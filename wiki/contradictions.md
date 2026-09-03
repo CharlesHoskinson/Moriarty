@@ -3,7 +3,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-03T14:17:00Z
+updated_at: 2026-09-03T20:06:53Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -17,6 +17,8 @@ sources:
   - SRC-0023
   - SRC-0024
   - SRC-0025
+  - SRC-0029
+  - SRC-0030
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -47,3 +49,8 @@ sources:
 | NEAR Intents guaranteed-delivery name versus transport semantics | The relay replays unacknowledged events, requires client deduplication, has a seven-day retention limit, and is described as live but not yet exercised by a solver | Treat it as bounded at-least-once delivery, not exactly-once or permanent delivery |
 | NEAR Intents confidentiality label versus trust boundary | `basic` and `advanced` lack public normative leakage definitions; the embedded profile uses a private NEAR fork, small permissioned validator set, treasury, private relay, and PoA bridge | Model confidentiality as a named adapter profile with explicit disclosure and custody assumptions |
 | Current ERC-7683 versus prior draft and OIF terminology | The 2026 resolver draft removes the prior standardized order/open/fill objects; current OIF code and prose still call `StandardOrder` and `MandateOutput` ERC-7683 | Pin the exact revision and treat OIF as a separate compatibility profile; never blend the two semantics |
+| ACTUS documentation sitemap origin versus deployed origin | All 220 documentation sitemap entries use `https://your-docusaurus-site.example.com`, while the same paths are deployed at `https://documentation.actusfrf.org` | Preserve the sitemap bytes; replace only the recorded origin during acquisition; record every rewritten URL and never treat the placeholder host as live authority |
+| ACTUS taxonomy breadth versus executable contract-type surface | The pinned taxonomy contains 32 rows, while the dictionary `contractType` term, technical specification, and public fixture files define 18 executable contract types | Publish a 32-row disposition matrix and a separate 18-type vector matrix; never count taxonomy-only or unavailable rows as implemented-and-vector-tested |
+| ACTUS public vector corpus versus public Haskell test harness | The pinned corpus has 277 vectors across 18 types, but the Haskell suite declares 14 types, excludes seven fixtures, omits the analysis-date fixture, compares only three fields, and downcasts payoff to `Float` | Use the Haskell code as independent comparative evidence only; Moriarty must discover all 277, exclude none, preserve decimal intent, and compare every present ordered field |
+| ACTUS core FOSS description versus public source access | The public core-license README describes the core as FOSS and publishes license terms, while the public service instructions require an authorization token for the Java core and CI uses a secret checkout token | Distinguish legal permission from practical source availability; do not bypass access controls or require private code; obtain license review before distribution or a conformance claim |
+| ACTUS service dependency version versus README version | The service build pins `org.actus:actus-core:1.1.0`, while its README says the service includes core version 1.0.1 | Treat build configuration as the dependency evidence for the pinned commit and preserve the README as documentation drift; require exact version identity for any optional oracle run |

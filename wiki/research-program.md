@@ -3,7 +3,7 @@ id: moriarty.research.program
 type: decision
 title: Moriarty DeFi Kernel research program
 status: active
-updated_at: 2026-09-03T14:17:00Z
+updated_at: 2026-09-03T20:06:53Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -15,6 +15,9 @@ sources:
   - SRC-0024
   - SRC-0025
   - SRC-0026
+  - SRC-0029
+  - SRC-0030
+  - SRC-0031
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -133,15 +136,59 @@ SRC-0025 and the primary standards in SRC-0021; observed 2026-09-03; authority
 primary standards and repository comparison; scope Ethereum compatibility;
 evidence contradiction and recommendation; confidence high; status S2.
 
-The focused assignment is now version 1.2:
+**CLM-0126.** The pinned ACTUS dictionary has 32 taxonomy rows, while its
+`contractType` term and the technical specification define 18 executable
+contract types. Taxonomy breadth and executable-vector coverage are distinct
+measures. Source: SRC-0029 and SRC-0030; observed 2026-09-03; authority primary
+machine-readable standard and reproduced repository survey; scope ACTUS
+coverage boundary; evidence source fact and repository observation; confidence
+high; status S5 for the public inputs.
+
+**CLM-0127.** The pinned public ACTUS test corpus contains 276 per-contract
+fixtures plus one analysis-date fixture. The 277 fixtures cover all 18
+executable contract types and can contain observed data, observed events, a
+horizon, and nine result fields. Moriarty must discover and run all 277 without
+exclusion. Source: SRC-0029 and SRC-0030; observed 2026-09-03; authority primary
+reference-test corpus; scope Moriarty terminal conformance benchmark; evidence
+source fact and reproduced inventory; confidence high; status S5.
+
+**CLM-0128.** The public Haskell `actus-core` test suite declares 14 of the 18
+executable types, excludes seven fixtures, omits the analysis-date fixture, and
+compares event type, event date, and payoff only. Its payoff assertion downcasts
+to `Float`. It is valuable independent code evidence, but it is not a complete
+oracle for Moriarty's 277-vector gate. Source: SRC-0030; commit
+`42451170dc61c5c11c4144bd5a69046f149e8016`; authority public implementation;
+scope comparative ACTUS semantics; evidence reproduced repository observation;
+confidence high; status S3.
+
+**CLM-0129.** The official public service depends on
+`org.actus:actus-core:1.1.0`, but its instructions require an authorization
+token and its CI checks out the core with a secret. The private Java core is not
+an available normative dependency. Moriarty may use it only as optional,
+authorized, version-pinned differential evidence. Source: SRC-0029 and
+SRC-0030; observed 2026-09-03; authority public build and workflow source; scope
+ACTUS evidence boundary; evidence repository observation; confidence high;
+status unavailable for the private source.
+
+**CLM-0130.** Prompt version 1.3 defines an ACTUS completion predicate with a
+public source and license lock, one disposition for every taxonomy row, typed
+packages for all 18 executable types, two independent semantics, all 277
+mandatory vectors, shared surface-to-Core-to-Compact compilation, full present-
+field comparison, adversarial controls, and compatibility-only release
+language. Source: SRC-0031; created 2026-09-03; authority normative task input;
+scope Moriarty research and release program; evidence design decision;
+confidence high; status S2.
+
+The focused assignment is now version 1.3:
 [`../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml`](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml).
 It defines execution-state authorization, a cryptographic lifecycle refinement
 chain, settlement-level predicates, compiler and proof artifacts, separate
-CAKE and NEAR/ERC/OIF status rows, 38 specified-only intent data contracts, a
-typed-certificate developer interface, twelve workstreams, thirteen
-experiments, eighteen deliverables, twelve sprints, and eighteen release
-gates. It does not change the active semantic scope. The Grok, Sol, and Fable
-council advisory is preserved in SRC-0027.
+CAKE and NEAR/ERC/OIF status rows, 47 specified-only data contracts, a typed-
+certificate developer interface, thirteen workstreams, seventeen experiments,
+twenty-two deliverables, fifteen sprints, and twenty-four release gates. Its
+ACTUS benchmark has 32 taxonomy dispositions, 18 typed packages, and all 277
+mandatory public vectors. It does not change the active semantic scope. The
+Grok, Sol, and Fable council advisory is preserved in SRC-0027.
 
 ## Preserved dissent
 

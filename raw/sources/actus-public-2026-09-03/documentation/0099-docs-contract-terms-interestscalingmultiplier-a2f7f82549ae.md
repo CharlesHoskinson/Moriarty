@@ -1,0 +1,191 @@
+[Skip to main content](#__docusaurus_skipToContent_fallback)
+
+[![Actus Logo](/img/ActusLogoRGB.jpg)![Actus Logo](/img/ActusLogoRGB.jpg)](/)[Dictionary](https://www.actusfrf.org/dictionary)[Taxonomy](https://www.actusfrf.org/taxonomy)
+
+[GitHub](https://github.com/actusfrf)
+
+* [Welcome to ACTUS Documentation](/docs/intro)
+* [Introduction to ACTUS](/docs/category/introduction-to-actus)
+* [ACTUS Quick Start](/docs/quickstart)
+* [Quickstart Extension for ACTUS Risk Factors](/docs/category/1-extention-for-actus-risk-factors)
+* [Demos and Guides](/docs/actus-demo/demo-user-guide)
+* [ACTUS Competition Pre-Announcement](/docs/competition)
+* [Awesome Python Library](/docs/category/awesome-python-library)
+
+  + [Awesome ACTUS Library](/docs/awesome-actus-lib/awesome-actus-library)
+  + [ACTUS Standard](/docs/standard/overview)
+
+    - [Overview](/docs/standard/overview)
+    - [Core Concepts](/docs/standard/core-concepts)
+    - [Contract Types](/docs/contract-types/PAM)
+    - [Contract Terms](/docs/contract-terms/contract-terms-overview)
+
+      * [Contract Terms Overview](/docs/contract-terms/contract-terms-overview)
+      * [Accrued Interest](/docs/contract-terms/accruedInterest)
+      * [Amortization Date](/docs/contract-terms/amortizationDate)
+      * [Array Cycle Anchor Date Of Interest Payment](/docs/contract-terms/arrayCycleAnchorDateOfInterestPayment)
+      * [Array Cycle Anchor Date Of Principal Redemption](/docs/contract-terms/arrayCycleAnchorDateOfPrincipalRedemption)
+      * [Array Cycle Anchor Date Of Rate Reset](/docs/contract-terms/arrayCycleAnchorDateOfRateReset)
+      * [Array Cycle Of Interest Payment](/docs/contract-terms/arrayCycleOfInterestPayment)
+      * [Array Cycle Of Principal Redemption](/docs/contract-terms/arrayCycleOfPrincipalRedemption)
+      * [Array Cycle Of Rate Reset](/docs/contract-terms/arrayCycleOfRateReset)
+      * [Array Fixed Variable](/docs/contract-terms/arrayFixedVariable)
+      * [Array Increase Decrease](/docs/contract-terms/arrayIncreaseDecrease)
+      * [Array Next Principal Redemption Payment](/docs/contract-terms/arrayNextPrincipalRedemptionPayment)
+      * [Array Rate](/docs/contract-terms/arrayRate)
+      * [Boundary Crossed Flag](/docs/contract-terms/boundaryCrossedFlag)
+      * [Boundary Direction](/docs/contract-terms/boundaryDirection)
+      * [Boundary Effect](/docs/contract-terms/boundaryEffect)
+      * [Boundary Leg Initially Active](/docs/contract-terms/boundaryLegInitiallyActive)
+      * [Boundary Monitoring Anchor Date](/docs/contract-terms/boundaryMonitoringAnchorDate)
+      * [Boundary Monitoring Cycle](/docs/contract-terms/boundaryMonitoringCycle)
+      * [Boundary Monitoring End Date](/docs/contract-terms/boundaryMonitoringEndDate)
+      * [Boundary Value](/docs/contract-terms/boundaryValue)
+      * [Business Day Convention](/docs/contract-terms/businessDayConvention)
+      * [Calendar](/docs/contract-terms/calendar)
+      * [Capitalization End Date](/docs/contract-terms/capitalizationEndDate)
+      * [Clearing House](/docs/contract-terms/clearingHouse)
+      * [Contract Deal Date](/docs/contract-terms/contractDealDate)
+      * [Contract Identifier](/docs/contract-terms/contractID)
+      * [Contract Performance](/docs/contract-terms/contractPerformance)
+      * [Contract Role](/docs/contract-terms/contractRole)
+      * [Contract Structure](/docs/contract-terms/contractStructure)
+      * [Contract Type](/docs/contract-terms/contractType)
+      * [Counterparty Identifier](/docs/contract-terms/counterpartyID)
+      * [Coverage Of Credit Enhancement](/docs/contract-terms/coverageOfCreditEnhancement)
+      * [Creator Identifier](/docs/contract-terms/creatorID)
+      * [Credit Event Type Covered](/docs/contract-terms/creditEventTypeCovered)
+      * [Credit Line Amount](/docs/contract-terms/creditLineAmount)
+      * [Currency](/docs/contract-terms/currency)
+      * [Currency 2](/docs/contract-terms/currency2)
+      * [Cycle Anchor Date Of Dividend](/docs/contract-terms/cycleAnchorDateOfDividend)
+      * [Cycle Anchor Date Of Fee](/docs/contract-terms/cycleAnchorDateOfFee)
+      * [Cycle Anchor Date Of Interest Calculation Base](/docs/contract-terms/cycleAnchorDateOfInterestCalculationBase)
+      * [Cycle Anchor Date Of Interest Payment](/docs/contract-terms/cycleAnchorDateOfInterestPayment)
+      * [Cycle Anchor Date Of Margining](/docs/contract-terms/cycleAnchorDateOfMargining)
+      * [Cycle Anchor Date Of Optionality](/docs/contract-terms/cycleAnchorDateOfOptionality)
+      * [Cycle Anchor Date Of Principal Redemption](/docs/contract-terms/cycleAnchorDateOfPrincipalRedemption)
+      * [Cycle Anchor Date Of Rate Reset](/docs/contract-terms/cycleAnchorDateOfRateReset)
+      * [Cycle Anchor Date Of Scaling Index](/docs/contract-terms/cycleAnchorDateOfScalingIndex)
+      * [Cycle Of Dividend](/docs/contract-terms/cycleOfDividend)
+      * [Cycle Of Fee](/docs/contract-terms/cycleOfFee)
+      * [Cycle Of Interest Calculation Base](/docs/contract-terms/cycleOfInterestCalculationBase)
+      * [Cycle Of Interest Payment](/docs/contract-terms/cycleOfInterestPayment)
+      * [Cycle Of Margining](/docs/contract-terms/cycleOfMargining)
+      * [Cycle Of Optionality](/docs/contract-terms/cycleOfOptionality)
+      * [Cycle Of Principal Redemption](/docs/contract-terms/cycleOfPrincipalRedemption)
+      * [Cycle Of Rate Reset](/docs/contract-terms/cycleOfRateReset)
+      * [Cycle Of Scaling Index](/docs/contract-terms/cycleOfScalingIndex)
+      * [Cycle Point Of Interest Payment](/docs/contract-terms/cyclePointOfInterestPayment)
+      * [Cycle Point Of Rate Reset](/docs/contract-terms/cyclePointOfRateReset)
+      * [Day Count Convention](/docs/contract-terms/dayCountConvention)
+      * [Delinquency Period](/docs/contract-terms/delinquencyPeriod)
+      * [Delinquency Rate](/docs/contract-terms/delinquencyRate)
+      * [Delivery Settlement](/docs/contract-terms/deliverySettlement)
+      * [End Of Month Convention](/docs/contract-terms/endOfMonthConvention)
+      * [Ex Dividend Date](/docs/contract-terms/exDividendDate)
+      * [Exercise Amount](/docs/contract-terms/exerciseAmount)
+      * [Exercise Date](/docs/contract-terms/exerciseDate)
+      * [Fee Accrued](/docs/contract-terms/feeAccrued)
+      * [Fee Basis](/docs/contract-terms/feeBasis)
+      * [Fee Rate](/docs/contract-terms/feeRate)
+      * [Fixing Period](/docs/contract-terms/fixingPeriod)
+      * [Futures Price](/docs/contract-terms/futuresPrice)
+      * [Grace Period](/docs/contract-terms/gracePeriod)
+      * [Guaranteed Exposure](/docs/contract-terms/guaranteedExposure)
+      * [Initial Exchange Date](/docs/contract-terms/initialExchangeDate)
+      * [Initial Margin](/docs/contract-terms/initialMargin)
+      * [Interest Calculation Base](/docs/contract-terms/interestCalculationBase)
+      * [Interest Calculation Base Amount](/docs/contract-terms/interestCalculationBaseAmount)
+      * [Interest Scaling Multiplier](/docs/contract-terms/interestScalingMultiplier)
+      * [Life Cap](/docs/contract-terms/lifeCap)
+      * [Life Floor](/docs/contract-terms/lifeFloor)
+      * [Maintenance Margin Lower Bound](/docs/contract-terms/maintenanceMarginLowerBound)
+      * [Maintenance Margin Upper Bound](/docs/contract-terms/maintenanceMarginUpperBound)
+      * [Market Object Code](/docs/contract-terms/marketObjectCode)
+      * [Market Object Code Of Rate Reset](/docs/contract-terms/marketObjectCodeOfRateReset)
+      * [Market Object Code Of Scaling Index](/docs/contract-terms/marketObjectCodeOfScalingIndex)
+      * [Market Value Observed](/docs/contract-terms/marketValueObserved)
+      * [Maturity Date](/docs/contract-terms/maturityDate)
+      * [Maximum Penalty Free Disbursement](/docs/contract-terms/maximumPenaltyFreeDisbursement)
+      * [Next Dividend Payment Amount](/docs/contract-terms/nextDividendPaymentAmount)
+      * [Next Principal Redemption Payment](/docs/contract-terms/nextPrincipalRedemptionPayment)
+      * [Next Reset Rate](/docs/contract-terms/nextResetRate)
+      * [Nominal Interest Rate](/docs/contract-terms/nominalInterestRate)
+      * [Nominal Interest Rate 2](/docs/contract-terms/nominalInterestRate2)
+      * [Non Performing Date](/docs/contract-terms/nonPerformingDate)
+      * [Notional Principal](/docs/contract-terms/notionalPrincipal)
+      * [Notional Principal 2](/docs/contract-terms/notionalPrincipal2)
+      * [Notional Scaling Multiplier](/docs/contract-terms/notionalScalingMultiplier)
+      * [Option Exercise End Date](/docs/contract-terms/optionExerciseEndDate)
+      * [Option Exercise Type](/docs/contract-terms/optionExerciseType)
+      * [Option Strike 1](/docs/contract-terms/optionStrike1)
+      * [Option Strike 2](/docs/contract-terms/optionStrike2)
+      * [Option Type](/docs/contract-terms/optionType)
+      * [Penalty Rate](/docs/contract-terms/penaltyRate)
+      * [Penalty Type](/docs/contract-terms/penaltyType)
+      * [Period Cap](/docs/contract-terms/periodCap)
+      * [Period Floor](/docs/contract-terms/periodFloor)
+      * [Premium Discount At IED](/docs/contract-terms/premiumDiscountAtIED)
+      * [Prepayment Effect](/docs/contract-terms/prepaymentEffect)
+      * [Prepayment Period](/docs/contract-terms/prepaymentPeriod)
+      * [Price At Purchase Date](/docs/contract-terms/priceAtPurchaseDate)
+      * [Price At Termination Date](/docs/contract-terms/priceAtTerminationDate)
+      * [Purchase Date](/docs/contract-terms/purchaseDate)
+      * [Quantity](/docs/contract-terms/quantity)
+      * [Rate Multiplier](/docs/contract-terms/rateMultiplier)
+      * [Rate Spread](/docs/contract-terms/rateSpread)
+      * [Scaling Effect](/docs/contract-terms/scalingEffect)
+      * [Scaling Index At Contract Deal Date](/docs/contract-terms/scalingIndexAtContractDealDate)
+      * [Seniority](/docs/contract-terms/seniority)
+      * [Settlement Currency](/docs/contract-terms/settlementCurrency)
+      * [Settlement Period](/docs/contract-terms/settlementPeriod)
+      * [Status Date](/docs/contract-terms/statusDate)
+      * [Termination Date](/docs/contract-terms/terminationDate)
+      * [Unit](/docs/contract-terms/unit)
+      * [Variation Margin](/docs/contract-terms/variationMargin)
+      * [X Day Notice](/docs/contract-terms/xDayNotice)
+  + [Getting Started](/docs/getting-started/installation)
+  + [Examples](/docs/examples/basic-contract-types/example_PAM)
+  + [Guides](/docs/guides/common-patterns)
+* [[ACTUSFRF] CORE LICENSE 1.0](/docs/license)
+
+* [Awesome Python Library](/docs/category/awesome-python-library)
+* [ACTUS Standard](/docs/standard/overview)
+* [Contract Terms](/docs/contract-terms/contract-terms-overview)
+* Interest Scaling Multiplier
+
+On this page
+
+Interest Scaling Multiplier
+===========================
+
+Interest Scaling Multiplier
+---------------------------
+
+**Acronym**: `SCIP`  
+**Identifier**: `interestScalingMultiplier`  
+**Group**: `Notional Principal`  
+**Type**: `Real`  
+**Default**: `1`
+
+### Description
+
+The multiplier being applied to interest cash flows
+
+[Previous
+
+Interest Calculation Base Amount](/docs/contract-terms/interestCalculationBaseAmount)[Next
+
+Life Cap](/docs/contract-terms/lifeCap)
+
+* [Interest Scaling Multiplier](/docs/contract-terms/interestScalingMultiplier#interest-scaling-multiplier)
+  + [Description](/docs/contract-terms/interestScalingMultiplier#description)
+
+Community
+
+* [X.com](https://x.com/ActusResearch)
+* [GitHub](https://github.com/actusfrf)
+* [LinkedIn](https://www.linkedin.com/company/actus-research)
+
+Copyright © 2026 Financial Research Foundation. Built with Docusaurus.

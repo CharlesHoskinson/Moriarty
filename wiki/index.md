@@ -38,7 +38,9 @@ will grow by merging evidence into durable topic pages.
 - [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
 - [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.
-- [Semantics, intent, compiler, proof, and SDK prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — focused twelve-sprint assignment with an exact intent-refinement theorem and standards review.
+- [Semantics, intent, compiler, proof, SDK, and ACTUS prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — version 1.3 assignment with an exact intent-refinement theorem, standards review, and a no-exclusion 277-vector ACTUS completion gate.
+- [ACTUS public-source acquisition manifest](../evidence/actus-public-source-acquisition-2026-09-03.json) — 270 fetched public URLs, one explicit robots failure, 220 documentation host rewrites, 14 repository pins, 32 taxonomy rows, and all 277 reference fixtures.
+- [ACTUS public code survey](../evidence/actus-public-code-survey-2026-09-03.json) — executable contract surface, Haskell harness gaps, private Java boundary, license constraints, and prompt consequences.
 - [Intent standards research source](../deliverables/moriarty-intent-standards-2026-09-03/report-source.md) — complete CAKE and NEAR documentation crawl plus current Ethereum/OIF lifecycle, trust, and SDK findings.
 - [Intent prompt council advisory](../deliverables/moriarty-intent-prompt-council-advisory-2026-09-03.md) — blind Grok, Sol, and Fable review, preserved dissent, and the single correction pass applied to prompt version 1.2.
 

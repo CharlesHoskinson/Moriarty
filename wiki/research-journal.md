@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-03T14:17:00Z
+updated_at: 2026-09-03T20:06:53Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -12,6 +12,9 @@ sources:
   - SRC-0024
   - SRC-0025
   - SRC-0026
+  - SRC-0029
+  - SRC-0030
+  - SRC-0031
 ---
 
 # Moriarty research journal
@@ -406,3 +409,64 @@ stale each adjacent artifact. Then run a cross-domain trace in which the NEAR
 internal ledger succeeds but destination payout fails. Release the research
 specification only if every false authority or settlement claim is rejected at
 the correct boundary.
+
+## Prompt iteration P04: use ACTUS as the terminal completeness vector
+
+- State: public source lock and prompt revision completed
+- Active semantic scope: `0.0.0-e00.2`
+- Scope change: none
+
+### Trigger
+
+The user required one final prompt iteration that uses ACTUS as the test vector
+for Moriarty completeness. The user required the work to scrape the public
+documentation, inspect ACTUS repository code, and cover every public reference
+contract.
+
+### Evidence and design rationale
+
+Scrapling captured 270 public ACTUS URLs and recorded one explicit 404 for the
+documentation site's missing `robots.txt`. The documentation sitemap publishes
+220 entries under a placeholder origin. The acquisition replaced only that
+origin with `documentation.actusfrf.org`, fetched all 220, and recorded each
+substitution. Eleven official repositories and three comparative Marlowe
+repositories are pinned in the source manifest.
+
+The pinned dictionary contains 32 taxonomy rows. The dictionary and technical
+specification define 18 executable contract types. The public test repository
+contains 276 per-contract fixtures plus one analysis-date fixture. These counts
+define different obligations: every taxonomy row needs a disposition, while all
+277 executable vectors must run without skips or exclusions.
+
+Direct code inspection found that the public Haskell `actus-core` declares 14
+of the 18 executable types in its test-facing contract enum, excludes seven
+fixtures, does not include the analysis-date file in its suite, compares only
+event type, date, and payoff, and downcasts payoff to binary32 `Float`. The
+official public service depends on a Java core whose source requires an access
+token. The service CI uses a secret for that checkout. The private core is
+therefore optional evidence, not a release dependency.
+
+Prompt version 1.3 requires all 18 executable types as typed surface packages
+over shared abstractions. Every fixture must pass through the same surface,
+canonical Core, and Compact compiler. Two independent semantics must compare
+every present ordered result field under explicit decimal, calendar, event, and
+observation rules. The prompt forbids product-specific Core constructors,
+fixture allowlists, exclusions, hidden expected failures, and certification
+language.
+
+### Semantic scope transition
+
+No Core constructor, type, or dynamic rule was accepted. ACTUS starts as a
+surface-package and conformance obligation. A minimal expressivity
+counterexample must pass the semantic-motion process before it can change the
+frozen Core. Version `0.0.0-e00.2` and snapshot SHA-256
+`9bee72cb3a71962128ce5ead07b0912a3f54b1d813d59f629852631057e36c7a`
+remain active.
+
+### Next falsification test
+
+Implement the lossless ACTUS fixture importer and two independent schedule and
+payoff semantics. Discover all 277 vectors from the pinned corpus. Fail the
+language path at the first fixture that needs a product-specific compiler
+bypass or an unapproved Core extension. Preserve the minimal counterexample and
+its full expected and actual ordered trace.

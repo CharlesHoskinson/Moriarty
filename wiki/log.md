@@ -1,5 +1,19 @@
 # Wiki log
 
+## [2026-09-03] research | ACTUS terminal completeness prompt
+
+Captured the complete public ACTUS site and documentation sitemap with
+Scrapling, pinned eleven official and three comparative repositories, and
+inventoried 32 taxonomy rows, 18 executable contract types, and all 277 public
+reference fixtures. Direct code inspection identified the public Haskell
+implementation's four missing executable types, seven excluded fixtures,
+analysis-date omission, three-field comparator, and binary32 payoff downcast.
+The official Java core remained access-controlled and unused. Revised the
+focused prompt to version 1.3 with typed ACTUS packages, two independent
+semantics, shared Core and Compact compilation, full present-field comparison,
+24 release gates, and compatibility-only language. Semantic scope
+`0.0.0-e00.2` did not change.
+
 ## [2026-09-03] research | CAKE, NEAR Intents, and Ethereum intent lifecycle
 
 Acquired the 14-link CAKE Working Group corpus and all 68 official NEAR Intents

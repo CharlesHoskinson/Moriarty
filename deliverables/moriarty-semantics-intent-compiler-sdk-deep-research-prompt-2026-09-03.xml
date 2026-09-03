@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.2">
+<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.3">
   <title>
     Moriarty Semantics, Intent Correctness, Verified Compilation, Compact and
-    ZKIR Realization, and Standard Developer Interface
+    ZKIR Realization, Standard Developer Interface, and ACTUS Completeness
   </title>
 
   <research_date>2026-09-03</research_date>
@@ -11,9 +11,11 @@
     Produce a decision-grade semantics and implementation design for Moriarty.
     Define Moriarty as a finite financial-agreement and transaction-intent
     language. Specify its Core, typed surface language, compiler, proof program,
-    Compact and ZKIR realization, and complete developer interface. Determine
-    whether a user, wallet, solver, auditor, or application can verify that a
-    proposed execution implements the signed intent without additional effects.
+    Compact and ZKIR realization, and complete developer interface. Use every
+    public ACTUS reference contract as the terminal, non-toy completeness test.
+    Determine whether a user, wallet, solver, auditor, or application can verify
+    that a proposed execution implements the signed intent without additional
+    effects.
   </purpose>
 
   <role>
@@ -27,7 +29,9 @@
   <controlling_question>
     What exact language, semantic relation, compiler architecture, proof
     artifacts, and developer interface let Moriarty serve as the trusted intent
-    and financial-agreement layer of a Midnight DeFi Kernel?
+    and financial-agreement layer of a Midnight DeFi Kernel, and can that
+    architecture express and execute the complete public ACTUS reference-vector
+    corpus?
   </controlling_question>
 
   <decision_standard>
@@ -35,14 +39,18 @@
     “intent,” “proof,” “verified,” “safe,” or “correct” without an exact
     predicate and named assumptions. Separate semantic authorization from
     solver optimality, proof-system soundness, ledger acceptance, liveness,
-    oracle truth, custody, legal rights, and application security.
+    oracle truth, custody, legal rights, and application security. Do not call
+    Moriarty complete unless it passes the ACTUS completion predicate in this
+    assignment.
   </decision_standard>
 
   <relationship_to_existing_program>
     This assignment supplements the existing Moriarty DeFi Kernel assignment.
     It does not repeat the completed DeFi taxonomy audit. Use its seven
     human-facing families and formal-behavior facets as benchmark inputs. Do not
-    make those categories part of the semantic kernel.
+    make those categories part of the semantic kernel. ACTUS is the terminal
+    reference-contract benchmark for the resulting language and compiler. It is
+    not a request to add one Core constructor for each financial product.
   </relationship_to_existing_program>
 
   <frozen_starting_scope>
@@ -86,6 +94,7 @@
     <principle id="T08">No external script, oracle, bridge, solver, or custodian inherits Moriarty guarantees.</principle>
     <principle id="T09">A client verifies artifacts, state, intent refinement, proof, and transaction effects before signing.</principle>
     <principle id="T10">An unavailable dependency never becomes semantic approval.</principle>
+    <principle id="T11">ACTUS contract types are typed surface packages and conformance vectors unless evidence proves that Core lacks required expressivity.</principle>
   </candidate_enduring_thesis>
 
   <required_terminology>
@@ -162,6 +171,16 @@
     <term name="correctness_of_intent">
       A composed theorem about intent refinement. It is not signature validity,
       successful simulation, solver profitability, or proof verification alone.
+    </term>
+    <term name="actus_reference_contract">
+      A version-pinned public ACTUS test fixture interpreted as contract terms,
+      observed risk data or events, a horizon, and an ordered expected trace.
+    </term>
+    <term name="actus_reference_vector_compatibility">
+      A reproducible result in which Moriarty discovers, imports, elaborates,
+      executes, compiles, and compares all mandatory public ACTUS fixtures under
+      the source, license, numeric, ordering, and trace rules in this assignment.
+      This result is not ACTUS certification.
     </term>
   </required_terminology>
 
@@ -255,6 +274,12 @@
     <input path="evidence/cake-working-group-acquisition-2026-09-03.json" role="complete CAKE one-hop acquisition manifest" />
     <input path="evidence/near-intents-docs-acquisition-2026-09-03.json" role="complete NEAR Intents documentation acquisition manifest" />
     <input path="evidence/moriarty-intent-standards-claim-ledger-2026-09-03.csv" role="intent standards claim and contradiction ledger" />
+    <input path="evidence/actus-public-source-acquisition-2026-09-03.json" role="immutable ACTUS web, repository, taxonomy, fixture, and license source lock" />
+    <input path="raw/sources/actus-public-2026-09-03" role="Scrapling-captured public ACTUS corpus with adjacent receipts" />
+    <input path="repos/actusfrf" role="version-pinned public ACTUS organization repositories" />
+    <input path="repos/actus-core" role="public Haskell ACTUS implementation for comparative code evidence" />
+    <input path="repos/marlowe-actus-labs" role="public ACTUS and Marlowe prototype evidence" />
+    <input path="repos/marlowe-cardano/marlowe-actus" role="public integrated Marlowe ACTUS implementation evidence" />
   </mandatory_local_inputs>
 
   <mandatory_external_sources>
@@ -410,6 +435,176 @@
       CAKE chain-abstraction framework.
     </verified_compilation_and_proof_architectures>
   </mandatory_external_sources>
+
+  <actus_reference_profile taxonomy_rows="32" executable_contract_types="18" contract_fixtures="276" analysis_date_fixtures="1" mandatory_vectors="277">
+    <purpose>
+      Use ACTUS as the terminal completeness test for Moriarty's financial-
+      agreement language, two independent semantics implementations, shared
+      compiler pipeline, Compact backend, and conformance tooling. The frozen
+      public corpus contains 276 per-contract fixtures and one analysis-date
+      fixture. Treat all 277 mandatory vectors as one indivisible release set.
+    </purpose>
+
+    <public_sources>
+      <source uri="https://www.actusfrf.org/sitemap.xml" role="official site inventory" />
+      <source uri="https://documentation.actusfrf.org/sitemap.xml" role="official documentation inventory with placeholder-host rewrite recorded" />
+      <source uri="https://github.com/actusfrf/actus-dictionary" commit="356f7663f26091105cc4fef4ae3496942dcf0ebf" role="machine-readable taxonomy and terms" />
+      <source uri="https://github.com/actusfrf/actus-techspecs" commit="94ef09e4992f79d573f84f41d8480f557365870e" role="technical specifications" />
+      <source uri="https://github.com/actusfrf/actus-tests" commit="f7a8064872b69db1f0beabac771c99dc3ce0c397" role="normative public reference vectors" />
+      <source uri="https://github.com/actusfrf/actus-userguides" commit="60234c1ea538115386421aec94ede4bcae0a94d4" role="documentation source and examples" />
+      <source uri="https://github.com/actusfrf/actus-service" commit="7293157a7f272925dbce68b5a037d2e23c585c9e" role="public service source and private-core dependency evidence" />
+      <source uri="https://github.com/actusfrf/actus-riskservice" commit="ee9c96e4fa52ed1c96206801ae2ccac42d89337e" role="public risk-service implementation" />
+      <source uri="https://github.com/actusfrf/actus-webapp" commit="bf866a06a7345d8d0be2c1c15354f9c6014e0c65" role="public client implementation" />
+      <source uri="https://github.com/actusfrf/actus-core-license" commit="7677145ac1b58b1677d8d2519b316ed6de7889fa" role="core license and conformance-claim boundary" />
+      <source uri="https://github.com/actusfrf/actus-resources" commit="e8d8fc4df9a5d07bcb84646ef13ddb3c640215bb" role="public resource inventory" />
+      <source uri="https://github.com/actusfrf/actus-distributions" commit="b6116e8713531a548b94e3f2b96f0a107f342a0c" role="public distribution inventory" />
+      <source uri="https://github.com/actusfrf/actus-docker-networks" commit="c69320d075c808404a783018794a447f26e7d93a" role="public deployment and dependency evidence" />
+      <source uri="https://github.com/marlowe-lang/actus-core" commit="42451170dc61c5c11c4144bd5a69046f149e8016" role="public Haskell comparative implementation" />
+      <source uri="https://github.com/marlowe-lang/marlowe-actus-labs" commit="472cc60319b079abfd3a367dc55a6012ad867b39" role="public comparative prototype" />
+      <source uri="https://github.com/marlowe-lang/marlowe-cardano/tree/main/marlowe-actus" commit="99f432d8ef9dbd1b52b7fa089254de15913b490f" role="public integrated comparative implementation" />
+    </public_sources>
+
+    <local_evidence>
+      <input path="evidence/actus-public-source-acquisition-2026-09-03.json" role="source, receipt, repository, taxonomy, fixture, and license manifest" />
+      <input path="raw/sources/actus-public-2026-09-03" role="immutable raw and AI-targeted Markdown capture" />
+      <input path="repos/actusfrf/actus-dictionary" role="pinned dictionary" />
+      <input path="repos/actusfrf/actus-techspecs" role="pinned technical specifications" />
+      <input path="repos/actusfrf/actus-tests" role="pinned vectors" />
+      <input path="repos/actus-core" role="pinned public Haskell comparison" />
+      <input path="repos/marlowe-actus-labs" role="pinned package and integration comparison" />
+      <input path="repos/marlowe-cardano/marlowe-actus" role="pinned integrated comparison" />
+    </local_evidence>
+
+    <source_lock_rule>
+      Refresh the public inventory before implementation, record every changed
+      source, and freeze a new immutable manifest. Recompute taxonomy and fixture
+      counts from pinned files. A changed count does not silently change this
+      assignment. It creates a reviewed scope motion and a new prompt version.
+      Preserve each fetch, failure, redirect, host substitution, commit, dirty
+      state, submodule state, digest, license, and coverage limitation.
+    </source_lock_rule>
+
+    <authority_rule>
+      Use the pinned public technical specification, dictionary, and test corpus
+      as the normative inputs available to this program. Use public services,
+      user guides, and independent implementations as comparative evidence.
+      Resolve contradictions explicitly and do not invent missing semantics.
+      Do not require access to the private Java `actus-core` repository. If an
+      authorized copy becomes available, use it only as an optional differential
+      oracle and record its exact version and license. Never bypass access
+      controls or make private source a release dependency.
+    </authority_rule>
+
+    <license_and_claim_rule>
+      Preserve attribution and share-alike obligations for the CC BY-SA 4.0
+      public technical specification, dictionary, and tests. Preserve Apache-2.0
+      notices for public software that uses that license. Review the separate
+      ACTUS core license before distributing derived core code or making public
+      conformance claims. Use the phrase “ACTUS reference-vector compatibility”
+      for the result defined here. Do not describe the result as ACTUS
+      certification, endorsement, or universal equivalence to unavailable code.
+    </license_and_claim_rule>
+
+    <executable_contract_types>
+      <contract_type id="PAM">Principal at Maturity</contract_type>
+      <contract_type id="LAM">Linear Amortizer</contract_type>
+      <contract_type id="LAX">Exotic Linear Amortizer</contract_type>
+      <contract_type id="NAM">Negative Amortizer</contract_type>
+      <contract_type id="ANN">Annuity</contract_type>
+      <contract_type id="CLM">Call Money</contract_type>
+      <contract_type id="UMP">Undefined Maturity Profile</contract_type>
+      <contract_type id="CSH">Cash</contract_type>
+      <contract_type id="STK">Stock</contract_type>
+      <contract_type id="COM">Commodity</contract_type>
+      <contract_type id="FXOUT">Foreign Exchange Outright</contract_type>
+      <contract_type id="SWPPV">Plain Vanilla Interest Rate Swap</contract_type>
+      <contract_type id="SWAPS">Swap</contract_type>
+      <contract_type id="CAPFL">Cap or Floor</contract_type>
+      <contract_type id="OPTNS">Option</contract_type>
+      <contract_type id="FUTUR">Future</contract_type>
+      <contract_type id="CEG">Guarantee</contract_type>
+      <contract_type id="CEC">Collateral</contract_type>
+    </executable_contract_types>
+
+    <fixture_schema>
+      Import each fixture identifier, contract type, contract terms, optional
+      `to` horizon, optional `dataObserved`, optional `eventsObserved`, and
+      ordered `results`. Preserve unknown fields and reject unknown critical
+      fields. Parse decimal JSON strings and JSON numbers without a binary32
+      downcast. Define canonical date, time-zone, decimal, rounding, and
+      comparison rules. If exact equality is impossible for a justified reason,
+      state one field-specific tolerance before execution and prove that it
+      cannot hide a semantic divergence. Compare every result field that is
+      present, not only date, event type, and payoff.
+      <result_field name="eventDate" />
+      <result_field name="eventType" />
+      <result_field name="payoff" />
+      <result_field name="currency" />
+      <result_field name="notionalPrincipal" />
+      <result_field name="nominalInterestRate" />
+      <result_field name="accruedInterest" />
+      <result_field name="exerciseAmount" />
+      <result_field name="exerciseDate" />
+    </fixture_schema>
+
+    <taxonomy_accounting expected_rows="32">
+      Account for every row in the pinned ACTUS taxonomy. Keep taxonomy breadth
+      separate from executable-vector coverage. Assign one evidence-backed
+      disposition to each row and never count a row twice.
+      <allowed_disposition id="implemented-and-vector-tested" />
+      <allowed_disposition id="specified-without-reference-vector" />
+      <allowed_disposition id="taxonomy-only" />
+      <allowed_disposition id="planned" />
+      <allowed_disposition id="superseded-alias" />
+      <allowed_disposition id="unavailable" />
+    </taxonomy_accounting>
+
+    <implementation_rule>
+      Implement the 18 executable types as versioned, typed surface packages
+      over shared schedules, expressions, observations, state transitions, and
+      payoff abstractions. Elaborate every package through the same typed surface
+      and canonical Core interfaces used by other Moriarty programs. Compile all
+      fixtures through one shared compiler pipeline and one general Compact
+      backend. Do not implement one bespoke Core constructor or compiler lowerer
+      per ACTUS contract type. Propose a Core semantic motion only when a minimal
+      counterexample proves that the frozen Core cannot express a required
+      behavior. Give each accepted motion a proof delta, migration, backend
+      result, negative test, and new scope digest.
+    </implementation_rule>
+
+    <semantic_obligations>
+      Define and independently test scalar and array schedules, business-day
+      adjustment, end-of-month convention, calendar and day-count convention,
+      event ordering, contract-role signs, state initialization, state-transition
+      functions, payoff functions, risk-factor observation, child-contract
+      observation, settlement currency, analysis date, horizon truncation,
+      unscheduled observed events, exercise, settlement, and contract
+      composition. Bind every contract term, observation, event, output field,
+      and generated transfer through source-to-Core and Core-to-Compact maps.
+    </semantic_obligations>
+
+    <execution_rule>
+      Discover fixtures from the pinned corpus instead of a hand-maintained
+      allowlist. Run the 276 contract fixtures and the one analysis-date fixture
+      through two independent semantics implementations. Then elaborate and
+      compile the same all 277 mandatory vectors through the shared compiler and
+      Compact backend. Preserve an ordered field-level result for every vector.
+      No skip, exclusion, quarantine, or expected failure is permitted. A parse
+      error, unsupported contract type, missing observation, trace mismatch,
+      backend mismatch, timeout, or resource-bound failure is a failed gate.
+    </execution_rule>
+
+    <completion_predicate>
+      Moriarty is ACTUS-reference-vector complete only if all clauses hold:
+      <clause id="A1">The source and license lock is reproducible and has no undisposed public input.</clause>
+      <clause id="A2">All 32 taxonomy rows have one supported disposition and the 18 executable types are implemented as typed packages.</clause>
+      <clause id="A3">Both independent semantics implementations execute all 277 fixtures and match every present ordered result field.</clause>
+      <clause id="A4">Every fixture elaborates through the shared typed surface and canonical Core without a fixture-specific bypass.</clause>
+      <clause id="A5">The shared Compact backend matches the reference trace and effect projection for every fixture under declared resource bounds.</clause>
+      <clause id="A6">Adversarial, metamorphic, differential, and mutation tests detect numeric, calendar, ordering, role, observation, composition, compiler, and comparator defects.</clause>
+      <clause id="A7">The release dossier states ACTUS reference-vector compatibility, all limitations, and no certification claim.</clause>
+    </completion_predicate>
+  </actus_reference_profile>
 
   <standards_analysis_matrix>
     For every standard, record identifier, title, exact source revision,
@@ -820,6 +1015,36 @@
       evidence threshold for continuing, reducing scope, or stopping language
       development.
     </workstream>
+
+    <workstream id="W13" name="ACTUS reference-contract completeness benchmark">
+      Execute the complete `actus_reference_profile`. Recompute the 32-row
+      taxonomy inventory, 18-type executable inventory, 276 per-contract
+      fixtures, and one analysis-date fixture from the pinned public sources.
+      Produce typed surface packages, exact fixture schemas, two independent
+      semantics implementations, shared elaboration, canonical Core, readable
+      Compact, field-complete comparators, and reproducible coverage manifests.
+
+      Demonstrate common abstractions for schedules, observations, event order,
+      state transitions, payoff functions, roles, exercise, settlement, and
+      composition. Reject a general-language claim if any fixture bypasses the
+      shared compiler pipeline or requires a contract-specific Core constructor
+      or backend lowerer. Report every unsupported term or behavior as a minimal
+      expressivity counterexample and process it through the semantic-scope
+      ledger before changing Core.
+
+      Run every mandatory vector without exclusions. Compare every present
+      ordered result field under the declared numeric and calendar rules. Test
+      reference semantics, independent semantics, Core execution, and generated
+      Compact as distinct evidence layers. Treat reference-vector success as a
+      broad regression and compatibility result, not as universal proof that all
+      financial contracts are correct.
+
+      Publish a 32-row taxonomy disposition matrix and keep it separate from the
+      18-type vector pass matrix. Record public-source licenses, attribution,
+      missing private implementation evidence, and every contradiction. The
+      private Java core is optional comparative evidence and cannot be a hidden
+      requirement. End with an explicit ACTUS completion-predicate verdict.
+    </workstream>
   </workstreams>
 
   <required_compiler_artifacts>
@@ -882,6 +1107,15 @@
     <contract>SubmissionReceipt</contract>
     <contract>FinalityOrRollbackEvidence</contract>
     <contract>IntentCorrectnessBundle</contract>
+    <contract>ActusSourceLock</contract>
+    <contract>ActusTaxonomyDisposition</contract>
+    <contract>ActusReferenceContract</contract>
+    <contract>ActusObservedData</contract>
+    <contract>ActusObservedEvent</contract>
+    <contract>ActusExpectedEvent</contract>
+    <contract>ActusTraceComparison</contract>
+    <contract>ActusCoverageManifest</contract>
+    <contract>ActusLicenseDisposition</contract>
   </required_intent_data_contracts>
 
   <required_experiments>
@@ -979,6 +1213,41 @@
       ERC-style intent tasks. Measure authoring, review, misunderstanding,
       rejected attacks, and evidence interpretation.
     </experiment>
+    <experiment id="E14">
+      Reacquire and pin the ACTUS public sites and organization repositories.
+      Recompute the 32 taxonomy rows, 18 executable types, 276 contract fixtures,
+      one analysis-date fixture, fixture input variants, output fields, licenses,
+      redirects, failures, and repository states. Fail if any public input lacks
+      a disposition or if the frozen counts change without a reviewed scope
+      motion.
+    </experiment>
+    <experiment id="E15">
+      Parse and execute all 277 ACTUS fixtures in two independently implemented
+      semantics. Compare ordered events and every result field present in each
+      fixture. Preserve exact decimal intent across JSON string and number forms.
+      Test dates, horizons, schedules, business-day and end-of-month adjustments,
+      day counts, roles, observations, exercise, settlement, and composition.
+      Any skipped or quarantined fixture fails the experiment.
+    </experiment>
+    <experiment id="E16">
+      Express all 18 executable ACTUS contract types as typed surface packages.
+      Elaborate every fixture through the shared surface, canonical Core, and
+      general Compact compiler. Differentially compare reference, independent,
+      Core, and generated-Compact traces and effects. Measure source size,
+      normalized Core size, generated Compact size, maximum steps, state,
+      witness, circuit, proof, and verification cost. Reject completeness if a
+      type or fixture uses a bespoke compiler bypass.
+    </experiment>
+    <experiment id="E17">
+      Mutate ACTUS terms, numeric representations, rounding, dates, schedules,
+      event ordering, contract roles, risk observations, observed events,
+      child-contract references, state transitions, payoff functions, generated
+      Compact, and expected results. Add metamorphic checks for economically
+      neutral encodings and sign or scaling relations. Require the importer,
+      semantics, backend comparison, or validator to detect every
+      security-critical mutant. If an authorized Java core is available, run it
+      as an optional version-pinned oracle without changing the mandatory gate.
+    </experiment>
   </required_experiments>
 
   <required_deliverables>
@@ -1000,6 +1269,10 @@
     <deliverable id="D16">OpenSpec change set for each accepted build sprint.</deliverable>
     <deliverable id="D17">Semantic-scope ledger and wiki research journal.</deliverable>
     <deliverable id="D18">Final build, reduce-scope, or stop decision.</deliverable>
+    <deliverable id="D19">Immutable ACTUS public-source, repository, version, license, contradiction, taxonomy, and fixture lock with one disposition for each of the 32 taxonomy rows.</deliverable>
+    <deliverable id="D20">Typed Moriarty packages for all 18 executable ACTUS contract types, a lossless importer for all 277 fixtures, two independent semantics implementations, and a field-complete trace comparator.</deliverable>
+    <deliverable id="D21">A no-exclusion 277-vector pass or failure matrix, surface-to-Core and Core-to-Compact maps, differential traces, resource measurements, negative controls, and mutation results.</deliverable>
+    <deliverable id="D22">An ACTUS reference-vector compatibility and Moriarty completeness verdict that states every limitation, license duty, failed clause, and prohibited certification claim.</deliverable>
   </required_deliverables>
 
   <openspec_requirements>
@@ -1053,13 +1326,32 @@
       Reconcile and implement the minimum safety spine. Validate all API and
       data contracts across supported environments.
     </sprint>
-    <sprint id="S11" name="Adversarial conformance and audit">
-      Run differential, property, fuzz, mutation, privacy, malicious solver,
-      malicious Runtime, malicious prover, wallet, and rollback exercises.
+    <sprint id="S11" name="ACTUS source lock and conformance harness">
+      Freeze the public ACTUS source, repository, license, taxonomy, and fixture
+      inventories. Implement lossless schemas, discovery, exact numeric parsing,
+      ordered full-field comparison, coverage manifests, and negative controls.
     </sprint>
-    <sprint id="S12" name="Terminal decision">
+    <sprint id="S12" name="ACTUS typed packages and independent semantics">
+      Implement all 18 executable contract types as typed surface packages over
+      shared abstractions. Run all 277 fixtures through two independent semantics
+      implementations. Process any proven Core expressivity gap as a semantic
+      motion instead of adding a product-specific escape hatch.
+    </sprint>
+    <sprint id="S13" name="ACTUS shared compilation and backend correspondence">
+      Elaborate and compile all 277 fixtures through canonical Core and the
+      general Compact backend. Preserve differential traces, field-level results,
+      source maps, resource bounds, adversarial cases, metamorphic cases, and
+      mutation evidence. No excluded fixture can advance the sprint.
+    </sprint>
+    <sprint id="S14" name="Adversarial conformance and audit">
+      Run differential, property, fuzz, mutation, privacy, malicious solver,
+      malicious Runtime, malicious prover, wallet, rollback, and ACTUS
+      compatibility exercises.
+    </sprint>
+    <sprint id="S15" name="Terminal decision">
       Decide language, library plus certifier, intent verifier only, or stop.
-      Preserve dissent, evidence gaps, and the exact next scope.
+      Preserve dissent, evidence gaps, the ACTUS completion verdict, and the
+      exact next scope.
     </sprint>
   </sprint_sequence>
 
@@ -1067,8 +1359,8 @@
     <gate id="G01">No unresolved ambiguity exists in normative syntax, typing, dynamics, observations, or canonical encoding.</gate>
     <gate id="G02">Every deployable program has machine-checked finite lifetime and resource bounds.</gate>
     <gate id="G03">Every accepted semantic motion has a proof delta, migration result, backend result, and negative test.</gate>
-    <gate id="G04">At least two independent semantics implementations pass every conformance vector.</gate>
-    <gate id="G05">Reference and generated backend agree on every required trace and effect projection.</gate>
+    <gate id="G04">At least two independent semantics implementations pass every conformance vector, including every mandatory ACTUS vector.</gate>
+    <gate id="G05">Reference and generated backend agree on every required trace and effect projection, including every present ordered ACTUS result field.</gate>
     <gate id="G06">Every adjacent lifecycle artifact binds its predecessor digest, domain, state, resolver and contract identity, upgrade state, assumptions, and version. The intent verifier rejects substitution, omission, equivocation, staleness, or any unauthorized objective, quote, authorization, resolution, plan, fee, disclosure, fill, fulfillment, and recovery mutation before its authority boundary.</gate>
     <gate id="G07">Replay fails across network, contract, version, sequence, nonce, validity, and cancellation domains.</gate>
     <gate id="G08">All public effects and private disclosures match the signed intent and approved manifests. Disclosure acceptance is distinct from effect authorization and cannot expand it.</gate>
@@ -1080,8 +1372,14 @@
     <gate id="G14">The SDK has stable errors, typed verification certificates, idempotency, version negotiation, asynchronous cancellation, partial-fill residuals, durable delivery deduplication, crash consistency, fill and payout separation, settlement levels, typed reversals, compensation, refund, and unavailable outcomes.</gate>
     <gate id="G15">A compromised solver, Runtime, indexer, registry, or remote prover cannot create a signing request for extra effects.</gate>
     <gate id="G16">The proof claim names every trusted compiler, circuit, verifier, parameter, ledger, wallet, oracle, relay, validator, treasury, custodian, and bridge assumption. Confidential profiles have a separate leakage theorem and trusted-computing-base statement.</gate>
-    <gate id="G17">At least two non-toy pilots prefer Moriarty's assurance workflow to the audited Compact-library baseline.</gate>
-    <gate id="G18">If G05, G06, G09, G15, or G17 fails, reduce scope or stop the language path.</gate>
+    <gate id="G17">At least two non-toy pilots, including the complete ACTUS benchmark, prefer Moriarty's assurance workflow to the audited Compact-library baseline.</gate>
+    <gate id="G18">If G05, G06, G09, G15, G17, or any ACTUS gate G19 through G24 fails, reduce scope or stop the language path.</gate>
+    <gate id="G19">The ACTUS source lock reproduces all public site and repository dispositions, the 32-row taxonomy, the 18 executable contract types, 276 contract fixtures, one analysis-date fixture, all licenses, and every known access limitation.</gate>
+    <gate id="G20">Discovery, lossless parsing, and execution cover all 277 mandatory ACTUS vectors. No vector is skipped, excluded, quarantined, marked as an expected failure, or hidden by an allowlist.</gate>
+    <gate id="G21">Two independent semantics implementations match every present ordered result field for every ACTUS vector under the frozen decimal, rounding, date, calendar, event-order, observation, and comparison rules.</gate>
+    <gate id="G22">Every ACTUS vector elaborates through the shared typed surface and canonical Core, compiles through the general Compact backend, matches the reference trace and effect projection, and stays within declared finite resource bounds. No fixture-specific or contract-specific compiler bypass exists.</gate>
+    <gate id="G23">Every one of the 32 ACTUS taxonomy rows has exactly one evidence-backed disposition. Only the 18 executable types with passing vectors count as implemented-and-vector-tested.</gate>
+    <gate id="G24">The release dossier uses ACTUS reference-vector compatibility, preserves attribution and license duties, identifies the private Java core as optional and unavailable unless authorized, states limitations, and makes no certification or endorsement claim.</gate>
   </release_gates>
 
   <red_team_requirements>
@@ -1102,6 +1400,10 @@
     <challenge>The 65-component SDK may exceed the project's maintenance capacity.</challenge>
     <challenge>A standard interface may freeze immature semantics too early.</challenge>
     <challenge>Moriarty may offer no measured advantage over typed intent schemas and local verification.</challenge>
+    <challenge>Passing a finite ACTUS corpus may hide untested term combinations, observation paths, or specification ambiguities.</challenge>
+    <challenge>A fixture importer or comparator may erase precision, fields, order, or unsupported values and manufacture a false pass.</challenge>
+    <challenge>Product-specific ACTUS branches may make a demo pass while disproving Moriarty's shared-language and shared-compiler claim.</challenge>
+    <challenge>Taxonomy rows without executable vectors may be mislabeled as implemented and inflate completeness.</challenge>
   </red_team_requirements>
 
   <prohibited_shortcuts>
@@ -1126,14 +1428,22 @@
     <item>Do not hide an external assumption in an adapter or manifest.</item>
     <item>Do not use calendar duration as evidence of progress.</item>
     <item>Do not let an LLM bypass parser, checker, proof, verifier, or human approval.</item>
+    <item>Do not use a hand-maintained ACTUS fixture allowlist in place of discovery from the pinned corpus.</item>
+    <item>Do not skip, exclude, quarantine, or mark an ACTUS reference fixture as an expected failure.</item>
+    <item>Do not compare only ACTUS event date, event type, and payoff when the fixture supplies more result fields.</item>
+    <item>Do not downcast ACTUS numeric values to binary32 or use an undeclared tolerance.</item>
+    <item>Do not implement one bespoke Core constructor or compiler lowerer per ACTUS contract type.</item>
+    <item>Do not count taxonomy-only, planned, unavailable, aliased, or unvectorized rows as implemented-and-vector-tested.</item>
+    <item>Do not require, redistribute, or infer behavior from a private ACTUS core without authorization and license review.</item>
   </prohibited_shortcuts>
 
   <quality_bar>
     Use exact syntax, judgments, types, algorithms, schemas, hashes, versions,
     commit identifiers, proof statements, counterexamples, commands, and
     acceptance predicates. Label inference. Preserve disagreement. Specify
-    unperformed work as `specified-only`. End with one exact architecture and a
-    build, reduce-scope, or stop decision.
+    unperformed work as `specified-only`. Report the ACTUS completion predicate
+    clause by clause. End with one exact architecture and a build, reduce-scope,
+    or stop decision.
   </quality_bar>
 
   <final_required_answer>
@@ -1148,6 +1458,8 @@
     7. Adopt, adapt, or reject each ERC pattern.
     8. Specify the standard developer interface.
     9. Prove and test the cross-layer claims.
-    10. Advance, reduce scope, or stop after the sprint gates.
+    10. Report the 32-row ACTUS dispositions and the no-exclusion 277-vector result.
+    11. State ACTUS reference-vector compatibility without implying certification.
+    12. Advance, reduce scope, or stop after every sprint gate.
   </final_required_answer>
 </deep_research_assignment>

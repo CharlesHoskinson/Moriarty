@@ -1,6 +1,6 @@
 # Moriarty semantics and intent research-prompt design
 
-Status: approved for prompt version 1.3
+Status: implemented in prompt version 1.3
 
 ## Decision
 
