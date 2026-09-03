@@ -133,8 +133,14 @@ class State:
             raise ValueError("stored account quantities must be positive")
         if tuple(sorted(self.accounts)) != self.accounts:
             raise ValueError("accounts must use canonical order")
+        account_keys = tuple(account for account, _ in self.accounts)
+        if len(set(account_keys)) != len(account_keys):
+            raise ValueError("account keys must be unique")
         if tuple(sorted(self.choices)) != self.choices:
             raise ValueError("choices must use canonical order")
+        choice_keys = tuple(choice_id for choice_id, _ in self.choices)
+        if len(set(choice_keys)) != len(choice_keys):
+            raise ValueError("choice keys must be unique")
 
     @classmethod
     def from_accounts(
@@ -321,6 +327,13 @@ def compute_transaction(
     before = reduce_to_quiescence(contract, working_state)
 
     if supplied is None:
+        if (
+            isinstance(before.contract, Close)
+            and before.reductions == 0
+            and not before.payments
+            and not before.warnings
+        ):
+            return TransactionResult(False, state, contract, error="contract_closed")
         if isinstance(before.contract, When):
             return TransactionResult(False, state, contract, error="input_required")
         return TransactionResult(

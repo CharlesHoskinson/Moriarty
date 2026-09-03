@@ -38,8 +38,12 @@ class SwapParameters:
             raise ValueError("swap tokens must be distinct")
         if self.amount_a <= 0 or self.amount_b <= 0:
             raise ValueError("swap amounts must be positive")
+        if self.amount_a >= 2**128 or self.amount_b >= 2**128:
+            raise ValueError("swap amounts must fit Compact Uint<128>")
         if self.deadline <= 0:
             raise ValueError("swap deadline must be positive")
+        if self.deadline >= 2**64:
+            raise ValueError("swap deadline must fit Compact Uint<64>")
         if not self.choice_id:
             raise ValueError("swap choice identifier must not be empty")
 

@@ -2,8 +2,8 @@
 
 <!-- markdownlint-disable MD013 -->
 
-Date: 2026-09-03 UTC  
-Status: S3 experimental evidence  
+Date: 2026-09-03 UTC
+Status: S3 experimental evidence
 Assignment experiment: E00
 
 ## Result
@@ -12,6 +12,9 @@ The initial E00 predicate passed at experimental scope. A finite Moriarty Core
 atomic swap generated fixed-state Compact. The reference Core and an independent
 manifest machine agreed on 1,000 unique deterministic traces. The traces had
 zero observable divergence and zero conservation or non-negativity failures.
+The backend machine interprets the manifest's structured public phase, input,
+and value-effect table. Witness authorization and privacy behavior remain
+compiler/static-review obligations outside this differential comparison.
 
 The pinned Compact compiler emitted TypeScript, metadata, and four ZKIR 3.0
 circuits. The pinned ZKIR mock compiler accepted all four circuits.
@@ -44,6 +47,11 @@ The corrected source uses `disclose(decision)`. The artifact manifest also lists
 `decision` as public. This is intentional because the Core choice is public.
 Moriarty must never infer such disclosure silently from the backend error.
 
+The `negative/` directory preserves the failing source and a receipt with the
+exact command, exit code, full-diagnostic digest, and a bounded diagnostic
+excerpt. The negative source differs from the passing source only at that
+disclosure wrapper.
+
 ## Reproduce the semantic certificate
 
 ```bash
@@ -60,8 +68,15 @@ Expected certificate summary:
 - five rejection classes
 - both terminal phases
 - deadline offsets `-1`, `0`, and `1`
+- 18 action-by-phase deadline-boundary cells
+- terminal expiry rejection from both terminal phases
 - zero divergences
 - zero invariant failures
+
+The generated contract is an abstract template. Its constructor schema records
+the required Compact types and encodings, but no concrete Midnight user
+addresses, authority hashes, or token colors are bound. Those values must be
+recorded and verified in a separate deployment manifest before any network run.
 
 ## Compile to ZKIR
 
@@ -94,6 +109,8 @@ commands, artifact hashes, host scope, and the proof-generation limitation.
 - `translation-certificate.json` records the trace corpus digest, coverage,
   invariant result, and zero-divergence result.
 - `toolchain-results.json` records the Compact and ZKIR execution results.
+- `negative/undisclosed-decision.compact` and `negative/compile-result.json`
+  preserve the disclosure negative control.
 - `output/compiler/contract-manifest.json` is the compiler-generated artifact
   manifest.
 - `output/zkir/*.zkir` and `output/zkir/*.bzkir` are the generated circuit

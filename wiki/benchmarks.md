@@ -3,7 +3,7 @@ id: experiments.benchmarks
 type: benchmark
 title: Reproduced benchmarks and experiments
 status: active
-updated_at: 2026-09-03T05:39:34Z
+updated_at: 2026-09-03T06:17:58Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -76,8 +76,14 @@ one maximum timeout, and 22 syntax nodes.
 The reference interpreter and independent manifest machine agreed on 1,000
 unique deterministic traces. Coverage included seven accepted transition
 classes, five rejection classes, both terminal phases, and deadline offsets
-`-1`, `0`, and `1`. The run found zero divergence, zero conservation failures,
-and zero negative balances.
+`-1`, `0`, and `1`. Eighteen required cells cover the expected input and expiry
+action in each reachable non-terminal phase at each deadline offset. Terminal
+expiry rejection is covered for both terminal phases. The run found zero
+divergence, zero conservation failures, and zero negative balances.
+
+The independent machine interprets the manifest's structured public phase,
+input, and value effects. It does not execute Compact witnesses or prove privacy;
+those remain separate compiler and review obligations.
 
 Compact compiler `0.34.100` emitted four ZKIR 3.0 circuits. The pinned ZKIR mock
 compiler accepted each circuit:
@@ -95,6 +101,11 @@ observation from `SRC-0019`, status S3, with high confidence. The compiler
 identified an undeclared indirect disclosure through branch-dependent ledger
 effects.
 
+The failing source and a machine-readable receipt now preserve the exact
+negative-control command, exit code 255, source digest, complete-diagnostic
+digest, and a bounded diagnostic excerpt. The passing and failing sources differ
+only at the decision disclosure wrapper.
+
 The corrected source uses `disclose(decision)`. The artifact manifest lists the
 decision as public. This correction is not cosmetic. A Moriarty visibility type
 must decide disclosure before lowering and must reject any backend-driven silent
@@ -103,3 +114,8 @@ change to that decision.
 The E00 run did not generate keys or proofs. It did not execute on a network or
 measure fees and proving latency. It did not prove the Core-to-Compact compiler,
 Compact compiler, ZKIR implementation, or proof system correct.
+
+The generated Compact remains an abstract template. The manifest specifies the
+constructor types and required encodings, but concrete Midnight addresses,
+authority hashes, and token colors are unbound. A deployment manifest and client
+verification remain required before a network experiment.

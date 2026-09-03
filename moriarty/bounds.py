@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from moriarty.core import Case, Choice, Close, Contract, Deposit, If, Pay, When
+from moriarty.core import Account, Case, Choice, Close, Contract, Deposit, If, Pay, When
 
 
 @dataclass(frozen=True)
@@ -34,33 +34,49 @@ def _maximum(paths: tuple[_Path, ...]) -> _Path:
     )
 
 
-def _path(contract: Contract, live_accounts: frozenset) -> _Path:
-    live_count = len(live_accounts)
+def _path(contract: Contract, balances: dict[Account, int]) -> _Path:
+    live_count = len(balances)
     if isinstance(contract, Close):
         return _Path(0, live_count, live_count, live_count)
     if isinstance(contract, Pay):
-        remaining = live_accounts - {contract.account}
-        continuation = _path(contract.continuation, remaining)
+        next_balances = dict(balances)
+        balance = next_balances.get(contract.account, 0)
+        paid = min(max(contract.amount.quantity, 0), balance)
+        if paid == balance:
+            next_balances.pop(contract.account, None)
+        elif paid:
+            next_balances[contract.account] = balance - paid
+        continuation = _path(contract.continuation, next_balances)
         return _Path(
             continuation.inputs,
             1 + continuation.reductions,
-            1 + continuation.payments,
+            int(paid > 0) + continuation.payments,
             max(live_count, continuation.max_live_accounts),
         )
     if isinstance(contract, If):
-        return _maximum(
+        branch = _maximum(
             (
-                _path(contract.then_contract, live_accounts),
-                _path(contract.else_contract, live_accounts),
+                _path(contract.then_contract, dict(balances)),
+                _path(contract.else_contract, dict(balances)),
             )
+        )
+        return _Path(
+            branch.inputs,
+            1 + branch.reductions,
+            branch.payments,
+            max(live_count, branch.max_live_accounts),
         )
     if isinstance(contract, When):
         paths: list[_Path] = []
         for candidate in contract.cases:
-            next_live = live_accounts
+            next_balances = dict(balances)
             if isinstance(candidate.action, Deposit):
-                next_live = live_accounts | {candidate.action.account}
-            child = _path(candidate.continuation, next_live)
+                amount = candidate.action.amount.quantity
+                if amount > 0:
+                    next_balances[candidate.action.account] = (
+                        next_balances.get(candidate.action.account, 0) + amount
+                    )
+            child = _path(candidate.continuation, next_balances)
             paths.append(
                 _Path(
                     1 + child.inputs,
@@ -69,7 +85,7 @@ def _path(contract: Contract, live_accounts: frozenset) -> _Path:
                     max(live_count, child.max_live_accounts),
                 )
             )
-        timeout = _path(contract.timeout_continuation, live_accounts)
+        timeout = _path(contract.timeout_continuation, dict(balances))
         paths.append(
             _Path(
                 timeout.inputs,
@@ -126,7 +142,7 @@ def _max_timeout(contract: Contract) -> int:
 
 
 def analyze_bounds(contract: Contract) -> Bounds:
-    path = _path(contract, frozenset())
+    path = _path(contract, {})
     return Bounds(
         max_inputs=path.inputs,
         max_reductions=path.reductions,

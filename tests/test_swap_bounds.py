@@ -1,13 +1,37 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import replace
+
+import pytest
 
 from moriarty.bounds import analyze_bounds
-from moriarty.core import ChoiceInput, DepositInput, State, compute_transaction
+from moriarty.core import (
+    Account,
+    ChoiceEquals,
+    ChoiceInput,
+    Close,
+    Constant,
+    Deposit,
+    DepositInput,
+    If,
+    Pay,
+    State,
+    When,
+    case,
+    compute_transaction,
+)
 from moriarty.swap import SwapParameters, canonical_swap
 
 
 PARAMETERS = SwapParameters.example()
+
+
+def test_parameters_fit_the_emitted_compact_integer_widths() -> None:
+    with pytest.raises(ValueError, match="Uint<128>"):
+        replace(PARAMETERS, amount_a=2**128)
+    with pytest.raises(ValueError, match="Uint<64>"):
+        replace(PARAMETERS, deadline=2**64)
 
 
 def apply_valid_prefix(length: int):
@@ -104,3 +128,51 @@ def test_static_bounds_cover_the_complete_swap_tree() -> None:
     assert bounds.max_live_accounts == 2
     assert bounds.max_timeout == PARAMETERS.deadline
     assert bounds.syntax_nodes == 22
+
+
+def test_bounds_count_if_reductions_and_accounts_retained_by_partial_payments() -> None:
+    partial_then_second_deposit = When(
+        cases=(
+            case(
+                Deposit(PARAMETERS.alice_account, PARAMETERS.alice, Constant(10)),
+                Pay(
+                    PARAMETERS.alice_account,
+                    PARAMETERS.bob,
+                    Constant(5),
+                    When(
+                        cases=(
+                            case(
+                                Deposit(
+                                    PARAMETERS.bob_account,
+                                    PARAMETERS.bob,
+                                    Constant(20),
+                                ),
+                                Close(),
+                            ),
+                        ),
+                        timeout=10,
+                        timeout_continuation=Close(),
+                    ),
+                ),
+            ),
+        ),
+        timeout=10,
+        timeout_continuation=Close(),
+    )
+    conditional = If(
+        ChoiceEquals("unused", 1),
+        Pay(
+            Account(PARAMETERS.alice, PARAMETERS.token_a),
+            PARAMETERS.bob,
+            Constant(1),
+            Close(),
+        ),
+        Close(),
+    )
+
+    partial_bounds = analyze_bounds(partial_then_second_deposit)
+    conditional_bounds = analyze_bounds(conditional)
+
+    assert partial_bounds.max_live_accounts == 2
+    assert partial_bounds.max_payments == 3
+    assert conditional_bounds.max_reductions == 2

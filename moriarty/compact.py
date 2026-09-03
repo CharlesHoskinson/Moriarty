@@ -53,6 +53,13 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def disclosure_negative_control(source: str) -> str:
+    disclosed = "if (disclose(decision) == 1)"
+    if source.count(disclosed) != 1:
+        raise ValueError("Compact source lacks one canonical decision disclosure")
+    return source.replace(disclosed, "if (decision == 1)")
+
+
 def _compact_source() -> str:
     return """// Generated from the canonical Moriarty Core E00 atomic swap.
 // This code is experimental and has not received an independent audit.
@@ -97,9 +104,11 @@ constructor(
   amountA = disclose(initialAmountA);
   amountB = disclose(initialAmountB);
   deadline = disclose(initialDeadline);
+  assert(alice != bob, "swap parties must be distinct");
   assert(amountA > 0, "token A amount must be positive");
   assert(amountB > 0, "token B amount must be positive");
   assert(tokenA != tokenB, "swap tokens must be distinct");
+  assert(deadline > 0, "swap deadline must be positive");
   phase = Phase.WaitingAlice;
 }
 
@@ -175,35 +184,171 @@ def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
         "deadline": parameters.deadline,
         "choice_id": parameters.choice_id,
     }
+    constructor_schema = [
+        {
+            "name": "initialAlice",
+            "compact_type": "UserAddress",
+            "core_parameter": "alice",
+            "abstract_value": parameters.alice.name,
+            "encoding": "midnight-js encodeUserAddress",
+        },
+        {
+            "name": "initialBob",
+            "compact_type": "UserAddress",
+            "core_parameter": "bob",
+            "abstract_value": parameters.bob.name,
+            "encoding": "midnight-js encodeUserAddress",
+        },
+        {
+            "name": "initialAliceAuthority",
+            "compact_type": "Bytes<32>",
+            "core_parameter": None,
+            "abstract_value": None,
+            "encoding": "persistentHash<PartySecret> output",
+        },
+        {
+            "name": "initialBobAuthority",
+            "compact_type": "Bytes<32>",
+            "core_parameter": None,
+            "abstract_value": None,
+            "encoding": "persistentHash<PartySecret> output",
+        },
+        {
+            "name": "initialTokenA",
+            "compact_type": "Bytes<32>",
+            "core_parameter": "token_a",
+            "abstract_value": asdict(parameters.token_a),
+            "encoding": "Midnight ledger token color",
+        },
+        {
+            "name": "initialTokenB",
+            "compact_type": "Bytes<32>",
+            "core_parameter": "token_b",
+            "abstract_value": asdict(parameters.token_b),
+            "encoding": "Midnight ledger token color",
+        },
+        {
+            "name": "initialAmountA",
+            "compact_type": "Uint<128>",
+            "core_parameter": "amount_a",
+            "abstract_value": parameters.amount_a,
+            "encoding": "unsigned integer",
+        },
+        {
+            "name": "initialAmountB",
+            "compact_type": "Uint<128>",
+            "core_parameter": "amount_b",
+            "abstract_value": parameters.amount_b,
+            "encoding": "unsigned integer",
+        },
+        {
+            "name": "initialDeadline",
+            "compact_type": "Uint<64>",
+            "core_parameter": "deadline",
+            "abstract_value": parameters.deadline,
+            "encoding": "Midnight block-time seconds",
+        },
+    ]
+    for parameter in constructor_schema:
+        parameter["binding"] = "required-in-deployment-manifest"
+    refund_effects = [
+        {
+            "kind": "pay_all",
+            "account": "alice",
+            "to": parameters.alice.name,
+            "token": asdict(parameters.token_a),
+        },
+        {
+            "kind": "pay_all",
+            "account": "bob",
+            "to": parameters.bob.name,
+            "token": asdict(parameters.token_b),
+        },
+    ]
+    settle_effects = [
+        {
+            "kind": "pay_all",
+            "account": "alice",
+            "to": parameters.bob.name,
+            "token": asdict(parameters.token_a),
+        },
+        {
+            "kind": "pay_all",
+            "account": "bob",
+            "to": parameters.alice.name,
+            "token": asdict(parameters.token_b),
+        },
+    ]
     entry_points = [
         {
             "name": "fundAlice",
             "from": "WaitingAlice",
             "to": "WaitingBob",
             "authorization": "aliceSecret",
-            "effects": ["receive token_a amount_a"],
+            "time_guard": "before-deadline",
+            "input": {
+                "kind": "deposit",
+                "party": parameters.alice.name,
+                "policy_id": parameters.token_a.policy_id,
+                "asset_name": parameters.token_a.asset_name,
+                "quantity": parameters.amount_a,
+            },
+            "effects": [
+                {
+                    "kind": "credit",
+                    "account": "alice",
+                    "quantity": parameters.amount_a,
+                }
+            ],
         },
         {
             "name": "fundBob",
             "from": "WaitingBob",
             "to": "WaitingDecision",
             "authorization": "bobSecret",
-            "effects": ["receive token_b amount_b"],
+            "time_guard": "before-deadline",
+            "input": {
+                "kind": "deposit",
+                "party": parameters.bob.name,
+                "policy_id": parameters.token_b.policy_id,
+                "asset_name": parameters.token_b.asset_name,
+                "quantity": parameters.amount_b,
+            },
+            "effects": [
+                {
+                    "kind": "credit",
+                    "account": "bob",
+                    "quantity": parameters.amount_b,
+                }
+            ],
         },
         {
             "name": "decide",
             "from": "WaitingDecision",
-            "to": ["Settled", "Refunded"],
+            "to": {"0": "Refunded", "1": "Settled"},
             "authorization": "bobSecret",
+            "time_guard": "before-deadline",
+            "input": {
+                "kind": "choice",
+                "party": parameters.bob.name,
+                "choice_id": parameters.choice_id,
+                "lower": 0,
+                "upper": 1,
+            },
             "choice": {"id": parameters.choice_id, "lower": 0, "upper": 1},
-            "effects": ["two atomic sends"],
+            "outcome_effects": {
+                "0": refund_effects,
+                "1": settle_effects,
+            },
         },
         {
             "name": "expire",
             "from": ["WaitingAlice", "WaitingBob", "WaitingDecision"],
             "to": "Refunded",
             "authorization": None,
-            "effects": ["refund held assets"],
+            "time_guard": "at-or-after-deadline",
+            "input": {"kind": "expire"},
+            "effects": refund_effects,
         },
     ]
     manifest: dict[str, Any] = {
@@ -213,6 +358,36 @@ def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
         "core_sha256": _sha256(_canonical_bytes(core_data)),
         "compact_sha256": _sha256(source.encode("utf-8")),
         "parameters": parameter_data,
+        "binding_status": "abstract-template",
+        "constructor_schema": constructor_schema,
+        "unbound_constructor_parameters": [
+            parameter["name"] for parameter in constructor_schema
+        ],
+        "phases": [
+            "WaitingAlice",
+            "WaitingBob",
+            "WaitingDecision",
+            "Settled",
+            "Refunded",
+        ],
+        "initial_phase": "WaitingAlice",
+        "terminal_phases": ["Settled", "Refunded"],
+        "backend_model_scope": {
+            "included": [
+                "acceptance",
+                "public phase",
+                "balances",
+                "choices",
+                "payments",
+                "transaction time",
+            ],
+            "excluded": [
+                "witness execution",
+                "privacy semantics",
+                "compiler correctness",
+                "proof-system soundness",
+            ],
+        },
         "bounds": asdict(bounds),
         "entry_points": entry_points,
         "witnesses": [

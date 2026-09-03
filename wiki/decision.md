@@ -3,7 +3,7 @@ id: moriarty.port.decision
 type: decision
 title: Marlowe-to-Moriarty port decision
 status: active
-updated_at: 2026-09-03T05:39:34Z
+updated_at: 2026-09-03T06:17:58Z
 sources:
   - SRC-0003
   - SRC-0004
@@ -91,6 +91,11 @@ E00 produced a finite Core, generated Compact, a client-checkable manifest, and
 a 1,000-trace certificate with zero divergence. Compact and the ZKIR mock
 compiler accepted the corrected artifacts. No unbounded collection, dynamic
 loop, recursion, or cross-contract call appears in generated Compact.
+
+This result is for an abstract constructor template. It does not bind a real
+Midnight address, authority digest, or token color. The 18 deadline-boundary
+cells, terminal-call regressions, artifact hash chain, and disclosure negative
+control strengthen the stop test without changing that limitation.
 
 The E00 result does not select a production language. Keep the Compact-library
 fallback active until at least the loan, option, mandate, and conditional-token

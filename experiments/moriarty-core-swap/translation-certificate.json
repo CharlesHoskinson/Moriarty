@@ -1,12 +1,12 @@
 {
-  "certificate_sha256": "4c78d59df3c1b4aa551d25b3d0c9abfcf4625e6a3eb5172b780b34e0ae7b1c47",
+  "certificate_sha256": "ffee14e27c106fad8dbb6fdd8fdc819655bdd156b9b64cddbc6cc553d1c9981e",
   "claims_not_established": [
     "Compact compiler correctness",
     "ZKIR correctness or proof soundness",
     "proof generation or network deployment",
     "fees, proving latency, or production security"
   ],
-  "compact_sha256": "7c3efcd184b48108fa09e307e5e8c44d6c088794e77e25d9cff344bc55bdaaec",
+  "compact_sha256": "1a564672475b020eafdb96aeb8326f01bcdc2144efec872d44c7020f6e535281",
   "core_sha256": "a72c4e0e108cfbbeb74f1da9e2ca544d32c457ca539c3dc9b5e20d83dd2a353b",
   "coverage": {
     "accepted_transitions": [
@@ -18,10 +18,58 @@
       "WaitingDecision:choice-1->Settled",
       "WaitingDecision:expire->Refunded"
     ],
+    "boundary_cells": [
+      "Refunded:expire:-1->time_before_state",
+      "Refunded:expire:0->contract_closed",
+      "Refunded:expire:0->time_before_state",
+      "Refunded:expire:1->contract_closed",
+      "Settled:expire:1->contract_closed",
+      "WaitingAlice:deposit:-1->accepted",
+      "WaitingAlice:deposit:0->contract_closed",
+      "WaitingAlice:deposit:1->contract_closed",
+      "WaitingAlice:expire:-1->input_required",
+      "WaitingAlice:expire:0->accepted",
+      "WaitingAlice:expire:1->accepted",
+      "WaitingBob:deposit:-1->accepted",
+      "WaitingBob:deposit:0->contract_closed",
+      "WaitingBob:deposit:1->contract_closed",
+      "WaitingBob:expire:-1->input_required",
+      "WaitingBob:expire:0->accepted",
+      "WaitingBob:expire:1->accepted",
+      "WaitingDecision:choice:-1->accepted",
+      "WaitingDecision:choice:0->contract_closed",
+      "WaitingDecision:choice:1->contract_closed",
+      "WaitingDecision:expire:-1->input_required",
+      "WaitingDecision:expire:0->accepted",
+      "WaitingDecision:expire:1->accepted"
+    ],
     "deadline_offsets": [
       -1,
       0,
       1
+    ],
+    "rejected_transitions": [
+      "Refunded:choice->time_before_state",
+      "Refunded:deposit->time_before_state",
+      "Refunded:expire->contract_closed",
+      "Refunded:expire->time_before_state",
+      "Settled:deposit->contract_closed",
+      "Settled:expire->contract_closed",
+      "WaitingAlice:choice->no_matching_input",
+      "WaitingAlice:deposit->contract_closed",
+      "WaitingAlice:deposit->no_matching_input",
+      "WaitingAlice:expire->input_required",
+      "WaitingBob:choice->no_matching_input",
+      "WaitingBob:deposit->contract_closed",
+      "WaitingBob:deposit->no_matching_input",
+      "WaitingBob:deposit->time_before_state",
+      "WaitingBob:expire->input_required",
+      "WaitingDecision:choice->choice_out_of_bounds",
+      "WaitingDecision:choice->contract_closed",
+      "WaitingDecision:choice->no_matching_input",
+      "WaitingDecision:deposit->no_matching_input",
+      "WaitingDecision:deposit->time_before_state",
+      "WaitingDecision:expire->input_required"
     ],
     "rejection_codes": [
       "choice_out_of_bounds",
@@ -38,7 +86,15 @@
   "divergence_count": 0,
   "first_divergence": null,
   "invariant_failure_count": 0,
-  "manifest_sha256": "970dbbbb72ff7876093f2250dac13deb043c5fd8717ee702930ee9591a4bbc76",
+  "manifest_sha256": "8d20e78834ddddc7fdaa0fd27c4c4ecb7bf75f7729b8f0eae77513a50a314fd1",
+  "producer_source_sha256": {
+    "moriarty/backend.py": "517efe09ac8c6954378fcdb747750088af646d298f0713eb088c5325c8bbf358",
+    "moriarty/bounds.py": "09c552777ec91880407b409303f0ea5fa3f19bcc2afbc273a433f5fc6bb9091f",
+    "moriarty/certificate.py": "7cbb13632d612b11723aa9ba0d75e86cda2ce18be3d441c7ad392971c311b8be",
+    "moriarty/compact.py": "5ab287eaae67dc2dbf177c291b333d242cdff9619c09cf9602d98f9096e9dc2b",
+    "moriarty/core.py": "564a926779beb54bd16ff58481f5c950bae6fb50fcd5b0d7c9eb56427f83273b",
+    "moriarty/swap.py": "b64419e260c63ef5fb265a8df3cddfb46c5f9e13598e2afe41876b43bfe03244"
+  },
   "required_coverage": {
     "accepted_transitions": [
       "WaitingAlice:deposit->WaitingBob",
@@ -49,10 +105,34 @@
       "WaitingDecision:choice-1->Settled",
       "WaitingDecision:expire->Refunded"
     ],
+    "boundary_cells": [
+      "WaitingAlice:deposit:-1->accepted",
+      "WaitingAlice:deposit:0->contract_closed",
+      "WaitingAlice:deposit:1->contract_closed",
+      "WaitingAlice:expire:-1->input_required",
+      "WaitingAlice:expire:0->accepted",
+      "WaitingAlice:expire:1->accepted",
+      "WaitingBob:deposit:-1->accepted",
+      "WaitingBob:deposit:0->contract_closed",
+      "WaitingBob:deposit:1->contract_closed",
+      "WaitingBob:expire:-1->input_required",
+      "WaitingBob:expire:0->accepted",
+      "WaitingBob:expire:1->accepted",
+      "WaitingDecision:choice:-1->accepted",
+      "WaitingDecision:choice:0->contract_closed",
+      "WaitingDecision:choice:1->contract_closed",
+      "WaitingDecision:expire:-1->input_required",
+      "WaitingDecision:expire:0->accepted",
+      "WaitingDecision:expire:1->accepted"
+    ],
     "deadline_offsets": [
       -1,
       0,
       1
+    ],
+    "rejected_transitions": [
+      "Refunded:expire->contract_closed",
+      "Settled:expire->contract_closed"
     ],
     "rejection_codes": [
       "choice_out_of_bounds",
@@ -71,7 +151,7 @@
   "status": "S3-translation-validation-evidence",
   "stop_test_passed": true,
   "trace_algorithm": "seeded-boundary-prefix-plus-lexicographic-product-v1",
-  "trace_corpus_sha256": "6f16e7bd10d8415644b20a13d65d787dad322a9ba28b58f66ac6c619da3b0679",
+  "trace_corpus_sha256": "6ed158575067b3be9706728d056c0ddb6ef48d4081a1d32b7054f21e84dd4f07",
   "trace_count": 1000,
   "unique_trace_count": 1000
 }

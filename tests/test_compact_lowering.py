@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import replace
 
 import pytest
 
 from moriarty.backend import BackendInput, BackendMachine, BackendState
-from moriarty.compact import lower_swap
+from moriarty.compact import disclosure_negative_control, lower_swap
 from moriarty.swap import SwapParameters, canonical_swap
 
 
@@ -40,6 +41,16 @@ def test_generated_compact_has_no_unbounded_or_cross_contract_feature() -> None:
     assert "decision: Uint<0..2>" in source
     assert "if (disclose(decision) == 1)" in source
     assert "export enum Phase" in source
+
+
+def test_disclosure_negative_control_removes_only_the_public_wrapper() -> None:
+    source = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).compact_source
+
+    negative = disclosure_negative_control(source)
+
+    assert "if (decision == 1)" in negative
+    assert "if (disclose(decision) == 1)" not in negative
+    assert negative.count("disclose(") == source.count("disclose(") - 1
 
 
 def test_every_witness_constraint_precedes_its_first_effect() -> None:
@@ -100,6 +111,32 @@ def test_manifest_names_effects_disclosures_witnesses_and_bounds() -> None:
         "deadline",
         "decision",
     ]
+    assert manifest["binding_status"] == "abstract-template"
+    assert "privacy semantics" in manifest["backend_model_scope"]["excluded"]
+    assert manifest["unbound_constructor_parameters"] == [
+        "initialAlice",
+        "initialBob",
+        "initialAliceAuthority",
+        "initialBobAuthority",
+        "initialTokenA",
+        "initialTokenB",
+        "initialAmountA",
+        "initialAmountB",
+        "initialDeadline",
+    ]
+    constructor_schema = {
+        entry["name"]: entry for entry in manifest["constructor_schema"]
+    }
+    assert constructor_schema["initialAlice"]["compact_type"] == "UserAddress"
+    assert constructor_schema["initialAlice"]["encoding"] == (
+        "midnight-js encodeUserAddress"
+    )
+    assert constructor_schema["initialTokenA"]["compact_type"] == "Bytes<32>"
+    assert constructor_schema["initialTokenA"]["encoding"] == (
+        "Midnight ledger token color"
+    )
+    assert constructor_schema["initialAmountA"]["compact_type"] == "Uint<128>"
+    assert constructor_schema["initialDeadline"]["compact_type"] == "Uint<64>"
     assert len(manifest["compact_sha256"]) == 64
 
 
@@ -148,3 +185,36 @@ def test_manifest_machine_executes_success_and_deadline_refund() -> None:
         (PARAMETERS.bob.name, PARAMETERS.token_a.policy_id, PARAMETERS.token_a.asset_name, PARAMETERS.amount_a),
         (PARAMETERS.alice.name, PARAMETERS.token_b.policy_id, PARAMETERS.token_b.asset_name, PARAMETERS.amount_b),
     )
+
+
+def test_manifest_machine_rejects_a_missing_or_corrupted_transition_table() -> None:
+    manifest = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).manifest
+    missing = deepcopy(manifest)
+    missing["entry_points"] = []
+    corrupted = deepcopy(manifest)
+    corrupted["entry_points"][0]["to"] = "UnknownPhase"
+
+    with pytest.raises(ValueError, match="four transition entries"):
+        BackendMachine(missing)
+    with pytest.raises(ValueError, match="unknown target phase"):
+        BackendMachine(corrupted)
+
+
+def test_manifest_machine_interprets_structured_effects() -> None:
+    manifest = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).manifest
+    altered = deepcopy(manifest)
+    altered["entry_points"][0]["effects"] = []
+    machine = BackendMachine(altered)
+    deposit = BackendInput.deposit(
+        PARAMETERS.alice.name,
+        PARAMETERS.token_a.policy_id,
+        PARAMETERS.token_a.asset_name,
+        PARAMETERS.amount_a,
+        now=5,
+    )
+
+    result = machine.apply(BackendState(), deposit)
+
+    assert result.accepted
+    assert result.state.phase == "WaitingBob"
+    assert result.state.alice_balance == 0

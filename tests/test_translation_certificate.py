@@ -52,7 +52,21 @@ def test_certificate_has_zero_divergence_and_complete_stop_test_coverage() -> No
     }
     assert certificate["coverage"]["terminal_phases"] == ["Refunded", "Settled"]
     assert certificate["coverage"]["deadline_offsets"] == [-1, 0, 1]
-    assert certificate["required_coverage"] == certificate["coverage"]
+    assert {
+        "Refunded:expire->contract_closed",
+        "Settled:expire->contract_closed",
+    } <= set(certificate["coverage"]["rejected_transitions"])
+    assert len(certificate["required_coverage"]["boundary_cells"]) == 18
+    assert set(certificate["producer_source_sha256"]) == {
+        "moriarty/backend.py",
+        "moriarty/bounds.py",
+        "moriarty/certificate.py",
+        "moriarty/compact.py",
+        "moriarty/core.py",
+        "moriarty/swap.py",
+    }
+    for key, required in certificate["required_coverage"].items():
+        assert set(required) <= set(certificate["coverage"][key])
     assert len(certificate["certificate_sha256"]) == 64
 
 

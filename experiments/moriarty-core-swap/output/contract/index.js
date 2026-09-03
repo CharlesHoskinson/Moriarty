@@ -120,7 +120,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
           __compactRuntime.typeError('fundAlice',
                                      'argument 1 (as invoked from Typescript)',
-                                     'swap.compact line 58 char 1',
+                                     'swap.compact line 60 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -144,7 +144,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
           __compactRuntime.typeError('fundBob',
                                      'argument 1 (as invoked from Typescript)',
-                                     'swap.compact line 66 char 1',
+                                     'swap.compact line 68 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -169,14 +169,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
           __compactRuntime.typeError('decide',
                                      'argument 1 (as invoked from Typescript)',
-                                     'swap.compact line 74 char 1',
+                                     'swap.compact line 76 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(typeof(decision_0) === 'bigint' && decision_0 >= 0n && decision_0 <= 1n)) {
           __compactRuntime.typeError('decide',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'swap.compact line 74 char 1',
+                                     'swap.compact line 76 char 1',
                                      'Uint<0..2>',
                                      decision_0)
         }
@@ -205,7 +205,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.callContext.currentQueryContext != undefined)) {
           __compactRuntime.typeError('expire',
                                      'argument 1 (as invoked from Typescript)',
-                                     'swap.compact line 89 char 1',
+                                     'swap.compact line 91 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -538,6 +538,31 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_4.toValue(initialDeadline_0),
                                                                                               alignment: _descriptor_4.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
+    __compactRuntime.assert(!this._equal_0(_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                                     partialProofData,
+                                                                                                     [
+                                                                                                      { dup: { n: 0 } },
+                                                                                                      { idx: { cached: false,
+                                                                                                               pushPath: false,
+                                                                                                               path: [
+                                                                                                                      { tag: 'value',
+                                                                                                                        value: { value: _descriptor_10.toValue(0n),
+                                                                                                                                 alignment: _descriptor_10.alignment() } }] } },
+                                                                                                      { popeq: { cached: false,
+                                                                                                                 result: undefined } }]).value),
+                                           _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                                     partialProofData,
+                                                                                                     [
+                                                                                                      { dup: { n: 0 } },
+                                                                                                      { idx: { cached: false,
+                                                                                                               pushPath: false,
+                                                                                                               path: [
+                                                                                                                      { tag: 'value',
+                                                                                                                        value: { value: _descriptor_10.toValue(1n),
+                                                                                                                                 alignment: _descriptor_10.alignment() } }] } },
+                                                                                                      { popeq: { cached: false,
+                                                                                                                 result: undefined } }]).value)),
+                            'swap parties must be distinct');
     let t_0;
     __compactRuntime.assert((t_0 = _descriptor_2.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                              partialProofData,
@@ -568,7 +593,7 @@ export class Contract {
                                                                                                          result: undefined } }]).value),
                              t_1 > 0n),
                             'token B amount must be positive');
-    __compactRuntime.assert(!this._equal_0(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+    __compactRuntime.assert(!this._equal_1(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                                      partialProofData,
                                                                                                      [
                                                                                                       { dup: { n: 0 } },
@@ -593,6 +618,21 @@ export class Contract {
                                                                                                       { popeq: { cached: false,
                                                                                                                  result: undefined } }]).value)),
                             'swap tokens must be distinct');
+    let t_2;
+    __compactRuntime.assert((t_2 = _descriptor_4.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                             partialProofData,
+                                                                                             [
+                                                                                              { dup: { n: 0 } },
+                                                                                              { idx: { cached: false,
+                                                                                                       pushPath: false,
+                                                                                                       path: [
+                                                                                                              { tag: 'value',
+                                                                                                                value: { value: _descriptor_10.toValue(8n),
+                                                                                                                         alignment: _descriptor_10.alignment() } }] } },
+                                                                                              { popeq: { cached: false,
+                                                                                                         result: undefined } }]).value),
+                             t_2 > 0n),
+                            'swap deadline must be positive');
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
                                       [
@@ -711,7 +751,7 @@ export class Contract {
                                        { swap: { n: 0 } }]);
     if (recipient_0.is_left
         &&
-        this._equal_1(recipient_0.left.bytes,
+        this._equal_2(recipient_0.left.bytes,
                       _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                 partialProofData,
                                                                                 [
@@ -868,7 +908,7 @@ export class Contract {
                                                                                                                    { popeq: { cached: false,
                                                                                                                               result: undefined } }]).value)),
                             'swap deadline has passed');
-    __compactRuntime.assert(this._equal_2(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+    __compactRuntime.assert(this._equal_3(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                                     partialProofData,
                                                                                                     [
                                                                                                      { dup: { n: 0 } },
@@ -952,7 +992,7 @@ export class Contract {
                                                                                                                    { popeq: { cached: false,
                                                                                                                               result: undefined } }]).value)),
                             'swap deadline has passed');
-    __compactRuntime.assert(this._equal_3(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+    __compactRuntime.assert(this._equal_4(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                                     partialProofData,
                                                                                                     [
                                                                                                      { dup: { n: 0 } },
@@ -1036,7 +1076,7 @@ export class Contract {
                                                                                                                    { popeq: { cached: false,
                                                                                                                               result: undefined } }]).value)),
                             'swap deadline has passed');
-    __compactRuntime.assert(this._equal_4(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
+    __compactRuntime.assert(this._equal_5(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                                     partialProofData,
                                                                                                     [
                                                                                                      { dup: { n: 0 } },
@@ -1433,7 +1473,11 @@ export class Contract {
     return [];
   }
   _equal_0(x0, y0) {
-    if (!x0.every((x, i) => y0[i] === x)) { return false; }
+    {
+      let x1 = x0.bytes;
+      let y1 = y0.bytes;
+      if (!x1.every((x, i) => y1[i] === x)) { return false; }
+    }
     return true;
   }
   _equal_1(x0, y0) {
@@ -1449,6 +1493,10 @@ export class Contract {
     return true;
   }
   _equal_4(x0, y0) {
+    if (!x0.every((x, i) => y0[i] === x)) { return false; }
+    return true;
+  }
+  _equal_5(x0, y0) {
     if (!x0.every((x, i) => y0[i] === x)) { return false; }
     return true;
   }

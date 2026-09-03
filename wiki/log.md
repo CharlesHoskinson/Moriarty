@@ -5,10 +5,13 @@
 Implemented the finite E00 Core subset and canonical two-token swap. Generated
 fixed-state Compact, an artifact manifest, and an independent transition
 machine. One thousand unique traces produced zero divergence and zero invariant
-failures. The first Compact compile reproduced an undeclared-disclosure footgun
-for the decision argument. The corrected source lists and applies the public
-disclosure explicitly. Compact emitted four ZKIR 3.0 circuits, and the pinned
-mock compiler accepted all four. Real key and proof generation remain open.
+failures across 18 required deadline-boundary cells and both terminal-expiry
+rejections. The first Compact compile reproduced an undeclared-disclosure
+footgun for the decision argument. The corrected source lists and applies the
+public disclosure explicitly; the failing source and diagnostic digest are now
+preserved. Compact emitted four ZKIR 3.0 circuits, and the pinned mock compiler
+accepted all four. Constructor values, real keys, and proof generation remain
+open.
 
 ## [2026-09-03] decision | DeFi Kernel prompt, council, and graph
 

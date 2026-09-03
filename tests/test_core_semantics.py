@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from moriarty.core import (
     Account,
     Choice,
@@ -24,6 +26,15 @@ ALICE = Party("alice")
 BOB = Party("bob")
 TOKEN_A = Token("aa", "A")
 TOKEN_B = Token("bb", "B")
+
+
+def test_state_rejects_duplicate_account_and_choice_keys() -> None:
+    account = Account(ALICE, TOKEN_A)
+
+    with pytest.raises(ValueError, match="account keys must be unique"):
+        State(accounts=((account, 5), (account, 10)))
+    with pytest.raises(ValueError, match="choice keys must be unique"):
+        State(choices=(("settle", 0), ("settle", 1)))
 
 
 def test_deposit_must_match_party_account_token_and_quantity() -> None:
@@ -163,6 +174,16 @@ def test_close_refunds_accounts_in_deterministic_order() -> None:
     ]
     assert result.state.accounts == ()
     assert result.reductions == 2
+
+
+def test_empty_closed_contract_rejects_a_useless_transaction() -> None:
+    state = State(min_time=4)
+
+    result = compute_transaction(Close(), state, None, now=5)
+
+    assert not result.accepted
+    assert result.error == "contract_closed"
+    assert result.state == state
 
 
 def test_partial_payment_is_typed_and_conserves_the_account() -> None:

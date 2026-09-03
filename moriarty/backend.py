@@ -64,29 +64,161 @@ class BackendResult:
 
 class BackendMachine:
     def __init__(self, manifest: dict[str, Any]) -> None:
-        parameters = manifest["parameters"]
-        self.alice = str(parameters["alice"])
-        self.bob = str(parameters["bob"])
-        self.token_a = (
-            str(parameters["token_a"]["policy_id"]),
-            str(parameters["token_a"]["asset_name"]),
-        )
-        self.token_b = (
-            str(parameters["token_b"]["policy_id"]),
-            str(parameters["token_b"]["asset_name"]),
-        )
-        self.amount_a = int(parameters["amount_a"])
-        self.amount_b = int(parameters["amount_b"])
-        self.deadline = int(parameters["deadline"])
-        self.choice_id = str(parameters["choice_id"])
+        phases = manifest.get("phases")
+        if not isinstance(phases, list) or not all(
+            isinstance(phase, str) for phase in phases
+        ):
+            raise ValueError("manifest must define string phases")
+        self.phases = frozenset(phases)
+        if manifest.get("initial_phase") != "WaitingAlice":
+            raise ValueError("manifest initial phase must be WaitingAlice")
+        terminal_phases = manifest.get("terminal_phases")
+        if not isinstance(terminal_phases, list):
+            raise ValueError("manifest must define terminal phases")
+        self.terminal_phases = frozenset(str(phase) for phase in terminal_phases)
 
-    def _refunds(self, state: BackendState) -> tuple[Payment, ...]:
+        entries = manifest.get("entry_points")
+        if not isinstance(entries, list) or len(entries) != 4:
+            raise ValueError("manifest must define four transition entries")
+        self.transitions = {
+            str(entry.get("name")): entry
+            for entry in entries
+            if isinstance(entry, dict)
+        }
+        if set(self.transitions) != {"fundAlice", "fundBob", "decide", "expire"}:
+            raise ValueError("manifest must define the four canonical transitions")
+        for transition in self.transitions.values():
+            sources = transition.get("from")
+            source_phases = [sources] if isinstance(sources, str) else sources
+            if not isinstance(source_phases, list) or not set(source_phases) <= self.phases:
+                raise ValueError("manifest transition contains an unknown source phase")
+            targets = transition.get("to")
+            target_phases = list(targets.values()) if isinstance(targets, dict) else [targets]
+            if not all(target in self.phases for target in target_phases):
+                raise ValueError("manifest transition contains an unknown target phase")
+            expected_input = transition.get("input")
+            if not isinstance(expected_input, dict) or expected_input.get("kind") not in {
+                "choice",
+                "deposit",
+                "expire",
+            }:
+                raise ValueError("manifest transition must define a supported input")
+            if expected_input["kind"] == "choice":
+                outcome_effects = transition.get("outcome_effects")
+                if not isinstance(outcome_effects, dict):
+                    raise ValueError("choice transition must define outcome effects")
+                for effects in outcome_effects.values():
+                    self._validate_effects(effects)
+            else:
+                self._validate_effects(transition.get("effects"))
+
+        parameters = manifest["parameters"]
+        self.deadline = int(parameters["deadline"])
+
+    @staticmethod
+    def _validate_effects(effects: object) -> None:
+        if not isinstance(effects, list):
+            raise ValueError("manifest transition effects must be a list")
+        for effect in effects:
+            if not isinstance(effect, dict) or effect.get("kind") not in {
+                "credit",
+                "pay_all",
+            }:
+                raise ValueError("manifest transition contains an unsupported effect")
+            if effect.get("account") not in {"alice", "bob"}:
+                raise ValueError("manifest effect contains an unknown account")
+
+    def _target(self, transition_name: str, outcome: int | None = None) -> str:
+        target = self.transitions[transition_name]["to"]
+        if isinstance(target, dict):
+            if outcome is None or str(outcome) not in target:
+                raise ValueError("manifest transition does not define the outcome")
+            return str(target[str(outcome)])
+        return str(target)
+
+    def _transition(self, phase: str, input_kind: str) -> dict[str, Any] | None:
+        matches = []
+        for transition in self.transitions.values():
+            sources = transition["from"]
+            source_phases = [sources] if isinstance(sources, str) else sources
+            if phase in source_phases and transition["input"]["kind"] == input_kind:
+                matches.append(transition)
+        if len(matches) > 1:
+            raise ValueError("manifest has ambiguous transitions")
+        return matches[0] if matches else None
+
+    @staticmethod
+    def _matches_input(expected: dict[str, Any], supplied: BackendInput) -> bool:
+        if expected["kind"] != supplied.kind:
+            return False
+        if supplied.kind == "deposit":
+            return (
+                supplied.party == expected.get("party")
+                and supplied.policy_id == expected.get("policy_id")
+                and supplied.asset_name == expected.get("asset_name")
+                and supplied.quantity == expected.get("quantity")
+                and int(expected.get("quantity", 0)) > 0
+            )
+        if supplied.kind == "choice":
+            return (
+                supplied.party == expected.get("party")
+                and supplied.choice_id == expected.get("choice_id")
+            )
+        return supplied.kind == "expire"
+
+    @staticmethod
+    def _apply_effects(
+        state: BackendState,
+        effects: list[dict[str, Any]],
+    ) -> tuple[dict[str, int], tuple[Payment, ...]]:
+        balances = {
+            "alice": state.alice_balance,
+            "bob": state.bob_balance,
+        }
         payments: list[Payment] = []
-        if state.alice_balance:
-            payments.append((self.alice, *self.token_a, state.alice_balance))
-        if state.bob_balance:
-            payments.append((self.bob, *self.token_b, state.bob_balance))
-        return tuple(payments)
+        for effect in effects:
+            account = str(effect["account"])
+            if effect["kind"] == "credit":
+                balances[account] += int(effect["quantity"])
+                continue
+            quantity = balances[account]
+            if quantity:
+                token = effect["token"]
+                payments.append(
+                    (
+                        str(effect["to"]),
+                        str(token["policy_id"]),
+                        str(token["asset_name"]),
+                        quantity,
+                    )
+                )
+                balances[account] = 0
+        return balances, tuple(payments)
+
+    def _apply_transition(
+        self,
+        transition: dict[str, Any],
+        state: BackendState,
+        *,
+        current_time: int,
+        choice: int | None = None,
+    ) -> BackendResult:
+        if choice is None:
+            effects = transition["effects"]
+        else:
+            effects = transition["outcome_effects"][str(choice)]
+        balances, payments = self._apply_effects(state, effects)
+        return BackendResult(
+            True,
+            BackendState(
+                self._target(str(transition["name"]), choice),
+                balances["alice"],
+                balances["bob"],
+                state.choice if choice is None else choice,
+                current_time,
+            ),
+            payments=payments,
+        )
 
     def apply(
         self,
@@ -101,101 +233,37 @@ class BackendMachine:
         if current_time < state.min_time:
             return BackendResult(False, state, error="time_before_state")
 
-        terminal = state.phase in {"Settled", "Refunded"}
+        terminal = state.phase in self.terminal_phases
         if terminal:
-            if supplied is not None:
-                return BackendResult(False, state, error="contract_closed")
-            return BackendResult(
-                True,
-                BackendState(
-                    state.phase,
-                    state.alice_balance,
-                    state.bob_balance,
-                    state.choice,
-                    current_time,
-                ),
-            )
+            return BackendResult(False, state, error="contract_closed")
 
         if current_time >= self.deadline:
             if supplied is not None:
                 return BackendResult(False, state, error="contract_closed")
-            return BackendResult(
-                True,
-                BackendState("Refunded", choice=state.choice, min_time=current_time),
-                payments=self._refunds(state),
+            transition = self._transition(state.phase, "expire")
+            if transition is None:
+                return BackendResult(False, state, error="contract_closed")
+            return self._apply_transition(
+                transition,
+                state,
+                current_time=current_time,
             )
 
         if supplied is None:
             return BackendResult(False, state, error="input_required")
 
-        if state.phase == "WaitingAlice":
-            if not self._matches_deposit(
-                supplied,
-                self.alice,
-                self.token_a,
-                self.amount_a,
-            ):
-                return BackendResult(False, state, error="no_matching_input")
-            return BackendResult(
-                True,
-                BackendState("WaitingBob", self.amount_a, min_time=current_time),
-            )
-
-        if state.phase == "WaitingBob":
-            if not self._matches_deposit(
-                supplied,
-                self.bob,
-                self.token_b,
-                self.amount_b,
-            ):
-                return BackendResult(False, state, error="no_matching_input")
-            return BackendResult(
-                True,
-                BackendState(
-                    "WaitingDecision",
-                    state.alice_balance,
-                    self.amount_b,
-                    min_time=current_time,
-                ),
-            )
-
-        if state.phase == "WaitingDecision":
-            if (
-                supplied.kind != "choice"
-                or supplied.party != self.bob
-                or supplied.choice_id != self.choice_id
-            ):
-                return BackendResult(False, state, error="no_matching_input")
-            if supplied.chosen not in {0, 1}:
+        transition = self._transition(state.phase, supplied.kind)
+        if transition is None or not self._matches_input(transition["input"], supplied):
+            return BackendResult(False, state, error="no_matching_input")
+        choice = supplied.chosen if supplied.kind == "choice" else None
+        if choice is not None:
+            lower = int(transition["input"]["lower"])
+            upper = int(transition["input"]["upper"])
+            if not lower <= choice <= upper:
                 return BackendResult(False, state, error="choice_out_of_bounds")
-            if supplied.chosen == 1:
-                payments = (
-                    (self.bob, *self.token_a, state.alice_balance),
-                    (self.alice, *self.token_b, state.bob_balance),
-                )
-                phase = "Settled"
-            else:
-                payments = self._refunds(state)
-                phase = "Refunded"
-            return BackendResult(
-                True,
-                BackendState(phase, choice=supplied.chosen, min_time=current_time),
-                payments=payments,
-            )
-
-        raise ValueError(f"unknown backend phase: {state.phase}")
-
-    @staticmethod
-    def _matches_deposit(
-        supplied: BackendInput,
-        party: str,
-        token: tuple[str, str],
-        quantity: int,
-    ) -> bool:
-        return (
-            supplied.kind == "deposit"
-            and supplied.party == party
-            and (supplied.policy_id, supplied.asset_name) == token
-            and supplied.quantity == quantity
-            and quantity > 0
+        return self._apply_transition(
+            transition,
+            state,
+            current_time=current_time,
+            choice=choice,
         )

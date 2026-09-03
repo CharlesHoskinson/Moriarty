@@ -22,16 +22,20 @@ from graphify.export import to_json
 from moriarty.evidence import validate_e00_evidence
 
 
-GRAPH_ROOT = ROOT / "graphs" / "moriarty-decision-corpus"
-SEMANTIC = GRAPH_ROOT / ".graphify_semantic.json"
-DETECT = GRAPH_ROOT / ".graphify_detect.json"
-OUTPUT = GRAPH_ROOT / "graphify-out"
+SEMANTIC = ROOT / "evidence/moriarty-decision-semantic-2026-09-03.json"
+DETECT = ROOT / "evidence/moriarty-decision-detection-2026-09-03.json"
+GRAPH_PATH = ROOT / "evidence/moriarty-decision-graph-data-2026-09-03.json"
 E00_CERTIFICATE = ROOT / "experiments" / "moriarty-core-swap" / "translation-certificate.json"
 E00_TOOLCHAIN = ROOT / "experiments" / "moriarty-core-swap" / "toolchain-results.json"
 
 
 def identifier(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+
+
+def source_path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else ROOT / path
 
 
 def add_extracted_edge(graph, source: str, target: str, relation: str, evidence: str) -> None:
@@ -51,7 +55,11 @@ def add_extracted_edge(graph, source: str, target: str, relation: str, evidence:
 def add_e00_evidence(graph, root_id: str) -> None:
     certificate = json.loads(E00_CERTIFICATE.read_text(encoding="utf-8"))
     toolchain = json.loads(E00_TOOLCHAIN.read_text(encoding="utf-8"))
-    validate_e00_evidence(certificate, toolchain)
+    validate_e00_evidence(
+        certificate,
+        toolchain,
+        artifact_directory=E00_CERTIFICATE.parent,
+    )
 
     certificate_source = str(E00_CERTIFICATE.relative_to(ROOT))
     toolchain_source = str(E00_TOOLCHAIN.relative_to(ROOT))
@@ -164,12 +172,12 @@ def main() -> None:
     extraction = json.loads(SEMANTIC.read_text(encoding="utf-8"))
     detection = json.loads(DETECT.read_text(encoding="utf-8"))
     expected_files = {
-        str(Path(filename).resolve())
+        str(source_path(filename).resolve())
         for kind in ("document", "paper")
         for filename in detection.get("files", {}).get(kind, [])
     }
     extracted_files = {
-        str(Path(str(node["source_file"])).resolve())
+        str(source_path(str(node["source_file"])).resolve())
         for node in extraction.get("nodes", [])
     }
     if expected_files != extracted_files:
@@ -194,7 +202,7 @@ def main() -> None:
         root_id,
         label="Moriarty Decision and Research Corpus",
         file_type="concept",
-        source_file="graphs/moriarty-decision-corpus/.graphify_detect.json",
+        source_file=str(DETECT.relative_to(ROOT)),
         semantic_status="curated corpus root",
     )
     for filename in sorted(expected_files):
@@ -213,7 +221,7 @@ def main() -> None:
             relation="indexes_source",
             confidence="EXTRACTED",
             confidence_score=1.0,
-            source_file="graphs/moriarty-decision-corpus/.graphify_detect.json",
+            source_file=str(DETECT.relative_to(ROOT)),
             weight=1.0,
             _src=root_id,
             _tgt=source_id,
@@ -221,7 +229,8 @@ def main() -> None:
         matching = sorted(
             str(node)
             for node, attrs in graph.nodes(data=True)
-            if str(Path(str(attrs.get("source_file", ""))).resolve()) == filename
+            if str(source_path(str(attrs.get("source_file", ""))).resolve())
+            == filename
             and str(node) != source_id
         )
         if matching:
@@ -242,13 +251,11 @@ def main() -> None:
 
     communities = cluster(graph)
     labels = label_communities_by_hub(graph, communities)
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    graph_path = OUTPUT / "graph.json"
     source_hash = hashlib.sha256(SEMANTIC.read_bytes()).hexdigest()
     to_json(
         graph,
         communities,
-        str(graph_path),
+        str(GRAPH_PATH),
         force=True,
         built_at_commit=f"semantic-sha256:{source_hash}",
         community_labels=labels,
@@ -267,8 +274,9 @@ def main() -> None:
             "communities": len(communities),
             "missing_endpoint_edges": len(missing_edges),
         },
-        "graph": str(graph_path.relative_to(ROOT)),
+        "graph": str(GRAPH_PATH.relative_to(ROOT)),
         "semantic": str(SEMANTIC.relative_to(ROOT)),
+        "detection": str(DETECT.relative_to(ROOT)),
         "qualification": (
             "Semantic relations were extracted by an agy worker under the Graphify "
             "schema. INFERRED and AMBIGUOUS edges are hypotheses, not authority."
