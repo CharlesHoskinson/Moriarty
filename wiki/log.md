@@ -1,5 +1,13 @@
 # Wiki log
 
+## [2026-09-03] decision | Evidence-gated sprints and complete SDK scope
+
+Superseded calendar-based progress with evidence-gated sprints. Added the
+research journal and an iteration-scoped semantic ledger. Classified E00 as a
+narrow Compact DSL feasibility result rather than general language evidence.
+Expanded the SDK boundary to the complete authoring, compiler, analysis,
+packaging, verification, wallet, chain, and operations development system.
+
 ## [2026-09-03] experiment | Moriarty Core atomic-swap stop test
 
 Implemented the finite E00 Core subset and canonical two-token swap. Generated

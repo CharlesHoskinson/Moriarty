@@ -28,7 +28,9 @@ will grow by merging evidence into durable topic pages.
 - [Security boundaries](security.md) — threat and audit partition.
 - [Port decision](decision.md) — scorecard and go/no-go recommendation.
 - [Research program](research-program.md) — agentic-council synthesis, XML
-  prompt, 90-day sprint, backend stop test, and incremental decision graph.
+  prompt, evidence-gated sprints, backend stop test, and incremental decision graph.
+- [Research journal](research-journal.md) — iteration decisions, semantic scope,
+  evidence state, and next falsification test.
 
 ## Workstream pages
 

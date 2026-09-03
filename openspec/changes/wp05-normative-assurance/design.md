@@ -1,0 +1,35 @@
+# Design: WP05 normative assurance
+
+## Context
+
+Marlowe has Isabelle, Agda, Haskell, Plutus, and TypeScript semantics with
+uneven correspondence. Moriarty must choose authority before expanding Core.
+
+## Inputs
+
+- WP03 theorem and implementation delta.
+- WP04 accepted candidate semantics.
+- Available maintainers, toolchains, extraction paths, and CI constraints.
+
+## Outputs
+
+- A scored strategy comparison with uncertainty.
+- Executable prototypes for two or three high-risk obligations.
+- A normative artifact and derived-artifact policy.
+- A proof, conformance, ownership, and release roadmap.
+
+## Decisions
+
+The selected strategy must support executable semantics, maintainable proofs,
+and backend correspondence. Independent implementations may remain only with a
+defined conformance role.
+
+## Failure Handling
+
+If no strategy has credible maintainers and integration, select audited Compact
+libraries. Do not create a new prover formalization for prestige.
+
+## Verification
+
+Build and run each prototype in a pinned environment. Record axioms, admitted
+lemmas, extraction gaps, build time, artifact hashes, and maintainer evidence.

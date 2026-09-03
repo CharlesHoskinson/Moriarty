@@ -3,7 +3,7 @@ id: moriarty.research.program
 type: decision
 title: Moriarty DeFi Kernel research program
 status: active
-updated_at: 2026-09-03T01:48:25Z
+updated_at: 2026-09-03T07:23:21Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -16,7 +16,8 @@ sources:
 
 ## Current decision
 
-Run a gated 90-day feasibility phase. Treat F1-F6/P as a falsifiable human
+Run a sequence of evidence-gated feasibility sprints. Do not count calendar
+time as progress. Treat F1-F6/P as a falsifiable human
 taxonomy, not language syntax. Use M5 formal behaviors inside the specification
 and assurance system. Generate reviewable Compact before ZKIR. Keep audited
 Compact libraries as the default fallback if a separate language has no measured
@@ -36,8 +37,9 @@ The durable XML research prompt is
 [`../deliverables/moriarty-defi-kernel-deep-research-prompt-2026-09-03.xml`](../deliverables/moriarty-defi-kernel-deep-research-prompt-2026-09-03.xml).
 It defines 12 workstreams, 26 experiments, 22 deliverables, 18 release gates,
 the Scrapling-only web policy, the wiki/graph loop, the 72-row coverage rule,
-and the final ten-part decision contract. The focused schedule is
-[`../deliverables/moriarty-90-day-research-sprint-2026-09-03.md`](../deliverables/moriarty-90-day-research-sprint-2026-09-03.md).
+and the final ten-part decision contract. The active sprint contract is
+[`../deliverables/moriarty-sprint-program-2026-09-03.md`](../deliverables/moriarty-sprint-program-2026-09-03.md).
+The calendar-based plan is retained only as superseded history.
 
 ## Earliest stop test
 

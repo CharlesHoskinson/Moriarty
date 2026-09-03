@@ -2,10 +2,13 @@
 
 <!-- markdownlint-disable MD013 MD060 -->
 
-Date: 2026-09-03 UTC  
-Status: proposed and partially started  
-Decision target: fund a Moriarty language vertical slice, choose audited Compact
-libraries instead, or stop
+- Date: 2026-09-03 UTC
+- Status: superseded by `moriarty-sprint-program-2026-09-03.md`
+- Decision target: fund a Moriarty language vertical slice, choose audited Compact
+  libraries instead, or stop
+
+> This calendar-based plan is historical. The active plan uses evidence-gated
+> sprints. No calendar duration contributes to completion.
 
 ## Outcome
 
