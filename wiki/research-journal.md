@@ -234,3 +234,39 @@ package-specific predicate.
 Compile a second finite financial application through shared compiler
 interfaces. Reject the general-DSL claim if it needs a new application-specific
 lowerer. Do not expand the Core until an S03 semantic motion passes.
+
+## Prompt iteration P01: freeze the semantics and intent research question
+
+- State: research assignment specified
+- Active semantic scope: `0.0.0-e00.2`
+- Scope change: none
+
+### Trigger
+
+The user requested a focused study of Moriarty semantics, specification,
+compiler construction, proof shape, correctness of intent, the CAKE framework,
+ERC standards, and the standard developer interface.
+
+### Evidence and design rationale
+
+The CAKE framework provides useful Application, Permission, Solver, and
+Settlement boundaries. Current ERC and EIP documents provide patterns for
+resolver-based orders, typed signing, replay handling, account delegation,
+permissions, wallet batching, and DeFi interfaces. These sources are
+comparative evidence. They do not define Moriarty Core or Midnight authority.
+
+The new assignment defines intent correctness as a refinement relation. A plan
+and execution can be correct only when every observed effect is authorized by
+the signed intent under verified state, artifacts, proof, and named assumptions.
+Solver optimization stays outside this safety predicate.
+
+### Semantic scope transition
+
+No semantic motion was accepted. The active scope version and digest remain
+unchanged. This prompt specifies research and release gates only.
+
+### Next falsification test
+
+Write the candidate intent-refinement judgment for the atomic swap. Mutate the
+plan with one extra effect. Require the local verifier to reject the plan before
+it creates a signing request.

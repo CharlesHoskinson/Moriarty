@@ -28,7 +28,8 @@ will grow by merging evidence into durable topic pages.
 - [Security boundaries](security.md) — threat and audit partition.
 - [Port decision](decision.md) — scorecard and go/no-go recommendation.
 - [Research program](research-program.md) — agentic-council synthesis, XML
-  prompt, evidence-gated sprints, backend stop test, and incremental decision graph.
+  prompts, evidence-gated sprints, intent correctness, CAKE and ERC review,
+  backend stop test, and incremental decision graph.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, and next falsification test.
 
@@ -37,6 +38,7 @@ will grow by merging evidence into durable topic pages.
 - [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
 - [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.
+- [Semantics, intent, compiler, proof, and SDK prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — focused twelve-sprint assignment with an exact intent-refinement theorem and standards review.
 
 ## Workstream pages
 

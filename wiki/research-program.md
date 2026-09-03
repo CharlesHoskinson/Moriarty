@@ -3,11 +3,14 @@ id: moriarty.research.program
 type: decision
 title: Moriarty DeFi Kernel research program
 status: active
-updated_at: 2026-09-03T07:23:21Z
+updated_at: 2026-09-03T13:13:20Z
 sources:
   - SRC-0016
   - SRC-0017
   - SRC-0018
+  - SRC-0020
+  - SRC-0021
+  - SRC-0022
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -73,6 +76,39 @@ The graph is at
 Its shortest useful synthesis path joins the candidate taxonomy, M5 profile,
 atomic-swap stop test, backend boundedness condition, and library-only fallback.
 Graph centrality is not evidence authority.
+
+## Focused semantics and intent program
+
+**CLM-0120.** The CAKE framework separates a chain-abstraction product into
+Application, Permission, Solver, and Settlement layers. It defines intent as an
+expected output rather than one fixed transaction path. Moriarty will test this
+as an architecture boundary, not as normative semantics. Source: SRC-0020,
+section “Introducing the CAKE Framework”; published 2024-02-15; authority
+primary descriptive research; scope comparative architecture; evidence source
+fact; reproduction not applicable; confidence high; status S2.
+
+**CLM-0121.** The official pages retrieved for ERC-7683 and ERC-7521 label both
+standards Draft. The current ERC-7683 text centers on a resolver that translates
+an opaque protocol payload into solver-facing instructions and assumptions. Its
+security section does not guarantee settlement-protocol security. Source:
+SRC-0021, records MIS-020 and MIS-024; created 2023-09-19 and 2024-04-11;
+authority primary standards documents; scope comparative intent standards;
+evidence source fact; reproduced acquisition; confidence high; status S2.
+
+**CLM-0122.** EIP-712 is Final and defines typed structured-data signing with
+domain separation. Its abstract and security section state that it does not add
+replay protection. Moriarty must specify nonce, consumption, cancellation,
+network, contract, version, sequence, and validity rules separately. Source:
+SRC-0021, record MIS-006; created 2017-09-12; authority primary standards
+document; scope signature-interface comparison; evidence source fact and design
+inference; reproduced acquisition; confidence high; status S2.
+
+The focused assignment is
+[`../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml`](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml).
+It defines the intent-refinement theorem, compiler and proof artifacts, CAKE and
+ERC review, complete developer interface, twelve workstreams, thirteen
+experiments, eighteen deliverables, twelve sprints, and eighteen release gates.
+It does not change the active semantic scope.
 
 ## Preserved dissent
 

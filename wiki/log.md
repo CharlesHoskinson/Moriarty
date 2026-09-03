@@ -1,5 +1,13 @@
 # Wiki log
 
+## [2026-09-03] design | Moriarty semantics and intent research prompt
+
+Added a focused XML assignment for Moriarty semantics, intent correctness,
+verified compilation, Compact and ZKIR realization, and the standard developer
+interface. Acquired the CAKE framework and 28 official ERC and EIP pages with
+Scrapling. Preserved exact status, source date, path, and SHA-256 evidence. The
+assignment uses twelve evidence-gated sprints and makes no semantic change.
+
 ## [2026-09-03] audit | Evidence and SDK gate hardening
 
 Closed the independent review findings. The disclosure validator now handles
