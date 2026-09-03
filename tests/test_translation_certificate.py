@@ -52,7 +52,24 @@ def test_certificate_has_zero_divergence_and_complete_stop_test_coverage() -> No
     }
     assert certificate["coverage"]["terminal_phases"] == ["Refunded", "Settled"]
     assert certificate["coverage"]["deadline_offsets"] == [-1, 0, 1]
+    assert certificate["required_coverage"] == certificate["coverage"]
     assert len(certificate["certificate_sha256"]) == 64
+
+
+def test_stop_test_rejects_a_large_but_incomplete_trace_corpus() -> None:
+    candidates = generate_traces(PARAMETERS, minimum=20_000)
+    traces = tuple(
+        trace
+        for trace in candidates
+        if all(step.kind != "expire" for step in trace.steps)
+    )[:1_000]
+
+    assert len(traces) == 1_000
+    certificate = validate_translation(PARAMETERS, traces)
+
+    assert certificate["divergence_count"] == 0
+    assert certificate["invariant_failure_count"] == 0
+    assert certificate["stop_test_passed"] is False
 
 
 def test_certificate_is_byte_stable_for_the_same_inputs() -> None:

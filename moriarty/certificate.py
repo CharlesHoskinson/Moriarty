@@ -23,6 +23,30 @@ from moriarty.core import (
 from moriarty.swap import SwapParameters, canonical_swap
 
 
+REQUIRED_ACCEPTED_TRANSITIONS = frozenset(
+    {
+        "WaitingAlice:deposit->WaitingBob",
+        "WaitingAlice:expire->Refunded",
+        "WaitingBob:deposit->WaitingDecision",
+        "WaitingBob:expire->Refunded",
+        "WaitingDecision:choice-0->Refunded",
+        "WaitingDecision:choice-1->Settled",
+        "WaitingDecision:expire->Refunded",
+    }
+)
+REQUIRED_REJECTION_CODES = frozenset(
+    {
+        "choice_out_of_bounds",
+        "contract_closed",
+        "input_required",
+        "no_matching_input",
+        "time_before_state",
+    }
+)
+REQUIRED_TERMINAL_PHASES = frozenset({"Refunded", "Settled"})
+REQUIRED_DEADLINE_OFFSETS = frozenset({-1, 0, 1})
+
+
 @dataclass(frozen=True)
 class Stimulus:
     kind: str
@@ -458,6 +482,12 @@ def validate_translation(
 
     trace_data = [[asdict(step) for step in trace.steps] for trace in traces]
     manifest_sha256 = _sha256_json(lowering.manifest)
+    required_coverage = {
+        "accepted_transitions": sorted(REQUIRED_ACCEPTED_TRANSITIONS),
+        "rejection_codes": sorted(REQUIRED_REJECTION_CODES),
+        "terminal_phases": sorted(REQUIRED_TERMINAL_PHASES),
+        "deadline_offsets": sorted(REQUIRED_DEADLINE_OFFSETS),
+    }
     certificate = {
         "schema_version": 1,
         "status": "S3-translation-validation-evidence",
@@ -478,6 +508,7 @@ def validate_translation(
             "terminal_phases": sorted(terminal_phases),
             "deadline_offsets": sorted(deadline_offsets),
         },
+        "required_coverage": required_coverage,
         "claims_not_established": [
             "Compact compiler correctness",
             "ZKIR correctness or proof soundness",
@@ -490,6 +521,10 @@ def validate_translation(
         and len({trace.steps for trace in traces}) == len(traces)
         and divergence_count == 0
         and invariant_failure_count == 0
+        and REQUIRED_ACCEPTED_TRANSITIONS <= accepted_transitions
+        and REQUIRED_REJECTION_CODES <= rejection_codes
+        and REQUIRED_TERMINAL_PHASES <= terminal_phases
+        and REQUIRED_DEADLINE_OFFSETS <= deadline_offsets
     )
     certificate["certificate_sha256"] = _sha256_json(certificate)
     return certificate
