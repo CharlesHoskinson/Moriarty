@@ -1,0 +1,114 @@
+Marlowe language V2 - Final Report
+Rationale and process
+As the ecosystem for the Marlowe DSL reaches maturity, with the deployment of the TS-SDK and other components, it is the right time to review the constructs and behaviour of the core language and its supporting platform, and to scope out and design its successor, Marlowe v2. We envisaged improving Marlowe in a number of ways:
+Simplification of aspects of the original language. This might include simplifying the When construct so that the contract will by default close on timeout. Generalising some constructs, such as a When that awaits a set of actions, could substantially simplify the expression of a common programming pattern.
+Making the language more expressive. This could include adding new control constructs, such as bounded loops, and primitives, e.g. for crypto operations. It would also include conceptual additions, such as sub-languages for time arithmetic or token minting. Note that Marlowe is not intended to be general-purpose like Plinth or Aiken, but it is also higher-level in that it describes complete computation (on- and off-chain) rather than simply on-chain.
+Improving the scalability of the language: an example of this would be to change the behaviour of a contract on close to optimise performance with larger numbers of contract participants.
+Addressing the security of the language, which could be improved by checking types of values, so that e.g. addition only takes place between the same “kind” of number.
+This document represents the results of discussions of a working group made up of Marlowe language designers, developers and users that took place in a series of Google Meet events held January 20 – March 3, 2026. The discussions were recorded and minuted. 
+Nature of the proposed changes
+These changes include changes to particular constructs of the language, and more fundamental changes to the model embodied by language itself.
+Within each of the sections (language constructs and models, implementation), the changes are classified into three groups. Justifications for the changes appear in italics.
+Essential: These changes should be implemented in the V2.0 of the Marlowe language.
+Desirable: These changes will be further elaborated alongside the development of V2.0, and, after evaluating the designs, be implemented in V2.1 of the Marlowe language.
+Possible: These suggestions should remain on the table for further consideration, but not be implemented in V2.0 or 2.1
+Language constructs
+Essential 
+1. Modify When so that the continuation on timeout is Close. This simplifies the language and means that programs are more linear, and semantics simpler. It also appears to fit with current usage, though it probably requires the addition of the Sleep construct below.
+ 1. We can use Notify (TimeIntervalStart > timeout) to approximate the semantics of the current timeout branch, as indicated in this MIP draft. 
+2. Generalising the When construct to trigger on all of a set of actions. 
+ 1. A question here is how to disentangle things when only a subset of actions has happened at timeout. Under the existing model, moving to the timeout continuation might not make sense in this intermediate state, but if Close is the timeout option, this would seem to be sensible in most cases.
+ 2. This has the advantage of semantic atomicity of multiple inputs, such as choice and deposit. It also supports a validator optimization, with multiple input processing in a single transaction, leading to significant compression of the contract.
+3. Removal of shadowing logic in the When semantics and usage of direct indexing in as part of the Input.
+ 1. Currently when an Input is provided an elaborate matching strategy is executed to pick the first Case which matches the input. The semantics of that matching is surprisingly complex and costs a lot of on-chain resources.
+ 2. We propose an addition of an index to the Input which will indicate directly which Case the user intends to pick. We argue that the semantics of When will be more direct - it contains a set of actions from which any one can be picked without influencing each other. 
+ 3. If we introduce indices then we can actually extend the Case so it could contain a set of inputs which should be executed atomically. This could significantly reduce sizes of many contracts and idioms (for example dynamic amount deposit is modeled as Choice + Deposit).
+In other words we propose to add to Case an extra list Case Action [Action] Contract. This means that the actions which involve multiple user will require multi-sig.
+ 4. If we use explicit indices then the list of Case’s can be in the future subject to some form of compression as well where only a specific entry has to be delivered uncompressed to the chain.
+ 4. Allow the When construct to proceed on any clause that succeeds, rather than just the first. This would make the When non-deterministic, but is consistent with analysis of the contracts, for example, where all possible paths are explored.
+ 1. This high-level semantics is also consistent with a lower-level view in which resources used during computation can exceed constraints, and so not allowing the computation to proceed along that branch; in such a case it is possible for computation to proceed along other branches.
+ 2. This approach is consistent with interpreting exceptions as “no op”s: if an exception occurs in a branch, other branches can be explored.
+ 5. Add a construct so that execution of the contract will Sleep for a given period (or up to a specified time). This was previously given by a When with an empty list of clauses, which could only time out, and so replaces functionality lost if When is simplified as above.
+ 1. In the MIP there is a discussion around Assert (even when we don't introduce it directly it can be modeled by direct division by zero ;-)) and Notify as an option.
+ 6. Exceptions, for example in the case of division by zero.
+ 1. This could be “guarded” with a value to use in case the denominator is zero, but arguably this leads to cluttered, defensive programming. Currently Marlowe does this in the case of lookup for an undefined identifier, and can lead to outcomes that are unexpected and hard to reason about. 
+ 2. It would be possible to make this (or all) exception(s) Close the contract. This “graceful shutdown” would be in line with the proposal to Close on timeout.
+ 3. A third option is for exceptions to be a “no op” in the context of an enclosing When construct: this is discussed in more detail in top-level item 4 above.
+ 4. Finally, it would be possible to include a general mechanism for exception handling in Marlowe. This would require careful thought, as it could substantially alter the way in which Marlowe contracts were written, and should be seen in the light of the general “language model” modifications suggested in the next section of the document.
+ 7. EntryDeposit input - this type of input could replace the cumbersome and hard to use Open roles. This input would effectively be an address variable binding (a variable of type “address”), which could later be used as reference to a particular Party. More details here. 
+ 8. Additional core primitive functions
+ 1. Function for computing a hash of an integer: there are clear use cases for this construct, including commitments to values.
+Desirable 
+ 9. Support for token manipulation: this has consistently been requested by users.
+ 1. Mint and distribute new role tokens during the course of a contract, instead of at the beginning. See here for examples of use cases.
+ 2. Mint utility tokens during the course of a contract.
+ 3. Manage tokens together as Value, not separately.
+ 10. Extended parameterisation.
+ 1. Parameters in Bound (i.e., not just constants), so that bounds can range between variables instead of numbers.
+ 2. Roles as parameters, so that the role in a choice etc. can be a variable.
+ 3. Deposit a non-predefined amount
+ 4. This and the previous point are related to prior discussion of Extended Marlowe and parametrisation here.
+ 5. The justifications for considering this are twofold: it would extend the generality of the language, and by doing so could simplify the way that Marlowe is currently extended.
+ 11. Add constructs for repetition, including, for example
+ 1. Fold-based recursion.
+ 2. Iteration and loops.
+ 3. Note that this is most easily supported by the change to SISO control flow suggested below. Including constructs for repetition is raised by users, and there are clear use cases for it in e.g. loans which have a fixed set of repayments over a period of time.
+ 12. Additional core primitive functions
+ 1. Bit arithmetic.
+ 2. Other cryptographic primitives
+Possible 
+ 13. Add support for naming
+ 1. Naming (sub-)contracts adds explicit sharing.
+ 2. This could be generalised to adding function definitions to the language, with a range of parameter types (see discussion of parametrisation above).
+ 3. Also see discussion of sharing in the next section.
+ 14. An enhanced Time data type, including
+ 1. Time arithmetic: operators for combination of time values
+ 2. Time relative to events, including the start of contract or the minTime.
+ 15. Add support for further data types
+ 1. In the context of blockchain and its limited resources `Set` and `Map` could be really useful because they "compress" well with Merkleized Patricia Tries (logarithmic membership proofs and basic operations).
+ 2. Lists/Sorted List/Heaps (with Merkleized flavors) probably could be useful on the chain as well but they require assessment of their specific operation proof sizes.
+Language model
+Desirable
+ 16. Control flow: is it possible to transform Marlowe into a single-in, single-out model with timeouts? This makes Marlowe more like a traditional block-structured language. 
+ 
+ 1. Pay and let do this already. It is a matter of transforming everything else.
+ 2. This makes supporting (bounded) recursion much more straightforward.
+ 3. This has an impact on sharing (see below): in the continuation model it is often the case that the same continuation is used multiple times in a contract; in this approach it is simply the same (program) continuation.
+ 4. Simplifying control flow in this way will enable the more straightforward introduction of repetition in some form (e.g. a for-loop construct), as well as simplifying the underlying language model.
+ 17. Sharing: one way of avoiding duplication in Marlowe contracts is to allow some sort of let for contracts themselves, so that duplication is explicit in duplicated use of a label. This is a potential advantage for readability as well as potentially supporting efficiency in an implementation through sharing.
+ 1. Note: the readability is given by embedding Marlowe in a language where (sub-)contracts can be named, but this is lost when the contract is transformed into Marlowe.
+ 2. Aside: this is a flaw in Faustus. The source language has sharing, but this is lost in translation to Marlowe.
+ 18. Marlowe State Channel (Layer 2 solution).
+ 1. When designing the language we should probably focus also on a somewhat non obvious execution model which could give this technology an edge in the context of the blockchain.
+ 2. We could look at the L1 as a layer which should be rather sparsely used to settle the necessary steps or cashflows or to resolve conflicts.
+ 19. Type checker: beside the static analysis approach to the contract validation we could also introduce a regular type checker - even in the current version it could be helpful. More details here. 
+ 1. Tooling should be extended to highlight type mismatches, and ideally to suggest fixes for the problems too.
+Possible
+ 20. Marlowe contracts currently include metadata e.g. to improve the user experience within the Playground and other tools. A discussion of how this could be systematised and extended is here.
+ 1. This metadata-enabled Marlowe code could be the output from a compilation process that takes an extended “surface” language and translates it into Marlowe for on-chain execution.
+ 21. Make Marlowe chain-agnostic. Details presented here.
+ 22. Adopt an explicit state machine model. Actions trigger transitions between states, with accompanying outputs (payments etc).
+ 1. This would still be based on the local accounts model.
+ 2. Naively, this loses the finite lifetime property, but it would be possible to reintroduce this through bounding the time or number of steps. Alternatively the crucial thing would be to ensure that the contract never “gets stuck”.
+ 3. Could support this proposal directly on chain with multiple validators, one per state, and off-chain in the Marlowe Runner.
+Validator level changes
+Changes listed below do not directly affect the interpreter implementation or influence it rather slightly.
+Essential 
+ 23. State compression. The memory limitations of the Marlowe Validator on-chain present considerable challenges due to memory constraints. While we must also take into account the computational load, theoretically, state compression through providing a subset of the state could reduce the datum decoding volume. More details here.
+ 24. Allowing splitting Close into several transactions or into several outputs.
+ 25. Upgrades to the newest cheap primitives which are coming to the Plutus (constant access Arrays, builtin Value type etc.).
+Desirable
+ 26. Validator changes to reduce on-chain costs for specific contracts and Marlowe idioms.
+ 1. This is covered elsewhere, e.g. by the proposal to treat multiple inputs in a single step.
+ 2. Autowithdrawls
+ 3. Simplified payout handling - requirement for Tx outputs to be aligned with the generated payouts.
+ 27. Tooling needs to be thought about alongside the implementation.
+ 1. Tooling could support a redefinition of what "pure Marlowe" is: for example it would be worth inventing some surface succinct syntax for it, with LSP support on top. 
+ 2. Currently across the tooling the yaml/json syntax is more useful than the original DSL which is actually less succinct than yaml and is not the cross language target.
+Possible
+ 28. Configurable fees for contract runners.
+ 29. Set payment PKH for a role, so that sending to the payout validator can be bypassed.
+ 30. Payment to scripts, which needs the capability to attach datum or datum hash to output.
+ 31. There may be substantial utility in expanding the Validator datum type, enabling it to convey additional data that could be passed as datum to the payout UTxOs and payout script. The Marlowe validator should solely ensure the preservation of this value across its execution thread on the chain. More details here.
+ 32. Optimistic input submission. One of the limitations of the current execution flow of Marlowe contracts on chain is its inability to easily handle different orderings of Inputs permutations of which (like deposits) preserve the same semantics. Details here.
+ 1. Potentially having independently verifiable choices (signed choices)

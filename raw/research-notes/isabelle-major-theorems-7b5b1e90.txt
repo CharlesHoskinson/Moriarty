@@ -1,0 +1,289 @@
+### TransactionBound
+### SingleInputTransactions
+1199-  by (metis Transaction.cases playTraceAuxToSingleInputIsEquivalent_induction_step)
+1200-
+1201:theorem traceToSingleInputIsEquivalent : "playTrace sn co tral = playTrace sn co (traceListToSingleInput tral)"
+1202-  apply (simp only:playTrace.simps)
+1203-  using playTraceAuxToSingleInputIsEquivalent by blast
+1204-
+1205-
+1206-lemma transactionPrefixForSingleInput : "h # t = traceListToSingleInput nt \<Longrightarrow> (\<exists> nt2. t = traceListToSingleInput nt2)"
+1207-  apply (induction nt rule:traceListToSingleInput.induct)
+1208-  apply simp
+1209-  subgoal for si inps rest
+### QuiescentResult
+62-  using reductionLoopIsQuiescent_aux by blast
+63-
+64:theorem reduceContractUntilQuiecentIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+65-                                                  reduceContractUntilQuiescent env sta c = ContractQuiescent newReduced wa ef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+66-  by (simp only:reduceContractUntilQuiescent.simps reductionLoopIsQuiescent)
+67-
+68-lemma applyAllInputsLoopIsQuiescent_base : "validAndPositive_state fixSta \<Longrightarrow>
+69-                                            applyAllLoop reduced env fixSta cont [] wa ef = ApplyAllSuccess newReduced nwa nef nsta ncon \<Longrightarrow> isQuiescent ncon nsta"
+70-  apply (cases "reduceContractUntilQuiescent env fixSta cont")
+71-  by (simp_all del:reduceContractUntilQuiescent.simps validAndPositive_state.simps add:reduceContractUntilQuiecentIsQuiescent)
+72-
+--
+106-  by (smt ApplyAllResult.exhaust ApplyAllResult.simps(10) ApplyAllResult.simps(8) ApplyAllResult.simps(9) IntervalResult.simps(5) TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllInputsLoopIsQuiescent fixInterval_preserves_preserves_validAndPositive_state)
+107-
+108:theorem computeTransactionIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+109-                                         computeTransaction traIn sta cont = TransactionOutput traOut \<Longrightarrow>
+110-                                         isQuiescent (txOutContract traOut) (txOutState traOut)"
+111-
+112-  apply (cases "traIn")
+113-  apply (cases "traOut")
+114-  by (smt IntervalResult.exhaust IntervalResult.simps(6) Transaction.update_convs(3) TransactionOutput.distinct(1) TransactionOutputRecord.surjective computeTransaction.simps computeTransactionIsQuiescent_aux old.unit.exhaust)
+115-
+116-lemma playTraceAuxIsQuiescent : "validAndPositive_state (txOutState traIn) \<Longrightarrow>
+--
+127-  done
+128-
+129:theorem playTraceIsQuiescent : "playTrace sl cont (Cons h t) = TransactionOutput traOut \<Longrightarrow>
+130-                                isQuiescent (txOutContract traOut) (txOutState traOut)"
+131-  by (metis TransactionOutputRecord.select_convs(3) list.discI playTrace.simps playTraceAuxIsQuiescent validAndPositive_initial_state)
+132-
+133-
+134-lemma reductionLoop_reduce_monotonic : "reductionLoop True env sta cont wa ef = ContractQuiescent reduce nwa nef newState newCont \<Longrightarrow> reduce"
+135-  apply (induction True env sta cont wa ef arbitrary:reduce nwa nef newState newCont rule:reductionLoop.induct)
+136-  subgoal for env state contract warnings payments reduce nwa nef newState newCont
+137-    apply (cases "reduceContractStep env state contract")
+--
+148-
+149-text "If we reduce the contract and the continuation has changed, then the reduced flag should be true"
+150:theorem reduceContractUntilQuiescent_ifDifferentReduced : "reduceContractUntilQuiescent si sta cont = ContractQuiescent reduce wa ef sta newCont \<Longrightarrow> cont \<noteq> newCont \<Longrightarrow> reduce"
+151-  apply (simp only:reduceContractUntilQuiescent.simps)
+152-  apply (simp only:reductionLoop.simps)
+153-  apply (cases "reduceContractStep si sta cont")
+154-  apply (simp only:ReduceStepResult.case Let_def)
+155-  using reductionLoop_reduce_monotonic apply blast
+156-   apply simp
+157-  by auto
+158-
+### Timeout
+216-  by (smt State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.elims(3) isQuiescent.simps(1) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiecentIsQuiescent reduceContractUntilQuiescent.simps timedOutReduceContractLoop_closes_contract validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.simps)
+217-
+218:theorem timedOutTransaction_closes_contract :
+219-  "validAndPositive_state sta
+220-   \<Longrightarrow> iniTime \<ge> minTime sta
+221-   \<Longrightarrow> iniTime \<ge> maxTimeContract cont
+222-   \<Longrightarrow> endTime \<ge> iniTime
+223-   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
+224-   \<Longrightarrow> isClosedAndEmpty (computeTransaction \<lparr> interval = (iniTime, endTime)
+225-                                            , inputs = [] \<rparr> sta cont)"
+226-  apply (simp del:validAndPositive_state.simps reduceContractUntilQuiescent.simps add:Let_def)
+--
+240-  using maxTimeNotAmbiguous by auto
+241-
+242:corollary timeOutTransaction_does_not_fail : 
+243-  assumes "validAndPositive_state sta"
+244-  assumes "emptyTxAfterDeadline = \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr>"
+245-  assumes "iniTime \<ge> minTime sta"
+246-      and "iniTime \<ge> maxTimeContract cont"
+247-      and "endTime \<ge> iniTime" 
+248-  assumes "accounts sta \<noteq> [] \<or> cont \<noteq> Close"
+249-    shows "\<exists>txOut. computeTransaction emptyTxAfterDeadline sta cont = TransactionOutput txOut"
+250-  using assms by (meson Timeout.isClosedAndEmpty.elims(2)  timedOutTransaction_closes_contract)
+251-
+252:theorem timeOutTransaction_closes_contract2 :
+253-  "validAndPositive_state sta
+254-   \<Longrightarrow> accounts sta \<noteq> [] \<or> cont \<noteq> Close
+255-   \<Longrightarrow> \<exists> inp . isClosedAndEmpty (computeTransaction inp sta cont)"
+256-  by (meson not_less not_less_iff_gr_or_eq timedOutTransaction_closes_contract)
+257-
+258:theorem timedOutTransaction_preserves_assets :
+259-  assumes "validAndPositive_state sta"
+260-  assumes "emptyTxAfterDeadline = \<lparr> interval = (iniTime, endTime), inputs = [] \<rparr>"
+261-  assumes "iniTime \<ge> minTime sta"
+262-      and "iniTime \<ge> maxTimeContract cont"
+263-      and "endTime \<ge> iniTime"
+264-  assumes "accounts sta \<noteq> [] \<or> cont \<noteq> Close"
+265-  assumes "computeTransaction emptyTxAfterDeadline sta cont = TransactionOutput txOut"
+266-  shows "assetsInState sta = assetsInExternalPayments (txOutPayments txOut)"
+### PositiveAccounts
+130-  by (metis ReduceStepResult.inject State.ext_inject)
+131-
+132:theorem reduceContractStep_gtZero :
+133-  "valid_state state \<Longrightarrow>
+134-   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+135-   reduceContractStep env state cont = Reduced wa eff newState newCont \<Longrightarrow>
+136-   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+137-  apply (cases cont)
+138-  apply (cases "refundOne (accounts state)")
+139-  apply simp
+140-  apply (metis (mono_tags, lifting) option.simps(5) prod.case_eq_if prod.collapse reduceContractStep.simps(1) reduceContractStep_gtZero_Refund)
+--
+245-  by (smt IntervalResult.distinct(1) IntervalResult.inject(1) State.select_convs(1) State.surjective State.update_convs(4))
+246-
+247:theorem computeTransaction_gtZero :
+248-  "valid_state state \<Longrightarrow>
+249-   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+250-   computeTransaction tx state contract = (TransactionOutput txOut) \<Longrightarrow>
+251-   positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
+252-  apply (simp only:computeTransaction.simps)
+253-  apply (cases "fixInterval (interval tx) state")
+254-  apply (simp only:IntervalResult.case)
+255-  subgoal for env state
+--
+280-  by (simp add: MList.lookup_empty)
+281-
+282:theorem playTrace_gtZero :
+283-  "playTrace sl contract t = TransactionOutput txOut \<Longrightarrow>
+284-   positiveMoneyInAccountOrNoAccount y tok (accounts (txOutState txOut))"
+285-  by (metis TransactionOutputRecord.select_convs(3) emptyState_gtZero playTrace.simps playTraceAux.simps(1) playTraceAux_gtZero playTrace_preserves_valid_state)
+286-
+287-(* Alternative formulation *)
+288-
+289-fun allAccountsPositive :: "Accounts \<Rightarrow> bool" where
+290-"allAccountsPositive accs = foldl (\<lambda> r ((_, _), money) . r \<and> money > 0) True accs"
+--
+357-  using positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 by auto
+358-
+359:theorem accountsArePositive2 :
+360-    "valid_state state \<Longrightarrow> allAccountsPositiveState state
+361-    \<Longrightarrow> computeTransaction txIn state cont = TransactionOutput txOut
+362-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"  
+363-  by (meson computeTransaction_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
+364-
+365:theorem accountsArePositive2_trace :
+366-    "valid_state (txOutState txIn) \<Longrightarrow> allAccountsPositiveState (txOutState txIn)
+367-    \<Longrightarrow> playTraceAux txIn transList = TransactionOutput txOut
+368-    \<Longrightarrow> allAccountsPositiveState (txOutState txOut)"
+369-  by (meson allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.simps playTraceAux_gtZero playTraceAux_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state_valid_accounts)
+370-
+371-fun validAndPositive_state :: "State \<Rightarrow> bool" where
+372-"validAndPositive_state state = (valid_state state \<and> allAccountsPositiveState state)"
+373-
+### AssetsPreservation
+106-
+107-text "And finally the general case"
+108:theorem assetsInAccounts_distrib_insert :
+109-  assumes "valid_map accs"
+110-  shows "assetsInAccounts (MList.insert (accId, tok) val accs)
+111-       = assetsInAccounts accs - asset tok (nat (moneyInAccount accId tok accs)) + asset tok (nat val)"
+112-  using assetsInAccounts_distrib_insert_deleted assetsInAccounts_of_deleted assms by auto
+113-
+114:corollary AssetsInAccount_distrib_on_cons :
+115-  "valid_map rest \<Longrightarrow>
+116-  assetsInAccounts (((accId, tok), val) # rest) =  asset tok (nat val) + assetsInAccounts rest"
+117-  by (simp add: Groups.ab_semigroup_add_class.add.commute)
+118-
+119-
+120-subsubsection "Account assets"
+121-
+122-(* These helpers were translated from an older representation, they doesn't help prove that
+--
+375-qed
+376-
+377:theorem refundOnePreservesAssets :
+378-  assumes "allAccountsPositive accs"
+379-  shows "assetsInAccounts accs = (
+380-           case refundOne accs of
+381-             Some ((accId, tok, val), rest) \<Rightarrow> assetsInAccounts rest + asset tok (nat val)
+382-           | None \<Rightarrow> 0
+383-         )"
+384-proof (cases "refundOne accs")
+385-  case None
+--
+437-"
+438-
+439:theorem reduceContractStep_preserves_assets :
+440-  "\<lbrakk> validAndPositive_state state
+441-   ; reduceContractStep env state cont = Reduced warnings effect newState newCont
+442-   \<rbrakk> \<Longrightarrow>
+443-   assetsInState state = assetsInReduceEffect effect + assetsInState newState"
+444-proof (cases cont)
+445-  (* Close only reduces the contract if the accounts are not empty.
+446-     If it has it will refundOne (which preserves assets)
+447-   *)
+--
+618-qed
+619-
+620:theorem reduceContractUntilQuiescent_preserves_assets :
+621-  assumes "validAndPositive_state state"
+622-      and "reduceContractUntilQuiescent env state contract
+623-           = ContractQuiescent reduced warnings payments newState cont"
+624-    shows "assetsInState state = assetsInState newState + assetsInExternalPayments payments"
+625-proof -
+626-  have "assetsInState state + assetsInExternalPayments [] = assetsInState newState + assetsInExternalPayments payments"
+627-    by (metis reduceContractUntilQuiescent.simps assms reductionLoop_preserves_assets)
+628-  with assms show ?thesis
+--
+657-qed simp_all
+658-
+659:theorem applyInput_preserves_assets :
+660-  assumes "validAndPositive_state inState"
+661-      and "applyInput env inState input contract = Applied warnings outState cont"
+662-    shows "assetsInState inState + assetsInInput input = assetsInState outState"
+663-using assms proof (cases contract)
+664-  case (When cs timeout timeoutCont)
+665-  with assms applyCases_preserves_assets show ?thesis
+666-    by simp
+667-qed auto
+--
+734-qed
+735-
+736:theorem applyAllInputs_preserves_assets :
+737-  assumes "validAndPositive_state inState"
+738-      and "applyAllInputs env inState inContract inputs'
+739-          = ApplyAllSuccess outContractChanged outWarnings outPayments outState cont"
+740-    shows "assetsInState inState + assetsInInputs inputs'
+741-          = assetsInState outState + assetsInExternalPayments outPayments"
+742-  using assms applyAllLoop_preserves_assets by fastforce
+743-
+744-subsection "Compute transaction"
+745-
+746:theorem computeTransaction_preserves_assets :
+747-  assumes "validAndPositive_state state"
+748-      and "computeTransaction tx state contract = TransactionOutput out"
+749-    shows "assetsInState state + assetsInTransaction tx
+750-          = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
+751-proof -
+752-  obtain env fixSta
+753-    where fixedTx: "fixInterval (interval tx) state = IntervalTrimmed env fixSta"
+754-    by (smt (verit, best) assms TransactionOutput.distinct(1) computeTransaction.elims IntervalResult.exhaust IntervalResult.simps(6))
+--
+836-qed
+837-
+838:theorem playTrace_preserves_assets :
+839-  assumes "playTrace slot contract txs = TransactionOutput out"
+840-    shows "assetsInTransactions txs
+841-         = assetsInState (txOutState out) + assetsInExternalPayments (txOutPayments out)"
+842-proof -
+843-  let ?iniState = "\<lparr> txOutWarnings = []
+844-                   , txOutPayments = []
+845-                   , txOutState = emptyState slot
+846-                   , txOutContract = contract
+### ValidState
+149-  by auto
+150-
+151:theorem computeTransaction_preserves_valid_state :
+152-   "valid_state state \<Longrightarrow> computeTransaction tran state cont = TransactionOutput out \<Longrightarrow> valid_state (txOutState out)"
+153-  apply (simp only:computeTransaction.simps Let_def)
+154-  apply (cases "fixInterval (interval tran) state")
+155-  apply (simp only:IntervalResult.case)
+156-  subgoal for env sta
+157-    apply (cases "applyAllInputs env sta cont (inputs tran)")
+158-    apply (simp only:ApplyAllResult.case)
+159-    apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state fixInterval_preserves_valid_state small_lazy'.cases)
+--
+176-  by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) emptyState.elims valid_state.simps)
+177-
+178:theorem playTrace_preserves_valid_state :
+179-  "playTrace sl c transList = TransactionOutput txOut \<Longrightarrow>
+180-   valid_state (txOutState txOut)"
+181-  apply (simp only:playTrace.simps)
+182-  by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) TransactionOutputRecord.select_convs(3) emptyState.elims playTraceAux_preserves_valid_state valid_state.simps)
+183-
+184-end
+### CloseSafe
+49-  done
+50-
+51:theorem closeIsSafe : "computeTransaction tra sta Close = TransactionOutput trec \<Longrightarrow> txOutWarnings trec = []"
+52-  apply (simp only:computeTransaction.simps)
+53-  apply (auto split:IntervalResult.splits option.splits ApplyAllResult.splits
+54-              simp del:applyAllLoop.simps simp add:closeIsSafe_applyAllInputs)
+55-  subgoal for env fixSta warnings payments newState cont
+56-    apply (cases "\<not> warnings \<and> accounts sta = []")
+57-    by (auto simp del:applyAllLoop.simps simp add:closeIsSafe_applyAllInputs)
+58-  done
+59-

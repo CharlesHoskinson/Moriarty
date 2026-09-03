@@ -1,0 +1,2 @@
+If this persists, please [email us](mailto:error-lite+ed82@duckduckgo.com?subject=Error%20getting%20results).  
+Our support email address includes an anonymized error code that helps us understand the context of your search.

@@ -1,0 +1,420 @@
+-----------------------------------------------------------------------------
+--
+-- Module      :  $Headers
+-- License     :  Apache 2.0
+--
+-- Stability   :  Experimental
+-- Portability :  Portable
+--
+-----------------------------------------------------------------------------
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
+{-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
+{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
+-- A big hammer, but it helps.
+{-# OPTIONS_GHC -fno-specialise #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+{- HLINT ignore "Avoid restricted function" -}
+
+-- | = Marlowe: financial contracts domain specific language for blockchain
+--
+--   Here we present a reference implementation of Marlowe, domain-specific language targeted at
+--   the execution of financial contracts in the style of Peyton Jones et al
+--   on Cardano.
+--
+--   This is the Haskell implementation of Marlowe semantics for Cardano.
+--
+--   == Semantics
+--
+--   Semantics is based on <https://github.com/input-output-hk/marlowe/blob/stable/src/Semantics.hs>
+--
+--   Marlowe Contract execution is a chain of transactions,
+--   where remaining contract and its state is passed through /Datum/,
+--   and actions (i.e. /Choices/) are passed as
+--   /Redeemer Script/
+--
+--   /Validation Script/ is always the same Marlowe interpreter implementation, available below.
+module Language.Marlowe.Core.V1.Semantics (
+  -- * Semantics
+  MarloweData (..),
+  MarloweParams (..),
+  Payment (..),
+  TransactionInput (..),
+  TransactionOutput (..),
+  computeTransaction,
+  playTrace,
+
+  -- * Supporting Functions
+  addMoneyToAccount,
+  applyAction,
+  applyAllInputs,
+  applyCases,
+  applyInput,
+  convertReduceWarnings,
+  evalObservation,
+  evalValue,
+  fixInterval,
+  getContinuation,
+  giveMoney,
+  moneyInAccount,
+  playTraceAux,
+  reduceContractStep,
+  reduceContractUntilQuiescent,
+  refundOne,
+  updateMoneyInAccount,
+
+  -- * Supporting Types
+  ApplyAction (..),
+  ApplyAllResult (..),
+  ApplyResult (..),
+  ApplyWarning (..),
+  ReduceEffect (..),
+  ReduceResult (..),
+  ReduceStepResult (..),
+  ReduceWarning (..),
+  TransactionError (..),
+  TransactionWarning (..),
+
+  -- * Utility Functions
+  allBalancesArePositive,
+  contractLifespanUpperBound,
+  isClose,
+  notClose,
+  paymentMoney,
+  totalBalance,
+
+  -- * Serialisation
+  currencySymbolFromJSON,
+  currencySymbolToJSON,
+  validatorHashFromJSON,
+  validatorHashToJSON,
+) where
+
+import Control.Applicative ((<*>), (<|>))
+import Control.DeepSeq (NFData)
+import qualified Data.Aeson as JSON
+import Data.Aeson.Types (
+  FromJSON (parseJSON),
+  KeyValue ((.=)),
+  Parser,
+  ToJSON (toJSON, toJSONList),
+  object,
+  withArray,
+  withObject,
+  (.:),
+  (.:?),
+ )
+import qualified Data.Aeson.Types as JSON
+import Data.ByteString.Base16.Aeson (EncodeBase16 (EncodeBase16))
+import qualified Data.Foldable as F
+import Data.Scientific (Scientific)
+import Data.Text (pack)
+import Deriving.Aeson (Generic)
+import Language.Marlowe.Core.V1.Semantics.Types (
+  AccountId,
+  Accounts,
+  Action (..),
+  Case (..),
+  Contract (..),
+  Environment (..),
+  Input (..),
+  InputContent (..),
+  IntervalError (..),
+  IntervalResult (..),
+  Money,
+  Observation (..),
+  Party,
+  Payee (..),
+  State (..),
+  TimeInterval,
+  Token (..),
+  Value (..),
+  ValueId,
+  emptyState,
+  getAction,
+  getInputContent,
+  inBounds,
+ )
+import Language.Marlowe.ParserUtil (getInteger, withInteger)
+import Language.Marlowe.Pretty (Pretty (..))
+import PlutusLedgerApi.V2 (CurrencySymbol (CurrencySymbol), POSIXTime (..), ScriptHash (ScriptHash))
+import qualified PlutusLedgerApi.V2 as Val
+import PlutusTx (makeIsDataIndexed)
+import qualified PlutusTx.AssocMap as Map
+import qualified PlutusTx.Builtins as Builtins
+import PlutusTx.Lift (makeLift)
+import PlutusTx.Prelude (
+  AdditiveGroup ((-)),
+  AdditiveSemigroup ((+)),
+  Bool (..),
+  Eq (..),
+  Integer,
+  Maybe (..),
+  MultiplicativeSemigroup ((*)),
+  Ord (max, min, (<), (<=), (>), (>=)),
+  all,
+  foldMap,
+  foldr,
+  fromBuiltin,
+  fst,
+  map,
+  negate,
+  not,
+  otherwise,
+  return,
+  reverse,
+  snd,
+  toBuiltin,
+  ($),
+  (&&),
+  (++),
+  (.),
+  (=<<),
+  (>>=),
+  (||),
+ )
+import Text.PrettyPrint.Leijen (comma, hang, lbrace, line, rbrace, space, text, (<>))
+import Prelude (mapM, (<$>))
+import qualified Prelude as Haskell
+
+-- Functions that used in Plutus Core must be inlineable,
+-- so their code is available for PlutusTx compiler.
+{-# INLINEABLE fixInterval #-}
+{-# INLINEABLE evalValue #-}
+{-# INLINEABLE evalObservation #-}
+{-# INLINEABLE refundOne #-}
+{-# INLINEABLE moneyInAccount #-}
+{-# INLINEABLE updateMoneyInAccount #-}
+{-# INLINEABLE addMoneyToAccount #-}
+{-# INLINEABLE giveMoney #-}
+{-# INLINEABLE reduceContractStep #-}
+{-# INLINEABLE reduceContractUntilQuiescent #-}
+{-# INLINEABLE applyAction #-}
+{-# INLINEABLE getContinuation #-}
+{-# INLINEABLE applyCases #-}
+{-# INLINEABLE applyInput #-}
+{-# INLINEABLE convertReduceWarnings #-}
+{-# INLINEABLE applyAllInputs #-}
+{-# INLINEABLE isClose #-}
+{-# INLINEABLE notClose #-}
+{-# INLINEABLE computeTransaction #-}
+{-# INLINEABLE contractLifespanUpperBound #-}
+{-# INLINEABLE totalBalance #-}
+
+-- | Payment occurs during 'Pay' contract evaluation, and
+--     when positive balances are payed out on contract closure.
+data Payment = Payment AccountId Payee Token Integer
+  deriving stock (Haskell.Eq, Generic, Haskell.Show)
+
+instance NFData Payment
+
+instance ToJSON Payment where
+  toJSON (Payment accountId payee token amount) =
+    object
+      [ "payment_from" .= accountId
+      , "to" .= payee
+      , "token" .= token
+      , "amount" .= amount
+      ]
+
+instance FromJSON Payment where
+  parseJSON =
+    withObject "Payment"
+      $ \o ->
+        Payment
+          <$> o .: "payment_from"
+          <*> o .: "to"
+          <*> o .: "token"
+          <*> o .: "amount"
+
+-- | Extract the money value from a payment.
+paymentMoney :: Payment -> Money
+paymentMoney (Payment _ _ (Token cur tok) amt) = Val.singleton cur tok amt
+
+-- | Effect of 'reduceContractStep' computation
+data ReduceEffect
+  = ReduceWithPayment Payment
+  | ReduceNoPayment
+  deriving stock (Haskell.Show)
+
+-- | Warning during 'reduceContractStep'
+data ReduceWarning
+  = ReduceNoWarning
+  | ReduceNonPositivePay AccountId Payee Token Integer
+  | ReducePartialPay AccountId Payee Token Integer Integer
+  | --                                      ^ src    ^ dest       ^ paid ^ expected
+    ReduceShadowing ValueId Integer Integer
+  | --                                     oldVal ^  newVal ^
+    ReduceAssertionFailed
+  deriving stock (Haskell.Show, Haskell.Eq)
+
+-- | Result of 'reduceContractStep'
+data ReduceStepResult
+  = Reduced ReduceWarning ReduceEffect State Contract
+  | NotReduced
+  | AmbiguousTimeIntervalReductionError
+  deriving stock (Haskell.Show)
+
+-- | Result of 'reduceContractUntilQuiescent'
+data ReduceResult
+  = ContractQuiescent Bool [ReduceWarning] [Payment] State Contract
+  | RRAmbiguousTimeIntervalError
+  deriving stock (Haskell.Show, Haskell.Eq)
+
+-- | Warning of 'applyCases'
+data ApplyWarning
+  = ApplyNoWarning
+  | ApplyNonPositiveDeposit Party AccountId Token Integer
+  deriving stock (Haskell.Show, Haskell.Eq)
+
+-- | Result of 'applyCases'
+data ApplyResult
+  = Applied ApplyWarning State Contract
+  | ApplyNoMatchError
+  | ApplyHashMismatch
+  deriving stock (Haskell.Show, Haskell.Eq)
+
+-- | Result of 'applyAllInputs'
+data ApplyAllResult
+  = ApplyAllSuccess Bool [TransactionWarning] [Payment] State Contract
+  | ApplyAllNoMatchError
+  | ApplyAllAmbiguousTimeIntervalError
+  | ApplyAllHashMismatch
+  deriving stock (Haskell.Show)
+
+-- | Warnings during transaction computation
+data TransactionWarning
+  = TransactionNonPositiveDeposit Party AccountId Token Integer
+  | TransactionNonPositivePay AccountId Payee Token Integer
+  | TransactionPartialPay AccountId Payee Token Integer Integer
+  | --                                                 ^ src    ^ dest     ^ paid   ^ expected
+    TransactionShadowing ValueId Integer Integer
+  | --                                                 oldVal ^  newVal ^
+    TransactionAssertionFailed
+  deriving stock (Haskell.Show, Generic, Haskell.Eq)
+  deriving anyclass (Pretty)
+
+instance NFData TransactionWarning
+
+-- | Transaction error
+data TransactionError
+  = TEAmbiguousTimeIntervalError
+  | TEApplyNoMatchError
+  | TEIntervalError IntervalError
+  | TEUselessTransaction
+  | TEHashMismatch
+  deriving stock (Haskell.Show, Generic, Haskell.Eq)
+
+instance NFData TransactionError
+
+instance ToJSON TransactionError where
+  toJSON TEAmbiguousTimeIntervalError = JSON.String "TEAmbiguousTimeIntervalError"
+  toJSON TEApplyNoMatchError = JSON.String "TEApplyNoMatchError"
+  toJSON (TEIntervalError intervalError) = object ["error" .= JSON.String "TEIntervalError", "context" .= intervalError]
+  toJSON TEUselessTransaction = JSON.String "TEUselessTransaction"
+  toJSON TEHashMismatch = JSON.String "TEHashMismatch"
+
+instance FromJSON TransactionError where
+  parseJSON (JSON.String s) =
+    case s of
+      "TEAmbiguousTimeIntervalError" -> return TEAmbiguousTimeIntervalError
+      "TEApplyNoMatchError" -> return TEApplyNoMatchError
+      "TEUselessTransaction" -> return TEUselessTransaction
+      "TEHashMismatch" -> return TEHashMismatch
+      _ -> Haskell.fail "Failed parsing TransactionError"
+  parseJSON (JSON.Object o) = do
+    err <- o .: "error"
+    if err Haskell.== ("TEIntervalError" :: Haskell.String)
+      then TEIntervalError <$> o .: "context"
+      else Haskell.fail "Failed parsing TransactionError"
+  parseJSON _ = Haskell.fail "Failed parsing TransactionError"
+
+-- | Marlowe transaction input.
+data TransactionInput = TransactionInput
+  { txInterval :: TimeInterval
+  , txInputs :: [Input]
+  }
+  deriving stock (Haskell.Show, Haskell.Eq, Generic)
+
+instance NFData TransactionInput
+
+instance Pretty TransactionInput where
+  prettyFragment tInp = text "TransactionInput" <> space <> lbrace <> line <> txIntLine <> line <> txInpLine
+    where
+      txIntLine = hang 2 $ text "txInterval = " <> prettyFragment (txInterval tInp) <> comma
+      txInpLine = hang 2 $ text "txInputs = " <> prettyFragment (txInputs tInp) <> rbrace
+
+-- | Marlowe transaction output.
+data TransactionOutput
+  = TransactionOutput
+      { txOutWarnings :: [TransactionWarning]
+      , txOutPayments :: [Payment]
+      , txOutState :: State
+      , txOutContract :: Contract
+      }
+  | Error TransactionError
+  deriving stock (Haskell.Eq, Generic, Haskell.Show)
+
+instance NFData TransactionOutput
+
+instance ToJSON TransactionOutput where
+  toJSON TransactionOutput{..} =
+    object
+      [ "warnings" .= txOutWarnings
+      , "payments" .= txOutPayments
+      , "state" .= txOutState
+      , "contract" .= txOutContract
+      ]
+  toJSON (Error err) = object ["transaction_error" .= err]
+
+instance FromJSON TransactionOutput where
+  parseJSON =
+    withObject "TransactionOutput"
+      $ \o ->
+        let asTransactionOutput =
+              TransactionOutput
+                <$> o .: "warnings"
+                <*> o .: "payments"
+                <*> o .: "state"
+                <*> o .: "contract"
+            asError = Error <$> o .: "transaction_error"
+         in asTransactionOutput <|> asError
+
+-- | Parse a validator hash from JSON.
+validatorHashFromJSON :: JSON.Value -> Parser ScriptHash
+validatorHashFromJSON v = do
+  EncodeBase16 bs <- parseJSON v
+  return $ ScriptHash $ toBuiltin bs
+
+-- | Serialise a validator hash as JSON.
+validatorHashToJSON :: ScriptHash -> JSON.Value
+validatorHashToJSON (ScriptHash h) = toJSON . EncodeBase16 . fromBuiltin $ h
+
+-- | Parse a currency symbol from JSON.
+currencySymbolFromJSON :: JSON.Value -> Parser CurrencySymbol
+currencySymbolFromJSON v = do
+  EncodeBase16 bs <- parseJSON v
+  return $ CurrencySymbol $ toBuiltin bs
+
+-- | Serialise a currency symbol to JSON.
+currencySymbolToJSON :: CurrencySymbol -> JSON.Value
+currencySymbolToJSON (CurrencySymbol h) = toJSON . EncodeBase16 . fromBuiltin $ h
+
+-- | This data type is a content of a contract's /Datum/

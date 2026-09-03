@@ -1,0 +1,480 @@
+repos/marlowe/isabelle/Core/CloseSafe.thy:5:lemma closeIdemp_reduceContractStep : "reduceContractStep env fixSta Close = Reduced wa ef sta cont \<Longrightarrow> cont = Close"
+repos/marlowe/isabelle/Core/CloseSafe.thy:8:lemma closeIdemp_reductionLoop : "reductionLoop reducedBefore env fixSta Close wa ef = ContractQuiescent reducedAfter reduceWarns pays curState cont \<Longrightarrow> cont = Close"
+repos/marlowe/isabelle/Core/CloseSafe.thy:13:    using closeIdemp_reduceContractStep by blast
+repos/marlowe/isabelle/Core/CloseSafe.thy:16:lemma closeIdemp_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduced reduceWarns pays curState cont \<Longrightarrow> cont = Close"
+repos/marlowe/isabelle/Core/CloseSafe.thy:18:  using closeIdemp_reductionLoop by blast
+repos/marlowe/isabelle/Core/CloseSafe.thy:20:lemma closeIsSafe_reduceContractStep : "reduceContractStep env fixSta Close = Reduced wa ef sta cont \<Longrightarrow> wa = ReduceNoWarning"
+repos/marlowe/isabelle/Core/CloseSafe.thy:23:lemma closeIsSafe_reductionLoop : "wa = [] \<Longrightarrow> reductionLoop reducedBefore env fixSta Close wa ef = ContractQuiescent reducedAfter reduceWarns pays curState cont \<Longrightarrow> reduceWarns = []"
+repos/marlowe/isabelle/Core/CloseSafe.thy:29:    using closeIdemp_reduceContractStep closeIsSafe_reduceContractStep by fastforce
+repos/marlowe/isabelle/Core/CloseSafe.thy:32:lemma closeIsSafe_reduceContractUntilQuiescent : "reduceContractUntilQuiescent env fixSta Close = ContractQuiescent reduced reduceWarns pays curState cont \<Longrightarrow> reduceWarns = []"
+repos/marlowe/isabelle/Core/CloseSafe.thy:33:  by (simp add: closeIsSafe_reductionLoop)
+repos/marlowe/isabelle/Core/CloseSafe.thy:35:lemma closeIsSafe_applyInput : "applyInput env curState head Close = Applied applyWarn newState cont2 \<Longrightarrow> applyWarn = ApplyNoWarning"
+repos/marlowe/isabelle/Core/CloseSafe.thy:38:lemma closeIsSafe_applyAllInputs : "applyAllInputs env fixSta Close inps = ApplyAllSuccess reduced warnings payments newState cont \<Longrightarrow> warnings = []"
+repos/marlowe/isabelle/Core/CloseSafe.thy:44:    apply (subst closeIsSafe_reduceContractUntilQuiescent[of env fixSta reduced reduceWarns pays newState cont])
+repos/marlowe/isabelle/Core/CloseSafe.thy:47:    using closeIsSafe_reduceContractUntilQuiescent convertReduceWarnings.simps(1) apply blast
+repos/marlowe/isabelle/Core/CloseSafe.thy:48:    using closeIdemp_reduceContractUntilQuiescent by force
+repos/marlowe/isabelle/Core/CloseSafe.thy:51:theorem closeIsSafe : "computeTransaction tra sta Close = TransactionOutput trec \<Longrightarrow> txOutWarnings trec = []"
+repos/marlowe/isabelle/Core/CloseSafe.thy:54:              simp del:applyAllLoop.simps simp add:closeIsSafe_applyAllInputs)
+repos/marlowe/isabelle/Core/CloseSafe.thy:57:    by (auto simp del:applyAllLoop.simps simp add:closeIsSafe_applyAllInputs)
+repos/marlowe/isabelle/Core/ValidState.thy:5:lemma valid_state_valid_accounts : "valid_state state \<Longrightarrow> valid_map (accounts state)"
+repos/marlowe/isabelle/Core/ValidState.thy:9:lemma refundOne_preserves_valid_map_accounts :
+repos/marlowe/isabelle/Core/ValidState.thy:17:lemma reductionStep_preserves_valid_state_Refund :
+repos/marlowe/isabelle/Core/ValidState.thy:23:  using refundOne_preserves_valid_map_accounts by auto
+repos/marlowe/isabelle/Core/ValidState.thy:25:lemma updateMoneyInAccount_preserves_valid_map :
+repos/marlowe/isabelle/Core/ValidState.thy:30:lemma giveMoney_preserves_valid_map :
+repos/marlowe/isabelle/Core/ValidState.thy:35:  using updateMoneyInAccount_preserves_valid_map by auto
+repos/marlowe/isabelle/Core/ValidState.thy:37:lemma reductionStep_preserves_valid_state_Pay :
+repos/marlowe/isabelle/Core/ValidState.thy:47:  by (metis ReduceStepResult.inject State.select_convs(1) State.select_convs(2) State.select_convs(3) State.surjective State.update_convs(1) giveMoney_preserves_valid_map updateMoneyInAccount_preserves_valid_map valid_state.simps)
+repos/marlowe/isabelle/Core/ValidState.thy:49:lemma reductionStep_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:54:  apply (metis (full_types) State.surjective old.unit.exhaust reductionStep_preserves_valid_state_Refund)
+repos/marlowe/isabelle/Core/ValidState.thy:55:  using reductionStep_preserves_valid_state_Pay apply blast
+repos/marlowe/isabelle/Core/ValidState.thy:64:lemma reductionLoop_preserves_valid_state_aux :
+repos/marlowe/isabelle/Core/ValidState.thy:74:  apply (metis (no_types, lifting) ReduceStepResult.simps(8) reductionStep_preserves_valid_state)
+repos/marlowe/isabelle/Core/ValidState.thy:77:lemma reductionLoop_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:83:  using reductionLoop_preserves_valid_state_aux by blast
+repos/marlowe/isabelle/Core/ValidState.thy:85:lemma applyCases_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:91:  apply (smt ApplyResult.inject State.select_convs(1) State.select_convs(2) State.select_convs(3) State.surjective State.update_convs(1) updateMoneyInAccount_preserves_valid_map)
+repos/marlowe/isabelle/Core/ValidState.thy:97:lemma applyInput_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:106:  apply (metis applyCases_preserves_valid_state applyInput.simps(1))
+repos/marlowe/isabelle/Core/ValidState.thy:110:lemma applyAllLoop_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:120:    apply (metis (no_types, lifting) ApplyAllResult.inject ReduceResult.simps(4) reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
+repos/marlowe/isabelle/Core/ValidState.thy:128:      apply (metis applyInput_preserves_valid_state reduceContractUntilQuiescent.simps reductionLoop_preserves_valid_state)
+repos/marlowe/isabelle/Core/ValidState.thy:133:lemma applyAllInputs_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:137:  by (metis applyAllInputs.simps applyAllLoop_preserves_valid_state)
+repos/marlowe/isabelle/Core/ValidState.thy:139:lemma fixInterval_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:151:theorem computeTransaction_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:159:    apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs.simps applyAllLoop_preserves_valid_state fixInterval_preserves_valid_state small_lazy'.cases)
+repos/marlowe/isabelle/Core/ValidState.thy:164:lemma playTraceAux_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:172:  by (smt TransactionOutput.case(1) TransactionOutput.case(2) TransactionOutput.exhaust computeTransaction_preserves_valid_state)
+repos/marlowe/isabelle/Core/ValidState.thy:174:lemma empty_state_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:178:theorem playTrace_preserves_valid_state :
+repos/marlowe/isabelle/Core/ValidState.thy:182:  by (metis MList.valid_empty State.select_convs(1) State.select_convs(2) State.select_convs(3) TransactionOutputRecord.select_convs(3) emptyState.elims playTraceAux_preserves_valid_state valid_state.simps)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:15:text "We can express the \<^bold>\<open>assets in the account\<close> as a simple foldr over the accounts array"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:19:text "The \<^emph>\<open>addAccountAssets\<close> function is commutative over composition, which allows to operate
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:21:lemma addAccountAssetsCommutesComposition :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:30:text "And to be able to express it as a normal \<^emph>\<open>fold\<close> enables more lemmas to work with."
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:31:lemma assetsInAccountFold : "assetsInAccounts accs = fold addAccountAssets accs 0"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:36:text "Because we are adding positive numbers, adding an account entry to some accumulator is always
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:39:lemma addAccountAssets_AlwaysIncreases : "accu \<le> addAccountAssets entry accu"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:43:lemma filtered_as_leq_as : "assetsInAccounts (filter P accs) \<le> assetsInAccounts accs"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:64:text "The main theorem of this section \<^emph>\<open>assetsInAccounts_distrib_insert\<close> describes how assets
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:67:lemma assetsInAccounts_distrib_insert_not_member :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:83:lemma assetsInAccounts_distrib_insert_deleted :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:89:lemma assetsInAccounts_of_deleted :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:108:theorem assetsInAccounts_distrib_insert :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:114:corollary AssetsInAccount_distrib_on_cons :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:123:the assets are preserved, but they help understand the assets of different Parties, so I leave
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:133:lemma accountAssetsOfEmpty :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:137:lemma accountAssets_without_accId_isZero :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:148:lemma accountAssets_leq_assetsInAccount:
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:156:lemma positiveAccounts_implies_positiveMoneyInAccount :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:170:    using allAccountsPositive_implies_lookup_is_positive by fastforce
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:174:we need to know that the assets obtained from \<^term>\<open>moneyInAccount\<close> are always
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:176:from \<^term>\<open>moneyInAccount\<close> as a filter."
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:177:lemma assetsOfMoneyInAccountAsFilter :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:202:lemma moneyInAccount_leq_assetsInAccount :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:210:lemma assetsInAccounts_distrib_on_update:
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:226:lemma addMoneyToAccount_distrib:
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:239:    using assms positiveAccounts_implies_positiveMoneyInAccount by blast
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:251:lemma state_account_red : "accounts (state \<lparr> accounts := a \<rparr>) = a"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:263:lemma addExternalPaymentAssetsCommutesComposition :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:275:lemma assetsInPayments_rev : "assetsInExternalPayments payments = assetsInExternalPayments (rev payments)"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:285:lemma assetsInPayments_append : "assetsInExternalPayments (xs @ ys) = assetsInExternalPayments xs + assetsInExternalPayments ys"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:305:lemma addInputAssetsCommutesComposition :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:325:lemma addTransactionAssetsCommutesComposition :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:337:section "Asset preservation"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:341:lemma fixInterval_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:350:text "In order to prove that refundOne preserves assets we first show that for a valid account, the
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:353:lemma assetsInAccountIsZero_iff_AccsIsNil :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:377:theorem refundOnePreservesAssets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:404:lemma transferBetweenAccountsPreservesMoney :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:425:    by (smt (verit, ccfv_threshold) semigroup_add_class.add.assoc addMoneyToAccount_distrib assetsDistributesPlus assetsInAccounts_distrib_on_update assms diff_add updateMoneyInAccount_preserves_valid_map)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:434:In order to prove that reduceContractStep preserves assets we only need to check the paths that
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:435:leads to the contract being \<^emph>\<open>Reduced\<close>. The other possible outcomes (\<^emph>\<open>NotReduced\<close> and \<^emph>\<open>AmbiguousTimeIntervalReductionError\<close>)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:439:theorem reduceContractStep_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:446:     If it has it will refundOne (which preserves assets)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:511:      using letBindings moneyToPayIsPositive nat_diff_distrib' positiveAccounts_implies_positiveMoneyInAccount assms by force
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:522:        by (smt (verit, best) AssetsPreservation.assetsInState.elims PositiveAccounts.allAccountsPositiveState.elims(2) PositiveAccounts.validAndPositive_state.simps add_cancel_right_left assms(1) balanceNatSplit diff_le_self letBindings(1) letBindings(3) letBindings(4) nat_le_eq_zle paidMoney_leq_balance positiveAccounts_implies_positiveMoneyInAccount transferBetweenAccountsPreservesMoney validAccountMap)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:546:  (* When is only reduced if there is a timeout, if there is, the state is preserved and no payments are made *)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:547:  case (When cases timeout tCont)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:577:subsection "Reduce contract until quiescent"
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:579:lemma reductionLoop_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:593:      using reductionLoopInduction.prems Reduced reduceContractStep_preserves_validAndPositive_state by blast
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:597:    with reductionLoopInduction.prems Reduced reduceContractStep_preserves_assets
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:598:      have induction_reduceContractStep_preserves_assets:
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:604:      with newPaymentAssets induction_reduceContractStep_preserves_assets show ?thesis
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:608:      with newPaymentAssets induction_reduceContractStep_preserves_assets show ?thesis
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:620:theorem reduceContractUntilQuiescent_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:627:    by (metis reduceContractUntilQuiescent.simps assms reductionLoop_preserves_assets)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:635:lemmas applyCases_preserves_assets_induct = applyCases.induct[case_names CaseDeposit CaseChoice CaseNotify a b c d]
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:637:lemma applyCases_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:642:using assms proof (induction env inState input cases rule: applyCases_preserves_assets_induct )
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:659:theorem applyInput_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:664:  case (When cs timeout timeoutCont)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:665:  with assms applyCases_preserves_assets show ?thesis
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:671:lemma applyAllLoop_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:686:  hence preservedReducedAssets:
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:688:    using local.applyAllLoopInduction.prems(1) reduceContractUntilQuiescent_preserves_assets by blast
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:692:    moreover note contractIsReduced preservedReducedAssets applyAllLoopInduction
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:705:      moreover note contractIsReduced preservedReducedAssets applyAllLoopInduction Cons
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:707:        using calculation reduceContractUntilQuiescent_preserves_validAndPositive_state
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:710:        using calculation applyInput_preserves_preserves_validAndPositive_state
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:724:        using calculation by (meson applyInput_preserves_assets)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:736:theorem applyAllInputs_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:742:  using assms applyAllLoop_preserves_assets by fastforce
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:746:theorem computeTransaction_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:766:      using calculation fixInterval_preserves_preserves_validAndPositive_state validAndPositiveImpliesValid
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:769:      using calculation applyAllInputs_preserves_preserves_validAndPositive_state
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:773:      using calculation applyAllInputs_preserves_assets
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:779:      by (metis AssetsPreservation.assetsInTransaction.simps fixInterval_preserves_assets)
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:785:lemma playTraceAux_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:815:      using calculation computeTransaction_preserves_validAndPositive_state by auto
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:818:      using calculation computeTransaction_preserves_assets by presburger
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:838:theorem playTrace_preserves_assets :
+repos/marlowe/isabelle/Core/AssetsPreservation.thy:856:    using calculation playTraceAux_preserves_assets by blast
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:2:\<comment> \<open>This module defines the types we abstract from blockchain specific implementation\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:8:section \<open>Blockchain agnostic \label{sec:blockchain-agnostic}\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:13:\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:18:\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:21:In order to define the different \<^term>\<open>Token\<close>s that are used as currency in the participants accounts
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:23: we need to be able to express a \<^term>\<open>TokenName\<close> and \<^term>\<open>CurrencySymbol\<close>.
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:24:\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:30:and to make payouts to them, we need to express an \<^term>\<open>Address\<close>.\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:33:text \<open>In the context of this specification, these \<^term>\<open>ByteString\<close> types are opaque, and we don't enforce
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:34:a particular encoding or format, only that they can be sorted \secref{sec:bytestring}.\<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:36:text \<open>The \<^term>\<open>Timeout\<close>s that prevent us from waiting forever for external \<^term>\<open>Input\<close>s are represented
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:37:by the number of milliseconds from the Unix Epoch \<^footnote>\<open>January 1st, 1970 at 00:00:00 UTC\<close>. \<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:42:text \<open>The \<^term>\<open>TimeInterval\<close> that defines the validity of a transaction is a tuple of exclusive start
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:43:and end time. \<close>
+repos/marlowe/isabelle/Core/BlockchainTypes.thy:44:\<comment> \<open>TODO: Check if exclusive or inclusive\<close>
+repos/marlowe/isabelle/Core/TransactionBound.thy:24:lemma reduceContractStep_quiescent_reduces : "isQuiescent c st \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:31:lemma reduceContractStep_not_quiescent_reduces : "\<not> isQuiescent c st \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:56:lemma reduceContractStep_doesnt_increase_maxTransactions : "reduceContractStep env st c = Reduced wa ef nst nc \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:58:  using reduceContractStep_not_quiescent_reduces reduceContractStep_quiescent_reduces by fastforce
+repos/marlowe/isabelle/Core/TransactionBound.thy:60:lemma reductionLoop_doesnt_increase_maxTransactions : "reductionLoop reduced env st c wa ef = ContractQuiescent newReduced nwa nef nst nc \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:72:lemma reductionLoop_reduces_maxTransactions : "validAndPositive_state st \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:81:       by (metis le_imp_less_Suc less_le_trans maxTransactions.elims reduceContractStep_doesnt_increase_maxTransactions reduceContractStep_not_quiescent_reduces reduceContractStep_preserves_validAndPositive_state reduceContractStep_quiescent_reduces reductionLoopIsQuiescent)
+repos/marlowe/isabelle/Core/TransactionBound.thy:86:lemma reductionLoop_doesnt_increase_countWhens : "reductionLoop reduced env st c wa ef = ContractQuiescent newReduced nwa nef nst nc \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:94:      by (metis le_eq_less_or_eq less_trans reduceContractStep_not_quiescent_reduces reduceContractStep_quiescent_reduces)
+repos/marlowe/isabelle/Core/TransactionBound.thy:98:lemma applyCases_doesnt_increase_countWhens :
+repos/marlowe/isabelle/Core/TransactionBound.thy:112:lemma applyInput_decreases_countWhens :
+repos/marlowe/isabelle/Core/TransactionBound.thy:124:lemma applyCases_doesnt_increase_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:130:lemma applyInput_doesnt_increase_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:142:lemma applyAllLoop_doesnt_increase_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:161:      apply (metis (full_types) applyInput_doesnt_increase_maxTransactions applyInput_preserves_preserves_validAndPositive_state le_trans reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_preserves_validAndPositive_state reductionLoop_doesnt_increase_maxTransactions)
+repos/marlowe/isabelle/Core/TransactionBound.thy:166:lemma reduceContractUntilQuiescent_doesnt_increase_countWhens : "validAndPositive_state state \<Longrightarrow>
+repos/marlowe/isabelle/Core/TransactionBound.thy:171:lemma applyAllLoop_doesnt_increase_countWhens :
+repos/marlowe/isabelle/Core/TransactionBound.thy:188:        apply (smt applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state leI less_le_trans less_not_refl order.strict_trans reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/TransactionBound.thy:194:lemma applyAllLoop_decreases_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:213:          apply (metis (mono_tags) applyAllInputsLoopIsQuiescent applyAllLoop_doesnt_increase_countWhens applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state max.coboundedI2 max_absorb1 not_le reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/TransactionBound.thy:215:          by (metis (mono_tags, lifting) applyAllInputsLoopIsQuiescent applyAllLoop_doesnt_increase_countWhens applyInput_decreases_countWhens applyInput_preserves_preserves_validAndPositive_state dual_order.strict_trans1 le_less_trans less_SucI reduceContractUntilQuiescent_doesnt_increase_countWhens reduceContractUntilQuiescent_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/TransactionBound.thy:221:lemma minTime_doesnt_affect_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:226:lemma fixInterval_preserves_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:240:lemma computeTransaction_decreases_maxTransactions_aux :
+repos/marlowe/isabelle/Core/TransactionBound.thy:246:lemma computeTransaction_decreases_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:260:      by (metis TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) applyAllInputs.simps applyAllInputsIsQuiescent applyAllLoop_doesnt_increase_countWhens computeTransaction_decreases_maxTransactions_aux fixInterval_preserves_maxTransactions fixInterval_preserves_preserves_validAndPositive_state isQuiescent.simps(1) le_neq_implies_less maxTransactions.simps not_less_eq not_less_iff_gr_or_eq)
+repos/marlowe/isabelle/Core/TransactionBound.thy:265:lemma playTraceAux_only_accepts_maxTransactions_aux :
+repos/marlowe/isabelle/Core/TransactionBound.thy:275:    apply (metis TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state dual_order.strict_trans playTraceAux.simps(1))
+repos/marlowe/isabelle/Core/TransactionBound.thy:279:lemma playTraceAux_only_accepts_maxTransactions :
+repos/marlowe/isabelle/Core/TransactionBound.thy:291:      apply (metis (mono_tags, lifting) TransactionOutputRecord.select_convs(3) TransactionOutputRecord.select_convs(4) TransactionOutputRecord.surjective TransactionOutputRecord.update_convs(1) TransactionOutputRecord.update_convs(2) computeTransaction_decreases_maxTransactions computeTransaction_preserves_validAndPositive_state le_trans not_le not_less_eq)
+repos/marlowe/isabelle/Core/TransactionBound.thy:299:lemma playTrace_only_accepts_maxTransactionsInitialStateSN :
+repos/marlowe/isabelle/Core/TransactionBound.thy:310:lemma maxTransactionsInitialState_equiv_maxTransactionsInitialStateSN :
+repos/marlowe/isabelle/Core/TransactionBound.thy:316:lemma playTrace_only_accepts_maxTransactionsInitialState :
+repos/marlowe/isabelle/Core/QuiescentResult.thy:5:lemma reduceContractStepPayIsQuiescent :
+repos/marlowe/isabelle/Core/QuiescentResult.thy:28:lemma reduceOneIsSomeIfNotEmptyAndPositive : "accs \<noteq> [] \<Longrightarrow> allAccountsPositive accs \<Longrightarrow> refundOne accs \<noteq> None"
+repos/marlowe/isabelle/Core/QuiescentResult.thy:31:lemma reduceContractStepIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:46:lemma reductionLoopIsQuiescent_aux :
+repos/marlowe/isabelle/Core/QuiescentResult.thy:55:  apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/QuiescentResult.thy:59:lemma reductionLoopIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:64:theorem reduceContractUntilQuiecentIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:68:lemma applyAllInputsLoopIsQuiescent_base : "validAndPositive_state fixSta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:73:lemma applyAllInputsLoopIsQuiescent_loop : "(\<And>reduced env fixSta cont wa ef.
+repos/marlowe/isabelle/Core/QuiescentResult.thy:82:    apply (meson applyInput_preserves_preserves_validAndPositive_state reduceContractUntilQuiescent_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/QuiescentResult.thy:87:lemma applyAllInputsLoopIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:93:lemma applyAllInputsIsQuiescent : "validAndPositive_state fixSta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:97:lemma computeTransactionIsQuiescent_aux : "validAndPositive_state sta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:106:  by (smt ApplyAllResult.exhaust ApplyAllResult.simps(10) ApplyAllResult.simps(8) ApplyAllResult.simps(9) IntervalResult.simps(5) TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.ext_inject applyAllInputs.simps applyAllInputsLoopIsQuiescent fixInterval_preserves_preserves_validAndPositive_state)
+repos/marlowe/isabelle/Core/QuiescentResult.thy:108:theorem computeTransactionIsQuiescent : "validAndPositive_state sta \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:116:lemma playTraceAuxIsQuiescent : "validAndPositive_state (txOutState traIn) \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:126:    using computeTransactionIsQuiescent computeTransaction_preserves_validAndPositive_state by simp_all
+repos/marlowe/isabelle/Core/QuiescentResult.thy:129:theorem playTraceIsQuiescent : "playTrace sl cont (Cons h t) = TransactionOutput traOut \<Longrightarrow>
+repos/marlowe/isabelle/Core/QuiescentResult.thy:134:lemma reductionLoop_reduce_monotonic : "reductionLoop True env sta cont wa ef = ContractQuiescent reduce nwa nef newState newCont \<Longrightarrow> reduce"
+repos/marlowe/isabelle/Core/QuiescentResult.thy:150:theorem reduceContractUntilQuiescent_ifDifferentReduced : "reduceContractUntilQuiescent si sta cont = ContractQuiescent reduce wa ef sta newCont \<Longrightarrow> cont \<noteq> newCont \<Longrightarrow> reduce"
+repos/marlowe/isabelle/Core/Timeout.thy:10:lemma max_of_ge : "ia \<le> i \<Longrightarrow> max (i::int) ia = i"
+repos/marlowe/isabelle/Core/Timeout.thy:13:lemma reduceStepClose_is_Close : "reduceContractStep env sta Close = Reduced re wa nsta ncon \<Longrightarrow> ncon = Close"
+repos/marlowe/isabelle/Core/Timeout.thy:25:lemma reductionLoopClose_is_Close : "reductionLoop reduced env sta Close x y = ContractQuiescent newReduced re wa nsta ncon \<Longrightarrow> ncon = Close"
+repos/marlowe/isabelle/Core/Timeout.thy:38:lemma reduceClose_is_Close : "reduceContractUntilQuiescent env sta Close = ContractQuiescent reduced re wa nsta ncon \<Longrightarrow> ncon = Close"
+repos/marlowe/isabelle/Core/Timeout.thy:42:lemma timedOutReduce_only_quiescent_in_close_When :
+repos/marlowe/isabelle/Core/Timeout.thy:49:lemma maxTimeWhen : "maxTimeContract (When x41 x42 x43) \<le> iniTime \<Longrightarrow> x42 \<le> iniTime"
+repos/marlowe/isabelle/Core/Timeout.thy:53:lemma maxTimeNotAmbiguous_reduceStep :
+repos/marlowe/isabelle/Core/Timeout.thy:72:lemma maxTimeOnlyDecreases_reduceStepWhen :
+repos/marlowe/isabelle/Core/Timeout.thy:79:lemma maxTimeOnlyDecreases_reduceStep :
+repos/marlowe/isabelle/Core/Timeout.thy:101:lemma maxTimeNotAmbiguous_reduceLoop : "maxTimeContract cont \<le> iniTime \<Longrightarrow>
+repos/marlowe/isabelle/Core/Timeout.thy:114:lemma maxTimeNotAmbiguous : "maxTimeContract cont \<le> iniTime \<Longrightarrow>
+repos/marlowe/isabelle/Core/Timeout.thy:120:lemma timedOutReduce_only_quiescent_in_close :
+repos/marlowe/isabelle/Core/Timeout.thy:129:  using timedOutReduce_only_quiescent_in_close_When apply blast
+repos/marlowe/isabelle/Core/Timeout.thy:133:lemma timedOutReduceStep_does_not_modify_minTime :
+repos/marlowe/isabelle/Core/Timeout.thy:169:lemma timedOutReduceContractLoop_closes_contract : "
+repos/marlowe/isabelle/Core/Timeout.thy:195:    using timedOutReduce_only_quiescent_in_close
+repos/marlowe/isabelle/Core/Timeout.thy:200:lemma timedOutReduceContractUntilQuiescent_closes_contract :
+repos/marlowe/isabelle/Core/Timeout.thy:207:  by (smt State.select_convs(4) State.surjective State.update_convs(4) timedOutReduceContractLoop_closes_contract)
+repos/marlowe/isabelle/Core/Timeout.thy:209:lemma timedOutReduceContractStep_empties_accounts :
+repos/marlowe/isabelle/Core/Timeout.thy:216:  by (smt State.ext_inject State.surjective State.update_convs(4) allAccountsPositiveState.elims(3) isQuiescent.simps(1) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiecentIsQuiescent reduceContractUntilQuiescent.simps timedOutReduceContractLoop_closes_contract validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.simps)
+repos/marlowe/isabelle/Core/Timeout.thy:218:theorem timedOutTransaction_closes_contract :
+repos/marlowe/isabelle/Core/Timeout.thy:235:     apply (metis max.orderE timedOutReduceContractStep_empties_accounts timedOutReduceContractUntilQuiescent_closes_contract)
+repos/marlowe/isabelle/Core/Timeout.thy:238:    by (metis max.orderE timedOutReduceContractUntilQuiescent_closes_contract)     
+repos/marlowe/isabelle/Core/Timeout.thy:242:corollary timeOutTransaction_does_not_fail : 
+repos/marlowe/isabelle/Core/Timeout.thy:250:  using assms by (meson Timeout.isClosedAndEmpty.elims(2)  timedOutTransaction_closes_contract)
+repos/marlowe/isabelle/Core/Timeout.thy:252:theorem timeOutTransaction_closes_contract2 :
+repos/marlowe/isabelle/Core/Timeout.thy:256:  by (meson not_less not_less_iff_gr_or_eq timedOutTransaction_closes_contract)
+repos/marlowe/isabelle/Core/Timeout.thy:258:theorem timedOutTransaction_preserves_assets :
+repos/marlowe/isabelle/Core/Timeout.thy:271:    using computeTransaction_preserves_assets calculation by presburger
+repos/marlowe/isabelle/Core/Timeout.thy:273:    using calculation by (metis Timeout.isClosedAndEmpty.simps(1) timedOutTransaction_closes_contract)
+repos/marlowe/isabelle/Core/TimeRange.thy:8:text "Helper functions for \<^emph>\<open>calculateNonAmbiguousInterval\<close>"
+repos/marlowe/isabelle/Core/TimeRange.thy:23:A TimeInterval (startTime, endTime) is ambiguous wrt a When's timeout iff startTime < timeout \<le> endTime
+repos/marlowe/isabelle/Core/TimeRange.thy:25:\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:27:text \<open>The \<^emph>\<open>calculateNonAmbiguousInterval\<close> function can help a user to calculate a TimeInterval that
+repos/marlowe/isabelle/Core/TimeRange.thy:28:won't be ambiguous for the next \<^emph>\<open>n\<close> inputs of a contract.\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:30:text \<open>The only constructor that can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> is \<^term>\<open>When\<close> contract. 
+repos/marlowe/isabelle/Core/TimeRange.thy:31:Computing a transaction can yield a \<^term>\<open>TEAmbiguousTimeIntervalError\<close> if there is a \<^term>\<open>When\<close> timeout that makes it ambiguous.
+repos/marlowe/isabelle/Core/TimeRange.thy:32:A TimeInterval expressed as the tuple \<^term>\<open>(startTime, endTime)\<close> is ambiguous wrt a \<^term>\<open>When\<close>'s timeout
+repos/marlowe/isabelle/Core/TimeRange.thy:33:iff \<^emph>\<open>startTime < timeout \<le> endTime\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:34:\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:37:\<open> The parameters of \<^emph>\<open>calculateNonAmbiguousInterval\<close> are:
+repos/marlowe/isabelle/Core/TimeRange.thy:38:\<^item> An optional number of inputs to check. The number of inputs corresponds to the number of \<^term>\<open>When\<close>. 
+repos/marlowe/isabelle/Core/TimeRange.thy:43:The function returns an Optionally Bound Time Interval, as defined in the \<^emph>\<open>OptBoundTimeInterval.thy\<close> theory.
+repos/marlowe/isabelle/Core/TimeRange.thy:44:In the \<^emph>\<open>TimeRange.thy\<close> theory we prove that computing a transaction with these bounds doesn't end with an ambiguous interval error. 
+repos/marlowe/isabelle/Core/TimeRange.thy:45:\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:46:\<comment> \<open>NOTE: The intersectInterval function can produce an invalid time interval, which would mean that no suitable TimeInterval was found\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:49:\<comment> \<open>A Close contract can't be ambiguous, so an Unbounded interval is returned \<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:51:\<comment> \<open>A Pay contract isn't ambiguous by itself, so we calculate for the continuation\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:53:\<comment> \<open>If we branch, we intersect the result of both possibilites. \<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:58:case, when we have a particular action \<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:59:"calculateNonAmbiguousInterval n t (When [] timeout tcont) =
+repos/marlowe/isabelle/Core/TimeRange.thy:60:  (if t < timeout
+repos/marlowe/isabelle/Core/TimeRange.thy:61:  \<comment> \<open>If the When's timeout is in the future, we can generate a non-ambiguous time interval
+repos/marlowe/isabelle/Core/TimeRange.thy:62:      by restricting the endTime to be strictly lower than the timeout\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:63:   then (Unbounded, Bounded (timeout - 1))
+repos/marlowe/isabelle/Core/TimeRange.thy:64:  \<comment> \<open>If the timeout is in the past, we need to restrict the startTime to be larger or equal than
+repos/marlowe/isabelle/Core/TimeRange.thy:65:     the timeout\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:66:   else intersectInterval (Bounded timeout, Unbounded) (calculateNonAmbiguousInterval n t tcont))" |
+repos/marlowe/isabelle/Core/TimeRange.thy:68:"calculateNonAmbiguousInterval n t (When (Case _ cont  # restCases) timeout tcont) =  
+repos/marlowe/isabelle/Core/TimeRange.thy:70:\<comment> \<open>If n is none (check all) or n > 0 we recursively calculate the intersection for all the continuations\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:72:                         (calculateNonAmbiguousInterval n t (When restCases timeout tcont))
+repos/marlowe/isabelle/Core/TimeRange.thy:73:\<comment> \<open>If n \<le> 0 we don't calculate for the current case and we iterate until we reach the base case\<close>  
+repos/marlowe/isabelle/Core/TimeRange.thy:74:\<comment> \<open>TODO: we should be able to replace restCases with [] to check the base case directly\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:75:   else calculateNonAmbiguousInterval n t (When restCases timeout tcont))" |
+repos/marlowe/isabelle/Core/TimeRange.thy:76:\<comment> \<open>Let and Assert constructs aren't ambiguous by themselves, so we just calculate for the continuation\<close>
+repos/marlowe/isabelle/Core/TimeRange.thy:81:theorem inIntervalIdempotentToIntersectInterval :
+repos/marlowe/isabelle/Core/TimeRange.thy:86:lemma inIntervalIdempotency1 :
+repos/marlowe/isabelle/Core/TimeRange.thy:98:lemma inIntervalIdempotency2 :
+repos/marlowe/isabelle/Core/TimeRange.thy:110:lemma compatibleIdempotencyWhen :
+repos/marlowe/isabelle/Core/TimeRange.thy:125:lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_When :
+repos/marlowe/isabelle/Core/TimeRange.thy:145:lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_reduceContractStep :
+repos/marlowe/isabelle/Core/TimeRange.thy:163:lemma resultOfReduceIsCompatibleToo :
+repos/marlowe/isabelle/Core/TimeRange.thy:188:lemma resultOfReductionLoopQuiescentIsCompatibleToo :
+repos/marlowe/isabelle/Core/TimeRange.thy:203:lemma resultOfReduceUntilQuiescentIsCompatibleToo :
+repos/marlowe/isabelle/Core/TimeRange.thy:209:lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_reduceContractUntilQuiescent :
+repos/marlowe/isabelle/Core/TimeRange.thy:226:lemma successInApplyCasesReturnChildCase :
+repos/marlowe/isabelle/Core/TimeRange.thy:254:lemma resultOfApplyCaseIsCompatibleToo_aux :
+repos/marlowe/isabelle/Core/TimeRange.thy:268:lemma resultOfApplyCaseIsCompatibleToo :
+repos/marlowe/isabelle/Core/TimeRange.thy:278:lemma resultOfApplyInputIsCompatibleToo :
+repos/marlowe/isabelle/Core/TimeRange.thy:286:lemma geIfNone_redListSize :
+repos/marlowe/isabelle/Core/TimeRange.thy:291:lemma reduceStep_ifCaseLtCt_aux : "inInterval (a, b) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/TimeRange.thy:303:lemma reduceStep_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct (When x41 x42 x43)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/TimeRange.thy:317:lemma reduceLoop_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct cont) \<Longrightarrow>
+repos/marlowe/isabelle/Core/TimeRange.thy:338:lemma reduceContractUntilQuiescent_ifCaseLtCt : "inInterval (timeInterval env) (calculateNonAmbiguousInterval n ct cont) \<Longrightarrow>
+repos/marlowe/isabelle/Core/TimeRange.thy:344:lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllLoop :
+repos/marlowe/isabelle/Core/TimeRange.thy:378:lemma calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_applyAllInputs :
+repos/marlowe/isabelle/Core/TimeRange.thy:387:theorem calculateNonAmbiguousIntervalAvoidsAmbiguousInterval :
+repos/marlowe/isabelle/Core/TimeRange.thy:413:corollary calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_bounded :
+repos/marlowe/isabelle/Core/TimeRange.thy:419:corollary calculateNonAmbiguousIntervalAvoidsAmbiguousInterval_unbounded :
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:8:A BEndpoint represents either an Unbounded (-\infty  or \infty) endpoint or a closed (inclusive) bounded
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:10:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:19:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:24:We can think of an \<^emph>\<open>OptBoundTimeInterval\<close> as sets with four possible options:
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:29:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:43:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:65:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:67:lemma(*<*)maxLow_assoc [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:78:lemma(*<*)minHigh_assoc [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:101:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:103:lemma(*<*)maxLow_comm [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:113:lemma(*<*)minHigh_comm [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:135:This section proves that the function \<^emph>\<open>intersectInterval\<close> behaves the same as set intersection. In order to
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:137:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:138:lemma (*<*)belongsToSubBelongsToSet_low_1:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:150:lemma (*<*)belongsToSubBelongsToSet_low_2:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:158:lemma (*<*)belongsToSubBelongsToSet_high_1:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:170:lemma (*<*)belongsToSubBelongsToSet_high_2:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:179:lemma (*<*)belongsToSubSet_BelongsToMaxLowSet [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:190:lemma (*<*)belongsToSubSet_BelongsToMinHighSet [simp]:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:201:lemma (*<*)belongsToSubSet_BelongsToSet:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:214:theorem (*<*)intersectIntervalIsIntersect:(*>*)
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:231:The inInterval function checks if a closed and bounded Time Interval is inside 
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:232:an optional bounded closed time interval  
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:233:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:243:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:253:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:261:If the Time Interval is valid, then the \<^emph>\<open>inInterval\<close> function implies a subset.
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:262:\<close>
+repos/marlowe/isabelle/Core/OptBoundTimeInterval.thy:263:theorem inInterval_subset: 
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:5:fun positiveMoneyInAccountOrNoAccount :: "AccountId \<Rightarrow> Token \<Rightarrow> Accounts \<Rightarrow> bool" where
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:6:"positiveMoneyInAccountOrNoAccount accId tok mlist =
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:11:lemma addMoneyToAccountPositve_match :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:14:    positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (y, tok2) newBalance accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:18:lemma addMoneyToAccountPositive_noMatch :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:19: "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:22:    positiveMoneyInAccountOrNoAccount y tok2 (MList.insert (accId, tok2) newBalance accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:23:  by (metis addMoneyToAccountPositve_match insert_lookup_different positiveMoneyInAccountOrNoAccount.elims(2) positiveMoneyInAccountOrNoAccount.elims(3))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:25:lemma updateMoneyInAccount_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:27:  \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:28:  positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok2 newBalance accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:31:lemma addMoneyToAccountPositive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:32:  "(\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:33:  \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 (addMoneyToAccount accId tok3 money accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:43:lemma giveMoney_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:44:    "\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:46:       positiveMoneyInAccountOrNoAccount y tok3 newAccs"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:48:  apply (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:51:  by (simp del:positiveMoneyInAccountOrNoAccount.simps addMoneyToAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:53:lemma positiveMoneyInAccountOrNoAccount_valid_zero : "valid_map (((accId, tok), money) # rest) \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId tok rest"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:54:  apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:57:lemma positiveMoneyInAccountOrNoAccount_sublist_gtZero_different :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:59:   0 < money \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok ((accIdTok, money) # rest) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:60:   accIdTok \<noteq> (y, tok) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok rest"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:61:  apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:64:lemma positiveMoneyInAccountOrNoAccount_gtZero_preservation :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:66:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok ((accIdTok, money) # rest)) \<Longrightarrow> positiveMoneyInAccountOrNoAccount y tok2 rest"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:67:  apply (simp only:positiveMoneyInAccountOrNoAccount.simps findWithDefault.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:70:lemma reduceOne_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:72:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:74:   positiveMoneyInAccountOrNoAccount y tok2 newAccs"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:79:    apply (metis option.inject positiveMoneyInAccountOrNoAccount_gtZero_preservation prod.inject)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:80:    by (metis MList.sublist_valid positiveMoneyInAccountOrNoAccount_gtZero_preservation refundOne.simps(1))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:83:lemma reduceContractStep_gtZero_Refund :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:85:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:89:   positiveMoneyInAccountOrNoAccount y tok3 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:92:lemma MList_delete_preserves_gtZero : "valid_map accs \<Longrightarrow> \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok accs \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:93:                                       positiveMoneyInAccountOrNoAccount y tok2 (MList.delete accIdTok accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:94:  by (metis (full_types) MList.delete_lookup_None MList.different_delete_lookup option.simps(4) positiveMoneyInAccountOrNoAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:96:lemma reduceContractStep_gtZero_Pay_aux :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:98:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:99:   positiveMoneyInAccountOrNoAccount y tok2 (updateMoneyInAccount accId tok3 amount (accounts state))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:100:  by (metis MList_delete_preserves_gtZero insert_lookup_different not_le positiveMoneyInAccountOrNoAccount.elims(2) positiveMoneyInAccountOrNoAccount.elims(3) updateMoneyInAccount.simps updateMoneyInAccount_gtZero valid_state_valid_accounts)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:102:lemma reduceContractStep_gtZero_Pay :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:104:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:106:   positiveMoneyInAccountOrNoAccount y tok3 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:114:  apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps updateMoneyInAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:121:lemma reduceContractStep_gtZero_Let :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:123:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:125:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:129:  apply (simp del:positiveMoneyInAccountOrNoAccount.simps valid_state.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:132:theorem reduceContractStep_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:134:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:136:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:147:lemma reduceLoop_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:149:    \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:151:    positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:156:      apply (metis (no_types, lifting) ReduceStepResult.simps(8) reduceContractStep_gtZero reductionStep_preserves_valid_state)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:161:lemma reduceContractUntilQuiescent_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:163:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:165:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:169:lemma applyCases_positive : "valid_state state \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:170:       \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:172:       positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:179:    apply (simp add:Let_def del:valid_state.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:180:    apply (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:182:    by (simp add:Let_def del:valid_state.simps updateMoneyInAccount.simps positiveMoneyInAccountOrNoAccount.simps moneyInAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:190:lemma applyInput_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:192:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:194:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:200:  using applyCases_positive apply blast
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:204:lemma applyAllLoop_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:206:   \<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:208:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:224:        apply (metis applyInput_gtZero applyInput_preserves_valid_state reduceContractUntilQuiescent.simps reduceLoop_gtZero reductionLoop_preserves_valid_state)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:230:lemma applyAllInputs_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:232:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:234:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:238:lemma fixInterval_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:240:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:242:   positiveMoneyInAccountOrNoAccount y tok2 (accounts newState)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:247:theorem computeTransaction_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:249:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state)) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:251:   positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:259:    apply (metis TransactionOutput.distinct(1) TransactionOutput.inject(1) TransactionOutputRecord.select_convs(3) applyAllInputs_gtZero fixInterval_gtZero fixInterval_preserves_valid_state old.prod.exhaust)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:263:lemma playTraceAux_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:265:   (\<forall>x tok. positiveMoneyInAccountOrNoAccount x tok (accounts (txOutState txIn))) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:267:   positiveMoneyInAccountOrNoAccount y tok2 (accounts (txOutState txOut))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:272:    apply (simp del:valid_state.simps computeTransaction.simps positiveMoneyInAccountOrNoAccount.simps add:Let_def)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:274:    using computeTransaction_gtZero computeTransaction_preserves_valid_state apply auto[1]
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:278:lemma emptyState_gtZero : "positiveMoneyInAccountOrNoAccount y tok (accounts (emptyState sl))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:282:theorem playTrace_gtZero :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:284:   positiveMoneyInAccountOrNoAccount y tok (accounts (txOutState txOut))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:285:  by (metis TransactionOutputRecord.select_convs(3) emptyState_gtZero playTrace.simps playTraceAux.simps(1) playTraceAux_gtZero playTrace_preserves_valid_state)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:295:lemma allAccountsPositiveMeansFirstIsPositive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:305:lemma allAccountsPositiveMeansAllAccountsInTailArePositive_aux :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:312:lemma allAccountsPositiveMeansAllAccountsInTailArePositive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:318:lemma allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount_aux :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:319:  "(\<And>accId tok. allAccountsPositive accs \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId tok accs) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:320:   allAccountsPositive ((a, b) # accs) \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId2 tok2 ((a, b) # accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:321:  apply (simp only:positiveMoneyInAccountOrNoAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:332:lemma allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:333:  "allAccountsPositive accs \<Longrightarrow> positiveMoneyInAccountOrNoAccount accId tok accs"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:338:lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:342:lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:343:  "(valid_map accs \<Longrightarrow> \<forall>accId tok. positiveMoneyInAccountOrNoAccount accId tok accs \<Longrightarrow> allAccountsPositive accs) \<Longrightarrow>
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:344:   valid_map ((a, b) # accs) \<Longrightarrow> \<forall>accId tok. positiveMoneyInAccountOrNoAccount accId tok ((a, b) # accs) \<Longrightarrow> allAccountsPositive ((a, b) # accs)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:348:  apply (simp only:positiveMoneyInAccountOrNoAccount.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:349:  apply (rule positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:351:  by (meson MList.sublist_valid positiveMoneyInAccountOrNoAccount.simps positiveMoneyInAccountOrNoAccount_gtZero_preservation)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:353:lemma positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:354:  "valid_map accs \<Longrightarrow> (\<forall> accId tok. positiveMoneyInAccountOrNoAccount accId tok accs) \<Longrightarrow> allAccountsPositive accs"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:357:  using positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive_aux2 by auto
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:359:theorem accountsArePositive2 :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:363:  by (meson computeTransaction_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) computeTransaction_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state.elims(2))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:365:theorem accountsArePositive2_trace :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:369:  by (meson allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.simps playTraceAux_gtZero playTraceAux_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive valid_state_valid_accounts)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:374:lemma validAndPositiveImpliesValid : "validAndPositive_state state \<Longrightarrow> valid_state state"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:377:lemma validAndPositiveImpliesPositive : "validAndPositive_state state \<Longrightarrow> (\<forall> x tok. positiveMoneyInAccountOrNoAccount x tok (accounts state))"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:380:lemma reduceContractStep_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:385:  by (meson allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount allAccountsPositiveState.elims(2) allAccountsPositiveState.elims(3) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractStep_gtZero reductionStep_preserves_valid_state valid_state.elims(2))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:387:lemma reduceContractUntilQuiescent_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:391:  by (metis allAccountsPositiveState.elims(3) positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive reduceContractUntilQuiescent.simps reduceContractUntilQuiescent_gtZero reductionLoop_preserves_valid_state validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:393:lemma applyInput_preserves_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:397:  by (meson allAccountsPositiveState.simps applyInput_gtZero applyInput_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:399:lemma applyAllInputs_preserves_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:403:  by (metis allAccountsPositiveState.elims(3) applyAllInputs.simps applyAllInputs_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.elims(2))
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:405:lemma fixInterval_preserves_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:409:  by (metis allAccountsPositiveState.elims(3) fixInterval_gtZero fixInterval_preserves_valid_state old.prod.exhaust positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositiveImpliesValid validAndPositive_state.elims(3) valid_state.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:411:lemma applyAllLoop_preserves_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:415:  by (meson allAccountsPositiveState.simps applyAllLoop_gtZero applyAllLoop_preserves_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive validAndPositiveImpliesPositive validAndPositive_state.simps valid_state.simps)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:417:lemma computeTransaction_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:421:  using accountsArePositive2 computeTransaction_preserves_valid_state validAndPositive_state.simps by blast
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:423:lemma playTraceAux_preserves_validAndPositive_state :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:427:  using accountsArePositive2_trace playTraceAux_preserves_valid_state validAndPositive_state.simps by blast
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:429:lemma validAndPositive_initial_state : "validAndPositive_state (emptyState sl)"
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:430:  using emptyState_gtZero empty_state_valid_state positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive by auto
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:432:lemma allAccountsPositive_implies_every_account_positive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:447:lemma allAccountsPositive_implies_lookup_is_positive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:452:  by (metis allAccountsPositive_implies_every_account_positive lookupAsMap map_of_SomeD)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:455:lemma updateMoneyIsPositive :
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:467:       positiveMoneyInAccountOrNoAccount and allAccountsPositive to avoid unecesary conversion *)
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:468:    by (metis MList.delete_valid MList_delete_preserves_gtZero allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive)    
+repos/marlowe/isabelle/Core/PositiveAccounts.thy:476:    by (smt (verit, del_insts) PositiveAccounts.positiveMoneyInAccountOrNoAccount.simps addMoneyToAccountPositve_match allAccountsPositiveImpliesPositiveMoneyInAccountOrNoAccount insert_lookup_different positiveMoneyInAccountOrNoAccountImpliesAllAccountsPositive updateMoneyInAccount_preserves_valid_map)
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:7:declare [[ smt_timeout = 300 ]]
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:12:\<close>
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:25:\<close>
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:31:lemma reductionLoopIdempotent :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:46:lemma reduceContractUntilQuiescentIdempotent :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:52:lemma applyAllLoopEmptyIdempotent :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:60:lemma applyAllLoopJustAppendsWarningsAndEffects :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:81:lemma applyAllLoop_preserves_reduced : "applyAllLoop True env state cont list warns pays = ApplyAllSuccess reduced fwarn fpays fstate fcont \<Longrightarrow> reduced"
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:89:lemma applyAllLoop_noNil_reduces : "applyAllLoop False env sta cont (h#t) wa ef = ApplyAllSuccess reduced nwa npa nsta ncont \<Longrightarrow> reduced"
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:92:  using applyAllLoop_preserves_reduced by blast
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:94:lemma sthOrInequality : "(reducedBefore \<or> a # list \<noteq> []) = True"
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:97:lemma applyLoopIdempotent_base_case :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:115:    apply (smt ApplyAllResult.inject ApplyResult.inject ReduceResult.inject append.right_neutral append_assoc applyAllLoopJustAppendsWarningsAndEffects applyAllLoop_preserves_reduced convertReduceWarnings.simps(1) reduceContractUntilQuiescentIdempotent self_append_conv2)
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:121:lemma applyLoopIdempotent :
+repos/marlowe/isabelle/Core/SingleInputTransactions.thy:136: lemma applyLoopIdempotent_base_case2 :

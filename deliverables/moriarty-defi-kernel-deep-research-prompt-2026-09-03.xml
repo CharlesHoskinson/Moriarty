@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deep_research_assignment id="moriarty-defi-kernel-2026-09-03" version="1.0">
+  <title>
+    Moriarty DeFi Kernel: An Evidence-Driven DeFi Taxonomy, Marlowe Capability,
+    Compact DSL, ZKIR, SDK, Formal-Assurance, and Adoption Study
+  </title>
+
+  <research_date>2026-09-02</research_date>
+
+  <purpose>
+    Determine whether a Marlowe-like, strictly bounded language called Moriarty
+    should become the semantic and authoring layer of a Midnight DeFi Kernel.
+    Audit the completeness and usefulness of DeFiFormal's twelve-area taxonomy,
+    map all 72 protocol rows to Marlowe capabilities and gaps, design a small
+    formal Core and typed surface language, generate reviewable Compact, compile
+    through the supported toolchain to ZKIR, and define the SDK, Runtime,
+    security, proof, migration, governance, and demand gates needed for a real
+    deployment decision.
+  </purpose>
+
+  <role>
+    Act as a multidisciplinary principal research and architecture team that
+    combines programming-language design, mechanized semantics, zero-knowledge
+    systems, Midnight and Compact engineering, Marlowe and Cardano expertise,
+    financial-contract domain knowledge, DeFi mechanism and market research,
+    compiler and SDK engineering, security auditing, empirical methods,
+    developer experience, governance, and product strategy.
+  </role>
+
+  <decision_standard>
+    Produce a falsifiable decision, not a feature wishlist. Prefer a smaller
+    design with explicit assumptions over a broad design that obscures trust or
+    resource costs. A successful circuit proves only its encoded relation under
+    named compiler, proof-system, key, public-input, and ledger assumptions. It
+    does not prove oracle truth, custody, legal enforceability, participant
+    cooperation, liquidity, economic soundness, or arbitrary external code.
+  </decision_standard>
+
+  <local_inputs>
+    <input kind="primary_repository" status="S4"
+      path="/home/charl/defiformal"
+      commit="8ae0bbfaa3193078d1cabf6999db1382985b7f95">
+      DeFiFormal repository and executable experiments.
+    </input>
+    <input kind="research_memorandum" status="S2"
+      path="raw/sources/reclassifying-defi-taxonomy-updated-run-2026-09-02.md">
+      Repository-verified updated taxonomy run supplied by the user. Treat it as
+      a hypothesis ledger; cite the primary repository for reproducible facts.
+    </input>
+    <input kind="legacy_research_report" status="S2"
+      path="raw/sources/reclassifying-defi-taxonomy-report-2026-09-02.pdf">
+      Earlier repository-unreachable run. Retain it only for provenance and
+      comparisons that are not superseded.
+    </input>
+    <input kind="marlowe_assignment" status="S2"
+      path="raw/assignments/modernizing-marlowe-assignment-2026-09-02.xml">
+      Full Marlowe modernization source and deliverable requirements.
+    </input>
+    <input kind="crosswalk" status="S3"
+      path="evidence/defiformal-72-protocol-family-facet-crosswalk-2026-09-02.csv">
+      Current 72-row M2+M3 family and facet mapping. Audit every row; do not
+      treat the assignments or kernel flags as normative.
+    </input>
+    <input kind="legacy_crosswalk" status="S3"
+      path="evidence/defiformal-72-protocol-m4plus-crosswalk-2026-09-02.csv">
+      Historical M4+ migration and benchmark view.
+    </input>
+    <input kind="repository_graph" status="S3"
+      path="/home/charl/defiformal/graphify-out/graph.json">
+      Persistent DeFiFormal knowledge graph.
+    </input>
+    <input kind="repository_graph" status="S3"
+      path="graphs/marlowe-org-full/graphify-out/graph.json">
+      Persistent Marlowe organization and documentation graph.
+    </input>
+    <input kind="repository_graph" status="S3"
+      path="graphs/midnightntwrk-key-2026-09-02.json">
+      Pinned Midnight and Compact structural graph.
+    </input>
+  </local_inputs>
+
+  <baseline_to_reproduce_not_assume>
+    <claim id="B01">The corpus contains 72 uniquely named product rows in 12 legacy labels.</claim>
+    <claim id="B02">The construction suite contains 60 specifications and excludes 12 lower-ranked rows.</claim>
+    <claim id="B03">The 60 specifications contain 1,259 obligations: 570 covered and 689 residue.</claim>
+    <claim id="B04">No construction currently has a complete verdict; 45 are partial and 15 inadmissible.</claim>
+    <claim id="B05">61 of 72 element sets satisfy the repository laws and warrants.</claim>
+    <claim id="B06">
+      The 61 eligible rows produce 1,830 pairs. Of 185 failures, 3 occur among
+      143 same-category pairs and 182 among 1,687 cross-category pairs. The exact
+      failure rates are 2.0979 percent and 10.7884 percent, a 5.1425 ratio.
+    </claim>
+    <claim id="B07">
+      Deterministic Jaccard leave-one-out classification recovers 47 of 72
+      labels at 1-NN and 50 of 72 at 3-NN. D12 recovers 0 of 5 at 1-NN.
+    </claim>
+    <claim id="B08">
+      D12 mean internal Jaccard is 0.16 and D12-to-D09 mean Jaccard is 0.27.
+    </claim>
+    <claim id="B09">
+      Hierarchical clustering reportedly reaches no more than ARI 0.41 against
+      the twelve labels. Reproduce this independently and preserve linkage,
+      distance, tie, and package-version choices.
+    </claim>
+    <claim id="B10">29 of 72 rows have a smaller canonical form and four canonical collision groups exist.</claim>
+    <claim id="B11">The formal v3 self-test passes 22 of 22 assertions at the pinned commit.</claim>
+    <claim id="B12">
+      One finite Moriarty escrow compiled through Compact compiler 0.34.100,
+      language 0.26.0, runtime 0.19.100, ledger 9.1.0.0-rc.3, and ZKIR 3. Three
+      circuits passed the current mock compiler. This is S3 feasibility evidence,
+      not proof generation, ledger deployment, audit, or semantic correspondence.
+    </claim>
+  </baseline_to_reproduce_not_assume>
+
+  <candidate_taxonomy hypothesis="M2+M3-human-M5-formal">
+    <human_families>
+      <family id="F1" name="Exchange and price discovery" />
+      <family id="F2" name="Credit and collateralized debt" />
+      <family id="F3" name="Derivatives" />
+      <family id="F4" name="Consensus-position claims" />
+      <family id="F5" name="Tokenized off-chain claims" />
+      <family id="F6" name="Delegated asset management" />
+      <family id="P" name="Prediction and event-contingent markets" />
+    </human_families>
+    <mandatory_facets>
+      <facet>execution architecture</facet>
+      <facet>settlement domain and finality</facet>
+      <facet>custody and asset control</facet>
+      <facet>legal and off-chain dependence</facet>
+      <facet>collateral and solvency model</facet>
+      <facet>oracle source, freshness, aggregation, dispute, and fallback</facet>
+      <facet>authorization, mandate, recovery, and upgrade authority</facet>
+      <facet>price-discovery mechanism, order flow, and sequencing</facet>
+      <facet>privacy, disclosure, and observability</facet>
+      <facet>governance, emergency power, and change control</facet>
+    </mandatory_facets>
+    <facet_rule>
+      The facet schema is mandatory, but `none` and `not-applicable` are valid
+      explicit values. A populated or mandatory field must never imply that an
+      oracle, custodian, legal wrapper, bridge, identity provider, or governance
+      process exists or is trustworthy.
+    </facet_rule>
+    <formal_profile id="M5">
+      actors and authorities; assets and units; states and transitions;
+      obligations and rights; conservation and solvency invariants; liveness and
+      availability assumptions; failure and recovery modes; privacy and
+      disclosure effects; environmental capabilities.
+    </formal_profile>
+    <required_challenges>
+      <challenge>Is Prediction a family or a subtype of derivatives distinguished by an adjudication facet?</challenge>
+      <challenge>Is tokenization merely a representation facet, and is F5 coherent without its legal substrate?</challenge>
+      <challenge>Do pooled liquidity claims require a distinct family or explicit F1/F6 multi-membership?</challenge>
+      <challenge>Are insurance and risk pooling a missing economic family rather than derivative subtypes?</challenge>
+      <challenge>Are payments, streaming, vesting, treasury, and payroll a missing family or agreement primitive layer?</challenge>
+      <challenge>Is privacy a product family, a cross-cutting execution facet, or infrastructure only?</challenge>
+      <challenge>Should oracles, bridges, intents, identity, and settlement remain infrastructure and facets?</challenge>
+      <challenge>Can every application be assigned at component level before protocol-level aggregation?</challenge>
+      <challenge>Does temporal reclassification preserve stable identifiers and migration history?</challenge>
+      <challenge>Would a formal-behavior taxonomy alone serve language design better than any market-facing families?</challenge>
+    </required_challenges>
+  </candidate_taxonomy>
+
+  <non_negotiable_language_principles>
+    <principle id="L01">Moriarty is a financial-agreement DSL, not a general-purpose language.</principle>
+    <principle id="L02">Every deployed agreement has a statically checked lifetime and resource envelope.</principle>
+    <principle id="L03">Every wait, branch, non-cooperation path, timeout, refund, and terminal balance is explicit.</principle>
+    <principle id="L04">The semantic Core is independent of product-category labels and as small as evidence permits.</principle>
+    <principle id="L05">Typed source conveniences elaborate away or generate explicit finite Core obligations.</principle>
+    <principle id="L06">Value conservation is per asset and never implies solvency, price stability, custody, or legal redemption.</principle>
+    <principle id="L07">Private witness data is untrusted input until all required properties are constrained in the circuit.</principle>
+    <principle id="L08">Every disclosure is explicit, typed, attributable, and visible in the artifact manifest.</principle>
+    <principle id="L09">External code and services use explicit capabilities and do not inherit Core guarantees.</principle>
+    <principle id="L10">The client verifies intent, artifact identity, network, bounds, effects, and public disclosures before signing.</principle>
+    <principle id="L11">Immutable Marlowe V1 contracts remain where deployed; migration means translation or coexistence, not chain-state relocation.</principle>
+    <principle id="L12">Moriarty is not justified without evidence that it improves assurance or review cost over audited Compact libraries.</principle>
+  </non_negotiable_language_principles>
+
+  <research_method>
+    <wiki_llm_loop>
+      <step order="1">Query `wiki/index.md` and the persistent graphs before acquiring more material.</step>
+      <step order="2">State the smallest evidence gap and the decision it can change.</step>
+      <step order="3">Acquire the smallest adequate primary-source set.</step>
+      <step order="4">Preserve raw content, receipt, digest, date, version, and access limitation.</step>
+      <step order="5">Pin repositories by remote, branch or tag, full commit, submodules, and dirty state.</step>
+      <step order="6">Inspect source code, tests, schemas, build files, and generated artifacts, not only READMEs.</step>
+      <step order="7">Reproduce quantitative or executable claims with a deterministic harness.</step>
+      <step order="8">Update the smallest existing wiki concepts and contradiction register.</step>
+      <step order="9">Update the knowledge graph incrementally and query it for cross-repository paths.</step>
+      <step order="10">Run independent adversarial review and preserve dissent or abstention.</step>
+      <step order="11">Apply falsification and release gates before advancing status.</step>
+      <step order="12">Repeat until all blocking questions are answered, explicitly deferred, or assigned a stop decision.</step>
+    </wiki_llm_loop>
+    <web_acquisition>
+      Use Scrapling for every public web search, page retrieval, crawl, and
+      extraction. Select the least invasive fetcher that works. Respect robots,
+      access controls, terms, and rate limits. Do not use a second web-search or
+      web-fetch facility silently. Git and structured GitHub APIs may be used for
+      repository acquisition and history after discovery. Record the exact query,
+      URL, canonical URL, status, retrieval UTC, digest, parser, and coverage.
+    </web_acquisition>
+    <knowledge_graph>
+      Preserve source, symbol, file, repository, claim, obligation, protocol,
+      family, facet, semantic construct, generated artifact, test, theorem,
+      threat, and decision nodes. Required edges include defines, implements,
+      elaborates-to, compiles-to, generated-by, corresponds-to, depends-on,
+      assumes, discharges, contradicts, supersedes, maps-to, tested-by,
+      evidenced-by, and deployed-as. Never use graph centrality as authority.
+    </knowledge_graph>
+    <claim_schema>
+      Every material claim must record a stable claim ID, exact source and
+      locator, publication or commit date, repository and full commit where
+      relevant, authority class, lifecycle scope, evidence kind, reproduction
+      status, confidence, counterevidence, assumptions, and architecture impact.
+    </claim_schema>
+    <status_taxonomy>
+      <status id="S0">historical or superseded</status>
+      <status id="S1">idea or discussion only</status>
+      <status id="S2">written proposal or design</status>
+      <status id="S3">prototype or experimental branch</status>
+      <status id="S4">implemented and tested but unreleased</status>
+      <status id="S5">released but not deployed or broadly supported</status>
+      <status id="S6">deployed and supported</status>
+      <status id="S7">deployed, independently audited, and operationally evidenced</status>
+    </status_taxonomy>
+  </research_method>
+
+  <agentic_council>
+    <purpose>
+      Use independent providers to reduce correlated design error. This process
+      is advisory and must not be described as a formal proof or governance vote.
+    </purpose>
+    <members>
+      <member provider="xAI" requested_model="Grok" role="taxonomy, market structure, adversarial product critique" />
+      <member provider="OpenAI" requested_model="GPT-5.6 Sol" role="architecture auditor and decision arbiter" />
+      <member provider="Anthropic" requested_model="claude-fable-5-1" role="language, formal semantics, and research-program design" />
+    </members>
+    <provider_truthfulness>
+      Before substantive use, run the provider's exact bounded inference canary.
+      Record requested model, emitted canonical model when available, terminal
+      status, tool permissions, and output digest. A banner, model-list command,
+      stdout phrase, or configured alias is not proof of successful inference.
+      Never substitute another provider or model silently. Record unavailable,
+      failed, or unverified identity as an abstention or qualification.
+    </provider_truthfulness>
+    <rounds>
+      <round id="C1">Each member receives the same evidence brief and produces an independent proposal.</round>
+      <round id="C2">Blind the authors and ask each available member to critique the other proposals against evidence and stop gates.</round>
+      <round id="C3">The architect synthesizes agreements, named disagreements, minority reports, unknowns, and experiments that can decide them.</round>
+      <round id="C4">No consensus label is allowed unless every counted ballot is substantive, terminal, and model-qualified.</round>
+    </rounds>
+  </agentic_council>
+
+  <mandatory_source_corpus>
+    <defiformal>
+      Inspect the pinned repository in full, including corpus lanes, the 60
+      specifications and verdicts, laws, warrants, hazard checks, canonicalization,
+      composition experiments, formal v2 and v3, research notes, referee reports,
+      branch history when available, and every source used to create the twelve
+      labels. Reconcile 69 versus 72, 35 versus 60, category double-filing,
+      protocol-versus-organization units, and any silent substitutions.
+    </defiformal>
+    <marlowe>
+      Inspect the complete `marlowe-lang` organization and all official entry
+      points, including the V1 semantics, Isabelle and Agda artifacts, Haskell,
+      Plutus validators, Runtime, Runtime NG, TypeScript SDK, Playground, Runner,
+      CLI, explorer, starter kit, ACTUS, oracle protocol, MIPs, audits, release
+      history, V2 workshop report, proposal branches, and deployment registries.
+      Reconcile formal, executable, serialized, API, release, and deployed states.
+    </marlowe>
+    <midnight_compact_zkir>
+      Inspect official Midnight documentation, all public `midnightntwrk`
+      repositories, all relevant `LFDT-Minokawa` repositories, current Compact
+      compiler and language sources, runtime and SDK sources, ZKIR versions,
+      ledger and transaction specifications, proof-system assumptions, network
+      deployment evidence, audits, key and parameter lifecycle, wallet and
+      identity interfaces, compatibility policy, and current resource limits.
+      Bind every assertion to an exact version tuple and effective date.
+    </midnight_compact_zkir>
+    <external_taxonomy>
+      Use current primary protocol documentation, aggregator definitions and
+      schemas, academic DeFi taxonomies, financial standards, and audited code
+      to test coverage. Include at least lending and risk curators, on-chain
+      capital allocators, AMMs and order books, stablecoins and RWAs, staking and
+      restaking, perpetuals and options, prediction markets, insurance and risk
+      pooling, payments and streaming, privacy systems, oracles, intents and
+      solvers, bridges, identity, and governance. Dynamic market data is evidence
+      of materiality, not a semantic definition.
+    </external_taxonomy>
+    <comparative_languages>
+      Compare transferable ideas from Marlowe, ACTUS, Findel, DAML/Canton, Pact,
+      Scilla, Move, Scrypto, Solidity, Vyper, Aiken, Plutus/Plinth, Scalus,
+      Michelson/LIGO/Archetype, Reach, Simplicity, BitML, session types,
+      typestate, linear and affine types, refinement and effect systems,
+      proof-carrying compilation, and verified compilers. Use primary papers and
+      official specifications. Reject ideas that introduce hidden unboundedness
+      or an unverifiable external effect.
+    </comparative_languages>
+  </mandatory_source_corpus>
+
+  <workstreams>
+    <workstream id="W1" name="Evidence and repository reconstruction">
+      Enumerate, pin, classify, and graph every relevant repository, package,
+      specification, deployment artifact, validator or circuit identity, release,
+      issue, pull request, and maintainer relationship. Identify generated versus
+      hand-maintained definitions, duplicate semantics, version skew, superseded
+      components, build complexity, missing security policies, single-maintainer
+      risks, and unverifiable status claims.
+    </workstream>
+
+    <workstream id="W2" name="Taxonomy completeness and validity">
+      Define the classified unit as component, deployed product, protocol, or
+      organization and justify it. Reproduce the full 12-by-12 Jaccard matrix,
+      1-NN and 3-NN results, hierarchical clustering under average, complete,
+      and Ward linkage, ARI, NMI, silhouette or other justified metrics, category
+      cohesion, composition rates with exact denominators, obligation coverage,
+      residue concentration, and canonical-form collisions. Add bootstrap or
+      leave-one-source-out uncertainty where sound.
+
+      Compare M0 flat twelve, M1 repaired twelve, M2 hierarchy, M3 facets, M4+
+      multi-axis, and M5 formal behavior. Test M2+M3 human plus M5 internal as a
+      candidate, not a foregone result. Define primary and secondary membership,
+      component-to-protocol aggregation, boundary cases, confidence, reviewer
+      rationale, taxonomy version, and migration identifiers.
+
+      Conduct genuine blinded independent labeling on a stratified in-corpus and
+      held-out sample. Do not describe simulated perspectives as inter-rater
+      reliability. Measure agreement and adjudication. Test temporal stability on
+      at least two pinned historical snapshots if recoverable.
+
+      Propose a family-promotion rule. Start with these candidate gates, then
+      justify revisions: at least five materially distinct products; a recurring
+      obligation or failure mode not represented elsewhere; internal cohesion
+      above best external overlap; blinded macro-F1 at least 0.70; no promoted
+      family at zero recall; pairwise reviewer agreement at least 0.80; and one
+      release cycle as experimental before normative promotion.
+    </workstream>
+
+    <workstream id="W3" name="DeFiFormal algebra and obligation audit">
+      Reconstruct the element vocabulary, carrier sorts, order, joins, laws,
+      warrants, hazards, composition predicate, canonicalization, construction
+      semantics, and verdict logic. Determine which results are mathematical,
+      executable checks, empirical labels, or editorial conclusions. Audit the
+      party-sort, bounded-mandate, strategy-level, rate, conditional-token,
+      recourse, custody, register, reserve, and order-flow residues. State the
+      evidence threshold each proposed Moriarty primitive actually meets.
+    </workstream>
+
+    <workstream id="W4" name="Marlowe capability and proof map">
+      Reconstruct Marlowe V1 syntax, state, operational semantics, transaction
+      reduction, action ordering, authorization, roles, payouts, time, values,
+      warnings, errors, object bundles, shallow and deep Merkleization,
+      continuation storage, Runtime, transaction construction, rollback, and
+      lifecycle. Build a theorem-like guarantee matrix with premises and exact
+      correspondence gaps among Isabelle, Agda, Haskell, TypeScript, Plutus,
+      Runtime, wallet, and ledger.
+
+      For each of the 72 DeFiFormal rows, record what a finite Marlowe V1
+      agreement skeleton can express; what requires unrolling, custom Plutus,
+      Runtime logic, oracle choices, role policies, or external services; what
+      cannot be represented faithfully; and whether the obstacle is semantic,
+      authorization, privacy, liveness, composability, state, cost, or open-world
+      truth. Never equate a bounded skeleton with the complete named protocol.
+    </workstream>
+
+    <workstream id="W5" name="Moriarty semantic architecture">
+      Compare at least four coherent designs: audited Compact library only;
+      conservative Marlowe-derived Core; small verified Core plus typed surface
+      and generated Compact; and composable capability DSL. Keep direct ZKIR and
+      portable multi-backend execution as separately scored later options.
+
+      Specify preliminary Core syntax, typed source syntax, types and kinds,
+      visibility and information-flow labels, authority and mandate model,
+      action-set semantics, time model, resource algebra, errors and obligations,
+      canonical serialization, version identifiers, package model, elaboration,
+      and small-step or reduction semantics.
+
+      Specify Core as an implementation-independent semantic delta against
+      Marlowe. Classify each proposed change as a representation choice, an
+      observable semantic policy, or a new environmental capability. Resolve
+      numeric bounds and partial-payment reject-versus-warning behavior before
+      the reference-semantics freeze. Admit atomic Step, typed Attest, authority,
+      mandate, or split/merge only when a required demonstration cannot be
+      expressed conservatively with the smaller Core and the change has explicit
+      invariants, failure behavior, resource bounds, and a conservative-
+      elaboration or non-interference argument.
+
+      Determine whether party/authority, bounded mandate, strategy, typed
+      attestations, and conditional-token split/merge belong in Core, source,
+      packages, or capabilities. No primitive enters Core only because one
+      product wants it. Bounded source loops must either elaborate away or carry
+      a proof that Core and circuit bounds remain explicit.
+    </workstream>
+
+    <workstream id="W6" name="Seven family applications and 72-row coverage">
+      Implement or specify one minimal canonical demonstration per F1 through F6
+      and Prediction:
+      <application family="F1">finite atomic or constant-product swap</application>
+      <application family="F2">single-collateral fixed-term loan</application>
+      <application family="F3">fully collateralized European option or finite-horizon derivative</application>
+      <application family="F4">fixed-period staking-reward claim</application>
+      <application family="F5">single-issuer capped subscription and redemption claim</application>
+      <application family="F6">capped single-asset allocation mandate</application>
+      <application family="P">binary conditional-token split, merge, and redemption market</application>
+
+      For each demonstration give the safety property, external assumption,
+      privacy value, upper bound, Marlowe V1 encoding, Moriarty source, elaborated
+      Core, generated Compact, ZKIR and artifact manifest, SDK workflow, client
+      checks, adversarial tests, and measured cost.
+
+      Retain the 13 legacy D01-D12 regression patterns. Produce a 72-row manifest
+      with one compilable bounded instance or an explicit `outside-kernel` result
+      per row. An outside-kernel result must name the minimal agreement skeleton,
+      capability assumptions, unsupported behavior, and why no honest Core claim
+      is possible. Do not implement 72 bespoke semantic features.
+    </workstream>
+
+    <workstream id="W7" name="Compact, ZKIR, and Midnight backend">
+      Trace the exact path from Moriarty source to normalized Core to generated
+      Compact to generated TypeScript and ZKIR to proof and verifier artifacts to
+      a Midnight state transition. Identify every compiler phase, serialization
+      boundary, private witness callback, public input, ledger read or write,
+      disclosed value, generated key, proof parameter, and version dependency.
+
+      Define deterministic source generation, source maps, canonical manifests,
+      artifact hashes, reproducible builders, independent translation validation,
+      differential traces, version compatibility, key and parameter lifecycle,
+      upgrade, rollback, revocation, and incident response. Compare generated
+      Compact with a universal interpreter and direct ZKIR only after end-to-end
+      cost and correspondence evidence exists.
+
+      Treat the auditable object as a triple: normalized Core instance,
+      generated Compact, and independently checked translation-validation
+      certificate. Analyze correlated defects where generator and certificate
+      checker share the same wrong assumption. Do not treat translation
+      validation as a substitute for a stable Compact semantics or independent
+      compiler assurance.
+
+      Build an explicit leakage model covering values, identities, keys, state
+      shape, branch choice, timing, transaction graph, proof metadata, fees,
+      failures, retries, and external calls. Compiler acceptance is not a privacy
+      audit.
+    </workstream>
+
+    <workstream id="W8" name="SDK, Runtime, wallet, and deployment kernel">
+      Specify a TypeScript-first SDK with parser, formatter, type checker,
+      elaborator, simulator, analyzer, cost estimator, package lock, source map,
+      artifact manifest, deployment planner, witness adapter, proof orchestration,
+      state query, event stream, and explorer integration. Define a stateless
+      planner and locally checkable transaction or intent plan before considering
+      a larger Runtime service.
+
+      State what the client and wallet must independently verify: source/Core
+      digest, generated artifacts, compiler and network tuple, contract and
+      circuit identity, public disclosures, requested private witnesses, parties,
+      assets, amounts, bounds, fees, state predecessor, outputs, capabilities,
+      verification keys, proof parameters, expiry, and replay domain. Exercise a
+      malicious planner and malicious UI.
+    </workstream>
+
+    <workstream id="W9" name="Formal assurance and conformance">
+      Choose a maintainable normative semantics strategy after comparing proof
+      reuse and contributor capacity for Isabelle, Agda, Lean, a compact
+      executable reference, and multiple differentially checked interpreters.
+      Define proof obligations before implementation. Select the production
+      proof environment during the feasibility phase and before the normative
+      Core freeze, using executable criteria for proof reuse, contributor
+      availability, extraction or generation, trusted-base size, CI
+      reproducibility, and proof-maintenance cost. If no candidate clears the
+      published thresholds, take the library-only path.
+
+      Audit at least termination, finite lifetime, deterministic reduction,
+      quiescence and idempotence, per-asset conservation, non-negative balances,
+      close/refund completeness, authorization soundness, mandate non-escalation,
+      attestation freshness and replay separation, split/merge conservation,
+      action-set atomicity, serialization and hash consistency, visibility-flow
+      safety, resource-bound soundness, elaboration correctness, generated-Compact
+      translation validity, and correspondence with observed Midnight transitions.
+
+      Separate semantic non-locking, circuit satisfiability, proof soundness,
+      verifier acceptance, ledger feasibility, transaction construction, witness
+      availability, continuation or state availability, participant cooperation,
+      wallet correctness, Runtime correctness, oracle truth, and future protocol
+      support.
+    </workstream>
+
+    <workstream id="W10" name="Security and economic threat model">
+      Cover malformed initial state, counterfeit artifacts, compromised build or
+      registry, dependency substitution, compiler mismatch, invalid witness,
+      unconstrained callback, accidental disclosure, proof or key compromise,
+      replay, front-running and sequencing, authorization escalation, mandate
+      revocation races, oracle manipulation and equivocation, bridge and custody
+      failure, reserve or legal misrepresentation, external-call composition,
+      denial of service, unbounded state, proof exhaustion, Runtime or UI
+      substitution, wallet compromise, rollback, upgrade confusion, governance
+      capture, and misleading safety claims.
+
+      For every threat identify asset, adversary, boundary, precondition, path,
+      consequence, prevention, detection, recovery, residual risk, and audit owner.
+      Audit the Core, elaborator, Compact generator, translation validator,
+      compiler tuple, SDK/client, Runtime, capability protocols, and applications
+      as separate boundaries.
+    </workstream>
+
+    <workstream id="W11" name="Migration, governance, maintenance, and adoption">
+      Design side-by-side Marlowe V1 and Moriarty operation. Classify V1 source
+      translations as proved equivalent, trace-equivalent under assumptions,
+      policy-selected, representable but behaviorally changed, or unsafe to
+      translate. Do not claim Cardano state or funds move to Midnight.
+
+      Propose repository ownership, normative-spec authority, semantic and
+      artifact versioning, release train, two-owner review, MIP-equivalent
+      process, signed registries, reproducible builders, audit cadence, security
+      response, LTS, and funding. Identify required maintainers by skill, not only
+      headcount.
+
+      Test whether developers prefer a new language, audited Compact libraries,
+      or SDK verification. Run user studies with DApp developers, TypeScript
+      developers, auditors, and financial-domain reviewers. Require written
+      pilots and measured changes in authoring time, review time, defects, audit
+      cost, proof cost, and operational incidents.
+    </workstream>
+
+    <workstream id="W12" name="Decision and red team">
+      Score options with evidence and uncertainty. Include the strongest case for
+      stopping language work and shipping only templates, a verifier, and a
+      taxonomy/assumption manifest. Identify conditions under which each option
+      wins. A high feature count cannot compensate for loss of assurance,
+      boundedness, privacy clarity, backend feasibility, or demand.
+    </workstream>
+  </workstreams>
+
+  <required_experiments>
+    <experiment id="E00">
+      First run the Compact-generation stop test: encode accounts, deposits, one
+      finite choice, one enforceable timeout, and one atomic two-token swap;
+      generate Compact; produce a client-checkable artifact and disclosure
+      manifest; inspect all containers, loops, and witness callbacks; create a
+      translation-validation certificate; and run at least 1,000
+      coverage-guided, materially distinct differential traces. If generated
+      code requires an unbounded container or an unconstrained witness callback,
+      choose library-only or stop before expanding the Core.
+    </experiment>
+    <experiment id="E01">Reproduce 72, 60, 1,259, 570, 689, and verdict counts from primary files.</experiment>
+    <experiment id="E02">Reproduce the 12-by-12 Jaccard matrix with explicit within and cross formulas.</experiment>
+    <experiment id="E03">Reproduce 1-NN and 3-NN with deterministic tie rules and preserve every prediction.</experiment>
+    <experiment id="E04">Reproduce hierarchical clusters, ARI and NMI under pinned algorithms and dependencies.</experiment>
+    <experiment id="E05">Reproduce exact eligible pair denominators, failures, causes, and rate ratios.</experiment>
+    <experiment id="E06">Reproduce canonicalization, collisions, laws, warrants, and the v3 self-test.</experiment>
+    <experiment id="E07">Conduct a blinded multi-rater label study and report agreement, disagreement, and adjudication.</experiment>
+    <experiment id="E08">Test temporal and held-out taxonomy stability on new and historical protocol samples.</experiment>
+    <experiment id="E09">Create the seven family applications and the 72-row bounded-instance or outside-kernel manifest.</experiment>
+    <experiment id="E10">Compare Marlowe V1, audited Compact library, Moriarty generated Compact, and a bounded interpreter on at least swap, loan, option, mandate, and conditional tokens.</experiment>
+    <experiment id="E11">Run 10, 100, and 1,000-period schedules through unrolling, rollover, and certified bounded iteration.</experiment>
+    <experiment id="E12">Benchmark high-party close, staged claims, fixed-depth state, and continuation availability failure.</experiment>
+    <experiment id="E13">Run valid- and invalid-initial-state tests, per-asset unit errors, overflow boundaries, and terminal-balance checks.</experiment>
+    <experiment id="E14">Test ordered-any, atomic-all, threshold, partial collection, timeout, cancellation, racing inputs, and replay.</experiment>
+    <experiment id="E15">Test mandate scope, delegation, revocation, rotation, recipient restrictions, spend caps, and escalation attacks.</experiment>
+    <experiment id="E16">Test conditional-token split, merge, transfer, redeem, contradictory resolution, and conservation under composition.</experiment>
+    <experiment id="E17">Test oracle staleness, replay, equivocation, aggregation, dispute, failure, and privacy leakage.</experiment>
+    <experiment id="E18">Test a malicious witness adapter, generated-Compact mutation, manifest corruption, compiler-version mismatch, and invalid proof input.</experiment>
+    <experiment id="E19">Run full proof generation and verification, not only mock compilation, on specified hardware and target environments.</experiment>
+    <experiment id="E20">Measure constraints, keys, proof size, memory, latency, verification, transaction size, fees, state growth, and failure behavior.</experiment>
+    <experiment id="E21">Rebuild deterministic artifacts on two clean systems and compare hashes and manifests.</experiment>
+    <experiment id="E22">Run at least 10,000 independently generated, coverage-guided, materially distinct differential traces per canonical application across reference Core and generated backend, including boundaries and failure paths.</experiment>
+    <experiment id="E23">Make the local client reject malicious planner, UI, artifact, disclosure, state, network, and fee substitutions.</experiment>
+    <experiment id="E24">Perform a Marlowe V1-to-Moriarty translation dry run and produce equivalence or policy reports.</experiment>
+    <experiment id="E25">Run a small comparative user study and require at least two non-toy pilot commitments.</experiment>
+  </required_experiments>
+
+  <decision_scorecards>
+    <taxonomy weights_total="100">
+      <criterion weight="18">empirical exhaustiveness</criterion>
+      <criterion weight="14">internal coherence</criterion>
+      <criterion weight="12">boundary clarity and reproducibility</criterion>
+      <criterion weight="12">mechanism and risk discrimination</criterion>
+      <criterion weight="14">formal-modeling usefulness</criterion>
+      <criterion weight="12">Moriarty reuse</criterion>
+      <criterion weight="8">temporal and cross-chain stability</criterion>
+      <criterion weight="5">migration cost</criterion>
+      <criterion weight="5">maintenance</criterion>
+    </taxonomy>
+    <architecture weights_total="100">
+      <criterion weight="20">semantic safety and formal assurance</criterion>
+      <criterion weight="15">Midnight executability and predictable proof and ledger cost</criterion>
+      <criterion weight="12">useful financial expressiveness</criterion>
+      <criterion weight="10">authoring and debugging</criterion>
+      <criterion weight="10">Marlowe migration and compatibility</criterion>
+      <criterion weight="10">SDK, Runtime, and deployment coherence</criterion>
+      <criterion weight="8">demonstrated adoption potential</criterion>
+      <criterion weight="8">implementation and maintenance feasibility</criterion>
+      <criterion weight="7">interoperability with explicit assurance boundaries</criterion>
+    </architecture>
+    <rules>
+      Score 0 through 5. Give raw and weighted scores, evidence, uncertainty,
+      disputed assumptions, sensitivity, and conditions under which another
+      option wins. Burden scores must use one consistent direction.
+    </rules>
+  </decision_scorecards>
+
+  <numeric_release_gates>
+    <gate id="G01">No unresolved ambiguity in normative Core semantics.</gate>
+    <gate id="G02">Every deployed instance has checked lifetime, transition, state, action, party, asset, collection, witness, continuation, and circuit bounds.</gate>
+    <gate id="G03">Seven of seven family demonstrations compile with the real pinned compiler, generate proofs, verify, and execute in an official local or development environment.</gate>
+    <gate id="G04">Every one of the 72 rows has a reviewed bounded instance or an explicit outside-kernel classification and assumption manifest.</gate>
+    <gate id="G05">At least 95 percent of in-scope obligations have an implemented proof or test; all residue is classified as external, deferred, unsupported, contradicted, or accepted risk.</gate>
+    <gate id="G06">Reference Core and backend agree on 100 percent of at least 10,000 generated traces per canonical application.</gate>
+    <gate id="G07">No accepted invalid-witness mutation and no unexplained semantic divergence.</gate>
+    <gate id="G08">All deterministic artifacts reproduce byte-for-byte on two clean builders or every justified nondeterministic field is excluded by a documented canonicalization rule.</gate>
+    <gate id="G09">Canonical serialization, source maps, manifests, artifact identities, network identifiers, keys, and version tuples are deterministic and client-verified.</gate>
+    <gate id="G10">An independent audit has a published scope and severity rubric; zero critical or high findings remain unresolved; medium findings require named acceptance, compensating control, owner, and expiry.</gate>
+    <gate id="G11">Cost budgets for proof time, peak memory, verification, key size, proof size, transaction size, state growth, and fees are numeric, hardware-specific, network-specific, and met for every flagship.</gate>
+    <gate id="G12">The malicious-planner and malicious-UI exercises are rejected locally before signature or proof submission.</gate>
+    <gate id="G13">The privacy leakage inventory has no undeclared public field, branch, state-shape, timing, failure, or metadata disclosure within the stated model.</gate>
+    <gate id="G14">Taxonomy promotion requires the validated thresholds from W2; no category is promoted from simulated raters alone.</gate>
+    <gate id="G15">Marlowe compatibility claims pass a migration rehearsal and exact trace or proof criteria; changed cases require user-selected policy.</gate>
+    <gate id="G16">Documentation and registries are generated from, or verified against, the released artifacts.</gate>
+    <gate id="G17">At least two non-toy pilot specifications are supplied or signed off by prospective users, exercise the principal privacy, boundedness, and client-verification capabilities, and produce measured authoring, review, and defect-detection results against the Compact-template baseline.</gate>
+    <gate id="G18">An independent comparison shows that Moriarty provides a material assurance or review advantage over audited Compact templates; otherwise ship the library-only option.</gate>
+  </numeric_release_gates>
+
+  <automatic_stop_conditions>
+    <condition>Any reproducible conservation, authorization, terminal-balance, or proof-soundness failure.</condition>
+    <condition>Any required runtime-sized structure or computation without a sound static bound.</condition>
+    <condition>Any undeclared disclosure required for correct execution.</condition>
+    <condition>Any client path that accepts an artifact, key, network, state, or version substitution.</condition>
+    <condition>Inability to generate and verify real proofs within agreed product budgets.</condition>
+    <condition>Inability to maintain two qualified owners for the normative semantics and release pipeline.</condition>
+    <condition>No two non-toy pilots by the 90-day investment gate.</condition>
+    <condition>No demonstrated advantage over a smaller audited Compact-library solution.</condition>
+  </automatic_stop_conditions>
+
+  <required_deliverables>
+    <deliverable id="D01">Executive decision and strongest no-redesign case.</deliverable>
+    <deliverable id="D02">Source, claim, version, deployment, and contradiction inventory.</deliverable>
+    <deliverable id="D03">Repository, package, specification, artifact, and trust-boundary graph.</deliverable>
+    <deliverable id="D04">Reproduced DeFiFormal dataset, metrics, methods, uncertainty, and audit report.</deliverable>
+    <deliverable id="D05">Recommended taxonomy, definitions, facets, decision rules, migration map, and maintenance policy.</deliverable>
+    <deliverable id="D06">Complete 72-row old-to-new mapping with component, family, facets, M5 profile, confidence, and rationale.</deliverable>
+    <deliverable id="D07">Marlowe V1 capability and gap matrix for all 72 rows.</deliverable>
+    <deliverable id="D08">Marlowe theorem, premise, implementation-correspondence, and portability matrix.</deliverable>
+    <deliverable id="D09">Seven primary family applications, 13 legacy patterns, and 72 bounded instances or outside-kernel manifests.</deliverable>
+    <deliverable id="D10">Preliminary Moriarty Core and typed surface specification with elaboration, effects, visibility, serialization, bounds, and diagnostics.</deliverable>
+    <deliverable id="D11">Generated Compact, ZKIR, proof, manifest, source-map, and differential-test artifacts for the flagship suite.</deliverable>
+    <deliverable id="D12">Compact/ZKIR/Midnight compiler, proof, key, ledger, privacy, and upgrade assurance dossier.</deliverable>
+    <deliverable id="D13">SDK, client verifier, Runtime, wallet, explorer, package, and deployment architecture.</deliverable>
+    <deliverable id="D14">End-to-end threat model, privacy leakage report, audit boundaries, and incident plan.</deliverable>
+    <deliverable id="D15">Normative-semantics decision, proof roadmap, conformance suite, fuzzing, mutation, cost, and release gates.</deliverable>
+    <deliverable id="D16">Marlowe V1 coexistence, translation, equivalence, policy, registry, and LTS plan.</deliverable>
+    <deliverable id="D17">Repository, team, funding, release, governance, specification-authority, and proposal process.</deliverable>
+    <deliverable id="D18">90-day, 12-month, and 24-month roadmap with dependencies, staffing, cost ranges, validation, go/no-go, rollback, and scope reduction.</deliverable>
+    <deliverable id="D19">Adoption study, library-versus-language comparison, pilot commitments, and measurable success criteria.</deliverable>
+    <deliverable id="D20">Agentic-council packet with independent ballots, blind critiques, dissent, abstentions, synthesis, and model evidence.</deliverable>
+    <deliverable id="D21">Ten-page maximum stakeholder pre-read, motions, two-session agenda, unresolved register, and decision-record template.</deliverable>
+    <deliverable id="D22">Machine-readable claim ledger, taxonomy, 72-row manifest, experiment manifest, status register, and release checklist.</deliverable>
+  </required_deliverables>
+
+  <final_answer_contract>
+    End with a direct recommendation in this exact order:
+    <item number="1" label="Classify">The taxonomy and maintenance rule to adopt.</item>
+    <item number="2" label="Preserve">The exact Marlowe principles and constructs to retain.</item>
+    <item number="3" label="Build in Moriarty Core">The smallest formally defensible kernel.</item>
+    <item number="4" label="Build above Core">Surface, packages, Compact backend, SDK, Runtime, and capabilities.</item>
+    <item number="5" label="Keep outside">Open-world, legal, oracle, custody, solver, bridge, strategy, and application responsibilities.</item>
+    <item number="6" label="Reject">Unsafe, unbounded, unjustified, or demand-free proposals.</item>
+    <item number="7" label="Prove and test">The exact formal, security, privacy, conformance, and empirical gates.</item>
+    <item number="8" label="Migrate">Marlowe coexistence and honest compatibility rules.</item>
+    <item number="9" label="Deploy and govern">The 90-day, 12-month, and 24-month sequence and ownership model.</item>
+    <item number="10" label="Validate demand or stop">The pilots and evidence required to fund a separate language.</item>
+  </final_answer_contract>
+
+  <quality_bar>
+    The result must be repository-specific, source-dated, status-labeled,
+    reproducible, implementable, and candid about uncertainty. Do not produce a
+    generic DeFi survey, a superficial language checklist, a Turing-complete
+    redesign, a direct-to-ZKIR claim without interface stability, a taxonomy
+    justified only by TVL, a full-protocol claim derived from an agreement
+    skeleton, a formal-safety claim derived from tests alone, a privacy claim
+    derived from proof success alone, or a platform in which the LLM, Runtime,
+    oracle, custodian, legal system, bridge, solver, or external script silently
+    becomes trusted. Conclude with one primary recommendation, one smaller
+    fallback, and explicit conditions that trigger the fallback or stop work.
+  </quality_bar>
+</deep_research_assignment>

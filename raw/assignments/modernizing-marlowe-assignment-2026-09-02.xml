@@ -1,0 +1,1399 @@
+<deep_research_assignment>
+
+  <title>
+    Modernizing Marlowe:
+    A Decision-Grade Language, Formal-Semantics, Runtime, Tooling,
+    Governance, and Adoption Strategy for Marlowe V2 and Beyond
+  </title>
+
+  <research_date>2026-09-02</research_date>
+
+  <role>
+    Act as a multidisciplinary principal research and architecture team
+    combining the expertise of:
+
+    - a programming-language designer specializing in restricted,
+      domain-specific, and total languages;
+    - a formal-methods researcher experienced with Isabelle, Agda, Lean,
+      mechanized operational semantics, compiler correctness, and model checking;
+    - a Cardano ledger, extended-UTxO, Plutus, and transaction-construction
+      architect;
+    - a compiler, type-system, intermediate-representation, and language-server
+      engineer;
+    - a distributed-systems and application-runtime architect;
+    - a smart-contract security researcher and independent auditor;
+    - a financial-contract-domain expert familiar with ACTUS, derivatives,
+      escrow, lending, settlement, and institutional workflows;
+    - a developer-tools, low-code, visual-programming, and API designer;
+    - an open-source maintainer, release engineer, and technical-governance
+      specialist;
+    - a product strategist studying developer adoption and financial-platform
+      product-market fit;
+    - and a technical facilitator capable of turning research findings into a
+      structured stakeholder discussion and an actionable decision record.
+  </role>
+
+  <mission>
+    Produce a decision-grade modernization study and stakeholder discussion
+    packet for Marlowe.
+
+    Determine the strongest evolution of Marlowe that:
+
+    1. preserves or strengthens its high-assurance financial-contract thesis;
+    2. materially improves expressiveness, readability, modularity,
+       scalability, composability, and developer experience;
+    3. remains executable and economically practical under current and
+       realistically anticipated Cardano ledger constraints;
+    4. cleanly separates the stable language semantics from Cardano-specific
+       validator and Runtime concerns;
+    5. has an explicit formal-verification and security-assurance strategy;
+    6. provides a credible migration path from existing Marlowe V1 contracts,
+       validators, APIs, serialized artifacts, and applications;
+    7. is maintainable by the present community and governance structure;
+    8. responds to demonstrated user and application needs rather than producing
+       an abstract language-design wishlist;
+    9. incorporates, audits, and where necessary revises the existing Marlowe V2
+       report and implementation proposals;
+    10. identifies the exact scope that should ship as V2.0, what should be
+        developed for V2.1, what belongs in a later version or extension layer,
+        and what should be rejected.
+  </mission>
+
+  <central_question>
+    What should Marlowe become over the next three years if its purpose is to be
+    the safest, most analyzable, usable, and operationally credible language and
+    platform for finite financial agreements on Cardano and potentially other
+    execution environments?
+
+    Do not answer this by simply adding features to Marlowe V1. Decide which
+    capabilities belong in:
+
+    - the minimal semantic kernel;
+    - a typed source language that elaborates into the kernel;
+    - reusable libraries and contract templates;
+    - the Cardano validator layer;
+    - transaction-composition protocols;
+    - Marlowe Runtime;
+    - external oracle, identity, and token-policy services;
+    - or application-specific code.
+  </central_question>
+
+  <starting_position>
+    Treat Marlowe as a complete socio-technical platform rather than merely a
+    syntax.
+
+    The research must reconstruct and independently verify the following
+    baseline:
+
+    - the current Marlowe V1 contract and action algebra;
+    - its executable semantics and transaction-reduction model;
+    - accounts, parties, addresses, roles, role tokens, payouts, values,
+      observations, timeouts, warnings, and errors;
+    - contract continuations, object bundles, shallow and deep Merkleization,
+      and continuation storage;
+    - the relationship between abstract semantics, the Haskell implementation,
+      Plutus validators, Cardano transactions, and ledger rules;
+    - the Runtime service architecture, APIs, transaction construction,
+      indexing, chain synchronization, and rollback handling;
+    - the TypeScript SDK, Playground, Blockly support, Runner, CLI,
+      MarloweScan, starter kit, examples, and ACTUS tooling;
+    - the Isabelle and Agda specifications and the extent to which they are
+      authoritative, executable, synchronized, and complete;
+    - audits, static analysis, property-based testing, golden tests,
+      differential tests, and on-chain tests;
+    - the Marlowe Language CIC, SIG/community processes, MIPs, release
+      practices, repository ownership, and maintenance capacity;
+    - and the existing Marlowe V2 design report and funding proposals.
+
+    Do not assume that documentation, code, formal specifications, deployed
+    validators, package releases, and current services all describe the same
+    version. Reconcile them explicitly.
+  </starting_position>
+
+  <candidate_enduring_thesis>
+    Evaluate, rather than blindly assume, that a modern Marlowe should retain
+    these principles:
+
+    1. Marlowe is a financial-agreement DSL, not a general-purpose smart-contract
+       language.
+    2. Every contract is finite or otherwise has a statically provable resource
+       and lifetime bound.
+    3. All branches, waits, and non-cooperation contingencies are explicit.
+    4. Contract behavior is inspectable by domain experts and analyzable by
+       machines.
+    5. Value conservation and payout behavior are part of the semantic model.
+    6. The maximum lifetime and execution-resource envelope can be determined
+       before deployment.
+    7. A universal or small family of audited validators can execute many
+       contracts without each contract requiring a new audit.
+    8. High-level source convenience must not enlarge the trusted on-chain kernel
+       without strong justification.
+    9. Off-chain services may improve usability, but correctness should not
+       silently depend on trusting a particular Runtime operator.
+    10. The distinction among semantic safety, ledger executability, participant
+        liveness, data availability, and application security must remain
+        explicit.
+  </candidate_enduring_thesis>
+
+  <mandatory_source_corpus>
+
+    <official_entry_points>
+      Inspect all sections, links, guides, tutorials, playbooks, examples,
+      developer tools, and security material reachable from:
+
+      https://docs.cardano.org/developer-resources/smart-contracts/marlowe
+      https://docs.marlowe-lang.org/
+      https://marlowe-lang.org/
+      https://marlowe-lang.org/blog/
+    </official_entry_points>
+
+    <marlowe_v2_sources>
+      Inspect in full:
+
+      https://marlowe-lang.org/blog/marlowe-v2-sessions-report/
+      https://docs.google.com/document/d/1Ex7SyN2hys8CD-hmULiwYNkKumGELlEAl15KWkMIpKs/edit
+      https://projectcatalyst.io/funds/13/cardano-use-cases-concept/marlowe-2025-marlowe-v2
+      https://hydra-voting.intersectmbo.org/votes/cardano-budget-2026/69fc8a71b05ff80adc7d5c4f
+
+      Locate meeting notes, recordings, follow-up posts, prototypes, branches,
+      pull requests, work packages, milestone reports, funding decisions, and
+      implementation status associated with these sources.
+
+      Do not treat a proposal, workshop conclusion, requested budget, merged
+      prototype, deployed validator, or production-supported release as
+      equivalent statuses.
+    </marlowe_v2_sources>
+
+    <repositories>
+      Inspect the complete Marlowe GitHub organization:
+
+      https://github.com/marlowe-lang
+
+      At minimum, deeply inspect:
+
+      https://github.com/marlowe-lang/marlowe
+      https://github.com/marlowe-lang/marlowe-agda
+      https://github.com/marlowe-lang/marlowe-cardano
+      https://github.com/marlowe-lang/marlowe-plutus
+      https://github.com/marlowe-lang/marlowe-runtime-ng
+      https://github.com/marlowe-lang/marlowe-ts-sdk
+      https://github.com/marlowe-lang/marlowe-playground
+      https://github.com/marlowe-lang/marlowe-runner
+      https://github.com/marlowe-lang/marlowe-doc
+      https://github.com/marlowe-lang/marlowe-starter-kit
+      https://github.com/marlowe-lang/MIPs
+      https://github.com/marlowe-lang/actus-core
+      https://github.com/marlowe-lang/marlowe-oracle-protocol
+      https://github.com/marlowe-lang/real-world-marlowe
+      https://github.com/marlowe-lang/awesome-marlowe
+
+      Enumerate every repository in the organization and classify it as:
+
+      - active and authoritative;
+      - active but experimental;
+      - maintenance-only;
+      - superseded;
+      - archived;
+      - demonstration/example material;
+      - infrastructure or deployment support;
+      - formal specification;
+      - client library;
+      - or unclear.
+
+      Record latest meaningful commit dates, releases, tags, open issues,
+      pull requests, maintainers, language, dependency relationships, and
+      apparent replacement repositories.
+
+      Inspect source code rather than relying only on repository READMEs.
+    </repositories>
+
+    <formal_and_assurance_sources>
+      Inspect:
+
+      - the Isabelle Marlowe specification and proof scripts;
+      - the Agda implementation and any V2 prototypes;
+      - the on-chain transaction specification;
+      - the validator test report;
+      - Marlowe security guidance;
+      - audit reports and remediation records;
+      - static-analysis implementation;
+      - property, golden, semantics-oracle, fuzz, integration, and on-chain
+        tests;
+      - validator script registries and hash-verification mechanisms;
+      - and all research papers linked by the official Marlowe documentation.
+
+      Include at minimum the papers concerning:
+
+      - Marlowe financial contracts on blockchain;
+      - implementation and analysis of Marlowe;
+      - efficient static analysis;
+      - standardized crypto loans;
+      - and scripting smart contracts for distributed ledgers.
+    </formal_and_assurance_sources>
+
+    <cardano_platform_sources>
+      Use current primary Cardano sources to establish:
+
+      - the current ledger era and active Plutus versions;
+      - current protocol parameters and transaction limits;
+      - inline datums, reference inputs, reference scripts, collateral, native
+        assets, minting policies, transaction metadata, wallet interfaces, and
+        governance-era capabilities;
+      - current and scheduled hard-fork changes that affect scripts, transaction
+        composition, nested transactions, execution limits, or state-machine
+        design;
+      - and the current state of Hydra and other relevant Cardano L2 mechanisms.
+
+      Never copy historical numerical limits from an old Marlowe page without
+      checking the live protocol parameters and their effective dates.
+    </cardano_platform_sources>
+
+    <empirical_sources>
+      Inspect:
+
+      - MarloweScan and raw on-chain data;
+      - deployed validator versions and script hashes;
+      - mainnet, pre-production, and preview contract activity;
+      - contract templates and application repositories;
+      - Runtime API use;
+      - package-download and repository-activity signals;
+      - issue trackers, support questions, Discord/SIG discussions when
+        accessible, and developer interviews;
+      - and known organizations or applications that have evaluated or used
+        Marlowe.
+
+      Treat absence of public evidence as absence of evidence, not proof of
+      absence. Clearly identify unverifiable adoption claims.
+    </empirical_sources>
+
+    <comparative_sources>
+      Compare Marlowe with current primary documentation and research for:
+
+      - Aiken, PlutusTx, Plinth, Scalus, and other relevant Cardano languages;
+      - DAML and Canton;
+      - ACTUS and other financial-contract standards;
+      - Findel-style financial contract combinators;
+      - Pact;
+      - Move;
+      - Scrypto;
+      - Scilla;
+      - Solidity and Vyper;
+      - Michelson, LIGO, SmartPy, and Archetype;
+      - Reach;
+      - Simplicity;
+      - BitML and state-channel contract languages;
+      - session types, typestate, effect systems, linear types, refinement
+        types, and temporal-contract languages;
+      - workflow and business-process languages;
+      - and verified compiler or proof-carrying-code architectures.
+
+      Do not produce a superficial feature checklist. Determine which design
+      ideas transfer to Marlowe without destroying its bounded, analyzable
+      character.
+    </comparative_sources>
+
+  </mandatory_source_corpus>
+
+  <evidence_and_status_rules>
+    For every material claim, record:
+
+    - exact source;
+    - publication or commit date;
+    - repository, tag, branch, and commit hash where relevant;
+    - whether the source is normative, descriptive, historical, experimental,
+      or promotional;
+    - whether the claim describes V1, a deployed validator, a current service,
+      an unreleased implementation, the V2.0 proposal, a V2.1 idea, or a
+      speculative future direction;
+    - whether the claim was independently reproduced;
+    - and confidence level.
+
+    Use this status taxonomy consistently:
+
+    S0 = historical or superseded;
+    S1 = idea or discussion only;
+    S2 = written proposal or design;
+    S3 = prototype or experimental branch;
+    S4 = implemented and tested but unreleased;
+    S5 = released but not deployed or broadly supported;
+    S6 = deployed and supported;
+    S7 = deployed, independently audited, and operationally evidenced.
+
+    Resolve contradictions among documentation, code, formal specifications,
+    APIs, release notes, and deployed scripts. Do not silently choose the
+    newest-looking source.
+  </evidence_and_status_rules>
+
+  <workstream_1_current_system_reconstruction>
+    Reconstruct Marlowe V1 precisely.
+
+    Produce:
+
+    1. The complete abstract syntax and data model for contracts, actions,
+       inputs, values, observations, parties, payees, tokens, accounts, choices,
+       timeouts, state, warnings, payments, and transaction results.
+    2. The operational flow through interval fixing, reduction to quiescence,
+       input application, transaction computation, and continuation selection.
+    3. The meaning and consequences of each warning and error.
+    4. The relationship among source representations, JSON encoding, object
+       bundles, linked objects, contract hashes, and Merkleized continuations.
+    5. The lifecycle of a contract from authoring through simulation, analysis,
+       deployment, transaction construction, validation, indexing, payout, and
+       closure.
+    6. The exact authorization model for addresses, roles, role tokens, open
+       roles, and payouts.
+    7. The assumptions that make the abstract semantics blockchain-agnostic and
+       the points at which the Cardano realization is not blockchain-agnostic.
+    8. The trusted computing base for each supported user workflow.
+    9. A system-context diagram, component diagram, transaction sequence
+       diagram, and data/provenance diagram.
+  </workstream_1_current_system_reconstruction>
+
+  <workstream_2_formal_guarantee_audit>
+    Build a formal-guarantee matrix with columns:
+
+    - claimed property;
+    - exact mathematical statement;
+    - environmental assumptions;
+    - specification containing the property;
+    - proof assistant or test mechanism;
+    - proof status;
+    - implementation correspondence;
+    - Cardano realization correspondence;
+    - known counterexample or qualification;
+    - V2 impact;
+    - and required new proof work.
+
+    Audit at least:
+
+    - termination;
+    - finite maximum lifetime;
+    - conservation of value;
+    - positivity of internal accounts;
+    - eventual closure;
+    - absence of value after closure;
+    - quiescence;
+    - idempotence of reduction to quiescence;
+    - equivalence of grouped and separately applied inputs;
+    - determinism;
+    - upper bounds on transactions and execution;
+    - authorization soundness;
+    - timeout liveness;
+    - payout accessibility;
+    - serialization and hashing consistency;
+    - and correspondence among Isabelle, Agda, Haskell, TypeScript, and Plutus.
+
+    Replace unconditional marketing formulations with theorem-like statements
+    that expose assumptions.
+
+    In particular, distinguish:
+
+    A. semantic non-locking;
+    B. validator acceptance;
+    C. ledger-resource feasibility;
+    D. transaction-construction feasibility;
+    E. availability of Merkleized continuations;
+    F. participant willingness and key availability;
+    G. wallet and Runtime correctness;
+    H. and continued availability of an execution path under protocol changes.
+
+    Determine whether one formalization should become normative and whether
+    other implementations should be generated from it, proved equivalent to it,
+    or checked through a conformance suite.
+  </workstream_2_formal_guarantee_audit>
+
+  <workstream_3_repository_and_implementation_archaeology>
+    Build a repository and package dependency graph.
+
+    Identify:
+
+    - duplicated implementations of Marlowe types or semantics;
+    - generated versus hand-maintained code;
+    - version-skew risks;
+    - abandoned integrations;
+    - build-system and Nix complexity;
+    - validator compiler dependencies;
+    - serialization boundaries;
+    - API compatibility constraints;
+    - unmaintained client libraries;
+    - gaps in release automation;
+    - absence or presence of security policies;
+    - test ownership;
+    - and single-maintainer or funding risks.
+
+    Determine which repositories should be:
+
+    - retained as authoritative;
+    - merged;
+    - split;
+    - generated from specifications;
+    - rewritten;
+    - archived;
+    - or replaced.
+
+    Propose a coherent target package and repository architecture for V2.
+  </workstream_3_repository_and_implementation_archaeology>
+
+  <workstream_4_empirical_contract_and_cost_study>
+    Implement or reconstruct a representative benchmark suite containing:
+
+    - simple escrow;
+    - atomic token swap;
+    - zero-coupon bond;
+    - recurring loan or interest schedule;
+    - covered call or option;
+    - auction;
+    - contract for differences using oracle input;
+    - multi-party revenue distribution;
+    - milestone-based grant or treasury contract;
+    - dynamically joined participant or open-role contract;
+    - long-running subscription;
+    - ACTUS-derived contract;
+    - and a high-fan-out close or payout scenario.
+
+    For V1 and each serious modernization candidate, measure:
+
+    - source size and readability;
+    - expanded AST size;
+    - serialized JSON and datum size;
+    - object-bundle and Merkleized size;
+    - number of continuations;
+    - number of transactions;
+    - script execution units;
+    - transaction size;
+    - memory use;
+    - fees;
+    - minimum-UTxO implications;
+    - number of internal accounts and payouts;
+    - Runtime calls;
+    - wallet signatures;
+    - continuation-storage requirements;
+    - failure behavior;
+    - analysis time;
+    - and ability to calculate safe upper bounds before deployment.
+
+    Test several wallet UTxO configurations rather than reporting idealized
+    transactions only.
+
+    Reproduce resource-limit failures and determine whether each proposed
+    mitigation moves, removes, or merely obscures the limit.
+  </workstream_4_empirical_contract_and_cost_study>
+
+  <workstream_5_language_usability_and_user_research>
+    Evaluate Marlowe separately for:
+
+    - financial-domain experts with limited programming experience;
+    - smart-contract developers;
+    - TypeScript application developers;
+    - auditors and formal-methods specialists;
+    - infrastructure operators;
+    - and institutional legal, risk, and operations teams.
+
+    Investigate:
+
+    - whether the existing concrete syntax is actually used;
+    - whether most contracts are instead constructed in Haskell, TypeScript,
+      JavaScript, Blockly, JSON, or templates;
+    - where authoring errors occur;
+    - where users lose the connection between source intent and on-chain state;
+    - whether Blockly and textual representations round-trip safely;
+    - whether users understand accounts, roles, payouts, timeouts, and
+      Merkleization;
+    - how easily users interpret static-analysis counterexamples;
+    - how much Cardano and Plutus knowledge remains necessary;
+    - and whether Runtime abstractions reduce complexity or merely relocate it.
+
+    Conduct structured interviews or derive an interview protocol. Do not infer
+    usability solely from language elegance.
+
+    Identify the smallest set of use cases for which Marlowe is clearly better
+    than writing an Aiken or Plutus application directly.
+  </workstream_5_language_usability_and_user_research>
+
+  <workstream_6_existing_v2_proposal_audit>
+    Reconstruct every proposal in the final Marlowe V2 report and related
+    implementation proposals.
+
+    At minimum, investigate:
+
+    - changing timeout behavior so that When closes by default or always closes;
+    - waiting for all, any, threshold, or otherwise structured sets of actions;
+    - WhenAll or equivalent constructs;
+    - EntryDeposit and replacement of the separate open-role validator;
+    - state compression;
+    - improved Close behavior for large participant sets;
+    - bounded iteration;
+    - cryptographic and hashing primitives;
+    - finer-grained types or kinds for values;
+    - token-aware arithmetic;
+    - time and duration arithmetic;
+    - token-minting sublanguages;
+    - oracle improvements;
+    - Runtime and tooling changes;
+    - validator restructuring;
+    - and Marlowe execution in L2 or state-channel environments.
+
+    For each proposal provide:
+
+    - problem being solved;
+    - evidence that the problem is material;
+    - current workaround;
+    - exact proposed semantics;
+    - alternative designs;
+    - dependencies;
+    - source-compatibility impact;
+    - serialized-data impact;
+    - validator and Runtime impact;
+    - formal proof obligations;
+    - execution-cost impact;
+    - security implications;
+    - migration implications;
+    - implementation status;
+    - and recommendation:
+      retain, revise, split, merge, defer, reject, or move outside the core.
+
+    Do not preserve the V2.0, V2.1, and “possible” classifications merely
+    because they appeared in the workshop report. Reassess them with evidence.
+  </workstream_6_existing_v2_proposal_audit>
+
+  <workstream_7_modernization_architectures>
+    Develop and compare at least these four coherent alternatives.
+
+    <option_0_v1_stabilization>
+      Maintain the existing language semantics, concentrating on documentation,
+      compatibility, Runtime simplification, cost improvements, security,
+      tooling, and governance.
+
+      Treat this as a serious baseline rather than a straw man.
+    </option_0_v1_stabilization>
+
+    <option_1_conservative_v2>
+      Evolve the existing core directly with a tightly limited set of V2
+      constructs, broadly following the official V2.0 proposal.
+
+      Optimize for continuity, reduced implementation burden, and preservation
+      of existing mental and formal models.
+    </option_1_conservative_v2>
+
+    <option_2_verified_core_and_typed_surface>
+      Define a smaller or comparably small Marlowe Core 2 as the authoritative
+      executable kernel.
+
+      Add a modern typed surface language that may provide:
+
+      - modules and imports;
+      - named definitions;
+      - parameterized templates;
+      - typed functions or macros that elaborate away;
+      - records and domain data used at compile time;
+      - generics over parties, tokens, and schedules;
+      - bounded loops, folds, and comprehensions;
+      - relative-time expressions;
+      - typed amounts and units;
+      - pattern-like construction;
+      - reusable packages;
+      - and better diagnostics.
+
+      Require elaboration to produce a finite core contract with an explicit
+      resource, transaction, and lifetime bound before deployment.
+
+      Investigate whether the surface compiler can be verified, proof-producing,
+      translation-validated, or sufficiently checked through differential and
+      property testing.
+    </option_2_verified_core_and_typed_surface>
+
+    <option_3_composable_protocol_dsl>
+      Treat Marlowe as a typed financial state-machine and transaction-intent
+      language that can safely compose with external validators, minting
+      policies, credentials, oracles, and application logic.
+
+      Define explicit capability and trust boundaries rather than embedding
+      arbitrary Plutus behavior inside the Marlowe semantic kernel.
+
+      Investigate typed foreign calls, transaction constraints, effect
+      declarations, capability manifests, script-hash allowlists, and
+      compositional audit evidence.
+    </option_3_composable_protocol_dsl>
+
+    <option_4_portable_or_l2_semantics>
+      Explore whether the blockchain-agnostic semantics should have multiple
+      execution backends, including Cardano L1, Hydra or another state-channel
+      environment, or additional ledgers.
+
+      Do not recommend portability merely because it is technically possible.
+      Identify the common semantic substrate, unavoidable backend differences,
+      security models, liquidity assumptions, and realistic demand.
+    </option_4_portable_or_l2_semantics>
+
+    Score all options using the decision framework below. Hybrid proposals are
+    permitted, but their boundaries must be exact.
+  </workstream_7_modernization_architectures>
+
+  <workstream_8_language_design_questions>
+
+    <types>
+      Determine whether V2 needs:
+
+      - distinct types for amounts, integers, ratios, percentages, timestamps,
+        durations, slot or POSIX time, token quantities, account balances,
+        choice values, hashes, signatures, credentials, and oracle observations;
+      - token-indexed or unit-indexed amounts;
+      - refinement types for ranges and non-negativity;
+      - linear or affine treatment of value and authorization;
+      - effect types for deposits, payments, minting, oracle reads, and external
+        script interaction;
+      - typestate for contract phases;
+      - and explicit uncertainty or freshness metadata for oracle values.
+
+      Show which checks occur at authoring, elaboration, static analysis,
+      Runtime transaction construction, and on chain.
+    </types>
+
+    <control_and_concurrency>
+      Specify the semantics of:
+
+      - default closure on timeout;
+      - explicit non-Close timeout continuations, if retained;
+      - all-of, any-of, ordered, unordered, threshold, and atomic action sets;
+      - simultaneous deposits;
+      - competing choices;
+      - cancellation;
+      - bounded iteration;
+      - bounded retries;
+      - and multi-party progress.
+
+      Explain ordering, race conditions, front-running implications, quiescence,
+      fairness, and transaction atomicity.
+    </control_and_concurrency>
+
+    <abstraction_and_packages>
+      Evaluate:
+
+      - modules;
+      - imports;
+      - package identifiers and versions;
+      - named reusable components;
+      - parameterized contracts;
+      - hygienic macros;
+      - compile-time functions;
+      - generics;
+      - schedule and payment combinators;
+      - interface or trait-like abstractions;
+      - object bundles;
+      - canonical linking;
+      - dependency locking;
+      - reproducible builds;
+      - and package signing.
+
+      Prevent abstraction features from introducing hidden unbounded execution.
+    </abstraction_and_packages>
+
+    <time>
+      Design a coherent distinction among:
+
+      - absolute ledger time;
+      - relative durations;
+      - business calendars;
+      - recurring schedules;
+      - settlement windows;
+      - grace periods;
+      - and oracle publication times.
+
+      Identify what belongs in consensus semantics versus off-chain schedule
+      generation. Address daylight-saving time, calendar conventions, and
+      external business-day rules without pretending the ledger natively knows
+      them.
+    </time>
+
+    <parties_identity_and_authorization>
+      Compare:
+
+      - fixed addresses;
+      - transferable role tokens;
+      - open roles;
+      - EntryDeposit;
+      - multisignature or threshold authorization;
+      - native scripts;
+      - script-controlled credentials;
+      - identity credentials;
+      - delegated authorization;
+      - recovery and key rotation;
+      - and revocation.
+
+      Determine whether roles should remain token-based capabilities or become a
+      more general typed authorization abstraction.
+
+      Preserve visibility of the exact monetary-policy and script assumptions.
+    </parties_identity_and_authorization>
+
+    <oracles_and_external_data>
+      Define how contracts represent:
+
+      - data identifiers;
+      - source identity;
+      - signatures or attestations;
+      - timestamp and freshness;
+      - aggregation;
+      - dispute or fallback behavior;
+      - replay protection;
+      - bounds and units;
+      - and oracle failure.
+
+      Compare direct Choice-based inputs with the emerging Marlowe oracle
+      protocol and Cardano-wide oracle patterns.
+    </oracles_and_external_data>
+
+    <minting_and_external_scripts>
+      Decide whether token minting and interaction with non-Marlowe validators
+      belong in:
+
+      - core semantics;
+      - a restricted sublanguage;
+      - a typed transaction-composition layer;
+      - capability-declared extensions;
+      - or application code.
+
+      Analyze the audit and proof boundary of each approach.
+
+      Do not imply that arbitrary external scripts inherit Marlowe's safety
+      guarantees.
+    </minting_and_external_scripts>
+
+    <errors_warnings_and_obligations>
+      Replace loosely structured warnings where appropriate with typed,
+      attributable diagnostics.
+
+      Investigate whether Marlowe should express and analyze:
+
+      - hard errors;
+      - warnings;
+      - unmet obligations;
+      - partial payments;
+      - infeasible branches;
+      - unreachable actions;
+      - liveness dependencies;
+      - insufficient collateral or minimum value;
+      - resource-bound violations;
+      - and reliance on external data or scripts.
+    </errors_warnings_and_obligations>
+
+    <serialization_and_versioning>
+      Specify:
+
+      - canonical source and core encodings;
+      - stable hashes;
+      - schema identifiers;
+      - language and validator version identifiers;
+      - forward and backward compatibility;
+      - unknown-field behavior;
+      - package and continuation hashes;
+      - source maps;
+      - and cross-language conformance.
+
+      Analyze whether existing JSON is suitable as a long-term canonical
+      interchange format.
+    </serialization_and_versioning>
+
+  </workstream_8_language_design_questions>
+
+  <workstream_9_scalability_and_state>
+    Analyze separately:
+
+    - semantic contract size;
+    - serialized contract size;
+    - on-chain datum size;
+    - transaction size;
+    - validator execution memory and CPU;
+    - number of internal accounts;
+    - payout fan-out;
+    - wallet-input overhead;
+    - continuation lookup;
+    - Runtime database state;
+    - and chain-index requirements.
+
+    Evaluate:
+
+    - state compression;
+    - continuation DAG normalization;
+    - improved Merkleization;
+    - canonical subtree sharing;
+    - proof-carrying continuation retrieval;
+    - replicated or decentralized continuation storage;
+    - staged payouts;
+    - pull-based payout queues;
+    - aggregation;
+    - batched close;
+    - account compaction;
+    - reference inputs and scripts;
+    - nested transactions where applicable;
+    - and L2 execution.
+
+    For each optimization state:
+
+    - what resource is reduced;
+    - what new resource or trust dependency is introduced;
+    - whether auditability is preserved;
+    - whether data availability becomes weaker;
+    - and whether the optimization changes semantics or only realization.
+  </workstream_9_scalability_and_state>
+
+  <workstream_10_runtime_and_api_modernization>
+    Compare the existing Runtime architecture with the lightweight
+    marlowe-runtime-ng direction and alternative architectures.
+
+    Determine whether V2 Runtime should be:
+
+    - a monolithic service;
+    - a set of independently deployable services;
+    - a stateless transaction planner plus replaceable chain/index providers;
+    - a client-side or edge-capable library;
+    - or a hybrid.
+
+    Cover:
+
+    - transaction planning;
+    - coin and UTxO selection;
+    - fee and execution-unit estimation;
+    - safety checking before contract creation;
+    - continuation storage;
+    - contract discovery and indexing;
+    - rollback behavior;
+    - payout discovery;
+    - event subscriptions;
+    - wallet signing;
+    - partial transaction workflows;
+    - hardware and enterprise custody;
+    - script registries;
+    - REST and WebSocket API versioning;
+    - OpenAPI generation;
+    - typed clients;
+    - idempotency;
+    - retries;
+    - observability;
+    - provenance;
+    - multi-provider operation;
+    - local verification of Runtime output;
+    - and trust-minimized deployment.
+
+    Establish what a client must verify so that a compromised or faulty Runtime
+    cannot induce an unintended contract or transaction.
+  </workstream_10_runtime_and_api_modernization>
+
+  <workstream_11_tooling_and_authoring>
+    Define a complete modern developer environment, including:
+
+    - a canonical textual syntax;
+    - parser, formatter, and linter;
+    - language server;
+    - semantic highlighting;
+    - type-directed completion;
+    - source maps from surface language to core and on-chain data;
+    - visual execution traces;
+    - time-travel simulation;
+    - debugger;
+    - symbolic path exploration;
+    - static-analysis counterexamples;
+    - property testing;
+    - contract-difference and semantic-equivalence tools;
+    - cost and transaction-bound visualization;
+    - visual/textual round-trip editing;
+    - package manager and registry;
+    - reproducible builds;
+    - CI integration;
+    - deployment manifests;
+    - script-hash verification;
+    - and contract provenance or software-bill-of-materials output.
+
+    Evaluate AI-assisted contract authoring, but place the LLM outside the
+    trusted core.
+
+    An AI-generated contract must pass the same parser, type checker,
+    elaborator, analyzer, simulator, conformance tests, and user approval as
+    human-written source. Propose methods for producing explanations,
+    assumptions, counterexamples, and proof evidence rather than trusting an
+    LLM's natural-language assurances.
+  </workstream_11_tooling_and_authoring>
+
+  <workstream_12_security_and_threat_model>
+    Produce an end-to-end threat model covering:
+
+    - malicious or incorrectly configured role-token monetary policies;
+    - counterfeit or unsupported validator versions;
+    - script-registry compromise;
+    - invalid initial state;
+    - malformed addresses or tokens;
+    - arithmetic and unit confusion;
+    - timeout ambiguity;
+    - unavailable Merkleized continuations;
+    - continuation substitution;
+    - oracle manipulation, staleness, equivocation, and replay;
+    - external-script composition;
+    - Runtime compromise;
+    - transaction substitution;
+    - man-in-the-middle and web-application attacks;
+    - wallet compromise;
+    - cross-site scripting;
+    - denial of service and resource exhaustion;
+    - chain rollback;
+    - API version skew;
+    - serialization disagreement;
+    - package and dependency compromise;
+    - compiler or validator miscompilation;
+    - governance capture;
+    - and upgrade confusion.
+
+    For each threat identify:
+
+    - asset;
+    - adversary;
+    - trust boundary;
+    - precondition;
+    - attack path;
+    - consequence;
+    - detection;
+    - prevention;
+    - recovery;
+    - and residual risk.
+
+    Specify independent-audit boundaries for the semantic kernel, compiler,
+    validators, Runtime, SDK, and extension mechanisms.
+  </workstream_12_security_and_threat_model>
+
+  <workstream_13_conformance_and_verification_strategy>
+    Design a sustainable assurance pipeline containing:
+
+    - a normative language specification;
+    - executable reference semantics;
+    - formal proofs;
+    - validator correspondence;
+    - cross-language conformance vectors;
+    - differential testing;
+    - property-based generation of correlated state, contract, and input data;
+    - fuzzing of parsers, serializers, linkers, and APIs;
+    - mutation testing;
+    - golden examples;
+    - on-chain tests;
+    - cost-regression tests;
+    - compatibility tests;
+    - and reproducible validator builds.
+
+    Consider these implementation strategies:
+
+    1. Isabelle remains normative and other implementations are checked against
+       it.
+    2. Agda becomes the executable and formal reference.
+    3. A new specification is written in Lean or another environment.
+    4. A compact reference interpreter is normative while proof artifacts
+       establish its properties.
+    5. Multiple independent semantics implementations are retained and checked
+       through differential conformance.
+
+    Recommend one strategy based on proof reuse, extraction quality,
+    maintainability, contributor availability, integration with the compiler,
+    and risk of specification drift.
+
+    Define the V2 proof obligations before implementation begins.
+  </workstream_13_conformance_and_verification_strategy>
+
+  <workstream_14_migration_and_compatibility>
+    Assume that existing on-chain V1 contracts and validators are immutable.
+
+    Design:
+
+    - side-by-side V1 and V2 operation;
+    - version negotiation;
+    - validator and payout-script registries;
+    - Runtime routing;
+    - API compatibility;
+    - SDK compatibility;
+    - serialized-contract identification;
+    - continuation-store compatibility;
+    - explorer support;
+    - and end-of-support policy.
+
+    Classify V1 contracts into:
+
+    - mechanically translatable with proven semantic equivalence;
+    - translatable only with user-selected policy decisions;
+    - representable but behaviorally changed;
+    - or not safely translatable.
+
+    Provide:
+
+    - a V1-to-V2 translator design;
+    - an equivalence checker;
+    - source and state migration reports;
+    - dry-run tooling;
+    - rollback procedures;
+    - and guidance for contracts that should remain on V1.
+
+    Do not use “breaking change” as a substitute for a migration strategy.
+  </workstream_14_migration_and_compatibility>
+
+  <workstream_15_adoption_and_product_strategy>
+    Determine who Marlowe V2 is for.
+
+    Test candidate target segments such as:
+
+    - Cardano DApp developers who want audited financial state machines;
+    - treasury and grant-management systems;
+    - escrow and marketplace applications;
+    - token vesting and distribution;
+    - loans, bonds, derivatives, and structured products;
+    - institutional settlement workflows;
+    - fintech developers using TypeScript;
+    - legal or financial professionals using templates or visual tools;
+    - educational users;
+    - and multi-chain financial-contract platforms.
+
+    For each segment assess:
+
+    - current workflow;
+    - unmet need;
+    - alternative solution;
+    - reason to choose Marlowe;
+    - integration burden;
+    - assurance requirement;
+    - regulatory or operational concern;
+    - willingness to adopt;
+    - and measurable success criteria.
+
+    Investigate whether “non-programmers author smart contracts” remains the
+    principal value proposition or whether the stronger proposition is
+    “developers compose audited, analyzable financial state machines.”
+
+    Recommend a precise positioning statement and three to five flagship
+    applications that exercise the modernization rather than merely demonstrate
+    toy examples.
+  </workstream_15_adoption_and_product_strategy>
+
+  <decision_scorecard>
+    Score each modernization architecture from 0 to 5 using this weighted
+    framework:
+
+    - semantic safety and formal assurance: 20%;
+    - ledger executability and predictable cost: 15%;
+    - useful financial expressiveness: 12%;
+    - authoring and debugging experience: 10%;
+    - V1 migration and ecosystem compatibility: 10%;
+    - Runtime and tooling coherence: 10%;
+    - demonstrated adoption potential: 8%;
+    - implementation and long-term maintenance burden: 8%;
+    - interoperability and composability: 7%.
+
+    Provide:
+
+    - raw scores;
+    - weighted scores;
+    - evidence;
+    - uncertainty;
+    - disputed assumptions;
+    - sensitivity analysis;
+    - and the conditions under which another option would become preferable.
+
+    Do not let a high feature count compensate for loss of formal assurance or
+    operational executability.
+  </decision_scorecard>
+
+  <required_experiments>
+    At minimum, perform or specify reproducibly:
+
+    1. V1-versus-V2 implementation of the representative contract suite.
+    2. A recurring-payment contract with 10, 100, and 1,000 periods, comparing
+       unrolling and bounded iteration.
+    3. A high-participant close and payout benchmark.
+    4. A WhenAll or action-set concurrency test covering ordering, partial
+       submission, atomicity, and timeout.
+    5. A typed-value experiment demonstrating unit and token errors caught
+       before deployment.
+    6. A state-compression benchmark measuring datum, transaction, execution,
+       storage, and proof impacts.
+    7. A Merkleized-continuation availability failure exercise.
+    8. An invalid-initial-state exercise.
+    9. A role-token monetary-policy attack and recovery analysis.
+    10. An oracle staleness, replay, and equivocation exercise.
+    11. A Runtime-compromise exercise in which the client verifies or rejects a
+        maliciously constructed transaction.
+    12. Differential semantics tests across every maintained implementation.
+    13. A V1-to-V2 migration dry run on representative deployed contracts.
+    14. A small user study comparing V1, the candidate V2 surface language,
+        TypeScript construction, and Blockly.
+    15. A proof-effort prototype for the two or three highest-risk proposed
+        language constructs.
+  </required_experiments>
+
+  <required_deliverables>
+
+    <deliverable_1_executive_decision>
+      A concise recommendation stating:
+
+      - Marlowe's enduring purpose;
+      - the recommended architecture;
+      - exact V2.0 scope;
+      - exact V2.1 scope;
+      - deferred and rejected proposals;
+      - migration strategy;
+      - primary target users;
+      - required funding and team;
+      - and the three largest unresolved risks.
+    </deliverable_1_executive_decision>
+
+    <deliverable_2_evidence_inventory>
+      A source, repository, version, deployment, and status inventory with
+      contradictions and documentation drift highlighted.
+    </deliverable_2_evidence_inventory>
+
+    <deliverable_3_current_architecture>
+      A complete V1 language and platform architecture, lifecycle, data-flow,
+      trust-boundary, and repository-dependency model.
+    </deliverable_3_current_architecture>
+
+    <deliverable_4_language_and_semantics_dossier>
+      A precise account of current syntax, semantics, serialization,
+      authorization, time, value, state, analysis, warnings, and errors.
+    </deliverable_4_language_and_semantics_dossier>
+
+    <deliverable_5_formal_assurance_matrix>
+      The theorem, assumption, implementation-correspondence, and proof-gap
+      matrix.
+    </deliverable_5_formal_assurance_matrix>
+
+    <deliverable_6_empirical_benchmark>
+      Reproducible contract, cost, size, transaction, usability, and failure
+      benchmarks using current protocol parameters.
+    </deliverable_6_empirical_benchmark>
+
+    <deliverable_7_v2_proposal_audit>
+      A proposal-by-proposal disposition table for all existing Marlowe V2
+      ideas.
+    </deliverable_7_v2_proposal_audit>
+
+    <deliverable_8_comparative_analysis>
+      A comparison that extracts transferable language, verification,
+      transaction-composition, runtime, and tooling patterns from other systems.
+    </deliverable_8_comparative_analysis>
+
+    <deliverable_9_architecture_options>
+      Full descriptions and weighted scorecards for the stabilization,
+      conservative V2, verified-core-plus-surface-language, composable-protocol,
+      and portable/L2 alternatives.
+    </deliverable_9_architecture_options>
+
+    <deliverable_10_recommended_v2_specification>
+      Provide a preliminary but concrete design containing:
+
+      - core and surface grammars;
+      - type and kind system;
+      - elaboration rules;
+      - operational semantics;
+      - resource-bound model;
+      - serialization;
+      - version identifiers;
+      - extension boundaries;
+      - and formal proof obligations.
+
+      Include before-and-after examples for at least eight representative
+      contracts.
+    </deliverable_10_recommended_v2_specification>
+
+    <deliverable_11_platform_architecture>
+      Specify validators, Runtime, API, SDK, authoring tools, continuation
+      storage, explorer, oracle integration, and deployment architecture.
+    </deliverable_11_platform_architecture>
+
+    <deliverable_12_security_plan>
+      End-to-end threat model, trusted-computing-base analysis, audit boundaries,
+      secure-development process, and incident-response requirements.
+    </deliverable_12_security_plan>
+
+    <deliverable_13_verification_and_test_plan>
+      Normative-specification decision, proof roadmap, conformance suite,
+      differential-test plan, fuzzing strategy, cost gates, and release gates.
+    </deliverable_13_verification_and_test_plan>
+
+    <deliverable_14_migration_plan>
+      V1/V2 coexistence, translator, equivalence checking, API migration,
+      validator registry, explorer support, deprecation, rollback, and
+      long-term-support policy.
+    </deliverable_14_migration_plan>
+
+    <deliverable_15_repository_and_governance_plan>
+      Target repository structure, code ownership, release train, semantic
+      versioning policy, MIP improvements, specification authority, audit
+      process, and maintenance model.
+    </deliverable_15_repository_and_governance_plan>
+
+    <deliverable_16_roadmap>
+      Provide:
+
+      - first 90 days;
+      - months 4 through 6;
+      - months 7 through 12;
+      - months 13 through 24;
+      - and later work.
+
+      For each phase specify:
+
+      - deliverables;
+      - dependencies;
+      - staffing;
+      - cost range;
+      - validation gates;
+      - adoption experiments;
+      - security reviews;
+      - go/no-go criteria;
+      - and rollback or scope-reduction options.
+    </deliverable_16_roadmap>
+
+    <deliverable_17_draft_improvement_proposals>
+      Outline the MIPs or equivalent proposals required for:
+
+      - language versioning;
+      - V2 core semantics;
+      - type system;
+      - serialization;
+      - validator versioning;
+      - Runtime/API compatibility;
+      - extension or composition mechanisms;
+      - migration;
+      - and conformance testing.
+    </deliverable_17_draft_improvement_proposals>
+
+    <deliverable_18_discussion_packet>
+      Produce a stakeholder workshop packet containing:
+
+      - a ten-page maximum pre-read;
+      - terminology and system map;
+      - disputed assumptions;
+      - six to ten explicit decision motions;
+      - evidence for and against each motion;
+      - stakeholder-specific questions;
+      - a two-session discussion agenda;
+      - decision matrix;
+      - unresolved-issue register;
+      - and decision-record template.
+
+      Include motions addressing at least:
+
+      1. whether Marlowe remains a strictly finite DSL;
+      2. whether V2 adopts a small verified core plus typed surface language;
+      3. the exact V2.0 feature boundary;
+      4. bounded iteration;
+      5. state compression and closing behavior;
+      6. action-set semantics;
+      7. external-script and minting composition;
+      8. the normative formal specification;
+      9. V1 compatibility;
+      10. and Marlowe's primary target user and product position.
+    </deliverable_18_discussion_packet>
+
+  </required_deliverables>
+
+  <release_gates>
+    Propose numeric gates, but at minimum require:
+
+    - no unresolved ambiguity in normative semantics;
+    - explicit resource and lifetime bounds for every deployable contract;
+    - type safety for the new source language;
+    - conformance among maintained implementations;
+    - deterministic canonical serialization;
+    - reproduced V1 behavior where compatibility is claimed;
+    - no critical or high-severity unresolved audit findings;
+    - cost regression thresholds;
+    - tests for live ledger limits and representative wallet states;
+    - complete Runtime transaction-verification guidance;
+    - migration rehearsal;
+    - documentation synchronized to release artifacts;
+    - and at least two non-toy applications or committed pilot users exercising
+      the principal V2 capabilities.
+  </release_gates>
+
+  <red_team_requirements>
+    Challenge all of the following assumptions:
+
+    - that greater expressiveness necessarily increases adoption;
+    - that non-programmers want to author executable financial contracts;
+    - that current formal proofs cover the deployed system;
+    - that bounded loops are easy to add without weakening predictability;
+    - that state compression solves rather than relocates scalability problems;
+    - that Merkleization is safe without a continuation-availability protocol;
+    - that role tokens are the correct long-term authorization abstraction;
+    - that a universal validator is always preferable;
+    - that arbitrary Plutus composition can coexist with Marlowe guarantees;
+    - that blockchain-agnostic semantics create practical multi-chain
+      portability;
+    - that a Runtime can remain both convenient and trust-minimized;
+    - that the existing V2 categories are correctly prioritized;
+    - that historical documentation reflects current code or protocol limits;
+    - and that technical modernization is justified without evidence of users.
+
+    Include the strongest case for not performing a major language redesign.
+  </red_team_requirements>
+
+  <quality_bar>
+    The final report must be repository-specific, evidence-driven, and
+    implementable.
+
+    Do not produce:
+
+    - a generic smart-contract-language survey;
+    - a generic Cardano overview;
+    - an unranked feature wishlist;
+    - a proposal to make Marlowe Turing complete;
+    - a redesign that discards the existing semantics and ecosystem without
+      quantifying migration cost;
+    - unsupported claims about safety or adoption;
+    - hard-coded ledger limits copied from historical documentation;
+    - or an architecture in which the LLM, Runtime, oracle, or external script
+      silently becomes trusted.
+
+    Use exact dates, versions, commit hashes, script hashes, benchmark
+    configurations, and confidence labels.
+
+    Label inference as inference. Show disagreements among sources. Quantify
+    uncertainty. Make tradeoffs explicit.
+
+    The report should conclude with a concrete decision, not merely a menu of
+    possibilities.
+  </quality_bar>
+
+  <final_required_answer>
+    End with a direct recommendation in this form:
+
+    1. Preserve:
+       the exact Marlowe principles and V1 constructs that should remain.
+
+    2. Change in V2.0:
+       the smallest coherent, formally defensible, deployable modernization.
+
+    3. Develop for V2.1:
+       capabilities requiring further semantics, proofs, experiments, or
+       infrastructure.
+
+    4. Move outside the core:
+       features better implemented in the surface language, libraries, Runtime,
+       oracle protocol, transaction-composition layer, or applications.
+
+    5. Reject:
+       proposals whose safety, complexity, migration, cost, or demand tradeoff
+       is unfavorable.
+
+    6. Prove and test:
+       the exact formal, security, conformance, and empirical work required
+       before release.
+
+    7. Migrate:
+       the exact V1/V2 coexistence and compatibility strategy.
+
+    8. Build:
+       the 90-day, 12-month, and 24-month implementation sequence.
+
+    9. Govern:
+       the specification, repository, release, audit, and MIP process.
+
+    10. Validate demand:
+        the pilots and adoption evidence required to justify continued
+        investment.
+  </final_required_answer>
+
+</deep_research_assignment>
