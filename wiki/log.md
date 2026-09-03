@@ -140,3 +140,13 @@ Built Compact compiler 0.34.100 from pinned source, compiled a finite Moriarty
 escrow lowering with the ZKIR 3 backend, passed six acceptance tests and 44 ZKIR
 library tests, and mock-compiled all three generated circuits. Full proof tests
 remain dependent on external `MIDNIGHT_PP` parameter files.
+
+## [2026-09-03] research | Complete NEAR Intents documentation and prompt council
+
+Acquired all 68 official NEAR Intents sitemap pages plus both published OpenAPI
+documents with Scrapling. Separated internal-ledger execution, source fill,
+claim, destination finality, and destination spendability. Grok, Sol, and
+Fable reviewed one frozen prompt draft. The single correction pass produced
+prompt version 1.2 with execution-state authorization, cryptographic lifecycle
+bindings, typed verification certificates, and a separate confidential trust
+profile. Semantic scope `0.0.0-e00.2` did not change.

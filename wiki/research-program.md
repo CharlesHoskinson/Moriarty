@@ -133,13 +133,15 @@ SRC-0025 and the primary standards in SRC-0021; observed 2026-09-03; authority
 primary standards and repository comparison; scope Ethereum compatibility;
 evidence contradiction and recommendation; confidence high; status S2.
 
-The focused assignment is now version 1.1:
+The focused assignment is now version 1.2:
 [`../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml`](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml).
-It defines the intent-refinement theorem, compiler and proof artifacts, CAKE and
-NEAR/ERC/OIF review, 33 intent data contracts, a complete developer interface,
-twelve workstreams, thirteen experiments, eighteen deliverables, twelve
-sprints, and eighteen release gates. It does not change the active semantic
-scope.
+It defines execution-state authorization, a cryptographic lifecycle refinement
+chain, settlement-level predicates, compiler and proof artifacts, separate
+CAKE and NEAR/ERC/OIF status rows, 38 specified-only intent data contracts, a
+typed-certificate developer interface, twelve workstreams, thirteen
+experiments, eighteen deliverables, twelve sprints, and eighteen release
+gates. It does not change the active semantic scope. The Grok, Sol, and Fable
+council advisory is preserved in SRC-0027.
 
 ## Preserved dissent
 

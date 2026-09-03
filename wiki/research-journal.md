@@ -353,3 +353,56 @@ adapter, Runtime, or application code.
 Construct one cross-chain swap trace in which the NEAR internal-ledger batch
 succeeds but the bridge withdrawal fails or is rolled back. Reject any
 candidate `fulfilled` predicate that accepts the internal batch alone.
+
+## Prompt iteration P03: bind lifecycle evidence before authorization
+
+- State: council correction pass completed
+- Active semantic scope: `0.0.0-e00.2`
+- Scope change: none
+
+### Trigger
+
+The user required Grok, Sol, and Fable to review the intent research prompt
+after the CAKE, NEAR Intents, and Ethereum standards research sprint.
+
+### Council evidence and decision
+
+All three providers completed the same frozen blind brief. Grok ran as
+`grok-4.6-build`, Sol as `gpt-5.6-sol`, and Fable as canonical
+`claude-fable-5-1`; Fable also disclosed a Haiku helper. All three requested
+changes. Their common finding was that a sequence of well-named objects is not
+yet an assurance chain.
+
+Prompt version 1.2 now requires every adjacent lifecycle artifact to bind its
+predecessor digest, execution state, authorization domain, resolver and
+contract code identity, upgrade state, assumptions, and version. The candidate
+theorem evaluates authorization at execution state and separates
+`SignAfterResolve` from `SignBeforeResolve`.
+
+The prompt also indexes settlement evidence from internal-ledger transition to
+destination spendability. It makes cancel-or-fill, residual authorization,
+refund destination, delivery deduplication, typed reversal, and compensation
+explicit. Safety verifiers must return a typed certificate or a structured
+rejection; a Boolean cannot authorize signing, submission, claim, or refund.
+
+Confidential execution now has a separate trusted-computing-base and leakage
+theorem. Operator, relay, treasury, and bridge attestations cannot discharge a
+proof obligation. CAKE, NEAR, current ERC-7683, prior ERC-7683, and OIF must
+remain five separate evidence and status rows.
+
+### Semantic scope transition
+
+No semantic motion was accepted. All 38 intent data contracts and new SDK
+operations are `specified-only`. They do not modify the frozen 65-component SDK
+or 28 canonical data-contract inventory until an accepted OpenSpec change.
+Version `0.0.0-e00.2` and snapshot SHA-256
+`9bee72cb3a71962128ce5ead07b0912a3f54b1d813d59f629852631057e36c7a`
+remain active.
+
+### Next falsification test
+
+Build the lifecycle refinement-chain harness. Substitute, omit, equivocate, or
+stale each adjacent artifact. Then run a cross-domain trace in which the NEAR
+internal ledger succeeds but destination payout fails. Release the research
+specification only if every false authority or settlement claim is rejected at
+the correct boundary.

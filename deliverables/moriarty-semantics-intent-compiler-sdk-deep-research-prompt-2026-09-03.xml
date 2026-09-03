@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.1">
+<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.2">
   <title>
     Moriarty Semantics, Intent Correctness, Verified Compilation, Compact and
     ZKIR Realization, and Standard Developer Interface
@@ -252,6 +252,9 @@
     <input path="repos/marlowe-agda" role="Agda formalization baseline" />
     <input path="repos/midnightntwrk" role="Midnight repository corpus" />
     <input path="repos/LFDT-Minokawa" role="active Compact compiler and runtime corpus" />
+    <input path="evidence/cake-working-group-acquisition-2026-09-03.json" role="complete CAKE one-hop acquisition manifest" />
+    <input path="evidence/near-intents-docs-acquisition-2026-09-03.json" role="complete NEAR Intents documentation acquisition manifest" />
+    <input path="evidence/moriarty-intent-standards-claim-ledger-2026-09-03.csv" role="intent standards claim and contradiction ledger" />
   </mandatory_local_inputs>
 
   <mandatory_external_sources>
@@ -416,6 +419,16 @@
     error model, capability discovery, extensibility, security warnings,
     deployed evidence, and Moriarty disposition. Use dispositions `adopt`,
     `adapt`, `adapter-only`, `test-vector-only`, `defer`, or `reject`.
+
+    Produce a mechanically visible five-row compatibility and evidence matrix:
+    <required_row>CAKE as a non-normative architecture taxonomy</required_row>
+    <required_row>NEAR Intents as a deployed implementation profile whose documentation, OpenAPI, source, and observed behavior are independent evidence streams</required_row>
+    <required_row>current resolver-based ERC-7683 as an unstable draft</required_row>
+    <required_row>prior ERC-7683 order and fill draft as superseded history</required_row>
+    <required_row>OIF as a separate implementation family that retains prior-style order vocabulary</required_row>
+    Do not transfer status, deployment evidence, or guarantees from one row to
+    another. When sources disagree, preserve the contradiction. Give reproduced
+    observed behavior authority only for the behavior that was reproduced.
   </standards_analysis_matrix>
 
   <workstreams>
@@ -460,56 +473,96 @@
     <workstream id="W4" name="Intent calculus and correctness relation">
       Define canonical `IntentObjective`, `UserIntent`, `IntentDomain`,
       `AllowedEffects`, `ForbiddenEffects`, `Validity`, `SignerPolicy`,
-      `DisclosurePolicy`, `CapabilityBudget`, `FeeLedger`, `StateAnchor`,
-      `FinalityPolicy`, and `FailurePolicy` objects. Keep `QuoteRequest`,
-      `Quote`, `IntentAuthorization`, protocol `OrderPayload`,
-      `ResolutionSnapshot`, `ResolvedPlan`, `FillReceipt`, `FulfillmentProof`,
-      `RefundReceipt`, and `CancellationReceipt` distinct.
+      `DisclosurePolicy`, `DisclosureAcceptance`, `CapabilityBudget`,
+      `FeeLedger`, `StateAnchor`, `StateCommitment`, `FinalityPolicy`, and
+      `FailurePolicy` objects. Keep `QuoteRequest`, `Quote`,
+      `IntentAuthorization`, protocol `OrderPayload`, `ResolutionSnapshot`,
+      `ResolvedPlan`, `FillReceipt`, `FulfillmentProof`, `ClaimReceipt`,
+      `SettlementReceipt`, `RefundReceipt`, and `CancellationReceipt` distinct.
+
+      Classify every lifecycle object as command, authorization, carrier, state,
+      observation, or evidence. Give it one producer, its permitted consumers,
+      an identity rule, mutability rule, scope, and version. Show pairwise
+      non-equivalence for objective, quote, authorization, order payload,
+      resolution, plan, fill, claim, settlement, refund, and cancellation.
 
       Define whether objectives are hard predicates, optimization preferences,
       or both. A user safety claim must depend only on hard predicates. Define
       single-use, reusable, partially fillable, cancellable, delegated, and
-      composed intents. Define consumption, residual intent, nullifiers,
-      sequencing, revocation, and rollback behavior.
+      composed intents. Define consumption, residual authorization, residual
+      intent, nullifiers, sequencing, and revocation. An unsigned residual is
+      not automatically authorized.
 
-      Define a lifecycle state machine from draft through permission check,
-      authorization, disclosure, quote, selection, resolution, execution,
-      fills, proof, claim, payout, fulfillment, or recovery. For every
-      transition state actor, authority, signed fields, domain, chain binding,
-      verifying contract, nonce, validity, state dependency, idempotency,
-      disclosed data, precondition, postcondition, failure, retry,
-      cancellation, rollback, proof, and finality rule. Do not collapse a
-      service status into a semantic state.
+      Separate `SignAfterResolve`, where the signer authorizes a fully bound
+      resolved plan, from `SignBeforeResolve`, where the authorization binds a
+      resolver policy and a later plan is checked at execution state. Never
+      claim pre-sign plan verification for an unresolved `SignBeforeResolve`
+      payload.
+
+      Define a normative lifecycle automaton from draft through permission
+      check, authorization, disclosure, quote, selection, resolution,
+      execution, fills, proof, claim, payout, settlement, fulfillment, or
+      recovery. For every transition state actor, authority, signed fields,
+      domain, chain binding, verifying contract, state commitment, nonce,
+      validity, state dependency, idempotency, disclosed data, precondition,
+      postcondition, failure, retry, cancellation, proof, and finality rule. Do
+      not collapse a service status into a semantic state.
+
+      Define a cryptographic refinement chain across every adjacent lifecycle
+      artifact. Each successor binds the predecessor digest plus the applicable
+      policy, network, contract, state, code identity, assumptions, and version.
+      Test substitution, omission, equivocation, and stale-snapshot attacks at
+      every edge.
 
       Define the six partial-fill and atomicity meanings separately. Specify
       duplicate outputs, first-filler ownership, multi-solver completion,
       callback failure, proof-delay races, late claims, and partial-fill
-      residual conservation. Do not claim general cross-domain atomicity.
+      residual conservation. Define cancel-or-fill exclusivity, the losing
+      cancellation race, signed residual and refund destinations, and the exact
+      refund predicate. Do not claim general cross-domain atomicity.
+
+      Replace a generic rollback verb with four typed outcomes: same-ledger
+      state reversal, source-ledger reorganization, local application rollback,
+      and irreversible cross-domain compensation. Define the authority that
+      reconciles each outcome.
+
+      Index settlement claims by explicit levels: internal-ledger transition,
+      source-chain fill, fulfillment-proof acceptance, claim completion,
+      destination finality, and destination spendability. A theorem at one
+      level does not imply a theorem at another. Name the ledger over which
+      each conservation theorem ranges and identify every asynchronous boundary.
 
       Define the semantic judgment in mathematical notation. At minimum use
-      objects equivalent to state `S`, intent `I`, plan `P`, trace `T`, outcome
-      `O`, artifacts `A`, assumptions `H`, and projection `view`.
+      signing state `S_sign`, execution state `S_exec`, intent `I`, plan `P`,
+      trace `T`, outcome `O`, artifacts `A`, assumptions `H`, domain `D`, nonce
+      `N`, settlement level `L`, and projection `view`.
 
       <required_theorem id="INTENT-SAFETY"><![CDATA[
         wellTyped(I)
-        and validAuthorization(I)
-        and freshState(S)
-        and verifiedArtifacts(A)
-        and verifyPlan(I, S, A, P) = verified
-        and executes(P, S, T, O)
-        implies authorized(I, H, view(T, O))
+        and AuthorizationValid(I.authorization, S_exec, I.domain, I.nonce)
+        and SnapshotFresh(A.snapshot, A.querySet, A.mutability, S_exec)
+        and ResolverBound(A.resolverId, A.codeHash, A.implementation, A.upgradeState)
+        and AssumptionsVerified(H, A.witnesses)
+        and RefinementChainBound(I, A, P)
+        and verifyPlan(I, S_sign, S_exec, A, P) = VerificationCertificate.valid
+        and executes(P, S_exec, A.asyncBoundary, T, O)
+        and SettlementPredicate(L, I.finalityPolicy, T, O)
+        implies authorizedAt(I, H, L, view(T, O))
       ]]></required_theorem>
 
-      Strengthen this theorem to bind network, ledger, contract, Core,
-      serializer, compiler, circuit, proof parameters, state sequence, nonce,
-      validity interval, signers, assets, fees, public effects, disclosures,
-      capabilities, and failure outcome. State where proof verification and
-      ledger correspondence enter the premise.
+      Quantify the difference between signing and execution state. Bind network,
+      ledger, contract, Core, serializer, compiler, circuit, proof parameters,
+      resolver identity and code hash, proxy implementation and upgrade state,
+      state sequence, nonce domain, validity interval, signers, approval scope,
+      assets, fees, public effects, disclosures, capabilities, assumptions, and
+      failure outcome. State where proof verification and ledger correspondence
+      enter the premise.
 
       Define separate theorems for no extra spend, no diverted change, no extra
       mint or burn, fee compliance, signer compliance, disclosure compliance,
-      capability non-escalation, replay rejection, cancellation, partial-fill
-      residual correctness, and composition.
+      capability non-escalation, replay rejection, cancel-or-fill exclusivity,
+      refund authorization, partial-fill residual correctness, settlement-level
+      correspondence, and composition.
     </workstream>
 
     <workstream id="W5" name="Proof-of-correctness-of-intent artifact">
@@ -527,6 +580,18 @@
       Separate statement data from witness data. Bind all public inputs and
       private commitments. Define what is proved, what is checked by a local
       deterministic verifier, what is assumed, and what remains unavailable.
+      Classify every fulfillment artifact as `Proof`, `Receipt`, or
+      `Attestation`. A trusted attestation cannot discharge a proof obligation.
+      State whether evidence establishes internal execution, source fill,
+      claim, destination finality, destination spendability, or only a service
+      assertion.
+
+      Give confidential execution a separate trusted-computing-base profile,
+      leakage model, adversary model, and theorem. Exclude confidential relay,
+      permissioned validator, treasury, custody, and proof-of-authority bridge
+      claims from the general intent-correctness theorem unless their premises
+      are explicit.
+
       Determine whether the evidence bundle should use one proof, several
       linked proofs, recursive aggregation, or no aggregation. Do not require
       zero knowledge for predicates that are cheaper and clearer to verify
@@ -648,6 +713,11 @@
       state snapshot and assumption manifest before the user authorizes any
       effects derived from it.
 
+      Produce the required five-row compatibility matrix. Keep CAKE ontology,
+      the deployed NEAR comparison, current resolver-based ERC-7683, prior
+      ERC-7683, and OIF in separate rows with independent status and evidence.
+      A name shared by two rows does not establish semantic compatibility.
+
       Define a compatibility profile for EIP-712-style typed display and domain
       separation without assuming EVM signatures. Define adapters for contract
       signers, account abstraction, delegated permissions, wallet batching, and
@@ -666,10 +736,10 @@
       <operation group="author">parse, format, lint, check, elaborate, normalize, serialize</operation>
       <operation group="assure">analyze, simulate, debug, compare, explainCounterexample, estimateBounds</operation>
       <operation group="build">compileCompact, validateBackend, certifyTranslation, verifyBuild, emitSBOM</operation>
-      <operation group="intent">createObjective, createIntent, explainIntent, encodeIntent, hashIntent, createSigningPayload, verifyAuthorization, cancelIntent</operation>
+      <operation group="intent">createObjective, createIntent, explainIntent, encodeIntent, decodeSignedPayload, hashIntent, createSigningPayload, preSignEffectDiff, verifyAuthorization, verifyApprovalScope, verifyVerifyingContract, cancelIntent</operation>
       <operation group="quote">requestQuote, verifyQuote, compareQuotes, selectQuote, rejectQuote</operation>
       <operation group="solver">discoverSolvers, resolveIntent, verifyResolution, proposePlan, comparePlans, consumeIntent, deriveResidualIntent</operation>
-      <operation group="state">fetchStateEvidence, verifyState, handleRollback</operation>
+      <operation group="state">fetchStateEvidence, verifyState, selectObservationPolicy, reconcileReversal, compensateFailure</operation>
       <operation group="proof">resolveParameters, verifyParameters, createProofRequest, prove, verifyProof</operation>
       <operation group="transaction">planTransaction, summarizeEffects, verifyPlan, createSigningRequest, sign, submit, observe</operation>
       <operation group="settlement">recordFill, verifyFill, verifyFulfillment, claim, requestRefund, verifyRefund, verifyFinality</operation>
@@ -683,14 +753,32 @@
       local-versus-remote execution, security checks, conformance vectors, and
       owning package.
 
-      Define a disclosure matrix for user, wallet, quote provider, solver,
-      aggregator, relay, bundler, prover, oracle, bridge, Runtime, chain, and
-      observer. Define sealed and selective disclosure, retention, correlation,
-      failed-quote leakage, metadata minimization, and MEV exposure.
+      `verifyQuote`, `verifyResolution`, `verifyPlan`, `verifyAuthorization`,
+      `verifyState`, `verifyProof`, and settlement verifiers must be pure and
+      fail closed. They return a typed `VerificationCertificate` or a structured
+      rejection, never a bare Boolean. Signing, submission, claim, and refund
+      operations require the applicable valid certificate. The certificate
+      binds canonical signed bytes, human display, state commitment, effect
+      diff, approval scope, verifying-contract code hash, proxy implementation
+      and administration state, observation policy, assumptions, and versions.
+
+      Define one stable delivery-deduplication key. Specify durable persistence
+      order, crash consistency before and after execution and acknowledgement,
+      replay retention, idempotent claim and refund identifiers, and the
+      authority that reconciles local, source-ledger, and cross-domain states.
+
+      Define a disclosure and fee matrix for user, wallet, quote provider,
+      solver, aggregator, relay, bundler, paymaster, prover, oracle, bridge,
+      Runtime, chain, and observer. Define sealed and selective disclosure,
+      retention, correlation, failed-quote leakage, metadata minimization, and
+      MEV exposure. Transport delivery and retry policy are operational
+      protocols outside Moriarty Core.
 
       Reconcile this interface with the existing 65 components and 28 data
       contracts. Add, merge, split, or reject entries through explicit change
-      records. Identify the minimum safety spine that must exist before any
+      records. All interface additions in this assignment remain
+      `specified-only` until an accepted OpenSpec change updates those frozen
+      inventories. Identify the minimum safety spine that must exist before any
       signing workflow.
     </workstream>
 
@@ -708,6 +796,13 @@
       fill-versus-payout confusion, late proof versus refund races, bridge
       finality, address-profile collision, and confidential-relay or treasury
       compromise.
+
+      Define a separate confidential-execution boundary. Inventory private
+      relay operators, permissioned validators, treasury custody, bridge
+      operators, proof-system parameters, public leakage, timing leakage, and
+      availability dependencies. Treat 1Click provider assertions as
+      attestations outside the verified Core boundary unless independently
+      proved from ledger evidence.
 
       For each threat record asset, adversary, boundary, precondition, attack,
       consequence, prevention, detection, recovery, residual risk, test, proof
@@ -764,7 +859,10 @@
     <contract>SolverPlan</contract>
     <contract>PlanEffectSummary</contract>
     <contract>StateEvidence</contract>
+    <contract>StateCommitment</contract>
+    <contract>ObservationPolicy</contract>
     <contract>DisclosurePolicy</contract>
+    <contract>DisclosureAcceptance</contract>
     <contract>FeeLedger</contract>
     <contract>FinalityPolicy</contract>
     <contract>ResidualIntent</contract>
@@ -773,10 +871,12 @@
     <contract>FillReceipt</contract>
     <contract>FulfillmentProof</contract>
     <contract>ClaimReceipt</contract>
+    <contract>SettlementReceipt</contract>
     <contract>RefundReceipt</contract>
     <contract>ProofRequest</contract>
     <contract>ProofReceipt</contract>
     <contract>VerificationResult</contract>
+    <contract>VerificationCertificate</contract>
     <contract>SigningRequest</contract>
     <contract>SignatureReceipt</contract>
     <contract>SubmissionReceipt</contract>
@@ -805,14 +905,21 @@
       Mutate each plan with an extra payment, diverted change, fee increase,
       extra disclosure, extra capability, wrong signer, wrong network, wrong
       contract, stale state, expired interval, reused nonce, and wrong proof.
-      Require local rejection before signing.
+      Mutate every adjacent lifecycle binding by predecessor substitution,
+      omission, equivocation, and stale snapshot. Mutate resolver code hash,
+      proxy implementation and administration state, approval scope, canonical
+      signed bytes, display, assumptions, and observation policy. Require local
+      rejection before signing for `SignAfterResolve` and before execution for
+      every unresolved field in `SignBeforeResolve`.
     </experiment>
     <experiment id="E05">
       Exercise single-use, partial-fill, residual, cancellation, delegated, and
       composed intents. Model-check races among fill, cancel, timeout, and
       rollback. Cover every partial-fill meaning, duplicate outputs, multiple
       solvers, first-filler ownership, callback failure, late proof, claim, and
-      refund. Require per-asset residual conservation.
+      refund. Exercise both sides of the cancel-or-fill race. Require signed
+      residual and refund destinations, single-use consumption, and per-asset
+      residual conservation.
     </experiment>
     <experiment id="E06">
       Implement a CAKE-layer test harness with replaceable application,
@@ -820,7 +927,11 @@
       separately and record which Moriarty verifier detects the defect. Replay
       NEAR-style at-least-once relay events, disconnect longer than retention,
       acknowledge before durable persistence, submit an asynchronous
-      cancellation during a fill, and report fill success before payout.
+      cancellation during a fill, and report fill success before payout. Crash
+      before and after persistence, execution, acknowledgement, and publication;
+      lose the deduplication store; then test idempotent reconciliation. Record
+      internal-ledger success followed by bridge, payout, or destination-finality
+      failure without relabeling it as end-to-end success.
     </experiment>
     <experiment id="E07">
       Implement current ERC-7683 and ERC-7521 compatibility adapters or justify
@@ -859,7 +970,9 @@
       Verify identical intent meaning and stable error behavior. Exercise
       quote verification, resolver snapshot verification, fill and payout
       separation, fulfillment verification, refund, transport resumption,
-      duplicate delivery, and unknown status or error handling.
+      duplicate delivery, and unknown status or error handling. Require typed
+      verification certificates or structured rejections; fail any workflow
+      that uses a bare Boolean as signing or settlement authorization.
     </experiment>
     <experiment id="E13">
       Give developers and auditors equivalent Moriarty, raw Compact, and
@@ -873,15 +986,15 @@
     <deliverable id="D02">Complete source, version, and contradiction inventory.</deliverable>
     <deliverable id="D03">Normative Moriarty Core specification.</deliverable>
     <deliverable id="D04">Typed surface grammar, type system, and elaboration specification.</deliverable>
-    <deliverable id="D05">Intent calculus and exact intent-refinement relation.</deliverable>
-    <deliverable id="D06">Intent-correctness evidence-bundle specification.</deliverable>
+    <deliverable id="D05">Normative lifecycle automaton, cryptographic refinement chain, intent calculus, and exact intent-refinement relation.</deliverable>
+    <deliverable id="D06">Proof, receipt, and attestation taxonomy; settlement-level index; and intent-correctness evidence-bundle specification.</deliverable>
     <deliverable id="D07">Compiler architecture and intermediate-representation specification.</deliverable>
     <deliverable id="D08">Theorem catalog, proof dependency graph, and mechanization plan.</deliverable>
     <deliverable id="D09">Compact, ZKIR, proof, ledger, and privacy correspondence dossier.</deliverable>
     <deliverable id="D10">CAKE and NEAR Intents layer, lifecycle, trust, status, and failure map.</deliverable>
     <deliverable id="D11">Version-pinned ERC, EIP, CAIP, OIF, and NEAR disposition and field-level compatibility matrix.</deliverable>
-    <deliverable id="D12">Standard developer interface with complete typed API signatures.</deliverable>
-    <deliverable id="D13">Canonical schemas, version rules, errors, and conformance vectors.</deliverable>
+    <deliverable id="D12">Standard developer interface with complete typed verifier contracts, certificates, rejections, and API signatures.</deliverable>
+    <deliverable id="D13">Traceability matrix from theorem premises and data contracts to gates and experiments, plus canonical schemas, version rules, errors, and conformance vectors.</deliverable>
     <deliverable id="D14">Threat model and independent audit boundaries.</deliverable>
     <deliverable id="D15">Reproducible experiment suite and preserved measurements.</deliverable>
     <deliverable id="D16">OpenSpec change set for each accepted build sprint.</deliverable>
@@ -956,17 +1069,17 @@
     <gate id="G03">Every accepted semantic motion has a proof delta, migration result, backend result, and negative test.</gate>
     <gate id="G04">At least two independent semantics implementations pass every conformance vector.</gate>
     <gate id="G05">Reference and generated backend agree on every required trace and effect projection.</gate>
-    <gate id="G06">The intent verifier rejects every unauthorized objective, quote, authorization, resolution, plan, fee, disclosure, fill, fulfillment, and recovery mutation before signing or claiming.</gate>
+    <gate id="G06">Every adjacent lifecycle artifact binds its predecessor digest, domain, state, resolver and contract identity, upgrade state, assumptions, and version. The intent verifier rejects substitution, omission, equivocation, staleness, or any unauthorized objective, quote, authorization, resolution, plan, fee, disclosure, fill, fulfillment, and recovery mutation before its authority boundary.</gate>
     <gate id="G07">Replay fails across network, contract, version, sequence, nonce, validity, and cancellation domains.</gate>
-    <gate id="G08">All public effects and private disclosures match the signed intent and approved manifests.</gate>
+    <gate id="G08">All public effects and private disclosures match the signed intent and approved manifests. Disclosure acceptance is distinct from effect authorization and cannot expand it.</gate>
     <gate id="G09">Real proofs verify under pinned, approved, and digest-bound parameters.</gate>
     <gate id="G10">Proof and ledger costs meet frozen application-specific budgets on named hardware and network versions.</gate>
     <gate id="G11">Every security-critical compiler or verifier mutant is detected, or the survivor blocks release.</gate>
     <gate id="G12">Build artifacts reproduce byte-for-byte on two independent clean builders.</gate>
     <gate id="G13">No critical or high audit finding remains unresolved.</gate>
-    <gate id="G14">The SDK has stable errors, idempotency, version negotiation, asynchronous cancellation, partial-fill residuals, delivery deduplication, fill and payout separation, finality, rollback, refund, and unavailable outcomes.</gate>
+    <gate id="G14">The SDK has stable errors, typed verification certificates, idempotency, version negotiation, asynchronous cancellation, partial-fill residuals, durable delivery deduplication, crash consistency, fill and payout separation, settlement levels, typed reversals, compensation, refund, and unavailable outcomes.</gate>
     <gate id="G15">A compromised solver, Runtime, indexer, registry, or remote prover cannot create a signing request for extra effects.</gate>
-    <gate id="G16">The proof claim names every trusted compiler, circuit, verifier, parameter, ledger, wallet, and oracle assumption.</gate>
+    <gate id="G16">The proof claim names every trusted compiler, circuit, verifier, parameter, ledger, wallet, oracle, relay, validator, treasury, custodian, and bridge assumption. Confidential profiles have a separate leakage theorem and trusted-computing-base statement.</gate>
     <gate id="G17">At least two non-toy pilots prefer Moriarty's assurance workflow to the audited Compact-library baseline.</gate>
     <gate id="G18">If G05, G06, G09, G15, or G17 fails, reduce scope or stop the language path.</gate>
   </release_gates>
@@ -1004,6 +1117,11 @@
     <item>Do not call prior-draft ERC-7683 order and fill interfaces current.</item>
     <item>Do not call a transport exactly-once when it uses acknowledgement, replay, and deduplication.</item>
     <item>Do not call a confidential profile trustless when it depends on a permissioned relay, private validator set, treasury, or PoA bridge.</item>
+    <item>Do not use “partial fill,” “atomic,” “settled,” “final,” or “rollback” without selecting the exact defined meaning and settlement level.</item>
+    <item>Do not claim pre-sign plan approval when a `SignBeforeResolve` authorization leaves the plan unresolved.</item>
+    <item>Do not use one rollback primitive for ledger reversal, chain reorganization, local rollback, and irreversible compensation.</item>
+    <item>Do not call an operator attestation a proof or let it discharge a proof obligation.</item>
+    <item>Do not use a bare Boolean as authorization to sign, submit, claim, settle, or refund.</item>
     <item>Do not count a specified-only SDK component as implemented.</item>
     <item>Do not hide an external assumption in an adapter or manifest.</item>
     <item>Do not use calendar duration as evidence of progress.</item>
