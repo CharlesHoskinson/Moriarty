@@ -3,7 +3,7 @@ id: moriarty.port.decision
 type: decision
 title: Marlowe-to-Moriarty port decision
 status: active
-updated_at: 2026-09-03T01:32:06Z
+updated_at: 2026-09-03T05:39:34Z
 sources:
   - SRC-0003
   - SRC-0004
@@ -14,7 +14,10 @@ sources:
   - SRC-0015
   - SRC-0016
   - SRC-0017
+  - SRC-0019
 ---
+
+<!-- markdownlint-disable MD013 MD025 MD060 -->
 
 # Marlowe-to-Moriarty port decision
 
@@ -76,3 +79,20 @@ assumptions. It must not claim corpus coverage merely because all rows received
 a family, facet, or historical M4+ label. The current 60-construction evidence contains zero complete
 verdicts, so it is a requirements and residue source rather than proof that the
 kernel already covers the market.
+
+## First backend stop-test disposition
+
+**CLM-0119.** Continue the bounded feasibility phase after E00. This is a
+recommendation based on the reproduced S3 experiment in `SRC-0019`. Confidence
+is medium because only one canonical application and mock compilation have
+passed.
+
+E00 produced a finite Core, generated Compact, a client-checkable manifest, and
+a 1,000-trace certificate with zero divergence. Compact and the ZKIR mock
+compiler accepted the corrected artifacts. No unbounded collection, dynamic
+loop, recursion, or cross-contract call appears in generated Compact.
+
+The E00 result does not select a production language. Keep the Compact-library
+fallback active until at least the loan, option, mandate, and conditional-token
+applications pass the same gate. Stop any privacy claim that depends on an
+unlisted `disclose()` expression.

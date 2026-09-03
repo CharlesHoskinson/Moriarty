@@ -21,8 +21,8 @@ will grow by merging evidence into durable topic pages.
   the Moriarty proof boundary.
 - [Midnight repository inventory](midnight-repositories.md) — 74 official
   repositories, active Compact source relocation, and backend pins.
-- [Reproduced benchmarks](benchmarks.md) — Marlowe scaling, typed values, and
-  the compiled Moriarty escrow.
+- [Reproduced benchmarks](benchmarks.md) — Marlowe scaling, typed values, the
+  compiled Moriarty escrow, and the E00 atomic-swap stop test.
 - [Moriarty architecture](moriarty-architecture.md) — Core, surface, Compact,
   ZKIR, Runtime, and trust boundaries.
 - [Security boundaries](security.md) — threat and audit partition.

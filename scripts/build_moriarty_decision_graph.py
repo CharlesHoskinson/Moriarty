@@ -6,23 +6,158 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sys
 from importlib.metadata import version
 from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from graphify.build import build_from_json
 from graphify.cluster import cluster, label_communities_by_hub
 from graphify.export import to_json
 
+from moriarty.evidence import validate_e00_evidence
 
-ROOT = Path(__file__).resolve().parents[1]
+
 GRAPH_ROOT = ROOT / "graphs" / "moriarty-decision-corpus"
 SEMANTIC = GRAPH_ROOT / ".graphify_semantic.json"
 DETECT = GRAPH_ROOT / ".graphify_detect.json"
 OUTPUT = GRAPH_ROOT / "graphify-out"
+E00_CERTIFICATE = ROOT / "experiments" / "moriarty-core-swap" / "translation-certificate.json"
+E00_TOOLCHAIN = ROOT / "experiments" / "moriarty-core-swap" / "toolchain-results.json"
 
 
 def identifier(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+
+
+def add_extracted_edge(graph, source: str, target: str, relation: str, evidence: str) -> None:
+    graph.add_edge(
+        source,
+        target,
+        relation=relation,
+        confidence="EXTRACTED",
+        confidence_score=1.0,
+        source_file=evidence,
+        weight=1.0,
+        _src=source,
+        _tgt=target,
+    )
+
+
+def add_e00_evidence(graph, root_id: str) -> None:
+    certificate = json.loads(E00_CERTIFICATE.read_text(encoding="utf-8"))
+    toolchain = json.loads(E00_TOOLCHAIN.read_text(encoding="utf-8"))
+    validate_e00_evidence(certificate, toolchain)
+
+    certificate_source = str(E00_CERTIFICATE.relative_to(ROOT))
+    toolchain_source = str(E00_TOOLCHAIN.relative_to(ROOT))
+    nodes = {
+        "moriarty_e00_atomic_swap": (
+            "Moriarty E00 Atomic Swap",
+            "experiment",
+            certificate_source,
+        ),
+        "moriarty_e00_core": (
+            "E00 Finite Moriarty Core",
+            "semantics",
+            certificate_source,
+        ),
+        "moriarty_e00_compact": (
+            "E00 Generated Compact",
+            "code",
+            toolchain_source,
+        ),
+        "moriarty_e00_manifest_machine": (
+            "E00 Independent Manifest Machine",
+            "code",
+            certificate_source,
+        ),
+        "moriarty_e00_zkir": (
+            "E00 Four ZKIR 3 Circuits",
+            "artifact",
+            toolchain_source,
+        ),
+        "moriarty_e00_certificate": (
+            "E00 Translation Certificate",
+            "evidence",
+            certificate_source,
+        ),
+        "moriarty_e00_decision_disclosure": (
+            "E00 Public Decision Disclosure",
+            "security",
+            toolchain_source,
+        ),
+    }
+    for node_id, (label, file_type, source_file) in nodes.items():
+        graph.add_node(
+            node_id,
+            label=label,
+            file_type=file_type,
+            source_file=source_file,
+            semantic_status="EXTRACTED",
+        )
+
+    add_extracted_edge(
+        graph,
+        root_id,
+        "moriarty_e00_atomic_swap",
+        "indexes_experiment",
+        certificate_source,
+    )
+    for target in (
+        "moriarty_e00_core",
+        "moriarty_e00_compact",
+        "moriarty_e00_manifest_machine",
+        "moriarty_e00_zkir",
+        "moriarty_e00_certificate",
+        "moriarty_e00_decision_disclosure",
+    ):
+        add_extracted_edge(
+            graph,
+            "moriarty_e00_atomic_swap",
+            target,
+            "contains_evidence",
+            certificate_source,
+        )
+    add_extracted_edge(
+        graph,
+        "moriarty_e00_core",
+        "moriarty_e00_compact",
+        "lowers_to",
+        toolchain_source,
+    )
+    add_extracted_edge(
+        graph,
+        "moriarty_e00_compact",
+        "moriarty_e00_zkir",
+        "compiles_to",
+        toolchain_source,
+    )
+    add_extracted_edge(
+        graph,
+        "moriarty_e00_certificate",
+        "moriarty_e00_core",
+        "validates_against",
+        certificate_source,
+    )
+    add_extracted_edge(
+        graph,
+        "moriarty_e00_certificate",
+        "moriarty_e00_manifest_machine",
+        "validates_against",
+        certificate_source,
+    )
+    add_extracted_edge(
+        graph,
+        "moriarty_e00_decision_disclosure",
+        "moriarty_e00_compact",
+        "declared_in",
+        toolchain_source,
+    )
 
 
 def main() -> None:
@@ -103,6 +238,8 @@ def main() -> None:
                 _tgt=target,
             )
 
+    add_e00_evidence(graph, root_id)
+
     communities = cluster(graph)
     labels = label_communities_by_hub(graph, communities)
     OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -122,6 +259,7 @@ def main() -> None:
         "tool_versions": {"graphify_api": version("graphifyy")},
         "semantic_sha256": source_hash,
         "source_files": len(expected_files),
+        "curated_experiments": ["E00"],
         "built_counts": {
             "nodes": graph.number_of_nodes(),
             "edges": graph.number_of_edges(),
