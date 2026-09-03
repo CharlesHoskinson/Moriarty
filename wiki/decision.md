@@ -3,7 +3,7 @@ id: moriarty.port.decision
 type: decision
 title: Marlowe-to-Moriarty port decision
 status: active
-updated_at: 2026-09-03T06:17:58Z
+updated_at: 2026-09-03T06:48:47Z
 sources:
   - SRC-0003
   - SRC-0004

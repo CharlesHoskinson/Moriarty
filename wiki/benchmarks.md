@@ -3,7 +3,7 @@ id: experiments.benchmarks
 type: benchmark
 title: Reproduced benchmarks and experiments
 status: active
-updated_at: 2026-09-03T06:17:58Z
+updated_at: 2026-09-03T06:48:47Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -82,8 +82,10 @@ expiry rejection is covered for both terminal phases. The run found zero
 divergence, zero conservation failures, and zero negative balances.
 
 The independent machine interprets the manifest's structured public phase,
-input, and value effects. It does not execute Compact witnesses or prove privacy;
-those remain separate compiler and review obligations.
+input, time guard, timeout priority, and value effects. Regression certificates
+also pass for deadlines `1`, `2`, and `3` and for party names that reverse the
+role-to-account sort order. It does not execute Compact witnesses or prove
+privacy; those remain separate compiler and review obligations.
 
 Compact compiler `0.34.100` emitted four ZKIR 3.0 circuits. The pinned ZKIR mock
 compiler accepted each circuit:

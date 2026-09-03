@@ -43,6 +43,10 @@ class BackendInput:
     ) -> BackendInput:
         return cls("choice", party, now, choice_id=choice_id, chosen=chosen)
 
+    @classmethod
+    def expire(cls, *, now: int) -> BackendInput:
+        return cls("expire", "", now)
+
 
 @dataclass(frozen=True)
 class BackendState:
@@ -103,6 +107,16 @@ class BackendMachine:
                 "expire",
             }:
                 raise ValueError("manifest transition must define a supported input")
+            if transition.get("time_guard") not in {
+                "before-deadline",
+                "at-or-after-deadline",
+            }:
+                raise ValueError("manifest transition must define a supported time guard")
+            if (
+                expected_input["kind"] == "expire"
+                and transition.get("preempts_other_inputs") is not True
+            ):
+                raise ValueError("expiry transition must preempt other inputs")
             if expected_input["kind"] == "choice":
                 outcome_effects = transition.get("outcome_effects")
                 if not isinstance(outcome_effects, dict):
@@ -146,6 +160,18 @@ class BackendMachine:
         if len(matches) > 1:
             raise ValueError("manifest has ambiguous transitions")
         return matches[0] if matches else None
+
+    def _guard_error(
+        self,
+        transition: dict[str, Any],
+        current_time: int,
+    ) -> str | None:
+        time_guard = transition["time_guard"]
+        if time_guard == "before-deadline" and current_time >= self.deadline:
+            return "contract_closed"
+        if time_guard == "at-or-after-deadline" and current_time < self.deadline:
+            return "input_required"
+        return None
 
     @staticmethod
     def _matches_input(expected: dict[str, Any], supplied: BackendInput) -> bool:
@@ -237,25 +263,29 @@ class BackendMachine:
         if terminal:
             return BackendResult(False, state, error="contract_closed")
 
-        if current_time >= self.deadline:
-            if supplied is not None:
-                return BackendResult(False, state, error="contract_closed")
-            transition = self._transition(state.phase, "expire")
-            if transition is None:
-                return BackendResult(False, state, error="contract_closed")
-            return self._apply_transition(
-                transition,
-                state,
-                current_time=current_time,
-            )
-
-        if supplied is None:
-            return BackendResult(False, state, error="input_required")
-
-        transition = self._transition(state.phase, supplied.kind)
-        if transition is None or not self._matches_input(transition["input"], supplied):
+        input_kind = "expire" if supplied is None else supplied.kind
+        expiry = self._transition(state.phase, "expire")
+        if (
+            input_kind != "expire"
+            and expiry is not None
+            and self._guard_error(expiry, current_time) is None
+        ):
+            return BackendResult(False, state, error="contract_closed")
+        transition = self._transition(state.phase, input_kind)
+        if transition is None:
             return BackendResult(False, state, error="no_matching_input")
-        choice = supplied.chosen if supplied.kind == "choice" else None
+        guard_error = self._guard_error(transition, current_time)
+        if guard_error is not None:
+            return BackendResult(False, state, error=guard_error)
+        if supplied is not None and not self._matches_input(
+            transition["input"], supplied
+        ):
+            return BackendResult(False, state, error="no_matching_input")
+        choice = (
+            supplied.chosen
+            if supplied is not None and supplied.kind == "choice"
+            else None
+        )
         if choice is not None:
             lower = int(transition["input"]["lower"])
             upper = int(transition["input"]["upper"])

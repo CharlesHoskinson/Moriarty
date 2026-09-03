@@ -32,6 +32,13 @@ class SwapParameters:
     choice_id: str = "settle"
 
     def __post_init__(self) -> None:
+        for field_name, value in (
+            ("amount_a", self.amount_a),
+            ("amount_b", self.amount_b),
+            ("deadline", self.deadline),
+        ):
+            if type(value) is not int:
+                raise TypeError(f"{field_name} must be an integer")
         if self.alice == self.bob:
             raise ValueError("swap parties must be distinct")
         if self.token_a == self.token_b:

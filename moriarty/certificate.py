@@ -203,29 +203,30 @@ def _boundary_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
 
 
 def _seed_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
+    action_time = max(0, parameters.deadline - 1)
     alice = Stimulus.deposit(
         parameters.alice.name,
         parameters.token_a,
         parameters.amount_a,
-        1,
+        action_time,
     )
     bob = Stimulus.deposit(
         parameters.bob.name,
         parameters.token_b,
         parameters.amount_b,
-        2,
+        action_time,
     )
     settle = Stimulus.choice(
         parameters.bob.name,
         parameters.choice_id,
         1,
-        3,
+        action_time,
     )
     cancel = Stimulus.choice(
         parameters.bob.name,
         parameters.choice_id,
         0,
-        3,
+        action_time,
     )
     baseline = (
         Trace((alice, bob, settle)),
@@ -239,25 +240,15 @@ def _seed_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
                     parameters.bob.name,
                     parameters.token_a,
                     parameters.amount_a,
-                    1,
+                    action_time,
                 ),
             )
         ),
-        Trace((Stimulus.expire(parameters.deadline - 1),)),
+        Trace((Stimulus.expire(action_time),)),
         Trace(
             (
-                Stimulus.deposit(
-                    parameters.alice.name,
-                    parameters.token_a,
-                    parameters.amount_a,
-                    50,
-                ),
-                Stimulus.deposit(
-                    parameters.bob.name,
-                    parameters.token_b,
-                    parameters.amount_b,
-                    49,
-                ),
+                Stimulus.expire(parameters.deadline),
+                Stimulus.expire(action_time),
             )
         ),
         Trace(
@@ -268,7 +259,7 @@ def _seed_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
                     parameters.bob.name,
                     parameters.choice_id,
                     2,
-                    3,
+                    action_time,
                 ),
             )
         ),
@@ -281,7 +272,7 @@ def _seed_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
                     parameters.alice.name,
                     parameters.token_a,
                     parameters.amount_a,
-                    4,
+                    parameters.deadline + 1,
                 ),
             )
         ),
@@ -297,44 +288,45 @@ def _seed_traces(parameters: SwapParameters) -> tuple[Trace, ...]:
 
 
 def _alphabet(parameters: SwapParameters) -> tuple[Stimulus, ...]:
+    action_time = max(0, parameters.deadline - 1)
     return (
         Stimulus.deposit(
             parameters.alice.name,
             parameters.token_a,
             parameters.amount_a,
-            1,
+            action_time,
         ),
         Stimulus.deposit(
             parameters.alice.name,
             parameters.token_a,
             parameters.amount_a + 1,
-            1,
+            action_time,
         ),
         Stimulus.deposit(
             parameters.bob.name,
             parameters.token_a,
             parameters.amount_a,
-            1,
+            action_time,
         ),
         Stimulus.deposit(
             parameters.bob.name,
             parameters.token_b,
             parameters.amount_b,
-            2,
+            action_time,
         ),
         Stimulus.deposit(
             parameters.alice.name,
             parameters.token_b,
             parameters.amount_b,
-            2,
+            action_time,
         ),
-        Stimulus.choice(parameters.bob.name, parameters.choice_id, 0, 3),
-        Stimulus.choice(parameters.bob.name, parameters.choice_id, 1, 3),
-        Stimulus.choice(parameters.bob.name, parameters.choice_id, -1, 3),
-        Stimulus.choice(parameters.bob.name, parameters.choice_id, 2, 3),
-        Stimulus.choice(parameters.alice.name, parameters.choice_id, 1, 3),
-        Stimulus.choice(parameters.bob.name, "wrong-choice", 1, 3),
-        Stimulus.expire(parameters.deadline - 1),
+        Stimulus.choice(parameters.bob.name, parameters.choice_id, 0, action_time),
+        Stimulus.choice(parameters.bob.name, parameters.choice_id, 1, action_time),
+        Stimulus.choice(parameters.bob.name, parameters.choice_id, -1, action_time),
+        Stimulus.choice(parameters.bob.name, parameters.choice_id, 2, action_time),
+        Stimulus.choice(parameters.alice.name, parameters.choice_id, 1, action_time),
+        Stimulus.choice(parameters.bob.name, "wrong-choice", 1, action_time),
+        Stimulus.expire(action_time),
         Stimulus.expire(parameters.deadline),
         Stimulus.expire(parameters.deadline + 1),
     )
@@ -385,9 +377,9 @@ def _core_input(stimulus: Stimulus):
     raise ValueError(f"unknown stimulus kind: {stimulus.kind}")
 
 
-def _backend_input(stimulus: Stimulus) -> BackendInput | None:
+def _backend_input(stimulus: Stimulus) -> BackendInput:
     if stimulus.kind == "expire":
-        return None
+        return BackendInput.expire(now=stimulus.now)
     if stimulus.kind == "deposit":
         return BackendInput.deposit(
             stimulus.party,
@@ -552,11 +544,7 @@ def validate_translation(
             )
             core_phase = _next_phase(core_phase, stimulus, core_result.accepted)
             backend_supplied = _backend_input(stimulus)
-            backend_result = machine.apply(
-                backend_state,
-                backend_supplied,
-                now=stimulus.now if backend_supplied is None else None,
-            )
+            backend_result = machine.apply(backend_state, backend_supplied)
 
             core_observation = _core_observation(core_result, core_phase)
             backend_observation = _backend_observation(backend_result, parameters)
@@ -626,7 +614,7 @@ def validate_translation(
         "schema_version": 1,
         "status": "S3-translation-validation-evidence",
         "research_date": "2026-09-03",
-        "trace_algorithm": "seeded-boundary-prefix-plus-lexicographic-product-v1",
+        "trace_algorithm": "seeded-boundary-prefix-plus-lexicographic-product-v2",
         "trace_count": len(traces),
         "unique_trace_count": len({trace.steps for trace in traces}),
         "trace_corpus_sha256": _sha256_json(trace_data),

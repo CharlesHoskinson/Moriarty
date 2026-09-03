@@ -4,12 +4,15 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from moriarty.backend import BackendMachine, BackendResult
 from moriarty.certificate import (
     generate_traces,
     validate_translation,
     write_experiment,
 )
+from moriarty.core import Party
 from moriarty.swap import SwapParameters
 
 
@@ -119,6 +122,52 @@ def test_certificate_detects_a_corrupted_backend() -> None:
 
     assert certificate["divergence_count"] > 0
     assert certificate["first_divergence"] is not None
+
+
+def test_certificate_detects_a_corrupted_time_guard() -> None:
+    class CorruptGuardMachine(BackendMachine):
+        def __init__(self, manifest):
+            corrupted = json.loads(json.dumps(manifest))
+            corrupted["entry_points"][0]["time_guard"] = "at-or-after-deadline"
+            super().__init__(corrupted)
+
+    traces = generate_traces(PARAMETERS, minimum=20)
+
+    certificate = validate_translation(
+        PARAMETERS,
+        traces,
+        machine_factory=CorruptGuardMachine,
+    )
+
+    assert certificate["divergence_count"] > 0
+    assert certificate["first_divergence"] is not None
+
+
+@pytest.mark.parametrize("deadline", (1, 2, 3))
+def test_certificate_covers_the_stop_predicate_at_small_deadlines(
+    deadline: int,
+) -> None:
+    parameters = replace(PARAMETERS, deadline=deadline)
+    traces = generate_traces(parameters, minimum=1_000)
+
+    certificate = validate_translation(parameters, traces)
+
+    assert certificate["divergence_count"] == 0
+    assert certificate["stop_test_passed"] is True
+
+
+def test_certificate_preserves_semantics_when_party_sort_reverses_role_order() -> None:
+    parameters = replace(
+        PARAMETERS,
+        alice=Party("z-alice"),
+        bob=Party("a-bob"),
+    )
+    traces = generate_traces(parameters, minimum=1_000)
+
+    certificate = validate_translation(parameters, traces)
+
+    assert certificate["divergence_count"] == 0
+    assert certificate["stop_test_passed"] is True
 
 
 def test_experiment_writer_preserves_hashed_artifacts(tmp_path: Path) -> None:

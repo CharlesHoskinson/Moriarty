@@ -6,7 +6,10 @@ Implemented the finite E00 Core subset and canonical two-token swap. Generated
 fixed-state Compact, an artifact manifest, and an independent transition
 machine. One thousand unique traces produced zero divergence and zero invariant
 failures across 18 required deadline-boundary cells and both terminal-expiry
-rejections. The first Compact compile reproduced an undeclared-disclosure
+rejections. Follow-up semantic review added manifest-driven time guards and
+timeout priority, canonical refund ordering for all accepted party names,
+small-deadline coverage, and exact Compact integer validation. The first Compact
+compile reproduced an undeclared-disclosure
 footgun for the decision argument. The corrected source lists and applies the
 public disclosure explicitly; the failing source and diagnostic digest are now
 preserved. Compact emitted four ZKIR 3.0 circuits, and the pinned mock compiler

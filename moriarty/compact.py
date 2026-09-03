@@ -60,8 +60,21 @@ def disclosure_negative_control(source: str) -> str:
     return source.replace(disclosed, "if (decision == 1)")
 
 
-def _compact_source() -> str:
-    return """// Generated from the canonical Moriarty Core E00 atomic swap.
+def _compact_source(parameters: SwapParameters) -> str:
+    refund_sends = {
+        parameters.alice_account: (
+            "    sendUnshielded(tokenA, amountA, "
+            "right<ContractAddress, UserAddress>(alice));"
+        ),
+        parameters.bob_account: (
+            "    sendUnshielded(tokenB, amountB, "
+            "right<ContractAddress, UserAddress>(bob));"
+        ),
+    }
+    ordered_refunds = "\n".join(
+        refund_sends[account] for account in sorted(refund_sends)
+    )
+    source = """// Generated from the canonical Moriarty Core E00 atomic swap.
 // This code is experimental and has not received an independent audit.
 
 pragma language_version >= 0.26 && <= 0.26;
@@ -145,8 +158,7 @@ export circuit decide(decision: Uint<0..2>): [] {
     sendUnshielded(tokenB, amountB, right<ContractAddress, UserAddress>(alice));
     phase = Phase.Settled;
   } else {
-    sendUnshielded(tokenA, amountA, right<ContractAddress, UserAddress>(alice));
-    sendUnshielded(tokenB, amountB, right<ContractAddress, UserAddress>(bob));
+__ORDERED_REFUNDS__
     phase = Phase.Refunded;
   }
 }
@@ -159,19 +171,19 @@ export circuit expire(): [] {
     sendUnshielded(tokenA, amountA, right<ContractAddress, UserAddress>(alice));
   }
   if (phase == Phase.WaitingDecision) {
-    sendUnshielded(tokenA, amountA, right<ContractAddress, UserAddress>(alice));
-    sendUnshielded(tokenB, amountB, right<ContractAddress, UserAddress>(bob));
+__ORDERED_REFUNDS__
   }
   phase = Phase.Refunded;
 }
 """
+    return source.replace("__ORDERED_REFUNDS__", ordered_refunds)
 
 
 def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
     if contract != canonical_swap(parameters):
         raise ValueError("lowerer accepts only the canonical atomic-swap shape")
 
-    source = _compact_source()
+    source = _compact_source(parameters)
     bounds = analyze_bounds(contract)
     core_data = _data(contract)
     parameter_data = {
@@ -251,19 +263,23 @@ def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
     ]
     for parameter in constructor_schema:
         parameter["binding"] = "required-in-deployment-manifest"
-    refund_effects = [
-        {
+    refund_effects_by_account = {
+        parameters.alice_account: {
             "kind": "pay_all",
             "account": "alice",
             "to": parameters.alice.name,
             "token": asdict(parameters.token_a),
         },
-        {
+        parameters.bob_account: {
             "kind": "pay_all",
             "account": "bob",
             "to": parameters.bob.name,
             "token": asdict(parameters.token_b),
         },
+    }
+    refund_effects = [
+        refund_effects_by_account[account]
+        for account in sorted(refund_effects_by_account)
     ]
     settle_effects = [
         {
@@ -347,6 +363,7 @@ def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
             "to": "Refunded",
             "authorization": None,
             "time_guard": "at-or-after-deadline",
+            "preempts_other_inputs": True,
             "input": {"kind": "expire"},
             "effects": refund_effects,
         },

@@ -7,6 +7,7 @@ import pytest
 
 from moriarty.backend import BackendInput, BackendMachine, BackendState
 from moriarty.compact import disclosure_negative_control, lower_swap
+from moriarty.core import Party
 from moriarty.swap import SwapParameters, canonical_swap
 
 
@@ -193,11 +194,15 @@ def test_manifest_machine_rejects_a_missing_or_corrupted_transition_table() -> N
     missing["entry_points"] = []
     corrupted = deepcopy(manifest)
     corrupted["entry_points"][0]["to"] = "UnknownPhase"
+    missing_guard = deepcopy(manifest)
+    missing_guard["entry_points"][0].pop("time_guard")
 
     with pytest.raises(ValueError, match="four transition entries"):
         BackendMachine(missing)
     with pytest.raises(ValueError, match="unknown target phase"):
         BackendMachine(corrupted)
+    with pytest.raises(ValueError, match="supported time guard"):
+        BackendMachine(missing_guard)
 
 
 def test_manifest_machine_interprets_structured_effects() -> None:
@@ -218,3 +223,66 @@ def test_manifest_machine_interprets_structured_effects() -> None:
     assert result.accepted
     assert result.state.phase == "WaitingBob"
     assert result.state.alice_balance == 0
+
+
+def test_manifest_machine_interprets_time_guards() -> None:
+    manifest = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).manifest
+    altered = deepcopy(manifest)
+    altered["entry_points"][0]["time_guard"] = "at-or-after-deadline"
+    machine = BackendMachine(altered)
+    deposit = BackendInput.deposit(
+        PARAMETERS.alice.name,
+        PARAMETERS.token_a.policy_id,
+        PARAMETERS.token_a.asset_name,
+        PARAMETERS.amount_a,
+        now=5,
+    )
+
+    result = machine.apply(BackendState(), deposit)
+
+    assert result.accepted is False
+    assert result.error == "input_required"
+
+
+def test_manifest_machine_rejects_early_explicit_expiry() -> None:
+    manifest = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).manifest
+    machine = BackendMachine(manifest)
+
+    result = machine.apply(
+        BackendState(),
+        BackendInput.expire(now=PARAMETERS.deadline - 1),
+    )
+
+    assert result.accepted is False
+    assert result.error == "input_required"
+
+
+def test_manifest_expiry_preempts_other_inputs_at_the_deadline() -> None:
+    manifest = lower_swap(canonical_swap(PARAMETERS), PARAMETERS).manifest
+    machine = BackendMachine(manifest)
+
+    result = machine.apply(
+        BackendState(),
+        BackendInput.choice(
+            PARAMETERS.bob.name,
+            PARAMETERS.choice_id,
+            1,
+            now=PARAMETERS.deadline,
+        ),
+    )
+
+    assert result.accepted is False
+    assert result.error == "contract_closed"
+
+
+def test_lowering_preserves_refund_order_for_non_example_party_names() -> None:
+    parameters = replace(
+        PARAMETERS,
+        alice=Party("zeta"),
+        bob=Party("alpha"),
+    )
+
+    source = lower_swap(canonical_swap(parameters), parameters).compact_source
+    refund_branch = source.split("} else {", maxsplit=1)[1].split("}", maxsplit=1)[0]
+
+    assert refund_branch.index("tokenB") < refund_branch.index("tokenA")

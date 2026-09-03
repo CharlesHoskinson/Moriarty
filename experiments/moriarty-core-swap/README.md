@@ -13,8 +13,9 @@ atomic swap generated fixed-state Compact. The reference Core and an independent
 manifest machine agreed on 1,000 unique deterministic traces. The traces had
 zero observable divergence and zero conservation or non-negativity failures.
 The backend machine interprets the manifest's structured public phase, input,
-and value-effect table. Witness authorization and privacy behavior remain
-compiler/static-review obligations outside this differential comparison.
+time-guard, timeout-priority, and value-effect table. Witness authorization and
+privacy behavior remain compiler/static-review obligations outside this
+differential comparison.
 
 The pinned Compact compiler emitted TypeScript, metadata, and four ZKIR 3.0
 circuits. The pinned ZKIR mock compiler accepted all four circuits.
@@ -72,6 +73,11 @@ Expected certificate summary:
 - terminal expiry rejection from both terminal phases
 - zero divergences
 - zero invariant failures
+
+Regression certificates also pass for the minimum deadlines `1`, `2`, and `3`
+and for party names whose canonical account order is the reverse of their
+Alice/Bob role order. Amounts and deadlines must be exact integers within the
+declared Compact widths.
 
 The generated contract is an abstract template. Its constructor schema records
 the required Compact types and encodings, but no concrete Midnight user

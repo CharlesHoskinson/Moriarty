@@ -34,6 +34,20 @@ def test_parameters_fit_the_emitted_compact_integer_widths() -> None:
         replace(PARAMETERS, deadline=2**64)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("amount_a", 1.5),
+        ("amount_b", True),
+        ("deadline", 3.5),
+        ("deadline", False),
+    ),
+)
+def test_parameters_require_exact_integer_types(field: str, value: object) -> None:
+    with pytest.raises(TypeError, match="must be an integer"):
+        replace(PARAMETERS, **{field: value})
+
+
 def apply_valid_prefix(length: int):
     contract = canonical_swap(PARAMETERS)
     state = State()
