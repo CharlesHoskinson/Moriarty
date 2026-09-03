@@ -3,12 +3,14 @@ id: research.open-questions
 type: question
 title: Open questions
 status: active
-updated_at: 2026-09-03T05:39:34Z
+updated_at: 2026-09-03T14:43:01Z
 sources:
   - SRC-0003
   - SRC-0005
   - SRC-0007
   - SRC-0019
+  - SRC-0023
+  - SRC-0025
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -39,3 +41,10 @@ until resolved or explicitly deferred.
   Marlowe-to-Moriarty translator instead of a one-way design migration tool?
 - Which source-level visibility types prevent a public Moriarty choice from
   arriving as a private Compact argument that needs an inferred disclosure?
+
+## ZKIR semantics in K (added 2026-09-03)
+
+- Which ZKIR v3 surface is the deployed one: the 34-instruction `92e8bdd3` surface that arc-zkir mechanizes, or the 42-instruction standalone `2ffe2d1` surface? Resolution route: inspect the Midnight node and ledger release that mainnet runs and the ZKIR version tag inside shipped `.zkir` artifacts.
+- Can the K definition be checked against the arc-zkir Agda model rather than only against the Rust crate, for example by generating the same witness and constraint traces for the precompile programs and comparing them with the Agda `synth` and preprocess functions? This needs the Agda toolchain (`nix run .#agda`) which has not been run locally.
+- Does Midnight's `k-rust` accept a definition that uses `MInt`, `Bytes`, and hooked `Int` operations, so that the ZKIR semantics can run inside the Midnight TypeScript tooling without canonical K? Not yet tested; `k-rust` is S4.
+- What does `compactc --feature-zkir-v3` emit for the Moriarty escrow and swap circuits, and do those programs stay inside the 34-instruction surface? The E00 experiment produced ZKIR 3 artifacts that can be re-read for this.

@@ -129,3 +129,16 @@ Built Compact compiler 0.34.100 from pinned source, compiled a finite Moriarty
 escrow lowering with the ZKIR 3 backend, passed six acceptance tests and 44 ZKIR
 library tests, and mock-compiled all three generated circuits. Full proof tests
 remain dependent on external `MIDNIGHT_PP` parameter files.
+
+## [2026-09-03] ingest | K Framework, ZKIR specification, and Midnight K tooling
+
+Crawled kframework.org with Scrapling (SRC-0024) and confirmed
+`runtimeverification/k` as the sole canonical repository; cloned it at
+v7.1.337 (SRC-0023) and recorded the lock. Acquired `input-output-hk/arc-zkir`
+(SRC-0025), the Agda mechanization and textual specification of ZKIR v2 and v3,
+and fetched its pinned `midnight-ledger` `ledger-9` commit `92e8bdd3`. Built a
+315-node graphify graph of the K documentation with agy `gemini-3.8-flash-high`
+as extractor. Wrote seven K pages, seven ZKIR pages, and the ZKIR-in-K plan (advisory consult routed to agy after Claude overload, preserved in raw/notes/);
+recorded the ledger-8 versus ledger-9 pin conflict and the 34 versus 42
+instruction drift as contradictions. Claude subagents were abandoned for this
+ingest after repeated API overload failures; all reading was done by agy.

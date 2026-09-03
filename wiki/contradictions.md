@@ -3,7 +3,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-03T01:56:00Z
+updated_at: 2026-09-03T14:43:01Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -14,6 +14,8 @@ sources:
   - SRC-0015
   - SRC-0016
   - SRC-0017
+  - SRC-0023
+  - SRC-0025
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -38,3 +40,6 @@ sources:
 | First taxonomy recommendation versus updated run | SRC-0015 recommends M4+ after it could not inspect DeFiFormal; SRC-0017, after repository inspection, recommends M2+M3 for human-facing families and facets with M5 as the internal formal profile | SRC-0017 supersedes the top-level taxonomy decision; preserve M4+ only as a historical crosswalk and useful facet decomposition |
 | Updated-run archive provenance versus Moriarty repository pin | SRC-0017 reports that its supplied ZIP had no recoverable commit; Moriarty has a separate clean checkout at `8ae0bbfaa3193078d1cabf6999db1382985b7f95` | Bind all reproduced results to SRC-0016 and the full commit; do not attribute that commit to the ZIP |
 | Updated-run complete-linkage ARI at 12 clusters versus independent harness | SRC-0017 reports 0.36; the deterministic SciPy nearest-neighbour-chain reproduction gives 0.3547259508, which rounds to 0.35 at two decimal places | Preserve the raw value and pinned method; treat 0.36 as a minor reporting or implementation-version discrepancy that does not change the best-ARI conclusion |
+| ZKIR v3 baseline branch | The Moriarty ledger pin is `midnight-ledger` `ledger-8` (`a8ab82ba2124c36f92795c683e70bd888bc1d1fb`); the arc-zkir specification and Agda mechanization pin `ledger-9` commit `92e8bdd3a97b61b229e38916e1b180de6f448dd5` (`midnight-zkir-v3` 3.0.0), and arc-zkir's own `CLAUDE.md` cites `04c9c5d9` (3.0.0-rc.2) | Fetched `92e8bdd3` locally and extracted its `zkir-v3/src`; a K semantics targets the spec-pinned `92e8bdd3` surface and records the ledger-8 pin as the deployed-ledger scope; see [zkir-formal-spec-agda.md](zkir/zkir-formal-spec-agda.md) |
+| ZKIR v3 instruction and type surface drift | `92e8bdd3` defines 34 instructions and 13 `IrType` variants; the standalone `midnightntwrk/midnight-zkir` at `2ffe2d17bbb736aec36fb300aeaca679a10d2278` defines 42 instructions (`reverse_bytes` renamed `reverse`; `slice`, `nth`, `concat`, `load_constant`, `sha512`, `and`, `or`, `xor` added) and 15 types (`Bool`, `Byte`, `Bytes(u32)` added, `Bytes32` removed); counts reproduced by enum variant count on 2026-09-03 | The mechanized specification covers only the 34-instruction surface; version every K claim by commit; the additional instructions are S5 unmechanized until arc-zkir tracks them; see [zkir-instruction-set.md](zkir/zkir-instruction-set.md) |
+| Writer miscount of the 2ffe2d1 surface | Two agy-authored drafts reported 37 and 41 instruction variants at `2ffe2d1`; direct variant counting gives 42 | Pages corrected to 42; the count method is recorded in the contradiction above |
