@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "status": "S3-experimental",
+  "observed_at_utc": "2026-09-03T05:39:34Z",
+  "host": {
+    "architecture": "x86_64",
+    "logical_cpus": 6,
+    "memory_bytes": 33657294848
+  },
+  "source_repositories": {
+    "compact": {
+      "commit": "11e7ec5abeecb99297c4faa74d30ef9adc7b51f3",
+      "repository": "https://github.com/LFDT-Minokawa/compact"
+    },
+    "zkir": {
+      "branch": "zkir-v3",
+      "commit": "2ffe2d17bbb736aec36fb300aeaca679a10d2278",
+      "repository": "https://github.com/midnightntwrk/midnight-zkir"
+    }
+  },
+  "toolchain": {
+    "compact_binary": {
+      "path": "/nix/store/5h37yza1bii76f71wjpnhpdjs8m2a7pf-compactc/bin/compactc",
+      "sha256": "976b3f5cb05cb91c5a911531345221a3a208596a491c130406bdca18ac144a3f"
+    },
+    "compact_compiler": "0.34.100",
+    "compact_language": "0.26.0",
+    "compact_runtime": "0.19.100",
+    "midnight_ledger": "9.1.0.0-rc.3",
+    "zkir": "3.0",
+    "zkir_mock_binary": {
+      "path": "repos/midnightntwrk/midnight-zkir/target/debug/zkir",
+      "sha256": "35c866d78453185cba0f81b87806fdf28ee43b48238e287bc367b3ee99aac742"
+    }
+  },
+  "compact_compile": {
+    "command": "/nix/store/5h37yza1bii76f71wjpnhpdjs8m2a7pf-compactc/bin/compactc --feature-zkir-v3 --skip-zk experiments/moriarty-core-swap/swap.compact experiments/moriarty-core-swap/output",
+    "exit_code": 0,
+    "generated_contract_info_bytes": 4052,
+    "generated_javascript_bytes": 139447,
+    "generated_source_map_bytes": 3649,
+    "generated_typescript_declarations_bytes": 3457
+  },
+  "initial_compile_failure": {
+    "classification": "undeclared-disclosure",
+    "cause": "The decision circuit argument controlled public ledger effects without an explicit disclose wrapper.",
+    "reproduced": true,
+    "resolution": "The generated source now uses disclose(decision), and the artifact manifest lists decision as public."
+  },
+  "zkir_mock_compile": {
+    "command": "repos/midnightntwrk/midnight-zkir/target/debug/zkir mock-compile-many experiments/moriarty-core-swap/output/zkir",
+    "exit_code": 0,
+    "circuits": {
+      "decide": {
+        "binary_bytes": 6133,
+        "impacts": 184,
+        "instructions": 225,
+        "k": 13,
+        "private_inputs": 2,
+        "public_inputs": 25,
+        "rows": 2507,
+        "sha256": "0418ab3a5b7e6b69b95dc38d1cffbecca6f5310e0b44752a166fcba177038c17",
+        "zkir_bytes": 18030
+      },
+      "expire": {
+        "binary_bytes": 4792,
+        "impacts": 146,
+        "instructions": 177,
+        "k": 9,
+        "private_inputs": 0,
+        "public_inputs": 21,
+        "rows": 452,
+        "sha256": "8f6b132aa503f14b69825a292a44a2b1a81f2f35286245b66e2e3cc5205fb110",
+        "zkir_bytes": 14083
+      },
+      "fundAlice": {
+        "binary_bytes": 1366,
+        "impacts": 39,
+        "instructions": 60,
+        "k": 13,
+        "private_inputs": 2,
+        "public_inputs": 8,
+        "rows": 2099,
+        "sha256": "b3cf5659b29e9e6bb6776833b8fbd7d44f45f2b2f29688ec33772b608a9ecb84",
+        "zkir_bytes": 4848
+      },
+      "fundBob": {
+        "binary_bytes": 1366,
+        "impacts": 39,
+        "instructions": 60,
+        "k": 13,
+        "private_inputs": 2,
+        "public_inputs": 8,
+        "rows": 2099,
+        "sha256": "9ec542b01489069c40c9145003987b203be50f5d32c4b3141d3a502e0f5ce74c",
+        "zkir_bytes": 4848
+      }
+    }
+  },
+  "artifact_hashes": {
+    "artifact_manifest_file_sha256": "f6918aea73f8449452e86eca6d2bb672f87c491af5096964880de39d00a0ce31",
+    "compact_source_sha256": "7c3efcd184b48108fa09e307e5e8c44d6c088794e77e25d9cff344bc55bdaaec",
+    "translation_certificate_file_sha256": "4332baef0a42112d5d4ba7d2865a35cb3a671041742bec0bdaedda0524d77efc"
+  },
+  "real_proof_generation": {
+    "performed": false,
+    "reason": "The current E00 gate used --skip-zk and mock-compile-many. It did not provision proof parameters or generate keys."
+  }
+}

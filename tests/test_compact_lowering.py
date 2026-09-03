@@ -38,6 +38,7 @@ def test_generated_compact_has_no_unbounded_or_cross_contract_feature() -> None:
     )
     assert all(term not in source for term in forbidden)
     assert "decision: Uint<0..2>" in source
+    assert "if (disclose(decision) == 1)" in source
     assert "export enum Phase" in source
 
 
@@ -97,6 +98,7 @@ def test_manifest_names_effects_disclosures_witnesses_and_bounds() -> None:
         "amountA",
         "amountB",
         "deadline",
+        "decision",
     ]
     assert len(manifest["compact_sha256"]) == 64
 

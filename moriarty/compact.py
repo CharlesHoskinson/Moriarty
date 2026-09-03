@@ -131,7 +131,7 @@ export circuit decide(decision: Uint<0..2>): [] {
   assert(phase == Phase.WaitingDecision, "swap does not expect a decision");
   assert(!blockTimeGte(deadline), "swap deadline has passed");
   assert(bobAuthority == authorityOfBobWitness(), "Bob authorization failed");
-  if (decision == 1) {
+  if (disclose(decision) == 1) {
     sendUnshielded(tokenA, amountA, right<ContractAddress, UserAddress>(bob));
     sendUnshielded(tokenB, amountB, right<ContractAddress, UserAddress>(alice));
     phase = Phase.Settled;
@@ -237,6 +237,7 @@ def lower_swap(contract: Contract, parameters: SwapParameters) -> Lowering:
             "amountA",
             "amountB",
             "deadline",
+            "decision",
         ],
         "toolchain": TOOLCHAIN,
         "expected_zkir": ["fundAlice", "fundBob", "decide", "expire"],
