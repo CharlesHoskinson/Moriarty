@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-7521: General Intents for Smart Contract Wallets</title>
+      <meta property="og:title" content="ERC-7521: General Intents for Smart Contract Wallets" />
+    
+    <meta name="description" content="A generalized intent specification for smart contract wallets, allowing authorization of current and future intent structures at sign time" />
+    <meta property="og:description" content="A generalized intent specification for smart contract wallets, allowing authorization of current and future intent structures at sign time" />
+    <meta name="twitter:description" content="A generalized intent specification for smart contract wallets, allowing authorization of current and future intent structures at sign time" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7521" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7521" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-7521: General Intents for Smart Contract Wallets
+    <a href="https://ethereum-magicians.org/t/erc-7521-generalized-intents-for-smart-contract-wallets/15840" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7521.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>A generalized intent specification for smart contract wallets, allowing authorization of current and future intent structures at sign time</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Stephen Monn&nbsp;(<a href="https://github.com/pixelcircuits">@pixelcircuits</a>), Bikem Bengisu&nbsp;(<a href="https://github.com/supiket">@supiket</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2023-09-19</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/erc-7521-generalized-intents-for-smart-contract-wallets/15840" target="_blank" rel="noopener">https://ethereum-magicians.org/t/erc-7521-generalized-intents-for-smart-contract-wallets/15840</a></td>
+        </tr>
+      
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#required-entry-point-contract-functionality">Required entry point contract functionality</a></li>
+      <li><a href="#intent-standard-behavior-executing-an-intent">Intent standard behavior executing an intent</a></li>
+      <li><a href="#smart-contract-wallet-behavior-executing-an-intent">Smart contract wallet behavior executing an intent</a></li>
+      <li><a href="#smart-contract-wallet-behavior-validating-an-intent">Smart contract wallet behavior validating an intent</a></li>
+      <li><a href="#solver-intent-validation">Solver intent validation</a></li>
+      <li><a href="#simulation">Simulation</a></li>
+      <li><a href="#extensions">Extensions</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#solvers">Solvers</a></li>
+      <li><a href="#entry-point-upgrading">Entry point upgrading</a></li>
+      <li><a href="#signature-aggregation">Signature aggregation</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>A generalized intent specification entry point contract which enables support for a multitude of intent standards as they evolve over time. Instead of smart contract wallets having to constantly upgrade to provide support for new intent standards as they pop up, a single entry point contract is trusted to handle signature verification which then passes off the low level intent data handling and defining to other contracts specified by users at intent sign time. These signed messages, called a <code class="language-plaintext highlighter-rouge">UserIntent</code>, are gossipped around any host of mempool strategies for MEV searchers to look through and combine with their own <code class="language-plaintext highlighter-rouge">UserIntent</code> into an object called an <code class="language-plaintext highlighter-rouge">IntentSolution</code>. MEV searchers then package up an <code class="language-plaintext highlighter-rouge">IntentSolution</code> object they build into a transaction making a <code class="language-plaintext highlighter-rouge">handleIntents</code> call to the special contract entry point contract. This transaction then goes through the typical MEV channels to eventually be included in a block.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>See also <a href="/EIPS/eip-4337">“ERC-4337: Account Abstraction via Entry Point Contract specification”</a> and the links therein for historical work and motivation.</p>
+
+<p>This proposal uses the same entry point contract idea to enable a single interface which smart contract wallets can support now to unlock future-proof access to an evolving intent landscape. It seeks to achieve the following goals:</p>
+
+<ul>
+  <li><strong>Achieve the key goal of enabling intents for users</strong>: allow users to use smart contract wallets containing arbitrary verification logic to specify intent execution as described and handled by various other intent standard contracts.</li>
+  <li><strong>Decentralization</strong>
+    <ul>
+      <li>Allow any MEV searcher to participate in the process of solving signed intents</li>
+      <li>Allow any developer to add their own intent standard definitions for users to opt-in to at sign time</li>
+    </ul>
+  </li>
+  <li><strong>Be forward thinking for future intent standard compatibility</strong>: Define an intent standard interface that gives future intent standard defining contracts access to as much information about the current <code class="language-plaintext highlighter-rouge">handleIntents</code> execution context as possible.</li>
+  <li><strong>Keep gas costs down to a minimum</strong>: Include key intent handling logic, like intent segment execution order, into the entry point contract itself in order to optimize gas efficiency for the most common use cases.</li>
+  <li><strong>Enable good user experience</strong>
+    <ul>
+      <li>Avoid the need for smart contract wallet upgrades when a user wants to use a newly developed intent standard.</li>
+      <li>Enable complex intent composition that only needs a single signature.</li>
+    </ul>
+  </li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>Users package up intents they want their wallet to participate in, in an ABI-encoded struct called a <code class="language-plaintext highlighter-rouge">UserIntent</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sender</code></td>
+      <td><code class="language-plaintext highlighter-rouge">address</code></td>
+      <td>The wallet making the intent</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">segments</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes[]</code></td>
+      <td>Data defined by multiple segments of varying intent standards</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">signature</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>Data passed into the wallet during the verification step</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The <code class="language-plaintext highlighter-rouge">segments</code> parameter is an array of arbitrary bytes whose use is defined by an intent standard. Each item in this array is referred to as an <strong>intent segment</strong>. The first 32 bytes of each segment is used to specify the <strong>intent standard ID</strong> to which the segment data belongs. Users send <code class="language-plaintext highlighter-rouge">UserIntent</code> objects to any mempool strategy that works best for the intent standards being used. A specialized class of MEV searchers called <strong>solvers</strong> look for these intents and ways that they can be combined with other intents (including their own) to create an ABI-encoded struct called an <code class="language-plaintext highlighter-rouge">IntentSolution</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">timestamp</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>The time at which intents should be evaluated</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">intents</code></td>
+      <td><code class="language-plaintext highlighter-rouge">UserIntent[]</code></td>
+      <td>List of intents to execute</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">order</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256[]</code></td>
+      <td>Order of execution for the included intents</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The solver then creates a <strong>solution transaction</strong>, which packages up an <code class="language-plaintext highlighter-rouge">IntentSolution</code> object into a single <code class="language-plaintext highlighter-rouge">handleIntents</code> call to a pre-published global <strong>entry point contract</strong>.</p>
+
+<p>The core interface of the entry point contract is as follows:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">handleIntents</span>
+    <span class="p">(</span><span class="n">IntentSolution</span> <span class="k">calldata</span> <span class="n">solution</span><span class="p">)</span>
+    <span class="k">external</span><span class="p">;</span>
+
+<span class="k">function</span> <span class="n">validateIntent</span>
+    <span class="p">(</span><span class="n">UserIntent</span> <span class="k">calldata</span> <span class="n">intent</span><span class="p">)</span>
+    <span class="k">external</span><span class="p">;</span>
+
+<span class="k">function</span> <span class="n">registerIntentStandard</span>
+    <span class="p">(</span><span class="n">IIntentStandard</span> <span class="n">intentStandard</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes32</span><span class="p">);</span>
+
+<span class="k">function</span> <span class="n">verifyExecutingIntentSegmentForStandard</span>
+    <span class="p">(</span><span class="n">IIntentStandard</span> <span class="n">intentStandard</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The core interface required for an intent standard to have is:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">validateIntentSegment</span>
+    <span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">segmentData</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">pure</span><span class="p">;</span>
+
+<span class="k">function</span> <span class="n">executeIntentSegment</span>
+    <span class="p">(</span><span class="n">IntentSolution</span> <span class="k">calldata</span> <span class="n">solution</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">executionIndex</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">segmentIndex</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">context</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The core interface required for a wallet to have is:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">validateUserIntent</span>
+    <span class="p">(</span><span class="n">UserIntent</span> <span class="k">calldata</span> <span class="n">intent</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">intentHash</span><span class="p">)</span>
+    <span class="k">external</span><span class="p">;</span>
+
+<span class="k">function</span> <span class="n">generalizedIntentDelegateCall</span>
+    <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">external</span><span class="p">;</span>
+</code></pre></div></div>
+  
+    <h3 id="required-entry-point-contract-functionality">
+      
+      
+        <a href="#required-entry-point-contract-functionality" class="anchor-link"></a> Required entry point contract functionality
+      
+      
+    </h3>
+
+<p>The entry point’s <code class="language-plaintext highlighter-rouge">handleIntents</code> function must perform the following steps. It must make two loops, the <strong>verification loop</strong> and the <strong>execution loop</strong>.</p>
+
+<p>In the verification loop, the <code class="language-plaintext highlighter-rouge">handleIntents</code> call must perform the following steps for each <code class="language-plaintext highlighter-rouge">UserIntent</code>:</p>
+
+<ul>
+  <li><strong>Validate <code class="language-plaintext highlighter-rouge">timestamp</code> value on the <code class="language-plaintext highlighter-rouge">IntentSolution</code></strong> by making sure it is within an acceptable range of <code class="language-plaintext highlighter-rouge">block.timestamp</code> or some time before it.</li>
+  <li><strong>Call <code class="language-plaintext highlighter-rouge">validateUserIntent</code> on the wallet</strong>, passing in the <code class="language-plaintext highlighter-rouge">UserIntent</code> and the hash of the intent. The wallet should verify the intent’s signature. If any <code class="language-plaintext highlighter-rouge">validateUserIntent</code> call fails, <code class="language-plaintext highlighter-rouge">handleIntents</code> must skip execution of at least that intent, and may revert entirely.</li>
+</ul>
+
+<p>In the execution loop, the <code class="language-plaintext highlighter-rouge">handleIntents</code> call must perform the following steps for all <strong>segments</strong> on the <code class="language-plaintext highlighter-rouge">segments</code> bytes array parameter on each <code class="language-plaintext highlighter-rouge">UserIntent</code>:</p>
+
+<ul>
+  <li><strong>Call <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> on the intent standard</strong>, specified by the first 32 bytes of the <code class="language-plaintext highlighter-rouge">segments</code> (the intent standard ID). This call passes in the entire <code class="language-plaintext highlighter-rouge">IntentSolution</code> as well as the current <code class="language-plaintext highlighter-rouge">executionIndex</code> (the number of times this function has already been called for any standard or intent before this), <code class="language-plaintext highlighter-rouge">segmentIndex</code> (index in the <code class="language-plaintext highlighter-rouge">segments</code> array to execute for) and <code class="language-plaintext highlighter-rouge">context</code> data. The <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> function returns arbitrary bytes per intent which must be remembered and passed into the next <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> call for the same intent.</li>
+</ul>
+
+<p>It’s up to the intent standard to choose how to parse the <code class="language-plaintext highlighter-rouge">segments</code> bytes and utilize the <code class="language-plaintext highlighter-rouge">context</code> data blob that persists across intent execution.</p>
+
+<p>The order of execution for <code class="language-plaintext highlighter-rouge">UserIntent</code> segments in the <code class="language-plaintext highlighter-rouge">segments</code> array always follows the same order defined on the <code class="language-plaintext highlighter-rouge">segments</code> parameter. However, the order of execution for segments between <code class="language-plaintext highlighter-rouge">UserIntent</code> objects can be specified by the <code class="language-plaintext highlighter-rouge">order</code> parameter of the <code class="language-plaintext highlighter-rouge">IntentSolution</code> object. For example, an <code class="language-plaintext highlighter-rouge">order</code> array of <code class="language-plaintext highlighter-rouge">[1,1,0,1]</code> would result in the second intent being executed twice (segments 1 and 2 on intent 2), then the first intent would be executed (segment 1 on intent 1), followed by the second intent being executed a third time (segment 3 on intent 2). If no ordering is specified in the solution, or all segments have not been processed for all intents after getting to the end of the order array, a default ordering will be used. This default ordering loops from the first intent to the last as many times as necessary until all intents have had all their segments executed. If the ordering calls for an intent to be executed after it’s already been executed for all its segments, then the <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> call is simply skipped and execution across all intents continues.</p>
+
+<p>Before accepting a <code class="language-plaintext highlighter-rouge">UserIntent</code>, solvers must use an RPC method to locally call the <code class="language-plaintext highlighter-rouge">validateIntent</code> function of the entry point, which verifies that the signature and data formatting is correct; see the <a href="#solver-intent-validation">Intent validation section below</a> for details.</p>
+  
+    <h4 id="registering-new-entry-point-intent-standards">
+      
+      
+        <a href="#registering-new-entry-point-intent-standards" class="anchor-link"></a> Registering new entry point intent standards
+      
+      
+    </h4>
+
+<p>The entry point’s <code class="language-plaintext highlighter-rouge">registerIntentStandard</code> function must allow for permissionless registration of new intent standard contracts. During the registration process, the entry point gives it a <strong>standard ID</strong> which is unique to the intent standard contract, entry point contract and chain ID.</p>
+  
+    <h3 id="intent-standard-behavior-executing-an-intent">
+      
+      
+        <a href="#intent-standard-behavior-executing-an-intent" class="anchor-link"></a> Intent standard behavior executing an intent
+      
+      
+    </h3>
+
+<p>The intent standard’s <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> function is given access to a wide set of data, including the entire <code class="language-plaintext highlighter-rouge">IntentSolution</code> in order to allow it to implement any kind of logic that may be seen as useful in the future. Each intent standard contract is expected to parse the <code class="language-plaintext highlighter-rouge">UserIntent</code> objects <code class="language-plaintext highlighter-rouge">segments</code> parameter and use that to validate any constraints or perform any actions relevant to the standard. Intent standards can also take advantage of the <code class="language-plaintext highlighter-rouge">context</code> data it can return at the end of the <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> function. This data is kept by the entry point and passed in as a parameter to the <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> function the next time it is called for an intent. This gives intent standards access to a persistent data store as other intents are executed in between others. One use case for this is an intent standard that is looking for a change in state during intent execution (like releasing tokens and expecting to be given other tokens).</p>
+  
+    <h3 id="smart-contract-wallet-behavior-executing-an-intent">
+      
+      
+        <a href="#smart-contract-wallet-behavior-executing-an-intent" class="anchor-link"></a> Smart contract wallet behavior executing an intent
+      
+      
+    </h3>
+
+<p>The entry point does not expect anything from the smart contract wallets after validation and during intent execution. However, intent standards may wish for the smart contract wallet to perform some action during execution. The smart contract wallet <code class="language-plaintext highlighter-rouge">generalizedIntentDelegateCall</code> function must perform a delegate call with the given calldata at the calling intent standard. In order for the wallet to trust making the delegate call it must call the <code class="language-plaintext highlighter-rouge">verifyExecutingIntentSegmentForStandard</code> function on the entry point contract to verify both of the following:</p>
+
+<ul>
+  <li>The <code class="language-plaintext highlighter-rouge">msg.sender</code> for <code class="language-plaintext highlighter-rouge">generalizedIntentDelegateCall</code> on the wallet is the intent standard contract that the entry point is currently calling <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> on.</li>
+  <li>The smart contract wallet is the <code class="language-plaintext highlighter-rouge">sender</code> on the <code class="language-plaintext highlighter-rouge">UserIntent</code> that the entry point is currently calling <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> for.</li>
+</ul>
+  
+    <h3 id="smart-contract-wallet-behavior-validating-an-intent">
+      
+      
+        <a href="#smart-contract-wallet-behavior-validating-an-intent" class="anchor-link"></a> Smart contract wallet behavior validating an intent
+      
+      
+    </h3>
+
+<p>The entry point calls <code class="language-plaintext highlighter-rouge">validateUserIntent</code> for each intent on the smart contract wallet specified in the <code class="language-plaintext highlighter-rouge">sender</code> field of each <code class="language-plaintext highlighter-rouge">UserIntent</code>. This function provides the entire <code class="language-plaintext highlighter-rouge">UserIntent</code> object as well as the precomputed hash of the intent. The smart contract wallet is then expected to analyze this data to ensure it was actually sent from the specified <code class="language-plaintext highlighter-rouge">sender</code>. If the intent is not valid, the smart contract wallet should throw an error in the <code class="language-plaintext highlighter-rouge">validateUserIntent</code> function. It should be noted that although <code class="language-plaintext highlighter-rouge">validateUserIntent</code> is not restricted as <code class="language-plaintext highlighter-rouge">view</code>, updates to state for things like nonce management, should be done in an individual segment on the intent itself. This allows for maximum customization in the way users define their intents while enshrining only the minimum verification within the entry point needed to ensure intents cannot be forged.</p>
+  
+    <h3 id="solver-intent-validation">
+      
+      
+        <a href="#solver-intent-validation" class="anchor-link"></a> Solver intent validation
+      
+      
+    </h3>
+
+<p>To validate a <code class="language-plaintext highlighter-rouge">UserIntent</code>, the solver makes a view call to <code class="language-plaintext highlighter-rouge">validateIntent</code> on the entry point. This function checks that the signature passes validation and that the segments on the intent are properly formatted. If the call reverts with any error, the solver should reject the <code class="language-plaintext highlighter-rouge">UserIntent</code>.</p>
+  
+    <h3 id="simulation">
+      
+      
+        <a href="#simulation" class="anchor-link"></a> Simulation
+      
+      
+    </h3>
+
+<p>Solvers are expected to handle simulation in typical MEV workflows. This most likely means dry running their solutions at the current block height to determine the outcome is as expected. Successful solutions can then be submitted as a bundle to block builders to be included in the next block.</p>
+  
+    <h3 id="extensions">
+      
+      
+        <a href="#extensions" class="anchor-link"></a> Extensions
+      
+      
+    </h3>
+
+<p>The entry point contract may enable additional functionality to reduce gas costs for common scenarios.</p>
+  
+    <h4 id="extension-embedded-intent-standards">
+      
+      
+        <a href="#extension-embedded-intent-standards" class="anchor-link"></a> Extension: embedded intent standards
+      
+      
+    </h4>
+
+<p>We extend the entry point logic to include the logic of several identified  <strong>common intent standards</strong>. These standards are registered with their own standard ID at entry point contract creation time. The functions <code class="language-plaintext highlighter-rouge">validateUserIntent</code> and <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> for these standards are included as part of the entry point contracts code in order to reduce external calls and save gas.</p>
+  
+    <h4 id="extension-handle-multi">
+      
+      
+        <a href="#extension-handle-multi" class="anchor-link"></a> Extension: handle multi
+      
+      
+    </h4>
+
+<p>We add the additional function <code class="language-plaintext highlighter-rouge">handleIntentsMulti(IntentSolution[] calldata solutions)</code> to the entry point contract. This allows multiple solutions to be executed in a single transaction to enable gas saving in intents that touch similar areas of storage.</p>
+  
+    <h4 id="extension-nonce-management">
+      
+      
+        <a href="#extension-nonce-management" class="anchor-link"></a> Extension: nonce management
+      
+      
+    </h4>
+
+<p>We add the functions <code class="language-plaintext highlighter-rouge">getNonce(address sender, uint256 key)</code> and <code class="language-plaintext highlighter-rouge">setNonce(uint256 key, uint256 nonce)</code> to the entry point contract. These functions allow nonce data to be stored in the entry point contracts storage. Nonces are stored at a per sender level and are available to be read by anyone. However, the entry point contract enforces that nonces can only be set for a user by a currently executing intent standard and only for the <code class="language-plaintext highlighter-rouge">sender</code> on the intent currently being executed.</p>
+  
+    <h4 id="extension-data-blobs">
+      
+      
+        <a href="#extension-data-blobs" class="anchor-link"></a> Extension: data blobs
+      
+      
+    </h4>
+
+<p>We enable the entry point contract to skip the validation of <code class="language-plaintext highlighter-rouge">UserIntent</code> objects with either a <code class="language-plaintext highlighter-rouge">sender</code> field of <code class="language-plaintext highlighter-rouge">address(0)</code> or an empty <code class="language-plaintext highlighter-rouge">segments</code> field (rather than fail validation). Similarly, they are skipped during execution. The <code class="language-plaintext highlighter-rouge">segments</code> field or <code class="language-plaintext highlighter-rouge">sender</code> field is then free to be treated as a way to inject any arbitrary data into intent execution. This data could be useful in solving an intent that has an intent standard which requires some secret to be known and proven to it, or an intent whose behavior can change according to what other intents are around it. For example, an intent standard that signals a smart contract wallet to transfer some tokens to the sender of the intent that is next in line for the execution process.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The main challenge with a generalized intent standard is being able to adapt to the evolving world of intents. Users need to have a way to express their intents in a seamless way without having to make constant updates to their smart contract wallets.</p>
+
+<p>In this proposal, we expect wallets to have a <code class="language-plaintext highlighter-rouge">validateUserIntent</code> function that takes as input a <code class="language-plaintext highlighter-rouge">UserIntent</code>, and verifies the signature. A trusted entry point contract uses this function to validate the signature and forwards the intent handling logic to the intent standard contracts specified in the first 32 bytes of each segment in the <code class="language-plaintext highlighter-rouge">segments</code> array field on the <code class="language-plaintext highlighter-rouge">UserIntent</code>. The wallet is then expected to have a <code class="language-plaintext highlighter-rouge">generalizedIntentDelegateCall</code> function that allows it to perform intent related actions from the intent standard contracts, using the <code class="language-plaintext highlighter-rouge">verifyExecutingIntentSegmentForStandard</code> function on the entry point for security.</p>
+
+<p>The entry point based approach allows for a clean separation between verification and intent execution, and prevents wallets from having to constantly update to support the latest intent standard composition that a user wants to use. The alternative would involve developers of new intent standards having to convince wallet software developers to support their new intent standards. This proposal moves the core definition of an intent into the hands of users at signing time.</p>
+  
+    <h3 id="solvers">
+      
+      
+        <a href="#solvers" class="anchor-link"></a> Solvers
+      
+      
+    </h3>
+
+<p>Solvers facilitate the fulfillment of a user’s intent in search of their own MEV. They also act as the transaction originator for executing intents on-chain, including having to front any gas fees, removing that burden from the typical user.</p>
+
+<p>Solvers will rely on gossiping networks and solution algorithms that are to be determined by the nature of the intents themselves and the individual intent standards being used.</p>
+  
+    <h3 id="entry-point-upgrading">
+      
+      
+        <a href="#entry-point-upgrading" class="anchor-link"></a> Entry point upgrading
+      
+      
+    </h3>
+
+<p>Wallets are encouraged to be DELEGATECALL forwarding contracts for gas efficiency and to allow wallet upgradability. The wallet code is expected to hard-code the entry point into their code for gas efficiency. If a new entry point is introduced, whether to add new functionality, improve gas efficiency, or fix a critical security bug, users can self-call to replace their wallet’s code address with a new code address containing code that points to a new entry point. During an upgrade process, it’s expected that intent standard contracts will also have to be re-registered to the new entry point.</p>
+
+<p>Another option would be for wallets to not hard-code the entry point and instead validate signatures from any entry point. When a signature is validated, the wallet can note the entry point in transient storage and then use that to ensure security when accepting <code class="language-plaintext highlighter-rouge">generalizedIntentDelegateCall</code> function calls. There is an example of this in the <a href="#reference-implementation">reference implementation</a>.</p>
+  
+    <h4 id="intent-standard-upgrading">
+      
+      
+        <a href="#intent-standard-upgrading" class="anchor-link"></a> Intent standard upgrading
+      
+      
+    </h4>
+
+<p>Because intent standards are not hardcoded into the wallet, users do not need to perform any operation to use any newly registered intent standards. A user can simply sign an intent with the new intent standard.</p>
+  
+    <h3 id="signature-aggregation">
+      
+      
+        <a href="#signature-aggregation" class="anchor-link"></a> Signature aggregation
+      
+      
+    </h3>
+
+<p>Signature aggregation should be handled by the smart contract wallets directly during the signature validation process. This removes complexity from the entry point and allows developers to be creative with solutions. The <a href="#reference-implementation">reference implementation</a> includes an example for how to accomplish this through the use of a wallet trusted aggregation contract which uses transient storage to report back to individual wallets that an intent was already validated via an aggregated signature earlier in the transaction call stack.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This ERC does not change the consensus layer, so there are no backwards compatibility issues for Ethereum as a whole. There is a little more difficulty when trying to integrate with existing smart contract wallets. If the wallet already has support for <a href="/EIPS/eip-4337">ERC-4337</a>, then implementing a <code class="language-plaintext highlighter-rouge">validateUserIntent</code> function should be very similar to the <code class="language-plaintext highlighter-rouge">validateUserOp</code> function, but would require an upgrade by the user.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>See <code class="language-plaintext highlighter-rouge">https://github.com/essential-contributions/ERC7521</code></p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>The entry point contract will need to be very heavily audited and formally verified, because it will serve as a central trust point for <em>all</em> <a href="/EIPS/eip-7521">ERC-7521</a> supporting wallets. In total, this architecture reduces auditing and formal verification load for the ecosystem, because the amount of work that individual <em>wallets</em> have to do becomes much smaller (they need only verify the <code class="language-plaintext highlighter-rouge">validateUserIntent</code> function and its “check signature” logic) and gate any calls to <code class="language-plaintext highlighter-rouge">generalizedIntentDelegateCall</code> by checking with the entry point using the <code class="language-plaintext highlighter-rouge">verifyExecutingIntentSegmentForStandard</code> function. The concentrated security risk in the entry point contract, however, needs to be verified to be very robust since it is so highly concentrated.</p>
+
+<p>Verification would need to cover one primary claim (not including claims needed to protect solvers, and intent standard related infrastructure):</p>
+
+<ul>
+  <li><strong>Safety against arbitrary hijacking</strong>: The entry point only returns true for <code class="language-plaintext highlighter-rouge">verifyExecutingIntentSegmentForStandard</code> when it has successfully validated the signature of the <code class="language-plaintext highlighter-rouge">UserIntent</code> and is currently in the middle of calling <code class="language-plaintext highlighter-rouge">executeIntentSegment</code> on the <code class="language-plaintext highlighter-rouge">standard</code> specified in the <code class="language-plaintext highlighter-rouge">segments</code> field of a <code class="language-plaintext highlighter-rouge">UserIntent</code> which also has the same <code class="language-plaintext highlighter-rouge">sender</code> as the <code class="language-plaintext highlighter-rouge">msg.sender</code> wallet calling the function.</li>
+</ul>
+
+<p>Additional heavy auditing and formal verification will also need to be done for any intent standard contracts a user decides to interact with.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Stephen Monn&nbsp;(<a href="https://github.com/pixelcircuits">@pixelcircuits</a>), Bikem Bengisu&nbsp;(<a href="https://github.com/supiket">@supiket</a>), "ERC-7521: General Intents for Smart Contract Wallets [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 7521, September 2023. Available: https://eips.ethereum.org/EIPS/eip-7521.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-7521: General Intents for Smart Contract Wallets [DRAFT]",
+    "name": "ERC-7521: General Intents for Smart Contract Wallets [DRAFT]",
+    "author": "Stephen Monn (@pixelcircuits), Bikem Bengisu (@supiket)",
+    "dateCreated": "2023-09-19",
+    "datePublished": "2023-09-19",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-7521-generalized-intents-for-smart-contract-wallets/15840",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2023"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

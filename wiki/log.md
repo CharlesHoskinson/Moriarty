@@ -1,5 +1,16 @@
 # Wiki log
 
+## [2026-09-03] research | CAKE, NEAR Intents, and Ethereum intent lifecycle
+
+Acquired the 14-link CAKE Working Group corpus and all 68 official NEAR Intents
+documentation pages with Scrapling, including the full documentation aggregate
+and two OpenAPI specifications. Reconstructed the deployed objective, quote,
+authorization, Verifier, relay, bridge, fill, payout, cancellation, refund, and
+finality boundaries. Revised the focused research prompt to version 1.1 with 33
+intent data contracts, current ERC-7683 versus OIF version separation, resolver
+snapshot obligations, delivery deduplication, asynchronous cancellation, and
+cross-domain fulfillment tests. The semantic scope remains `0.0.0-e00.2`.
+
 ## [2026-09-03] design | Moriarty semantics and intent research prompt
 
 Added a focused XML assignment for Moriarty semantics, intent correctness,

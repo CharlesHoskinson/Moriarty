@@ -39,6 +39,7 @@ will grow by merging evidence into durable topic pages.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
 - [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.
 - [Semantics, intent, compiler, proof, and SDK prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — focused twelve-sprint assignment with an exact intent-refinement theorem and standards review.
+- [Intent standards research source](../deliverables/moriarty-intent-standards-2026-09-03/report-source.md) — complete CAKE and NEAR documentation crawl plus current Ethereum/OIF lifecycle, trust, and SDK findings.
 
 ## Workstream pages
 

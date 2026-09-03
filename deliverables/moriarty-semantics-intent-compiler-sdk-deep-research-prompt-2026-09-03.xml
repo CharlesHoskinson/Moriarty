@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.0">
+<deep_research_assignment id="moriarty-semantics-intent-compiler-sdk" version="1.1">
   <title>
     Moriarty Semantics, Intent Correctness, Verified Compilation, Compact and
     ZKIR Realization, and Standard Developer Interface
@@ -97,12 +97,52 @@
       A signed, versioned predicate over acceptable outcomes and effects. It
       does not prescribe one execution path unless the signer requires one.
     </term>
+    <term name="objective">
+      The user's desired end-state predicate and hard constraints before any
+      provider supplies a price, route, or execution plan.
+    </term>
+    <term name="quote">
+      A provider-authenticated, expiring commercial proposal. A quote is not
+      user authorization, an execution plan, a fill, or settlement evidence.
+    </term>
+    <term name="authorization">
+      The exact signed capability to consume assets or exercise authority under
+      a named domain, nonce, validity interval, and cancellation policy.
+    </term>
+    <term name="order_payload">
+      A protocol-specific executable request derived from an objective and an
+      authorization. Opaque payload bytes never define Moriarty meaning by
+      themselves.
+    </term>
+    <term name="resolved_plan">
+      A concrete execution graph obtained from an order under a pinned resolver,
+      state snapshot, code identity, and explicit assumption set.
+    </term>
     <term name="plan">
       A concrete solver or planner proposal that selects a path, inputs,
       outputs, proof work, fees, witnesses, and execution ordering.
     </term>
     <term name="execution_trace">
       The ordered semantic and ledger-visible events produced by a plan.
+    </term>
+    <term name="fill">
+      Evidence that one specified execution obligation or output has occurred.
+      A fill is not necessarily final, spendable, complete, or cross-domain
+      settled.
+    </term>
+    <term name="fulfillment">
+      Evidence that every required destination postcondition holds under the
+      intent's finality policy. Origin inclusion or internal-ledger execution
+      alone is insufficient.
+    </term>
+    <term name="settlement">
+      The protocol-specific process that turns fills and proofs into final,
+      spendable outcomes or an authorized recovery path.
+    </term>
+    <term name="partial_fill">
+      One of six separately declared meanings: divisible economic fill, partial
+      output completion, same-chain transaction atomicity, contiguous wallet
+      execution, cross-domain all-or-refund, or end-to-end atomicity.
     </term>
     <term name="intent_refinement">
       The relation that holds when every effect of a plan and trace is permitted
@@ -216,6 +256,12 @@
 
   <mandatory_external_sources>
     <cake_framework>
+      <source url="https://frontier.tech/cake-working-group">
+        Crawl the complete public one-hop link corpus. Classify every link and
+        preserve a fetch or a specific failure disposition. Inspect the CAKE
+        workshop notes as historical working material, not as ratified
+        semantics.
+      </source>
       <source url="https://frontier.tech/the-cake-framework" date="2024-02-15">
         Review the Chain Abstraction Key Elements framework in full. Analyze its
         Application, Permission, Solver, and Settlement layers. Reconstruct its
@@ -226,19 +272,74 @@
         Map Moriarty components and trust boundaries to each CAKE layer. State
         which CAKE concepts apply to one Midnight network, which apply only to
         multi-domain settlement, and which Moriarty must reject or strengthen.
+        Reconcile CAKE's desired-outcome definition with permission, disclosure,
+        solver access, bridge trust, asynchronous finality, cancellation,
+        partial execution, refund, and recovery gaps.
       </required_disposition>
     </cake_framework>
+
+    <near_intents>
+      <source url="https://docs.near.org/chain-abstraction/intents/overview">
+        Inspect the current NEAR overview and follow its official documentation
+        and source links.
+      </source>
+      <source url="https://docs.near-intents.org/llms.txt">
+        Acquire every page in the official documentation index and sitemap.
+        Inspect the 1Click, Verifier, solver Message Bus, bridge, SDK, privacy,
+        security, compliance, fee, and changelog sections in full.
+      </source>
+      <source url="https://1click.chaindefuser.com/docs/v0/openapi.yaml">
+        Treat the published OpenAPI document as an independent API evidence
+        stream. Reconcile it with the narrative documentation and clients.
+      </source>
+      <source url="https://explorer.near-intents.org/api/v0/openapi.yaml">
+        Inspect explorer history and status provenance separately from execution
+        authority.
+      </source>
+      <source url="https://github.com/near/intents">
+        Pin and inspect the deployed Verifier source, generated documentation,
+        tests, audits, deployment identity, and upgrade authority.
+      </source>
+      <source url="https://github.com/defuse-protocol/sdk-monorepo">
+        Pin and inspect the SDK implementations and their correspondence with
+        the published APIs.
+      </source>
+      <required_disposition>
+        Reconstruct the deployed lifecycle from quote request through signed
+        payload, relay, internal-ledger execution, bridge withdrawal, payout,
+        refund, cancellation, and final receipt. Separate Verifier atomicity
+        from asynchronous cross-contract completion and cross-domain finality.
+        Reproduce token-difference conservation, nonce and salt handling,
+        signature profiles, simulation limits, message redelivery, partial
+        fills, payout states, and bridge recovery. Treat 1Click, the Message
+        Bus, confidential FAR execution, treasury custody, compliance services,
+        and bridge operators as named profiles outside Moriarty Core.
+      </required_disposition>
+    </near_intents>
 
     <intent_and_order_standards>
       <source url="https://eips.ethereum.org/EIPS/eip-7683">Cross Chain Intents</source>
       <source url="https://eips.ethereum.org/EIPS/eip-7521">General Intents for Smart Contract Wallets</source>
       <source url="https://eips.ethereum.org/EIPS/eip-7930">Interoperable Addresses</source>
       <source url="https://eips.ethereum.org/EIPS/eip-7802">Cross-chain mint and burn token interface</source>
+      <source url="https://chainagnostic.org/CAIPs/caip-2">Blockchain identification</source>
+      <source url="https://chainagnostic.org/CAIPs/caip-10">Account identification</source>
+      <source url="https://chainagnostic.org/CAIPs/caip-350">Namespace profiles</source>
+      <source url="https://github.com/openintentsframework/oif-specs">Open Intents Framework schemas and APIs</source>
+      <source url="https://github.com/openintentsframework/oif-contracts">Open Intents Framework contracts</source>
+      <source url="https://github.com/openintentsframework/oif-solver">Open Intents Framework solver</source>
       <required_questions>
         Compare opaque payloads and resolver trust with canonical typed Moriarty
         intent. Compare solver-facing instructions, explicit assumptions,
         payment safety, partial fills, cancellation, deadlines, settlement, and
         simulation. Verify each standard's current status and exact revision.
+        Treat the post-2026-05-13 resolver form of ERC-7683 as current. Label
+        `OnchainCrossChainOrder`, `GaslessCrossChainOrder`, `open`, `openFor`,
+        destination `fill`, `ResolvedCrossChainOrder`, `maxSpent`, and
+        `minReceived` as prior-draft concepts unless a source pins that draft.
+        Analyze OIF's `StandardOrder` vocabulary separately and explain any
+        version divergence. Do not assume that text address equality gives a
+        canonical cross-chain identity.
       </required_questions>
     </intent_and_order_standards>
 
@@ -357,16 +458,33 @@
     </workstream>
 
     <workstream id="W4" name="Intent calculus and correctness relation">
-      Define canonical `UserIntent`, `IntentDomain`, `AllowedEffects`,
-      `ForbiddenEffects`, `Objective`, `Validity`, `SignerPolicy`,
-      `DisclosureBudget`, `CapabilityBudget`, `FeeBudget`, `StateAnchor`, and
-      `FailurePolicy` objects.
+      Define canonical `IntentObjective`, `UserIntent`, `IntentDomain`,
+      `AllowedEffects`, `ForbiddenEffects`, `Validity`, `SignerPolicy`,
+      `DisclosurePolicy`, `CapabilityBudget`, `FeeLedger`, `StateAnchor`,
+      `FinalityPolicy`, and `FailurePolicy` objects. Keep `QuoteRequest`,
+      `Quote`, `IntentAuthorization`, protocol `OrderPayload`,
+      `ResolutionSnapshot`, `ResolvedPlan`, `FillReceipt`, `FulfillmentProof`,
+      `RefundReceipt`, and `CancellationReceipt` distinct.
 
       Define whether objectives are hard predicates, optimization preferences,
       or both. A user safety claim must depend only on hard predicates. Define
       single-use, reusable, partially fillable, cancellable, delegated, and
       composed intents. Define consumption, residual intent, nullifiers,
       sequencing, revocation, and rollback behavior.
+
+      Define a lifecycle state machine from draft through permission check,
+      authorization, disclosure, quote, selection, resolution, execution,
+      fills, proof, claim, payout, fulfillment, or recovery. For every
+      transition state actor, authority, signed fields, domain, chain binding,
+      verifying contract, nonce, validity, state dependency, idempotency,
+      disclosed data, precondition, postcondition, failure, retry,
+      cancellation, rollback, proof, and finality rule. Do not collapse a
+      service status into a semantic state.
+
+      Define the six partial-fill and atomicity meanings separately. Specify
+      duplicate outputs, first-filler ownership, multi-solver completion,
+      callback failure, proof-delay races, late claims, and partial-fill
+      residual conservation. Do not claim general cross-domain atomicity.
 
       Define the semantic judgment in mathematical notation. At minimum use
       objects equivalent to state `S`, intent `I`, plan `P`, trace `T`, outcome
@@ -400,7 +518,11 @@
       state evidence, plan, effect summary, static certificates, translation
       certificate, circuit identity, proof request, proof receipt, local proof
       verification, transaction verification, immutable signing request,
-      submission receipt, and finality or rollback evidence.
+      submission receipt, fills, fulfillment proof, claim or refund receipt,
+      and finality or rollback evidence. Bind any external resolver by network,
+      address, implementation and code hash, upgrade state, resolution block
+      tag, payload hash, resolved-plan hash, witnesses, queries, and named and
+      implicit assumptions.
 
       Separate statement data from witness data. Bind all public inputs and
       private commitments. Define what is proved, what is checked by a local
@@ -512,6 +634,20 @@
       exports only a compatibility view, or remains separate. Never make an
       opaque resolver the unreviewed authority for signed intent meaning.
 
+      Map NEAR Intents as a deployed comparative profile. Separate its
+      `token_diff` conservation and Verifier batch from quote service, signed
+      payload generation, solver relay, deposit tracking, bridge withdrawal,
+      cancellation, refund, payout, and finality. Reconcile narrative docs,
+      OpenAPI, deployed contracts, SDKs, and observable events. Preserve status
+      and behavior contradictions rather than choosing the newest-looking
+      representation.
+
+      Compare the current ERC-7683 resolver graph with its previous order/fill
+      draft and with current OIF schemas, contracts, and solver code. Analyze
+      resolver upgrade and time-of-check/time-of-use risk. Bind resolution to a
+      state snapshot and assumption manifest before the user authorizes any
+      effects derived from it.
+
       Define a compatibility profile for EIP-712-style typed display and domain
       separation without assuming EVM signatures. Define adapters for contract
       signers, account abstraction, delegated permissions, wallet batching, and
@@ -530,11 +666,14 @@
       <operation group="author">parse, format, lint, check, elaborate, normalize, serialize</operation>
       <operation group="assure">analyze, simulate, debug, compare, explainCounterexample, estimateBounds</operation>
       <operation group="build">compileCompact, validateBackend, certifyTranslation, verifyBuild, emitSBOM</operation>
-      <operation group="intent">createIntent, explainIntent, encodeIntent, hashIntent, createSigningPayload, verifyAuthorization</operation>
-      <operation group="solver">resolveIntent, quoteIntent, proposePlan, comparePlans, consumeIntent, deriveResidualIntent</operation>
+      <operation group="intent">createObjective, createIntent, explainIntent, encodeIntent, hashIntent, createSigningPayload, verifyAuthorization, cancelIntent</operation>
+      <operation group="quote">requestQuote, verifyQuote, compareQuotes, selectQuote, rejectQuote</operation>
+      <operation group="solver">discoverSolvers, resolveIntent, verifyResolution, proposePlan, comparePlans, consumeIntent, deriveResidualIntent</operation>
       <operation group="state">fetchStateEvidence, verifyState, handleRollback</operation>
       <operation group="proof">resolveParameters, verifyParameters, createProofRequest, prove, verifyProof</operation>
       <operation group="transaction">planTransaction, summarizeEffects, verifyPlan, createSigningRequest, sign, submit, observe</operation>
+      <operation group="settlement">recordFill, verifyFill, verifyFulfillment, claim, requestRefund, verifyRefund, verifyFinality</operation>
+      <operation group="transport">subscribe, acknowledgeDelivery, deduplicateDelivery, resumeSubscription, reconcileStatus</operation>
       <operation group="package">resolvePackage, lockDependencies, verifyPackage, reproduceBuild</operation>
       <operation group="conformance">runVectors, runDifferential, runFuzz, runMutation, releaseVerdict</operation>
 
@@ -543,6 +682,11 @@
       outcomes, version negotiation, idempotency, cancellation, privacy class,
       local-versus-remote execution, security checks, conformance vectors, and
       owning package.
+
+      Define a disclosure matrix for user, wallet, quote provider, solver,
+      aggregator, relay, bundler, prover, oracle, bridge, Runtime, chain, and
+      observer. Define sealed and selective disclosure, retention, correlation,
+      failed-quote leakage, metadata minimization, and MEV exposure.
 
       Reconcile this interface with the existing 65 components and 28 data
       contracts. Add, merge, split, or reject entries through explicit change
@@ -558,7 +702,12 @@
       escalation, broad delegation, proof substitution, malicious parameters,
       witness leakage, invalid public input, compiler miscompilation, source-map
       fraud, Runtime compromise, wallet compromise, chain rollback, settlement
-      failure, oracle equivocation, and cross-domain inconsistency.
+      failure, oracle equivocation, cross-domain inconsistency, resolver
+      upgrade, resolution time-of-check/time-of-use, duplicate relay delivery,
+      acknowledgement-before-processing data loss, asynchronous cancellation,
+      fill-versus-payout confusion, late proof versus refund races, bridge
+      finality, address-profile collision, and confidential-relay or treasury
+      compromise.
 
       For each threat record asset, adversary, boundary, precondition, attack,
       consequence, prevention, detection, recovery, residual risk, test, proof
@@ -600,17 +749,31 @@
   </required_compiler_artifacts>
 
   <required_intent_data_contracts>
+    <contract>IntentObjective</contract>
+    <contract>QuoteRequest</contract>
+    <contract>Quote</contract>
     <contract>UserIntent</contract>
     <contract>IntentDomain</contract>
     <contract>IntentAuthorization</contract>
     <contract>IntentDisplay</contract>
-    <contract>IntentQuote</contract>
-    <contract>ResolvedIntent</contract>
+    <contract>OrderPayload</contract>
+    <contract>ResolverIdentity</contract>
+    <contract>ResolutionSnapshot</contract>
+    <contract>AssumptionManifest</contract>
+    <contract>ResolvedPlan</contract>
     <contract>SolverPlan</contract>
     <contract>PlanEffectSummary</contract>
     <contract>StateEvidence</contract>
+    <contract>DisclosurePolicy</contract>
+    <contract>FeeLedger</contract>
+    <contract>FinalityPolicy</contract>
     <contract>ResidualIntent</contract>
     <contract>CancellationReceipt</contract>
+    <contract>DeliveryReceipt</contract>
+    <contract>FillReceipt</contract>
+    <contract>FulfillmentProof</contract>
+    <contract>ClaimReceipt</contract>
+    <contract>RefundReceipt</contract>
     <contract>ProofRequest</contract>
     <contract>ProofReceipt</contract>
     <contract>VerificationResult</contract>
@@ -634,7 +797,9 @@
     <experiment id="E03">
       Encode one intent with at least three distinct valid solver plans. Prove
       that each plan satisfies the same hard predicate. Show that objective
-      ranking remains separate from safety.
+      ranking remains separate from safety. Preserve objective, quote,
+      authorization, order payload, resolution snapshot, plan, fill, and
+      fulfillment artifacts as distinct values.
     </experiment>
     <experiment id="E04">
       Mutate each plan with an extra payment, diverted change, fee increase,
@@ -645,22 +810,33 @@
     <experiment id="E05">
       Exercise single-use, partial-fill, residual, cancellation, delegated, and
       composed intents. Model-check races among fill, cancel, timeout, and
-      rollback.
+      rollback. Cover every partial-fill meaning, duplicate outputs, multiple
+      solvers, first-filler ownership, callback failure, late proof, claim, and
+      refund. Require per-asset residual conservation.
     </experiment>
     <experiment id="E06">
       Implement a CAKE-layer test harness with replaceable application,
       permission, solver, and settlement components. Compromise each component
-      separately and record which Moriarty verifier detects the defect.
+      separately and record which Moriarty verifier detects the defect. Replay
+      NEAR-style at-least-once relay events, disconnect longer than retention,
+      acknowledge before durable persistence, submit an asynchronous
+      cancellation during a fill, and report fill success before payout.
     </experiment>
     <experiment id="E07">
       Implement current ERC-7683 and ERC-7521 compatibility adapters or justify
       rejection. Run official vectors and adversarial opaque-payload or resolver
-      substitutions.
+      substitutions. Compare the post-2026-05-13 resolver draft with the prior
+      ERC-7683 interface and OIF `StandardOrder`. Mutate resolver code,
+      implementation, block tag, query state, witness, assumption, and resolved
+      plan between resolution and execution.
     </experiment>
     <experiment id="E08">
       Produce an EIP-712-inspired signing display and domain-separated payload
       for Moriarty. Demonstrate replay rejection across network, contract,
-      language version, state sequence, and validity interval.
+      language version, state sequence, and validity interval. Add NEP-413,
+      ERC-191, raw Ed25519, and WebAuthn profiles where supported. Test the same
+      public key in two wallet ecosystems, versioned nonce-salt rotation, key
+      removal, and stale payload generation.
     </experiment>
     <experiment id="E09">
       Mechanize the intent-safety theorem for one canonical application. Connect
@@ -680,7 +856,10 @@
     <experiment id="E12">
       Run the complete standard developer flow in browser, Node.js, CLI, local
       prover, remote untrusted prover, wallet, and enterprise custody profiles.
-      Verify identical intent meaning and stable error behavior.
+      Verify identical intent meaning and stable error behavior. Exercise
+      quote verification, resolver snapshot verification, fill and payout
+      separation, fulfillment verification, refund, transport resumption,
+      duplicate delivery, and unknown status or error handling.
     </experiment>
     <experiment id="E13">
       Give developers and auditors equivalent Moriarty, raw Compact, and
@@ -699,8 +878,8 @@
     <deliverable id="D07">Compiler architecture and intermediate-representation specification.</deliverable>
     <deliverable id="D08">Theorem catalog, proof dependency graph, and mechanization plan.</deliverable>
     <deliverable id="D09">Compact, ZKIR, proof, ledger, and privacy correspondence dossier.</deliverable>
-    <deliverable id="D10">CAKE layer map with trust and failure boundaries.</deliverable>
-    <deliverable id="D11">ERC and EIP disposition and compatibility matrix.</deliverable>
+    <deliverable id="D10">CAKE and NEAR Intents layer, lifecycle, trust, status, and failure map.</deliverable>
+    <deliverable id="D11">Version-pinned ERC, EIP, CAIP, OIF, and NEAR disposition and field-level compatibility matrix.</deliverable>
     <deliverable id="D12">Standard developer interface with complete typed API signatures.</deliverable>
     <deliverable id="D13">Canonical schemas, version rules, errors, and conformance vectors.</deliverable>
     <deliverable id="D14">Threat model and independent audit boundaries.</deliverable>
@@ -777,7 +956,7 @@
     <gate id="G03">Every accepted semantic motion has a proof delta, migration result, backend result, and negative test.</gate>
     <gate id="G04">At least two independent semantics implementations pass every conformance vector.</gate>
     <gate id="G05">Reference and generated backend agree on every required trace and effect projection.</gate>
-    <gate id="G06">The intent verifier rejects every unauthorized mutation before signing.</gate>
+    <gate id="G06">The intent verifier rejects every unauthorized objective, quote, authorization, resolution, plan, fee, disclosure, fill, fulfillment, and recovery mutation before signing or claiming.</gate>
     <gate id="G07">Replay fails across network, contract, version, sequence, nonce, validity, and cancellation domains.</gate>
     <gate id="G08">All public effects and private disclosures match the signed intent and approved manifests.</gate>
     <gate id="G09">Real proofs verify under pinned, approved, and digest-bound parameters.</gate>
@@ -785,7 +964,7 @@
     <gate id="G11">Every security-critical compiler or verifier mutant is detected, or the survivor blocks release.</gate>
     <gate id="G12">Build artifacts reproduce byte-for-byte on two independent clean builders.</gate>
     <gate id="G13">No critical or high audit finding remains unresolved.</gate>
-    <gate id="G14">The SDK has stable errors, idempotency, version negotiation, cancellation, rollback, and unavailable outcomes.</gate>
+    <gate id="G14">The SDK has stable errors, idempotency, version negotiation, asynchronous cancellation, partial-fill residuals, delivery deduplication, fill and payout separation, finality, rollback, refund, and unavailable outcomes.</gate>
     <gate id="G15">A compromised solver, Runtime, indexer, registry, or remote prover cannot create a signing request for extra effects.</gate>
     <gate id="G16">The proof claim names every trusted compiler, circuit, verifier, parameter, ledger, wallet, and oracle assumption.</gate>
     <gate id="G17">At least two non-toy pilots prefer Moriarty's assurance workflow to the audited Compact-library baseline.</gate>
@@ -814,12 +993,17 @@
 
   <prohibited_shortcuts>
     <item>Do not equate a valid signature with authorized semantics.</item>
+    <item>Do not equate a quote with an authorization, order, plan, or fill.</item>
+    <item>Do not equate origin inclusion, internal-ledger execution, or fill with final cross-domain fulfillment.</item>
     <item>Do not equate simulation with universal correctness.</item>
     <item>Do not equate compiler acceptance with semantic preservation.</item>
     <item>Do not equate mock ZKIR compilation with proof generation.</item>
     <item>Do not equate proof verification with ledger correspondence.</item>
     <item>Do not treat a solver, resolver, Runtime, prover, oracle, or wallet as trusted by default.</item>
     <item>Do not import EVM concepts into blockchain-independent Core without a semantic need.</item>
+    <item>Do not call prior-draft ERC-7683 order and fill interfaces current.</item>
+    <item>Do not call a transport exactly-once when it uses acknowledgement, replay, and deduplication.</item>
+    <item>Do not call a confidential profile trustless when it depends on a permissioned relay, private validator set, treasury, or PoA bridge.</item>
     <item>Do not count a specified-only SDK component as implemented.</item>
     <item>Do not hide an external assumption in an adapter or manifest.</item>
     <item>Do not use calendar duration as evidence of progress.</item>

@@ -3,7 +3,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-03T01:56:00Z
+updated_at: 2026-09-03T14:17:00Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -14,6 +14,9 @@ sources:
   - SRC-0015
   - SRC-0016
   - SRC-0017
+  - SRC-0023
+  - SRC-0024
+  - SRC-0025
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -38,3 +41,9 @@ sources:
 | First taxonomy recommendation versus updated run | SRC-0015 recommends M4+ after it could not inspect DeFiFormal; SRC-0017, after repository inspection, recommends M2+M3 for human-facing families and facets with M5 as the internal formal profile | SRC-0017 supersedes the top-level taxonomy decision; preserve M4+ only as a historical crosswalk and useful facet decomposition |
 | Updated-run archive provenance versus Moriarty repository pin | SRC-0017 reports that its supplied ZIP had no recoverable commit; Moriarty has a separate clean checkout at `8ae0bbfaa3193078d1cabf6999db1382985b7f95` | Bind all reproduced results to SRC-0016 and the full commit; do not attribute that commit to the ZIP |
 | Updated-run complete-linkage ARI at 12 clusters versus independent harness | SRC-0017 reports 0.36; the deterministic SciPy nearest-neighbour-chain reproduction gives 0.3547259508, which rounds to 0.35 at two decimal places | Preserve the raw value and pinned method; treat 0.36 as a minor reporting or implementation-version discrepancy that does not change the best-ARI conclusion |
+| NEAR Intents atomic and automatic-refund overview versus route behavior | The overview states atomic execution and automatic refunds; Verifier documentation says external calls complete asynchronously, simulation excludes them, and deposit, withdrawal, storage, and indexer paths include detached, nonrefundable, or manual recovery | Define atomicity and recovery per layer and route; never lift Verifier batch atomicity to bridge fulfillment |
+| NEAR Intents non-custodial description versus implementation boundaries | The overview says users maintain control; `intents.near` records contract-held internal balances, 1Click says it temporarily transfers assets to a trusted swapping agent, and confidential execution adds a treasury and PoA bridge | Publish a route-specific custody and authority manifest before approval |
+| NEAR Intents narrative status versus OpenAPI | The quickstart lists `KNOWN_DEPOSIT_TX`, which is absent from the published swap status enum; the order enum contains `UNTRIGGERED`, which the narrative omits; fill and payout use independent states | SDKs must accept unknown statuses, preserve raw evidence, and reconcile service status with chain evidence |
+| NEAR Intents guaranteed-delivery name versus transport semantics | The relay replays unacknowledged events, requires client deduplication, has a seven-day retention limit, and is described as live but not yet exercised by a solver | Treat it as bounded at-least-once delivery, not exactly-once or permanent delivery |
+| NEAR Intents confidentiality label versus trust boundary | `basic` and `advanced` lack public normative leakage definitions; the embedded profile uses a private NEAR fork, small permissioned validator set, treasury, private relay, and PoA bridge | Model confidentiality as a named adapter profile with explicit disclosure and custody assumptions |
+| Current ERC-7683 versus prior draft and OIF terminology | The 2026 resolver draft removes the prior standardized order/open/fill objects; current OIF code and prose still call `StandardOrder` and `MandateOutput` ERC-7683 | Pin the exact revision and treat OIF as a separate compatibility profile; never blend the two semantics |

@@ -1,0 +1,59 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://docs.near.org/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# NEAR Intents
+
+> Learn how the intents protocol works
+
+NEAR Intents is a multichain transaction protocol where users specify what they want and let third parties compete to provide the best solution. This works for everything from token swaps to pizza delivery, creating a universal marketplace across crypto and traditional services.
+
+<img src="https://mintcdn.com/neardocs/qO2GD-gji1aakHqN/assets/docs/chain-abstraction/intents-overview.png?fit=max&auto=format&n=qO2GD-gji1aakHqN&q=85&s=0f00df672a9f3f4f87a22ed4cf8546a0" alt="NEAR Intents Overview" width="2499" height="381" data-path="assets/docs/chain-abstraction/intents-overview.png" />
+
+<Card title="Read Intents Docs" icon="book-open" href="https:docs.near-intents.org">
+  Read the official documentation to learn more about NEAR Intents and how to use it
+</Card>
+
+***
+
+## How It Works
+
+<Steps>
+  <Step title="Intent Creation">
+    A user or AI agent expresses a desired outcome *(ex: Swap Token A for Token B)* and broadcasts the intent to network of Market Makers (also called Solvers).
+  </Step>
+
+  <Step title="Market Maker Competition">
+    An off-chain decentralized network of Market Makers (aka solvers) compete to fulfill the request in the most optimal way. When the network finds the best solution, it presents it as a quote to the originating user/agent for approval.
+  </Step>
+
+  <Step title="Intent Execution">
+    If the quote from the Market Maker is accepted, the intent is executed by calling a "Verifier" smart contract on NEAR Protocol. This contract securely verifies and settles the final transaction.
+  </Step>
+</Steps>
+
+***
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Official NEAR Intents Documentation" icon="book-open" href="https://docs.near-intents.org">
+    Read the official documentation to learn more about NEAR Intents.
+  </Card>
+
+  <Card title="Dev Support Channel" icon="message-circle" href="https://t.me/near_intents">
+    Join the Telegram developer support channel.
+  </Card>
+
+  <Card title="Integration Example" icon="code" href="https://github.com/near-examples/near-intents-examples">
+    Explore an easy integration example that uses the 1Click API.
+  </Card>
+
+  <Card title="near-intents.org (Live Site)" icon="globe" href="https://near-intents.org">
+    Try the live demo application showcasing token swaps.
+  </Card>
+
+  <Card title="Independent Fee Benchmark" icon="chart-bar" href="https://openchainbench.com/benchmarks/bridge-fee">
+    Compare NEAR Intents against other bridges on effective USDC transfer costs, measured independently across Solana, Base, and Arbitrum corridors.
+  </Card>
+</CardGroup>

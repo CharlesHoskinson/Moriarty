@@ -3,7 +3,7 @@ id: moriarty.research.program
 type: decision
 title: Moriarty DeFi Kernel research program
 status: active
-updated_at: 2026-09-03T13:13:20Z
+updated_at: 2026-09-03T14:17:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -11,6 +11,10 @@ sources:
   - SRC-0020
   - SRC-0021
   - SRC-0022
+  - SRC-0023
+  - SRC-0024
+  - SRC-0025
+  - SRC-0026
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -103,12 +107,39 @@ SRC-0021, record MIS-006; created 2017-09-12; authority primary standards
 document; scope signature-interface comparison; evidence source fact and design
 inference; reproduced acquisition; confidence high; status S2.
 
-The focused assignment is
+**CLM-0123.** The complete official NEAR Intents documentation sitemap contains
+68 pages. All 68 pages, the full documentation aggregate, and two published
+OpenAPI documents were acquired with adjacent Scrapling receipts. The Verifier
+provides an internal-ledger `token_diff` conservation rule, but external calls,
+bridge withdrawals, payouts, and refunds have separate asynchronous and trust
+assumptions. Source: SRC-0024; acquired 2026-09-03; authority primary
+deployed-system documentation and schemas; scope comparative intent lifecycle;
+evidence source fact and reproduced acquisition; confidence high for coverage
+and medium for deployed correspondence; status S6.
+
+**CLM-0124.** The standards do not define one interchangeable intent object.
+Moriarty research must keep objective, quote, authorization, order payload,
+resolution snapshot, solver plan, fill, fulfillment proof, claim, cancellation,
+refund, and final settlement separate. Source: SRC-0023 through SRC-0025;
+created 2026-09-03; authority evidence-backed architecture recommendation;
+scope Moriarty intent calculus and SDK; evidence inference; confidence high;
+status S2.
+
+**CLM-0125.** Current ERC-7683 is a resolver interface and differs materially
+from its prior order-and-fill draft and current OIF `StandardOrder` vocabulary.
+Any Moriarty adapter must bind resolver code and upgrade state, resolution
+block, payload, resolved plan, witnesses, queries, and assumptions. Source:
+SRC-0025 and the primary standards in SRC-0021; observed 2026-09-03; authority
+primary standards and repository comparison; scope Ethereum compatibility;
+evidence contradiction and recommendation; confidence high; status S2.
+
+The focused assignment is now version 1.1:
 [`../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml`](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml).
 It defines the intent-refinement theorem, compiler and proof artifacts, CAKE and
-ERC review, complete developer interface, twelve workstreams, thirteen
-experiments, eighteen deliverables, twelve sprints, and eighteen release gates.
-It does not change the active semantic scope.
+NEAR/ERC/OIF review, 33 intent data contracts, a complete developer interface,
+twelve workstreams, thirteen experiments, eighteen deliverables, twelve
+sprints, and eighteen release gates. It does not change the active semantic
+scope.
 
 ## Preserved dissent
 

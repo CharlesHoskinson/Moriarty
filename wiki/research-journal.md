@@ -3,11 +3,15 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-03T09:07:57Z
+updated_at: 2026-09-03T14:17:00Z
 sources:
   - SRC-0016
   - SRC-0017
   - SRC-0018
+  - SRC-0023
+  - SRC-0024
+  - SRC-0025
+  - SRC-0026
 ---
 
 # Moriarty research journal
@@ -270,3 +274,82 @@ unchanged. This prompt specifies research and release gates only.
 Write the candidate intent-refinement judgment for the atomic swap. Mutate the
 plan with one extra effect. Require the local verifier to reject the plan before
 it creates a signing request.
+
+## Prompt iteration P02: separate the deployed intent lifecycle
+
+- State: primary-source corpus acquired and under synthesis
+- Active semantic scope: `0.0.0-e00.2`
+- Scope change: none
+
+### Trigger
+
+The user required a deep research pass over CAKE, the complete NEAR Intents
+documentation, and current Ethereum intent standards before revising the
+intent portion of the assignment.
+
+### Intermediate evidence and rationale
+
+Scrapling acquired all 68 pages in the official NEAR Intents documentation
+sitemap, its documentation index, the NEAR overview, and both published
+OpenAPI specifications. The deployed NEAR stack distinguishes a quote request,
+quote, signed Verifier payload, solver relay, internal-ledger execution,
+external bridge withdrawal, fill status, payout status, cancellation request,
+refund, and final receipt. These objects cannot safely share one `Intent`
+type.
+
+The Verifier's `token_diff` is a useful conservation pattern: all signed token
+differences in one batch must sum to zero for each token. It does not establish
+cross-chain completion. Cross-contract calls are asynchronous, simulations
+exclude their effects, and bridge withdrawals add independent trust and
+finality assumptions.
+
+NEAR supplies concrete replay defenses: signer, verifying contract, deadline,
+and a 256-bit single-use nonce whose four-byte salt is versioned by the
+contract. Its supported signature profiles do not provide one unambiguous
+chain identity. The documentation states that the same public key can map
+wallets from different chains to an indistinguishable implicit account.
+
+Operational evidence also changes the SDK boundary. Order cancellation is
+asynchronous. Fill and payout are separate status dimensions. Guaranteed relay
+delivery is at-least-once, requires durable deduplication, retains messages for
+at most seven days, and is documented as live but not yet exercised by a
+solver. Confidential execution uses a permissioned private NEAR fork, private
+relay, treasury-backed assets, and a PoA bridge. These are named trust profiles,
+not properties inherited by Moriarty Core.
+
+Current ERC-7683 is resolver-based and materially differs from both its prior
+draft and the Open Intents Framework implementation vocabulary. The revised
+assignment must pin the current revision and keep objective, quote,
+authorization, opaque order, resolved plan, wallet execution, fill, proof,
+claim, refund, cancellation, and final settlement distinct.
+
+### Candidate prompt changes
+
+- Add the complete CAKE and NEAR corpora plus version-pinned OIF and CAIP
+  sources.
+- Define a typed lifecycle with actor, authority, state anchor, idempotency,
+  observable data, proof, finality, retry, and cancellation rules on every
+  transition.
+- Add resolver snapshot and time-of-check/time-of-use obligations.
+- Split economic partial fill, output completion, transaction atomicity,
+  contiguous wallet execution, cross-chain all-or-refund, and end-to-end
+  atomicity.
+- Add SDK contracts for quote requests, resolution snapshots, assumptions,
+  disclosure, fees, fills, fulfillment, refunds, and transport delivery.
+- Require adversarial experiments for duplicate relay events, asynchronous
+  cancellation, proof-delay races, bridge rollback, and misleading status.
+
+### Semantic scope transition
+
+No semantic motion is accepted by this research. Version `0.0.0-e00.2` and
+snapshot SHA-256
+`9bee72cb3a71962128ce5ead07b0912a3f54b1d813d59f629852631057e36c7a`
+remain active. Every new object above is a research or interface requirement
+until a later semantic motion assigns it to Core, the intent calculus, an
+adapter, Runtime, or application code.
+
+### Next falsification test
+
+Construct one cross-chain swap trace in which the NEAR internal-ledger batch
+succeeds but the bridge withdrawal fails or is rolled back. Reject any
+candidate `fulfilled` predicate that accepts the internal batch alone.
