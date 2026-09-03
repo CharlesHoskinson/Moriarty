@@ -1,5 +1,26 @@
 # Wiki log
 
+## [2026-09-03] audit | Evidence and SDK gate hardening
+
+Closed the independent review findings. The disclosure validator now handles
+whitespace, excludes comments and strings, and rejects unnamed compound
+expressions. Complete compiler-interface metadata is checked against the
+Moriarty manifest. Clean reproduction and current-checkout evidence now have
+separate identities. Sprint manifests bind package, scope, outputs, self-hash,
+and package-specific gates. The SDK validator applies its schemas, requires
+exact counts, closes component references, and recomputes its complete index.
+
+## [2026-09-03] experiment | Clean Compact reproduction and complete SDK contracts
+
+Reproduced E00 from a clean archive and fresh environment. Forty-three focused
+tests passed, 1,000 traces had zero divergence, and all semantic, Compact,
+compiler-manifest, ZKIR, and negative-control digests matched. Recorded the
+Compact source-map path-sensitivity footgun. Added an independent Moriarty
+visibility-manifest validator with missing and additional disclosure controls.
+Specified 65 SDK components, 28 canonical data contracts, two JSON contract
+schemas, and a 17-component minimum safety spine. Preserved the Grok, Sol, and
+exact Fable 5.1 Council advisory and its requested changes.
+
 ## [2026-09-03] decision | Evidence-gated sprints and complete SDK scope
 
 Superseded calendar-based progress with evidence-gated sprints. Added the

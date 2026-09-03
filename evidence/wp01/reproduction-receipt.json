@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "package": "WP01",
+  "sprint": "S00",
+  "status": "S3-reproduced-clean-environment",
+  "observed_at_utc": "2026-09-03T08:12:48Z",
+  "source": {
+    "repository_commit": "006c4d91ed09c0a89261861b6e7203b3efa3e2df",
+    "archive_method": "git archive of the pinned commit into a new mktemp directory",
+    "uv_lock_sha256": "8de185b1edc22609c4039acfec79c96df1f64c34bda0c8923959c550871fd926"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "uv": "0.12.5",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "architecture": "x86_64"
+  },
+  "toolchain": {
+    "compact_repository_commit": "11e7ec5abeecb99297c4faa74d30ef9adc7b51f3",
+    "compact_compiler": "0.34.100",
+    "compact_binary_sha256": "976b3f5cb05cb91c5a911531345221a3a208596a491c130406bdca18ac144a3f",
+    "zkir_repository_commit": "2ffe2d17bbb736aec36fb300aeaca679a10d2278",
+    "zkir": "3.0",
+    "zkir_mock_binary_sha256": "35c866d78453185cba0f81b87806fdf28ee43b48238e287bc367b3ee99aac742"
+  },
+  "commands": [
+    "uv sync --project ${FRESH_ARCHIVE}",
+    "uv run --project ${FRESH_ARCHIVE} python ${FRESH_ARCHIVE}/experiments/moriarty-core-swap/generate.py",
+    "uv run --project ${FRESH_ARCHIVE} pytest ${FRESH_ARCHIVE}/tests/test_core_semantics.py ${FRESH_ARCHIVE}/tests/test_swap_bounds.py ${FRESH_ARCHIVE}/tests/test_compact_lowering.py ${FRESH_ARCHIVE}/tests/test_translation_certificate.py -q",
+    "/nix/store/5h37yza1bii76f71wjpnhpdjs8m2a7pf-compactc/bin/compactc --feature-zkir-v3 --skip-zk experiments/moriarty-core-swap/swap.compact experiments/moriarty-core-swap/output",
+    "${PINNED_ZKIR_BINARY} mock-compile-many experiments/moriarty-core-swap/output/zkir"
+  ],
+  "results": {
+    "focused_tests": {
+      "passed": 43,
+      "failed": 0
+    },
+    "traces": 1000,
+    "unique_traces": 1000,
+    "divergence_count": 0,
+    "invariant_failure_count": 0,
+    "positive_compact_exit_code": 0,
+    "zkir_mock_circuit_count": 4,
+    "zkir_mock_exit_code": 0,
+    "negative_disclosure_exit_code": 255,
+    "negative_diagnostic_sha256": "74debfc27b3400e59a556d2eeef5ff7182abdf2e73f4ef75ef8518ccf7bd04e4"
+  },
+  "reproduced_sha256": {
+    "artifact_manifest": "b65846b3e2e7eef4b85a10e0de71977d8e7b37e39f835f2cc31041cf35de4569",
+    "translation_certificate": "a3269b738e67e13cffd58f022e7dc21caa2b11a115ace708b390b88adcfb9f95",
+    "compact_source": "1a564672475b020eafdb96aeb8326f01bcdc2144efec872d44c7020f6e535281",
+    "compiler_manifest": "6a0eea3ed3e0df230a2e5cf1890e551201f6f795f2d77c7db0b421b7280c2c71",
+    "decide_zkir": "0418ab3a5b7e6b69b95dc38d1cffbecca6f5310e0b44752a166fcba177038c17",
+    "expire_zkir": "8f6b132aa503f14b69825a292a44a2b1a81f2f35286245b66e2e3cc5205fb110",
+    "fund_alice_zkir": "b3cf5659b29e9e6bb6776833b8fbd7d44f45f2b2f29688ec33772b608a9ecb84",
+    "fund_bob_zkir": "9ec542b01489069c40c9145003987b203be50f5d32c4b3141d3a502e0f5ce74c",
+    "decide_bzkir": "db5f84bddd6733f775479c3889f3d5f561de06fe67c92c45a3c8477cde23ead4",
+    "expire_bzkir": "43458fc4ff0c9e01abae9f2e0f5752430c4f62bcd745961922563ba5debf91d2",
+    "fund_alice_bzkir": "4aedd468163f4478949419510ff4fcb5477951fbcc440d61a57da77bc06ce7d2",
+    "fund_bob_bzkir": "473e2147679c30dccc50ca7393664d0775e2fd151263e5a388053415951b8233"
+  },
+  "digest_comparison": {
+    "semantic_artifacts_match": true,
+    "compiler_manifest_matches_with_recorded_relative_command": true,
+    "zkir_artifacts_match": true,
+    "negative_control_matches": true
+  },
+  "path_sensitivity_control": {
+    "performed": true,
+    "absolute_source_path_compile_exit_code": 0,
+    "absolute_source_path_compiler_manifest_sha256": "9538b07f88d0c4bedf5a797b2f0fe66bdb73be8817ee2e9e57f8b6ce2882f214",
+    "recorded_relative_path_compiler_manifest_sha256": "6a0eea3ed3e0df230a2e5cf1890e551201f6f795f2d77c7db0b421b7280c2c71",
+    "cause": "The Compact source map embeds invocation-path-dependent data.",
+    "disposition": "The SDK build orchestrator must use a canonical sandbox path or canonicalize source maps before reproducibility claims."
+  },
+  "conclusion": "A bounded Moriarty Core atomic-swap slice reproducibly generates accepted Compact and four ZKIR circuits under the pinned mock-proof path.",
+  "claims_not_established": [
+    "General Moriarty source-language compilation",
+    "Compact compiler correctness",
+    "ZKIR correctness or proof-system soundness",
+    "Real key or proof generation",
+    "Ledger transaction construction or acceptance",
+    "Production proving cost or privacy"
+  ]
+}

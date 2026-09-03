@@ -54,9 +54,17 @@ Attest, action sets, bounded mandates, conditional-token split or merge,
 Merkleized continuations, external calls, minting, packages, or the surface
 language.
 
+The initial S00 snapshot is `moriarty-core-0.0.0-e00.1.json`. The active clean-
+reproduction revision is `moriarty-core-0.0.0-e00.2.json`; its SHA-256 is
+`9bee72cb3a71962128ce5ead07b0912a3f54b1d813d59f629852631057e36c7a`.
+Both snapshots have identical semantics. `evidence/semantic-scope/index.json`
+names the active revision.
+
 S03 owns the first candidate Core freeze. Later sprints can upgrade the scope
 only through a new semantic-motion record. The record must state compatibility,
-proof, backend, privacy, resource, security, and demand effects.
+proof, backend, privacy, resource, security, and demand effects. It must create
+a new immutable snapshot and record the previous and new digests in the index
+and wiki journal.
 
 ## Compact DSL feasibility evidence
 
@@ -68,10 +76,19 @@ transition machine matches the Core on 1,000 unique traces. The compiler rejects
 an intentionally undeclared disclosure.
 
 This result shows that one bounded Marlowe-shaped financial DSL slice can target
-Compact. It does not establish a general source language, a complete compiler,
-a real proof, ledger execution, economic cost, universal interpretation, or
-production safety. S00 remains open until a fresh pinned environment reproduces
-the complete artifact chain.
+Compact. A clean archive and fresh environment reproduced 43 focused tests and
+all semantic, Compact, compiler-manifest, ZKIR, and negative-control digests.
+S00 passed at S3. It does not establish a general source language, a complete
+compiler, a real proof, ledger execution, economic cost, universal
+interpretation, or production safety.
+
+The clean reproduction receipt names only the pinned commit and reproduced
+artifacts. A separate current-checkout receipt binds the remediated disclosure,
+compiler-metadata, evidence-manifest, and SDK checks by source hash. It makes no
+fresh-archive or commit-identity claim.
+
+The reproduction also found path-sensitive Compact source-map output. The SDK
+must use a canonical sandbox path or canonicalize source maps.
 
 ## Complete SDK boundary
 
@@ -93,9 +110,13 @@ must cover:
 13. Chain, indexer, explorer, event, rollback, payout, and provenance clients.
 14. SDK versioning, compatibility, telemetry boundaries, SBOM, and release conformance.
 
-Every component needs inputs, outputs, failure types, trust assumptions, version
-rules, and local verification duties. Generated clients cannot silently trust a
-Runtime, compiler, registry, oracle, wallet, or LLM.
+WP09 now contains contracts for 65 components and 28 shared data artifacts.
+Seventeen components form the minimum implementation safety spine. The other 48
+remain specified-only. Generated clients cannot silently trust a Runtime,
+compiler, prover, proof-parameter provider, registry, oracle, wallet, or LLM.
+The deterministic instruction gate applies both JSON schemas, requires the
+exact inventories, resolves component references, and recomputes the index
+statistics and digests.
 
 ## Armed loop
 

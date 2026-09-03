@@ -3,8 +3,8 @@
 ## Why
 
 Moriarty needs a falsification test before the Core grows. The current
-atomic-swap experiment is reproduced at S4, but real proof generation remains
-outside this package.
+atomic-swap experiment is S3 prototype evidence. Fresh-environment reproduction
+and real proof generation remain open.
 
 ## What Changes
 
@@ -13,6 +13,7 @@ outside this package.
 - Preserve bound, disclosure, manifest, certificate, and differential evidence.
 - Make every backend stop condition executable and reviewable.
 - Reject hidden unbounded collections and unconstrained witness callbacks.
+- Re-run this package after WP04 freezes a new Core scope.
 
 ## Capabilities
 

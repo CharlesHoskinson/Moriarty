@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "normative": true,
+  "progress_unit": "evidence-gated-sprint",
+  "semantic_scope_index": "evidence/semantic-scope/index.json",
+  "validator": "scripts/validate_sprint_evidence.py",
+  "packages": [
+    {
+      "id": "WP01",
+      "sprint": "S00",
+      "dependencies": [],
+      "artifact_root": "evidence/wp01/",
+      "outputs": [
+        "experiments/moriarty-core-swap/artifact-manifest.json",
+        "experiments/moriarty-core-swap/translation-certificate.json",
+        "experiments/moriarty-core-swap/toolchain-results.json",
+        "experiments/moriarty-core-swap/negative/compile-result.json",
+        "evidence/wp01/reproduction-receipt.json",
+        "evidence/wp01/current-checkout-validation.json",
+        "evidence/wp01/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP01 --manifest openspec/work-packages.json",
+      "gate": "Fresh reproduction preserves all digests, has zero divergence, and rejects both disclosure controls.",
+      "failure_outcomes": ["audited-compact-libraries", "stop"],
+      "failure_selection_rule": "Stop after a safety, authorization, conservation, or boundedness failure. Select libraries after a correspondence or language-generality failure."
+    },
+    {
+      "id": "WP02",
+      "sprint": "S01",
+      "dependencies": [],
+      "artifact_root": "evidence/wp02/",
+      "outputs": [
+        "evidence/wp02/jaccard-matrix.json",
+        "evidence/wp02/composition-matrix.json",
+        "evidence/wp02/clustering-metrics.json",
+        "evidence/wp02/residue-689.csv",
+        "evidence/wp02/rater-handbook.md",
+        "evidence/wp02/rater-assignments.json",
+        "evidence/wp02/raw-ratings.ndjson",
+        "evidence/wp02/agreement-report.json",
+        "evidence/wp02/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP02 --manifest openspec/work-packages.json",
+      "gate": "All fixed corpus calculations reproduce and genuine rater records satisfy the research-data protocol.",
+      "failure_outcomes": ["provisional-taxonomy"],
+      "failure_selection_rule": "Retain the current taxonomy as provisional and exclude its demand claims from Core decisions."
+    },
+    {
+      "id": "WP03",
+      "sprint": "S02",
+      "dependencies": ["WP02"],
+      "artifact_root": "evidence/wp03/",
+      "outputs": [
+        "evidence/wp03/v1-construct-inventory.json",
+        "evidence/wp03/marlowe-moriarty-delta.csv",
+        "evidence/wp03/toolchain-lock.json",
+        "evidence/wp03/trace-vectors.json",
+        "evidence/wp03/correspondence-results.json",
+        "evidence/wp03/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP03 --manifest openspec/work-packages.json",
+      "gate": "Every inventory row has a locator, disposition, and exact proof or new-proof status.",
+      "failure_outcomes": ["exclude-construct", "block-compatibility"],
+      "failure_selection_rule": "Exclude any unreproduced construct from the Core freeze and block compatibility claims that depend on it."
+    },
+    {
+      "id": "WP04",
+      "sprint": "S03",
+      "dependencies": ["WP01", "WP02", "WP03"],
+      "artifact_root": "evidence/wp04/",
+      "outputs": [
+        "evidence/wp04/motions/index.json",
+        "evidence/wp04/model-check-results.json",
+        "evidence/wp04/evidence-manifest.json",
+        "evidence/semantic-scope/index.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP04 --manifest openspec/work-packages.json",
+      "gate": "Every motion has one disposition and every scope change has an immutable snapshot and journal digest transition.",
+      "failure_outcomes": ["defer-motion", "outside-core", "audited-compact-libraries"],
+      "failure_selection_rule": "Defer an ambiguous optional motion. Move an unproved external capability outside Core. Select libraries if a required slice has no finite semantics."
+    },
+    {
+      "id": "WP05",
+      "sprint": "S04",
+      "dependencies": ["WP03", "WP04"],
+      "artifact_root": "evidence/wp05/",
+      "outputs": [
+        "evidence/wp05/assurance-results.json",
+        "evidence/wp05/maintainer-evidence.json",
+        "evidence/wp05/toolchain-lock.json",
+        "evidence/wp05/prototype-results.json",
+        "evidence/wp05/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP05 --manifest openspec/work-packages.json",
+      "gate": "One strategy meets the frozen scorecard, prototype, conformance, and maintainer thresholds.",
+      "failure_outcomes": ["audited-compact-libraries"],
+      "failure_selection_rule": "Select audited Compact libraries when no normative strategy satisfies every viability threshold."
+    },
+    {
+      "id": "WP06",
+      "sprint": "S05",
+      "dependencies": ["WP01", "WP04", "WP05"],
+      "artifact_root": "evidence/wp06/",
+      "outputs": [
+        "experiments/moriarty-conditional-exchange/artifact-manifest.json",
+        "experiments/moriarty-conditional-exchange/translation-certificate.json",
+        "experiments/moriarty-conditional-exchange/adversarial-results.json",
+        "evidence/wp06/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP06 --manifest openspec/work-packages.json",
+      "gate": "Conservation, authorization, replay, boundedness, disclosure, and deterministic-build checks pass.",
+      "failure_outcomes": ["reject-extension", "outside-core"],
+      "failure_selection_rule": "Reject split or merge after a semantic safety failure. Keep prediction behavior outside Core after a backend-only failure."
+    },
+    {
+      "id": "WP07",
+      "sprint": "S06",
+      "dependencies": ["WP01", "WP02", "WP03", "WP04", "WP05", "WP06"],
+      "artifact_root": "evidence/wp07/",
+      "outputs": [
+        "experiments/moriarty-family-slices/index.json",
+        "evidence/wp07/shared-language-analysis.json",
+        "evidence/wp07/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP07 --manifest openspec/work-packages.json",
+      "gate": "Seven bounded kernels compile through shared interfaces and every unsupported protocol behavior is named.",
+      "failure_outcomes": ["six-family-evidence", "template-library", "audited-compact-libraries"],
+      "failure_selection_rule": "Report six-family evidence if WP06 rejects Prediction. Select templates if shared language interfaces fail. Select libraries if fewer than two non-swap slices share the pipeline."
+    },
+    {
+      "id": "WP08",
+      "sprint": "S07",
+      "dependencies": ["WP02", "WP03", "WP04", "WP07"],
+      "artifact_root": "evidence/wp08/",
+      "outputs": [
+        "evidence/wp08/protocol-coverage-72.json",
+        "evidence/wp08/coverage-summary.json",
+        "evidence/wp08/reviewer-decisions.ndjson",
+        "evidence/wp08/legacy-regression-results.json",
+        "evidence/wp08/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP08 --manifest openspec/work-packages.json",
+      "gate": "Exactly 72 unique rows and thirteen regressions have reviewed, evidence-complete dispositions.",
+      "failure_outcomes": ["block-language-decision"],
+      "failure_selection_rule": "Keep partial and outside-kernel results, but make the language option ineligible until every row and regression is reviewed."
+    },
+    {
+      "id": "WP09",
+      "sprint": "S08",
+      "dependencies": ["WP01", "WP04", "WP05", "WP07", "WP08"],
+      "artifact_root": "evidence/wp09/",
+      "outputs": [
+        "openspec/changes/wp09-complete-development-sdk/sdk-component-inventory.json",
+        "openspec/changes/wp09-complete-development-sdk/sdk-data-contracts.json",
+        "schemas/sdk/component-contract-v1.json",
+        "schemas/sdk/data-contract-v1.json",
+        "evidence/wp09/sdk-contract-index.json",
+        "evidence/wp09/minimum-safety-spine-results.json",
+        "evidence/wp09/malicious-plan-results.json",
+        "evidence/wp09/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP09 --manifest openspec/work-packages.json",
+      "gate": "All component contracts are complete and the implemented safety spine rejects every malicious plan before signing.",
+      "failure_outcomes": ["audited-compact-libraries", "stop"],
+      "failure_selection_rule": "Stop if any substitution reaches signing. Select libraries if the complete SDK contract or maintainable implementation spine cannot be delivered."
+    },
+    {
+      "id": "WP10",
+      "sprint": "S09",
+      "dependencies": ["WP01", "WP05", "WP06", "WP07", "WP09"],
+      "artifact_root": "evidence/wp10/",
+      "outputs": [
+        "evidence/wp10/measurement-protocol.json",
+        "evidence/wp10/testnet-authorization.json",
+        "evidence/wp10/library-baseline-lock.json",
+        "evidence/wp10/proof-cost-samples.ndjson",
+        "evidence/wp10/proof-cost-summary.json",
+        "evidence/wp10/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP10 --manifest openspec/work-packages.json",
+      "gate": "Real proof and cost distributions meet frozen budgets and the same workload compares an eligible library baseline.",
+      "failure_outcomes": ["scope-reduction", "audited-compact-libraries", "stop"],
+      "failure_selection_rule": "Reduce optional slices after isolated cost failures. Select libraries when their eligible baseline passes and Moriarty does not. Stop when neither path meets safety or cost gates."
+    },
+    {
+      "id": "WP11",
+      "sprint": "S10",
+      "dependencies": ["WP02", "WP07", "WP09", "WP10"],
+      "artifact_root": "evidence/wp11/",
+      "outputs": [
+        "evidence/wp11/audit-scope.json",
+        "evidence/wp11/audit-findings.json",
+        "evidence/wp11/study-preregistration.json",
+        "evidence/wp11/research-data-protocol.json",
+        "evidence/wp11/study-results.json",
+        "evidence/wp11/pilot-specifications.json",
+        "evidence/wp11/evidence-manifest.json"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP11 --manifest openspec/work-packages.json",
+      "gate": "The implemented audit scope has no open critical or high finding and measured demand or review advantage meets preregistered thresholds.",
+      "failure_outcomes": ["audited-compact-libraries", "stop"],
+      "failure_selection_rule": "Select libraries when a safe baseline exists but Moriarty lacks advantage or demand. Stop when both paths are unsafe or lack value-bearing demand."
+    },
+    {
+      "id": "WP12",
+      "sprint": "S11",
+      "dependencies": ["WP01", "WP02", "WP03", "WP04", "WP05", "WP06", "WP07", "WP08", "WP09", "WP10", "WP11"],
+      "artifact_root": "evidence/wp12/",
+      "outputs": [
+        "evidence/wp12/review-bundle-manifest.json",
+        "evidence/wp12/provider-reviews.json",
+        "evidence/wp12/dissent-register.json",
+        "deliverables/moriarty-terminal-decision.json",
+        "deliverables/moriarty-terminal-decision.json.minisig"
+      ],
+      "validator_command": "uv run python scripts/validate_sprint_evidence.py --package WP12 --manifest openspec/work-packages.json",
+      "gate": "The signed record selects Moriarty language, audited Compact libraries, or stop under the frozen scorecard.",
+      "failure_outcomes": ["audited-compact-libraries", "stop"],
+      "failure_selection_rule": "Apply the frozen selection order. Missing language evidence makes language ineligible. Missing safe library evidence selects stop."
+    }
+  ]
+}

@@ -2,49 +2,56 @@
 
 ## 1. Freeze component boundaries
 
-- [ ] Create a package ownership map for every named SDK component.
-- [ ] Define shared identifiers, result types, diagnostics, and version fields.
-- [ ] Define browser, Node.js, CLI, LSP, and service boundaries.
+- [x] Create `sdk-component-inventory.json` for all 65 components.
+- [x] Create `sdk-data-contracts.json` for shared wire contracts.
+- [x] Generate `evidence/wp09/sdk-contract-index.json` from both files.
+- [x] Define browser, Node.js, CLI, LSP, and service boundaries.
 
 ## 2. Specify the language toolchain
 
-- [ ] Specify syntax, parsing, formatting, linting, and diagnostics.
-- [ ] Specify type, visibility, capability, and bound checking.
-- [ ] Specify elaboration, normalization, serialization, source maps, and Compact generation.
+- [x] Specify syntax, parsing, formatting, linting, and diagnostics.
+- [x] Specify type, visibility, capability, and bound checking.
+- [x] Specify elaboration, normalization, serialization, source maps, and Compact generation.
 
 ## 3. Specify assurance tooling
 
-- [ ] Specify simulation, debugging, trace, and counterexample formats.
-- [ ] Specify static, symbolic, equivalence, and cost analysis.
-- [ ] Specify property, differential, fuzz, mutation, golden, and conformance interfaces.
+- [x] Specify simulation, debugging, trace, and counterexample formats.
+- [x] Specify static, symbolic, equivalence, and cost analysis.
+- [x] Specify property, differential, fuzz, mutation, golden, and conformance interfaces.
 
 ## 4. Specify packages and builds
 
-- [ ] Specify package identity, registry, resolution, locks, and signatures.
-- [ ] Specify canonical linking, reproducible builds, manifests, certificates, and SBOMs.
-- [ ] Specify continuation integrity and availability interfaces separately.
+- [x] Specify package identity, registry, resolution, locks, and signatures.
+- [x] Specify canonical linking, reproducible builds, manifests, certificates, and SBOMs.
+- [x] Specify continuation integrity and availability interfaces separately.
 
 ## 5. Specify deployment safety
 
-- [ ] Specify user intents, state snapshots, plans, and estimates.
-- [ ] Specify artifact, state, intent, disclosure, capability, and transaction verifiers.
-- [ ] Specify malicious-plan and partial-signature test suites.
+- [x] Specify user intents, state snapshots, plans, and estimates.
+- [x] Specify artifact, state, intent, disclosure, capability, and transaction verifiers.
+- [x] Specify malicious-plan and partial-signature conformance duties.
+- [ ] Implement the minimum safety spine named in `design.md`.
+- [ ] Reject an unapproved prover endpoint before witness release.
+- [ ] Reject a proof-parameter digest, circuit, or network mismatch.
 
 ## 6. Specify integrations
 
-- [ ] Specify wallet, hardware, custody, and partial-signing adapters.
-- [ ] Specify Runtime, oracle, identity, registry, and continuation adapters.
-- [ ] Specify chain, indexer, event, rollback, payout, and explorer adapters.
+- [x] Specify wallet, hardware, custody, and partial-signing adapters.
+- [x] Specify Runtime, oracle, identity, registry, and continuation adapters.
+- [x] Specify chain, indexer, event, rollback, payout, and explorer adapters.
 
 ## 7. Specify release operations
 
-- [ ] Publish the complete version and compatibility matrix.
-- [ ] Publish conformance, security, privacy, cost, and migration gates.
-- [ ] Publish support, telemetry, deprecation, rollback, and incident policies.
+- [x] Specify the complete version and compatibility matrix contract.
+- [x] Specify conformance, security, privacy, cost, and migration gates.
+- [x] Specify support, telemetry, deprecation, rollback, and incident policies.
 
 ## 8. Apply the gate
 
-- [ ] Verify every component has inputs, outputs, failures, trust, versions, and tests.
+- [x] Run `uv run pytest tests/test_openspec_work_packages.py -q`.
+- [ ] Write `evidence/wp09/minimum-safety-spine-results.json`.
+- [ ] Write `evidence/wp09/malicious-plan-results.json`.
 - [ ] Verify every signing path passes local verification.
 - [ ] Record missing components as package failure, not future polish.
 - [ ] Update `wiki/research-journal.md` with the SDK scope version.
+- [ ] Run `uv run python scripts/validate_sprint_evidence.py --package WP09 --manifest openspec/work-packages.json`.

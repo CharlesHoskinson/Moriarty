@@ -2,7 +2,7 @@
 
 ## 1. Prepare motions
 
-- [ ] Create one decision record for each required motion.
+- [ ] Create `evidence/wp04/motions/index.json` and one record per motion.
 - [ ] Attach WP03 source and theorem locators.
 - [ ] Attach WP02 demand and residue evidence.
 
@@ -24,4 +24,8 @@
 - [ ] Record exactly one disposition per motion.
 - [ ] Reject ambiguous Core semantics.
 - [ ] Update `wiki/research-journal.md` with the semantic version delta.
+- [ ] Create a new immutable snapshot and update `evidence/semantic-scope/index.json`.
+- [ ] Record previous and new snapshot digests in the journal.
 - [ ] Freeze only the accepted motion set.
+- [ ] Write `evidence/wp04/model-check-results.json`.
+- [ ] Run `uv run python scripts/validate_sprint_evidence.py --package WP04 --manifest openspec/work-packages.json`.

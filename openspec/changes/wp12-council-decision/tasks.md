@@ -5,6 +5,7 @@
 - [ ] Verify WP01 through WP11 gate results.
 - [ ] Freeze the semantic scope ledger and contradiction register.
 - [ ] Create and hash one blinded review bundle.
+- [x] Freeze `decision-scorecard.json` before terminal evidence exists.
 
 ## 2. Run the council
 
@@ -24,4 +25,6 @@
 
 - [ ] Select Moriarty language, audited Compact libraries, or stop.
 - [ ] Sign the scope, ownership, funding, release, and rollback record.
+- [ ] Verify the Ed25519 minisign signature with the named public key.
 - [ ] Update the wiki journal and terminal decision page.
+- [ ] Run `uv run python scripts/validate_sprint_evidence.py --package WP12 --manifest openspec/work-packages.json`.

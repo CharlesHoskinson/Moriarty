@@ -6,6 +6,8 @@
 
 The audit SHALL cover Core, compiler, Compact generation, certificates,
 verifiers, SDK signing boundary, packages, and extension capabilities.
+Only implemented components can satisfy the release audit gate. Specified-only
+components can receive design review, but that result is not a security audit.
 
 #### Scenario: the reviewer helped author a component
 
@@ -31,6 +33,18 @@ financial tasks with preregistered measures and participant roles.
 
 - WHEN no independent participant data exists
 - THEN the package reports no measured usability advantage.
+
+### Requirement: research-data protection
+
+The study SHALL preregister its method before recruitment. It SHALL define
+consent, pseudonyms, minimization, retention, deletion, withdrawal, access, and
+incident handling before collection.
+
+#### Scenario: a participant withdraws
+
+- WHEN the participant requests withdrawal within the declared period
+- THEN linked research data is deleted under the preregistered protocol
+- AND the deletion is recorded without retaining identity in the public corpus.
 
 ### Requirement: genuine pilot demand
 

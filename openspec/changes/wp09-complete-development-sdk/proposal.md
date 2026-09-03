@@ -14,6 +14,7 @@ wallet requests, and indexed state disconnected.
 - Specify transaction planning and local verification before signing.
 - Specify wallet, custody, oracle, identity, registry, chain, indexer, and explorer adapters.
 - Specify API versioning, conformance, release, support, and incident behavior.
+- Implement the minimum safety spine used by WP10 and WP11.
 
 ## Capabilities
 
@@ -38,6 +39,7 @@ None.
 
 ## Impact
 
-This package specifies the complete development SDK. It affects future source,
-compiler, analyzer, CLI, editor, package, planner, verifier, adapter, and release
-repositories. It does not implement or release those components.
+This package specifies all 65 SDK components and 28 shared wire contracts. It
+implements only the minimum safety spine required by WP10 and WP11. Other
+components remain `specified-only` until their owning sprint implements them.
+This package does not release the SDK.

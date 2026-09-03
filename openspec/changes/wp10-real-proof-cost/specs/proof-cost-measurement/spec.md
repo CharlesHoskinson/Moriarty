@@ -47,8 +47,29 @@ Compact libraries.
 
 Every sample SHALL bind artifact, toolchain, parameters, hardware, network,
 protocol settings, command, timestamp, and raw output.
+It SHALL also bind the prover endpoint and independent verifier identity.
 
 #### Scenario: an artifact digest is missing
 
 - WHEN a sample cannot identify its circuit
 - THEN it is excluded from aggregate results.
+
+### Requirement: frozen protocol and budgets
+
+The decision authority SHALL approve the measurement protocol, budgets,
+percentiles, sample counts, exclusions, and comparison rule before measurements.
+
+#### Scenario: a threshold changes after results exist
+
+- WHEN its approved digest changes
+- THEN prior measurements cannot satisfy the new gate without a new sprint run.
+
+### Requirement: authorized testnet only
+
+Testnet submission SHALL require a signed record naming authority, network,
+wallet, limits, and allowed artifacts. Mainnet submission is prohibited.
+
+#### Scenario: no authorization record exists
+
+- WHEN an experiment requests submission
+- THEN the SDK stops before wallet signing or network access.

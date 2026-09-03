@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from moriarty.evidence import validate_e00_evidence
+from moriarty.evidence import (
+    validate_compact_disclosures,
+    validate_compiler_metadata,
+    validate_e00_evidence,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +50,114 @@ def test_e00_graph_gate_rejects_a_corrupted_artifact_hash() -> None:
             corrupted,
             artifact_directory=experiment,
         )
+
+
+def test_generated_compact_disclosures_match_the_manifest() -> None:
+    experiment = ROOT / "experiments/moriarty-core-swap"
+    manifest = json.loads(
+        (experiment / "artifact-manifest.json").read_text(encoding="utf-8")
+    )
+    source = (experiment / "swap.compact").read_text(encoding="utf-8")
+    validate_compact_disclosures(manifest, source)
+    validate_compact_disclosures(
+        manifest,
+        source.replace("disclose(decision)", "disclose ( decision )", 1),
+    )
+
+    with pytest.raises(SystemExit, match="disclosure mismatch"):
+        validate_compact_disclosures(
+            manifest,
+            source.replace("disclose(decision)", "decision", 1)
+            + "\ndisclose (phase);\n",
+        )
+
+    with pytest.raises(SystemExit, match="disclosure mismatch"):
+        validate_compact_disclosures(
+            manifest,
+            source.replace("disclose(decision)", "decision", 1)
+            + "\n// disclose(decision) is not executable\n",
+        )
+
+    with pytest.raises(SystemExit, match="disclosure mismatch"):
+        validate_compact_disclosures(
+            manifest,
+            source.replace("disclose(decision)", "decision", 1)
+            + '\nassert(true, "disclose(decision) is not executable");\n',
+        )
+
+    with pytest.raises(SystemExit, match="disclosure mismatch"):
+        validate_compact_disclosures(
+            manifest,
+            source.replace("assert", "disclose(phase);\n  assert", 1),
+        )
+
+    with pytest.raises(SystemExit, match="disclosure mismatch"):
+        validate_compact_disclosures(
+            manifest,
+            source.replace("assert", "disclose(decision);\n  assert", 1),
+        )
+
+    for expression in ("disclose((phase))", "disclose(phase == Phase.Settled)"):
+        with pytest.raises(SystemExit, match="unrecognized disclosure"):
+            validate_compact_disclosures(
+                manifest,
+                source.replace("assert", f"{expression};\n  assert", 1),
+            )
+
+
+def test_compiler_metadata_matches_the_e00_manifest() -> None:
+    experiment = ROOT / "experiments/moriarty-core-swap"
+    manifest = json.loads(
+        (experiment / "artifact-manifest.json").read_text(encoding="utf-8")
+    )
+    compiler_metadata = json.loads(
+        (experiment / "output/compiler/contract-info.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    validate_compiler_metadata(manifest, compiler_metadata)
+
+    mutations = [
+        ("toolchain", lambda item: item.__setitem__("compiler-version", "0.0.0")),
+        (
+            "circuit",
+            lambda item: item["circuits"][2]["arguments"][0].__setitem__(
+                "name", "different"
+            ),
+        ),
+        (
+            "circuit",
+            lambda item: item["circuits"][0].__setitem__(
+                "result-type", {"type-name": "Boolean"}
+            ),
+        ),
+        ("witness", lambda item: item["witnesses"].pop()),
+        (
+            "witness",
+            lambda item: item["witnesses"][0].__setitem__("arguments", [{}]),
+        ),
+        ("ledger", lambda item: item["ledger"].append({"name": "undeclared"})),
+        (
+            "ledger",
+            lambda item: item["ledger"][0].__setitem__("exported", False),
+        ),
+        (
+            "ledger",
+            lambda item: item["ledger"][0].__setitem__(
+                "type", {"type-name": "Bytes", "length": 32}
+            ),
+        ),
+    ]
+    for message, mutate in mutations:
+        changed = deepcopy(compiler_metadata)
+        mutate(changed)
+        with pytest.raises(SystemExit, match=message):
+            validate_compiler_metadata(manifest, changed)
+
+    duplicate = deepcopy(compiler_metadata)
+    duplicate["circuits"].append(deepcopy(duplicate["circuits"][0]))
+    with pytest.raises(SystemExit, match="duplicate circuit"):
+        validate_compiler_metadata(manifest, duplicate)
 
 
 def test_moriarty_decision_graph_builds_from_semantic_extraction() -> None:

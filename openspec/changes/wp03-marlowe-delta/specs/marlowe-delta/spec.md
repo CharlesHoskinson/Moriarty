@@ -13,6 +13,11 @@ payments, and results.
 - WHEN Isabelle, Haskell, Plutus, Agda, or TypeScript defines the construct
 - THEN the row lists every maintained definition and its pinned locator.
 
+#### Scenario: no definition is reproducible
+
+- WHEN a construct has no pinned reproducible definition
+- THEN it is excluded from the WP04 Core freeze.
+
 ### Requirement: exact inheritance evidence
 
 Every inherited guarantee SHALL cite an exact theorem or reproduced

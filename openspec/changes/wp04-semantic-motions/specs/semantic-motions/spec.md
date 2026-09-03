@@ -61,5 +61,7 @@ version SHALL list Core, surface, backend, external, deferred, and rejected scop
 #### Scenario: one motion changes the Core
 
 - WHEN a motion is accepted or revised
-- THEN the journal records the previous and new semantic scope
+- THEN a new immutable semantic-scope snapshot is created
+- AND the scope index records its version and digest
+- AND the journal records the previous and new snapshot digests
 - AND it records new proof, migration, privacy, and resource obligations.

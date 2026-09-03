@@ -23,6 +23,26 @@ SHALL independently verify all semantic and monetary effects.
 - WHEN a validator, policy, or verifier identity differs from the manifest
 - THEN the client rejects the plan.
 
+### Requirement: untrusted coin selection
+
+Coin selection SHALL be separate from semantic approval. The local verifier
+SHALL recompute inputs, outputs, change, fees, collateral, network, and signers.
+
+#### Scenario: coin selection diverts change
+
+- WHEN selected inputs are sufficient but change uses an unapproved address
+- THEN the verifier rejects the plan before signing.
+
+### Requirement: generated backend validation
+
+The backend validator SHALL compare Core, generated Compact, compiler metadata,
+visibility, capabilities, resource bounds, and certificate digests.
+
+#### Scenario: generated metadata adds one public effect
+
+- WHEN the added effect is absent from the approved manifests
+- THEN backend validation rejects the artifact before proof generation.
+
 ### Requirement: state and sequence verification
 
 The verifier SHALL bind the plan to the expected contract, state hash, sequence,

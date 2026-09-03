@@ -36,7 +36,7 @@ for source, Core, Compact, ZKIR, compiler tuple, and test corpus.
 - WHEN a client validates an artifact with a mismatched digest
 - THEN certificate validation fails before signing.
 
-### Requirement: disclosure fail-closed behavior
+### Requirement: third-party disclosure negative control
 
 The Compact compiler SHALL reject a witness disclosure that the manifest does
 not declare.
@@ -47,9 +47,49 @@ not declare.
 - THEN compilation exits nonzero
 - AND no successful artifact replaces the preserved failure result.
 
+### Requirement: Moriarty disclosure correspondence
+
+Moriarty SHALL compare its visibility manifest with generated Compact and
+compiler metadata. The check SHALL parse lexical whitespace and SHALL ignore
+comments and string literals. This check SHALL fail on missing or additional
+disclosure. It SHALL reject a disclosure expression that is not one declared
+identifier.
+
+#### Scenario: generated code discloses an undeclared value
+
+- WHEN generated Compact or compiler metadata exposes an undeclared value
+- THEN backend validation fails before proof generation or signing.
+
+#### Scenario: disclosure syntax contains whitespace
+
+- WHEN generated Compact contains `disclose ( value )`
+- THEN the validator treats it as an executable disclosure
+- AND a missing or additional value still fails the gate.
+
+#### Scenario: compiler metadata differs from the manifest
+
+- WHEN a compiler reports another version, circuit argument, witness, or ledger
+  field
+- THEN backend validation fails before proof generation or signing.
+- AND the ledger comparison includes index, export status, storage kind, and
+  complete type metadata.
+
+### Requirement: separate reproduction identities
+
+The package SHALL keep the clean pinned-commit reproduction separate from
+current-checkout validation. Current-checkout evidence without a commit identity
+SHALL bind every decision-bearing source by SHA-256.
+
+#### Scenario: publish remediated validation
+
+- WHEN the current checkout adds a validator that is absent from the clean
+  reproduced commit
+- THEN a separate receipt identifies the current source hashes and commands
+- AND the clean receipt continues to identify only the pinned commit artifacts.
+
 ### Requirement: bounded claim scope
 
-The package SHALL label its result S4 at most. It SHALL NOT claim a real proof,
+The package SHALL label its current result S3. It SHALL NOT claim a real proof,
 ledger feasibility, production cost, or independent audit.
 
 #### Scenario: publish the result

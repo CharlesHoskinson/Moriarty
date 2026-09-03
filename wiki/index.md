@@ -32,6 +32,12 @@ will grow by merging evidence into durable topic pages.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, and next falsification test.
 
+## Active specification artifacts
+
+- [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
+- [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
+- [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.
+
 ## Workstream pages
 
 The consolidated decision report maps these pages to all 18 controlling

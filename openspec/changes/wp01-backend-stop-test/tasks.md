@@ -15,11 +15,19 @@
 
 ## 3. Reconcile evidence
 
-- [x] Update `wiki/benchmarks.md` with bounded claims.
-- [x] Update `evidence/moriarty-goal-completion-matrix-2026-09-03.csv`.
-- [ ] Reproduce the complete package from a fresh pinned environment.
+- [x] Bind `wiki/benchmarks.md` to commit `006c4d91ed09c0a89261861b6e7203b3efa3e2df`.
+- [x] Bind the goal matrix to the four evidence digests in the scope snapshot.
+- [x] Reproduce the complete package from a fresh pinned environment.
+- [x] Write `evidence/wp01/reproduction-receipt.json`.
+- [x] Write `evidence/wp01/current-checkout-validation.json`.
+- [x] Write `evidence/wp01/evidence-manifest.json`.
+- [x] Run Moriarty's manifest-versus-generated disclosure validator.
+- [x] Compare compiler-reported versions, circuits, arguments, witnesses, and
+  ledger fields with the artifact manifest.
 
 ## 4. Apply the gate
 
-- [ ] Compare fresh outputs with the preserved artifact digests.
+- [x] Compare fresh outputs with the preserved artifact digests.
+- [ ] Re-run WP01 after WP04 freezes the Core scope.
+- [x] Run `uv run python scripts/validate_sprint_evidence.py --package WP01 --manifest openspec/work-packages.json`.
 - [ ] Record library-only or stop if any acceptance predicate fails.

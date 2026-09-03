@@ -63,3 +63,15 @@ rules. Environment-specific transport SHALL not change semantics.
 
 - WHEN inputs and versions match
 - THEN both return the same verification result and reason code.
+
+### Requirement: untrusted prover boundary
+
+The SDK SHALL support a local prover and user-approved remote provers. It SHALL
+verify proof parameters and resulting proofs locally. It SHALL never send a raw
+private witness to an unapproved endpoint.
+
+#### Scenario: a provider substitutes proof parameters
+
+- WHEN parameter digest, circuit, network, or proof-system identity differs
+- THEN the request fails before witness processing
+- AND no signing request is produced.

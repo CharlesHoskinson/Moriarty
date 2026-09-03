@@ -6,6 +6,7 @@
 
 The dataset SHALL contain exactly one reviewed row for each of the 72 pinned
 protocol identifiers.
+The input roster SHALL match the SHA-256 pinned in `design.md`.
 
 #### Scenario: a name occurs in two product categories
 
@@ -41,6 +42,17 @@ the 72 product rows.
 
 - WHEN an expected trace changes
 - THEN migration impact and the approving semantic motion are required.
+
+### Requirement: independent reviewer privacy
+
+Each row SHALL have an independent reviewer pseudonym. A private custodian SHALL
+retain the identity mapping and independence evidence under the research-data
+protocol.
+
+#### Scenario: a reviewer helped author one row
+
+- WHEN independence is materially impaired
+- THEN another qualified reviewer decides that row.
 
 ### Requirement: no protocol overclaim
 

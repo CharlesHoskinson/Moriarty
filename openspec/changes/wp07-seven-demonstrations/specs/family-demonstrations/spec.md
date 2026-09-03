@@ -51,3 +51,9 @@ failure SHALL fail that slice.
 
 - WHEN one slice fails
 - THEN the package does not claim seven-family feasibility.
+
+#### Scenario: WP06 rejects Prediction
+
+- WHEN Prediction cannot enter Core safely
+- THEN the package records `six-family-evidence`
+- AND the seven-family language gate remains failed.

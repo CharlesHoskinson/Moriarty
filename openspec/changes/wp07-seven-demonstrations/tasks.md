@@ -16,6 +16,7 @@
 - [ ] Implement and compile the F1 through F6 slices.
 - [ ] Implement and compile the Prediction slice.
 - [ ] Preserve artifacts, commands, toolchains, and digests.
+- [ ] Write `experiments/moriarty-family-slices/index.json`.
 
 ## 4. Evaluate language evidence
 
@@ -26,4 +27,6 @@
 ## 5. Apply the gate
 
 - [ ] Require all seven slices to pass.
+- [ ] Record `six-family-evidence` if WP06 rejects Prediction.
 - [ ] Name every unsupported full-protocol behavior.
+- [ ] Run `uv run python scripts/validate_sprint_evidence.py --package WP07 --manifest openspec/work-packages.json`.

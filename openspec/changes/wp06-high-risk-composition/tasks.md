@@ -22,4 +22,8 @@
 
 - [ ] Preserve all counterexamples and raw compiler outputs.
 - [ ] Update the semantic scope ledger with the disposition.
+- [ ] Route every scope change through a new WP04 motion record.
+- [ ] Record previous and new scope digests in `wiki/research-journal.md`.
+- [ ] Extend the WP01 certificate validator before WP07.
 - [ ] Reject Core inclusion if any stop condition fires.
+- [ ] Run `uv run python scripts/validate_sprint_evidence.py --package WP06 --manifest openspec/work-packages.json`.

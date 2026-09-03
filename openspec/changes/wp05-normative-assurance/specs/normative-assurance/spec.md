@@ -26,7 +26,8 @@ resource theorems with assumptions.
 ### Requirement: executable prototype
 
 Each viable strategy SHALL execute at least one shared transition vector. The
-two strongest strategies SHALL prototype the highest-risk accepted motions.
+two strongest viable strategies SHALL prototype all three obligations frozen in
+`assurance-scorecard.json`.
 
 #### Scenario: a prototype uses an axiom or admitted result
 
@@ -52,3 +53,13 @@ maintainers or an approved succession plan.
 
 - WHEN no second maintainer or funded succession exists
 - THEN the language path fails the maintainability gate.
+
+### Requirement: precommitted selection
+
+Scores, weights, uncertainty penalties, viability thresholds, maintainer
+criteria, and tie rules SHALL be frozen before prototype results exist.
+
+#### Scenario: a preferred strategy misses one minimum criterion
+
+- WHEN its weighted score passes but one frozen minimum fails
+- THEN the strategy is not viable.

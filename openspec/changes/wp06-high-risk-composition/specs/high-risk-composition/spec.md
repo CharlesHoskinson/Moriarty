@@ -51,3 +51,14 @@ authorization, replay, nondeterminism, or unbounded-resource failure.
 
 - WHEN a minimized failing trace reproduces
 - THEN the motion returns to WP04 with a reject or revise disposition.
+
+### Requirement: semantic-upgrade provenance
+
+Every promotion, revision, deferment, outside-Core move, or rejection SHALL
+produce a WP04 motion record and semantic-scope transition before WP07.
+
+#### Scenario: the accepted constructor set changes
+
+- WHEN WP06 changes that set
+- THEN the project creates a new semantic version and immutable snapshot
+- AND WP01 is rerun against the new scope digest.

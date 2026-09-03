@@ -16,6 +16,8 @@ constructed protocols. Every row SHALL identify the deployed product unit.
 
 The package SHALL calculate Jaccard, nearest-neighbor, clustering, ARI, NMI,
 coverage, and composition metrics from pinned inputs.
+It SHALL pin algorithms, library versions, input order, ties, precision, and
+reference labels before calculation.
 
 #### Scenario: a metric has implementation sensitivity
 
@@ -42,6 +44,16 @@ SHALL preserve blinded inputs, raw decisions, disagreements, and adjudication.
 
 - WHEN no independent human ratings exist
 - THEN the agreement result is labeled simulated and excluded from decision gates.
+
+### Requirement: rater data protection
+
+The rater protocol SHALL define consent, pseudonyms, blinding, retention,
+deletion, withdrawal, access control, and incident handling before collection.
+
+#### Scenario: public evidence is exported
+
+- WHEN raw rating evidence enters the repository
+- THEN it uses pseudonyms and excludes the private identity mapping.
 
 ### Requirement: taxonomy boundary
 

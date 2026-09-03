@@ -20,6 +20,12 @@ differential comparison.
 The pinned Compact compiler emitted TypeScript, metadata, and four ZKIR 3.0
 circuits. The pinned ZKIR mock compiler accepted all four circuits.
 
+A fresh `git archive` of commit
+`006c4d91ed09c0a89261861b6e7203b3efa3e2df` reproduced 43 focused tests,
+the 1,000-trace certificate, the Compact source, compiler manifest, and all
+eight text and binary ZKIR digests. The receipt is
+`evidence/wp01/reproduction-receipt.json`.
+
 This result does not prove the Compact compiler, ZKIR implementation, or proof
 system correct. It does not establish key generation, proof generation, network
 deployment, fees, proving latency, privacy against traffic analysis, economic
@@ -52,6 +58,21 @@ The `negative/` directory preserves the failing source and a receipt with the
 exact command, exit code, full-diagnostic digest, and a bounded diagnostic
 excerpt. The negative source differs from the passing source only at that
 disclosure wrapper.
+
+Moriarty now checks the visibility manifest against every lexical `disclose`
+call in generated Compact. The scanner accepts legal whitespace and ignores
+comments and string literals. Negative tests remove the required `decision`
+disclosure and add an undeclared `phase` disclosure. Both fail before proof
+generation or signing. A second check compares the compiler-reported versions,
+circuits, arguments, witnesses, and ledger fields with the Moriarty manifest.
+
+## Reproducibility footgun reproduced
+
+The Compact compiler's source-map digest depends on how the input path is
+spelled. An absolute-path invocation compiled successfully but changed the
+compiler-manifest digest. The recorded relative-path command reproduced the
+original digest. The SDK build orchestrator must use a canonical sandbox path
+or canonicalize source maps before it claims reproducible builds.
 
 ## Reproduce the semantic certificate
 
@@ -115,6 +136,11 @@ commands, artifact hashes, host scope, and the proof-generation limitation.
 - `translation-certificate.json` records the trace corpus digest, coverage,
   invariant result, and zero-divergence result.
 - `toolchain-results.json` records the Compact and ZKIR execution results.
+- `evidence/wp01/reproduction-receipt.json` records the clean, pinned-commit
+  reproduction.
+- `evidence/wp01/current-checkout-validation.json` separately records the
+  remediated source-hash validation. It does not claim a fresh archive or commit
+  identity.
 - `negative/undisclosed-decision.compact` and `negative/compile-result.json`
   preserve the disclosure negative control.
 - `output/compiler/contract-manifest.json` is the compiler-generated artifact
