@@ -1,0 +1,273 @@
+{
+  "bounds": {
+    "max_inputs": 3,
+    "max_live_accounts": 2,
+    "max_payments": 2,
+    "max_reductions": 3,
+    "max_timeout": 100,
+    "syntax_nodes": 22
+  },
+  "compact_sha256": "f5204bae4f8836b5e9e4377e152ca63e16c6e39079382d87e34ca76151b121b9",
+  "core": {
+    "cases": [
+      {
+        "action": {
+          "account": {
+            "owner": {
+              "name": "alice",
+              "type": "Party"
+            },
+            "token": {
+              "asset_name": "A",
+              "policy_id": "aa",
+              "type": "Token"
+            },
+            "type": "Account"
+          },
+          "amount": {
+            "quantity": 10,
+            "type": "Constant"
+          },
+          "depositor": {
+            "name": "alice",
+            "type": "Party"
+          },
+          "type": "Deposit"
+        },
+        "continuation": {
+          "cases": [
+            {
+              "action": {
+                "account": {
+                  "owner": {
+                    "name": "bob",
+                    "type": "Party"
+                  },
+                  "token": {
+                    "asset_name": "B",
+                    "policy_id": "bb",
+                    "type": "Token"
+                  },
+                  "type": "Account"
+                },
+                "amount": {
+                  "quantity": 20,
+                  "type": "Constant"
+                },
+                "depositor": {
+                  "name": "bob",
+                  "type": "Party"
+                },
+                "type": "Deposit"
+              },
+              "continuation": {
+                "cases": [
+                  {
+                    "action": {
+                      "choice_id": "settle",
+                      "chooser": {
+                        "name": "bob",
+                        "type": "Party"
+                      },
+                      "lower_bound": 0,
+                      "type": "Choice",
+                      "upper_bound": 1
+                    },
+                    "continuation": {
+                      "else_contract": {
+                        "type": "Close"
+                      },
+                      "observation": {
+                        "choice_id": "settle",
+                        "expected": 1,
+                        "type": "ChoiceEquals"
+                      },
+                      "then_contract": {
+                        "account": {
+                          "owner": {
+                            "name": "alice",
+                            "type": "Party"
+                          },
+                          "token": {
+                            "asset_name": "A",
+                            "policy_id": "aa",
+                            "type": "Token"
+                          },
+                          "type": "Account"
+                        },
+                        "amount": {
+                          "quantity": 10,
+                          "type": "Constant"
+                        },
+                        "continuation": {
+                          "account": {
+                            "owner": {
+                              "name": "bob",
+                              "type": "Party"
+                            },
+                            "token": {
+                              "asset_name": "B",
+                              "policy_id": "bb",
+                              "type": "Token"
+                            },
+                            "type": "Account"
+                          },
+                          "amount": {
+                            "quantity": 20,
+                            "type": "Constant"
+                          },
+                          "continuation": {
+                            "type": "Close"
+                          },
+                          "payee": {
+                            "name": "alice",
+                            "type": "Party"
+                          },
+                          "type": "Pay"
+                        },
+                        "payee": {
+                          "name": "bob",
+                          "type": "Party"
+                        },
+                        "type": "Pay"
+                      },
+                      "type": "If"
+                    },
+                    "type": "Case"
+                  }
+                ],
+                "timeout": 100,
+                "timeout_continuation": {
+                  "type": "Close"
+                },
+                "type": "When"
+              },
+              "type": "Case"
+            }
+          ],
+          "timeout": 100,
+          "timeout_continuation": {
+            "type": "Close"
+          },
+          "type": "When"
+        },
+        "type": "Case"
+      }
+    ],
+    "timeout": 100,
+    "timeout_continuation": {
+      "type": "Close"
+    },
+    "type": "When"
+  },
+  "core_sha256": "a72c4e0e108cfbbeb74f1da9e2ca544d32c457ca539c3dc9b5e20d83dd2a353b",
+  "disclosures": [
+    "alice",
+    "bob",
+    "aliceAuthority",
+    "bobAuthority",
+    "tokenA",
+    "tokenB",
+    "amountA",
+    "amountB",
+    "deadline"
+  ],
+  "entry_points": [
+    {
+      "authorization": "aliceSecret",
+      "effects": [
+        "receive token_a amount_a"
+      ],
+      "from": "WaitingAlice",
+      "name": "fundAlice",
+      "to": "WaitingBob"
+    },
+    {
+      "authorization": "bobSecret",
+      "effects": [
+        "receive token_b amount_b"
+      ],
+      "from": "WaitingBob",
+      "name": "fundBob",
+      "to": "WaitingDecision"
+    },
+    {
+      "authorization": "bobSecret",
+      "choice": {
+        "id": "settle",
+        "lower": 0,
+        "upper": 1
+      },
+      "effects": [
+        "two atomic sends"
+      ],
+      "from": "WaitingDecision",
+      "name": "decide",
+      "to": [
+        "Settled",
+        "Refunded"
+      ]
+    },
+    {
+      "authorization": null,
+      "effects": [
+        "refund held assets"
+      ],
+      "from": [
+        "WaitingAlice",
+        "WaitingBob",
+        "WaitingDecision"
+      ],
+      "name": "expire",
+      "to": "Refunded"
+    }
+  ],
+  "expected_zkir": [
+    "fundAlice",
+    "fundBob",
+    "decide",
+    "expire"
+  ],
+  "parameters": {
+    "alice": "alice",
+    "amount_a": 10,
+    "amount_b": 20,
+    "bob": "bob",
+    "choice_id": "settle",
+    "deadline": 100,
+    "token_a": {
+      "asset_name": "A",
+      "policy_id": "aa"
+    },
+    "token_b": {
+      "asset_name": "B",
+      "policy_id": "bb"
+    }
+  },
+  "schema_version": 1,
+  "status": "S3-experimental",
+  "toolchain": {
+    "compact_compiler": "0.34.100",
+    "compact_language": "0.26.0",
+    "compact_runtime": "0.19.100",
+    "midnight_ledger": "9.1.0.0-rc.3",
+    "zkir": "3"
+  },
+  "witnesses": [
+    {
+      "constraint": "persistentHash(aliceSecret) == aliceAuthority",
+      "name": "aliceSecret",
+      "used_by": [
+        "fundAlice"
+      ]
+    },
+    {
+      "constraint": "persistentHash(bobSecret) == bobAuthority",
+      "name": "bobSecret",
+      "used_by": [
+        "fundBob",
+        "decide"
+      ]
+    }
+  ]
+}
