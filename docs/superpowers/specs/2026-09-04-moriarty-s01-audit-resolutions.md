@@ -85,11 +85,15 @@ explicit semantic kinds:
 - `PartialOutputCompletion`: some required outputs exist while others remain outstanding.
 - `SameChainTransactionAtomicity`: all state changes commit in one ledger transaction or none commit.
 - `ContiguousWalletExecution`: ordered wallet calls execute contiguously under the declared wallet mechanism.
-- `CrossDomainAllOrRefund`: each domain reaches fulfillment or the authorized recovery outcome under stated assumptions.
+- `CrossDomainAllOrRefund`: either all required domains fulfill, or all affected
+  domains satisfy the jointly authorized refund predicate. Mixed fulfillment
+  and refund does not satisfy this kind. Compensation is not a refund.
 - `EndToEndAtomicity`: the declared application-wide outcome commits as one indivisible semantic result.
 
 The XML term `partial_fill` names this ambiguous family only. It is not itself
 an authorization predicate. Each use must select one kind and settlement level.
+Cross-domain all-or-refund is conditional on named finality and liveness
+assumptions. It does not assert simultaneous commits or end-to-end atomicity.
 
 ## G17: distinct empirical obligations
 
