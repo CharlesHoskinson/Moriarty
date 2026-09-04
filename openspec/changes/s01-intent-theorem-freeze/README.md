@@ -30,10 +30,21 @@ results.
 Do not change Core. Do not select an S02 architecture. Do not change the prompt,
 the approved design, semantic scope, or old evidence.
 
-The eventual atomic-swap checker applies only to `SignAfterResolve`. It performs
+The local atomic-swap experiment applies only to `SignAfterResolve`. It performs
 exact transfer comparison only. It cannot establish authenticated effect
 completeness. It cannot authorize signing.
 
 Complete effect projection remains an open gap. The `SignBeforeResolve`
 boundaries remain an open gap.
 
+## Initial implementation
+
+The [effect checker](../../../moriarty/intent.py) compares transfer multisets.
+The [vector](../../../evidence/s01-intent-theorem-freeze/atomic-swap-extra-effect.json)
+contains the canonical settlement and one extra third-party payment.
+The [tests](../../../tests/test_intent_verifier.py) reconstruct settlement from Core
+and check rejection, restoration, malformed inputs, and duplicate transfers.
+
+The [execution audit](../../../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
+records the remaining freeze obligations. The aggregate S01 validator and
+evidence manifest have not been implemented.

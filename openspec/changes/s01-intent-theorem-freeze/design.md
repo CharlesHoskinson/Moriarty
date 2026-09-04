@@ -9,15 +9,16 @@ architecture decision. S04 remains responsible for mechanization.
 
 The later evidence manifest must bind immutable inputs and exact outputs with
 SHA-256 digests. A later validator must recompute each acceptance predicate from
-repository files. This Task 1 package supplies no validation result.
+repository files. This package supplies no aggregate validation result.
 
 ## Negative controls
 
-The atomic-swap baseline and extra-effect mutant are specified test vectors.
-Their checks have not run in Task 1. The mutant must fail with
-`UNAUTHORIZED_EXTRA_EFFECT` without a wider signed intent.
+The atomic-swap baseline and extra-effect mutant have a local executable test.
+The baseline must return `VALID`. The mutant must fail with
+`UNAUTHORIZED_EXTRA_EFFECT` without a wider policy. Removing the appended
+effect must restore the baseline result.
 
-The eventual checker is limited to the `SignAfterResolve` flow. It performs
+The local checker is limited to the `SignAfterResolve` flow. It performs
 exact transfer comparison only. It cannot establish authenticated effect completeness.
 It cannot authorize signing.
 
