@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -22,7 +23,10 @@ def artifact(path: Path) -> dict[str, object]:
     }
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=OUTPUT)
+    output = parser.parse_args(argv).output
     analysis = json.loads((GRAPH_OUT / ".graphify_analysis.json").read_text(encoding="utf-8"))
     diagnostic = analysis["diagnostic"]
     artifact_names = (
@@ -81,7 +85,7 @@ def main() -> None:
         ],
         "artifacts": {name: artifact(GRAPH_OUT / name) for name in artifact_names},
     }
-    OUTPUT.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    output.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(manifest, sort_keys=True))
 
 
