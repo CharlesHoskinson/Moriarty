@@ -61,6 +61,37 @@ def run_cli(root: Path, *arguments: str, env: dict[str, str] | None = None):
     )
 
 
+def run_recompute_api(root: Path):
+    program = """
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("s01_programmatic_validator", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+try:
+    value = module.recompute_gate()
+except Exception as error:
+    print(json.dumps({
+        "status": "invalid",
+        "error_type": type(error).__name__,
+        "error": str(error),
+    }, sort_keys=True))
+    raise SystemExit(1)
+print(json.dumps(value, sort_keys=True))
+"""
+    return subprocess.run(
+        [str(PYTHON), "-c", program, str(root / SCRIPT)],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
 def rewrite_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
@@ -448,6 +479,82 @@ def test_write_mode_is_explicit_and_default_mode_requires_receipts(tmp_path: Pat
 
     checked = run_cli(root)
     assert checked.returncode == 0, checked.stdout + checked.stderr
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ("missing-report", "stale-report", "missing-manifest", "stale-manifest", "stale-validator"),
+)
+def test_recompute_gate_is_closed_over_published_receipts(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = copied_package(tmp_path)
+    report_path = root / "evidence/s01-intent-theorem-freeze/validation-report.json"
+    manifest_path = root / "evidence/s01-intent-theorem-freeze/evidence-manifest.json"
+    if mutation == "missing-report":
+        report_path.unlink()
+    elif mutation == "stale-report":
+        report = json.loads(report_path.read_text())
+        report["gate_results"]["S01-10"] = False
+        rewrite_json(report_path, report)
+    elif mutation == "missing-manifest":
+        manifest_path.unlink()
+    elif mutation == "stale-manifest":
+        manifest = json.loads(manifest_path.read_text())
+        manifest["manifest_sha256"] = "0" * 64
+        rewrite_json(manifest_path, manifest)
+    else:
+        validator = root / SCRIPT
+        validator.write_text(validator.read_text() + "\n# stale validator\n", encoding="utf-8")
+
+    result = run_recompute_api(root)
+
+    assert result.returncode != 0
+    parsed = json.loads(result.stdout)
+    assert parsed["status"] == "invalid"
+    assert parsed["error_type"] == "ValidationError"
+
+
+@pytest.mark.parametrize("mutation", ("missing-definition", "unresolved-reference"))
+def test_programmatic_schema_reference_failures_are_validation_errors(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = copied_package(tmp_path)
+    schema_path = root / "schemas/intent/s01-artifacts-v1.json"
+    schema = json.loads(schema_path.read_text())
+    if mutation == "missing-definition":
+        schema["$defs"].pop("terminology")
+    else:
+        schema["$defs"]["terminology"] = {"$ref": "#/$defs/not-present"}
+    rewrite_json(schema_path, schema)
+
+    result = run_recompute_api(root)
+
+    assert result.returncode != 0
+    parsed = json.loads(result.stdout)
+    assert parsed["error_type"] == "ValidationError"
+    assert "schema" in parsed["error"]
+
+
+@pytest.mark.parametrize("keyword", ("$ref", "$dynamicRef"))
+def test_external_schema_references_are_rejected_before_resolution(
+    tmp_path: Path, keyword: str
+) -> None:
+    root = copied_package(tmp_path)
+    schema_path = root / "schemas/intent/s01-artifacts-v1.json"
+    schema = json.loads(schema_path.read_text())
+    schema["$defs"]["terminology"] = {
+        keyword: "https://schemas.invalid/external.json"
+    }
+    rewrite_json(schema_path, schema)
+
+    result = run_recompute_api(root)
+
+    assert result.returncode != 0
+    parsed = json.loads(result.stdout)
+    assert parsed["error_type"] == "ValidationError"
+    assert "unsupported schema reference" in parsed["error"]
+    assert "reference resolution failed" not in parsed["error"]
 
 
 def test_failed_write_mode_does_not_replace_existing_receipts(tmp_path: Path) -> None:

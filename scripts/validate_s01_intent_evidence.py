@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from jsonschema import Draft202012Validator  # noqa: E402
 from jsonschema.exceptions import SchemaError, ValidationError as SchemaValidationError  # noqa: E402
+from referencing.exceptions import Unresolvable  # noqa: E402
 
 
 EVIDENCE = ROOT / "evidence/s01-intent-theorem-freeze"
@@ -354,14 +355,39 @@ def _require_finite_json(value: object, context: str = "artifact") -> None:
             _require_finite_json(child, f"{context}[{index}]")
 
 
+def _validate_self_contained_references(value: object) -> None:
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if key in {"$ref", "$dynamicRef"} and (
+                not isinstance(child, str) or not child.startswith("#/$defs/")
+            ):
+                raise ValidationError(
+                    f"S01 schema has an unsupported schema reference in {key}"
+                )
+            _validate_self_contained_references(child)
+    elif isinstance(value, Sequence) and not isinstance(
+        value, (str, bytes, bytearray)
+    ):
+        for child in value:
+            _validate_self_contained_references(child)
+
+
 def _load_schema() -> dict[str, object]:
     schema = load_json(
         _closed_path("schemas/intent/s01-artifacts-v1.json", "schema")
     )
+    _validate_self_contained_references(schema)
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as error:
         raise ValidationError(f"S01 schema is invalid: {error.message}") from error
+    definitions = schema.get("$defs")
+    required_definitions = set(ARTIFACT_DEFS.values()) | {
+        "validationReport",
+        "evidenceManifest",
+    }
+    if not isinstance(definitions, dict) or not required_definitions <= set(definitions):
+        raise ValidationError("S01 schema is missing a required definition")
     return schema
 
 
@@ -379,6 +405,10 @@ def _schema_validate_one(
         location = ".".join(str(part) for part in error.absolute_path) or "<root>"
         raise ValidationError(
             f"S01 schema validation failed for {name} at {location}: {error.message}"
+        ) from error
+    except Unresolvable as error:
+        raise ValidationError(
+            f"S01 schema reference resolution failed for {name}"
         ) from error
 
 
@@ -788,12 +818,12 @@ def _validate_pinned_bytes() -> None:
             raise ValidationError(f"S01 reviewed normative output digest changed: {path_text}")
 
 
-def recompute_gate(
+def _recompute_semantic_gate(
     *,
     artifact_overrides: dict[str, dict[str, object]] | None = None,
     scope_override: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Recompute the ten semantic gates; this does not validate published receipts."""
+    """Recompute semantic gates and reviewed pins without reading generated receipts."""
     artifacts = load_artifacts() if artifact_overrides is None else artifact_overrides
     scope = (
         load_json(_closed_path("evidence/semantic-scope/index.json", "semantic scope"))
@@ -831,6 +861,20 @@ def recompute_gate(
         "status": "recomputed-package-gate-passed",
         "gate_results": gate_results,
     }
+
+
+def recompute_gate(
+    *,
+    artifact_overrides: dict[str, dict[str, object]] | None = None,
+    scope_override: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Recompute all gates and close them against published report and manifest."""
+    result = _recompute_semantic_gate(
+        artifact_overrides=artifact_overrides,
+        scope_override=scope_override,
+    )
+    _validate_published_receipts(result)
+    return result
 
 
 def _report_for(result: dict[str, object]) -> dict[str, object]:
@@ -946,9 +990,7 @@ def _validate_manifest(
             raise ValidationError(f"S01 evidence manifest output digest or role is invalid: {path_text}")
 
 
-def validate_published_evidence() -> dict[str, object]:
-    """Recompute semantic gates and close them against the report and manifest."""
-    result = recompute_gate()
+def _validate_published_receipts(result: dict[str, object]) -> None:
     report = load_json(
         _closed_path(
             "evidence/s01-intent-theorem-freeze/validation-report.json",
@@ -963,7 +1005,11 @@ def validate_published_evidence() -> dict[str, object]:
         )
     )
     _validate_manifest(manifest, result)
-    return result
+
+
+def validate_published_evidence() -> dict[str, object]:
+    """Run the closed public gate, including report and manifest validation."""
+    return recompute_gate()
 
 
 def _publish_atomically(path: Path, payload: bytes) -> None:
@@ -981,7 +1027,7 @@ def _publish_atomically(path: Path, payload: bytes) -> None:
 
 
 def write_evidence() -> dict[str, object]:
-    result = recompute_gate()
+    result = _recompute_semantic_gate()
     report = _report_for(result)
     report_bytes = _json_bytes(report)
     manifest = _manifest_for(result, report_bytes)

@@ -139,25 +139,25 @@ git diff --check
   schema, semantic, pin, and receipt failures.
 - `load_artifacts()` loads only the nine normative S01 JSON artifacts. Generated
   receipts do not participate in semantic gate computation.
-- `recompute_gate()` recomputes the ten semantic gates, verifies addressed
-  source imports, and checks immutable and reviewed-byte pins. It deliberately
-  does not validate the previously published report or manifest.
-- `validate_published_evidence()` is the closed read-only API. It calls
-  `recompute_gate()` and then independently validates report identity, manifest
-  identity, canonical self-hash, exact path closure, roles, and file digests.
-- Default CLI execution calls `validate_published_evidence()`. Therefore a CLI
-  success cannot be confused with semantic-only success.
+- `_recompute_semantic_gate()` is the private bootstrap helper. It recomputes
+  the ten semantic gates, verifies addressed source imports, and checks immutable
+  and reviewed-byte pins without reading generated receipts.
+- `recompute_gate()` is the planned closed public API. After private semantic
+  recomputation, it independently validates report identity, manifest identity,
+  canonical self-hash, exact path closure, roles, and file digests.
+- `validate_published_evidence()` delegates to the closed `recompute_gate()`.
+  Default CLI execution uses this public closed path. Neither public API can
+  report package success when a receipt or validator digest is missing or stale.
 - `--write-evidence` is the only publishing mode. It runs every semantic gate,
   constructs both receipts in memory, schema-validates them, checks hashes and
   closure, and only then replaces the two bounded output paths.
 - CLI failures are one JSON object on stdout with nonzero status and no Python
   traceback. Unknown arguments fail the same way.
 
-This separation resolves the outline/corrections difference: the outline placed
-receipt checks inside `recompute_gate()`, while the audited correction requires
-semantic computation to remain separate from previously published receipts.
-Callers that require closure must use `validate_published_evidence()` or the
-default CLI, not `recompute_gate()` alone.
+This separation satisfies both governing requirements: the planned public
+`recompute_gate()` API remains receipt-closed, while the audited correction's
+separate semantic computation is private and is used only to bootstrap explicit
+publication.
 
 ## Validation coverage
 
@@ -213,3 +213,53 @@ with a failing test and fixed before final verification. The final mutation
 suite and full repository suite found no unresolved functional concern. The
 reviewer rechecked the stable, resealed files and approved them with no remaining
 Critical, Important, or Minor finding.
+
+## Post-review API and schema-reference correction
+
+The controller's final spec-and-quality review found that the public
+`recompute_gate()` returned semantic success without validating generated
+receipts, and that JSON Schema reference-resolution failures escaped the stable
+`ValidationError` contract.
+
+The initial focused reproduction was:
+
+```text
+7 failed, 88 deselected in 0.90s
+```
+
+Five failures showed `recompute_gate()` returning success with a missing or
+stale report, missing or stale manifest, or stale validator digest. Two failures
+showed `_WrappedReferencingError` instead of `ValidationError` for a missing
+definition or unresolved local reference.
+
+Two self-containment mutations then completed a separate RED cycle:
+
+```text
+2 failed, 95 deselected in 0.49s
+```
+
+External `$ref` and `$dynamicRef` values reached the resolver instead of being
+rejected before resolution.
+
+The corrected targeted result was:
+
+```text
+9 passed, 88 deselected in 1.26s
+```
+
+After the final source changes, the actual publication command was run once:
+
+```text
+/home/charl/Moriarty/.venv/bin/python scripts/validate_s01_intent_evidence.py --write-evidence
+```
+
+The resealed default read-only validator returned all ten true gates and status
+`recomputed-package-gate-passed`. Final test results were:
+
+```text
+97 passed in 8.24s
+278 passed in 9.61s
+```
+
+The first result is the focused Task 5 suite. The second is the full repository
+suite. Syntax compilation and `git diff --check` also returned exit status zero.
