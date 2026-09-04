@@ -18,6 +18,10 @@ Begin with Task 1 and the independent Task 4 transfer-effect experiment.
 Keep Tasks 2, 3, and 5 open until their freeze obligations have explicit dispositions.
 The XML and approved-design digests remain unchanged.
 
+The [2026-09-04 resolution supplement](../specs/2026-09-04-moriarty-s01-audit-resolutions.md)
+now defines those dispositions for the user's full-prompt execution request.
+Continue Tasks 2, 3, and 5 with that supplement as an additional immutable input.
+
 For Task 4, reject malformed mapping fields without coercion. A successful
 effect comparison does not permit signing. Set `signing_request_permitted`
 to false for both the valid baseline and the rejected mutant. Treat `valid`
