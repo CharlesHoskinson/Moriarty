@@ -30,9 +30,14 @@ and research evidence. Do not commit credentials or unredacted environments.
 ## Current execution boundary
 
 The audited S01 starting increment, audit resolutions, and registries are
-integrated into `main`. Tasks 1 through 4 have passed independent review.
-Continue with the validator and evidence-only transition
-under the additive S01 audit resolutions. The full S01 gate has not passed.
+integrated into `main`. Tasks 1 through 5 have passed independent review.
+The closed validator recomputes the ten local S01 package gates and validates
+the published receipts. Continue with the evidence-only wiki transition and
+final whole-S01 review. These package gates are not the 24 XML release gates.
+
+S02 uses Quint models and the Quint CLI with the Apalache backend, as directed
+by the user. The reviewed model-comparison design is preparation, not an
+executed comparison or architecture selection.
 
 All architecture candidates must be tested before selecting an architecture.
 An absent proof, parameter file, pilot, or measurement is not evidence of infeasibility.
