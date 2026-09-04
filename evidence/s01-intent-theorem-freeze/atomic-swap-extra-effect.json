@@ -1,0 +1,102 @@
+{
+  "schema_id": "moriarty.dev/intent-plan-vector/v1",
+  "application": "canonical-atomic-swap",
+  "resolution": "SignAfterResolve",
+  "scope": "local-effect-check-only",
+  "limitations": [
+    "No authenticated-completeness guarantee.",
+    "No other authorization checks are performed."
+  ],
+  "policy": {
+    "allowed": [
+      {
+        "kind": "transfer",
+        "source": "alice",
+        "destination": "bob",
+        "policy_id": "aa",
+        "asset_name": "A",
+        "quantity": 10
+      },
+      {
+        "kind": "transfer",
+        "source": "bob",
+        "destination": "alice",
+        "policy_id": "bb",
+        "asset_name": "B",
+        "quantity": 20
+      }
+    ],
+    "required": [
+      {
+        "kind": "transfer",
+        "source": "alice",
+        "destination": "bob",
+        "policy_id": "aa",
+        "asset_name": "A",
+        "quantity": 10
+      },
+      {
+        "kind": "transfer",
+        "source": "bob",
+        "destination": "alice",
+        "policy_id": "bb",
+        "asset_name": "B",
+        "quantity": 20
+      }
+    ]
+  },
+  "baseline_effects": [
+    {
+      "kind": "transfer",
+      "source": "alice",
+      "destination": "bob",
+      "policy_id": "aa",
+      "asset_name": "A",
+      "quantity": 10
+    },
+    {
+      "kind": "transfer",
+      "source": "bob",
+      "destination": "alice",
+      "policy_id": "bb",
+      "asset_name": "B",
+      "quantity": 20
+    }
+  ],
+  "mutant_effects": [
+    {
+      "kind": "transfer",
+      "source": "alice",
+      "destination": "bob",
+      "policy_id": "aa",
+      "asset_name": "A",
+      "quantity": 10
+    },
+    {
+      "kind": "transfer",
+      "source": "bob",
+      "destination": "alice",
+      "policy_id": "bb",
+      "asset_name": "B",
+      "quantity": 20
+    },
+    {
+      "kind": "transfer",
+      "source": "alice",
+      "destination": "mallory",
+      "policy_id": "aa",
+      "asset_name": "A",
+      "quantity": 1
+    }
+  ],
+  "baseline_expected": {
+    "valid": true,
+    "reason": "VALID",
+    "signing_request_permitted": false
+  },
+  "mutant_expected": {
+    "valid": false,
+    "reason": "UNAUTHORIZED_EXTRA_EFFECT",
+    "signing_request_permitted": false
+  }
+}
