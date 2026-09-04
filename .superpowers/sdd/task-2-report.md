@@ -58,3 +58,24 @@ The seven registries validate independently through `$defs` named
 `assumptionRegistry`, and `ambiguityResolutions`. The schema also exposes
 `judgment`, `planVector`, `validationReport`, and `evidenceManifest` for Tasks 3
 and 5.
+
+## Review correction cycle
+
+Review found that the first freeze described lifecycle consumption as one
+generic verifier/validator/auditor trio and described W5 runtime artifacts as
+if the S01 design author produced them. Targeted tests reproduced those defects.
+The tests also reproduced that report and manifest gate maps accepted missing
+or invented gate identifiers. A separate RED test reproduced the missing role
+field on manifest input and output digest records.
+
+The corrected registries now assign each lifecycle object its actual pipeline
+consumers. Terminology records distinguish commands, carriers, state,
+observations, evidence, and semantic types; runtime artifacts name runtime
+producers and consumers. Because this task defines meanings but not canonical
+serialization algorithms, every canonical representation status is
+`profile-dependent` rather than `defined`.
+
+Both future receipt schemas now require exactly `S01-01` through `S01-10` and
+reject all other gate keys. Manifest input and output records require a
+non-empty `role` in addition to `path` and `sha256`. The corrected focused suite
+reported 28 passed.

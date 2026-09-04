@@ -168,3 +168,71 @@ def test_actus_is_not_classified_as_a_human_pilot() -> None:
     assert g17["resolved_predicate"] == (
         "two-human-pilots-prefer-workflow AND actus-g19-through-g24-pass"
     )
+
+
+def test_lifecycle_metadata_names_real_pipeline_consumers() -> None:
+    records = {item["name"]: item for item in load("lifecycle-objects.json")["objects"]}
+    assert "quote-provider" in records["QuoteRequest"]["permitted_consumers"]
+    assert "user-or-client" in records["Quote"]["permitted_consumers"]
+    assert "resolver-or-solver" in records["OrderPayload"]["permitted_consumers"]
+    assert "user-or-signer" in records["ResolvedPlan"]["permitted_consumers"]
+    assert "wallet-or-custodian" in records["ResolvedPlan"]["permitted_consumers"]
+    assert "settlement-mechanism" in records["FulfillmentProof"]["permitted_consumers"]
+    assert len({tuple(item["permitted_consumers"]) for item in records.values()}) > 10
+
+
+def test_w5_runtime_terms_describe_runtime_producers_and_consumers() -> None:
+    terms = {item["noun"]: item for item in load("terminology.json")["terms"]}
+    expected = {
+        "ProofRequest": ("verifier-or-client", "prover", "command"),
+        "ProofReceipt": ("prover-or-proof-verifier", "intent-verifier", "evidence"),
+        "SigningRequest": ("wallet-or-client", "user-or-signer", "command"),
+        "SubmissionReceipt": ("submission-interface", "runtime-or-indexer", "evidence"),
+        "ResolvedPlan": ("resolver-or-solver", "wallet-or-custodian", "carrier"),
+    }
+    for noun, (producer, consumer, category) in expected.items():
+        assert terms[noun]["producer"] == producer
+        assert consumer in terms[noun]["permitted_consumers"]
+        assert terms[noun]["semantic_category"] == category
+        assert terms[noun]["canonical_representation_status"] == "profile-dependent"
+        assert "S01-design-authority" not in terms[noun]["authority_boundary"]
+
+
+def test_report_and_manifest_require_exactly_the_ten_frozen_gates() -> None:
+    expected = {f"S01-{index:02d}" for index in range(1, 11)}
+    definitions = schema()["$defs"]
+    for name in ("validationReport", "evidenceManifest"):
+        gate_schema = definitions[name]["properties"]["gate_results"]
+        assert gate_schema["additionalProperties"] is False
+        assert set(gate_schema["required"]) == expected
+        assert set(gate_schema["properties"]) == expected
+
+
+def test_report_gate_schema_rejects_missing_and_invented_gates() -> None:
+    gate_schema = schema()["$defs"]["validationReport"]["properties"]["gate_results"]
+    validator = Draft202012Validator(gate_schema)
+    gates = {f"S01-{index:02d}": True for index in range(1, 11)}
+    validator.validate(gates)
+    missing = dict(gates)
+    del missing["S01-10"]
+    with pytest.raises(ValidationError):
+        validator.validate(missing)
+    invented = dict(gates)
+    invented["S01-11"] = True
+    with pytest.raises(ValidationError):
+        validator.validate(invented)
+
+
+def test_manifest_digest_records_require_a_nonblank_role() -> None:
+    manifest = schema()["$defs"]["evidenceManifest"]
+    for field in ("inputs", "outputs"):
+        record = manifest["properties"][field]["items"]
+        assert "role" in record["required"]
+        validator = Draft202012Validator(record)
+        validator.validate({"path": "artifact.json", "sha256": "a" * 64,
+                            "role": "normative-input"})
+        with pytest.raises(ValidationError):
+            validator.validate({"path": "artifact.json", "sha256": "a" * 64})
+        with pytest.raises(ValidationError):
+            validator.validate({"path": "artifact.json", "sha256": "a" * 64,
+                                "role": ""})
