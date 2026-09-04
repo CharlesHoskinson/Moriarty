@@ -164,6 +164,29 @@ def test_gate_01_rejects_incomplete_or_ambiguous_terminology(mutation, pattern) 
 
 
 @pytest.mark.parametrize(
+    ("noun", "field", "value"),
+    (
+        ("SettlementProcess", "semantic_category", "evidence"),
+        ("SettlementReceipt", "semantic_category", "process"),
+        ("SettlementProcess", "aliases", []),
+    ),
+)
+def test_gate_01_enforces_settlement_process_receipt_semantics(
+    noun: str, field: str, value: object
+) -> None:
+    module = load_module()
+    changed = artifacts(module)
+    terms = {item["noun"]: item for item in changed["terminology"]["terms"]}
+    if field == "aliases":
+        terms["SettlementProcess"]["aliases"] = []
+        terms["SettlementReceipt"]["aliases"] = ["settlement"]
+    else:
+        terms[noun][field] = value
+    with pytest.raises(module.ValidationError, match="settlement process and receipt"):
+        module.recompute_gate(artifact_overrides=changed)
+
+
+@pytest.mark.parametrize(
     "mutation",
     (
         lambda a: a["lifecycle-objects"]["objects"].pop(),

@@ -97,10 +97,11 @@ REQUIRED_TERMS = (
     "ActusReferenceVectorCompatibility", "DivisibleEconomicFill",
     "PartialOutputCompletion", "SameChainTransactionAtomicity",
     "ContiguousWalletExecution", "CrossDomainAllOrRefund", "EndToEndAtomicity",
+    "SettlementProcess",
 )
 REQUIRED_TERM_IDS = tuple(
     [f"TERM-W4-{index:03d}" for index in range(1, 28)]
-    + [f"TERM-S01-{index:03d}" for index in range(1, 43)]
+    + [f"TERM-S01-{index:03d}" for index in range(1, 44)]
 )
 REQUIRED_XML_ALIASES = {
     "agreement", "intent", "objective", "quote", "authorization",
@@ -235,7 +236,7 @@ REVIEWED_OUTPUT_PINS = {
     "evidence/s01-intent-theorem-freeze/lifecycle-objects.json": "9bb967ab06b835d61fba5f6adcc11b70da27a10befd9da497a7cb3de3d3a7d3c",
     "evidence/s01-intent-theorem-freeze/observation-model.json": "b56f7c8653906064568d9e132008ba68e0121d3f001e85211b8f6965a2fd899c",
     "evidence/s01-intent-theorem-freeze/optimization-preferences.json": "040ed99d4576db165f91a9289fb365c4d172b76e0ee4dab5ab8120d3b36ea132",
-    "evidence/s01-intent-theorem-freeze/terminology.json": "b4572303254f932aba311ddc324cf774ad2501b01fe054a309cc75eb6ea935c3",
+    "evidence/s01-intent-theorem-freeze/terminology.json": "c16997ab1ab6445ea5fb3e76e910b621110bb025537e93c29ea10d5795354c3b",
 }
 OUTPUT_ROLES = {
     **{path: "reviewed normative S01 artifact" for path in REVIEWED_OUTPUT_PINS},
@@ -454,6 +455,18 @@ def _gate_01(artifacts: Mapping[str, dict[str, object]]) -> None:
                 raise ValidationError("S01 terminology alias collides with a canonical noun")
     if set(aliases) != REQUIRED_XML_ALIASES:
         raise ValidationError("S01 terminology does not cover the full XML inventory")
+    terms_by_noun = {item["noun"]: item for item in terms}
+    settlement_process = terms_by_noun["SettlementProcess"]
+    settlement_receipt = terms_by_noun["SettlementReceipt"]
+    if (
+        settlement_process["semantic_category"] != "process"
+        or settlement_process["aliases"] != ["settlement"]
+        or settlement_receipt["semantic_category"] != "evidence"
+        or settlement_receipt["aliases"] != []
+    ):
+        raise ValidationError(
+            "S01 settlement process and receipt categories or aliases are inconsistent"
+        )
     if not ATOMICITY_KINDS <= set(nouns):
         raise ValidationError("S01 terminology lacks an explicit atomicity kind")
     if {"DisplayProjection", "AuthorizationProjection"} - set(nouns):

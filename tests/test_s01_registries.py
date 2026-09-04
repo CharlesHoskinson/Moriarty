@@ -128,6 +128,23 @@ def test_required_terminology_and_lifecycle_objects_are_distinct() -> None:
     assert len(objects) == 27
 
 
+def test_settlement_process_is_distinct_from_receipt_evidence() -> None:
+    terms = {item["noun"]: item for item in load("terminology.json")["terms"]}
+    settlement_alias_owner = next(
+        item for item in terms.values() if "settlement" in item["aliases"]
+    )
+    receipt = terms["SettlementReceipt"]
+
+    assert settlement_alias_owner["noun"] == "SettlementProcess"
+    assert settlement_alias_owner["semantic_category"] == "process"
+    assert "fills and proofs" in settlement_alias_owner["definition"]
+    assert "final, spendable outcomes" in settlement_alias_owner["definition"]
+    assert "authorized recovery path" in settlement_alias_owner["definition"]
+    assert receipt["semantic_category"] == "evidence"
+    assert receipt["aliases"] == []
+    assert "settlement process" in receipt["excluded_meanings"][0].lower()
+
+
 def test_partial_fill_family_and_projections_are_explicit() -> None:
     names = {item["noun"] for item in load("terminology.json")["terms"]}
     assert {
