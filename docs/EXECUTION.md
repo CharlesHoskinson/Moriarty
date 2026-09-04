@@ -32,8 +32,10 @@ and research evidence. Do not commit credentials or unredacted environments.
 The audited S01 starting increment, audit resolutions, and registries are
 integrated into `main`. Tasks 1 through 5 have passed independent review.
 The closed validator recomputes the ten local S01 package gates and validates
-the published receipts. Continue with the evidence-only wiki transition and
-final whole-S01 review. These package gates are not the 24 XML release gates.
+the published receipts. The Task 6 wiki handoff is committed in the implementation
+branch. Whole-S01 review found a settlement-process/receipt terminology mismatch;
+correct it and obtain re-review before the completion transition. These package
+gates are not the 24 XML release gates.
 
 S02 uses Quint models and the Quint CLI with the Apalache backend, as directed
 by the user. The reviewed model-comparison design is preparation, not an
