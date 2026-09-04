@@ -98,10 +98,13 @@ def test_removing_the_extra_effect_restores_the_valid_result() -> None:
     }
     assert vector["resolution"] == "SignAfterResolve"
     assert vector["scope"] == "local-effect-check-only"
+    assert vector["artifact_kind"] == "intent-plan-vector"
+    assert vector["semantic_scope_version"] == "0.0.0-e00.2"
     assert vector["limitations"] == [
         "No authenticated-completeness guarantee.",
         "No other authorization checks are performed.",
     ]
+    assert mutant[-1] == Effect("transfer", "alice", "mallory", "aa", "A", 1)
 
 
 def test_reordering_allowed_effects_is_valid() -> None:
@@ -141,6 +144,27 @@ def test_empty_exact_policy_accepts_only_empty_actual_effects() -> None:
     certificate = verify_plan_effects(policy, ())
     assert certificate.reason == "VALID"
     assert certificate.signing_request_permitted is False
+
+
+@pytest.mark.parametrize("count", (0, -1, 1))
+def test_effect_count_mappings_are_not_actual_effect_iterables(count: int) -> None:
+    effect = Effect.from_mapping(EFFECT_KEYS)
+    policy = EffectPolicy(allowed=(effect,), required=())
+    with pytest.raises(TypeError, match="iterable of Effect values"):
+        verify_plan_effects(policy, {effect: count})
+
+
+def test_non_effect_actual_entries_are_rejected() -> None:
+    policy = EffectPolicy(allowed=(), required=())
+    with pytest.raises(TypeError, match="iterable of Effect values"):
+        verify_plan_effects(policy, ("invalid",))
+
+
+def test_generator_actual_effects_are_supported() -> None:
+    effect = Effect.from_mapping(EFFECT_KEYS)
+    policy = EffectPolicy(allowed=(effect,), required=(effect,))
+    actual = (item for item in (effect,))
+    assert verify_plan_effects(policy, actual).reason == "VALID"
 
 
 @pytest.mark.parametrize("field", EFFECT_KEYS)

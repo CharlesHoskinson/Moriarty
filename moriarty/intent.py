@@ -114,7 +114,12 @@ def verify_plan_effects(
     policy: EffectPolicy,
     actual: Iterable[Effect],
 ) -> VerificationCertificate:
-    actual_counter = Counter(actual)
+    if isinstance(actual, Mapping):
+        raise TypeError("actual must be an iterable of Effect values, not a mapping")
+    actual_effects = tuple(actual)
+    if not all(isinstance(effect, Effect) for effect in actual_effects):
+        raise TypeError("actual must be an iterable of Effect values")
+    actual_counter = Counter(actual_effects)
     extra = actual_counter - Counter(policy.allowed)
     if extra:
         return VerificationCertificate(
