@@ -82,6 +82,7 @@ declared scope.
 
 - WHEN the future checker evaluates the `SignAfterResolve` baseline
 - THEN it SHALL use exact transfer comparison only
+- AND the local comparison result SHALL be `VALID`
 - AND it SHALL NOT claim authenticated effect completeness
 - AND it SHALL NOT authorize signing.
 
@@ -112,4 +113,3 @@ Complete effect projection remains open. Its failure result is
 `reject-incomplete-effect-projection`. The `SignBeforeResolve` boundaries remain
 open. An architecture-specific Core operation produces
 `move-architecture-operation-to-s02`.
-

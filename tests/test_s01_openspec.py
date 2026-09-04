@@ -45,6 +45,7 @@ def test_s01_normative_spec_has_ten_scenarios() -> None:
     assert text.count("#### Scenario:") == 10
     assert "UNAUTHORIZED_EXTRA_EFFECT" in text
     assert "optimization preference" in text
+    assert "local comparison result SHALL be `VALID`" in text
 
 
 def test_s01_contract_keeps_unverified_work_open_and_narrow() -> None:

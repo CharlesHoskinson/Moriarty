@@ -46,3 +46,38 @@ Final focused result: `3 passed in 0.00s`.
 - Only Task 1 is selected in the seven-task checklist.
 - No Task 2 through Task 7 file was created or changed.
 - No prompt, approved design, Core, scope, or old evidence file was changed.
+
+## Reviewer correction
+
+Added an explicit `VALID` result for the Scenario 8 local baseline comparison.
+The signing and authenticated-effect-completeness limits remain unchanged.
+
+RED command and output:
+
+```text
+/home/charl/Moriarty/.venv/bin/python -m pytest tests/test_s01_openspec.py -q
+.F.                                                                      [100%]
+=================================== FAILURES ===================================
+__________________ test_s01_normative_spec_has_ten_scenarios ___________________
+
+    def test_s01_normative_spec_has_ten_scenarios() -> None:
+        text = (CHANGE / "specs/intent-safety/spec.md").read_text(encoding="utf-8")
+        assert text.count("#### Scenario:") == 10
+        assert "UNAUTHORIZED_EXTRA_EFFECT" in text
+        assert "optimization preference" in text
+>       assert "local comparison result SHALL be `VALID`" in text
+E       AssertionError: assert 'local comparison result SHALL be `VALID`' in '# Intent-safety specification\\n\\n## ADDED Requirements\\n\\nThe following ten acceptance predicates are requirements, n...` boundaries remain\\nopen. An architecture-specific Core operation produces\\n`move-architecture-operation-to-s02`.\\n\\n'
+
+tests/test_s01_openspec.py:48: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_s01_openspec.py::test_s01_normative_spec_has_ten_scenarios
+1 failed, 2 passed in 0.01s
+```
+
+GREEN command and output:
+
+```text
+/home/charl/Moriarty/.venv/bin/python -m pytest tests/test_s01_openspec.py -q
+...                                                                      [100%]
+3 passed in 0.01s
+```
