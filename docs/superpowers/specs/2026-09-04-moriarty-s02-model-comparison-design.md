@@ -219,7 +219,12 @@ Instantiate every model constant explicitly.
 
 Use reproducible sampled runs during construction. Record seeds and domain bounds.
 The final S02 result also requires actual model checking, not only simulation.
-Use the installed Quint model-checking backend with pinned version and binary hashes.
+Use `.qnt` source and Quint's `typecheck`, `run`, `test`, and `verify` commands.
+Use `quint verify --backend apalache` for final model checking.
+Pin the Quint and Apalache versions and binary hashes.
+Follow the modeling and language skills from the
+[Quint LLM Kit](https://github.com/quint-co/quint-llm-kit).
+The user's 2026-09-04 direction excludes a direct TLA+/TLC workflow.
 Record whether coverage is bounded-depth exploration or complete finite-state exploration.
 Record the exact invariant, initializer, step operator, and termination behavior.
 
