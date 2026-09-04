@@ -236,3 +236,66 @@ def test_manifest_digest_records_require_a_nonblank_role() -> None:
         with pytest.raises(ValidationError):
             validator.validate({"path": "artifact.json", "sha256": "a" * 64,
                                 "role": ""})
+
+
+def test_intent_safety_judgment_has_the_frozen_shape() -> None:
+    judgment = load("intent-safety-judgment.json")
+    judgment_schema = schema()["$defs"]["judgment"]
+    Draft202012Validator(judgment_schema).validate(judgment)
+    assert judgment_schema["additionalProperties"] is False
+    assert judgment_schema["properties"]["premises"]["items"]["additionalProperties"] is False
+    assert judgment_schema["properties"]["conclusion"]["additionalProperties"] is False
+    assert judgment["schema_id"] == "moriarty.dev/intent-safety-judgment/v1"
+    assert judgment["artifact_kind"] == "intent-safety-judgment"
+    assert judgment["scope_version"] == "0.0.0-e00.2"
+    assert judgment["judgment_id"] == "INTENT-SAFETY"
+    assert judgment["version"] == "1"
+    assert judgment["architecture_binding"] == "neutral"
+    assert judgment["proof_status"] == "candidate-unmechanized"
+    assert judgment["quantifiers"] == [
+        "S_sign", "S_exec", "I", "P", "T", "O", "A", "H", "D", "N", "L"
+    ]
+    assert [(item["id"], item["expression"]) for item in judgment["premises"]] == [
+        ("well-typed", "wellTyped(I)"),
+        ("domain-bound", "I.domain = D"),
+        ("nonce-bound", "I.nonce = N"),
+        ("authorization-valid", "AuthorizationValid(I.authorization, S_exec, D, N)"),
+        ("snapshot-fresh", "SnapshotFresh(A.snapshot, A.querySet, A.mutability, S_exec)"),
+        ("resolver-bound", "ResolverBound(A.resolverId, A.codeHash, A.implementation, A.upgradeState)"),
+        ("assumptions-verified", "AssumptionsVerified(H, A.witnesses)"),
+        ("refinement-chain-bound", "RefinementChainBound(I, A, P)"),
+        (
+            "plan-valid",
+            "verifyPlan(I, S_sign, S_exec, A, P) = VerificationCertificate.valid",
+        ),
+        ("plan-executes", "executes(P, S_exec, A.asyncBoundary, T, O)"),
+        ("settlement-predicate", "SettlementPredicate(L, I.finalityPolicy, T, O)"),
+    ]
+    assert judgment["conclusion"] == {
+        "operator": "authorizedAt",
+        "expression": "authorizedAt(I, H, L, view(I.authorizer, D, L, T, O))",
+    }
+    assert set(judgment["required_bindings"]) == {
+        "network", "ledger", "verifying-contract", "upgrade-state", "core",
+        "serializer", "compiler", "circuit", "proof-parameters",
+        "resolver-identity", "resolver-code-hash", "resolver-implementation",
+        "proxy-implementation", "signing-state", "execution-state",
+        "state-sequence", "nonce-domain", "validity-interval", "signers",
+        "approval-scope", "assets", "effects", "fees", "disclosures",
+        "capabilities", "assumptions", "failure-outcomes",
+        "complete-effect-projection", "signing-order-profile",
+    }
+    assert set(judgment["subsidiary_claims"]) == {
+        "no-extra-spend", "no-diverted-change", "no-extra-mint-or-burn",
+        "fee-compliance", "signer-compliance", "disclosure-compliance",
+        "capability-non-escalation", "replay-rejection",
+        "cancel-or-fill-exclusivity", "refund-authorization",
+        "partial-fill-residual-correctness", "settlement-level-correspondence",
+        "composition",
+    }
+    assert set(judgment["exclusions"]) == {
+        "liveness", "economic-optimality", "legal-enforceability",
+        "stronger-settlement-levels", "proof-system-soundness",
+        "backend-correspondence", "ledger-correspondence",
+    }
+    assert "optimization-preference" not in json.dumps(judgment)

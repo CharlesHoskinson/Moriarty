@@ -1,0 +1,127 @@
+{
+  "schema_id": "moriarty.dev/intent-safety-judgment/v1",
+  "artifact_kind": "intent-safety-judgment",
+  "scope_version": "0.0.0-e00.2",
+  "judgment_id": "INTENT-SAFETY",
+  "version": "1",
+  "architecture_binding": "neutral",
+  "proof_status": "candidate-unmechanized",
+  "quantifiers": [
+    "S_sign",
+    "S_exec",
+    "I",
+    "P",
+    "T",
+    "O",
+    "A",
+    "H",
+    "D",
+    "N",
+    "L"
+  ],
+  "premises": [
+    {
+      "id": "well-typed",
+      "expression": "wellTyped(I)"
+    },
+    {
+      "id": "domain-bound",
+      "expression": "I.domain = D"
+    },
+    {
+      "id": "nonce-bound",
+      "expression": "I.nonce = N"
+    },
+    {
+      "id": "authorization-valid",
+      "expression": "AuthorizationValid(I.authorization, S_exec, D, N)"
+    },
+    {
+      "id": "snapshot-fresh",
+      "expression": "SnapshotFresh(A.snapshot, A.querySet, A.mutability, S_exec)"
+    },
+    {
+      "id": "resolver-bound",
+      "expression": "ResolverBound(A.resolverId, A.codeHash, A.implementation, A.upgradeState)"
+    },
+    {
+      "id": "assumptions-verified",
+      "expression": "AssumptionsVerified(H, A.witnesses)"
+    },
+    {
+      "id": "refinement-chain-bound",
+      "expression": "RefinementChainBound(I, A, P)"
+    },
+    {
+      "id": "plan-valid",
+      "expression": "verifyPlan(I, S_sign, S_exec, A, P) = VerificationCertificate.valid"
+    },
+    {
+      "id": "plan-executes",
+      "expression": "executes(P, S_exec, A.asyncBoundary, T, O)"
+    },
+    {
+      "id": "settlement-predicate",
+      "expression": "SettlementPredicate(L, I.finalityPolicy, T, O)"
+    }
+  ],
+  "conclusion": {
+    "operator": "authorizedAt",
+    "expression": "authorizedAt(I, H, L, view(I.authorizer, D, L, T, O))"
+  },
+  "required_bindings": [
+    "network",
+    "ledger",
+    "verifying-contract",
+    "upgrade-state",
+    "core",
+    "serializer",
+    "compiler",
+    "circuit",
+    "proof-parameters",
+    "resolver-identity",
+    "resolver-code-hash",
+    "resolver-implementation",
+    "proxy-implementation",
+    "signing-state",
+    "execution-state",
+    "state-sequence",
+    "nonce-domain",
+    "validity-interval",
+    "signers",
+    "approval-scope",
+    "assets",
+    "effects",
+    "fees",
+    "disclosures",
+    "capabilities",
+    "assumptions",
+    "failure-outcomes",
+    "complete-effect-projection",
+    "signing-order-profile"
+  ],
+  "subsidiary_claims": [
+    "no-extra-spend",
+    "no-diverted-change",
+    "no-extra-mint-or-burn",
+    "fee-compliance",
+    "signer-compliance",
+    "disclosure-compliance",
+    "capability-non-escalation",
+    "replay-rejection",
+    "cancel-or-fill-exclusivity",
+    "refund-authorization",
+    "partial-fill-residual-correctness",
+    "settlement-level-correspondence",
+    "composition"
+  ],
+  "exclusions": [
+    "liveness",
+    "economic-optimality",
+    "legal-enforceability",
+    "stronger-settlement-levels",
+    "proof-system-soundness",
+    "backend-correspondence",
+    "ledger-correspondence"
+  ]
+}
