@@ -66,9 +66,32 @@ The runner, pin table, interpreter, dependencies, operating system, and filesyst
 remain trusted. Replacing the runner and its pin table together is outside the
 stated guarantee.
 
+## Task 6 and whole-package review
+
+The whole-package reviewer inspected through Task 6 commit `89848ae`. The
+evidence-only wiki handoff, source metadata, and corrected OpenSpec status had
+no material findings. The review confirmed the local checker and receipt
+closure, but identified one P2 terminology error: required XML alias
+`settlement` referred to `SettlementReceipt`, an evidence object, rather than
+the protocol-specific settlement process defined by XML v1.3.
+
+The correction must introduce a separate `SettlementProcess`, move the alias,
+retain the receipt's evidence meaning, add a distinction regression, and update
+only the affected normative pin before recomputing receipts. This is a
+specification correction within S01, not a Core semantic motion. The prior
+manifest is preserved byte-for-byte under
+`raw/repository-observations/2026-09-04-s01-pre-settlement-correction-manifest.json`.
+Its SHA-256 is `e58efb60c4c8e85d9ff2de878bc0b9628c08b79430a5aa00a0ce397618d507bd`.
+The original 20-pin comparison remains a historical review observation; the
+revised terminology pin requires new independent review.
+
+The reviewer found no other material issue. Six whole-branch blank-line-at-EOF
+warnings are a documented, nonblocking style exception; see the final
+verification record. S01 remains open until the semantic correction is reviewed.
+
 ## Open work
 
-The evidence-only wiki transition and final whole-S01 review remain outstanding
-at this ledger revision.
+The settlement terminology correction, its independent re-review, and final
+whole-S01 completion transition remain outstanding at this ledger revision.
 The earlier Tasks 1 and 4 review is recorded in the
 [execution audit](2026-09-04-moriarty-v1.3-execution-audit.md).
