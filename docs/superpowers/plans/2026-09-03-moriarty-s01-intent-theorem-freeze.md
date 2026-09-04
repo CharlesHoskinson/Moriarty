@@ -8,6 +8,24 @@
 
 **Tech Stack:** Python 3.13, frozen dataclasses, JSON Schema Draft 2020-12, pytest, OpenSpec Markdown, SHA-256.
 
+## Execution audit — 2026-09-04
+
+Read the [execution audit](../reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
+before using the examples below. The audit identifies corrections to the
+sample parser, signing permission, and package validator.
+
+Begin with Task 1 and the independent Task 4 transfer-effect experiment.
+Keep Tasks 2, 3, and 5 open until their freeze obligations have explicit dispositions.
+The XML and approved-design digests remain unchanged.
+
+For Task 4, reject malformed mapping fields without coercion. A successful
+effect comparison does not permit signing. Set `signing_request_permitted`
+to false for both the valid baseline and the rejected mutant. Treat `valid`
+as an effect-comparison verdict only. Record this correction in the vector's limitations.
+
+For Task 5, apply A05 and A07 from the audit before implementing the validator.
+Use measured test counts. Do not copy a predicted count into completion evidence.
+
 ## Global Constraints
 
 - Keep semantic scope version `0.0.0-e00.2`.

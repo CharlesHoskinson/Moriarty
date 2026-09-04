@@ -35,6 +35,8 @@ will grow by merging evidence into durable topic pages.
 
 ## Active specification artifacts
 
+- [Prompt v1.3 execution audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md) — signing, parser, effect-completeness, and validator findings with execution dispositions.
+- [S01 intent-theorem contract](../openspec/changes/s01-intent-theorem-freeze/README.md) — initial implementation in progress, with unresolved theorem-freeze obligations.
 - [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
 - [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.

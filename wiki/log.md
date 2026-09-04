@@ -1,5 +1,13 @@
 # Wiki log
 
+## [2026-09-04] audit | Prompt v1.3 and initial S01 execution
+
+Audited the focused XML assignment, approved S01 design, and implementation plans.
+The [audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
+records repository observations, sample-code probes, and unresolved freeze obligations.
+The S01 OpenSpec contract begins implementation. The theorem and aggregate
+evidence gates remain open. The prompt, approved design, and Core snapshot retain their pins.
+
 ## [2026-09-03] research | ACTUS terminal completeness prompt
 
 Captured the complete public ACTUS site and documentation sitemap with
