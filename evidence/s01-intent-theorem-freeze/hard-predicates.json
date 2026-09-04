@@ -1,0 +1,445 @@
+{
+  "schema_id": "moriarty.dev/intent-hard-predicate-registry/v1",
+  "artifact_kind": "intent-hard-predicate-registry",
+  "scope_version": "0.0.0-e00.2",
+  "registry_kind": "hard",
+  "authorization_rule": "authorizedAt is valid only when every applicable hard predicate is valid over the complete AuthorizationProjection.",
+  "predicates": [
+    {
+      "id": "allowed-effects",
+      "version": "1",
+      "definition": "Every actual effect belongs to the signed allowed-effect relation.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "UNAUTHORIZED_EFFECT",
+      "signed_binding": "I.allowedEffects",
+      "external_premise": "complete AuthorizationProjection",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "forbidden-effects",
+      "version": "1",
+      "definition": "No actual effect belongs to the signed forbidden-effect relation.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "FORBIDDEN_EFFECT",
+      "signed_binding": "I.forbiddenEffects",
+      "external_premise": "complete AuthorizationProjection",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "no-extra-spend",
+      "version": "1",
+      "definition": "Every debit is authorized by asset, amount, source, destination, and purpose.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "UNAUTHORIZED_EXTRA_SPEND",
+      "signed_binding": "I.allowedEffects and I.capabilityBudget",
+      "external_premise": "complete spend evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "no-diverted-change",
+      "version": "1",
+      "definition": "Every change output reaches its signed destination and asset bounds.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "DIVERTED_CHANGE",
+      "signed_binding": "I.allowedEffects.changeDestinations",
+      "external_premise": "complete output evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "no-extra-mint-or-burn",
+      "version": "1",
+      "definition": "Minted and burned quantities remain within signed asset-policy bounds.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "UNAUTHORIZED_MINT_OR_BURN",
+      "signed_binding": "I.allowedEffects.mintBurnBounds",
+      "external_premise": "ledger policy correspondence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "fee-compliance",
+      "version": "1",
+      "definition": "Every fee is attributable and within the signed FeeLedger limits.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "FEE_POLICY_VIOLATION",
+      "signed_binding": "I.feeLedger",
+      "external_premise": "complete fee projection",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "signer-compliance",
+      "version": "1",
+      "definition": "Signatures satisfy identities, thresholds, roles, and approval scope.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "SIGNER_POLICY_VIOLATION",
+      "signed_binding": "I.signerPolicy",
+      "external_premise": "signature verification",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "disclosure-compliance",
+      "version": "1",
+      "definition": "Every disclosure is allowed for its recipient and purpose.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "DISCLOSURE_POLICY_VIOLATION",
+      "signed_binding": "I.disclosurePolicy",
+      "external_premise": "disclosure audit evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "capability-non-escalation",
+      "version": "1",
+      "definition": "Execution exercises no capability beyond the signed budget.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "CAPABILITY_ESCALATION",
+      "signed_binding": "I.capabilityBudget",
+      "external_premise": "runtime capability correspondence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "replay-rejection",
+      "version": "1",
+      "definition": "Nonce, domain, validity, state sequence, and consumption state reject replay.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "REPLAY_DETECTED",
+      "signed_binding": "I.domain, I.nonce, I.validity",
+      "external_premise": "authorization registry state",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "cancel-or-fill-exclusivity",
+      "version": "1",
+      "definition": "At most one of cancellation or fill wins for the same consumable authorization.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "CANCEL_FILL_CONFLICT",
+      "signed_binding": "I.failurePolicy and authorization identity",
+      "external_premise": "linearizable registry or ledger evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "refund-authorization",
+      "version": "1",
+      "definition": "Refunds occur only under the signed condition and to the signed destination.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "UNAUTHORIZED_REFUND",
+      "signed_binding": "I.failurePolicy.refundPredicate",
+      "external_premise": "complete recovery evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "partial-fill-residual-correctness",
+      "version": "1",
+      "definition": "A selected partial-fill kind conserves consumed quantity and leaves an explicitly authorized residual.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "INVALID_RESIDUAL",
+      "signed_binding": "I.partialFillPolicy",
+      "external_premise": "fill, residual, and consumption evidence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "Consumed quantity is removed and the conserved residual requires explicit authorization; an unsigned residual is unauthorized.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "settlement-level-correspondence",
+      "version": "1",
+      "definition": "Claims assert only the settlement level supported by named ledger evidence.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "SETTLEMENT_LEVEL_MISMATCH",
+      "signed_binding": "I.finalityPolicy",
+      "external_premise": "ledger and finality correspondence",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "Composition is conjunction; invalid or unavailable components cannot be promoted to valid.",
+      "enters_authorized_at": true
+    },
+    {
+      "id": "composition",
+      "version": "1",
+      "definition": "Composed intents preserve every component hard predicate and reject conflicting authority.",
+      "canonical_parameters": [
+        "intent identity",
+        "domain",
+        "settlement level",
+        "authorization projection"
+      ],
+      "evaluation_state": "Evaluate against pinned signing and execution state; missing, stale, or uncheckable evidence is unavailable.",
+      "required_artifacts": [
+        "signed intent",
+        "resolved plan or execution-bound plan",
+        "complete authorization projection"
+      ],
+      "pass_result": "valid",
+      "fail_result": "invalid",
+      "unavailable_result": "unavailable",
+      "stable_failure_reason": "COMPOSITION_VIOLATION",
+      "signed_binding": "component authorizations and composition policy",
+      "external_premise": "complete composed effect projection",
+      "settlement_levels": [
+        "applicable declared level"
+      ],
+      "residual_behavior": "The predicate remains applicable to every surviving residual authorization.",
+      "composition_rule": "All component predicates must be valid and authority intersections must be nonconflicting.",
+      "enters_authorized_at": true
+    }
+  ]
+}
+

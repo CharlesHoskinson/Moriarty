@@ -1,0 +1,1395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moriarty.dev/schemas/intent/s01-artifacts-v1.json",
+  "$defs": {
+    "terminology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "terms"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-terminology-registry"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "noun",
+              "definition",
+              "excluded_meanings",
+              "semantic_category",
+              "identity_rule",
+              "version_rule",
+              "mutability_rule",
+              "producer",
+              "permitted_consumers",
+              "authority_boundary",
+              "canonical_representation_status",
+              "basis",
+              "aliases",
+              "unresolved_aliases"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "noun": {
+                "type": "string",
+                "minLength": 1
+              },
+              "definition": {
+                "type": "string",
+                "minLength": 1
+              },
+              "excluded_meanings": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "semantic_category": {
+                "type": "string",
+                "minLength": 1
+              },
+              "identity_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mutability_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "producer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "permitted_consumers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "authority_boundary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "canonical_representation_status": {
+                "enum": [
+                  "defined",
+                  "profile-dependent",
+                  "not-canonical"
+                ]
+              },
+              "basis": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "unresolved_aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            }
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "lifecycleObjects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "objects"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-lifecycle-object-registry"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "primary_category",
+              "secondary_roles",
+              "producer",
+              "permitted_consumers",
+              "identity_rule",
+              "mutability_rule",
+              "scope",
+              "version",
+              "authority_boundary"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "primary_category": {
+                "enum": [
+                  "command",
+                  "authorization",
+                  "carrier",
+                  "state",
+                  "observation",
+                  "evidence"
+                ]
+              },
+              "secondary_roles": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "producer": {
+                "type": "string",
+                "minLength": 1
+              },
+              "permitted_consumers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "identity_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mutability_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "authority_boundary": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 27
+        }
+      }
+    },
+    "observationModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "actors",
+        "event_fields",
+        "display_projection",
+        "authorization_projection",
+        "declassification_rule",
+        "authorization_effect_projection_complete",
+        "signing_profiles",
+        "limitations"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-observation-model"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "observation_scope"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "user-or-signer",
+                  "counterparty",
+                  "resolver-or-solver",
+                  "prover",
+                  "runtime-or-indexer",
+                  "wallet-or-custodian",
+                  "ledger-observer",
+                  "auditor"
+                ]
+              },
+              "observation_scope": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 8
+        },
+        "event_fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "definition",
+              "visibility_rule",
+              "declassification_rule"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "definition": {
+                "type": "string",
+                "minLength": 1
+              },
+              "visibility_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "declassification_rule": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 15
+        },
+        "display_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "purpose",
+            "authority_rule",
+            "retains_complete_effect_set"
+          ],
+          "properties": {
+            "name": {
+              "enum": [
+                "DisplayProjection",
+                "AuthorizationProjection"
+              ]
+            },
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authority_rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retains_complete_effect_set": {
+              "type": "boolean"
+            }
+          }
+        },
+        "authorization_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "purpose",
+            "authority_rule",
+            "retains_complete_effect_set"
+          ],
+          "properties": {
+            "name": {
+              "enum": [
+                "DisplayProjection",
+                "AuthorizationProjection"
+              ]
+            },
+            "purpose": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authority_rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "retains_complete_effect_set": {
+              "type": "boolean"
+            }
+          }
+        },
+        "declassification_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorization_effect_projection_complete": {
+          "const": true
+        },
+        "signing_profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "authorization_boundary",
+              "requirements",
+              "implementation_status"
+            ],
+            "properties": {
+              "name": {
+                "enum": [
+                  "SignAfterResolve",
+                  "SignBeforeResolve"
+                ]
+              },
+              "authorization_boundary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "requirements": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "implementation_status": {
+                "const": "not-implemented"
+              }
+            }
+          },
+          "minItems": 2
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "predicateRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "registry_kind",
+        "authorization_rule",
+        "predicates"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "enum": [
+            "intent-hard-predicate-registry",
+            "intent-optimization-preference-registry"
+          ]
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registry_kind": {
+          "enum": [
+            "hard",
+            "preference"
+          ]
+        },
+        "authorization_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "version",
+              "definition",
+              "canonical_parameters",
+              "evaluation_state",
+              "required_artifacts",
+              "pass_result",
+              "fail_result",
+              "unavailable_result",
+              "stable_failure_reason",
+              "signed_binding",
+              "external_premise",
+              "settlement_levels",
+              "residual_behavior",
+              "composition_rule",
+              "enters_authorized_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "definition": {
+                "type": "string",
+                "minLength": 1
+              },
+              "canonical_parameters": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "evaluation_state": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required_artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "pass_result": {
+                "const": "valid"
+              },
+              "fail_result": {
+                "const": "invalid"
+              },
+              "unavailable_result": {
+                "const": "unavailable"
+              },
+              "stable_failure_reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "signed_binding": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "external_premise": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "settlement_levels": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "residual_behavior": {
+                "type": "string",
+                "minLength": 1
+              },
+              "composition_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "enters_authorized_at": {
+                "type": "boolean"
+              },
+              "ranking_precondition": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "assumptionRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "assumptions"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-assumption-registry"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "version",
+              "kind",
+              "owner",
+              "scope",
+              "affected_claims",
+              "evidence_method",
+              "freshness_rule",
+              "revocation_rule",
+              "failure_result",
+              "verification_status",
+              "observable"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "cryptographic",
+                  "compiler",
+                  "proof-system",
+                  "ledger",
+                  "wallet-or-custody",
+                  "oracle-or-registry",
+                  "resolver-or-solver",
+                  "runtime-or-indexer",
+                  "relay-bridge-or-finality",
+                  "availability-or-liveness"
+                ]
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1
+              },
+              "affected_claims": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "evidence_method": {
+                "type": "string",
+                "minLength": 1
+              },
+              "freshness_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revocation_rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "failure_result": {
+                "enum": [
+                  "invalid",
+                  "unavailable"
+                ]
+              },
+              "verification_status": {
+                "enum": [
+                  "assumed",
+                  "unavailable",
+                  "verified"
+                ]
+              },
+              "observable": {
+                "type": "boolean"
+              }
+            }
+          },
+          "minItems": 10
+        }
+      }
+    },
+    "judgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "judgment_id",
+        "version",
+        "architecture_binding",
+        "proof_status",
+        "quantifiers",
+        "premises",
+        "conclusion",
+        "required_bindings",
+        "subsidiary_claims",
+        "exclusions"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-safety-judgment"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "judgment_id": {
+          "const": "INTENT-SAFETY"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "architecture_binding": {
+          "const": "neutral"
+        },
+        "proof_status": {
+          "const": "candidate-unmechanized"
+        },
+        "quantifiers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "premises": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "expression"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expression": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "conclusion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operator",
+            "expression"
+          ],
+          "properties": {
+            "operator": {
+              "type": "string",
+              "minLength": 1
+            },
+            "expression": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required_bindings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "subsidiary_claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "ambiguityResolutions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "scope_version",
+        "resolutions"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-ambiguity-resolutions"
+        },
+        "scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolutions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "topic",
+              "source_locator",
+              "original_text",
+              "interpretation",
+              "status",
+              "implementation_status",
+              "proof_status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "topic": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_locator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "original_text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "interpretation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "enum": [
+                  "resolved-specification",
+                  "deferred"
+                ]
+              },
+              "implementation_status": {
+                "enum": [
+                  "not-implemented",
+                  "specified-only"
+                ]
+              },
+              "proof_status": {
+                "enum": [
+                  "not-proved",
+                  "not-applicable"
+                ]
+              },
+              "pilot_kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "actus_kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "resolved_predicate": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_locators": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            }
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "planVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "application",
+        "semantic_scope_version",
+        "policy",
+        "baseline_effects",
+        "mutant_effects",
+        "baseline_expected",
+        "mutant_expected",
+        "limitations"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-plan-vector"
+        },
+        "application": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "allowed",
+            "required"
+          ],
+          "properties": {
+            "allowed": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "source",
+                  "destination",
+                  "policy_id",
+                  "asset_name",
+                  "quantity"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "transfer"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "policy_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "asset_name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "minItems": 1
+            },
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "source",
+                  "destination",
+                  "policy_id",
+                  "asset_name",
+                  "quantity"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "transfer"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "destination": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "policy_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "asset_name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "minItems": 1
+            }
+          }
+        },
+        "baseline_effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "source",
+              "destination",
+              "policy_id",
+              "asset_name",
+              "quantity"
+            ],
+            "properties": {
+              "kind": {
+                "const": "transfer"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "destination": {
+                "type": "string",
+                "minLength": 1
+              },
+              "policy_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "mutant_effects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "source",
+              "destination",
+              "policy_id",
+              "asset_name",
+              "quantity"
+            ],
+            "properties": {
+              "kind": {
+                "const": "transfer"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "destination": {
+                "type": "string",
+                "minLength": 1
+              },
+              "policy_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "baseline_expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "valid",
+            "reason",
+            "signing_request_permitted"
+          ],
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "signing_request_permitted": {
+              "type": "boolean"
+            }
+          }
+        },
+        "mutant_expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "valid",
+            "reason",
+            "signing_request_permitted"
+          ],
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "signing_request_permitted": {
+              "type": "boolean"
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "validationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "package_id",
+        "status",
+        "semantic_scope_version",
+        "semantic_scope_sha256",
+        "gate_results",
+        "evidence_boundary"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-validation-report"
+        },
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_scope_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "gate_results": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "minProperties": 1
+        },
+        "evidence_boundary": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "evidenceManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "artifact_kind",
+        "package_id",
+        "sprint_id",
+        "status",
+        "semantic_scope_version",
+        "semantic_scope_sha256",
+        "inputs",
+        "outputs",
+        "commands",
+        "environment",
+        "gate_results",
+        "limitations",
+        "manifest_sha256"
+      ],
+      "properties": {
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "const": "intent-evidence-manifest"
+        },
+        "package_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sprint_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_scope_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "semantic_scope_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          },
+          "minItems": 1
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "python",
+            "platform"
+          ],
+          "properties": {
+            "python": {
+              "type": "string",
+              "minLength": 1
+            },
+            "platform": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "gate_results": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "minProperties": 1
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}
