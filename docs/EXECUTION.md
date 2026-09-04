@@ -29,9 +29,10 @@ and research evidence. Do not commit credentials or unredacted environments.
 
 ## Current execution boundary
 
-The audited S01 starting increment is integrated into `main`. Tasks 1 and 4
-have passed review. Continue with the registries, theorem artifact, validator,
-and evidence-only transition under the additive S01 audit resolutions.
+The audited S01 starting increment, audit resolutions, and registries are
+integrated into `main`. Tasks 1 through 4 have passed independent review.
+Continue with the validator and evidence-only transition
+under the additive S01 audit resolutions. The full S01 gate has not passed.
 
 All architecture candidates must be tested before selecting an architecture.
 An absent proof, parameter file, pilot, or measurement is not evidence of infeasibility.
