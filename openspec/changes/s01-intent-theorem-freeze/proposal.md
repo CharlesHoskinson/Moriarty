@@ -14,8 +14,9 @@ Core architectures. The package must expose incomplete evidence and ambiguity.
 ## Acceptance predicates
 
 The normative specification defines all ten predicates. These predicates are
-requirements, not passed results. The package status remains specified-only and
-in-progress until later tasks produce and validate the evidence.
+requirements, and the repository validator has now recomputed each one as
+passing for the bounded local S01 package. This S3 result is not a mechanized
+theorem, Task 7 completion, or passage of any prompt release gate.
 
 ## Failure outcomes
 
@@ -26,6 +27,6 @@ in-progress until later tasks produce and validate the evidence.
 
 ## Impact
 
-This package adds only S01 contract files and their structure test. It does not
-change Core, semantic scope, prompt inputs, approved design, or old evidence.
-
+This package adds the S01 contract, registries, local exact-transfer checker,
+tests, validation report, and evidence manifest. It does not change Core,
+semantic scope, prompt inputs, approved design, or old evidence.

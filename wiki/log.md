@@ -1,5 +1,18 @@
 # Wiki log
 
+## [2026-09-04] experiment | S01 evidence-only intent-safety freeze
+
+Recorded the architecture-neutral S01 terminology, observation model, hard
+predicates, preferences, assumptions, and candidate-unmechanized theorem. The
+validator recomputed all ten local package predicates. The local swap baseline
+was `VALID`, the extra-effect mutant was `UNAUTHORIZED_EXTRA_EFFECT`, and both
+certificates denied signing. No production signing request was attempted. The
+transition preserves semantic scope `0.0.0-e00.2` and its frozen digest.
+Mechanization, authenticated effect completeness, runtime `SignBeforeResolve`
+verification, proof and backend correspondence, ledger execution, ACTUS, human
+pilots, the 24 prompt release gates, and Task 7 review remain open. S02 retains
+the four-way architecture decision and uses Quint with Apalache, not TLA+/TLC.
+
 ## [2026-09-04] audit | Prompt v1.3 and initial S01 execution
 
 Audited the focused XML assignment, approved S01 design, and implementation plans.

@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-03T20:06:53Z
+updated_at: 2026-09-04T23:45:58Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -15,6 +15,8 @@ sources:
   - SRC-0029
   - SRC-0030
   - SRC-0031
+  - SRC-0032
+  - SRC-0033
 ---
 
 # Moriarty research journal
@@ -470,3 +472,74 @@ payoff semantics. Discover all 277 vectors from the pinned corpus. Fail the
 language path at the first fixture that needs a product-specific compiler
 bypass or an unapproved Core extension. Preserve the minimal counterexample and
 its full expected and actual ordered trace.
+
+## Iteration S01: freeze the architecture-neutral intent-safety interface
+
+- Timestamp: 2026-09-04T23:45:58Z
+- Repository evidence base: `3c87c3bb914c069153e1d700995f8e16971f1987`
+- State: ten local package predicates recomputed and passed at S3; Task 7
+  verification and independent review remain open
+
+### Trigger
+
+The user's instruction to execute the full XML version 1.3 assignment
+authorized execution of the architecture-neutral S01 plan. This record does
+not invent a separate human signoff event.
+
+### Frozen interface and local evidence
+
+**CLM-0132.** S01 froze the terminology, typed observations, hard predicates,
+optimization preferences, assumptions, and architecture-neutral intent-safety
+judgment. The theorem status is `candidate-unmechanized`. The fail-closed
+validator recomputed all ten local package predicates successfully, but that
+result is an S3 repository experiment rather than a proof. Source: SRC-0032 at
+`evidence-manifest.json`, `intent-safety-judgment.json`, and
+`validation-report.json`; observed 2026-09-04 at commit
+`3c87c3bb914c069153e1d700995f8e16971f1987`; authority experimental repository
+evidence; scope S01 specification and local verifier; evidence repository and
+experiment observation; reproduction reproduced; confidence high; lifecycle
+status S3.
+
+**CLM-0133.** For the local atomic-swap exact-transfer check, the baseline
+result is `VALID` and the extra-effect mutant result is
+`UNAUTHORIZED_EXTRA_EFFECT`. Both certificates set
+`signing_request_permitted` to false. No production signing request was
+attempted or authorized; the mutant therefore failed before signing. Source: SRC-0032 at
+`atomic-swap-extra-effect.json`; observed 2026-09-04 at commit
+`3c87c3bb914c069153e1d700995f8e16971f1987`; authority experimental repository
+evidence; scope the local `SignAfterResolve` transfer checker only; evidence
+experiment observation; reproduction reproduced; confidence high; lifecycle
+status S3.
+
+**CLM-0134.** The S01 G17 resolution separates two human-team preference pilots
+from the automated ACTUS G19-through-G24 benchmark. Recording the resolution
+passes neither obligation: no pilot or ACTUS result is established. Source:
+SRC-0032 at `ambiguity-resolutions.json` entry `AMB-S01-001`; observed
+2026-09-04; authority reviewed specification evidence; scope prompt version 1.3
+release-gate interpretation; evidence design decision and open question;
+reproduction not applicable; confidence high; lifecycle status S2.
+
+### Semantic-scope transition and S02 handoff
+
+**CLM-0135.** S01 is an evidence-only transition. Semantic scope remains
+`0.0.0-e00.2` with SHA-256
+`9bee72cb3a71962128ce5ead07b0912a3f54b1d813d59f629852631057e36c7a`.
+It establishes no mechanized theorem, authenticated complete-effect verifier,
+runtime `SignBeforeResolve` verifier, Compact or ZKIR correspondence,
+proof-system result, backend correspondence, ledger execution, ACTUS
+compatibility, or human-pilot result. S02 owns the still-open four-way
+architecture selection and will use Quint with Apalache; a direct TLA+/TLC
+workflow is excluded. Sources: SRC-0032 at `semantic_scope_version` and
+`limitations`, and SRC-0033 under `Execution evidence and package gate`;
+observed 2026-09-04; authority experimental repository evidence and reviewed
+experiment design; scope S01-to-S02 handoff; evidence experiment observation,
+open question, and recommendation; reproduction reproduced for S01 and not
+applicable for the unexecuted S02 design; confidence high; lifecycle status S3
+for the local S01 verifier and S2 for S02 preparation.
+
+### Next falsification test
+
+Complete Task 7's independent S01 verification and review without converting
+the ten local package predicates into any of the 24 prompt release gates. Then
+execute the four distinct S02 Quint models against the same frozen interface and
+preserve Apalache counterexamples before selecting an architecture.

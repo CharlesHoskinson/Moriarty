@@ -3,7 +3,7 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-03T01:22:22Z
+updated_at: 2026-09-04T23:45:58Z
 sources:
   - SRC-0004
   - SRC-0005
@@ -13,12 +13,25 @@ sources:
   - SRC-0015
   - SRC-0016
   - SRC-0017
+  - SRC-0031
+  - SRC-0033
 ---
 
 # Moriarty architecture decision
 
 Moriarty is a new bounded financial-agreement language, not a renamed copy of
 Marlowe and not a general-purpose Compact dialect.
+
+## Provisional decision
+
+**CLM-0131.** The agreement-Core-plus-intent-envelope architecture is the
+current candidate. It is not the prompt version 1.3 architecture freeze. S02
+must compare all four required architectures against the S01 intent-safety
+interface before selection. Sources: SRC-0031 at XML W1 and S02, and SRC-0033
+under `Four execution representations`; created and reviewed 2026-09-03 through
+2026-09-04; authority normative task input and reviewed experiment design;
+scope current research candidate and S02 selection; evidence recommendation;
+reproduction not applicable; confidence high; lifecycle status S2.
 
 The recommended pipeline is:
 

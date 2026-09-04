@@ -1,10 +1,13 @@
 # s01-intent-theorem-freeze
 
-Status: specified-only and in-progress
+Status: ten local package predicates passed; Task 7 verification and review in progress
 
-This package specifies the architecture-neutral S01 intent-safety gate. The ten
-acceptance predicates are requirements, not passed results. Later tasks must
-create the evidence and run the validator before the package can pass.
+This package specifies the architecture-neutral S01 intent-safety gate. The
+validator recomputed all ten local package predicates and returned
+`recomputed-package-gate-passed`. This S3 result does not complete Task 7. All
+24 prompt release gates remain open. Mechanization, authenticated complete-effect
+verification, runtime `SignBeforeResolve` verification, backend and ledger
+correspondence, ACTUS work, and human pilots remain specified-only.
 
 ## Dependencies
 
@@ -21,9 +24,10 @@ create the evidence and run the validator before the package can pass.
 
 ## Exact outputs
 
-This change produces package identifier `s01-intent-theorem-freeze`. It
-specifies ten named acceptance predicates. It does not yet produce passed gate
-results.
+This change produces package identifier `s01-intent-theorem-freeze`, ten named
+acceptance predicates, the evidence manifest, and a recomputed validation
+report. The ten local predicates passed; the result is not a prompt release
+gate or a mechanized theorem.
 
 ## Scope
 
@@ -45,6 +49,8 @@ contains the canonical settlement and one extra third-party payment.
 The [tests](../../../tests/test_intent_verifier.py) reconstruct settlement from Core
 and check rejection, restoration, malformed inputs, and duplicate transfers.
 
-The [execution audit](../../../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
-records the remaining freeze obligations. The aggregate S01 validator and
-evidence manifest have not been implemented.
+The [evidence manifest](../../../evidence/s01-intent-theorem-freeze/evidence-manifest.json)
+binds the local S01 inputs, outputs, and limitations. The [execution audit](../../../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
+records the remaining obligations. The candidate theorem is unmechanized, the
+local checker grants no signing authority, and Task 7 final verification and
+independent review remain open.

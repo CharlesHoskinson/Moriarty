@@ -7,9 +7,11 @@ architecture decision. S04 remains responsible for mechanization.
 
 ## Evidence manifest
 
-The later evidence manifest must bind immutable inputs and exact outputs with
-SHA-256 digests. A later validator must recompute each acceptance predicate from
-repository files. This package supplies no aggregate validation result.
+The evidence manifest binds immutable inputs and exact outputs with SHA-256
+digests. The validator recomputed each local acceptance predicate from
+repository files and recorded `recomputed-package-gate-passed`. This bounded S3
+package result is not a mechanized theorem, does not complete Task 7, and does
+not pass any of the 24 prompt release gates.
 
 ## Negative controls
 
