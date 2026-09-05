@@ -2,7 +2,10 @@
 
 Partial progress: Task1 literal fixtures/tests accepted at `35959ae`, with
 compiling RED/GREEN, nonauthor source approval and root receipt/archive audit.
-Task2 lifecycle implementation is dispatched; the complete A2 package is open.
+Task2 deterministic authority routes are accepted at `955f56b`: seven tests and
+recursive typecheck pass, with original compiling RED and independent source/
+receipt admission. Task3 adversarial controls and action harness are dispatched;
+shared final regressions and the complete A2 package remain open.
 
 - [ ] Verify the exact dependencies and source pins.
 - [ ] Read XML phase A2 and its named scenario inventory.

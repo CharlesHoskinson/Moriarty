@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T17:44:02Z
+updated_at: 2026-09-05T17:56:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1525,3 +1525,29 @@ installed Quint source inspection and an unused-invalid-declaration control,
 with independent review. Both final lifecycle closures must be frozen and bound
 before one shared boundary/adapter/Python regression receipt serves both units.
 All own tests, witnesses, properties and original source-plan hashes remain intact.
+
+### Candidate A installment authority routes execute
+
+**CLM-0164.** Experiment and repository observation: commit `955f56b` implements
+installment Task2. Seven named tests and the recursive typecheck passed through
+actual guarded authority routes under both profiles. Assertions cover parent
+registration without money movement, both initial fill/cancel race orders with
+retained stale losers, the second fill, fresh cancellation under the original
+parent signature, and separately signed nonce1 recovery/refusal cases.
+
+The original compiling freshCancellationTest failed with QNT508 under an extra
+AuthorityUnused proposal restriction. Removing only that restriction produced
+the observed GREEN; tests and accepted fixture did not change. Nonauthor source
+review approved. Root audited all four fifteen-file stage closures, before/after
+source and tool pins, raw terminal results and91original archive members.
+Evidence at `evidence/s02-candidate-a-completion/a2/task2/` includes the review,
+manifest, replayable validation and original author archive. Rust version is an
+installation-directory label, not an unsupported self-reported version claim.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope deterministic installment authority routes; observed date 2026-09-05 UTC;
+reproduction reproduced for named finite checks; confidence high for those
+observations; lifecycle S3 experimental branch. Root audited author runtime
+without duplicating it. Task3 is dispatched after admission; adversarial/action
+witnesses and shared final regressions remain open. No full A2, correspondence,
+model checking, Council, integration or broader XML gate is accepted.

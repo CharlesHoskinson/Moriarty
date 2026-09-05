@@ -505,3 +505,10 @@ profiles, actual funding/disposition/refusal paths, original compiling RED and
 independent source/evidence intake. Stale/adversarial harness tests follow.
 Reviewed addendum `a314549` consolidates equivalent static/shared regressions;
 it removes no lifecycle test, witness or semantic obligation.
+
+## [2026-09-05] execution | Execute installment authority routes
+
+CLM-0164 records `955f56b`: seven tests covering both races, two fills, fresh
+cancellation and nonce1 recovery/refusal. Original compiling RED, final GREEN,
+independent source approval and exact receipt/archive audit are preserved.
+Task3 is dispatched; full A2 and shared regressions remain open.
