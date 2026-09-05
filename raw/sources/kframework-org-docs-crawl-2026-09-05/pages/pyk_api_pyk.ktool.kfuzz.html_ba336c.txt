@@ -1,0 +1,337 @@
+# pyk.ktool.kfuzz module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.ktool.kfuzz.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.ktool package
+pyk.ktool.kfuzz module
+View page source
+pyk.ktool.kfuzz module
+
+class
+KFuzz
+(
+definition_dir:
+Path,
+handler:
+KFuzzHandler
+=
+<pyk.ktool.kfuzz._KFuzzNullHandler
+object>,
+subst_func:
+Callable[[Pattern,
+Mapping[EVar,
+Pattern]],
+Pattern]
+=
+<function
+substitute_vars>
+)
+[source]
+
+Bases:
+object
+Interface for fuzzing over property tests in K.
+definition_dir
+:
+Path
+
+fuzz_with_check
+(
+template
+:
+Pattern
+,
+subst_strategy
+:
+dict
+[
+EVar
+,
+SearchStrategy
+[
+Pattern
+]
+]
+,
+check_func
+:
+Callable
+[
+[
+Pattern
+]
+,
+Any
+]
+,
+**
+hypothesis_args
+:
+Any
+)
+→
+None
+[source]
+
+Fuzz over a property test using check_func to check for a passing test.
+See
+fuzz
+for info on the parameters.
+fuzz_with_exit_code
+(
+template
+:
+Pattern
+,
+subst_strategy
+:
+dict
+[
+EVar
+,
+SearchStrategy
+[
+Pattern
+]
+]
+,
+**
+hypothesis_args
+:
+Any
+)
+→
+None
+[source]
+
+Fuzz over a property test using the exit code from the interpreter to check for a passing test.
+See
+fuzz
+for info on the parameters.
+handler
+:
+KFuzzHandler
+
+subst_func
+:
+Callable
+[
+[
+Pattern
+,
+Mapping
+[
+EVar
+,
+Pattern
+]
+]
+,
+Pattern
+]
+
+class
+KFuzzHandler
+[source]
+
+Bases:
+ABC
+Allows custom behavior (ie. printing) during fuzzing for each test case and on a test failure.
+Can be passed to the
+KFuzz
+constructor or to
+fuzz
+with the
+handler
+keyword argument.
+abstract
+handle_failure
+(
+args
+:
+Mapping
+[
+EVar
+,
+Pattern
+]
+)
+→
+None
+[source]
+
+Handle a test case failure, before the
+AssertionError
+is raised.
+abstract
+handle_test
+(
+args
+:
+Mapping
+[
+EVar
+,
+Pattern
+]
+)
+→
+None
+[source]
+
+Handle each test case with the variable substitutions that are being used.
+fuzz
+(
+definition_dir:
+str
+|
+Path,
+template:
+Pattern,
+subst_strategy:
+dict[EVar,
+SearchStrategy[Pattern]],
+*,
+check_func:
+Callable[[Pattern],
+Any]
+|
+None
+=
+None,
+check_exit_code:
+bool
+=
+False,
+handler:
+KFuzzHandler
+=
+<pyk.ktool.kfuzz._KFuzzNullHandler
+object>,
+subst_func:
+Callable[[Pattern,
+Mapping[EVar,
+Pattern]],
+Pattern]
+=
+<function
+substitute_vars>,
+**hypothesis_args:
+Any
+)
+→
+None
+[source]
+
+Fuzz a property test with concrete execution over a K term.
+Parameters
+:
+definition_dir
+– The location of the K definition to run the interpreter for.
+template
+– The term which will be sent to the interpreter after randomizing inputs. It should contain at least one variable which will be substituted for a value.
+subst_strategy
+– Should have each variable in the template term mapped to a strategy for generating values for it.
+check_func
+– Will be called on the kore output from the interpreter.
+Should throw an AssertionError if it determines that the output indicates a test failure.
+A RuntimeError will be thrown if this is passed as an argument and check_exit_code is True.
+check_exit_code
+– Check the exit code of the interpreter for a test failure instead of using check_func.
+An exit code of 0 indicates a passing test.
+A RuntimeError will be thrown if this is True and check_func is also passed as an argument.
+handler
+– An instance of a
+KFuzzHandler
+implementing custom behavior while fuzzing.
+subst_func
+– A function used to apply the substitution to the template.
+Takes the original template and a substitution map, and returns the substituted pattern.
+Defaults to a bottom-up traversal that replaces variables with the corresponding values in the substitution map.
+hypothesis_args
+–
+Keyword arguments that will be passed as settings for the hypothesis test. Defaults:
+deadline: 5000
+phases: (Phase.explicit, Phase.reuse, Phase.generate)
+Raises
+:
+RuntimeError
+– If check_func exists and check_exit_code is set, or check_func doesn’t exist and check_exit_code is cleared.
+kintegers
+(
+*
+,
+min_value
+:
+int
+|
+None
+=
+None
+,
+max_value
+:
+int
+|
+None
+=
+None
+,
+with_inj
+:
+str
+|
+None
+=
+None
+)
+→
+SearchStrategy
+[
+Pattern
+]
+[source]
+
+Return a search strategy for K integers.
+Parameters
+:
+min_value
+– Minimum value for the generated integers
+max_value
+– Maximum value for the generated integers
+with_inj
+– Return the integer as an injection into this sort
+Returns
+:
+A strategy which generates integer domain values.
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

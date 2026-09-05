@@ -54,6 +54,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
 - [K tutorial section 2](k-framework/k-tutorial-intermediate.md) — lessons
   2.1 to 2.17 (most are stubs that defer to the user manual): macros, fresh
   constants, KLabels, overloading, #Or, function context, MInt, KORE, REPL.
+- [K best practices for the ZKIR definition](k-framework/k-best-practices.md) —
+  functions and totality, rule discipline, collections, builtins, backends,
+  naming, testing, distilled from the full kframework.org crawl (SRC-0026) and
+  applied to the ZKIR modules.
 - [K user manual digest](k-framework/k-user-manual.md) — production, cell and
   rule attributes, rewriting semantics, module system, kompile/krun/kprove
   options, claims.

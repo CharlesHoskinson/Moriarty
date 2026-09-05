@@ -1,0 +1,956 @@
+# pyk.kllvm.hints.prooftrace module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.kllvm.hints.prooftrace.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.kllvm package
+pyk.kllvm.hints package
+pyk.kllvm.hints.prooftrace module
+View page source
+pyk.kllvm.hints.prooftrace module
+
+class
+KoreHeader
+(
+kore_header
+:
+kore_header
+)
+[source]
+
+Bases:
+object
+Represents the Kore header.
+The Kore header is a file that contains the version of the Binary KORE used to serialize/deserialize the
+Proof Trace and all the aditional information needed make this process faster the Proof Trace.
+_kore_header
+
+The underlying KORE Header object.
+Type
+:
+kore_header
+__init__
+(
+kore_header
+:
+kore_header
+)
+→
+None
+[source]
+
+Initialize a new instance of the KoreHeader class.
+Parameters
+:
+kore_header
+(
+kore_header
+) – The KORE Header object.
+static
+create
+(
+header_path
+:
+Path
+)
+→
+KoreHeader
+[source]
+
+Create a new KoreHeader object from the given header file path.
+final
+class
+LLVMArgument
+(
+argument
+:
+Argument
+)
+[source]
+
+Bases:
+object
+Represents an LLVM argument.
+_argument
+
+The underlying Argument object. An argument is a wrapper object containing either a step
+Type
+:
+Argument
+event
+or
+a
+KORE
+pattern.
+__init__
+(
+argument
+:
+Argument
+)
+→
+None
+[source]
+
+Initialize the LLVMArgument object.
+Parameters
+:
+argument
+(
+Argument
+) – The Argument object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+Returns a string representation of the LLVMArgument object using the AST printing method.
+is_kore_pattern
+(
+)
+→
+bool
+[source]
+
+Check if the argument is a KORE Pattern.
+is_step_event
+(
+)
+→
+bool
+[source]
+
+Check if the argument is a step event.
+property
+kore_pattern
+:
+Pattern
+
+Return the KORE Pattern associated with the argument if any.
+property
+step_event
+:
+LLVMStepEvent
+
+Returns the LLVMStepEvent associated with the argument if any.
+class
+LLVMEventAnnotated
+(
+annotated_llvm_event
+:
+annotated_llvm_event
+)
+[source]
+
+Bases:
+object
+Represents an annotated LLVM event.
+This class is used to wrap an llvm_event and its corresponding event type.
+This class is used to iterate over the LLVM rewrite trace events.
+_annotated_llvm_event
+
+The underlying annotated LLVM event object.
+Type
+:
+annotated_llvm_event
+__init__
+(
+annotated_llvm_event
+:
+annotated_llvm_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMEventAnnotated class.
+Parameters
+:
+annotated_llvm_event
+(
+annotated_llvm_event
+) – The annotated LLVM event object.
+property
+event
+:
+LLVMArgument
+
+Returns the LLVM event as an LLVMArgument object.
+property
+type
+:
+LLVMEventType
+
+Returns the LLVM event type.
+class
+LLVMEventType
+(
+event_type
+:
+EventType
+)
+[source]
+
+Bases:
+object
+Represents an LLVM event type.
+This works as a wrapper around the EventType enum.
+It also provides properties to check the type of the event.
+_event_type
+
+The underlying EventType object.
+Type
+:
+EventType
+__init__
+(
+event_type
+:
+EventType
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMEventType class.
+Parameters
+:
+event_type
+(
+EventType
+) – The EventType object.
+property
+is_initial_config
+:
+bool
+
+Checks if the event type is an initial configuration event.
+property
+is_pre_trace
+:
+bool
+
+Checks if the event type is a pre-trace event.
+property
+is_trace
+:
+bool
+
+Checks if the event type is a trace event.
+final
+class
+LLVMFunctionEvent
+(
+function_event
+:
+llvm_function_event
+)
+[source]
+
+Bases:
+LLVMStepEvent
+Represent an LLVM function event in a proof trace.
+_function_event
+
+The underlying LLVM function event object.
+Type
+:
+llvm_function_event
+__init__
+(
+function_event
+:
+llvm_function_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMFunctionEvent class.
+Parameters
+:
+function_event
+(
+llvm_function_event
+) – The LLVM function event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMFunctionEvent object using the AST printing method.
+property
+args
+:
+list
+[
+LLVMArgument
+]
+
+Return a list of LLVMArgument objects representing the arguments of the LLVM function.
+property
+name
+:
+str
+
+Return the name of the LLVM function as a KORE Symbol Name.
+property
+relative_position
+:
+str
+
+Return the relative position of the LLVM function event in the proof trace.
+final
+class
+LLVMFunctionExitEvent
+(
+function_exit_event
+:
+llvm_function_exit_event
+)
+[source]
+
+Bases:
+LLVMStepEvent
+Represent an LLVM function exit event in a proof trace.
+_function_exit_event
+
+The underlying LLVM function exit event object.
+Type
+:
+llvm_function_exit_event
+__init__
+(
+function_exit_event
+:
+llvm_function_exit_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMFunctionExitEvent class.
+Parameters
+:
+function_exit_event
+(
+llvm_function_exit_event
+) – The LLVM function exit event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMFunctionExitEvent object using the AST printing method.
+property
+is_tail
+:
+bool
+
+Return True if the function exit event is a tail call.
+property
+rule_ordinal
+:
+int
+
+Return the axiom ordinal number associated with the function exit event.
+final
+class
+LLVMHookEvent
+(
+hook_event
+:
+llvm_hook_event
+)
+[source]
+
+Bases:
+LLVMStepEvent
+Represents a hook event in LLVM execution.
+_hook_event
+
+The underlying hook event object.
+Type
+:
+llvm_hook_event
+__init__
+(
+hook_event
+:
+llvm_hook_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMHookEvent class.
+Parameters
+:
+hook_event
+(
+llvm_hook_event
+) – The LLVM hook event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMHookEvent object using the AST printing method.
+property
+args
+:
+list
+[
+LLVMArgument
+]
+
+Return a list of LLVMArgument objects representing the arguments of the hook event.
+property
+name
+:
+str
+
+“INT.add”.
+Type
+:
+Return the attribute name of the hook event. Ex.
+property
+relative_position
+:
+str
+
+Return the relative position of the hook event in the proof trace.
+property
+result
+:
+Pattern
+
+Return the result pattern of the hook event evaluation.
+final
+class
+LLVMPatternMatchingFailureEvent
+(
+pattern_matching_failure_event
+:
+llvm_pattern_matching_failure_event
+)
+[source]
+
+Bases:
+LLVMStepEvent
+Represents an LLVM pattern matching failure event.
+This event is used to indicate that the pattern matching failed during the rewriting process.
+_pattern_matching_failure_event
+
+The underlying pattern matching failure event.
+Type
+:
+llvm_pattern_matching_failure_event
+__init__
+(
+pattern_matching_failure_event
+:
+llvm_pattern_matching_failure_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMPatternMatchingFailureEvent class.
+Parameters
+:
+pattern_matching_failure_event
+(
+llvm_pattern_matching_failure_event
+) – The LLVM pattern matching failure event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMPatternMatchingFailureEvent object using the AST printing method.
+property
+function_name
+:
+str
+
+Return the name of the function that failed to match the pattern.
+class
+LLVMRewriteEvent
+[source]
+
+Bases:
+LLVMStepEvent
+Represents LLVM rewrite event.
+abstract
+property
+rule_ordinal
+:
+int
+
+Return the axiom ordinal number of the rewrite rule.
+The rule ordinal represents the
+nth
+axiom in the kore definition.
+abstract
+property
+substitution
+:
+dict
+[
+str
+,
+Pattern
+]
+
+Returns the substitution dictionary used to perform the rewrite represented by this event.
+final
+class
+LLVMRewriteTrace
+(
+rewrite_trace
+:
+llvm_rewrite_trace
+)
+[source]
+
+Bases:
+object
+Represents an LLVM rewrite trace.
+_rewrite_trace
+
+The underlying LLVM rewrite trace object.
+Type
+:
+llvm_rewrite_trace
+__init__
+(
+rewrite_trace
+:
+llvm_rewrite_trace
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMRewriteTrace class.
+Parameters
+:
+rewrite_trace
+(
+llvm_rewrite_trace
+) – The LLVM rewrite trace object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMRewriteTrace object using the AST printing method.
+property
+initial_config
+:
+LLVMArgument
+
+Returns the initial configuration as an LLVMArgument object.
+static
+parse
+(
+trace
+:
+bytes
+,
+header
+:
+KoreHeader
+)
+→
+LLVMRewriteTrace
+[source]
+
+Parse the given proof hints byte string using the given kore_header object.
+property
+pre_trace
+:
+list
+[
+LLVMArgument
+]
+
+Returns a list of events that occurred before the initial configuration was constructed.
+property
+trace
+:
+list
+[
+LLVMArgument
+]
+
+Returns the trace.
+The trace is the list of events that occurred after the initial configurarion was constructed until the end of the
+proof trace when the final configuration is reached.
+property
+version
+:
+int
+
+Returns the version of the binary hints format used by this trace.
+class
+LLVMRewriteTraceIterator
+(
+rewrite_trace_iterator
+:
+llvm_rewrite_trace_iterator
+)
+[source]
+
+Bases:
+object
+Represents an LLVM rewrite trace iterator.
+This class is used to iterate over the LLVM rewrite trace events in the stream parser.
+_rewrite_trace_iterator
+
+The underlying LLVM rewrite trace iterator object.
+Type
+:
+llvm_rewrite_trace_iterator
+__init__
+(
+rewrite_trace_iterator
+:
+llvm_rewrite_trace_iterator
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMRewriteTraceIterator class.
+Parameters
+:
+rewrite_trace_iterator
+(
+llvm_rewrite_trace_iterator
+) – The LLVM rewrite trace iterator object.
+__iter__
+(
+)
+→
+Iterator
+[
+LLVMEventAnnotated
+]
+[source]
+
+Yield LLVMEventAnnotated options.
+This method is an iterator that yields LLVMEventAnnotated options.
+It iterates over the events in the trace and returns the next event as an LLVMEventAnnotated object.
+Yields
+:
+LLVMEventAnnotated
+– The next LLVMEventAnnotated option.
+__next__
+(
+)
+→
+LLVMEventAnnotated
+[source]
+
+Yield the next LLVMEventAnnotated object from the iterator.
+Returns
+:
+The next LLVMEventAnnotated object.
+Return type
+:
+LLVMEventAnnotated
+Raises
+:
+StopIteration
+– If there are no more events in the iterator.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMRewriteTraceIterator object using the AST printing method.
+static
+from_file
+(
+trace_path
+:
+Path
+,
+header
+:
+KoreHeader
+)
+→
+LLVMRewriteTraceIterator
+[source]
+
+Create a new LLVMRewriteTraceIterator object from the given trace and header file paths.
+property
+version
+:
+int
+
+Return the version of the HINTS format.
+final
+class
+LLVMRuleEvent
+(
+rule_event
+:
+llvm_rule_event
+)
+[source]
+
+Bases:
+LLVMRewriteEvent
+Represents an LLVM rule event.
+_rule_event
+
+The underlying LLVM rule event.
+Type
+:
+llvm_rule_event
+__init__
+(
+rule_event
+:
+llvm_rule_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMRuleEvent class.
+Parameters
+:
+rule_event
+(
+llvm_rule_event
+) – The LLVM rule event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMRuleEvent object using the AST printing method.
+property
+rule_ordinal
+:
+int
+
+Returns the axiom ordinal number of the rule event.
+property
+substitution
+:
+dict
+[
+str
+,
+Pattern
+]
+
+Returns the substitution dictionary used to perform the rewrite represented by this rule event.
+final
+class
+LLVMSideConditionEventEnter
+(
+side_condition_event
+:
+llvm_side_condition_event
+)
+[source]
+
+Bases:
+LLVMRewriteEvent
+Represents an event that enters a side condition in LLVM rewriting.
+This event is used to check the side condition of a rule. Mostly used in ensures/requires clauses.
+_side_condition_event
+
+The underlying side condition event.
+Type
+:
+llvm_side_condition_event
+__init__
+(
+side_condition_event
+:
+llvm_side_condition_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMSideConditionEventEnter class.
+Parameters
+:
+side_condition_event
+(
+llvm_side_condition_event
+) – The LLVM side condition event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMSideConditionEventEnter object using the AST printing method.
+property
+rule_ordinal
+:
+int
+
+Returns the axiom ordinal number associated with the side condition event.
+property
+substitution
+:
+dict
+[
+str
+,
+Pattern
+]
+
+Returns the substitution dictionary used to perform the rewrite represented by this side condition event.
+final
+class
+LLVMSideConditionEventExit
+(
+side_condition_end_event
+:
+llvm_side_condition_end_event
+)
+[source]
+
+Bases:
+LLVMStepEvent
+Represents an LLVM side condition event indicating the exit of a side condition.
+This event contains the result of the side condition evaluation.
+_side_condition_end_event
+
+The underlying side condition end event.
+Type
+:
+llvm_side_condition_end_event
+__init__
+(
+side_condition_end_event
+:
+llvm_side_condition_end_event
+)
+→
+None
+[source]
+
+Initialize a new instance of the LLVMSideConditionEventExit class.
+Parameters
+:
+side_condition_end_event
+(
+llvm_side_condition_end_event
+) – The LLVM side condition end event object.
+__repr__
+(
+)
+→
+str
+[source]
+
+Return a string representation of the object.
+Returns
+:
+A string representation of the LLVMSideConditionEventExit object using the AST printing method.
+property
+check_result
+:
+bool
+
+Return the boolean result of the evaluation of the side condition that corresponds to this event.
+property
+rule_ordinal
+:
+int
+
+Return the axiom ordinal number associated with the side condition event.
+class
+LLVMStepEvent
+[source]
+
+Bases:
+ABC
+Abstract base class representing an LLVM step event.
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.
