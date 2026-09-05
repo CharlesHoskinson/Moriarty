@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-04T23:45:58Z
+updated_at: 2026-09-05T00:00:31Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -17,6 +17,7 @@ sources:
   - SRC-0031
   - SRC-0032
   - SRC-0033
+  - SRC-0034
 ---
 
 # Moriarty research journal
@@ -543,3 +544,22 @@ Complete Task 7's independent S01 verification and review without converting
 the ten local package predicates into any of the 24 prompt release gates. Then
 execute the four distinct S02 Quint models against the same frozen interface and
 preserve Apalache counterexamples before selecting an architecture.
+
+### Review correction: settlement process and receipt
+
+**CLM-0136.** Whole-S01 review found that the XML term `settlement` had been
+aliased to receipt evidence. Commit
+`5d3863793660d551b3e30a88e322d5c9a497d33c` adds `SettlementProcess` for the
+protocol-specific process that turns fills and proofs into final, spendable
+outcomes or an authorized recovery path. `SettlementReceipt` remains evidence
+about a settlement step and no longer owns that alias. Regression checks
+distinguish the process and evidence categories. The revised manifest is
+SRC-0034; historical SRC-0032 is preserved byte-for-byte in the
+[pre-correction archive](../raw/repository-observations/2026-09-04-s01-pre-settlement-correction-manifest.json).
+Sources: SRC-0031 at XML `required_terminology/settlement`, SRC-0034 at
+`terminology.json` and the validation report; correction committed 2026-09-04,
+observed 2026-09-05T00:00:31Z; authority normative task input and experimental
+repository evidence; scope S01 specification correction with unchanged Core
+scope `0.0.0-e00.2`; evidence repository and experiment observation;
+reproduction reproduced; confidence high; lifecycle status S3. Independent
+re-review and Task 7 completion remain open at this observation.

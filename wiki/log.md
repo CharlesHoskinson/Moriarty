@@ -1,5 +1,14 @@
 # Wiki log
 
+## [2026-09-04] correction | Separate settlement process from receipt
+
+Corrected the S01 alias against XML v1.3: `settlement` names the process, while
+`SettlementReceipt` is evidence about a step. Preserved the prior manifest
+byte-for-byte and its SRC-0032 provenance; registered the revised manifest as
+SRC-0034. The correction does not change Core or semantic scope. Independent
+re-review remains required before closing S01. Also clarified that the user
+directed Quint instead of TLC and the reviewed design selects Apalache.
+
 ## [2026-09-04] experiment | S01 evidence-only intent-safety freeze
 
 Recorded the architecture-neutral S01 terminology, observation model, hard
