@@ -44,8 +44,72 @@ module execution {
     ...state, attempts: state.attempts.put(id, ProposedAttempt({id: id, actor: actor, operation: op,
       observation: obs, context: state.authority.context})),
   }
-  pure def canVerify(state: ExecutionState[s,c,a,p], id: AttemptId, evidence: EvidenceBundle[s,c,a,p]): bool = false
-  pure def applyVerify(state: ExecutionState[s,c,a,p], id: AttemptId, evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = state
+  pure def parentTransfer(parent: Parent[SignedPolicy[s,c,a,p]], recipient: Principal, quantity: int): Transfer = {
+    source: parent.source, destination: Wallet(recipient), asset: parent.asset, quantity: quantity,
+  }
+  pure def operationFinancialGuard(context: AuthorityContext[s,c,a,p], op: Operation, actual: List[Transfer]): bool = match op {
+    | OpFillSlot(fill) => match context.parents.get(fill.parent) {
+        | ParentVacant => false
+        | ParentLive(live) => canConsumeSlot(live.parent, live.entry, fill.slot, live.entry)
+            and actual == List(parentTransfer(live.parent, live.parent.recipient, slotQuantity(live.parent, fill.slot)))
+      }
+    | OpCancelParent(parent) => match context.parents.get(parent) {
+        | ParentVacant => false
+        | ParentLive(live) => canCancelParent(live.parent, live.entry, live.entry) and actual == List()
+      }
+    | OpRecover(recovery) => match context.parents.get(recovery.parent) {
+        | ParentVacant => false
+        | ParentLive(live) => live.entry.cancelled and live.entry.remainingAllowance > 0
+            and balance(context.ledger, live.parent.source, live.parent.asset) == live.entry.remainingAllowance
+            and actual == List(parentTransfer(live.parent, live.parent.key.principal, live.entry.remainingAllowance))
+      }
+    | _ => actual.length() > 0
+  }
+  pure def authorityAllows(context: AuthorityContext[s,c,a,p], key: AuthorityKey,
+                            attempt: PreparedAttempt[s,c,a,p], proof: SignatureProof[s,c,a,p]): bool = {
+    val policyAllowsActual = policyAllowsObservation(proof.signed.policy, attempt.operation,
+      attempt.observation, contextPolicyFacts(context))
+    proof.disposition == EvidenceValid and proof.attempt == attempt
+      and proof.signed.policy.body.key == key and policyAllowsActual
+      and match context.registry.get(key) {
+        | AuthorityUnused => false
+        | AuthorityRegistered(signed) => signed == proof.signed
+        | AuthorityConsumed(consumed) => consumed.signed == proof.signed
+            and match attempt.operation {
+              | OpFillSlot(fill) => fill.parent == key
+              | OpCancelParent(parent) => parent == key
+              | _ => false
+            }
+      }
+  }
+  pure def projectionAdmitsExecution(projection: CoreProjection[c]): bool = match projection {
+    | NoCoreProjection => true
+    | CoreProjected(result) => result.accepted and result.error == NoCoreError
+  }
+  pure def verificationValid(context: AuthorityContext[s,c,a,p], attempt: PreparedAttempt[s,c,a,p],
+                             evidence: EvidenceBundle[s,c,a,p]): bool =
+    if (validAuthorityContext(context) and validOperation(attempt.operation)) {
+      val needed = requiredKeys(attempt.operation, attempt.observation.effects)
+      val completeProofs = evidence.signatures.keys() == needed and needed.subseteq(AUTHORITY_KEYS)
+      if (completeProofs) needed.size() > 0 and attemptIdMatches(attempt.id, attempt.operation)
+        and attempt.context == context and attempt.observation.predecessor == context.candidate
+        and attempt.observation.transactionTime == context.environment.physicalTime
+        and attempt.observation.effectEvidence == EvidenceValid
+        and projectionAdmitsExecution(attempt.observation.coreProjection)
+        and evidence.effect.disposition == EvidenceValid and evidence.effect.attempt == attempt
+        and canApply(context.ledger, attempt.observation.effects)
+        and operationFinancialGuard(context, attempt.operation, attempt.observation.effects)
+        and needed.forall(key => authorityAllows(context, key, attempt, evidence.signatures.get(key)))
+      else false
+    } else false
+  pure def canVerify(state: ExecutionState[s,c,a,p], id: AttemptId, evidence: EvidenceBundle[s,c,a,p]): bool =
+    if (validExecutionState(state)) match state.attempts.get(id) {
+      | ProposedAttempt(attempt) => attempt.id == id and verificationValid(state.authority.context, attempt, evidence)
+      | _ => false
+    } else false
+  pure def applyVerify(state: ExecutionState[s,c,a,p], id: AttemptId, evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = {
+    ...state, attempts: state.attempts.put(id, VerifiedOperation({attempt: evidence.effect.attempt, evidence: evidence})),
+  }
   pure def canCommit(state: ExecutionState[s,c,a,p], id: AttemptId): bool = false
   pure def applyCommit(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = state
 }
