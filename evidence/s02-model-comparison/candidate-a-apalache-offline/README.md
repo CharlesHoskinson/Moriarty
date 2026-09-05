@@ -45,7 +45,23 @@ before SMT checking does not establish an architecture stop or semantic defect.
 The depth requested was four; deadlock checking was disabled for the genuinely
 terminating trace harness. Neither setting turns an unfinished check into proof.
 
-An identical-input retry with an 8-GiB heap was launched separately. Its terminal
-result must be recorded separately when observed; this receipt makes no claim
-about its eventual result or process liveness. Future checking still needs to
-establish the requested S02 bounds and full candidate integration properties.
+## Eight-GiB result and next action
+
+The identical-input retry used `JVM_ARGS=-Xmx8192m`, the same command and source,
+and `--out-dir=/tmp/moriarty-quint-verify.J18Azu/apalache-out-8g`. Its maximum heap
+was 8,589,934,592 bytes. It again completed Snowcat and reached InlinePass, then
+exhausted Java heap and exited 255 after 410.265 seconds. Exact command and
+detailed logs are retained. There was no invariant or counterexample result.
+Both tool handles are terminal. Root checked port 8822 remained unbound during
+the direct runs. Memory escalation stopped after these two attempts.
+
+The next empirical obligation is a reviewed semantics-preserving factoring of
+the model's repeated evaluator expressions, followed by unchanged-property
+checking. Dropping invariants or transitions is not an acceptable resource fix.
+Future checking still needs to establish the requested S02 bounds and full
+candidate integration properties. These are direct-CLI resource receipts, not
+successful mandatory `quint verify` evidence or S02 acceptance.
+
+The detailed logs retain their original whitespace, including a trailing space
+on the tool's exception line. A whitespace lint flags that immutable log byte;
+source/document checks are separate. Do not normalize the raw receipt.
