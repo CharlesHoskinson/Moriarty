@@ -271,6 +271,18 @@ class Runner:
         out['constraints'] = len(list_items(find_cell(cfg, '<constraints>')))
         out['k_cell'] = self.krun.pretty_print(find_cell(cfg, '<k>')).strip()
         out['needs'] = [need(x) for x in list_items(find_cell(cfg, '<needs>'))]
+        verdicts = list_items(find_cell(cfg, '<verdicts>'))
+        bad = []
+        for v in verdicts:
+            assert isinstance(v, KApply) and v.label.name == 'verdict'
+            outcome = v.args[1]
+            assert isinstance(outcome, KApply)
+            if outcome.label.name != 'holds':
+                gate = self.krun.pretty_print(v.args[0]).replace('\n', ' ')
+                gate = ' '.join(gate.split())
+                bad.append((outcome.label.name, tok_str(outcome.args[0]) if outcome.args else '', gate[:120]))
+        out['verdicts'] = len(verdicts)
+        out['violations'] = bad
         return out
 
     def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False) -> dict[str, Any]:

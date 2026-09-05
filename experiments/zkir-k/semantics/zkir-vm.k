@@ -17,6 +17,7 @@
 // A run is job(program, preimage). The preimage mirrors `ProofPreimage`.
 requires "zkir-syntax.k"
 requires "zkir-ops.k"
+requires "zkir-constraints.k"
 
 module ZKIR-VM-SYNTAX
   imports ZKIR-SYNTAX
@@ -36,6 +37,7 @@ module ZKIR-VM
   imports ZKIR-VM-SYNTAX
   imports ZKIR-WF
   imports ZKIR-OPS
+  imports ZKIR-CONSTRAINTS
   imports MAP
   imports SET
   imports K-EQUAL
@@ -43,11 +45,9 @@ module ZKIR-VM
   syntax Status ::= ok() [symbol(ok)] | error(String) [symbol(error)]
   syntax Skip   ::= skipNone() [symbol(skipNone)] | skipSome(Int) [symbol(skipSome)]
 
-  // Constraints: the in-circuit relation of one instruction over register
-  // names and immediates. `piGate(i, guard, x)` states pi[i] = guard ? x : 0.
-  syntax Constraint ::= gate(Instr)                       [symbol(gate)]
-                      | piGate(Int, Operand, Operand)     [symbol(piGate)]
-                      | piFixed(Int, Operand)             [symbol(piFixed)]   // pi[i] = x (binding input, commitment)
+  // Constraints (sort Constraint, ZKIR-CONSTRAINTS): the in-circuit relation
+  // of one instruction over register names and immediates; piGate(i, g, x)
+  // states pi[i] = g ? x : 0; piFixed pins the binding input and commitment.
 
   configuration
     <zkir>
@@ -63,6 +63,8 @@ module ZKIR-VM
       <doComm> false </doComm>
       <pre> preimage(.List, 0, noComm(), .List, .List, .List) </pre>
       <constraints> .List </constraints>
+      <chips> .Set </chips>
+      <verdicts> .List </verdicts>
       <deadPis> 0 </deadPis>
       <genMode> false </genMode>
       <needs> .List </needs>
@@ -81,8 +83,9 @@ module ZKIR-VM
   rule <k> genJob(P, Pre) => job(P, Pre) ... </k> <genMode> _ => true </genMode>
 
   // --- Start: decode inputs, seed the public-input vector ------------------------------
-  rule <k> job(program(_, Ins, Outs, DoComm, Is), Pre) => #loadInputs(decodeInputs(#preInputs(Pre), Ins, 0)) ~> #seedPi ~> Is </k>
+  rule <k> job(program(Mi, Ins, Outs, DoComm, Is), Pre) => #loadInputs(decodeInputs(#preInputs(Pre), Ins, 0)) ~> #seedPi ~> Is ~> #verdicts </k>
        <pre> _ => Pre </pre>
+       <chips> _ => usedChips(program(Mi, Ins, Outs, DoComm, Is)) </chips>
        <outTypes> _ => Outs </outTypes>
        <doComm> _ => DoComm </doComm>
 
@@ -438,6 +441,11 @@ module ZKIR-VM
     requires size(L) ==Int lenIrTypes(Ts) andBool typeOf(V) ==K T
   rule <k> #output(vsOk(ListItem(V) L), (T, Ts), I) => #fail("Output position " +String Int2String(I) +String ": signature declares " +String typeName(T) +String " but operand has runtime type " +String tn(V)) ... </k>
     requires size(L) ==Int lenIrTypes(Ts) andBool typeOf(V) =/=K T
+
+  // --- After the run: evaluate every emitted constraint against the witness ---------------------
+  syntax KItem ::= "#verdicts"
+  rule <k> #verdicts => .K ... </k> <constraints> Cs </constraints> <mem> M </mem> <pi> Pi </pi> <chips> Chips </chips>
+       <verdicts> _ => verdicts(Cs, M, Pi, Chips) </verdicts>
 
   // --- End of program: transcript exhaustion and communications commitment ------------------
   syntax KItem ::= "#finish"

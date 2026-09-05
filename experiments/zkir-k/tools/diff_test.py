@@ -58,12 +58,17 @@ def strs(xs):
     return [str(x) for x in xs]
 
 
-def build_preimage(runner: Runner, program, doc: dict, rng: random.Random, small: bool) -> tuple[dict, int]:
+def build_preimage(runner: Runner, program, doc: dict, rng: random.Random, small: bool, seed_pre: dict | None = None) -> tuple[dict, int]:
     gen = zv.small_encoded if small else zv.random_encoded
     inputs = [x for entry in doc['inputs'] for x in gen(entry['type'], rng)]
     rand = rng.randrange(zv.R)
     pre = {'inputs': strs(inputs), 'binding_input': str(rng.randrange(zv.R)),
            'private_transcript': [], 'public_transcript_inputs': [], 'public_transcript_outputs': []}
+    if seed_pre:
+        # the crate's own test values, when they are literals (manifest test_preimage)
+        for key in ('inputs', 'private_transcript', 'public_transcript_outputs', 'binding_input'):
+            if key in seed_pre:
+                pre[key] = seed_pre[key]
     if doc['do_communications_commitment']:
         pre['communications_commitment'] = ['0', str(rand)]
     passes = 0
@@ -112,6 +117,7 @@ def main() -> int:
     ap.add_argument('--only', default='')
     ap.add_argument('--seed', type=int, default=2026)
     ap.add_argument('--no-perturb', action='store_true')
+    ap.add_argument('--attempts', type=int, default=8)
     args = ap.parse_args()
     runner = Runner()
     rows = []
@@ -129,30 +135,49 @@ def main() -> int:
             except zkir_kast.ZkirFormatError:
                 continue   # rejected before preprocess by both sides
             rng = random.Random(f'{args.seed}:{path.name}')
-            small = corpus in ('midnight-zkir-2ffe2d1-precompiles', 'moriarty-compact-escrow', 'moriarty-core-swap')
+            manifest = directory / 'manifest.json'
+            seed_pre = None
+            if manifest.exists():
+                for entry in json.loads(manifest.read_text()).get('programs', []):
+                    if entry['file'] == path.name:
+                        seed_pre = entry.get('test_preimage')
+            # Up to MAX_ATTEMPTS preimages with small native inputs; stop after the
+            # first one both sides accept. Every attempt is compared.
             t1 = time.time()
-            try:
-                pre, passes = build_preimage(runner, program, doc, rng, small)
-            except RuntimeError as e:
-                rows.append((corpus, path.name, 'gen', 'krun failed', [str(e)[-300:]]))
-                failures += 1
-                continue
-            cases = [('main', pre)]
-            if not args.no_perturb and pre['inputs']:
-                pert = json.loads(json.dumps(pre))
-                pert['inputs'][0] = str(rng.randrange(zv.R))
-                cases.append(('perturbed', pert))
-            for label, p in cases:
-                k = runner.run(program, p)
-                r = oracle(path, p)
+            for attempt in range(args.attempts):
+                try:
+                    pre, passes = build_preimage(runner, program, doc, rng, small=True, seed_pre=seed_pre if attempt == 0 else None)
+                except RuntimeError as e:
+                    rows.append((corpus, path.name, f'gen{attempt}', 'krun failed', [str(e)[-300:]]))
+                    failures += 1
+                    break
+                k = runner.run(program, pre)
+                r = oracle(path, pre)
                 diffs = compare(k, r)
                 failures += bool(diffs)
-                rows.append((corpus, path.name, label, f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} passes={passes} {time.time() - t1:.1f}s", diffs))
+                note = ''
+                if k['status'] == 'error':
+                    same = k.get('error', '')[:20] == r.get('error', '')[:20]
+                    note = f" msg K='{k.get('error', '')[:70]}'" + ('' if same else f" Rust='{r.get('error', '')[:70]}'")
+                viol = k.get('violations', [])
+                vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
+                rows.append((corpus, path.name, f'run{attempt}', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} passes={passes} {time.time() - t1:.1f}s{note}{vnote}", diffs))
+                if k['status'] == 'ok' and r['status'] == 'ok':
+                    if not args.no_perturb and pre['inputs']:
+                        pert = json.loads(json.dumps(pre))
+                        pert['inputs'][0] = str(rng.randrange(zv.R))
+                        k2 = runner.run(program, pert)
+                        r2 = oracle(path, pert)
+                        d2 = compare(k2, r2)
+                        failures += bool(d2)
+                        rows.append((corpus, path.name, 'perturbed', f"K={k2['status']} Rust={r2['status']} regs={len(k2.get('memory', {}))}", d2))
+                    break
     for corpus, name, label, summary, diffs in rows:
         print(f"{'PASS' if not diffs else 'FAIL'}  {corpus:34} {name:52} {label:9} {summary}")
         for d in diffs[:8]:
             print(f'        {d}')
-    print(f'\n{len(rows)} comparisons, {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
+    oks = sum(1 for r in rows if r[3].startswith('K=ok Rust=ok'))
+    print(f'\n{len(rows)} comparisons ({oks} successful runs), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
     return 1 if failures else 0
 
 

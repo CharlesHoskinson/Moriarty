@@ -1,0 +1,227 @@
+{
+ "version": {
+  "major": 3,
+  "minor": 0
+ },
+ "inputs": [
+  {
+   "name": "%a",
+   "type": "Scalar<BLS12-381>"
+  },
+  {
+   "name": "%b",
+   "type": "Scalar<BLS12-381>"
+  },
+  {
+   "name": "%bs",
+   "type": "Bytes<32>"
+  },
+  {
+   "name": "%c",
+   "type": "Scalar<Jubjub>"
+  }
+ ],
+ "outputs": [
+  "Scalar<BLS12-381>",
+  "Point<Jubjub>"
+ ],
+ "do_communications_commitment": false,
+ "instructions": [
+  {
+   "op": "add",
+   "a": "%a",
+   "b": "%b",
+   "output": "%s"
+  },
+  {
+   "op": "mul",
+   "a": "%a",
+   "b": "%b",
+   "output": "%m"
+  },
+  {
+   "op": "neg",
+   "a": "%a",
+   "output": "%n"
+  },
+  {
+   "op": "inv",
+   "a": "%a",
+   "output": "%i"
+  },
+  {
+   "op": "mul",
+   "a": "%a",
+   "b": "%i",
+   "output": "%one"
+  },
+  {
+   "op": "constrain_eq",
+   "a": "%one",
+   "b": "0x01"
+  },
+  {
+   "op": "not",
+   "a": "0x00",
+   "output": "%t"
+  },
+  {
+   "op": "assert",
+   "cond": "%t"
+  },
+  {
+   "op": "constrain_to_boolean",
+   "val": "%t"
+  },
+  {
+   "op": "constrain_bits",
+   "val": "%a",
+   "bits": 16
+  },
+  {
+   "op": "less_than",
+   "a": "%a",
+   "b": "%b",
+   "bits": 16,
+   "output": "%lt"
+  },
+  {
+   "op": "div_mod_power_of_two",
+   "val": "%b",
+   "bits": 4,
+   "outputs": [
+    "%q",
+    "%r"
+   ]
+  },
+  {
+   "op": "reconstitute_field",
+   "divisor": "%q",
+   "modulus": "%r",
+   "bits": 4,
+   "output": "%b2"
+  },
+  {
+   "op": "constrain_eq",
+   "a": "%b2",
+   "b": "%b"
+  },
+  {
+   "op": "copy",
+   "val": "%a",
+   "output": "%a2"
+  },
+  {
+   "op": "into_bytes32",
+   "input": "%a",
+   "output": "%ab"
+  },
+  {
+   "op": "from_bytes32",
+   "bytes": "%ab",
+   "type": "Scalar<BLS12-381>",
+   "output": "%a3"
+  },
+  {
+   "op": "constrain_eq",
+   "a": "%a3",
+   "b": "%a"
+  },
+  {
+   "op": "reverse_bytes",
+   "bytes": "%bs",
+   "output": "%rev"
+  },
+  {
+   "op": "reverse_bytes",
+   "bytes": "%rev",
+   "output": "%rev2"
+  },
+  {
+   "op": "constrain_eq",
+   "a": "%rev2",
+   "b": "%bs"
+  },
+  {
+   "op": "test_eq",
+   "a": "%rev",
+   "b": "%bs",
+   "output": "%beq"
+  },
+  {
+   "op": "bytes32_into_low_high",
+   "bytes": "%bs",
+   "outputs": [
+    "%lo",
+    "%hi"
+   ]
+  },
+  {
+   "op": "bytes32_from_low_high",
+   "inputs": [
+    "%lo",
+    "%hi"
+   ],
+   "output": "%bs2"
+  },
+  {
+   "op": "constrain_eq",
+   "a": "%bs2",
+   "b": "%bs"
+  },
+  {
+   "op": "encode",
+   "input": "%bs",
+   "outputs": [
+    "%e0",
+    "%e1"
+   ]
+  },
+  {
+   "op": "jubjub_scalar_from_native",
+   "native": "%a",
+   "output": "%js"
+  },
+  {
+   "op": "ec_mul_generator",
+   "scalar": "%c",
+   "output": "%gc"
+  },
+  {
+   "op": "encode",
+   "input": "%c",
+   "outputs": [
+    "%ec"
+   ]
+  },
+  {
+   "op": "cond_select",
+   "bit": "%lt",
+   "a": "%a",
+   "b": "%b",
+   "output": "%sel"
+  },
+  {
+   "op": "transient_hash",
+   "inputs": [
+    "%a",
+    "%b"
+   ],
+   "output": "%h"
+  },
+  {
+   "op": "hash_to_curve",
+   "inputs": [
+    "%h"
+   ],
+   "output": "%hp"
+  },
+  {
+   "op": "output",
+   "vals": [
+    "%s",
+    "%hp"
+   ]
+  }
+ ]
+}
