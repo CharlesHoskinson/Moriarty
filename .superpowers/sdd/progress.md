@@ -1,5 +1,21 @@
 # Current execution progress
 
+## Candidate A execution handoff override, 2026-09-05 16:35 UTC
+
+A0 local boundary intake complete: source d14cfea, evidence 0190cb9 plus the
+canonical review-index follow-up. Independent native source/spec review approved;
+root ran forty boundary tests and one hundred funding traces, all five action
+witnesses 100/100 and each profile 50/100. Sixteen final import-closure files and
+149 archived members match. Historical Python closure gap remains disclosed.
+No Council or full Candidate A acceptance. Current session
+20260905T161538Z-60de62 is already begun; do not begin again after compaction.
+A1 corrected installment/swap plans are being drafted by a1_installment_plan;
+no lifecycle implementation dispatched yet. Other B work stays out of scope.
+Do not re-run completed A0 commands. Evidence is under
+evidence/s02-candidate-a-completion/a0/ with replayable validation command.
+The product goal was observed blocked, not automatically armed; current turn
+executes the approved Candidate A handoff without claiming automatic liveness.
+
 ## 2026-09-05 current override
 
 Latest continuation, 2026-09-05 UTC: Candidate A agreement semantic-unit Tasks
