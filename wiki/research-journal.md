@@ -913,3 +913,49 @@ Next execute `docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle
 persistent signing, fresh evidence, and atomic fill/cancel/recovery transitions.
 The full XML goal remains active. Foreman repairs remain closed; neither the
 finished design proposals nor the completed observation/policy units need restart.
+
+### Persistent symbolic signing executes under both profiles
+
+**CLM-0147.** Experiment observation: S02 branch `cbd1f1d`, corrected at `f2941d4`,
+implements persistent symbolic signing with exact checked policy content and
+key-local freshness snapshots. Alice and Bob can prepare concurrent checks and
+register independently. Relevant state, ledger, environment, own-key, and full
+parent dependencies invalidate stale checks. Parent registration retains the
+exact signed policy in unclaimed accounting without consuming its nonce or
+moving money.
+
+Corrected pinned receipts report 41 passing Quint tests and 1,000 sampled signing
+traces: 533 after-resolution and 467 before-resolution. Every trace reaches both
+signatures. The signing-only invariant checks unchanged money, structural
+registry/parent coherence, nonterminal enabledness, and no further signing action
+once both signatures exist. The broader implementation run preserved 72 policy,
+10 effect, 16 consumption, 37 observation, and 286 Python test passes, plus the
+ten local S01 checks. Those counts describe their pinned runs, not current main
+implementation or a complete S02 gate.
+
+Independent native GPT-6 Astra review found one nonblocking admission issue:
+unsupported Bob/Mallory parent policies could prepare unusable checks. A new
+failing test and early preparation guard resolve it; narrow re-review is clean.
+The initial RED correction command yielded before its assertion failure was
+collected, and that timing is explicitly disclosed in the receipt. Original
+manifests and the pre-correction source commit remain preserved.
+
+Claim metadata:
+
+- Sources: SRC-0035 adopted design; SRC-0033 comparison boundary.
+- Repository: local Moriarty, branch `s02-model-comparison`, corrected implementation `f2941d4`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators: `specs/quint/s02/authorization.qnt`, `authorization_harness.qnt`, `authorization_test.qnt`, and `evidence/s02-model-comparison/authorization/current.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-persistent-signing.md` on the branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: local deterministic tests, sampled signing paths, independent source review and correction re-review.
+- Scope: symbolic signing only; unchanged frozen Core; Alice-only parent fixture.
+- Evidence kind: experiment observation.
+- Reproduction: exact source/receipt pins, RED commits, and raw outputs preserved.
+- Confidence: high for recorded outcomes, not unperformed financial or correspondence work.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+No execution evidence verifier, atomic fill/cancel/recovery commit, candidate
+A–D semantics, or Core correspondence follows from this signing unit. Constructed
+cancelled contexts in guard tests are not cancellation traces. Next implement
+per-operation verification and the common commit boundary. Council gates and the
+full XML program remain open; Foreman development remains closed.

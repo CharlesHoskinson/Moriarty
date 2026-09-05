@@ -364,3 +364,13 @@ Recovery requirements are now explicit at `7cccc5a`, with a clean independent
 transcription review. These are unsigned constraints and required scenarios,
 not executed signing/recovery or passed S02 gates. Next work is the authority
 lifecycle, with the full XML goal active and Foreman development still closed.
+
+## [2026-09-05] implementation | Execute persistent symbolic signing
+
+Recorded CLM-0147 for corrected branch implementation `f2941d4`. Both signing
+profiles and independent concurrent signer checks execute; exact freshness
+constraints and parent registration are tested. Independent Astra review and
+admission-correction re-review are clean. Preserved RED/green source commits,
+raw sampled evidence, and the asynchronous RED timing disclosure. Next is
+per-operation verification and atomic lifecycle commitment, not another design
+vote or Foreman repair. No financial recovery or S02 gate is claimed.
