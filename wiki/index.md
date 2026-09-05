@@ -32,11 +32,12 @@ will grow by merging evidence into durable topic pages.
   backend stop test, and incremental decision graph.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, branch-only S02 foundation progress, Council restart status,
-  authorized Foreman successor repair, bounded review-runtime recovery,
+  historical Foreman repair attempts, the Moriarty-only workflow reset,
   four-alternative S02 coverage, and next falsification test.
 
 ## Active specification artifacts
 
+- [Moriarty restart](../docs/MORIARTY_RESTART.md) — Foreman development closed by user direction; resume S02 from preserved foundations, with type-sketch approval and acceptance reviews distinct from implementation.
 - [Prompt v1.3 execution audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md) — signing, parser, effect-completeness, and validator findings with execution dispositions.
 - [S01 intent-theorem package](../openspec/changes/s01-intent-theorem-freeze/README.md) — completed, independently reviewed specification package whose ten local predicates passed at S3; mechanization, full effect completeness, runtime verification, backend and ledger correspondence, ACTUS, pilots, and all 24 prompt release gates remain open at this boundary.
 - [S01 evidence manifest](../evidence/s01-intent-theorem-freeze/evidence-manifest.json) — reproducible local package-gate evidence for the candidate-unmechanized theorem and exact-transfer falsifier; it grants no signing authority and establishes no proof, backend, ledger, ACTUS, or pilot result.

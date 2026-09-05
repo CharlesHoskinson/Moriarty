@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T04:56:00Z
+updated_at: 2026-09-05T07:15:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -755,3 +755,37 @@ Claim metadata:
 - Reproduction: not applicable to this source comparison. Candidate experiments remain unperformed.
 - Confidence: high for the inspected requirements and absent candidate implementations.
 - Lifecycle status: S2 for the candidate designs. The shared experimental foundations do not raise candidate status.
+
+### Moriarty-only workflow reset
+
+**CLM-0143.** User decision and repository observation: Foreman development is
+closed for this workstream. The fetched Foreman main already contains PR 55 at
+`48f0b6eaed0eb25ee04d053317626eb768b60725`. The separate repair branch remains
+preserved, not accepted or merged by this reset. Its unfinished work is no longer
+a blanket prerequisite for authoring Moriarty models.
+
+The [restart assessment](../docs/MORIARTY_RESTART.md) resumes XML S02 from the
+existing effects and consumption foundations. Requested Council acceptance
+reviews remain outstanding. The user subsequently delegated type-sketch design
+signoff to GPT-6 Astra, Fable 5.1, and Grok 4.6 as formal-methods experts.
+Their decision remains outstanding. Neither obligation authorizes renewed Foreman
+development, and this reset selects no semantic alternative.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML S02 and the latest explicit user scope instruction.
+- Local locators: restart assessment, checkpoint fact 41, and obligations 2, 7, 9.
+- Repository: local Moriarty, baseline main `e37dde97847b9300b9f82c0a13f91885397088fd`, foundation branch `s02-model-comparison` at `6a60a645c03acad83b7cbc6b85d43996cd40ca65`.
+- Foreman repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, full commit above.
+- Observed and decision date: 2026-09-05 UTC.
+- Authority: user scope decision and local repository inspection.
+- Scope: S02 restart, unchanged Core `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: repository synchronization reproduced; candidate implementation remains unperformed.
+- Confidence: high for scope and repository state.
+- Lifecycle status: S2 for the restart plan, not candidate implementation or release.
+
+The user's continuation instruction covers the complete XML program, not S02
+alone. The app goal was initially paused. The user resumed it, and a subsequent
+goal-tool inspection confirmed `active`. This restores product-owned continuation,
+not evidence that any sprint or release gate is complete.

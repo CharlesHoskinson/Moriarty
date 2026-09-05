@@ -308,3 +308,16 @@ Foreman fixture recovery is preserved at
 `940034d008c094d2bbce3f6a954e7692327216cd`. Correction task 1463 addresses
 confirmed dispatch-boundary and public-output findings. Checkpoint fact 36
 records the handoff. Neither that dispatch nor its watchdog grants approval.
+
+## [2026-09-05] reset | Return the workstream to Moriarty
+
+Recorded CLM-0143 and the Moriarty restart assessment after explicit user direction
+to stop Foreman development. Fetched Foreman main and confirmed it already matches
+GitHub. Preserved its repair branch and unrelated changes. Dropped the obsolete
+repair obligations without marking their work complete. Retained Moriarty Council
+reviews as a separate obligation and identified S02 common authorization/recovery
+as the next implementation, followed by four distinct semantic alternatives.
+The user subsequently delegated the corrected type-sketch decision to the three
+requested formal-methods experts and reaffirmed full-program completion.
+That decision remains pending. No model logic, architecture
+selection, Council verdict, or release gate was added by this reset.
