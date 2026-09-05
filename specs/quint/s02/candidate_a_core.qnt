@@ -130,4 +130,55 @@ module candidate_a_core {
         }
       | _ => InputPreconditionFailureA
     }
+
+  // Internal result constructors: callers supply only actual frozen Core errors
+  // or successful reductions. Diagnostics never pass through these helpers.
+  pure def rolledBackTransaction(original: AState, error: CoreError): ATransactionEvaluation =
+    TransactionComputedA({accepted: false, state: original, error: error,
+      payments: List(), warnings: List(), reductions: 0})
+  pure def acceptedTransaction(reduced: AReduction): ATransactionEvaluation =
+    TransactionComputedA({accepted: true, state: reduced.state, error: NoCoreError,
+      payments: reduced.payments, warnings: reduced.warnings, reductions: reduced.reductions})
+
+  // Frozen core.py:323-370 source order, with finite-model diagnostics outside
+  // the Python result vocabulary. Every Core rejection uses the ORIGINAL state.
+  pure def computeTransaction(program: AProgram, before: AState, supplied: AInput,
+                             now: ATime): ATransactionEvaluation =
+    if (not(validState(program, before)) or not(validInput(supplied))) OutsideModelDomainA
+    else if (timeValue(now) < timeValue(before.minimumTime))
+      rolledBackTransaction(before, CoreErrorCode("time_before_state"))
+    else match reduceToQuiescence(program, {...before, minimumTime: now}) {
+      | QuiescenceOutsideDomainA => OutsideModelDomainA
+      | ReductionBoundFailureA => TransactionReductionBoundFailureA
+      | ReductionCompleteA(pre) => {
+          val currentNode = program.nodes.get(pre.state.continuation)
+          match supplied {
+            | NoAInput => match currentNode {
+                | CloseA => if (pre.reductions == 0 and pre.payments == List() and pre.warnings == List())
+                    rolledBackTransaction(before, CoreErrorCode("contract_closed"))
+                  else acceptedTransaction(pre)
+                | WhenA(_) => rolledBackTransaction(before, CoreErrorCode("input_required"))
+                | _ => acceptedTransaction(pre)
+              }
+            | PresentAInput(input) => match currentNode {
+                | WhenA(_) => match applyInput(program, pre.state, input) {
+                    | InputOutsideDomainA => OutsideModelDomainA
+                    | InputPreconditionFailureA => TransactionInputPreconditionFailureA
+                    | InputAppliedA(applied) => if (applied.error != NoCoreError)
+                        rolledBackTransaction(before, applied.error)
+                      else match reduceToQuiescence(program, applied.state) {
+                        | QuiescenceOutsideDomainA => OutsideModelDomainA
+                        | ReductionBoundFailureA => TransactionReductionBoundFailureA
+                        | ReductionCompleteA(post) => acceptedTransaction({state: post.state,
+                            payments: post.payments.foldl(pre.payments, (items, payment) => items.append(payment)),
+                            warnings: post.warnings.foldl(pre.warnings, (items, warning) => items.append(warning)),
+                            reductions: pre.reductions + post.reductions})
+                      }
+                  }
+                | CloseA => rolledBackTransaction(before, CoreErrorCode("contract_closed"))
+                | _ => rolledBackTransaction(before, CoreErrorCode("no_matching_input"))
+              }
+          }
+        }
+    }
 }

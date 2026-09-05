@@ -259,6 +259,176 @@ module candidate_a_core_test {
       and applyInput(program, emptyAState(N3), depositInput(22)) == InputOutsideDomainA)
   }
 
+  // Independent complete expected rejection, not the evaluator's result helper.
+  pure def expectedRollback(before: AState, code: str): ATransactionEvaluation = TransactionComputedA({
+    accepted: false, state: before, error: CoreErrorCode(code), payments: List(), warnings: List(), reductions: 0})
+  pure def initialTransactionState(node: NodeId, quantity: int): AState =
+    {...fundedState(node, quantity), minimumTime: Time1}
+  pure val payDepositPayProgram: AProgram = {root: N3, nodes: closeProgram.nodes
+    .put(N1, PayA({account: aliceA, payee: Bob, amount: ConstantA(5), continuation: N0}))
+    .put(N2, WhenA({cases: List(depositCase(5, N1)), timeout: Time100, timeoutNode: N0}))
+    .put(N3, PayA({account: aliceA, payee: Bob, amount: ConstantA(1), continuation: N2}))}
+  pure val warningDepositWarningProgram: AProgram = {root: N3, nodes: closeProgram.nodes
+    .put(N1, PayA({account: aliceA, payee: Bob, amount: ConstantA(10), continuation: N0}))
+    .put(N2, WhenA({cases: List(depositCase(5, N1)), timeout: Time100, timeoutNode: N0}))
+    .put(N3, PayA({account: aliceA, payee: Bob, amount: ConstantA(0), continuation: N2}))}
+
+  run timeBeforeStateRollbackTest = {
+    val before = fundedState(N1, 10)
+    assert(computeTransaction(payProgram(0), before, NoAInput, Time1)
+      == expectedRollback(before, "time_before_state"))
+  }
+  run emptyCloseRollbackTest = {
+    val before = initialTransactionState(N0, 0)
+    assert(computeTransaction(closeProgram, before, NoAInput, Time2)
+      == expectedRollback(before, "contract_closed"))
+  }
+  run waitingWithoutInputRollbackTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(waitingProgram(List(choiceCase(0, 1, N1))), before, NoAInput, Time2)
+      == expectedRollback(before, "input_required"))
+  }
+  run wrongInputRollbackTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(waitingProgram(List(choiceCase(0, 1, N1))), before,
+      PresentAInput(chosenInput(Mallory, 1)), Time2) == expectedRollback(before, "no_matching_input"))
+  }
+  run outOfBoundsRollbackTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(waitingProgram(List(choiceCase(0, 1, N1))), before,
+      PresentAInput(chosenInput(Bob, 2)), Time2) == expectedRollback(before, "choice_out_of_bounds"))
+  }
+  run nonpositiveDepositRollbackTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(Set(-1, 0).forall(quantity =>
+      computeTransaction(waitingProgram(List(depositCase(quantity, N1))), before,
+        PresentAInput(depositInput(quantity)), Time2) == expectedRollback(before, "non_positive_deposit")))
+  }
+  run timeoutNoInputCommitsRefundTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(waitingProgram(List(choiceCase(0, 1, N1))), before, NoAInput, Time100)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N0,
+        minimumTime: Time100, accounts: CORE_ACCOUNTS.mapBy(_ => 0)}, error: NoCoreError,
+        payments: List({source: aliceA, recipient: Alice, asset: TokenA, quantity: 10}),
+        warnings: List(), reductions: 2}))
+  }
+  run timeoutWithInputRollsBackRefundTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(Set(Time100, Time101).forall(time =>
+      computeTransaction(waitingProgram(List(choiceCase(0, 1, N1))), before,
+        PresentAInput(chosenInput(Bob, 1)), time) == expectedRollback(before, "contract_closed")))
+  }
+  run speculativeWarningRollbackTest = {
+    val program = {...waitingProgram(List(choiceCase(0, 1, N1))), root: N4,
+      nodes: waitingProgram(List(choiceCase(0, 1, N1))).nodes.put(N4,
+        PayA({account: aliceA, payee: Bob, amount: ConstantA(0), continuation: N3}))}
+    val before = initialTransactionState(N4, 10)
+    assert(computeTransaction(program, before, PresentAInput(chosenInput(Mallory, 1)), Time2)
+      == expectedRollback(before, "no_matching_input"))
+  }
+  run speculativePaymentRollbackTest = {
+    val before = initialTransactionState(N3, 1)
+    assert(computeTransaction(payDepositPayProgram, before, PresentAInput(depositInput(10)), Time2)
+      == expectedRollback(before, "no_matching_input"))
+  }
+  run speculativeNoInputRollbackTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(warningDepositWarningProgram, before, NoAInput, Time2)
+      == expectedRollback(before, "input_required"))
+  }
+  run beforeAfterReductionOrderTest = {
+    val before = initialTransactionState(N3, 1)
+    assert(computeTransaction(payDepositPayProgram, before, PresentAInput(depositInput(5)), Time2)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N0,
+        minimumTime: Time2, accounts: CORE_ACCOUNTS.mapBy(_ => 0)}, error: NoCoreError,
+        payments: List({source: aliceA, recipient: Bob, asset: TokenA, quantity: 1},
+          {source: aliceA, recipient: Bob, asset: TokenA, quantity: 5}), warnings: List(), reductions: 2}))
+  }
+  run beforeAfterWarningOrderTest = {
+    val before = initialTransactionState(N3, 0)
+    assert(computeTransaction(warningDepositWarningProgram, before, PresentAInput(depositInput(5)), Time2)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N0,
+        minimumTime: Time2, accounts: CORE_ACCOUNTS.mapBy(_ => 0)}, error: NoCoreError,
+        payments: List({source: aliceA, recipient: Bob, asset: TokenA, quantity: 5}),
+        warnings: List({code: "non_positive_payment", requested: IntValue(0), paid: IntValue(0)},
+          {code: "partial_payment", requested: IntValue(10), paid: IntValue(5)}), reductions: 2}))
+  }
+  run depositWithoutPaymentTransactionTest = {
+    val before = emptyAState(N6)
+    assert(computeTransaction(canonicalSwap, before, PresentAInput(depositInput(10)), Time1)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N5,
+        minimumTime: Time1, accounts: before.accounts.put(aliceA, 10)}, error: NoCoreError,
+        payments: List(), warnings: List(), reductions: 0}))
+  }
+  run depositThenCloseRefundTransactionTest = {
+    val before = initialTransactionState(N3, 0)
+    assert(computeTransaction(waitingProgram(List(depositCase(5, N0))), before,
+      PresentAInput(depositInput(5)), Time2) == TransactionComputedA({accepted: true,
+        state: {...before, continuation: N0, minimumTime: Time2}, error: NoCoreError,
+        payments: List({source: aliceA, recipient: Alice, asset: TokenA, quantity: 5}),
+        warnings: List(), reductions: 1}))
+  }
+  run choiceToEmptyCloseAcceptedTest = {
+    val before = initialTransactionState(N3, 0)
+    assert(computeTransaction(waitingProgram(List(choiceCase(0, 1, N0))), before,
+      PresentAInput(chosenInput(Bob, 1)), Time2) == TransactionComputedA({accepted: true,
+        state: {...before, continuation: N0, minimumTime: Time2,
+          choices: before.choices.put(SettleId, IntValue(1))}, error: NoCoreError,
+        payments: List(), warnings: List(), reductions: 0}))
+  }
+  run choiceThenIfPaymentTransactionTest = {
+    val program = {root: N3, nodes: closeProgram.nodes
+      .put(N1, PayA({account: aliceA, payee: Bob, amount: ConstantA(5), continuation: N0}))
+      .put(N2, IfA({observation: ChoiceEqualsA({id: SettleId, expected: 1}), thenNode: N1, elseNode: N0}))
+      .put(N3, WhenA({cases: List(choiceCase(0, 1, N2)), timeout: Time100, timeoutNode: N0}))}
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(program, before, PresentAInput(chosenInput(Bob, 1)), Time2)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N0, minimumTime: Time2,
+        choices: before.choices.put(SettleId, IntValue(1)), accounts: CORE_ACCOUNTS.mapBy(_ => 0)},
+        error: NoCoreError, payments: List({source: aliceA, recipient: Bob, asset: TokenA, quantity: 5},
+          {source: aliceA, recipient: Alice, asset: TokenA, quantity: 5}), warnings: List(), reductions: 3}))
+  }
+  run noInputActualReductionAcceptedTest = {
+    val before = initialTransactionState(N2, 0)
+    assert(computeTransaction(zeroBranchProgram, before, NoAInput, Time2)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N1, minimumTime: Time2},
+        error: NoCoreError, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run noInputWarningAcceptedTest = {
+    val before = initialTransactionState(N1, 0)
+    assert(computeTransaction(payProgram(0), before, NoAInput, Time2)
+      == TransactionComputedA({accepted: true, state: {...before, continuation: N0, minimumTime: Time2},
+        error: NoCoreError, payments: List(),
+        warnings: List({code: "non_positive_payment", requested: IntValue(0), paid: IntValue(0)}), reductions: 1}))
+  }
+  run suppliedAfterPreCloseRollbackTest = {
+    val before = initialTransactionState(N1, 10)
+    assert(computeTransaction(payProgram(10), before, PresentAInput(depositInput(5)), Time2)
+      == expectedRollback(before, "contract_closed"))
+  }
+  run matchedZeroVersusMismatchedZeroTransactionTest = {
+    val before = initialTransactionState(N3, 10)
+    assert(computeTransaction(waitingProgram(List(depositCase(10, N0))), before,
+      PresentAInput(depositInput(0)), Time2) == expectedRollback(before, "no_matching_input"))
+  }
+  run transactionDomainDiagnosticTest = {
+    val before = fundedState(N3, 10)
+    val program = waitingProgram(List())
+    assert(computeTransaction(program, {...before, accounts: Map()}, NoAInput, Time2) == OutsideModelDomainA
+      and computeTransaction({root: N0, nodes: Map()}, before, NoAInput, Time2) == OutsideModelDomainA
+      and computeTransaction(program, before, PresentAInput(depositInput(22)), Time1) == OutsideModelDomainA
+      and computeTransaction(program, before, PresentAInput(chosenInput(Bob, 3)), Time2) == OutsideModelDomainA)
+  }
+  run admittedTransactionFixturesNeverDiagnosticTest = assert(
+    Set(closeProgram, canonicalSwap, zeroBranchProgram, waitingProgram(List()),
+      waitingProgram(List(choiceCase(0, 1, N1))), waitingProgram(List(depositCase(0, N0))),
+      payProgram(0), payDepositPayProgram, warningDepositWarningProgram, maximalReductionProgram)
+      .forall(program => A_TIMES.forall(time =>
+        Set(NoAInput, PresentAInput(chosenInput(Bob, 1)), PresentAInput(depositInput(5)), PresentAInput(depositInput(0)))
+          .forall(supplied => match computeTransaction(program, initialTransactionState(program.root, 1), supplied, time) {
+            | TransactionComputedA(_) => true | _ => false
+          }))))
+
   run finiteProgramDomainTest = assert(validProgram(closeProgram)
     and validState(closeProgram, emptyAState(N0)) and validInput(NoAInput))
   run cycleRejectedByDomainTest = {

@@ -31,7 +31,9 @@ module candidate_a_types {
   type AInputEvaluation = InputAppliedA(AInputResult) | InputOutsideDomainA | InputPreconditionFailureA
   type ATransactionResult = {accepted: bool, state: AState, error: CoreError,
     payments: List[CorePayment], warnings: List[CoreWarning], reductions: int}
+  // Internal evaluator diagnostics remain outside the frozen Core error/result vocabulary.
   type ATransactionEvaluation = TransactionComputedA(ATransactionResult) | OutsideModelDomainA
+    | TransactionReductionBoundFailureA | TransactionInputPreconditionFailureA
   type APredecessor = {program: AProgram, state: AState}
   type AContinuation = {program: AProgram, node: NodeId}
 
