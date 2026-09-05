@@ -96,3 +96,19 @@ The common-model review bundle must cover the accumulated observation, policy,
 signing, execution, rejection, and installment units, not merely the historical
 effect foundation. It must preserve each unit's narrower evidence limits.
 Candidate A–D selection and S01 backfill remain separate acceptance obligations.
+
+### Candidate A continuation check
+
+The later read-only check observed Foreman `387dcd7521a45e91b2a58b309e20ffcc72902ec0`.
+Installed-runtime verification passed with manifest digest
+`6280ccf3323ff0e6eaa9343735cf0dd6af4063d4a0fc1dc1fb06e4811b1b0264`.
+The current Council README still excludes a live review coordinator and durable
+review runtime; runtime source/package inspection exposes preflight and admission,
+not a complete review execution path. No session Council tool was available.
+[Exact capability observation](../evidence/council/2026-09-05-candidate-a-local-readiness.json)
+preserves terminal verification and inspected entry points. No provider review
+was dispatched, no allowance consumed, and no Council verdict inferred.
+
+A0–A3 now have local evidence, with A2/A3 aggregate `28d35d8`. Required Council
+coverage remains open. Continue independent A4/A5 Moriarty work; do not repair
+Foreman or claim integration authority from native same-family reviews.
