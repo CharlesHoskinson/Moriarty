@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T20:50:01Z
+updated_at: 2026-09-05T21:56:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1779,3 +1779,43 @@ checks; confidence high for those observations; lifecycle S3 experimental branch
 A5 original/factored adapter and boundary suites each pass 15 and 40 tests;
 both installment recursive typechecks remain active. Full A4/A5, requested
 Council, integration and publication remain open.
+
+### Admit all native case drivers; retain the regression environment failure
+
+**CLM-0172.** Experiment and repository observation: producer Task2 `8be3cef`
+admits the full 78-wrapper aggregate recursive typecheck, all 12 unfiltered
+native Quint tests and 13 producer Python tests. Its lowerer preserves ordinary,
+negative, refusal, cancellation and recovery selectors. Root reviewed the full
+source and audited 15 original stages, 3128 source-byte members and 8102 runtime
+pins. The original boundary/ordinal behavioral failures and their two exact
+corrections are retained. The separate QNT404/QNT500/QNT202 compatibility failures
+are diagnostic history, not semantic negative controls. NW004 checks independent
+shard endpoints without claiming cross-shard state carry or paired namespace
+initialization. Two match-arm bindings are approved static language corrections,
+not an invented parser RED. The original receipt archive has 3230 members and
+SHA256 `98b132da47ea00f3261121155bc2223e2c8a7e6bc8e20391e6ab72d4977d5ddc`.
+
+RH001 now has an author-observed bounded-read failure and 15 passing producer
+Python tests after the streaming-hash correction. Root admission is pending.
+Task6's original broad synthetic mutation run continues on frozen source. No
+actual Candidate A native shard has yet been admitted or sealed. Largest-case
+resource feasibility, all 78 exports, independent replay and actual-package
+controls remain mandatory.
+
+The A5 original corpus has completed all 20 commands and 244 tests. The factored
+corpus and six-test equivalence sequence remain active; partial success is not
+complete Task2 acceptance. Fresh historical Python collection found 441 tests,
+but execution stopped at 440 passes and one failure: an unchanged test invokes
+`uv`, which is absent from the controlled recorder PATH. Original failure,
+JUnit and source/runtime receipts are retained; Core53 was not run after the
+failure. A pinned offline uv/interpreter launch supplement is being planned.
+No test exclusion, helper repair, successful retry or Core53 result is claimed.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local producer Task2 admission and explicitly partial A4/A5 execution;
+observed date 2026-09-05 UTC; reproduction reproduced for the named original
+Task2 checks; confidence high for those observations; lifecycle S3 experimental
+branch. Root evidence is under
+`evidence/s02-candidate-a-completion/a4/producer-task2/` on that branch.
+Full A4–A7, requested cross-provider Council, implementation integration and
+publication remain open. No Foreman repairs resumed.

@@ -44,8 +44,8 @@ will grow by merging evidence into durable topic pages.
 
 ## Active specification artifacts
 
-- [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — local A0 boundary intake
-  accepted with independent evidence; A1–A7 and Council remain open.
+- [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — A0–A3 locally accepted;
+  A4 checker/producer units admitted; full A4–A7 and Council remain open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

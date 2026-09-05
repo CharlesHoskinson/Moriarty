@@ -126,15 +126,25 @@ variable-order expectation based on a real toy trace; all 79 tests pass again.
 These are focused synthetic tests, not actual 78-shard package admission.
 The complete Task6 plan `cd06756` is adopted, its substitution RED is recorded,
 and the broad pre-export synthetic run is active against frozen source. Producer
-case lowering/native wrappers are under recorded validation; full export, replay
+case lowering and all78native wrappers are now admitted at `8be3cef`: complete
+aggregate recursive typecheck, all12native tests,13Python tests and independently
+audited15-stage original receipts. Its archive retains3230members, including
+the separate compatibility diagnostics and genuine two-fault behavioral RED.
+RH001 streaming recorder hashing has15author-observed Python passes and awaits
+root admission. Sharded exporter plan `e221eaf` is adopted; implementation is
+next after RH001 admission. Largest-case native feasibility, full export, replay
 and final semantic/locator/package acceptance remain open.
 
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;
 root audited all38 original source members per stage and retained the shared
-runtime archive losslessly. Full original/factored corpus comparison is running;
-both adapter suites pass their 15 tests and both authority-boundary suites pass
-all 40 tests after successful recursive typechecks. The remaining corpus/equivalence/sample checks
+runtime archive losslessly. The original corpus has completed20commands and
+all244tests. The factored corpus and six-test equivalence sequence continue;
+both adapter/boundary suites and the factored75-test Core suite pass. Fresh
+historical Python collection found441tests, but execution stopped at440passes
+and one missing-uv environment failure. Its original receipts are retained;
+an offline pinned launch supplement is planned, and Core53 has not run after
+that failure. The remaining corpus/equivalence/sample and regression checks
 are not yet accepted. No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 
