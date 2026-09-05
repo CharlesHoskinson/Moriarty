@@ -266,3 +266,21 @@ for the known lint repair and armed the per-lane stall watchdog. The monitor
 does not grant gate approval or reset contract limits. S02 type-sketch review
 continues in parallel. No S02 model logic, GitHub merge, or Council verdict is
 claimed by this entry.
+
+## [2026-09-05] planning | Correct the S02 observation carrier proposal
+
+Corrected the three issues in the authorization/recovery type sketch. The
+observation and verification record now bind transaction time. Core choice
+identifiers remain strings, with explicit absence distinct from zero in a
+bounded initialized map. Error and warning carriers preserve the declared
+frozen Python fields; separate proposed validators constrain emitted results.
+Compared the proposal with `moriarty/core.py` and the reviewed observation
+design. Requested explicit type-sketch signoff under the Quint workflow.
+No model logic, simulation, model check, or Council verdict was produced.
+
+Foreman lint repair is committed at
+`2007bad9e466ccc4ea51a20ee6708493af093e50`. The worker's nonzero exit remains
+recorded separately from its successful deterministic gate and fresh reports.
+Independent queue task 1460 passed the complete Council package check.
+Queue task 1461 starts the missing single-review execution implementation.
+These intermediate results do not complete the Foreman repair or S02.

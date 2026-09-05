@@ -5,17 +5,14 @@ from the independently reviewed S02 designs. This document is not an
 implementation, model result, Council decision, proof, candidate result, or S02
 gate result.
 
-## Main-review hold
+## Main-review disposition
 
-This draft is not ready for user type-sketch approval. Main review identified
-three issues that must be resolved before implementation:
-
-- Bind transaction time explicitly in observation and verification records.
-  The current `canCommit` requirement refers to data those records omit.
-- Remove premature candidate-specific `ChoiceId` decisions from the shared
-  carrier, or justify their scope against all four candidate requirements.
-- Compare the complete `CoreError` and `CoreWarning` carriers with frozen Core
-  before claiming exact result coverage.
+The three carrier issues identified in the initial draft are corrected below.
+Transaction time is bound explicitly. Core choice identifiers remain strings.
+Error and warning carriers preserve the declared frozen Python values; separate
+validation predicates constrain valid observations to frozen emission rules.
+This remains a proposed type sketch awaiting explicit user signoff, not a
+validated model or a Council decision.
 
 No model logic is authorized by this draft or its file presence.
 
@@ -67,20 +64,17 @@ wallet/escrow ledger and complete transfer effects.
 ```quint
 type OptionalInt = NoInt | IntValue(int)
 
-type ChoiceId = SettleChoice | Slot1Choice | Slot2Choice | RefundChoice
+type CoreChoiceId = str
 
 type CoreError =
   | NoCoreError
-  | TimeBeforeState
-  | ContractClosed
-  | InputRequired
-  | NoMatchingInput
-  | ChoiceOutOfBounds
-  | NonPositiveDeposit
+  | CoreErrorCode(str)
 
-type CoreWarning =
-  | NonPositivePayment({requested: int, paid: int})
-  | PartialPayment({requested: int, paid: int})
+type CoreWarning = {
+  code: str,
+  requested: OptionalInt,
+  paid: OptionalInt,
+}
 
 type CoreAccount = {owner: Principal, asset: Asset}
 
@@ -93,7 +87,7 @@ type CorePayment = {
 
 type CoreStateObservation[continuation] = {
   accounts: CoreAccount -> int,
-  choices: ChoiceId -> OptionalInt,
+  choices: CoreChoiceId -> OptionalInt,
   continuation: continuation,
   minimumTime: int,
 }
@@ -125,12 +119,32 @@ type CandidateObservation[state, continuation, artifact, plan] = {
   proposedSuccessor: state,
   artifactAndCall: artifact,
   resolvedPlan: plan,
+  transactionTime: int,
   effects: List[Transfer],
   outcome: SemanticOutcome,
   coreProjection: CoreResultObservation[continuation],
   effectEvidence: EvidenceDisposition,
 }
 ```
+
+`CoreChoiceId` preserves the frozen Core string identifier. Candidate fixtures
+supply finite literal identifier sets; the shared carrier assigns no
+candidate-specific constructors. The bounded map is initialized over each
+fixture's complete identifier set. `NoInt` represents an absent Core choice,
+while `IntValue(0)` represents a present zero. Its abstraction map must preserve
+that distinction and reject out-of-fixture identifiers, not silently omit them.
+
+`CoreError` and `CoreWarning` preserve the declared Python carriers without
+normalizing unknown values. `NoCoreError` represents `None`; `CoreErrorCode`
+preserves the exact string. Warning code and both optional integers remain
+independent. `validCoreObservation` must reject values outside the frozen
+emission rules rather than making the carrier lossy. Frozen Core declares
+these fields in `moriarty/core.py:187` and `moriarty/core.py:203`.
+Its current errors are `time_before_state`, `contract_closed`, `input_required`,
+`no_matching_input`, `choice_out_of_bounds`, and `non_positive_deposit`.
+Its warning emitters are `non_positive_payment` and `partial_payment`.
+These source observations specify validation work; they are not correspondence
+evidence.
 
 `continuation` must be a complete continuation payload. For Candidate A, a
 node index alone is insufficient: the instantiation must carry the complete
@@ -356,6 +370,7 @@ type OptionalPreSignCheck[state, continuation, artifact, plan] =
 type VerificationRecord[state, continuation, artifact, plan] = {
   policies: Principal -> AuthorityRecord[plan],
   observation: CandidateObservation[state, continuation, artifact, plan],
+  transactionTime: int,
   predecessorContext: Context[state, plan],
   currentEnvironment: Environment,
   signatureEvidence: Principal -> SignatureEvidence[plan],
@@ -401,6 +416,8 @@ action by themselves.
 pure def validCoreObservation[c](before: CoreStateObservation[c],
                                  result: CoreResultObservation[c],
                                  effects: List[Transfer]): bool
+pure def validFrozenCoreError(error: CoreError): bool
+pure def validFrozenCoreWarning(warning: CoreWarning): bool
 pure def rejectionPreserved[c](before: CoreStateObservation[c],
                                result: CoreResultObservation[c],
                                effects: List[Transfer]): bool
@@ -415,14 +432,12 @@ pure def conditionsHold[p](policy: Policy[p],
                            transactionTime: int): bool
 pure def principalAllows[s, c, a, p](policy: SignedPolicy[p],
                                     observation: CandidateObservation[s, c, a, p],
-                                    context: Context[s, p],
-                                    transactionTime: int): bool
+                                    context: Context[s, p]): bool
 pure def affectedPrincipals(effects: List[Transfer]): Set[Principal]
 pure def allAffectedPrincipalsAllow[s, c, a, p](
   policies: Principal -> AuthorityRecord[p],
   observation: CandidateObservation[s, c, a, p],
-  context: Context[s, p],
-  transactionTime: int): bool
+  context: Context[s, p]): bool
 
 pure def computeAfterResolvePreSignCheck[s, c, a, p](
   policy: Policy[p], plan: p, context: Context[s, p], artifactAndCall: a,
@@ -447,6 +462,7 @@ pure def verificationValid[s, c, a, p](
   record: VerificationRecord[s, c, a, p],
   current: Context[s, p]): bool
 pure def canCommit[s, c, a, p](record: VerificationRecord[s, c, a, p],
+                               actual: CandidateObservation[s, c, a, p],
                                current: Context[s, p]): bool
 
 pure def canRegisterAuthority[p](registry: AuthorityRegistry[p],
@@ -476,10 +492,17 @@ Each policy also checks its complete incoming consideration and conditional
 outcome; debit coverage alone is insufficient. Effect comparison preserves
 ordered occurrences and multiplicity.
 
-`canCommit` requires exact equality of the actual proposal, predecessor,
-environment, implementation version, transaction time, and consumption state
-with the verified bindings. A substituted or stale value requires rejection or
-fresh verification before any ledger or authority update.
+`computeVerification` copies `observation.transactionTime` into the verification
+record. `verificationValid` requires those values to agree and the time to be
+in the fixture's declared `TRANSACTION_TIMES` domain. `principalAllows` and
+`allAffectedPrincipalsAllow` pass only `observation.transactionTime` to
+`conditionsHold`; no independent time argument can disagree with the proposal.
+
+`canCommit` requires `actual == record.observation`,
+`record.transactionTime == actual.transactionTime`, and exact freshness of the
+predecessor context, environment, implementation version, and consumption
+state. A substituted observation or time requires fresh verification before
+any ledger or authority update.
 
 ## Harness state and action boundary
 
@@ -572,7 +595,9 @@ implementation review boundary:
 2. split `observations.qnt` into a separately reviewed prerequisite package,
    then implement authorization/recovery against the approved carrier.
 
-Candidate-specific constructor tables, choice ordering, artifact/call shapes,
-and resolved-plan shapes are intentionally supplied by the later candidate
-plans through the four generic parameters. They are not choices required to
+Candidate-specific state and constructor tables, artifact/call shapes, and
+resolved-plan shapes are supplied by later candidate plans through the four
+generic parameters. Frozen Core choice identifiers remain exact strings in the
+Core projection. Each bounded fixture supplies its finite identifier set and
+documents its independent abstraction map. These are not choices required to
 approve this common type sketch.
