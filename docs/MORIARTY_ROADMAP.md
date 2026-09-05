@@ -56,10 +56,12 @@ The latest boundary author report records 40 boundary tests, 15 adapter tests,
 441 Python tests, four typechecks, and 100 sampled funding traces without its
 safety predicate failing. Each of five actions was witnessed in all traces;
 the committed profiles split 50/50. These are author-run finite results.
-Root separately ran the Python suite and reviewed boundary source; native source
-reviews preceded a two-branch action-effect syntax correction. The corrected
-whole-unit independent runtime/evidence intake is still open. Do not promote
-this author report into a final acceptance or Council verdict.
+At the snapshot, root source reviews preceded a two-branch action-effect syntax
+correction. Subsequent A0 intake independently ran forty boundary tests and one
+hundred funding traces on the corrected source and obtained nonauthor review.
+Evidence is committed at `0190cb9`/`95899b3`; the historical author Python receipt
+lacks a complete contemporaneous Python dependency/source closure. Local A0 is
+accepted with that limitation disclosed, not as Council or whole-A acceptance.
 
 Model/checker authorship overlaps. The frozen Python oracle is a separate
 implementation, but shared authorship must remain disclosed. Adapter historical
@@ -88,14 +90,14 @@ The [package index](../openspec/WORK-PACKAGES-EARS.md) maps all packages.
 Eight Candidate A changes refine S02.
 The program change covers S01–S15 and G01–G24.
 Existing adopted S01/S02 packages remain unchanged.
-All newly specified completion tasks remain unchecked.
+A0 local intake is accepted; A1–A7 completion tasks remain open.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.
 
 | ID | Remaining deliverable | Depends on | Completion evidence |
 | --- | --- | --- | --- |
-| A0 | Recover source/evidence and close boundary intake | Existing `d14cfea` | Corrected source review, retained raw receipts/import closures, independent runtime checks and exact archive audit |
+| A0 | Local intake accepted; Council open | Existing `d14cfea` | Evidence `0190cb9`/`95899b3`: independent 40-test and 100-trace results, native source review, sixteen-file closure and 149-member archive audit |
 | A1 | Correct and adopt concrete lifecycle plans | A0; adopted authority design | Exact typed interfaces, independent literal plans/facts, both-profile scenario inventory, reviewed fixes to draft errors |
 | A2 | Actual A installment authority lifecycle | A1 | Both race orders, second fill, fresh cancellation attempt, newly signed recovery ten/five and deadline cases; deterministic tests and per-action witnesses |
 | A3 | Actual A swap authority lifecycle | A1; shared adapter/boundary | Separate depositor signatures, disposition signatures, real funds, settlement/refunds/timeouts, staleness, explicit no-effect rejection |

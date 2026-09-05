@@ -1,8 +1,10 @@
 # A0: Recover and accept the completed boundary unit
 
-Status: specified-only completion contract.
-Existing source status is recorded in the roadmap.
-This package does not create a passed gate.
+Status: local A0 intake accepted on 2026-09-05.
+Source: d14cfea98a1c9213e5ef5f12c1a088f4e966083d.
+Evidence: 0190cb97270e4775273cb3737dc649d874861e91 and
+95899b37fa03ccb61506e51c099dd6aea96bcc16 on s02-model-comparison.
+This does not pass Council, S02, or a full XML release gate.
 
 ## Dependencies
 
@@ -22,8 +24,6 @@ Preserve common authorization and frozen Python semantics.
 - `evidence/s02-candidate-a-completion/a0/manifest.json`
 - `evidence/s02-candidate-a-completion/a0/validation.json`
 - `evidence/s02-candidate-a-completion/a0/review.md`
-- `evidence/s02-candidate-a-completion/a0/manifest.json`
-- `evidence/s02-candidate-a-completion/a0/validation.json`
 
 ## Acceptance
 

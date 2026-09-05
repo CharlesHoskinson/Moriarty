@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T14:07:00Z
+updated_at: 2026-09-05T16:35:22Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1394,3 +1394,40 @@ graphs. A's authority-boundary implementation is under final verification, not
 accepted here. Complete A lifecycles, B–D comparison, model checking, Council,
 S03–S15, ACTUS and the XML release gates remain open. Foreman repairs stay closed;
 the full Moriarty goal remains active and no GitHub publication is claimed.
+
+### Candidate A A0 independent boundary intake accepted
+
+**CLM-0160.** Experiment and repository observation: root independently executed
+all forty boundary tests and one hundred sampled funding traces against source
+`d14cfea98a1c9213e5ef5f12c1a088f4e966083d`. Both commands terminated with exit 0.
+Each of five action witnesses occurred in all hundred traces; each signing
+profile committed in fifty traces. No boundarySafetyA violation was observed.
+This is finite execution evidence, not exhaustive verification or cryptography.
+
+Native nonauthor review approved the corrected boundary source/specification.
+Root checked sixteen final Quint import-closure files, 134 prior source pins,
+and 149 exact archived members. The historical boundary-author Python receipt
+lacks a full contemporaneous Python source/test/dependency closure; this remains
+disclosed, together with the predecessor adapter's historical RED provenance gaps.
+No missing historical evidence was reconstructed or silently passed.
+
+Evidence commits on s02-model-comparison are
+`0190cb97270e4775273cb3737dc649d874861e91` and
+`95899b37fa03ccb61506e51c099dd6aea96bcc16`. The latter adds the canonical
+review.md index required by OpenSpec. Locators are
+`evidence/s02-candidate-a-completion/a0/{manifest,validation}.json`,
+`review.md`, independent raw runtime receipts, and source/archive inventory.
+The existing main snapshot supplies the original exact archive without recopying.
+
+Claim metadata: sources SRC-0031 (XML S02), SRC-0033 (comparison boundary),
+SRC-0035 (common design); authority experimental; scope A0 boundary intake only;
+observed/commit date 2026-09-05 UTC; reproduction reproduced as scoped above;
+confidence high for these finite observations; lifecycle S3 experimental branch;
+local Moriarty repository without a configured remote. Main contains this status
+record, not integrated Candidate A source. Native review does not fill Council.
+
+A1 corrected installment and swap plans are next. Full lifecycles, integrated
+correspondence, bounded model checking, Council, A acceptance, B–D/S02 and all
+later XML obligations remain open. Foreman development remains closed.
+The product goal was observed marked blocked during this execution turn;
+the current turn is working, but no automatic background loop is claimed.

@@ -475,3 +475,11 @@ The new contracts do not establish implementation or gate completion.
 The roadmap flags consumed-nonce and revision errors in the unadopted installment draft.
 The snapshot directory preserves its exact original bytes and the boundary author evidence.
 Database integrity and document-validation receipts accompany the final snapshot manifest.
+
+## [2026-09-05] execution | Accept local Candidate A boundary intake
+
+CLM-0160 records independent forty-test and hundred-trace execution at d14cfea,
+native source/spec review, full Quint closure and exact archive checks, and
+the disclosed historical Python closure gap. A0 evidence is committed on the
+experimental branch at 0190cb9 and 95899b3. A1 plans follow; no Council, whole A,
+model-checking, integration or full XML gate is claimed.

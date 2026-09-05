@@ -1,6 +1,6 @@
 # EARS and OpenSpec work-package index
 
-Status: specified-only completion contracts, recorded 2026-09-05.
+Status: A0 local intake accepted; remaining completion contracts open, recorded 2026-09-05.
 Existing implementation evidence remains separate from these specifications.
 
 ## Notation and preservation
