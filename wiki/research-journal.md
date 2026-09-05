@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T00:00:31Z
+updated_at: 2026-09-05T07:43:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -18,6 +18,7 @@ sources:
   - SRC-0032
   - SRC-0033
   - SRC-0034
+  - SRC-0035
 ---
 
 # Moriarty research journal
@@ -579,3 +580,250 @@ confidence high; lifecycle status S3. The theorem remains unmechanized and
 both local certificates deny signing. S02 now owns the four-model Quint
 comparison; all later proof, backend, ledger, ACTUS, pilot, and release
 obligations remain open.
+
+## Iteration S02: record branch-only foundations and resume Council preparation
+
+- Timestamp: 2026-09-05T02:24:03Z
+- Main repository base: `5f692a4f0192158c955a95584a146d6703d01d3d`
+- State: intermediate branch work exists, but runtime implementation and Council review remain pending
+
+### Intermediate progress and user decision
+
+**CLM-0138.** Repository observation: the S02 effect foundation candidate and its honest
+receipt correction are committed on `s02-model-comparison` through
+`1bd4bff04fc24855b1c45ff95b1eab137909434d`. The exact-parent consumption
+foundation is committed at `8b905114c1cec79faf555974c0267f183ca31399`.
+Its honest receipt whitespace correction is committed at
+`6a60a645c03acad83b7cbc6b85d43996cd40ca65`. None of these commits is an
+ancestor of `main` at this observation. They have no Council approval and do
+not complete S02.
+
+User decision: on 2026-09-05 UTC, the user approved the narrow Foreman runtime
+binding fixes in the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md).
+The user also approved GitHub publication and merge for those fixes. The user
+accepted the documented limits of the official requested-versus-observed model
+routes and approved resumption of the Council workflow. The runtime change is
+not yet implemented, and no Council member has received the review bundle.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML S02 and W1, and SRC-0033 at the S02 execution-evidence boundary.
+- Local locators: the three full branch commits above, the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md), and the [Council review requirements](../docs/COUNCIL_REVIEWS.md).
+- Commit dates: the branch commits were created on 2026-09-04 MDT. The user decision was recorded on 2026-09-05 UTC.
+- Authority: normative task input, local repository observation, and direct user decision.
+- Scope: unreleased S02 preparation under semantic scope `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: commit presence and branch containment inspected. Branch execution evidence was not reproduced for this journal update.
+- Confidence: high for repository containment and the user decision.
+- Lifecycle status: S3 for the branch-only foundations and S2 for the pending runtime and Council work.
+
+### Program boundary and next falsification test
+
+Full S02 remains incomplete. No four-candidate comparison, architecture
+selection, Council verdict, integration decision, or S02 gate follows from the
+two foundations. S03 through S15 also remain incomplete.
+
+Implement and verify the approved narrow runtime binding carrier before Council
+dispatch. Then bind the requested and observed model-route evidence to the
+review record. Resume Council only after the runtime contract can preserve the
+immutable review bytes, ready-token hash, contract hash, prompt hash, and
+reviewer identity without post-response stamping.
+
+### Council repair candidate, not gate completion
+
+**CLM-0139.** Repository observation: Foreman now has a Task 1 candidate at
+`ac7c2deff6e39144c29836611ee85800ffed41c8` on branch
+`foreman/council-binding-20260905/implement/binding`. It adds canonical
+ready-token hashing and an immutable review-delivery preparation boundary.
+The worker round ended incomplete. Test typing errors and missing report
+evidence prevent acceptance. The single-review execution path remains unimplemented.
+No reviewed fix has reached GitHub, and no Moriarty Council gate passed.
+
+A correction dispatch stopped before provider execution with the scanner's
+`bound_exceeded` result. The wrapper described this as secret material, but
+the scanner did not report a secret finding. Removing the unused root
+dependency install from the worktree restored the unchanged scan to `clean`.
+The install remains recoverable outside the worktree. Council dependencies
+remain installed. The original execution contract governs the resumed attempt.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council and S02 obligations, and SRC-0033 at the execution-evidence boundary.
+- Local locators: Foreman commit above and Moriarty checkpoint fact 26.
+- External run receipts: `/home/charl/.foreman/runs/council-binding-20260905/`, including `execution-contract.json` and `secret-scan-open.trace`.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, experimental branch identified above.
+- Observed at: 2026-09-05T03:07:37Z. Commit date: 2026-09-05 UTC.
+- Authority: local repository and execution observations.
+- Scope: unreleased Council enablement only. Moriarty Core scope remains `0.0.0-e00.2`.
+- Evidence kind: repository observation and experiment observation.
+- Reproduction: partially reproduced. The scan result was reproduced, but Task 1 acceptance and Council execution remain pending.
+- Confidence: high for the committed candidate and scan disposition.
+- Lifecycle status: S3. No release, integration, or Council-approval claim.
+
+### Authorized successor and preserved repair candidate
+
+**CLM-0140.** Repository observation and user decision: the user explicitly
+authorized a successor after the predecessor contract escalated. Foreman
+accepted `council-binding-20260905-successor1`, which cites the predecessor
+and binds a new approval digest. It permits three implementation rounds, one
+correction round, and separate bounded verification, audit, Council,
+integration, and publication actions. Its deadline is 2026-09-05T09:40:00Z.
+
+The fresh repair branch starts from Foreman
+`d85b89598cb4e31bb55f67c0d97074ff4eebe0c7`. It preserves the separate
+PID-namespace documentation and replays the five prior repair commits with
+an unchanged patch-series range comparison. The preserved candidate is
+`748da867073a345881023fd0ff327cb3ce26f99d`. Queue task 1459 was dispatched
+to Grok 4.6 for the five known lint failures. The per-lane watchdog was armed.
+These dispatch and monitoring records are not a claim of continued liveness,
+passing checks, independent approval, or S02 completion.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council and S02 obligations, and SRC-0033 at the execution-evidence boundary.
+- Local locator: Moriarty checkpoint fact 31.
+- External receipts: `/home/charl/.foreman/runs/council-binding-20260905-successor1/execution-contract.json` and `events.jsonl`.
+- Contract SHA-256: `63b05cb6fb9a38b3563663cd6446fdae6022db3e9508420d7d37d85abdcd895a`.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, candidate branch `foreman/council-binding-20260905-successor1/implement/binding-fresh`.
+- Observed at: 2026-09-05T03:43:29Z. Commit and decision date: 2026-09-05 UTC.
+- Authority: local repository evidence and explicit user decision.
+- Scope: unreleased Council enablement; Core remains `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: handoff comparison reproduced; final package verification and reviews pending.
+- Confidence: high for authorization, contract creation, and preserved commits.
+- Lifecycle status: S3. No GitHub merge or Moriarty Council gate follows.
+
+### Review-runtime recovery checkpoint
+
+**CLM-0141.** Repository observation: the successor's unfinished Task 2 draft
+is preserved at `1fb1548d02c98e81ce9b7953a26cca2d2750bdf8`. The Grok event
+log records `max_turns_reached` with limit 75 at 2026-09-05T04:19:39.568Z.
+This terminal record does not establish a PID-namespace failure. Both worker
+reports remained incomplete. The controller archived those reports and the
+raw test logs before dispatching recovery task 1462 under the same successor
+contract's resume allowance. No verification, Council, or release approval
+follows from this recovery checkpoint.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council obligations and SRC-0033 at the execution-evidence boundary.
+- Local locator: Moriarty checkpoint fact 35.
+- External receipts: `/home/charl/.foreman/runs/council-binding-20260905-successor1/task2-attempt1-receipts/` and `task2-resume1.md` in the same run directory.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, candidate branch `foreman/council-binding-20260905-successor1/implement/binding-fresh`, full commit above.
+- Observed at: 2026-09-05T04:39:00Z. Commit date: 2026-09-05 UTC.
+- Authority: local repository and vendor terminal metadata.
+- Scope: unreleased Council enablement; Core remains `0.0.0-e00.2`.
+- Evidence kind: repository observation.
+- Reproduction: partially reproduced; recovery and final acceptance remain pending.
+- Confidence: high for preserved commit, stop metadata, and dispatch.
+- Lifecycle status: S3. No Moriarty Council gate or GitHub merge is claimed.
+
+### S02 alternative coverage before model implementation
+
+**CLM-0142.** Repository observation: XML v1.3 requires all four semantic
+alternatives before selection or an evidence-backed stop. The S02 branch
+contains shared effects and exact-parent consumption foundations, not these
+candidate implementations. All four candidates remain undetermined. Missing
+implementation is not a decisive counterexample against a candidate.
+
+| Alternative | Required distinct execution mechanism | Candidate-specific acceptance focus |
+| --- | --- | --- |
+| A: agreement Core plus intent envelope | Agreement interpreter and independent envelope predicate | Timeout priority, rollback, complete effects, and separate legality and authorization |
+| B: intent Core with agreement libraries | Native obligation graph plus separately checked agreement elaboration | Dependency removal and corrupted elaboration must expose failures |
+| C: two calculi with refinement bridge | Independently computed successors plus paired commitment | Corrupted or stale bridges and one-sided advancement must fail |
+| D: Compact library with local verifier | Application calls plus actual-effect extraction and verification | Artifact substitution and extraction corruption must fail |
+
+Each candidate needs the swap and two-installment workloads under both
+signing profiles. The closed registry has eleven witness identifiers. The
+design's phrase “all ten registry scenarios” is stale and must not remove a
+witness. Every candidate and both profiles also need the separate recovery
+paths before any fill and after the first fill. The existing cancellation
+bookkeeping does not supply that recovery evidence.
+
+The corrected observation, authorization, and recovery carrier remains a
+proposal awaiting explicit signoff. No new Quint logic follows from this
+coverage table. Frozen Core remains `0.0.0-e00.2`.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML workstream W1 and sprint S02, and SRC-0033 at the frozen semantic boundary.
+- Local locators: [reviewed comparison design](../docs/superpowers/specs/2026-09-04-moriarty-s02-model-comparison-design.md), [closed registry](../evidence/s02-model-comparison/requirements.json), and [corrected carrier proposal](../docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
+- Repository: local Moriarty repository, branch `s02-model-comparison`, commit `6a60a645c03acad83b7cbc6b85d43996cd40ca65`. Corrected main-branch carrier: commit `14b16f3ccd98c50070f7b18c2a608d38a8b29870`.
+- Observed at: 2026-09-05T04:56:00Z. Controlling design date: 2026-09-04 UTC.
+- Authority: controlling XML and reviewed local design.
+- Scope: proposed S02 candidate acceptance, not Core changes or deployed behavior.
+- Evidence kind: repository observation and open implementation obligation.
+- Reproduction: not applicable to this source comparison. Candidate experiments remain unperformed.
+- Confidence: high for the inspected requirements and absent candidate implementations.
+- Lifecycle status: S2 for the candidate designs. The shared experimental foundations do not raise candidate status.
+
+### Moriarty-only workflow reset
+
+**CLM-0143.** User decision and repository observation: Foreman development is
+closed for this workstream. The fetched Foreman main already contains PR 55 at
+`48f0b6eaed0eb25ee04d053317626eb768b60725`. The separate repair branch remains
+preserved, not accepted or merged by this reset. Its unfinished work is no longer
+a blanket prerequisite for authoring Moriarty models.
+
+The [restart assessment](../docs/MORIARTY_RESTART.md) resumes XML S02 from the
+existing effects and consumption foundations. Requested Council acceptance
+reviews remain outstanding. The user subsequently delegated type-sketch design
+signoff to GPT-6 Astra, Fable 5.1, and Grok 4.6 as formal-methods experts.
+Their decision remains outstanding. Neither obligation authorizes renewed Foreman
+development, and this reset selects no semantic alternative.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML S02 and the latest explicit user scope instruction.
+- Local locators: restart assessment, checkpoint fact 41, and obligations 2, 7, 9.
+- Repository: local Moriarty, baseline main `e37dde97847b9300b9f82c0a13f91885397088fd`, foundation branch `s02-model-comparison` at `6a60a645c03acad83b7cbc6b85d43996cd40ca65`.
+- Foreman repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, full commit above.
+- Observed and decision date: 2026-09-05 UTC.
+- Authority: user scope decision and local repository inspection.
+- Scope: S02 restart, unchanged Core `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: repository synchronization reproduced; candidate implementation remains unperformed.
+- Confidence: high for scope and repository state.
+- Lifecycle status: S2 for the restart plan, not candidate implementation or release.
+
+The user's continuation instruction covers the complete XML program, not S02
+alone. The app goal was initially paused. The user resumed it, and a subsequent
+goal-tool inspection confirmed `active`. This restores product-owned continuation,
+not evidence that any sprint or release gate is complete.
+
+### Delegated S02 common-foundation design
+
+**CLM-0144.** Repository observation and design recommendation: all three requested
+experts returned independent amendments against identical frozen inline sources.
+The [decision](../docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md)
+adopts a combined foundation by two-to-one preference while preserving Fable's
+split-review dissent. Astra and Fable support consumed-parent authority with
+explicit exact-parent residual applicability; Grok's registered-through-residual
+alternative is preserved but not selected. All agree that the current sketch
+needs correction and that neither architecture selection nor implementation
+acceptance follows from their advice.
+
+The design adds branch policies, optional Core projections, explicit
+operation-specific authorization, per-key and per-operation lifecycle records,
+current evidence checks, atomic registry/financial updates, and independently
+signed recovery. The complete disposition table also records disagreements about
+time, freshness, policy supersession, display binding, and terminal stuttering.
+No unanimity, actual model counterexample, or completed Council gate is claimed.
+
+Claim metadata:
+
+- Sources: SRC-0035 public proposal receipt; SRC-0031 XML S02; SRC-0033 frozen comparison design.
+- Local locator: [immutable proposals and receipt](../raw/reviews/s02-common-design-2026-09-05/receipt.json).
+- Repository: local Moriarty main source `76228d99960a78aba052aa481565d06b7a1762db`; foundation source `6a60a645c03acad83b7cbc6b85d43996cd40ca65`.
+- Observed and decision date: 2026-09-05 UTC.
+- Authority: experimental model advice and user-delegated local design decision.
+- Scope: common S02 foundation, unchanged Core `0.0.0-e00.2`.
+- Evidence kind: repository observation and recommendation.
+- Reproduction: not applicable to source-level design advice; no model tests were run by the proposal authors.
+- Confidence: high for receipt contents; proposed correctness remains to be tested.
+- Lifecycle status: S2. A–D implementations and all applicable gates remain open.
+
+The Astra route used the explicitly selected native model after its CLI credential
+failed before proposing. Fable metadata reports the requested canonical model
+plus auxiliary Haiku usage; Grok reports the requested alias's `grok-4.6-build`
+route. These observations are not model-identity attestations or Council admission.

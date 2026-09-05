@@ -202,3 +202,147 @@ Fable reviewed one frozen prompt draft. The single correction pass produced
 prompt version 1.2 with execution-state authorization, cryptographic lifecycle
 bindings, typed verification certificates, and a separate confidential trust
 profile. Semantic scope `0.0.0-e00.2` did not change.
+
+## [2026-09-05] checkpoint | Record branch-only S02 progress and Council restart decision
+
+Recorded the effect foundation candidate and corrected receipt commit
+`1bd4bff04fc24855b1c45ff95b1eab137909434d`. Recorded the exact-parent
+consumption foundation at `8b905114c1cec79faf555974c0267f183ca31399` and its
+honest receipt whitespace correction at
+`6a60a645c03acad83b7cbc6b85d43996cd40ca65`. All three commits remain only on
+`s02-model-comparison`. They are not integrated or Council-approved.
+
+Recorded the 2026-09-05 user decision to authorize the narrow Foreman runtime
+binding fixes, GitHub publication and merge, the documented official model-route
+limitations, and Council resumption. Runtime implementation remains pending.
+No Council review was dispatched. Full S02 and S03 through S15 remain
+incomplete. Historical log entries remain unchanged above this entry.
+
+## [2026-09-05] assignment | Investigate Foreman PID-namespace degradation
+
+Created the [Fable research assignment](../deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml)
+for the user's separate session. It includes the observed launcher warning,
+source and binary context, protected live work, and the official 42-page Grok
+4.6 card with its preserved PDF digest. The assignment requires read-only
+diagnosis, complete-card coverage, and explicit scrutiny of cleanup claims.
+The XML parser accepted the assignment. No root cause, remediation, Council
+approval, or containment guarantee follows from creating this prompt.
+
+## [2026-09-05] checkpoint | Resume the original v1.3 workstream
+
+Recorded Foreman candidate `ac7c2deff6e39144c29836611ee85800ffed41c8`
+and its incomplete status in research-journal claim CLM-0139. Task 1 needs
+correction. Task 2 and all requested Council gates remain pending.
+Recorded the scanner resource-limit refusal separately from a secret finding.
+The unchanged scanner passed after the unused root dependency install left
+the worktree. The install remains recoverable in the external run directory.
+No security policy changed, no GitHub merge occurred, and no gate passed.
+
+## [2026-09-05] checkpoint | Record Council repair escalation
+
+Foreman correction candidate `b65d8ad7d30dcc9d1563750fc45608ddd8f67219`
+completed its focused worker gate. The independent full package check then
+failed with five ESLint errors. Foreman Endstop recorded `Escalated` with
+reason `verify_blocking_after_correction` at 2026-09-05T03:21:48Z.
+The contract permits no further repair dispatch without successor authority.
+No GitHub merge or Council gate passed.
+
+Direct filesystem inspection found the ignored Task 1 and correction test
+receipts. Earlier absence claims based on file discovery are superseded.
+The original worker report and receipts remain preserved in the external run
+archive. The controller did not reconstruct historical test execution.
+
+Added the unapproved S02 authorization/recovery type sketch. Its main-review
+hold names missing transaction-time bindings, premature choice identifiers,
+and incomplete Core carrier comparison. No Quint model logic was added.
+
+## [2026-09-05] execution | Authorize and dispatch the successor repair
+
+Recorded the explicit successor authorization and contract in CLM-0140.
+Preserved the predecessor worktree and reports. Created a fresh branch from
+Foreman main with the separate PID-namespace documentation. Replayed all five
+repair commits with an unchanged range comparison. Dispatched queue task 1459
+for the known lint repair and armed the per-lane stall watchdog. The monitor
+does not grant gate approval or reset contract limits. S02 type-sketch review
+continues in parallel. No S02 model logic, GitHub merge, or Council verdict is
+claimed by this entry.
+
+## [2026-09-05] planning | Correct the S02 observation carrier proposal
+
+Corrected the three issues in the authorization/recovery type sketch. The
+observation and verification record now bind transaction time. Core choice
+identifiers remain strings, with explicit absence distinct from zero in a
+bounded initialized map. Error and warning carriers preserve the declared
+frozen Python fields; separate proposed validators constrain emitted results.
+Compared the proposal with `moriarty/core.py` and the reviewed observation
+design. Requested explicit type-sketch signoff under the Quint workflow.
+No model logic, simulation, model check, or Council verdict was produced.
+
+Foreman lint repair is committed at
+`2007bad9e466ccc4ea51a20ee6708493af093e50`. The worker's nonzero exit remains
+recorded separately from its successful deterministic gate and fresh reports.
+Independent queue task 1460 passed the complete Council package check.
+Queue task 1461 starts the missing single-review execution implementation.
+These intermediate results do not complete the Foreman repair or S02.
+
+## [2026-09-05] recovery | Preserve the unfinished review runtime
+
+Recorded CLM-0141 and checkpoint fact 35. Preserved the 25-file Task 2 draft
+in Foreman commit `1fb1548d02c98e81ce9b7953a26cca2d2750bdf8` and archived
+its incomplete reports and raw test receipts. Selected vendor terminal
+metadata identifies the 75-turn limit as the stop reason. Dispatched bounded
+completion task 1462 through the same successor contract's resume allowance.
+The watchdog was armed. These are historical dispatch facts, not continuing
+liveness, passing checks, independent review, or publication claims.
+
+## [2026-09-05] synthesis | Map the four S02 semantic alternatives
+
+Added CLM-0142 after comparing XML W1/S02, the reviewed four-representation
+design, the closed registry, and the branch foundation boundary. Retained
+all eleven witness identifiers and both additional recovery paths. Recorded
+the stale ten-scenario phrase without changing the pinned review candidate.
+All four alternatives remain unimplemented and undetermined. This source
+comparison is not model execution, correspondence evidence, or Council advice.
+
+Foreman fixture recovery is preserved at
+`940034d008c094d2bbce3f6a954e7692327216cd`. Correction task 1463 addresses
+confirmed dispatch-boundary and public-output findings. Checkpoint fact 36
+records the handoff. Neither that dispatch nor its watchdog grants approval.
+
+## [2026-09-05] reset | Return the workstream to Moriarty
+
+Recorded CLM-0143 and the Moriarty restart assessment after explicit user direction
+to stop Foreman development. Fetched Foreman main and confirmed it already matches
+GitHub. Preserved its repair branch and unrelated changes. Dropped the obsolete
+repair obligations without marking their work complete. Retained Moriarty Council
+reviews as a separate obligation and identified S02 common authorization/recovery
+as the next implementation, followed by four distinct semantic alternatives.
+The user subsequently delegated the corrected type-sketch decision to the three
+requested formal-methods experts and reaffirmed full-program completion.
+That decision remains pending. No model logic, architecture
+selection, Council verdict, or release gate was added by this reset.
+
+## [2026-09-05] correction | Remove superseded direct-approval instructions
+
+Aligned the type sketch and wiki index with the user delegation already recorded
+in CLM-0143 and `docs/MORIARTY_RESTART.md`. The three-expert design decision remains
+pending; the old direct-human-approval request must not block continuation.
+This is an instruction correction, not design consensus or implementation evidence.
+
+## [2026-09-05] correction | Distinguish the current full program from its predecessor
+
+Corrected the wiki schema's obsolete 18-output count and labeled the index's
+twelve-package link as the preceding program. XML v1.3 `required_deliverables`
+and `sprint_sequence` require D01–D22 and S01–S15. Preserved the historical package
+manifest and reports; their presence is not evidence that the current program,
+including ACTUS, is complete. This is source-fact alignment with SRC-0031,
+not a new experiment or a passed gate.
+
+## [2026-09-05] decision | Reconcile the three S02 design proposals
+
+Added SRC-0035 and CLM-0144. Preserved the identical frozen prompt, all three final
+public proposals, selected metadata, and source digests. Adopted the common design
+with explicit majority choices and preserved dissent. Superseded the earlier type
+sketch and queued observation tests before authorization implementation. Private
+reasoning and credentials were not imported. This is delegated design signoff,
+not strict Council admission, architecture selection, or an implementation gate.

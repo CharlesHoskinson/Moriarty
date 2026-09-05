@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "kind": "independent-design-proposal",
+  "recommendation": "amend",
+  "common_package": "combined",
+  "design_summary": "Build one common-foundation package as two Quint modules plus a non-candidate installment harness, not a shared A-D interpreter. observations.qnt owns lossless carriers and Core-consistency predicates. authorization.qnt owns policies, evidence, total registries, and pure checks. authorization_harness.qnt instantiates four finite dummy payloads and the ten-unit Alice escrow fixture. authorization_test.qnt holds deterministic traces. observations may import effects only. authorization may import observations, effects, and consumption. The harness may import authorization. No reverse imports. Do not edit frozen Python Core 0.0.0-e00.2, effects.qnt, or consumption.qnt.\n\nReuse Transfer, Ledger, policyAllows multiplicity comparison, and exact-parent Entry updates. Add installmentFixtureLedger that places 10 TokenA in Escrow({owner:Alice,asset:TokenA}) and 0 elsewhere. Do not call effects.initialLedger a funding trace. Wallet and escrow stay distinct. Ordered effect lists are the carrier; authorization uses submultiset multiplicity via policyAllows, never net deltas. Core payments stay a separate projection: an accepted deposit is a wallet-to-escrow Transfer and not a CorePayment.\n\nParameterize authorization by state, continuation, artifact, and plan. Instantiate the harness with non-unit dummy types that distinguish TwoSlotParentPlan from SingleSlotSubstitutedPlan and CanonicalInstallmentArtifact from SubstitutedArtifact. Dummy state is a non-wrapping token in a finite set that changes on every financial commit so predecessor bindings cannot alias distinct ledger or parent states. Equality on opaque payloads is the only inspection allowed inside authorization.qnt.\n\nKeep both signing profiles as data, not as two interpreters. Pre-sign checks unsigned Policy only and must not read SignatureToken, AuthorityRegistered, or VerificationRecord. SignAfterResolve: resolve complete plan, per-principal AfterResolveCheck including complete plan and artifact, sign, register, execution-verify, commit. SignBeforeResolve: BeforeResolveCheck of BoundedIntent plus enforcement mechanism with no concrete plan and no pre-sign-verified label, sign, register, later resolve, execution-verify, commit. Action guards are functions of profile plus retained records. LifecyclePhase is a summary label only. Store preSignChecks as Principal -> OptionalPreSignCheck. Freshness for canSign compares plan (after-resolve only), artifact (after-resolve only), ledger, environment, parent revision, and the signing principal's own registry cell. It must not fail solely because another principal registered a signature.\n\nAuthorityRegistry is total over 12 keys: {SwapDomain,InstallmentDomain} x {Alice,Bob,Mallory} x {0,1}. AuthorityVacant, AuthorityRegistered, and AuthorityConsumed remain. The installment parent key (InstallmentDomain,Alice,0) stays Registered through residual slot 2. ParentRegistry is the exact-parent consumption state. Move that key to AuthorityConsumed only when both slots are used or the parent is cancelled. Recovery uses a distinct Alice nonce 1 record. Instantiate Parent and Entry with SignedPolicy[plan], not unsigned Policy. Residual application requires Parent.policy to equal the registered SignedPolicy.\n\nBind execution with an explicit predicate: SignAfterResolve requires observation.resolvedPlan and artifactAndCall to equal the signed CompleteResolvedPlan binding; SignBeforeResolve requires effects, capabilities, conditions, mechanism, version, and any pinned artifact constraint to lie inside the signed BoundedIntent. canCommit requires actual==record.observation, identical transactionTime in {1,2,100,101}, environmentFresh on anchor, version, and mechanism, and matching consumption revision. Substituted plan, artifact, effects, or time require a new verification record before any ledger or registry update. DisplayProjection is a carrier field that principalAllows must ignore.\n\nPrepared fill and prepared cancel share one snapshot of Entry at one revision. The winner updates the entry; the loser fails prepared==entry. Harness actions: resolve, preSignCheck, sign, changeEnvironment, executionVerify, prepareFill, prepareCancel, commitFirstFill, attemptSecondFill, rejectStalePrepared, commitFreshCancel, verifyRecovery, commitRecovery. Each action assigns the whole HarnessState. There is no blanket stutter. Terminal Committed and RejectedPhase may stutter only when no mutating guard is enabled.\n\nRecovery is a separate verified transaction. Cancel does not move money. remainingAllowance stays budget-paid after cancel and after recovery; it is not spendable once cancelled and is not live cash. canRecover requires cancelled parent, unused recovery nonce, actual transfer equal to remaining escrow TokenA from Alice escrow to Alice wallet, and canApply. Both profiles must reach cancel-wins/recovery-before-any-fill (refund 10) and fill-wins/recovery-after-first-fill (fill 5, reject stale cancel, fresh cancel, refund 5, slot 2 unauthorized). Terminal conservation: escrowBalance+paidToBob+refundedToAlice=10.\n\nvalidCoreObservation takes allowedChoiceIds. NoInt is absent choice; IntValue(0) is present zero. Reject extra or missing fixture choice keys. Rejection compares to the original predecessor, including original minimumTime, and requires empty effects, payments, warnings, and zero reductions. Core error and warning carriers remain strings plus OptionalInt; validators restrict legal observations to the frozen E00 codes without making the carrier lossy. Environment.physicalTime lives in {0,1,2,100,101} and never decreases. Export identity amount injection, fixture time injection, and choice-id injection predicates from observations.qnt for a later independent checker to recompute. This harness records AbstractModelEvidence only.",
+  "required_changes": [
+    {
+      "id": "RC-AUTH-RESIDUAL",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "AuthorityRecord and canConsumeAuthority/applyConsumeAuthority; harness commitFirstFill",
+      "defect": "AuthorityRecord has only vacant, registered, and consumed. If commitFirstFill calls applyConsumeAuthority on Alice nonce 0, residual slot 2 loses applicable authority even though consumption.canConsumeSlot remains true. The parent nonce is a claimed two-slot capability, not a one-shot consume.",
+      "counterexample": "1. Register SignedPolicy parent key {InstallmentDomain,Alice,0} with slots 1->5 and 2->5. 2. commitFirstFill succeeds; Entry becomes usedSlots={1}, paid=5, remainingAllowance=5, cancelled=false. 3. applyConsumeAuthority writes AuthorityConsumed for nonce 0. 4. attemptSecondFill: canConsumeSlot(parent,entry,2,entry) is true, but allAffectedPrincipalsAllow fails because the only applicable record is Consumed. 5. Residual fill is unreachable. SignAfterResolve full two-slot binding cannot execute slot 2.",
+      "proposed_change": "Keep nonce 0 AuthorityRegistered through residual use. ParentRegistry remains the exact-parent state. Apply applyConsumeAuthority to nonce 0 only when usedSlots={1,2} or cancelled. Use applyConsumeAuthority for one-shot keys, including recovery nonce 1. Add canFillFromParent that requires AuthorityRegistered and canConsumeSlot.",
+      "acceptance_test": "Pure test: after slot 1, registry.get(parentKey) is AuthorityRegistered and validResidual holds. After slot 1 then cancel, canConsumeSlot for slot 2 is false and parent key is AuthorityConsumed. After both slots, parent key is AuthorityConsumed and canCancelParent is false."
+    },
+    {
+      "id": "RC-BIND-PLAN-ARTIFACT",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "BoundedIntent, PlanBinding, computeVerification, canCommit; missing plan/artifact refinement",
+      "defect": "BoundedIntent has no artifact pin. The function list has no planMatchesBinding predicate. SignBeforeResolve verification can accept any resolvedPlan or artifactAndCall whose effects remain a submultiset of allowedEffects. Opaque unit payloads make substitution unrepresentable.",
+      "counterexample": "SignBeforeResolve: sign BoundedIntent allowedEffects=[AliceEscrow->BobWallet TokenA 5], mechanism=LocalCheckerV1. Supply observation with the same effects, resolvedPlan=SingleSlotSubstitutedPlan, artifactAndCall=SubstitutedArtifact. If verification checks only policyAllows and mechanism, canCommit is true. Post-sign plan substitution and executed-artifact substitution survive.",
+      "proposed_change": "Parameterize PlanBinding by plan and artifact. After-resolve binding is {plan, artifact}. Before-resolve binding is BoundedIntent plus enforcementMechanism and ArtifactConstraint = MechanismOnly | PinnedArtifact(artifact). Add planMatchesBinding(policy, observation). After-resolve: equality on plan and artifact. Before-resolve: policyAllows, capabilities, conditions, mechanism, version, and artifact constraint. Harness dummy types must include canonical and substituted plan and artifact constructors. authorization.qnt may only use equality on those payloads.",
+      "acceptance_test": "Same effects, substituted plan: canCommit false. Same effects, substituted artifact under PinnedArtifact: canCommit false. After-resolve: sign TwoSlotParentPlan, verify SingleSlotSubstitutedPlan: canSign or canCommit false. Canonical pair: verificationValid true."
+    },
+    {
+      "id": "RC-FINITE-DOMAINS",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "Environment.physicalTime, AuthorityKey.nonce, SignatureToken.policyRevision, AuthorityRegistry, CoreChoiceId maps",
+      "defect": "physicalTime, nonce, and policyRevision are unbounded ints. CoreChoiceId is str. The sketch requires total maps and Apalache-finite models but does not define the finite key sets. Generic type parameters are implementable only after instantiation over finite dummy types and finite maps.",
+      "counterexample": "Initialize AuthorityRegistry with Map() or a single nonce-0 cell. Register recovery nonce 1: Quint permits it, but keys() != the declared universe, violating the total-registry rule. Apalache treats nonce as unbounded Int, so replay of nonce 2 is a new key rather than a rejected out-of-fixture key. Choice map with key \"mallory-extra\" is well-typed and bypasses fixture abstraction.",
+      "proposed_change": "Define PHYSICAL_TIMES=Set(0,1,2,100,101), NONCES=Set(0,1), AUTHORITY_KEYS as the 12-key product, ANCHORS as the three constructors, CORE_ACCOUNTS as Principal x Asset, and REVISIONS as Set(0,1,2,3). validEnvironment requires physicalTime in PHYSICAL_TIMES. Registries initialize with mapBy over AUTHORITY_KEYS to vacant/NoParent. validCoreObservation(allowedChoiceIds) requires choices.keys()==allowedChoiceIds. Instantiate harness type parameters with the dummy finite sums, not unit types.",
+      "acceptance_test": "Typecheck instantiated modules. A registry missing any AUTHORITY_KEYS cell is invalid. nonce=2 cannot register. physicalTime=-1 and 3 are invalid. Out-of-fixture choice keys are invalid. No operator matches on the four generic parameters inside authorization.qnt."
+    },
+    {
+      "id": "RC-ESCROW-FIXTURE",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "Harness installment fixture versus effects.initialLedger",
+      "defect": "effects.initialLedger(aliceA,bobB) credits wallets, not Alice escrow. The reviewed fixture is a declared pre-funded escrow of ten TokenA, not a reproduced funding trace.",
+      "counterexample": "Start with initialLedger(10,0). balance(Wallet(Alice),TokenA)=10 and escrow=0. Cancel unused parent. recoveryTransfer quantity 10 from escrow fails canApply. cancel-wins/recovery-before-any-fill cannot refund ten. If the harness first moves wallet to escrow, that path is a funding trace, which the fixture forbids.",
+      "proposed_change": "Add installmentFixtureLedger in the harness module: every LEDGER_KEYS cell 0 except (Escrow({owner:Alice,asset:TokenA}),TokenA)=10. Document it as a fixture assumption. Do not use initialLedger for this harness.",
+      "acceptance_test": "Initial validLedger, total TokenA=10, total TokenB=0, escrow Alice TokenA=10, all wallets 0. After cancel-wins recovery, Alice wallet TokenA=10 and escrow=0. No preceding wallet-to-escrow Transfer appears in the recovery traces."
+    },
+    {
+      "id": "RC-PROFILE-GUARDS",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "LifecyclePhase and harness action enabling conditions",
+      "defect": "A single linear phase cannot encode both profile orders. If resolve is enabled only from Drafted and preSignCheck only from Resolved, SignBeforeResolve cannot check a bounded intent before a concrete plan exists. If phase is the only guard, a BeforeResolveCheck can be retained while lifecycle says Resolved and later treated as a pre-sign-verified plan.",
+      "counterexample": "Profile=SignBeforeResolve. Guards: resolve iff lifecycle=Drafted; preSignCheck iff lifecycle=Resolved. The only enabled first action is resolve, which writes a concrete plan into context. The subsequent check is AfterResolveCheck or a BeforeResolveCheck taken after a plan exists. The reviewed rule that no concrete plan is labeled pre-sign verified is violated, or the before-resolve positive witness is unreachable.",
+      "proposed_change": "Retain LifecyclePhase as a label. Enable actions from profile plus records: SignBeforeResolve preSignCheck from Drafted or equivalent empty plan binding using only BeforeResolveCheck; sign from a Valid BeforeResolveCheck without requiring resolvedPlan; resolve after Registered authority; executionVerify after resolve. SignAfterResolve resolve first; AfterResolveCheck only; canSignAfterResolve requires checked.completePlan==current plan and checked artifact equality. Reject using AfterResolveCheck under SignBeforeResolve and the reverse.",
+      "acceptance_test": "Both profiles reach executionVerified then commit on the two recovery paths. SignBeforeResolve traces contain no AfterResolveCheck and never set a concrete-plan pre-sign-verified label. SignAfterResolve traces contain no BeforeResolveCheck. A resolve-before-check attempt under SignAfterResolve is the only legal order for that profile."
+    },
+    {
+      "id": "RC-COMMIT-GLUE",
+      "severity": "blocking",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "compute* disposition; commitFirstFill, commitFreshCancel, commitRecovery versus canCommit",
+      "defect": "compute and apply functions are specified not to authorize, but compute* may write EvidenceValid as a constant, and the harness commit actions are not required to call canCommit on the stored VerificationRecord. A financial action can then apply observation.effects and parent updates after substitution or without verification.",
+      "counterexample": "executionVerify stores a record for effects=[AliceEscrow->BobWallet 5]. Replace actual effects with [AliceEscrow->BobWallet 5, AliceEscrow->MalloryWallet 5] without a new verify. If commitFirstFill only checks canConsumeSlot and applyTransfers(actual), Mallory is paid and slot 1 is claimed. Second trace: commitRecovery with verification=NoVerification after cancel; escrow drains without a recovery signature. Third: computeAfterResolvePreSignCheck always returns Valid for a policy whose allowedEffects include a Mallory debit; canSignAfterResolve checks only context freshness and signs it.",
+      "proposed_change": "computeAfterResolvePreSignCheck and computeBeforeResolvePreSignCheck set disposition Valid iff the stated predicates hold, otherwise Invalid or Unavailable. canSign* requires Valid and binding freshness. commitFirstFill, commitFreshCancel, and commitRecovery require SomeVerification(record), verificationValid(record,current), and canCommit(record,actual,current). prepareFill and prepareCancel snapshot Entry and do not change ledger or registries. Sign does not require a VerificationRecord.",
+      "acceptance_test": "Commit with NoVerification is disabled. Commit with actual!=record.observation is disabled. Extra Mallory effect requires a new Valid verification, which principalAllows rejects. compute* on a policy that fails policyAllows returns non-Valid. Sign remains enabled after Valid pre-sign without verification."
+    },
+    {
+      "id": "RC-CORE-VALIDATOR",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "validCoreObservation, rejectionPreserved, CoreChoiceId, CoreError/CoreWarning",
+      "defect": "validCoreObservation has no allowedChoiceIds argument, so it cannot reject omitted or extra string keys. Rejection is not pinned to Python's restoration of the original State, including original min_time, rather than working_state with min_time=now. Deposit versus payment consistency is unspecified.",
+      "counterexample": "Predecessor min_time=0, now=1, supplied input does not match. Python compute_transaction returns accepted=false, error=no_matching_input, original min_time=0, empty payments/warnings, reductions=0. An observation with minimumTime=1, accepted=false, and otherwise empty lists passes a validator that only checks accepted==false. Later E00 correspondence against Python fails while the common validator said valid. Second: choices Map(\"settle\"->NoInt, \"x\"->IntValue(0)) is accepted although \"x\" is outside the swap fixture. Third: accepted deposit with a CorePayment equal to the credit contradicts core.py, which emits no Payment on deposit.",
+      "proposed_change": "rejectionPreserved requires result.accepted=false, result.state==before, empty warnings/payments/effects, reductions=0. Do not compare against a working state with updated minimumTime. validFrozenCoreError and validFrozenCoreWarning accept exactly the E00 codes in core.py. validCoreObservation(allowedChoiceIds, before, result, effects) requires those validators, choices.keys()==allowedChoiceIds, accounts.keys()==CORE_ACCOUNTS, and: every CorePayment injects as an escrow-source Transfer; wallet-to-escrow Transfers need not appear as CorePayments. Keep string carriers; do not collapse unknown codes into a closed sum that cannot represent a future Python string.",
+      "acceptance_test": "The no_matching_input case with minimumTime rewritten to now is invalid. Absent versus zero choice is distinguished. A deposit-only accepted observation with empty CorePayment list can be valid. A deposit-only observation that inserts a CorePayment is invalid. Unknown warning code is representable and fails validFrozenCoreWarning."
+    },
+    {
+      "id": "RC-PRESIGN-FRESHNESS",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "HarnessState.preSignCheck single OptionalPreSignCheck; canSign* exact Context equality",
+      "defect": "One OptionalPreSignCheck cannot store Alice and Bob checks. Exact Context equality includes authorityRegistry, so Alice's sign invalidates Bob's pre-sign record. The installment fixture is Alice-only, but authorization.qnt is the common interface for the later swap.",
+      "counterexample": "Swap SignAfterResolve. Alice AfterResolveCheck against C0. Alice signs; registry now has Alice; current=C1. Bob's check against C0 fails canSignAfterResolve because C1!=C0. If Bob does not re-check, Bob cannot sign. If the harness stores only one preSignCheck, Alice's record is overwritten and the anti-cycle evidence that Alice signed from her own Valid check is lost.",
+      "proposed_change": "Use preSignChecks: Principal -> OptionalPreSignCheck, initially NoPreSignCheck for every principal. canSign for principal P compares P's checked plan/artifact/environment/ledger/parent revision and P's own registry cell, and ignores other principals' AuthorityRegistered updates. Pre-sign still must not require any signature.",
+      "acceptance_test": "Sequential Alice then Bob sign under SignAfterResolve both succeed without re-resolving the plan, provided environment and plan are unchanged. Changing stateAnchor between Alice check and Alice sign disables Alice sign. Mallory vacant records remain vacant."
+    },
+    {
+      "id": "RC-PREPARED-RACE",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "OptionalPreparedCancellation only; missing prepared fill",
+      "defect": "The reviewed rule is that a prepared fill and a prepared cancellation bind the same consumption revision and the winner invalidates the loser. The sketch stores only preparedCancellation. commitFirstFill that reads the live Entry cannot lose to a cancel at a previously bound revision except by seeing cancelled after the fact.",
+      "counterexample": "prepareCancel at revision 0. prepareFill is unrepresentable. commitFreshCancel applies applyCancelParent. A fill that would have been bound at revision 0 is never stored, so rejectStalePrepared cannot exhibit a stale fill. The mandatory cancel-wins recovery path still exists, but the competing-fill negative control is not a harness action.",
+      "proposed_change": "Replace the cancel-only optional with OptionalPreparedConsumption holding {snapshot:Entry, kind:PrepareFill(slot)|PrepareCancel}. prepareFill and prepareCancel require snapshot==current entry. Commit of fill or cancel requires prepared.snapshot==current entry and kind match. The winner updates Entry.revision. rejectStalePrepared is enabled when snapshot!=current entry.",
+      "acceptance_test": "prepareCancel rev 0, commitFirstFill with prepared fill rev 0 wins, rejectStalePrepared is enabled for the cancel snapshot, fresh cancel at rev 1 then recovery of 5 succeeds. prepareFill and prepareCancel at rev 0, commitFreshCancel wins, subsequent fill with the old snapshot is disabled, recovery of 10 succeeds."
+    },
+    {
+      "id": "RC-DISPLAY",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "Missing DisplayProjection on CandidateObservation",
+      "defect": "The observation design requires DisplayProjection and the property that display or disclosure permission cannot add an authorized effect. The type sketch has Disclosure on policies but no display carrier, so the property is vacuous.",
+      "counterexample": "Two observations differ only in display text or a disclosure flag. Without a display field, they are equal and principalAllows cannot be shown independent of display. A later candidate can fold extra Transfers into a display object that authorization never sees.",
+      "proposed_change": "Add DisplayProjection as an opaque finite sum on CandidateObservation. principalAllows, allAffectedPrincipalsAllow, verificationValid, and canCommit must be invariant under changes of only that field. Disclosure sets on Policy never add Transfers.",
+      "acceptance_test": "Fix all other observation fields; vary DisplayProjection over at least two constructors; authorization booleans are identical. A policy with extra Disclosure values cannot authorize a Mallory debit that is absent from allowedEffects."
+    },
+    {
+      "id": "RC-INCOMING-ONE",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "Policy.requiredEffects versus PolicyCondition.RequiresIncoming",
+      "defect": "Incoming consideration is stored twice and can disagree. Debit coverage plus one of the two fields is not the reviewed conjunction.",
+      "counterexample": "Alice policy requiredEffects=[BobWallet->AliceEscrow TokenB 20] and conditions=[RequiresIncoming([])]. If conditionsHold ignores requiredEffects, Alice escrow debit of TokenA can succeed with no Bob deposit. If principalAllows ignores RequiresIncoming, the same bypass works in the other field.",
+      "proposed_change": "Make RequiresIncoming the only incoming-consideration carrier, or define requiredEffects as exactly that list and derive the condition. principalAllows requires policyAllows(required,allowed,actual), every debit location's principal, all conditionsHold including incoming and RequiresOutcome, validity window on observation.transactionTime, matching mechanism and version, and applicable capability. Bob choice cannot satisfy Alice debit.",
+      "acceptance_test": "Alice debit with empty incoming while RequiresIncoming is nonempty fails. Matching incoming and allowed debit succeeds. Bob-only signature over an Alice escrow debit fails allAffectedPrincipalsAllow."
+    },
+    {
+      "id": "RC-SIGNED-PARENT",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "ParentRecord[plan] uses Parent[Policy[plan]]; recoveryTransfer omits ledger",
+      "defect": "An unsigned Policy inside Parent can diverge from the registered SignedPolicy. recoveryTransfer(parent,entry) does not take the ledger, so remainingAllowance can mint a refund larger than escrow unless canRecover fail-closes.",
+      "counterexample": "Register signed parent with allowedEffects quantity 5 per slot. Store ActiveParent with unsigned policy.allowedEffects quantity 10. Residual or recovery uses the unsigned copy. Second: after slot 1, paid=5, remainingAllowance=5, but ledger escrow is 5. If a bug leaves remainingAllowance=10, recoveryTransfer builds quantity 10; applyRecoveryLedger without canApply yields negative escrow.",
+      "proposed_change": "Use Parent[SignedPolicy[plan]] and Entry[SignedPolicy[plan]] without changing consumption.qnt. canConsumeSlot/canCancelParent/canRecover require parent.policy==registry registered SignedPolicy. canRecover requires cancelled, actual=={source:parent.source,destination:Wallet(Alice),asset:TokenA,quantity:balance(ledger,parent.source,TokenA)}, quantity==entry.remainingAllowance, quantity>0, and canApply. applyRecoveryLedger runs only after canRecover. Do not set remainingAllowance to 0 on recovery; that would break validEntry because remainingAllowance must equal budget-paid.",
+      "acceptance_test": "Mismatched unsigned parent policy cannot fill or recover. Unused cancel then recover quantity 10. Fill then fresh cancel then recover quantity 5. Recover quantity 10 after first fill fails. Double recovery fails on consumed nonce 1 and on escrow 0. After recovery, validEntry still holds with remainingAllowance unchanged and cancelled true."
+    },
+    {
+      "id": "RC-HARNESS-EVIDENCE",
+      "severity": "major",
+      "file": "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md",
+      "location": "SettlementEvidence.level in the non-candidate harness; AfterResolve checkedCoreExpectation",
+      "defect": "The harness is not a Core interpreter. Filling SettlementEvidence with CoreResultEvidence or treating checkedCoreExpectation as a Python result fabricates settlement evidence. attemptSecondFill is absent, so 'slot 2 remains unauthorized' can be vacuously true.",
+      "counterexample": "AfterResolveCheck stores CoreResultObservation{accepted:true, payments:[fake], ...} and SettlementEvidence{level:CoreResultEvidence, disposition:EvidenceValid}. No Python compute_transaction ran. A later report cites this as E00 correspondence. Second: after fill-wins cancel, no action attempts slot 2, so the coverage map records slot 2 unauthorized without a rejected transition.",
+      "proposed_change": "Harness SettlementEvidence.level is always AbstractModelEvidence. AssumptionEvidence fields stay four separate premises. checkedCoreExpectation is a binding compared at execution verify to observation.coreProjection; it is not CoreResultEvidence. Add attemptSecondFill enabled iff canFillFromParent for slot 2; the fill-wins recovery trace must show it disabled after cancel. Export amount, time, and choice injection predicates from observations.qnt for a later independent checker that does not import authorization.qnt.",
+      "acceptance_test": "No harness trace contains CoreResultEvidence. Both recovery subscenario IDs are reached under both profiles with the stated refund amounts and authority cells. fill-wins includes a disabled attemptSecondFill after cancel. A mutated copy of the exported time injection (100 maps to 101) is a different operator from the observations.qnt predicate."
+    }
+  ],
+  "accepted_design_commitments": [
+    "Frozen Python Core 0.0.0-e00.2 is unchanged. No new Core constructor. Recovery refinements are experiment fixtures, not semantic motions.",
+    "Common code supplies transfer arithmetic and authorization predicates. Each later candidate defines its own propose, observe, and commitSuccessor. Candidate C's two successor computations and bridge relation stay outside this package.",
+    "Do not select A, B, C, or D in this package.",
+    "Both signing profiles remain. Pre-sign is not execution verification. SignAfterResolve cannot require the signature that the pre-sign enables. SignBeforeResolve never labels an unresolved plan pre-sign verified.",
+    "Per-principal conjunction: every wallet or escrow debit needs that principal's applicable policy. Incoming consideration and conditional outcomes are required in addition to debit coverage. Bob's choice cannot authorize Alice's assets.",
+    "SignatureToken records that a model sign action occurred. Only EvidenceDisposition is the typed external premise. Valid is not a real signature or proof. Unavailable and invalid fail closed. The four assumption fields remain independent.",
+    "Exact-parent consumption from consumption.qnt is reused: prepared snapshot equality, ordered slots 1 then 2, paid+remainingAllowance=budget, cancel does not pay Bob.",
+    "Independently authorized recovery on Alice nonce 1. Cancel does not release money or reuse nonce 0. remainingAllowance after cancel is not spendable and is not rewritten by recovery. Financial conservation is escrowBalance+paidToBob+refundedToAlice=10.",
+    "Both recovery paths are mandatory under both profiles: cancel-wins/recovery-before-any-fill refunds 10; fill-wins/recovery-after-first-fill refunds 5 and leaves slot 2 unauthorized.",
+    "Resolve, pre-sign check, sign, environment change, execution verify, and commit are separate actions. Environment may change between them. Stale bindings cannot authorize sign or commit.",
+    "Physical time is monotonic. Proposed transaction time is adversarial and drawn from {1,2,100,101}. Core time_before_state remains testable because a later now can be less than current minimumTime without moving physical time backward. State anchors have three values and do not wrap. Implementation versions do not wrap back to fresh.",
+    "Registries are total finite maps. Changing plan identity does not create a new nonce namespace.",
+    "Effect traces keep order and multiplicity. Authorization uses policyAllows submultiset comparison, not netting.",
+    "Complete Core observation fields: accepted, error, ordered warnings with requested and paid OptionalInt, ordered payments, accounts, choices, continuation, minimumTime, reductions. Continuation for later Candidate A must be constructor table plus index, not an index alone.",
+    "NoInt versus IntValue(0) is required. Rejection restores the original predecessor financial and Core state.",
+    "Display is not authority. Settlement claims cannot exceed declared evidence level. This harness uses AbstractModelEvidence only.",
+    "No blanket stutter to hide deadlock. Every action has an explicit guard and assigns all harness variables. Genuine terminal states are Committed and RejectedPhase.",
+    "Reuse effects.qnt and consumption.qnt without modification. Swap funding uses AuthorityRegistry and SwapDomain keys, not consumption.validParent, which is installment-specific.",
+    "Positive scenarios assume modeled signatures. That is not a cooperation or availability claim.",
+    "Generator and checker must not share the code whose correctness they compare. Candidate extraction is not the correspondence oracle."
+  ],
+  "open_questions": [
+    "Apalache capacity for an instantiated four-parameter authorization module with 12-key registries, list-valued effects, and the recovery traces is unmeasured. Any sampled run is simulation only until quint verify --backend apalache is actually executed.",
+    "How Candidate B obligation graphs and Candidate D library phases refine BoundedIntent beyond effect, mechanism, version, and artifact equality is a later candidate-plan question. This package only needs equality and the artifact constraint.",
+    "Whether the later swap model should grow one-shot consume helpers in authorization.qnt or keep swap nonces entirely in candidate modules is unresolved. Do not generalize consumption.validParent in this package.",
+    "Whether three state anchors suffice when swap and installment are separate harness instances rather than one combined state machine is unresolved and does not block this package.",
+    "Installment fixture choice-id set may be empty. Candidate A's When/Choice identifiers are not chosen here."
+  ],
+  "implementation_order": [
+    "Write observations.qnt: carriers, DisplayProjection, OptionalInt, frozen error and warning validators, rejectionPreserved against original predecessor, validCoreObservation(allowedChoiceIds), finite CORE_ACCOUNTS, TRANSACTION_TIMES, PHYSICAL_TIMES, and exported amount/time/choice injection predicates.",
+    "Typecheck observations.qnt with an explicit constant instantiation. Add observation_test.qnt cases for absent versus zero choice, deposit without CorePayment, and rejection min_time.",
+    "Write authorization.qnt types with Principal-indexed pre-sign maps, PlanBinding[plan,artifact], ArtifactConstraint, AuthorityRecord residual rule, Parent[SignedPolicy[plan]], finite AUTHORITY_KEYS, and Environment monotonicity.",
+    "Implement pure predicates: conditionsHold, principalAllows, allAffectedPrincipalsAllow, planMatchesBinding, compute* with honest disposition, canSign*, computeVerification, verificationValid, canCommit, register/consume, canFillFromParent, canRecover. Do not implement candidate propose.",
+    "Typecheck authorization.qnt instantiated with dummy finite plan, artifact, continuation, and state sums.",
+    "Write authorization_harness.qnt: installmentFixtureLedger, both profiles as a module constant, prepared fill/cancel snapshot, and the listed actions with full-state assignment and no blanket stutter.",
+    "Add authorization_test.qnt traces in this order: SignAfterResolve cancel-wins recovery 10; SignAfterResolve fill-wins recovery 5 with stale cancel rejected and attemptSecondFill disabled; repeat both under SignBeforeResolve; extra-effect rejection; post-sign plan substitution; artifact substitution; omitted verification; stale environment; unavailable evidence; recovery without cancel; recovery quantity mismatch.",
+    "After each new action, typecheck, run the new tests, and record enabled-action reachability. Do not add the next action until the current tests pass.",
+    "Pin Quint and Apalache versions only when those tools are actually run. Record bounded-depth versus complete finite exploration only from real verify output. Do not claim model checking from this design."
+  ],
+  "scope_limits": [
+    "This proposal is design signoff advice for the common observation, authorization, and recovery foundation. It is not implementation acceptance, a Council verdict, a proof, an S02 gate result, or an architecture selection.",
+    "Do not implement Candidate A-D execution, agreement AST interpretation, native obligation graphs, bridge correspondence, or Compact library phases in this package.",
+    "Do not compare generated CoreResultObservation values with Python compute_transaction here. Paired deadline commit and rollback witnesses remain later Candidate A/E00 work.",
+    "Do not change moriarty/core.py, moriarty/swap.py, effects.qnt, or consumption.qnt.",
+    "Do not treat model EvidenceValid as cryptographic authenticity, Compact or ledger correspondence, ACTUS coverage, production cost, or human preference.",
+    "Do not introduce a shared execution interpreter configured with four labels.",
+    "Foreman development is out of scope.",
+    "Unperformed experiments remain specified-only."
+  ],
+  "source_digests": {
+    "docs/superpowers/specs/2026-09-04-moriarty-s02-model-comparison-design.md": "75e242cabdde75fc77b6512bf8949715ad8f289311f32663d04da3c600856ab9",
+    "docs/superpowers/specs/2026-09-04-moriarty-s02-observation-authorization-design.md": "1adc668e970d35a492e272f4f22ac468dccfd690b2c2e1a0ce3ac62030d3ae25",
+    "docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md": "3ec80bd631ec1c55c8f02a2bb498f5b7a620d7848fbcc3bfb9377c53ba689dd3",
+    "evidence/s02-model-comparison/requirements.json": "fc76ecccfde5a20360cb9c725af8eea7910a94fe4460278ca30bd4ffd53eb3b7",
+    "moriarty/core.py": "564a926779beb54bd16ff58481f5c950bae6fb50fcd5b0d7c9eb56427f83273b",
+    "moriarty/swap.py": "82e9e1da76af65706171049f0238953aca5333edec4aeed6caa43dbd57c79797",
+    "specs/quint/s02/effects.qnt": "dccc9208d9a42f01685000b1358f1d2f9684bf5e8ebe1d5deadd0c992557504c",
+    "specs/quint/s02/consumption.qnt": "3dd07f3c5f274aff4fce4de9c245aa0b1f1fe7f68e29e5de95a0b1c42a00f93b"
+  }
+}

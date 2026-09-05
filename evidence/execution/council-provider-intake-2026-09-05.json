@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "classification": "repository-observation",
+  "recorded_at_utc": "2026-09-05T01:32:32Z",
+  "purpose": "Provider routing intake before Council ACE preflight",
+  "capture_kind": "selected fields transcribed from actual terminal tool output",
+  "raw_stdout_preserved": false,
+  "omissions": "Provider reasoning text and usage fields are not retained. This is not a raw process receipt.",
+  "cwd": "/tmp",
+  "probes": [
+    {
+      "provider": "xai",
+      "requested_model_id": "grok-4.6",
+      "provider_observed_model_id": "grok-4.6-build",
+      "observed_model_field": "modelUsage object key",
+      "command": "timeout 45s grok -p 'Return only the integer result of 1+1.' -m grok-4.6 --output-format json --tools '' --no-subagents --disable-web-search --verbatim --max-turns 1 --permission-mode plan",
+      "exit_code": 0,
+      "selected_output": {
+        "text": "2",
+        "stopReason": "end_turn",
+        "sessionId": "01a06f2e-fb24-7453-9943-ffeaa9faf817",
+        "requestId": "c7e93a77-0ff9-418a-b7be-b95bfd263f1b",
+        "num_turns": 1
+      },
+      "identity_disposition": "Requested and reported identifiers differ. A canonical mapping or explicit review policy decision remains required."
+    },
+    {
+      "provider": "openai",
+      "requested_model_id": "gpt-6-astra",
+      "provider_observed_model_id": null,
+      "observed_model_field": null,
+      "command": "printf 'Return only the integer result of 1+1. Do not call tools.\\n' | timeout 45s codex exec --model gpt-6-astra --sandbox read-only --skip-git-repo-check --ephemeral --ignore-user-config --json -",
+      "exit_code": 0,
+      "selected_output": {
+        "thread_id": "01a06f2e-fe65-7ed1-a5ef-cdb2e114888f",
+        "event_types": ["thread.started", "turn.started", "item.completed", "turn.completed"],
+        "item_type": "agent_message",
+        "item_text": "2"
+      },
+      "identity_disposition": "The JSON stream does not expose the served model ID. The CLI argument establishes only the requested model."
+    }
+  ],
+  "cli_observations": {
+    "grok_version": "grok 1.0.13 (5e9a58528b76) [stable]",
+    "grok_models": {"default": "grok-4.6", "available": ["grok-4.6", "grok-4.5"], "exit_code": 0},
+    "hidden_flags": [
+      {"command": "grok --no-leader --version", "exit_code": 0},
+      {"command": "grok --no-memory --version", "exit_code": 0}
+    ],
+    "hidden_flag_limit": "Argument parsing accepts these flags although help omits them. This does not establish their behavioral effect."
+  },
+  "council_ace_canary": false,
+  "ready_review_token_issued": false,
+  "review_dispatched": false,
+  "gate_pass": false
+}
