@@ -1,9 +1,36 @@
-# S02 effect arithmetic foundation
+# S02 common Quint foundations
 
-This directory contains the executable S02 effect foundation. It models pure
-transfer arithmetic and a small non-candidate deposit and refund harness.
+This directory contains incremental common models for the S02 architecture
+comparison. These are not candidate A–D interpreters or a passed S02 gate.
 
-## Model boundary
+## Implemented common units
+
+| Module | Responsibility | Evidence directory |
+| --- | --- | --- |
+| `effects.qnt` | Ordered transfer arithmetic and conservation | `foundation/` |
+| `consumption.qnt` | Exact parent claims, slots, cancellation, and residuals | `consumption/` |
+| `observations.qnt` | Neutral observations and structural Core result checks | `observations/` |
+| `policies.qnt` | Canonical branch policies and complete plan bindings | `policies/` |
+| `authorization.qnt` | Persistent symbolic signatures and fresh pre-sign checks | `authorization/` |
+| `execution.qnt` | Per-operation verification, atomic commit, and retained rejection | `execution/`, `rejection/` |
+
+Evidence directories are under `evidence/s02-model-comparison/`. Read their
+source pins and scope before reusing results; historical receipts are not
+automatically current after an imported module changes.
+
+`execution_harness.qnt` executes both signing profiles from prefunded unsigned
+swap escrow through check, sign, propose, verify, and atomic settlement.
+`rejection_harness.qnt` isolates missing-proof and stale-context rejection from
+a constructed signed context; run it with `--init=rejectionInit
+--step=rejectionStep`. Rejection preserves money and is not settlement.
+
+External evidence dispositions are trusted abstractions. They do not derive
+candidate semantics, cryptographic validity, or Core correspondence. Actual
+installment lifecycle coverage is a separate incremental harness. Candidate
+A–D execution, independent correspondence, mutation controls, Quint/Apalache
+checking, architecture selection, and requested Council gates remain required.
+
+## Effect arithmetic boundary
 
 - `effects.qnt` defines `Transfer`, `Ledger`, `canApply`, `applyTransfers`,
   `policyAllows`, and `totalAsset`.

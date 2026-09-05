@@ -95,4 +95,19 @@ module rejection_test {
     val other = repeatAttempt(CoreProjected({...acceptedCore, accepted: false, error: CoreErrorCode("invented-error")}))
     assert(rejectionReason(residualContext, other, repeatEvidence(other)) == UnauthorizedEffect)
   }
+  run cancellationCannotBecomeCoreRejectionTest = {
+    val other = {...repeatAttempt(CoreProjected({...acceptedCore, accepted: false,
+      error: CoreErrorCode("input_required")})), id: CancelAttempt, operation: cancel}
+    assert(not(verificationValid(residualContext, other, repeatEvidence(other)))
+      and rejectionReason(residualContext, other, repeatEvidence(other)) == UnauthorizedEffect)
+  }
+  run signatureSubstitutionPreservesOriginalAttemptTest = {
+    val substituted = {...attempt, actor: Alice}
+    val wrong = {...evidence, signatures: evidence.signatures.put(aliceKey,
+      {...evidence.signatures.get(aliceKey), attempt: substituted})}
+    val rejected = applyRejectProposed(proposed, DispositionAttempt, wrong)
+    assert(canRejectProposed(proposed, DispositionAttempt, wrong)
+      and rejected.attempts.get(DispositionAttempt) == RejectedOperation({attempt: attempt,
+        evidence: wrong, observedContext: attempt.context, reason: StaleBindings, stage: VerificationBoundary}))
+  }
 }

@@ -166,6 +166,8 @@ module execution {
         | CoreProjected(result) =>
             if (not(result.accepted) and result.error != NoCoreError and validFrozenCoreError(result.error)
               and not(isCancellation(attempt.operation))) CoreRejected(result.error)
+            else if (projectionAdmitsExecution(attempt.operation, obs.coreProjection)
+              and consumptionConflict(context, attempt.operation)) ConsumptionConflict
             else UnauthorizedEffect
         | NoCoreProjection => if (consumptionConflict(context, attempt.operation)) ConsumptionConflict
             else UnauthorizedEffect
