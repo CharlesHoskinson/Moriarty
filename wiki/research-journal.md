@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T03:07:37Z
+updated_at: 2026-09-05T03:43:29Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -658,3 +658,36 @@ Claim metadata:
 - Reproduction: partially reproduced. The scan result was reproduced, but Task 1 acceptance and Council execution remain pending.
 - Confidence: high for the committed candidate and scan disposition.
 - Lifecycle status: S3. No release, integration, or Council-approval claim.
+
+### Authorized successor and preserved repair candidate
+
+**CLM-0140.** Repository observation and user decision: the user explicitly
+authorized a successor after the predecessor contract escalated. Foreman
+accepted `council-binding-20260905-successor1`, which cites the predecessor
+and binds a new approval digest. It permits three implementation rounds, one
+correction round, and separate bounded verification, audit, Council,
+integration, and publication actions. Its deadline is 2026-09-05T09:40:00Z.
+
+The fresh repair branch starts from Foreman
+`d85b89598cb4e31bb55f67c0d97074ff4eebe0c7`. It preserves the separate
+PID-namespace documentation and replays the five prior repair commits with
+an unchanged patch-series range comparison. The preserved candidate is
+`748da867073a345881023fd0ff327cb3ce26f99d`. Queue task 1459 was dispatched
+to Grok 4.6 for the five known lint failures. The per-lane watchdog was armed.
+These dispatch and monitoring records are not a claim of continued liveness,
+passing checks, independent approval, or S02 completion.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council and S02 obligations, and SRC-0033 at the execution-evidence boundary.
+- Local locator: Moriarty checkpoint fact 31.
+- External receipts: `/home/charl/.foreman/runs/council-binding-20260905-successor1/execution-contract.json` and `events.jsonl`.
+- Contract SHA-256: `63b05cb6fb9a38b3563663cd6446fdae6022db3e9508420d7d37d85abdcd895a`.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, candidate branch `foreman/council-binding-20260905-successor1/implement/binding-fresh`.
+- Observed at: 2026-09-05T03:43:29Z. Commit and decision date: 2026-09-05 UTC.
+- Authority: local repository evidence and explicit user decision.
+- Scope: unreleased Council enablement; Core remains `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: handoff comparison reproduced; final package verification and reviews pending.
+- Confidence: high for authorization, contract creation, and preserved commits.
+- Lifecycle status: S3. No GitHub merge or Moriarty Council gate follows.

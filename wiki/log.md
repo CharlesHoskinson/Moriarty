@@ -255,3 +255,14 @@ archive. The controller did not reconstruct historical test execution.
 Added the unapproved S02 authorization/recovery type sketch. Its main-review
 hold names missing transaction-time bindings, premature choice identifiers,
 and incomplete Core carrier comparison. No Quint model logic was added.
+
+## [2026-09-05] execution | Authorize and dispatch the successor repair
+
+Recorded the explicit successor authorization and contract in CLM-0140.
+Preserved the predecessor worktree and reports. Created a fresh branch from
+Foreman main with the separate PID-namespace documentation. Replayed all five
+repair commits with an unchanged range comparison. Dispatched queue task 1459
+for the known lint repair and armed the per-lane stall watchdog. The monitor
+does not grant gate approval or reset contract limits. S02 type-sketch review
+continues in parallel. No S02 model logic, GitHub merge, or Council verdict is
+claimed by this entry.
