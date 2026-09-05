@@ -10,7 +10,7 @@ module ZKIR-OPS
   imports ZKIR-HASH
   imports STRING
 
-  syntax ValueResult ::= vOk(Value) | vErr(String)
+  syntax ValueResult ::= vOk(Value) | vErr(String) | vPanic(String)   // vPanic: the Rust code aborts here
   syntax PairResult  ::= pOk(Value, Value) | pErr(String)
   syntax CheckResult ::= cOk() | cErr(String)
 
@@ -100,9 +100,29 @@ module ZKIR-OPS
   // --- test_eq / constrain_eq / cond_select --------------------------------------------
   syntax Bool ::= eqSupported(Value, Value) [function, total]
   rule eqSupported(A, B) => sameType(A, B)
+  // test_eq_offcircuit (eq.rs): Native, Bytes32, the four point types and the
+  // six foreign field types compare by value; JubjubScalar pairs are unsupported.
+  syntax EqCase ::= eqValue() | eqUnsupported() | eqFalse()
+  syntax EqCase ::= eqDispatch(Value, Value) [function, total]
+  rule eqDispatch(native(_), native(_))                   => eqValue()
+  rule eqDispatch(bytes32(_), bytes32(_))                 => eqValue()
+  rule eqDispatch(jubjubPoint(_), jubjubPoint(_))         => eqValue()
+  rule eqDispatch(secp256k1Point(_), secp256k1Point(_))   => eqValue()
+  rule eqDispatch(secp256k1Base(_), secp256k1Base(_))     => eqValue()
+  rule eqDispatch(secp256k1Scalar(_), secp256k1Scalar(_)) => eqValue()
+  rule eqDispatch(secp256r1Point(_), secp256r1Point(_))   => eqValue()
+  rule eqDispatch(secp256r1Base(_), secp256r1Base(_))     => eqValue()
+  rule eqDispatch(secp256r1Scalar(_), secp256r1Scalar(_)) => eqValue()
+  rule eqDispatch(curve25519Point(_), curve25519Point(_)) => eqValue()
+  rule eqDispatch(curve25519Base(_), curve25519Base(_))   => eqValue()
+  rule eqDispatch(curve25519Scalar(_), curve25519Scalar(_)) => eqValue()
+  rule eqDispatch(_, _) => eqUnsupported() [owise]
   syntax ValueResult ::= testEqV(Value, Value) [function, total]
-  rule testEqV(A, B) => vOk(native(bool2Word(A ==K B))) requires sameType(A, B)
-  rule testEqV(A, B) => vErr("Unsupported test_eq: " +String tn(A) +String " == " +String tn(B)) requires notBool sameType(A, B)
+  rule testEqV(A, B) => #testEq(eqDispatch(A, B), A, B)
+  syntax ValueResult ::= #testEq(EqCase, Value, Value) [function, total]
+  rule #testEq(eqValue(), A, B) => vOk(native(bool2Word(A ==K B)))
+  rule #testEq(eqFalse(), _, _) => vOk(native(0))
+  rule #testEq(eqUnsupported(), A, B) => vErr("Unsupported test_eq: " +String tn(A) +String " == " +String tn(B))
   syntax Int ::= bool2Word(Bool) [function, total]
   rule bool2Word(true) => 1
   rule bool2Word(false) => 0
@@ -204,24 +224,90 @@ module ZKIR-OPS
   rule #consNative(iOk(_), isErr(S)) => isErr(S)
   rule #consNative(iOk(X), isOk(L)) => isOk(ListItem(X) L)
 
-  // persistent_hash / keccak256 preimage: parse the field elements by the
-  // alignment (transient-crypto AlignmentAtomExt::parse_field_repr) and lay
-  // the atoms out as bytes (ValueAtomExt::binary_repr_unchecked). Only atom
-  // segments are supported; `option` segments and `compress` atoms are
-  // reported as unsupported.
+  // persistent_hash / keccak256 preimage (off-circuit): parse the field
+  // elements by the alignment (transient-crypto `parse_field_repr_inner`) and
+  // lay the atoms out as bytes (`Value::binary_repr_unchecked`). Unused
+  // trailing elements are ignored, as `parse_field_repr` never checks the
+  // remaining slice. An `option` segment reads a u16 selector, parses the
+  // chosen alternative, then requires zero padding up to the widest
+  // alternative's field length; its bytes are the selector as a flagged int
+  // followed by the chosen alternative's bytes padded to the widest
+  // alternative's byte length. `compress` atoms cannot be parsed from fields.
   syntax BytesResult ::= alignedBytes(Alignment, List) [function, total]
-  rule alignedBytes(alignment(Segs), Fs) => #alignedBytes(Segs, Fs, .Bytes)
-  syntax BytesResult ::= #alignedBytes(Segments, List, Bytes) [function, total]
-  rule #alignedBytes(.Segments, .List, Acc) => bOk(Acc)
-  rule #alignedBytes(.Segments, Fs, _) => bErr("Inputs did not match alignment") requires size(Fs) >Int 0
+  rule alignedBytes(alignment(Segs), Fs) => #abOk(#alignedBytes(Segs, Fs, .Bytes))
+  syntax BytesResult ::= #abOk(ABResult) [function, total]
+  rule #abOk(abOk(B, _)) => bOk(B)
+  rule #abOk(abErr(S)) => bErr(S)
+  // abOk(bytes, remaining fields)
+  syntax ABResult ::= abOk(Bytes, List) | abErr(String)
+  syntax ABResult ::= #alignedBytes(Segments, List, Bytes) [function, total]
+  rule #alignedBytes(.Segments, Fs, Acc) => abOk(Acc, Fs)
   rule #alignedBytes((atom(fieldAtom()), Segs), ListItem(F) Fs, Acc) => #alignedBytes(Segs, Fs, Acc +Bytes Int2Bytes(32, F, LE))
-  rule #alignedBytes((atom(fieldAtom()), _), .List, _) => bErr("Inputs did not match alignment")
+  rule #alignedBytes((atom(fieldAtom()), _), .List, _) => abErr("Inputs did not match alignment")
   rule #alignedBytes((atom(bytesAtom(N)), Segs), Fs, Acc) => #alignedBytesAtom(N, Segs, Fs, Acc, bytesFromFieldRepr(Fs, N))
-  rule #alignedBytes((atom(compressAtom()), _), _, _) => bErr("Inputs did not match alignment")   // Compress atoms cannot be parsed from field elements
-  rule #alignedBytes((option(_), _), _, _) => bErr("unsupported: alignment option segment")
-  syntax BytesResult ::= #alignedBytesAtom(Int, Segments, List, Bytes, BytesResult) [function, total]
-  rule #alignedBytesAtom(_, _, _, _, bErr(S)) => bErr(S)
+  rule #alignedBytes((atom(compressAtom()), _), _, _) => abErr("Inputs did not match alignment")
+  rule #alignedBytes((option(Alts), Segs), ListItem(Sel) Fs, Acc) => #alignedOption(Alts, Sel, Segs, Fs, Acc)
+    requires fitsBits(Sel, 16)
+  rule #alignedBytes((option(_), _), ListItem(Sel) _, _) => abErr("Inputs did not match alignment") requires notBool fitsBits(Sel, 16)
+  rule #alignedBytes((option(_), _), .List, _) => abErr("Inputs did not match alignment")
+  syntax ABResult ::= #alignedBytesAtom(Int, Segments, List, Bytes, BytesResult) [function, total]
+  rule #alignedBytesAtom(_, _, _, _, bErr(S)) => abErr(S)
   rule #alignedBytesAtom(N, Segs, Fs, Acc, bOk(B)) => #alignedBytes(Segs, range(Fs, (N +Int 30) /Int 31, 0), Acc +Bytes B)
+  // option (Value::repr_traverse): chosen = Alts[Sel]; parse it, check zero
+  // padding of (maxFieldLen(Alts) - fieldLen(chosen)) elements; bytes = the
+  // selector as a 2-byte little-endian atom ++ chosenBytes ++
+  // zeros(maxBinLen(Alts) - binLen(chosen))
+  syntax ABResult ::= #alignedOption(Alignments, Int, Segments, List, Bytes) [function, total]
+  rule #alignedOption(Alts, Sel, _, _, _) => abErr("Inputs did not match alignment") requires Sel >=Int lenAlignments(Alts)
+  rule #alignedOption(Alts, Sel, Segs, Fs, Acc)
+    => #alignedOption2(#alignedBytes(segmentsOf(nthAlignment(Alts, Sel)), Fs, .Bytes), Alts, Sel, Segs, Acc)
+    requires Sel <Int lenAlignments(Alts)
+  syntax ABResult ::= #alignedOption2(ABResult, Alignments, Int, Segments, Bytes) [function, total]
+  rule #alignedOption2(abErr(S), _, _, _, _) => abErr(S)
+  rule #alignedOption2(abOk(B, Rest), Alts, Sel, Segs, Acc)
+    => #alignedOption3(#zeroPrefix(Rest, maxFieldLen(Alts) -Int fieldLenA(nthAlignment(Alts, Sel))),
+                       Acc +Bytes Int2Bytes(2, Sel, LE) +Bytes padRightBytes(B, maxBinLen(Alts), 0), Segs)
+  syntax ABResult ::= #alignedOption3(ListResult, Bytes, Segments) [function, total]
+  rule #alignedOption3(lErr(S), _, _) => abErr(S)
+  rule #alignedOption3(lOk(Rest), Acc, Segs) => #alignedBytes(Segs, Rest, Acc)
+  syntax ListResult ::= lOk(List) | lErr(String)
+  syntax ListResult ::= #zeroPrefix(List, Int) [function, total]   // drop N leading zeros
+  rule #zeroPrefix(L, N) => lOk(L) requires N <=Int 0
+  rule #zeroPrefix(ListItem(0) L, N) => #zeroPrefix(L, N -Int 1) requires N >Int 0
+  rule #zeroPrefix(ListItem(X) _, N) => lErr("Inputs did not match alignment") requires N >Int 0 andBool X =/=K 0
+  rule #zeroPrefix(.List, N) => lErr("Inputs did not match alignment") requires N >Int 0
+  syntax Segments ::= segmentsOf(Alignment) [function, total]
+  rule segmentsOf(alignment(Segs)) => Segs
+  syntax Int ::= lenAlignments(Alignments) [function, total]
+  rule lenAlignments(.Alignments) => 0
+  rule lenAlignments(_ | As) => 1 +Int lenAlignments(As)
+  syntax Alignment ::= nthAlignment(Alignments, Int) [function, total]
+  rule nthAlignment((A | _), 0) => A
+  rule nthAlignment((_ | As), N) => nthAlignment(As, N -Int 1) requires N >Int 0
+  rule nthAlignment(_, _) => alignment(.Segments) [owise]
+  // field and byte lengths of alignments (Alignment::field_len / bin_len)
+  syntax Int ::= fieldLenA(Alignment) [function, total]
+  rule fieldLenA(alignment(Segs)) => fieldLenS(Segs)
+  syntax Int ::= fieldLenS(Segments) [function, total]
+  rule fieldLenS(.Segments) => 0
+  rule fieldLenS((atom(fieldAtom()), Segs)) => 1 +Int fieldLenS(Segs)
+  rule fieldLenS((atom(compressAtom()), Segs)) => 1 +Int fieldLenS(Segs)
+  rule fieldLenS((atom(bytesAtom(N)), Segs)) => (N +Int 30) /Int 31 +Int fieldLenS(Segs)
+  rule fieldLenS((option(Alts), Segs)) => 1 +Int maxFieldLen(Alts) +Int fieldLenS(Segs)
+  syntax Int ::= maxFieldLen(Alignments) [function, total]
+  rule maxFieldLen(.Alignments) => 0
+  rule maxFieldLen((A | As)) => maxInt(fieldLenA(A), maxFieldLen(As))
+  syntax Int ::= binLenA(Alignment) [function, total]
+  rule binLenA(alignment(Segs)) => binLenS(Segs)
+  syntax Int ::= binLenS(Segments) [function, total]
+  rule binLenS(.Segments) => 0
+  rule binLenS((atom(fieldAtom()), Segs)) => 32 +Int binLenS(Segs)
+  rule binLenS((atom(compressAtom()), Segs)) => 32 +Int binLenS(Segs)
+  rule binLenS((atom(bytesAtom(N)), Segs)) => N +Int binLenS(Segs)
+  rule binLenS((option(Alts), Segs)) => 2 +Int maxBinLen(Alts) +Int binLenS(Segs)
+  syntax Int ::= maxBinLen(Alignments) [function, total]
+  rule maxBinLen(.Alignments) => 0
+  rule maxBinLen((A | As)) => maxInt(binLenA(A), maxBinLen(As))
 
   // bytes_from_field_repr(repr, n): stray = n mod 31 bytes come first (from
   // repr[0]), then the 31-byte chunks in reverse order of the elements.
@@ -250,11 +336,11 @@ module ZKIR-OPS
   // resolve_operand_bits with a bound: value must be Native and fit in N bits;
   // N >= FR_BITS is "Excessive bit bound".
   syntax CheckResult ::= checkBits(Value, Int) [function, total]
-  rule checkBits(_, N) => cErr("Excessive bit bound") requires N >=Int #frBits
+  rule checkBits(V, _) => cErr("cannot convert " +String tn(V) +String " to Native") requires notBool isNative(V)
+  rule checkBits(native(_), N) => cErr("Excessive bit bound") requires N >=Int #frBits
   rule checkBits(native(V), N) => cOk() requires N <Int #frBits andBool fitsBits(V, N)
   rule checkBits(native(V), N) => cErr("Bit bound failed: " +String Int2String(V) +String " is not " +String Int2String(N) +String "-bit")
     requires N <Int #frBits andBool notBool fitsBits(V, N)
-  rule checkBits(V, N) => cErr("cannot convert " +String tn(V) +String " to Native") requires N <Int #frBits andBool notBool isNative(V)
   syntax Bool ::= isNative(Value) [function, total]
   rule isNative(native(_)) => true
   rule isNative(_) => false [owise]

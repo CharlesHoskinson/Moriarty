@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pyk.kast.inner import KApply, KInner, KSort, KToken, top_down
+from pyk.kast.inner import KApply, KInner, KSequence, KSort, KToken, top_down
 from pyk.kast.prelude.kint import intToken
 from pyk.kore.parser import KoreParser
 from pyk.ktool.krun import KRun
@@ -53,16 +53,28 @@ def klist(items: list[KInner]) -> KInner:
     return t
 
 
+class PreimageError(ValueError):
+    """A preimage integer is not a canonical BLS12-381 scalar (the Rust
+    `ProofPreimage` holds `Fr` values; the oracle rejects such inputs)."""
+
+
+def fr(v) -> int:
+    n = int(v)
+    if not 0 <= n < R:
+        raise PreimageError(f'{n} is not a canonical field element')
+    return n
+
+
 def ints(values) -> KInner:
-    return klist([intToken(int(v)) for v in values])
+    return klist([intToken(fr(v)) for v in values])
 
 
 def preimage_term(p: dict[str, Any]) -> KInner:
     cc = p.get('communications_commitment')
-    comm = KApply('noComm') if cc is None else KApply('comm', [intToken(int(cc[0])), intToken(int(cc[1]))])
+    comm = KApply('noComm') if cc is None else KApply('comm', [intToken(fr(cc[0])), intToken(fr(cc[1]))])
     return KApply('preimage', [
         ints(p.get('inputs', [])),
-        intToken(int(p.get('binding_input', 0))),
+        intToken(fr(p.get('binding_input', 0))),
         comm,
         ints(p.get('private_transcript', [])),
         ints(p.get('public_transcript_inputs', [])),
@@ -186,6 +198,21 @@ def enc_chunks(b: bytes) -> list[int]:
     return [int.from_bytes(b[i:i + 31], 'little') for i in range(0, len(b), 31)]
 
 
+def type_string(t: KInner, ext: bool) -> str:
+    """The Rust `{:?}` of `IrType` for this value (Bytes<n> is `Bytes(n)` at 2ffe2d1)."""
+    assert isinstance(t, KApply)
+    lbl = t.label.name
+    if lbl == 'bytes32V':
+        return 'Bytes(32)' if ext else 'Bytes32'
+    if lbl == 'bytesV':
+        return f'Bytes({len(tok_bytes(t.args[0]))})'
+    return {'nativeV': 'Native', 'boolV': 'Bool', 'byteV': 'Byte', 'jubjubPointV': 'JubjubPoint',
+            'jubjubScalarV': 'JubjubScalar', 'secp256k1PointV': 'Secp256k1Point', 'secp256k1BaseV': 'Secp256k1Base',
+            'secp256k1ScalarV': 'Secp256k1Scalar', 'secp256r1PointV': 'Secp256r1Point', 'secp256r1BaseV': 'Secp256r1Base',
+            'secp256r1ScalarV': 'Secp256r1Scalar', 'curve25519PointV': 'Curve25519Point', 'curve25519BaseV': 'Curve25519Base',
+            'curve25519ScalarV': 'Curve25519Scalar'}[lbl]
+
+
 def encode_value(t: KInner, ext: bool = False) -> tuple[str, list[int]]:
     assert isinstance(t, KApply), t
     lbl = t.label.name
@@ -268,8 +295,10 @@ class Runner:
         self.ext = ext
         self.krun = KRun(definition or (default_ext_definition() if ext else default_definition()))
 
-    def run(self, program: KInner, preimage: dict[str, Any], depth: int | None = None, gen: bool = False) -> dict[str, Any]:
-        job = KApply('genJob' if gen else 'job', [program, preimage_term(preimage)])
+    def run(self, program: KInner, preimage: dict[str, Any], depth: int | None = None, gen: bool = False, checked: bool = False) -> dict[str, Any]:
+        """checked=True runs the static check `wf` first (checkedJob); the default
+        raw entry point models `preprocess` on any program `IrSource::load` accepts."""
+        job = KApply('genJob' if gen else ('checkedJob' if checked else 'job'), [program, preimage_term(preimage)])
         kore = self.krun.kast_to_kore(job, KSort('Job'))
         res = self.krun.run_process(kore, depth=depth)
         if res.returncode != 0:
@@ -278,15 +307,25 @@ class Runner:
         status = find_cell(cfg, '<status>')
         assert isinstance(status, KApply)
         out: dict[str, Any] = {}
-        if status.label.name == 'ok':
+        k_cell = find_cell(cfg, '<k>')
+        finished = isinstance(k_cell, KSequence) and len(k_cell.items) == 0
+        if not finished:
+            # a configuration with a residual computation is not a result: either
+            # no rule applied (stuck) or the depth bound was hit
+            out['status'] = 'depth-exhausted' if depth is not None else 'stuck'
+            out['error'] = self.krun.pretty_print(k_cell).replace('\n', ' ')[:300]
+        elif status.label.name == 'ok':
             out['status'] = 'ok'
+        elif status.label.name == 'panic':
+            out['status'] = 'panic'
+            out['error'] = tok_str(status.args[0])
         else:
             out['status'] = 'error'
             out['error'] = tok_str(status.args[0])
         memory = {}
         for k, v in map_items(find_cell(cfg, '<mem>')):
             variant, enc = encode_value(v, self.ext)
-            memory[tok_str(k)] = {'variant': variant, 'encoded': [str(e) for e in enc]}
+            memory[tok_str(k)] = {'variant': variant, 'type': type_string(v, self.ext), 'encoded': [str(e) for e in enc]}
         out['memory'] = memory
         out['pis'] = [str(tok_int(x)) for x in list_items(find_cell(cfg, '<pi>'))]
         out['pi_skips'] = [skip(x) for x in list_items(find_cell(cfg, '<skips>'))]
@@ -296,20 +335,24 @@ class Runner:
         out['needs'] = [need(x) for x in list_items(find_cell(cfg, '<needs>'))]
         verdicts = list_items(find_cell(cfg, '<verdicts>'))
         bad = []
+        allv = []
         for v in verdicts:
             assert isinstance(v, KApply) and v.label.name == 'verdict'
             outcome = v.args[1]
             assert isinstance(outcome, KApply)
+            gate = ' '.join(self.krun.pretty_print(v.args[0]).replace('\n', ' ').split())
+            rec = (outcome.label.name, tok_str(outcome.args[0]) if outcome.args else '', gate)
+            allv.append(rec)
             if outcome.label.name != 'holds':
-                gate = self.krun.pretty_print(v.args[0]).replace('\n', ' ')
-                gate = ' '.join(gate.split())
-                bad.append((outcome.label.name, tok_str(outcome.args[0]) if outcome.args else '', gate[:120]))
+                bad.append((rec[0], rec[1], gate[:120]))
         out['verdicts'] = len(verdicts)
+        out['all_verdicts'] = allv
         out['violations'] = bad
+        out['outputs'] = [type_string(v, self.ext) + ':' + ','.join(str(e) for e in encode_value(v, self.ext)[1]) for v in list_items(find_cell(cfg, '<outputs>'))]
         return out
 
-    def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False) -> dict[str, Any]:
-        return self.run(zkir_kast.load_program(path, ext=self.ext), preimage, gen=gen)
+    def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False, checked: bool = False) -> dict[str, Any]:
+        return self.run(zkir_kast.load_program(path, ext=self.ext), preimage, gen=gen, checked=checked)
 
 
 def main() -> int:
@@ -318,11 +361,12 @@ def main() -> int:
     ap.add_argument('preimage', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
     ap.add_argument('--ext', action='store_true')
+    ap.add_argument('--checked', action='store_true', help='run the static check first (checkedJob)')
     args = ap.parse_args()
     runner = Runner(args.definition, ext=args.ext)
     with open(args.preimage) as f:
         pre = json.load(f)
-    print(json.dumps(runner.run_file(args.file, pre), indent=1))
+    print(json.dumps(runner.run_file(args.file, pre, checked=args.checked), indent=1))
     return 0
 
 

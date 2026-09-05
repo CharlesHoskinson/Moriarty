@@ -48,7 +48,7 @@ for entry in manifest['programs']:
     body = '\n'.join(lines[start:end])
     pre = {}
     for field in FIELDS:
-        m = re.search(field + r':\s*vec!\[(.*?)\]', body, re.S)
+        m = re.search(r'(?<![A-Za-z0-9_])' + field + r':\s*vec!\[(.*?)\]', body, re.S)
         if m:
             vals = literal_vec(m.group(1))
             if vals is not None:

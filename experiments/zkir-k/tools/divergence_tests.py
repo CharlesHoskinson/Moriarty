@@ -66,12 +66,14 @@ CASES.append(('f04_less_than_odd_bits', 'Finding 4',
     'error', 'error', 'less_than', 'unknown',
     'a = 8 exceeds 3 bits off-circuit; the chip would accept the padded 4-bit bound (output absent, so unknown)'))
 
+EXTRA_PRE = {}
+NONCANON = [((zv.K256P + 5 - 1) & ((1 << 192) - 1)), ((zv.K256P + 5 - 1) >> 192)]
 CASES.append(('f05_noncanonical_foreign_limbs', 'Finding 5',
     program([('%x', 'Base<Secp256k1>')], [
-        {'op': 'add', 'a': '%x', 'b': '%x', 'output': '%y'}]),
-    [((zv.K256P + 5 - 1) & ((1 << 192) - 1)), ((zv.K256P + 5 - 1) >> 192)],
-    'ok', 'ok', 'add', 'holds',
-    'limbs encoding p + 5 decode (reduced) as 5 on both sides'))
+        {'op': 'add', 'a': '%x', 'b': '%x', 'output': '%y'}, {'op': 'output', 'vals': ['%y']}], outputs=['Base<Secp256k1>'], comm=True),
+    NONCANON,
+    'ok', 'ok', 'commGate', 'violated',
+    'limbs encoding p + 5 decode (reduced) as 5 off-circuit and the raw-stream commitment is accepted; in circuit the commitment is over the canonical re-encoding, so it differs'))
 
 CASES.append(('f06_cond_select_bytes32', 'Finding 6',
     program([('%bit', NATIVE), ('%a', 'Bytes<32>'), ('%b', 'Bytes<32>')], [
@@ -106,7 +108,7 @@ CASES.append(('f11_curve25519_torsion_point', 'Finding 11',
         {'op': 'from_coordinates', 'inputs': ['%x', '%y'], 'output': '%p'}]),
     zv.enc_foreign(0, zv.C25519P, 64, 4) + zv.enc_foreign(zv.C25519P - 1, zv.C25519P, 64, 4),
     'error', 'error', 'from_coordinates', 'violated',
-    '(0, -1) has order 2: on the curve, not in the subgroup; off-circuit both sides error, in circuit the cofactor-cleared point is unsatisfiable'))
+    '(0, -1) has order 2: on the curve, not in the subgroup; off-circuit both sides error, in circuit the cofactor-cleared point is unsatisfiable (the crate hint would panic)'))
 
 CASES.append(('f12_ec_mul_generator_p256', 'Finding 12',
     program([('%s', 'Scalar<Secp256r1>')], [
@@ -124,17 +126,52 @@ CASES.append(('f13_chip_gating_from_bytes32', 'Finding 13',
 
 wrong_x = (G8[0] + 2) % zv.R
 CASES.append(('k01_jubjub_from_coordinates_parity_only', 'K1 (new)',
-    program([('%x', NATIVE), ('%y', NATIVE)], [
+    program([('%x', NATIVE), ('%y', NATIVE), ('%enable', 'Point<Jubjub>')], [
         {'op': 'from_coordinates', 'inputs': ['%x', '%y'], 'output': '%p'},
-        {'op': 'into_coordinates', 'point': '%p', 'outputs': ['%px', '%py']}]), [wrong_x, G8[1]],
+        {'op': 'into_coordinates', 'point': '%p', 'outputs': ['%px', '%py']}]), [wrong_x, G8[1], G8[0], G8[1]],
     'ok', 'ok', 'from_coordinates', 'violated',
-    'off-circuit only the parity of x is used (decompression), so a wrong x yields the real point; in-circuit (x, y) must lie on the curve'))
+    'off-circuit only the parity of x is used (decompression), so a wrong x yields the real point; in circuit (x, y) must lie on the curve (a Jubjub input enables the chip)'))
+
+CASES.append(('k01b_jubjub_from_coordinates_no_chip', 'K1 companion',
+    program([('%x', NATIVE), ('%y', NATIVE)], [
+        {'op': 'from_coordinates', 'inputs': ['%x', '%y'], 'output': '%p'}]), [G8[0], G8[1]],
+    'ok', 'ok', 'from_coordinates', 'synthErr',
+    'native from_coordinates uses the Jubjub chip, which used_chips never enables for it: keygen would panic'))
+
+CASES.append(('k03_bytes32_input_assertion_panics', 'K3 (new)',
+    program([('%b', 'Bytes<32>')], [{'op': 'reverse_bytes', 'bytes': '%b', 'output': '%r'}]), [1 << 248, 0],
+    'panic', 'panic', 'reverse_bytes', 'unknown',
+    'a Bytes32 raw input whose low element uses byte 31 trips assert_eq! in the decoder: the crate panics, K reports a panic status'))
+
+CASES.append(('k04_jubjub_scalar_from_native_chip', 'K4 (new)',
+    program([('%a', NATIVE)], [
+        {'op': 'jubjub_scalar_from_native', 'native': '%a', 'output': '%s'},
+        {'op': 'ec_mul_generator', 'scalar': '%s', 'output': '%p'}]), [7],
+    'ok', 'ok', 'jubjub_scalar_from_native', 'synthErr',
+    'jubjub_scalar_from_native mints a JubjubScalar and its circuit arm calls std.jubjub(); used_chips does not enable the chip (finding 13 says from_bytes32 is the only such entry)'))
+
+CASES.append(('k05_less_than_253_bits_keygen', 'K5 (new)',
+    program([('%a', NATIVE), ('%b', NATIVE)], [
+        {'op': 'less_than', 'a': '%a', 'b': '%b', 'bits': 253, 'output': '%lt'}]), [1, 2],
+    'ok', 'ok', 'less_than', 'synthErr',
+    'bits 253 pads to 254 which exceeds MAX_BOUND_IN_BITS = 253 in bounded_of_element: preprocess accepts, keygen panics'))
+
+CASES.append(('k06_empty_impact_guard', 'R3-2',
+    program([('%g', NATIVE)], [{'op': 'impact', 'guard': '%g', 'inputs': []}]), [2],
+    'error', 'error', 'guardGate', 'violated',
+    'an empty impact still converts its guard to a bit in circuit, so a non-boolean guard is unsatisfiable there too'))
+
+CASES.append(('k07_alignment_option_offcircuit', 'astra-R2 #4',
+    program([('%x', NATIVE)], [
+        {'op': 'persistent_hash', 'alignment': [{'tag': 'option', 'value': [[{'tag': 'atom', 'value': {'tag': 'field'}}], [{'tag': 'atom', 'value': {'tag': 'bytes', 'length': 1}}]]}], 'inputs': ['0x01', '%x'], 'output': '%h'}]), [5],
+    'ok', 'ok', 'persistent_hash', 'synthErr',
+    'preprocess parses option alignments (selector 1 chooses the byte alternative); the circuit rejects them as not implemented'))
 
 CASES.append(('k02_transcript_too_short_panics', 'K2 (new)',
     program([('%a', NATIVE)], [
         {'op': 'private_input', 'guard': None, 'type': NATIVE, 'output': '%x'},
         {'op': 'add', 'a': '%a', 'b': '%x', 'output': '%y'}]), [1],
-    'error', 'oracle-failed', 'private_input', 'unknown',
+    'panic', 'panic', 'private_input', 'unknown',
     'an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports an error'))
 
 CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
@@ -146,46 +183,64 @@ CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
 
 
 def oracle(path: Path, pre: dict) -> dict:
-    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile('w', suffix='.json') as f:
         json.dump(pre, f)
-    res = subprocess.run([str(ORACLE), str(path), f.name], capture_output=True, text=True)
-    return json.loads(res.stdout) if res.returncode == 0 else {'status': 'oracle-failed', 'error': res.stderr[-300:]}
+        f.flush()
+        res = subprocess.run([str(ORACLE), str(path), f.name], capture_output=True, text=True)
+    if res.returncode == 101:
+        return {'status': 'panic', 'error': res.stderr.strip()[-300:]}
+    if res.returncode != 0:
+        return {'status': 'load-error', 'error': res.stderr.strip()[-300:]}
+    return json.loads(res.stdout)
 
 
 def main() -> int:
     OUT.mkdir(exist_ok=True)
     runner = Runner()
-    check_runner = Runner(HERE.parent / 'semantics' / 'zkir-check-kompiled')
     failures = 0
     for name, finding, prog, raw, exp_k, exp_r, gate_sub, exp_outcome, note in CASES:
         path = OUT / f'{name}.zkir'
         path.write_text(json.dumps(prog, indent=1) + '\n')
         pre = {'inputs': [str(x) for x in raw], 'binding_input': '42'}
-        # static well-formedness first (some findings are rejected there)
-        from pyk.kast.inner import KSort
-        from pyk.kore.parser import KoreParser
+        if pre_extra := dict(EXTRA_PRE.get(name, {})):
+            pre.update(pre_extra)
         term = zkir_kast.load_program(path)
-        res = check_runner.krun.run_process(check_runner.krun.kast_to_kore(term, KSort('Program')))
-        wf = zkir_kast.wf_result(check_runner.krun.pretty_print(check_runner.krun.kore_to_kast(KoreParser(res.stdout).pattern())))
+        if prog['do_communications_commitment']:
+            # the raw-stream commitment the crate accepts, taken from a K generation run
+            pre['communications_commitment'] = ['0', '7']
+            gen = runner.run(term, pre, gen=True)
+            comm = [x for kind, x in gen['needs'] if kind == 'comm']
+            if comm:
+                pre['communications_commitment'] = [str(comm[0]), '7']
         r = oracle(path, pre)
-        if wf != 'wfOk':
+        # the checked entry point: a well-formedness error ends the run before anything executes
+        k = runner.run(term, pre, checked=True)
+        if k['status'] == 'error' and k.get('error', '').startswith('well-formedness'):
             k_status = 'wfError'
             outcome = 'n/a'
-            detail = wf
+            detail = k['error']
         else:
-            k = runner.run(term, pre)
             k_status = k['status']
-            norm = lambda t: t.replace('_', '').lower()
-            hits = [v for v in k['violations'] if norm(gate_sub) in norm(v[2])]
-            if hits:
-                outcome = hits[0][0]
-                detail = f'{hits[0][0]}: {hits[0][1]}'
+            norm = lambda t: t.replace('_', '').replace(' ', '').lower()
+            # the target gate must have been emitted and evaluated; select it exactly
+            targets = [v for v in k['all_verdicts'] if norm(v[2]).startswith('gate(' + norm(gate_sub) + '(') or norm(v[2]).startswith(norm(gate_sub) + '(')]
+            if not targets:
+                outcome = 'no-such-gate'
+                detail = 'gate not emitted: ' + '; '.join(v[2][:30] for v in k['all_verdicts'][:4])
             else:
-                outcome = 'holds' if any(gate_sub in g for g in [gate_sub]) else 'holds'
-                detail = k.get('error', 'ok')
-        ok = (k_status == exp_k) and (r['status'] == exp_r) and (outcome == exp_outcome)
+                outcome = targets[0][0]
+                detail = f'{targets[0][0]}: {targets[0][1]}' if targets[0][1] else targets[0][0]
+            if k['status'] != 'ok' and not k.get('error', '').startswith('well'):
+                detail = detail + ' | ' + k.get('error', '')[:70]
+        ok = (k_status == exp_k) and (r['status'] == exp_r) and (outcome == exp_outcome) and (k_status != 'stuck')
         failures += not ok
         print(f"{'PASS' if ok else 'FAIL'}  {name:42} {finding:20} K={k_status:8} Rust={r['status']:6} gate={gate_sub}:{outcome}")
+        if k_status == 'ok' and r['status'] == 'ok' and 'memory' in r:
+            km = {n: (v['type'], v['encoded']) for n, v in k['memory'].items()}
+            rm = {n: (v['type'], v['encoded']) for n, v in r['memory'].items()}
+            if km != rm:
+                failures += 1
+                print(f"        MEMORY DIFFERS: K={km} Rust={rm}")
         print(f"        {note}")
         print(f"        K: {detail[:100]} | Rust: {r.get('error', 'ok')[:100]}")
         if not ok:

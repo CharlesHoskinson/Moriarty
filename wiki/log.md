@@ -185,3 +185,19 @@ development type-checks but cannot execute programs. New page
 `wiki/zkir/zkir-k-definition.md`; plan milestones marked done; K1 recorded in
 `contradictions.md`. Receipts: `evidence/zkir-k-*-2026-09-05.txt`,
 `evidence/arc-zkir-agda-typecheck-2026-09-05.txt`.
+
+## [2026-09-05] review | eight-reviewer audit and the second iteration
+
+Eight formal-methods reviews (four Claude Fable 5.1, four GPT-6 Astra via
+Codex read-only) of the K definition, briefs and reports under
+`experiments/zkir-k/review-2026-09-05/`, 34 findings consolidated; verdicts one
+APPROVED, four WARNING, three BLOCKED, with cross-vendor agreement on every
+major defect. All fixed on branch `zkir-k-iter2`: stuck runs, missing run-time
+checks, `test_eq` dispatch, alignment options, error-class comparison, the
+commitment gate, unsatisfiable versus unbuildable, public-input indices,
+native range checks, panic status, sequential resolution, chip and width
+checks, serde fidelity, totality. New receipts (`evidence/*-2026-09-05b.txt`):
+42/42, 18/18, 63/63, 20/20 divergence cases, 358/358 and 418/418 differential
+agreements. Three more upstream candidates K3 to K5 in `contradictions.md`.
+Also: full kframework.org crawl (SRC-0026) and `k-framework/k-best-practices.md`;
+semantics graph (237 nodes) in evidence.

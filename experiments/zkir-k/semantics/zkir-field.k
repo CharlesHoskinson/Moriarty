@@ -40,17 +40,27 @@ module ZKIR-FIELD
                | fdiv(Int, Int, Int)    [function, total]
                | fpow(Int, Int, Int)    [function, total]
                | fsq(Int, Int)          [function, total]
-  rule fmod(A, P)     => A modInt P
-  rule fadd(A, B, P)  => (A +Int B) modInt P
-  rule fsub(A, B, P)  => (A -Int B) modInt P
-  rule fmul(A, B, P)  => (A *Int B) modInt P
-  rule fneg(A, P)     => (0 -Int A) modInt P
-  rule finv(A, P)     => 0 requires A modInt P ==Int 0
-  rule finv(A, P)     => (A modInt P) ^%Int (P -Int 2) P requires A modInt P =/=Int 0
-  rule fdiv(A, B, P)  => fmul(A, finv(B, P), P)
-  rule fpow(A, E, P)  => (A modInt P) ^%Int E P requires E >=Int 0
-  rule fpow(_, E, _)  => 0 requires E <Int 0
-  rule fsq(A, P)      => fmul(A, A, P)
+  // Domain: P > 1 (the eight configured primes); other moduli give 0 so that
+  // the functions stay total for the symbolic backend (they are never reached).
+  rule fmod(A, P)     => A modInt P requires P >Int 1
+  rule fadd(A, B, P)  => (A +Int B) modInt P requires P >Int 1
+  rule fsub(A, B, P)  => (A -Int B) modInt P requires P >Int 1
+  rule fmul(A, B, P)  => (A *Int B) modInt P requires P >Int 1
+  rule fneg(A, P)     => (0 -Int A) modInt P requires P >Int 1
+  rule finv(A, P)     => 0 requires P >Int 1 andBool A modInt P ==Int 0
+  rule finv(A, P)     => (A modInt P) ^%Int (P -Int 2) P requires P >Int 1 andBool A modInt P =/=Int 0
+  rule fdiv(A, B, P)  => fmul(A, finv(B, P), P) requires P >Int 1
+  rule fpow(A, E, P)  => (A modInt P) ^%Int E P requires P >Int 1 andBool E >=Int 0
+  rule fsq(A, P)      => fmul(A, A, P) requires P >Int 1
+  rule fmod(_, _)     => 0 [owise]
+  rule fadd(_, _, _)  => 0 [owise]
+  rule fsub(_, _, _)  => 0 [owise]
+  rule fmul(_, _, _)  => 0 [owise]
+  rule fneg(_, _)     => 0 [owise]
+  rule finv(_, _)     => 0 [owise]
+  rule fdiv(_, _, _)  => 0 [owise]
+  rule fpow(_, _, _)  => 0 [owise]
+  rule fsq(_, _)      => 0 [owise]
 
   // Legendre symbol as 0, 1 or P-1 (i.e. -1); 0 counts as a residue, as in
   // midnight-curves `ct_quadratic_non_residue` (legendre == -1).
@@ -80,8 +90,8 @@ module ZKIR-FIELD
   rule #oddPart(N) => #oddPart(N /Int 2) requires N >Int 0 andBool N modInt 2 ==Int 0
   rule #oddPart(N) => N requires N <=Int 0 orBool N modInt 2 ==Int 1
   syntax Int ::= #nonResidue(Int, Int) [function, total]   // smallest quadratic non-residue >= Z
-  rule #nonResidue(P, Z) => Z requires isQuadraticNonResidue(Z, P)
-  rule #nonResidue(P, Z) => #nonResidue(P, Z +Int 1) requires notBool isQuadraticNonResidue(Z, P) andBool Z <Int P
+  rule #nonResidue(P, Z) => Z requires Z <Int P andBool isQuadraticNonResidue(Z, P)
+  rule #nonResidue(P, Z) => #nonResidue(P, Z +Int 1) requires Z <Int P andBool notBool isQuadraticNonResidue(Z, P)
   rule #nonResidue(P, Z) => 0 requires Z >=Int P
 
   // #ts(A, P, S, Q, Z): standard loop with M = S, c = Z^Q, t = A^Q, R = A^((Q+1)/2)

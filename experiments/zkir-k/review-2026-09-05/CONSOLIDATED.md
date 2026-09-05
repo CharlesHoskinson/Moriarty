@@ -10,7 +10,7 @@ attested from the event stream, so the requested model is recorded and the
 served model is unknown.
 
 Verdicts: astra-R1 WARNING, astra-R2 BLOCKED, astra-R3 BLOCKED, astra-R4 BLOCKED,
-fable-R2 WARNING, fable-R3 WARNING (fable-R1 and fable-R4 appended when they arrive).
+fable-R1 APPROVED, fable-R2 WARNING, fable-R3 WARNING, fable-R4 WARNING.
 
 ## Findings accepted for the next iteration, by severity
 
@@ -180,6 +180,32 @@ vendors report the same defect), the defect, and the fix adopted.
     them thirteen current divergences; the representation assumptions of the
     instruction-level abstraction (auxiliary witnesses, canonicity of
     JubjubScalar assignment, hash gadgets) must be listed.
+
+### Added from fable-R1 and fable-R4
+
+32. **Stale kompiled definition behind the unit receipts** (fable-R1 F1): the
+    unit receipts of 2026-09-05 were produced with a `zkir-test-kompiled`
+    older than the final `zkir-values.k`. Fix: rebuild every definition before
+    the receipts are written; the receipts of this iteration supersede them.
+33. **Extension `test_eq` on unequal-length byte strings** (fable-R4 #1,
+    astra-R4 R4-04): off-circuit false, in-circuit synthesis error. Fixed as
+    item 23.
+34. **Proof readiness** (fable-R4): a fully pinned `add` claim proves in ten
+    seconds under the Haskell backend; a `transient_hash` claim does not
+    terminate because Poseidon and `modInt` unfold symbolically. Not fixed in
+    this iteration; recorded as the state of the plan's uninterpreted-hash
+    treatment, which is not implemented.
+
+## Disposition after the iteration (2026-09-05, branch zkir-k-iter2)
+
+Items 1 to 13, 15 to 30 and 33 were implemented; items 14, 31 and 34 were
+handled in the documentation. The runner distinguishes `ok`, `error`, `panic`,
+`stuck` and `depth-exhausted`; `checkedJob` runs the static check first while
+`job` models `preprocess` alone; every gate is emitted with an emission-time
+public-input counter and evaluated as holds, violated, synthesis error,
+unknown or unsupported; the differential harness compares error classes and
+typed records and runs typed, transcript and commitment perturbations; the
+divergence harness selects its target gate exactly and covers 20 cases.
 
 ## Coverage additions adopted
 

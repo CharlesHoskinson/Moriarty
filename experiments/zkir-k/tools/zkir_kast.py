@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -75,16 +76,21 @@ def ir_type(name: Any) -> KInner:
     if EXT and isinstance(name, str):
         if name in EXT_TYPES:
             return KApply(EXT_TYPES[name])
-        if name.startswith('Bytes<') and name.endswith('>') and name[6:-1].isdigit():
-            n = int(name[6:-1])
+        m = re.fullmatch(r'Bytes<(0|[1-9][0-9]*)>', name, flags=re.ASCII)
+        if m:
+            n = int(m.group(1))
             if 1 <= n <= (1 << 24):
                 return KApply('BytesN', [intToken(n)])
     raise ZkirFormatError(f'unknown IR type {name!r}')
 
 
+HEX = re.compile(r'^[0-9a-fA-F]+$')
+
+
 def immediate(text: str) -> int:
     """`Operand::deserialize` for hex immediates: little-endian bytes, optional
-    leading '-', value must be < r."""
+    leading '-', value must be < r. `const_hex::decode` accepts only an even
+    number of hex digits, no whitespace or other characters."""
     negate = text.startswith('-')
     body = text[1:] if negate else text
     if not (body.startswith('0x') or body.startswith('0X')):
@@ -92,10 +98,9 @@ def immediate(text: str) -> int:
     hex_str = body[2:]
     if not hex_str:
         raise ZkirFormatError("hex immediate must have at least one digit after '0x'")
-    try:
-        raw = bytes.fromhex(hex_str)
-    except ValueError as e:
-        raise ZkirFormatError(f'invalid hex immediate {text!r}: {e}') from e
+    if not HEX.match(hex_str) or len(hex_str) % 2:
+        raise ZkirFormatError(f'invalid hex immediate {text!r}: odd length or non-hex character')
+    raw = bytes.fromhex(hex_str)
     if len(raw) > 32:
         raise ZkirFormatError(f'immediate {text!r} out of range for field element')
     value = int.from_bytes(raw, 'little')
@@ -142,7 +147,7 @@ def pair(items: Any, what: str) -> tuple[Any, Any]:
 
 
 def u32(value: Any, what: str) -> KInner:
-    if not isinstance(value, int) or isinstance(value, bool) or value < 0 or value >= 2**32:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0 or value >= 2**32:
         raise ZkirFormatError(f'{what} must be a u32, got {value!r}')
     return intToken(value)
 
@@ -183,12 +188,12 @@ def alignment(value: Any) -> KInner:
 # --- instructions ------------------------------------------------------------
 
 def _need(ins: dict, *keys: str) -> None:
+    """serde: every listed field is required (Option fields are listed by the
+    callers with `_opt`); unknown fields are ignored, as the Rust structs do
+    not carry `deny_unknown_fields`."""
     missing = [k for k in keys if k not in ins]
     if missing:
         raise ZkirFormatError(f"{ins.get('op')}: missing field(s) {missing}")
-    extra = sorted(set(ins) - set(keys) - {'op'})
-    if extra:
-        raise ZkirFormatError(f"{ins.get('op')}: unknown field(s) {extra}")
 
 
 def instruction(ins: Any) -> KInner:
@@ -311,8 +316,8 @@ def instruction(ins: Any) -> KInner:
             _need(ins, 'native', 'output')
             return KApply('jubjub_scalar_from_native', [operand(ins['native']), identifier(ins['output'])])
         case 'public_input' | 'private_input':
-            _need(ins, 'guard', 'type', 'output')
-            return KApply(op, [guard(ins['guard']), ir_type(ins['type']), identifier(ins['output'])])
+            _need(ins, 'type', 'output')   # guard is Option<Operand>: absent == null
+            return KApply(op, [guard(ins.get('guard')), ir_type(ins['type']), identifier(ins['output'])])
         case 'output':
             _need(ins, 'vals')
             return KApply('output', [operands(ins['vals'])])
@@ -329,14 +334,21 @@ def program(doc: Any) -> KInner:
     version = doc.get('version')
     if not isinstance(version, dict) or 'major' not in version or 'minor' not in version:
         raise ZkirFormatError('expected a version entry')
+    for part in ('major', 'minor'):   # serde u8
+        v = version[part]
+        if isinstance(v, bool) or not isinstance(v, int) or not (0 <= v <= 255):
+            raise ZkirFormatError(f'version.{part}: expected u8, got {v!r}')
     if version['major'] != 3 or not (0 <= version['minor'] <= 0):
         raise ZkirFormatError(f"unhandled version: {version['major']}.{version['minor']}")
     for key in ('inputs', 'outputs', 'do_communications_commitment', 'instructions'):
         if key not in doc:
             raise ZkirFormatError(f'missing field {key!r}')
+    for key in ('inputs', 'outputs', 'instructions'):   # serde Vec
+        if not isinstance(doc[key], list):
+            raise ZkirFormatError(f'{key}: expected a sequence')
     inputs = []
     for entry in doc['inputs']:
-        if not isinstance(entry, dict) or set(entry) != {'name', 'type'}:
+        if not isinstance(entry, dict) or 'name' not in entry or 'type' not in entry:
             raise ZkirFormatError(f'input must have name and type, got {entry!r}')
         inputs.append(KApply('typedId', [identifier(entry['name']), ir_type(entry['type'])]))
     outputs = [ir_type(t) for t in doc['outputs']]
