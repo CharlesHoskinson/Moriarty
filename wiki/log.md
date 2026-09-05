@@ -294,3 +294,17 @@ metadata identifies the 75-turn limit as the stop reason. Dispatched bounded
 completion task 1462 through the same successor contract's resume allowance.
 The watchdog was armed. These are historical dispatch facts, not continuing
 liveness, passing checks, independent review, or publication claims.
+
+## [2026-09-05] synthesis | Map the four S02 semantic alternatives
+
+Added CLM-0142 after comparing XML W1/S02, the reviewed four-representation
+design, the closed registry, and the branch foundation boundary. Retained
+all eleven witness identifiers and both additional recovery paths. Recorded
+the stale ten-scenario phrase without changing the pinned review candidate.
+All four alternatives remain unimplemented and undetermined. This source
+comparison is not model execution, correspondence evidence, or Council advice.
+
+Foreman fixture recovery is preserved at
+`940034d008c094d2bbce3f6a954e7692327216cd`. Correction task 1463 addresses
+confirmed dispatch-boundary and public-output findings. Checkpoint fact 36
+records the handoff. Neither that dispatch nor its watchdog grants approval.

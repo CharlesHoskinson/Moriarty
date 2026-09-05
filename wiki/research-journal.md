@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T04:39:00Z
+updated_at: 2026-09-05T04:56:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -716,3 +716,42 @@ Claim metadata:
 - Reproduction: partially reproduced; recovery and final acceptance remain pending.
 - Confidence: high for preserved commit, stop metadata, and dispatch.
 - Lifecycle status: S3. No Moriarty Council gate or GitHub merge is claimed.
+
+### S02 alternative coverage before model implementation
+
+**CLM-0142.** Repository observation: XML v1.3 requires all four semantic
+alternatives before selection or an evidence-backed stop. The S02 branch
+contains shared effects and exact-parent consumption foundations, not these
+candidate implementations. All four candidates remain undetermined. Missing
+implementation is not a decisive counterexample against a candidate.
+
+| Alternative | Required distinct execution mechanism | Candidate-specific acceptance focus |
+| --- | --- | --- |
+| A: agreement Core plus intent envelope | Agreement interpreter and independent envelope predicate | Timeout priority, rollback, complete effects, and separate legality and authorization |
+| B: intent Core with agreement libraries | Native obligation graph plus separately checked agreement elaboration | Dependency removal and corrupted elaboration must expose failures |
+| C: two calculi with refinement bridge | Independently computed successors plus paired commitment | Corrupted or stale bridges and one-sided advancement must fail |
+| D: Compact library with local verifier | Application calls plus actual-effect extraction and verification | Artifact substitution and extraction corruption must fail |
+
+Each candidate needs the swap and two-installment workloads under both
+signing profiles. The closed registry has eleven witness identifiers. The
+design's phrase “all ten registry scenarios” is stale and must not remove a
+witness. Every candidate and both profiles also need the separate recovery
+paths before any fill and after the first fill. The existing cancellation
+bookkeeping does not supply that recovery evidence.
+
+The corrected observation, authorization, and recovery carrier remains a
+proposal awaiting explicit signoff. No new Quint logic follows from this
+coverage table. Frozen Core remains `0.0.0-e00.2`.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML workstream W1 and sprint S02, and SRC-0033 at the frozen semantic boundary.
+- Local locators: [reviewed comparison design](../docs/superpowers/specs/2026-09-04-moriarty-s02-model-comparison-design.md), [closed registry](../evidence/s02-model-comparison/requirements.json), and [corrected carrier proposal](../docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
+- Repository: local Moriarty repository, branch `s02-model-comparison`, commit `6a60a645c03acad83b7cbc6b85d43996cd40ca65`. Corrected main-branch carrier: commit `14b16f3ccd98c50070f7b18c2a608d38a8b29870`.
+- Observed at: 2026-09-05T04:56:00Z. Controlling design date: 2026-09-04 UTC.
+- Authority: controlling XML and reviewed local design.
+- Scope: proposed S02 candidate acceptance, not Core changes or deployed behavior.
+- Evidence kind: repository observation and open implementation obligation.
+- Reproduction: not applicable to this source comparison. Candidate experiments remain unperformed.
+- Confidence: high for the inspected requirements and absent candidate implementations.
+- Lifecycle status: S2 for the candidate designs. The shared experimental foundations do not raise candidate status.

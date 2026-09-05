@@ -32,7 +32,8 @@ will grow by merging evidence into durable topic pages.
   backend stop test, and incremental decision graph.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, branch-only S02 foundation progress, Council restart status,
-  authorized Foreman successor repair, bounded review-runtime recovery, and next falsification test.
+  authorized Foreman successor repair, bounded review-runtime recovery,
+  four-alternative S02 coverage, and next falsification test.
 
 ## Active specification artifacts
 
