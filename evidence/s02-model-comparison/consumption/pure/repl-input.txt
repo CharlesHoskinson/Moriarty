@@ -1,0 +1,16 @@
+val parent = {
+  key: {domain: InstallmentDomain, principal: Alice, nonce: 0},
+  policy: {mechanismVersion: 1, acceptedDisclosure: false},
+  source: Escrow({owner: Alice, asset: TokenA}), recipient: Bob,
+  asset: TokenA, budget: 10, slots: Map(1 -> 5, 2 -> 5),
+}
+val initial = initialEntry(parent)
+initial
+validEntry(parent, initial)
+val first = applyConsumeSlot(parent, initial, 1)
+first
+validResidual(parent, initial, 1, first)
+val cancelled = applyCancelParent(parent, initial)
+cancelled
+validEntry(parent, cancelled)
+not(canConsumeSlot(parent, cancelled, 1, cancelled))

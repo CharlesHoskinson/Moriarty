@@ -1,0 +1,44 @@
+An example execution:
+
+[State 0]
+{
+  state:
+    {
+      cancelled: false,
+      claim: Unclaimed,
+      paid: 0,
+      remainingAllowance: 10,
+      revision: 0,
+      usedSlots: Set()
+    }
+}
+
+[State 1]
+{
+  state:
+    {
+      cancelled: false,
+      claim:
+        Claimed({
+          asset: TokenA,
+          budget: 10,
+          key: { domain: InstallmentDomain, nonce: 0, principal: Alice },
+          policy: { acceptedDisclosure: false, mechanismVersion: 1 },
+          recipient: Bob,
+          slots: Map(1 -> 5, 2 -> 5),
+          source: Escrow({ asset: TokenA, owner: Alice })
+        }),
+      paid: 5,
+      remainingAllowance: 5,
+      revision: 1,
+      usedSlots: Set(1)
+    }
+}
+
+[ok] No violation found (80ms at 12500 traces/second).
+Trace length statistics: max=2, min=2, average=2.00
+You may increase --max-samples and --max-steps.
+Use --verbosity to produce more (or less) output.
+Witnesses:
+firstFilled was witnessed in 1000 trace(s) out of 1000 explored (100.00%)
+Use --seed=0x2a --backend=rust to reproduce.

@@ -36,3 +36,15 @@ That command therefore attempts 34 non-test definitions and fails with
 evaluator errors. Use `--match 'Test$'` to discover the ten `run` tests.
 The import correction instantiates `effects_machine` in the test module and
 imports pure effects separately. This correction does not change a predicate.
+
+## Parent consumption foundation
+
+`consumption.qnt` checks one exact-parent nonce entry for the fixed two-slot
+installment workload. Its generic policy payload is compared structurally.
+Slot ordering, exact residuals, cancellation, and stale prepared snapshots
+are checked without wrapping revisions. The separate harness has no signing
+event and transfers no money. Its policy record is an equality-test fixture,
+not a complete signed envelope. These guards are bookkeeping prerequisites,
+not authorization. Full caller-side signature, registry ownership, conditions,
+candidate-semantic checks, and separately authorized refund recovery remain
+required. A cancellation witness here does not satisfy S02 recovery coverage.

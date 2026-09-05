@@ -1,0 +1,47 @@
+cwd=/home/charl/Moriarty/.worktrees/s01-audit-start
+consumption_typecheck_argv=/home/charl/.npm-global/bin/quint typecheck specs/quint/s02/consumption.qnt
+harness_typecheck_argv=/home/charl/.npm-global/bin/quint typecheck specs/quint/s02/consumption_harness.qnt
+test_typecheck_argv=/home/charl/.npm-global/bin/quint typecheck specs/quint/s02/consumption_test.qnt
+tests_argv=/home/charl/.npm-global/bin/quint test specs/quint/s02/consumption_test.qnt --main consumption_test --match 'Test$'
+safety_argv=/home/charl/.npm-global/bin/quint run specs/quint/s02/consumption_harness.qnt --main consumption_harness --invariant safety --witnesses firstFilled fullyFilled cancelledUnused cancelledResidual --seed 42 --max-samples 10000 --max-steps 4
+cancel_unused_argv=/home/charl/.npm-global/bin/quint run specs/quint/s02/consumption_harness.qnt --main consumption_harness --invariant notCancelledUnused --seed 42 --max-samples 100 --max-steps 4 --out-itf evidence/s02-model-comparison/consumption/cancel-unused.itf.json
+cancel_residual_argv=/home/charl/.npm-global/bin/quint run specs/quint/s02/consumption_harness.qnt --main consumption_harness --invariant notCancelledResidual --seed 42 --max-samples 100 --max-steps 4 --out-itf evidence/s02-model-comparison/consumption/cancel-residual.itf.json
+itf_inspection_argv=jq . evidence/s02-model-comparison/consumption/cancel-unused.itf.json evidence/s02-model-comparison/consumption/cancel-residual.itf.json
+focused_python_argv=/home/charl/Moriarty/.venv/bin/python -m pytest tests/test_s02_contract.py -q
+s01_validator_argv=/home/charl/Moriarty/.venv/bin/python scripts/validate_s01_intent_evidence.py
+diff_check_argv=git diff --check
+environment_argv=/home/charl/.npm-global/bin/quint --version; node --version; /home/charl/Moriarty/.venv/bin/python --version; sha256sum /home/charl/.npm-global/bin/quint /home/charl/Moriarty/.venv/bin/python; git rev-parse HEAD; date -u +%Y-%m-%dT%H:%M:%SZ
+
+consumption_source_sha256=3dd07f3c5f274aff4fce4de9c245aa0b1f1fe7f68e29e5de95a0b1c42a00f93b
+harness_source_sha256=41440c269e7a42c597d41fede9fe3583177c3f2ae4118b0f788806666911eb0e
+test_source_sha256=0d561cdc75d142997a7fb2373570266d314b927ce67b15c74eca665a71801943
+readme_source_sha256=9747b601b425047a7e772a28efdc76d3383e5535fe78ccec12ab85ecaa4cb8fb
+
+consumption_typecheck_exit_code=0
+harness_typecheck_exit_code=0
+test_typecheck_exit_code=0
+tests_exit_code=0
+safety_exit_code=0
+cancel_unused_exit_code=1
+cancel_unused_result=expected negated-witness invariant violation
+cancel_residual_exit_code=1
+cancel_residual_result=expected negated-witness invariant violation
+itf_inspection_exit_code=0
+focused_python_exit_code=0
+s01_validator_exit_code=0
+diff_check_exit_code=0
+environment_exit_code=0
+
+tests_stdout_sha256=1aac60ab2a5f8e8f4791f023263c573670497e4bede82b74b626ced8f494f55c
+safety_stdout_sha256=65b9bc63dbceb4f6189647b8af2f56dee68567d375b068318a764ae818356a1d
+cancel_unused_stdout_sha256=eb0f3b99c55742e381c6831c1e431bbe596700c62cf26e0f18c34e49943e0517
+cancel_unused_stderr_sha256=493103dd2270fdc5b0b1614575cfa015216b7e4ed1f5b57eef9f877789242b9e
+cancel_residual_stdout_sha256=81f215b2280e0459f5a6600433d554f7f5af3a5e933dcea25e4d53ee124c7095
+cancel_residual_stderr_sha256=493103dd2270fdc5b0b1614575cfa015216b7e4ed1f5b57eef9f877789242b9e
+cancel_unused_itf_sha256=c499fbfa259311fa93c59a2a61685ea7d5d63ea0b14c7e5c6624428ccf360c37
+cancel_residual_itf_sha256=a1a465beb79cde67173ada0851010eba1551e9854f469fa0f91a19f6d5a5cbbb
+itf_inspection_stdout_sha256=6a6f5e595b89e4da1b2b9d43eb99bbaa3d94cf95c81e9ca40e0cdc848d29a569
+focused_python_stdout_sha256=e0a6ea218ea5d725ce7272da8d68d45a029e489423e03af6960c7bff0f7fe414
+s01_validator_stdout_sha256=28eebcaad35cf18d2404ffaf3bb79882c47830a283e7e4cea66e85e4739d19a1
+environment_stdout_sha256=f584ec4cfb699a03d4c74ab3d176cd21dd11b5a7062c4aa8b472e7eec2e744aa
+empty_stream_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
