@@ -1,6 +1,57 @@
 # Current execution progress
 
-## Current override, 2026-09-05 20:53 UTC
+## Current override, 2026-09-05 21:27 UTC
+
+Candidate A execution remains active in this turn; session
+20260905T161538Z-60de62 remains open through fact90. Do not begin it again.
+Main HEAD3f1bb9f records NW004 independent-shard endpoint tests; strict OpenSpec
+validation passes. Experimental HEAD before this checkpoint is e221eaf.
+
+Producer Task2 finally has both intended behavioral REDs: QNT508 for
+dualMutationBoundariesTest and nativeCase032InitialOrdinalTest in original
+stage task2-boundaries-red-independent (575.166037158 seconds). Root independently
+verified the only restored source changes are the direct Verify guard and
+wrapper032 ordinal32; all other118 source files match. Full13 Python controls
+pass. Agent owns all78 wrapper typecheck73390 and all12 Quint tests46204.
+Prior QNT404/QNT500/QNT202 diagnostics remain separate language failures.
+
+Root's ignored a4-producer-task2-root-audit.py passes partial original intake:
+13 stages,2648 original before/after source members and8102 current runtime pins.
+This is not Task2 admission until both final native commands finish and are
+audited. The native wrapper/body design is unchanged. Root found a pre-export
+recorder whole-file artifact-hash issue; agent drafts an ignored streaming-hash
+and outer resource-receipt addendum. No code change or native export is authorized
+from that draft. Task3 exporter plan is fully adopted at e221eaf, SHA61c7571c…;
+implementation still waits for Task2 admission and root dispatch.
+
+Task6 checker tests remain frozen at b84ec390… and checker at b46af079….
+Agent a0 owns original synthetic114 run5645. Optional-zero and nonce triples
+passed; signer was on its corrected control at the last report. Root verified
+the entire5843ff6 test prefix unchanged and actual append exactly equals the
+adopted plan block, with20 functions and27 semantic mutants. The complete run
+is slow and remains active; no actual package exists or is claimed accepted.
+
+A5 original corpus loop87642 completed all20 commands and all244 tests.
+Factored loop92142 has passed through swap17, totaling89 tests at root intake.
+Agent started six-equivalence typecheck/test sequence36292 in the freed slot;
+concurrency remains two. Root independently audited28 completed corpus commands,
+1904 archived members and exact passing inventories. Full factored corpus,
+equivalence, samples, original Python/Core and pilot/full campaign remain open.
+
+Root also completed independent reverse-transformation audit of26 derived
+modules,18 identity wrappers,three delegates,28 original pins and30 frozen files;
+all244 run names and the exact six-test plan block are preserved. Original
+boundary RED archive intake passed for both67-member archives and eight external
+tool pins. Ignored audit scripts and source review are under .superpowers/sdd/.
+They must be retained in later Task2 evidence intake, not mistaken for a runtime
+equivalence or pilot verdict. Agent is checking the original-Python-inventory
+sequencing dependency; no subset invocation or plan amendment is approved yet.
+
+No root-owned running job at this checkpoint. No Foreman edits, Council dispatch,
+full A4/A5 completion, integration/publication or automatic product-loop claim.
+This block supersedes all status/next-step instructions below.
+
+## Previous override, 2026-09-05 20:53 UTC
 
 Main roadmap/wiki through CLM-0171 at5e948f5; session fact89. Native-order
 correction5843ff6 is admitted with79 tests, four original stages/220source
