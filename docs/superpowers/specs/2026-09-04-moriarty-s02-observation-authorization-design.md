@@ -46,6 +46,7 @@ Exact Quint encodings belong in the next implementation plan.
 | `CandidateObservation` | Actual complete effects, proposed successor, semantic outcome, applicable Core projection, artifact/call identity, predecessor bindings, and evidence availability. |
 | `AuthorityKey` | Domain, principal, and nonce; changing plan identity does not create a fresh nonce namespace. |
 | `SignedPolicy` | Principal, key, profile, permitted effects and conditions, refund rules, validity, capabilities, disclosure rules, cancellation policy, mechanism/version bindings, and resolved-plan or bounded-intent binding. |
+| `PreSignCheckRecord` | Proposed policy and, for after-resolve only, the complete resolved plan; checked content, context, enforcement identity, and validity disposition. It grants no signature or execution authority. |
 | `VerificationRecord` | Exact policies, actual proposal/effects, predecessor, environment, version, consumption state, evidence level, and valid/unavailable/invalid disposition. |
 | `ParentConsumption` | Signed parent, permitted slots, used slots, original budget, paid quantity, remaining allowance, cancellation state, and consumption revision. |
 | `DisplayProjection` | Presentation only; changing it cannot change signed policy or authorization results. |
@@ -69,6 +70,10 @@ authority, and the combined check must cover every actual effect. Bob's choice
 selects only a branch already permitted by Alice's signed escrow policy. It
 does not itself authorize a debit of Alice's assets.
 
+Each principal's check also evaluates that policy's complete relevant proposal,
+including required incoming consideration and conditional outcomes. Covering
+all debits is necessary but is not sufficient to satisfy those hard predicates.
+
 This conjunction is a bounded composition proposal, not a proved composition
 theorem. Signature authenticity remains an explicit external premise. A model
 boolean must not be reported as a real signature or proof.
@@ -79,11 +84,18 @@ policies for every funded escrow. An early refund checks only funded escrows.
 Funding does not manufacture the later signature: disposition policies must
 be explicitly signed in the model's lifecycle.
 
-Under `SignAfterResolve`, required principals sign the concrete resolved plan
-before verification and commitment. Under `SignBeforeResolve`, they first sign
-bounded policies and pinned enforcement identity; resolution and complete plan
-verification occur afterward. Positive scenarios assume participants provide
-the modeled signatures. This establishes no cooperation or availability claim.
+Under `SignAfterResolve`, first resolve the complete plan and perform the full
+pre-sign plan check against each principal's proposed policy. Signing requires
+that successful pre-sign record and unchanged applicable plan/context bindings.
+It cannot circularly require the signature that the check enables. Then verify
+the signed authorization and recheck execution-state freshness before commitment.
+
+Under `SignBeforeResolve`, first check the bounded policy, authorization limits,
+disclosure policy, assumption manifest, and pinned enforcement identity before
+signing. No concrete plan exists or is labeled pre-sign verified at that point.
+Resolution and complete signed-plan execution verification occur afterward.
+Positive scenarios assume participants provide the modeled signatures. This
+establishes no cooperation or availability claim.
 
 ## Two-installment fixture and cancellation economics
 
@@ -107,6 +119,21 @@ escrow to Alice after cancellation. Recovery is a distinct verified transaction
 and has its own positive witness. A's recovery path uses a refund branch and
 `Close`; no new Core constructor is required. Other candidates must provide
 the same observable recovery under their distinct representations.
+
+Preserve every existing registry witness identifier. Recovery adds these
+mandatory named subscenarios, not a replacement top-level witness vocabulary:
+
+- `cancel-wins/recovery-before-any-fill`: cancel the unused parent, then refund
+  ten units to Alice under the separate recovery policy.
+- `fill-wins/recovery-after-first-fill`: fill slot 1, reject the stale prepared
+  cancellation, accept a fresh cancellation, and refund the remaining five
+  units to Alice under the separate recovery policy. Slot 2 remains unauthorized.
+
+Every candidate and both signing profiles must cover both subscenarios under
+S02-05 and preserve their complete paths under S02-09. The coverage map and
+validator must require these subscenario IDs explicitly, including their final
+escrow, payment, refund, and authority states. Merely observing a cancellation
+flag does not satisfy recovery coverage. Recovery also has a per-action witness.
 
 Track financial value separately from remaining authorization:
 `escrowBalance + paidToBob + refundedToAlice = 10`. A refund reduces escrow
@@ -132,7 +159,9 @@ stale evidence fresh. Bind the relevant full predecessor state as well as the
 external anchor. Do not use a two-value transaction counter that aliases later
 financial states to earlier ones.
 
-Resolve, sign, environment change, verify, and commit remain separate actions.
+Resolve, pre-sign check, sign, environment change, execution verify, and commit
+remain separate actions. Permit environment changes between these boundaries;
+a stale pre-sign record cannot authorize signing a substituted plan.
 Commit requires that the actual proposal, predecessor, environment, version,
 time conditions, and consumption state still match the checked bindings.
 Otherwise reject or reverify before any financial or authority change.
@@ -156,3 +185,12 @@ real signature, authenticated private-effect extraction, Compact/ledger
 correspondence, production cost, ACTUS result, or human preference follows.
 The added installment recovery witness and finer pre-deadline time values are
 explicit experiment refinements, not accepted Core semantic motions.
+
+## Design review resolution
+
+Independent review found that the initial draft incorrectly placed signing
+before all verification. This revision distinguishes pre-sign checks from
+signed execution verification and follows the frozen S01 profile boundaries.
+It also closes the recovery witness mapping through two mandatory subscenarios
+under existing registry identifiers and gates S02-05/S02-09. Debit coverage is
+explicitly insufficient without each policy's incoming and conditional terms.
