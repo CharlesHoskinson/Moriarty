@@ -104,11 +104,21 @@ acceptance `28d35d8` maps every A2/A3 EARS requirement to its finite evidence.
 Its archive retains2673source/input files and all8final lifecycle source pins.
 This is local acceptance, not Council or model checking. A4 design is `effb7af`;
 checker plan `d4f6196` and interface correction `ab7c827` fix the unchanged
-78-case inventory at1557events. Checker Task1 `9f9cfda` implements strict carriers
-and the frozen Core bridge: five tests pass after the compiling negative control.
-Root audited original source/runtime receipts. Independent authority replay is
-in progress; the actual integrated producer and A5 factoring plans are under
-review. No A4 integrated-history or A5 Candidate A checker pass is claimed.
+78-case inventory at1557events. CheckerTasks1–5 (`9f9cfda` through `483013b`)
+implement strict carriers, actual frozen Python Core evaluation, independent
+authority rules, all expected ordinary/negative histories and provenance checks.
+All17 current tests pass; compiling negative controls and exact original
+source/runtime receipts are independently audited. Actual integrated exports and
+Task6 mutant acceptance remain open. The two-long-ITF transport exceeds installed
+Node's hard single-string cap; a case-sharded transport addendum is being reviewed
+without removing any of the78cases/1557events.
+
+A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
+and all six kernel tests pass after a genuine supplied-result mismatch RED;
+root audited all38 original source members per stage and retained the shared
+runtime archive losslessly. Full original/factored corpus equivalence is now
+dispatched. No integrated-history acceptance, Candidate A model-checking pass,
+Council result, main implementation merge or GitHub publication is claimed.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.

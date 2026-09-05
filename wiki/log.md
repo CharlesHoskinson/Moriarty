@@ -535,3 +535,13 @@ refund/rollback tests, compiling negative control and five passing tests.
 Root source and original-runtime audit admits only this unit. Interface addendum
 `ab7c827` preserves78cases and corrects their event sum to1557. Full replay,
 factored checking and Council remain open; no Foreman repairs were resumed.
+
+## [2026-09-05] execution | Commit independent histories and factored kernel
+
+CLM-0168 records checkerTasks2–5 through `483013b`:17tests, independently
+reconstructed78case histories and provenance checks, with original controls and
+root byte audits. Kernel `d824fa3` passes all6tests and recursive typecheck;
+its38-source receipts and shared runtime bytes are retained. Full factored corpus
+comparison is dispatched. The two-long-ITF export exceeds Node's string cap;
+a coverage-preserving case-sharded transport is under review. Actual integrated
+replay, bounded model checking, Council and integration are not yet accepted.

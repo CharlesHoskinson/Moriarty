@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T19:05:01Z
+updated_at: 2026-09-05T19:39:29Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1641,3 +1641,40 @@ removed. The exact corrected inventory is committed. Producer/A5 plans remain
 under review. Released Council capability was inspected without provider calls
 or Foreman edits; the required coordinator remains unavailable. A4–A7 and exact
 cross-provider Council acceptance remain open.
+
+### Candidate A independent histories and factored kernel implemented
+
+**CLM-0168.** Experiment and repository observation: checkerTasks2–5
+(`71db4f2`, `0655354`, `94f5824`, `483013b`) add independent authority rules,
+46 ordinary and32 negative/stale expected histories, strict full-state/field
+provenance and a direct CLI. All17 current tests pass. Each unit retains a
+genuine importable behavioral RED and original GREEN, with root source review
+and independent archive/stream/current-runtime audit. The direct-script import
+failure is separately retained and corrected. These expected histories do not
+constitute actual Quint integrated exports or final mutant acceptance.
+
+A5 kernel `d824fa3`, under adopted plan `900bb20`, passes recursive typecheck
+and all six finite kernel tests. The original typed supplied-result omission
+fails QNT508; the sole correction restores actual-versus-supplied result checking.
+Root verified all38 source archive members in each original command, exact
+RED/GREEN change and terminal streams. The one315704660-byte runtime archive is
+retained in seven lossless ordered Git-sized parts, with independent concatenated
+hash validation. The shared Python snapshot is reused, not duplicated. Full
+original/factored corpus comparison is dispatched; the pilot has not run.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local A4 checker units and A5 kernel; observed date2026-09-05 UTC;
+reproduction reproduced for named checks; confidence high for those observations;
+lifecycle S3 experimental branch. Evidence is under
+`evidence/s02-candidate-a-completion/a4/checker-task2/` through `checker-task5/`
+and `evidence/s02-candidate-a-completion/a5/kernel-task1/` on that branch.
+
+A read-only expected-state serialization estimate reports1557events and
+1545385554 installment plus546949423 swap bytes, excluding event payloads and
+ITF overhead. Installed Node's maximum string length is536870888; installed
+Quint0.32.0 assembles and serializes whole Rust/ITF results as single strings.
+Thus the adopted two-long-trace transport is infeasible unchanged; no actual
+failed export is claimed. A case-sharded addendum is being planned, preserving
+all78cases/1557events and full records, original receipts and mutant obligations.
+It changes transport, not model semantics. A4–A7 and exact-provider Council stay
+open; Foreman development remains closed and no providers were dispatched.
