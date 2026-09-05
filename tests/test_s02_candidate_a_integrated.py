@@ -134,3 +134,150 @@ def test_binding_checks_observed_field():
     bind_event(event,raw,0,'swap.itf.json','0'*64)
     bad=deepcopy(event); bad['profile']='SignAfterResolve'
     with pytest.raises(Invalid,match='raw provenance field profile'): bind_event(bad,raw,0,'swap.itf.json','0'*64)
+
+from scripts.check_s02_candidate_a_integrated import (
+    bind_window, check_shard, compare_case, file_digest, manifest_contract,
+    ENTRIES, RAW_NAMES, CASE_NAMES, TRANSPORT, VARS, RENAME, PYTHON_SOURCES, QNT_TESTS)
+from scripts.a4_json_stream import JsonStreamError, write_array_document
+
+
+def synthetic_shard(tmp_path, ordinal=36, raw_change=None, case_change=None):
+    # Small file-backed unit control, explicitly not native generator evidence.
+    from copy import deepcopy
+    import json
+    d = descriptors()[ordinal]
+    records = history(d)
+    states = []
+    events = []
+    for index, record in enumerate(records):
+        latest = {name: encode(value) for name, value in record['latest'].fields}
+        latest['sequence'] = {'#bigint': str(index)}
+        states.append({'#meta': {'index': index}, 'authorityState': encode(record['after']),
+                       'latestEvent': latest, 'caseIndex': {'#bigint': str(ordinal)},
+                       'cursor': {'#bigint': str(index)}})
+        event = {public: encode(record['latest'][internal]) for public, internal in RENAME.items()}
+        event.update(before=encode(record['before']), after=encode(record['after']))
+        events.append(event)
+    meta = {'format': 'ITF', 'format-description': 'https://apalache-mc.org/docs/adr/015adr-trace.html',
+            'source': ENTRIES[d['case_id']], 'status': 'ok',
+            'description': 'synthetic unit; not generator evidence', 'timestamp': 0}
+    raw = {'#meta': meta, 'vars': list(VARS), 'states': states}
+    if raw_change is not None: raw_change(raw)
+    raw_path = tmp_path/f'raw-{ordinal}.json'
+    with raw_path.open('wb') as stream:
+        write_array_document(stream, 'states', raw['states'], after=(('#meta', raw['#meta']), ('vars', raw['vars'])))
+    sha = file_digest(raw_path)
+    for index, event in enumerate(events):
+        event['provenance'] = {'input_path': f'raw/case-{ordinal:03d}.itf.json', 'input_sha256': sha,
+                               'before_index': max(0, index-1), 'after_index': index}
+    case = dict(d, events=events)
+    if case_change is not None: case_change(case)
+    case_path = tmp_path/f'case-{ordinal}.json'
+    with case_path.open('wb') as stream:
+        write_array_document(stream, 'events', case['events'], after=((k, v) for k, v in case.items() if k != 'events'))
+    return d, ordinal, case_path, raw_path, sha, case
+
+
+def test_sharded_window_profile_red(tmp_path):
+    import json
+    from copy import deepcopy
+    d, ordinal, case_path, raw_path, sha, _ = synthetic_shard(tmp_path)
+    event = json.loads(case_path.read_bytes())['events'][0]
+    current = json.loads(raw_path.read_bytes())['states'][0]
+    name = f'raw/case-{ordinal:03d}.itf.json'
+    bind_window(event, current, current, 0, name, sha)
+    bad = deepcopy(event)
+    bad['profile'] = 'SignBeforeResolve'
+    assert bad['profile'] != event['profile']
+    with pytest.raises(Invalid, match='raw provenance field profile'):
+        bind_window(bad, current, current, 0, name, sha)
+
+
+@pytest.mark.parametrize('ordinal', (36, 37))
+def test_sharded_bounded_matches_buffered(tmp_path, ordinal):
+    d, g, case_path, raw_path, sha, case = synthetic_shard(tmp_path, ordinal)
+    expected = compare_case(case, d)
+    assert check_shard(case_path, raw_path, d, g, sha) == len(expected) == 7
+
+
+@pytest.mark.parametrize('mutation', ('ordinal', 'cursor', 'index', 'status', 'vars', 'sequence', 'missing', 'extra'))
+def test_sharded_raw_controls(tmp_path, mutation):
+    from copy import deepcopy
+    def alter(raw):
+        if mutation == 'ordinal': raw['states'][0]['caseIndex'] = {'#bigint': '0'}
+        elif mutation == 'cursor': raw['states'][0]['cursor'] = True
+        elif mutation == 'index': raw['states'][0]['#meta']['index'] = 99
+        elif mutation == 'status': raw['#meta']['status'] = 'error'
+        elif mutation == 'vars': raw['vars'].reverse()
+        elif mutation == 'sequence': raw['states'][0]['latestEvent']['sequence'] = {'#bigint': '99'}
+        elif mutation == 'missing': raw['states'].pop()
+        else: raw['states'].append(deepcopy(raw['states'][-1]))
+    d, g, case_path, raw_path, sha, _ = synthetic_shard(tmp_path, raw_change=alter)
+    with pytest.raises(Invalid): check_shard(case_path, raw_path, d, g, sha)
+
+
+@pytest.mark.parametrize('mutation', ('descriptor', 'missing', 'extra', 'initial-before'))
+def test_sharded_case_controls(tmp_path, mutation):
+    from copy import deepcopy
+    def alter(case):
+        if mutation == 'descriptor': case['profile'] = 'SignBeforeResolve'
+        elif mutation == 'missing': case['events'].pop()
+        elif mutation == 'extra': case['events'].append(deepcopy(case['events'][-1]))
+        else: case['events'][0]['before']['authority']['context']['environment']['anchor'] = 1
+    d, g, case_path, raw_path, sha, _ = synthetic_shard(tmp_path, case_change=alter)
+    with pytest.raises(Invalid): check_shard(case_path, raw_path, d, g, sha)
+
+
+@pytest.mark.parametrize('target', ('case', 'raw'))
+def test_sharded_stream_suffix_failure(tmp_path, target):
+    d, g, case_path, raw_path, sha, case = synthetic_shard(tmp_path)
+    path = case_path if target == 'case' else raw_path
+    with path.open('ab') as stream: stream.write(b' trailing')
+    if target == 'raw':
+        sha = file_digest(raw_path)
+        for event in case['events']: event['provenance']['input_sha256'] = sha
+        with case_path.open('wb') as stream:
+            write_array_document(stream, 'events', case['events'], after=((k, v) for k, v in d.items()))
+    with pytest.raises(JsonStreamError): check_shard(case_path, raw_path, d, g, sha)
+
+
+def test_sharded_manifest_closed_schema_and_paths():
+    from copy import deepcopy
+    ds = descriptors()
+    assert len(ENTRIES) == len(RAW_NAMES) == len(CASE_NAMES) == 78
+    assert ENTRIES[ds[36]['case_id']] == 'specs/quint/s02/candidate_a_integrated_case_036.qnt'
+    assert 'scripts/a4_json_stream.py' in PYTHON_SOURCES and 'tests/test_a4_json_stream.py' in PYTHON_SOURCES
+    assert 'specs/quint/s02/candidate_a_integrated_wrappers_typecheck.qnt' in QNT_TESTS
+    pins = {'source_pins': {'file.py': '0'*64}, 'input_pins': {p: '0'*64 for p in RAW_NAMES},
+            'case_pins': {p: '0'*64 for p in CASE_NAMES}, 'receipt_pins': {'receipt.json': '0'*64}}
+    document = dict(schema_version=3, transport=TRANSPORT, inventory_sha256='0'*64, shards=[], **pins)
+    admitted = {k: v for k, v in document.items() if k != 'shards'} | {'entries': ENTRIES}
+    # Schema/pin-shape unit only: no filesystem or package success is asserted.
+    manifest_contract(document, admitted)
+    for mutation in ('schema2', 'staging', 'missing-raw', 'missing-case', 'overlap', 'bad-entry'):
+        bad = deepcopy(document)
+        admission = deepcopy(admitted)
+        if mutation == 'schema2': bad['schema_version'] = 2
+        elif mutation == 'staging': del admission['case_pins']
+        elif mutation == 'missing-raw':
+            name = next(iter(bad['input_pins']))
+            del bad['input_pins'][name]; del admission['input_pins'][name]
+        elif mutation == 'missing-case':
+            name = next(iter(bad['case_pins']))
+            del bad['case_pins'][name]; del admission['case_pins'][name]
+        elif mutation == 'overlap':
+            bad['receipt_pins'] = dict(bad['input_pins']); admission['receipt_pins'] = dict(bad['input_pins'])
+        else: admission['entries'][ds[36]['case_id']] = 'wrong.qnt'
+        with pytest.raises(Invalid): manifest_contract(bad, admission)
+
+
+@pytest.mark.parametrize('target', ('states', 'events'))
+def test_sharded_unknown_metadata_rejected_before_items(target):
+    import io
+    from scripts.check_s02_candidate_a_integrated import array_items
+    source = io.BytesIO(('{"unknown":0,"'+target+'":[1]}').encode())
+    metadata = {}
+    items = array_items(source, target, metadata)
+    with pytest.raises(Invalid, match='unexpected stream metadata'):
+        next(items)
+    assert metadata == {}
