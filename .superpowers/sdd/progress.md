@@ -14,8 +14,14 @@ Branch policies/plan views: committed 320dc53, independent Astra review clean;
 Persistent signing: implemented at cbd1f1d, corrected at f2941d4; independent
 Astra review and narrow re-review clean. Current receipt selects 41 tests and
 1,000 sampled signing traces. This is symbolic signing, not execution verification.
-Next: full per-operation evidence verification, atomic parent updates, and actual
-recovery, under docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle.md.
+Execution envelope: source46fe589/evidence0d5926b; independent source/evidence
+review clean, all47pins matched. Eight pipeline tests,42adversarial tests,
+1,000 sampled full signing-to-settlement paths from prefunded swap escrow.
+EvidenceValid remains a trusted external result, not candidate/crypto proof.
+Next: classified rejected attempts, actual first/second-fill and concurrent
+fill/cancel paths, then signed recovery of10/5 under both profiles. Generic
+parent commit helpers alone are not those traces. Continue under
+docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle.md.
 Do not rebuild the completed policy unit or re-run its design vote.
 Do not re-dispatch the finished three-expert design or observation implementation.
 

@@ -58,6 +58,13 @@ receipts below `evidence/s02-model-comparison/authorization/` and `execution/`.
 
 ## Implementation and verification sequence
 
+Progress note (2026-09-05): common evidence bindings and atomic commit code are
+implemented and reviewed at source `46fe589` / evidence `0d5926b`. The full
+signing-to-settlement harness covers prefunded swap escrow under both profiles.
+Keep the broader boxes below open until actual concurrent parent attempts,
+classified rejection, and both recovery paths execute. A constructed context or
+generic parent-update helper does not close a lifecycle obligation.
+
 - [x] Persistent signing: test-first carriers and pure guards; check -> sign
   stateful paths for both profiles. Reject wrong signer, altered checked policy,
   stale key/state/ledger/environment/parent dependency, and duplicate signing.
