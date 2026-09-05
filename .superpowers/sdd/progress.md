@@ -9,8 +9,12 @@ witnesses 100/100 and each profile 50/100. Sixteen final import-closure files an
 149 archived members match. Historical Python closure gap remains disclosed.
 No Council or full Candidate A acceptance. Current session
 20260905T161538Z-60de62 is already begun; do not begin again after compaction.
-A1 corrected installment/swap plans are being drafted by a1_installment_plan;
-no lifecycle implementation dispatched yet. Other B work stays out of scope.
+A1 plans adopted82d2c0b: independent semantic review and both final assembled
+typechecks passed, exact8module/12import evidence archived. A2Task1 fixture/test
+implementation dispatched to a1_installment_plan; A3Task1 swap fixture/test to
+execution_adversarial_tests. Each has a brief and unique ignored report/receipts.
+No Task2 until root accepts genuine compiling RED/GREEN plus nonauthor review.
+Other B work stays out of scope. A1 evidence is planning/static, not runtime.
 Do not re-run completed A0 commands. Evidence is under
 evidence/s02-candidate-a-completion/a0/ with replayable validation command.
 The product goal was observed blocked, not automatically armed; current turn
