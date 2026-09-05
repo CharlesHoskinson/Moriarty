@@ -553,3 +553,11 @@ typecheck, original controls and root nine-stage/8102runtime-pin audit. Plans
 `5829639`/`22cdec6` preserve78cases/1557events through native shards and strict
 streaming admission. CT/ST EARS and OpenSpec scenarios validate structurally.
 Case lowering and reader implementation are dispatched; full A4 remains open.
+
+## [2026-09-05] execution | Admit streaming transport and sharded checker units
+
+CLM-0170 records reader `62b7b30`, writer/hash `fdb81c7` and sharded checker
+`26c9cc5`. All 42 utility tests and the final 79-test checker/utility run pass.
+Root source review and original receipt audits retain both behavioral failures
+and the separate intermediate fixture correction. Producer validation resumes;
+full native package acceptance and A5 model checking remain open.

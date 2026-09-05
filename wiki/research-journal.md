@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T19:56:16Z
+updated_at: 2026-09-05T20:24:19Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1709,3 +1709,37 @@ Original producer evidence is under
 The future shared JSON utility is a disclosed common lexical dependency, not
 shared authority semantics. Largest-case native feasibility, complete exports,
 independent replay, bounded model checking, Council and integration remain open.
+
+### Candidate A streaming utility and sharded checker implemented
+
+**CLM-0170.** Experiment and repository observation: streaming reader `62b7b30`
+and writer/hash unit `fdb81c7` implement strict bounded JSON transport. All 42
+utility tests pass. Original duplicate-key and short-write behavioral failures,
+corrected results, source snapshots and unchanged runtime pins are retained and
+independently audited. This shared lexical dependency does not supply authority
+semantics to either implementation.
+
+Sharded checker supplement `26c9cc5` requires schema3, all 78 entries and raw/case
+pinsets, full source/import closure, independently reconstructed event/state
+histories, global ordinals, local adjacency and strict EOF. It passes 79 focused
+tests: 37 checker plus 42 utility tests. Root read the full source diff and audited
+ten original command stages, 420 source archive members and 3329 runtime files.
+The omitted raw-field equality and early unknown-metadata controls have genuine
+behavioral failures. An intermediate suffix-fixture hash-linkage failure and its
+fixture-only correction are retained separately. The original report calls
+`fdb81c7` its narrative dispatch base; command receipts bind `9d26d9b`, which is
+the root admission evidence base. No original receipt was rewritten.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local strict transport and synthetic checker units; observed date
+2026-09-05 UTC; reproduction reproduced for named checks; confidence high for
+those observations; lifecycle S3 experimental branch. Original evidence is under
+`evidence/s02-candidate-a-completion/a4/stream-reader-task1/`,
+`stream-writer-task2/` and `checker-sharded/` on the experimental branch.
+
+Producer validation has resumed with the newly frozen utility in its source
+closure. A5 original/factored corpus commands remain active, with both adapter
+15-test suites and authority-boundary typechecks reporting terminal success.
+These partial results do not admit the complete equivalence corpus. Actual
+native feasibility/exports, all 78-case replay and Task6 mutants, A5 model
+checking, Council and integration remain open. No Foreman repairs resumed.

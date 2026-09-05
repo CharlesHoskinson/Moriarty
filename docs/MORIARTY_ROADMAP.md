@@ -107,7 +107,7 @@ checker plan `d4f6196` and interface correction `ab7c827` fix the unchanged
 78-case inventory at1557events. CheckerTasks1–5 (`9f9cfda` through `483013b`)
 implement strict carriers, actual frozen Python Core evaluation, independent
 authority rules, all expected ordinary/negative histories and provenance checks.
-All17 current tests pass; compiling negative controls and exact original
+All 17 tests at that intermediate version passed; compiling negative controls and exact original
 source/runtime receipts are independently audited. Actual integrated exports and
 Task6 mutant acceptance remain open. Producer observer5616bcd now passes its
 recursive typecheck and four computation/order/diagnostic/cancellation tests;
@@ -115,14 +115,22 @@ two inventory tests also pass. Root admitted nine original receipt stages.
 The two-long-ITF transport exceeds installed Node's hard single-string cap;
 case-sharded transport5829639 and streaming utility plan22cdec6 are adopted
 without removing any of the78cases/1557events. Their CT/ST EARS and OpenSpec
-requirements are recorded; strict structural validation passes. Producer case
-lowering/native wrappers and streaming reader implementation are dispatched.
+requirements are recorded; strict structural validation passes. Streaming reader
+`62b7b30` and writer/hash utility `fdb81c7` are implemented and locally admitted:
+all 42 utility tests pass, with original duplicate-key and short-write controls.
+Sharded checker supplement `26c9cc5` passes 79 tests (37 checker plus 42 utility).
+Root reviewed its source and audited all ten original receipt stages. These are
+focused synthetic tests, not actual 78-shard package admission. Producer case
+lowering/native wrappers are under recorded validation; full export, replay and
+Task6 semantic/locator/package controls remain open.
 
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;
 root audited all38 original source members per stage and retained the shared
-runtime archive losslessly. Full original/factored corpus equivalence is now
-dispatched. No integrated-history acceptance, Candidate A model-checking pass,
+runtime archive losslessly. Full original/factored corpus comparison is running;
+both adapter suites pass their 15 tests and both authority-boundary recursive
+typechecks have terminal exit 0. The remaining corpus/equivalence/sample checks
+are not yet accepted. No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
