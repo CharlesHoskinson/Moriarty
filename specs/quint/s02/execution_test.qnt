@@ -17,4 +17,6 @@ module execution_test {
   pure val proposedBefore = applyPropose(signedBefore, DispositionAttempt, OpSettle, settleObservation, Bob)
   run verifyBeforeResolutionTest = assert(canVerify(proposedBefore, DispositionAttempt,
     settlementEvidence(signedBefore, aliceBefore, bobBefore)))
+  run commitSettlementTest = init.then(proposeSettlement).then(verifySettlement).then(commitSettlement)
+    .expect(settlementCommitted and settlementMoney)
 }

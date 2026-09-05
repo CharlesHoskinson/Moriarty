@@ -41,7 +41,11 @@ module execution_harness {
     canVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
     executionState' = applyVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
   }
-  action step = any {proposeSettlement, verifySettlement}
+  action commitSettlement = all {
+    canCommit(executionState, DispositionAttempt),
+    executionState' = applyCommit(executionState, DispositionAttempt),
+  }
+  action step = any {proposeSettlement, verifySettlement, commitSettlement}
   val settlementProposed = match executionState.attempts.get(DispositionAttempt) {
     | ProposedAttempt(_) => true
     | _ => false
@@ -51,4 +55,15 @@ module execution_harness {
     | _ => false
   }
   val proposalPreservesMoney = executionState.authority.context.ledger == fundedLedger
+  val settlementCommitted = match executionState.attempts.get(DispositionAttempt) {
+    | ExecutedOperation(_) => true
+    | _ => false
+  }
+  val settlementMoney = balance(executionState.authority.context.ledger, Wallet(Bob), TokenA) == 10
+    and balance(executionState.authority.context.ledger, Wallet(Alice), TokenB) == 20
+    and balance(executionState.authority.context.ledger, aliceEscrow, TokenA) == 0
+    and balance(executionState.authority.context.ledger, bobEscrow, TokenB) == 0
+  val executionSafety = validExecutionState(executionState)
+    and ASSETS.forall(asset => totalAsset(executionState.authority.context.ledger, asset) == totalAsset(fundedLedger, asset))
+    and (if (settlementCommitted) settlementMoney else proposalPreservesMoney)
 }
