@@ -1,5 +1,56 @@
 # Current execution progress
 
+## Current override, 2026-09-05 22:41 UTC
+
+Candidate A execution remains active in this turn. Session
+20260905T161538Z-60de62 remains open through fact92 and measurement37 in
+main's session database. Do not begin it again. Main HEADa7dced1 records
+CLM-0173. Experimental HEAD1df388a admits RH002. No automatic product loop,
+Council dispatch, full A4/A5 completion or publication is claimed.
+
+Admitted experimental units since the previous checkpoint: all78 native
+wrappers and producer tests8be3cef; streamed recorder artifact hashingb08a2da;
+structural exporter source and55 unit tests9a263d7; measured bounded native
+runner and41 short-process controls1df388a. Original archives and independent
+audits are committed under their scoped A4 evidence directories. The exporter
+has not processed an actual Candidate A package. Four actual-package producer
+tests and the complete checker/package gates remain mandatory.
+
+A5 Task2 has all52 original command stages terminal. Root independently
+audited all52 stages/3650 archived source members, exact244 original and244
+factored tests, six full-record equivalence tests,100 samples per lifecycle
+with25/24 positive witnesses,2691 frozen Python/Core inputs, exact441 original
+Python collection/JUnit identities, and complete Core53/14ITF comparison.
+The original deliberate behavioral RED and two environment failures remain
+preserved. Real uv and exact python3 alias amendments supplied the passing
+retry without test/source changes. The nonauthor review found no material
+blocker in this bounded unit, with explicit prior-dependency authorship and
+finite-check limits. Root's fresh archive audit passed:515 members,15 lossless
+parts,744523649bytes, SHAc3d2d971... . Task2 is admitted for a narrow experimental
+commit, with all28 newly derived source/manifest files and root evidence.
+No Task3 pilot is yet dispatched. All A5 author command sessions are closed;
+do not restart them.
+
+Only the A4 Task6 broad synthetic test session5645 remains agent-owned and
+running. Latest report:47 passing instances; claimed-reductions triple passed
+and effects-order started. No failures or source changes. Test/checker hashes
+remain b84ec390.../b46af079... . Do not restart or omit its controls. After full
+synthetic admission, all final sources must be frozen before measured largest
+native export, all78 exports, stage/case-pin admission/seal and independent
+complete replay. No actual-package acceptance is claimed.
+
+Task2 source inventory/report/index remain frozen at97fad041...,
+e035e329.../7db8df0b... . Following admission, dispatch only the adopted Task3
+prefix tests, samples and paired compile; root must inspect exact generated
+JSON/size metrics before bounded checker commands. Do not increase resources,
+change predicates or launch a full campaign from pilot authority.
+
+Unrelated Candidate B draft is still untracked and must remain untouched.
+No Foreman edits or new harness repairs. Exact-vendor Council remains an
+external gate, not fulfilled by the local agents. This block supersedes all
+status and next-step instructions below. Root's short audit commands are
+terminal at this checkpoint; the narrow Task2 commit is the next local action.
+
 ## Current override, 2026-09-05 21:27 UTC
 
 Candidate A execution remains active in this turn; session
