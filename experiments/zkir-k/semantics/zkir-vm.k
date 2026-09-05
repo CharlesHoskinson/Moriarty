@@ -68,6 +68,7 @@ module ZKIR-VM
       <deadPis> 0 </deadPis>
       <genMode> false </genMode>
       <needs> .List </needs>
+      <strictDecode> false </strictDecode>   // true for the ZKIR-EXT surface (canonical-form check on decoding)
       <status> ok() </status>
     </zkir>
 
@@ -83,8 +84,8 @@ module ZKIR-VM
   rule <k> genJob(P, Pre) => job(P, Pre) ... </k> <genMode> _ => true </genMode>
 
   // --- Start: decode inputs, seed the public-input vector ------------------------------
-  rule <k> job(program(Mi, Ins, Outs, DoComm, Is), Pre) => #loadInputs(decodeInputs(#preInputs(Pre), Ins, 0)) ~> #seedPi ~> Is ~> #verdicts </k>
-       <pre> _ => Pre </pre>
+  rule <k> job(program(Mi, Ins, Outs, DoComm, Is), Pre) => #loadInputs(decodeInputs(#preInputs(Pre), Ins, 0, Strict)) ~> #seedPi ~> Is ~> #verdicts </k>
+       <pre> _ => Pre </pre> <strictDecode> Strict </strictDecode>
        <chips> _ => usedChips(program(Mi, Ins, Outs, DoComm, Is)) </chips>
        <outTypes> _ => Outs </outTypes>
        <doComm> _ => DoComm </doComm>
@@ -371,30 +372,32 @@ module ZKIR-VM
   syntax KItem ::= #input(BoolResult, IrType, String, String)
   rule <k> #input(boolErr(S), _, _, _) => #fail(S) ... </k>
   rule <k> #input(boolOk(false), T, O, _) => .K ... </k> <mem> M => M[O <- defaultValue(T)] </mem>
-  rule <k> #input(boolOk(true), T, O, "public") => #put(O, #decodeSlice(#prePubOut(Pre), Idx, T)) ... </k>
-       <pre> Pre </pre> <pubOutIdx> Idx => Idx +Int encodedLen(T) </pubOutIdx>
+  rule <k> #input(boolOk(true), T, O, "public") => #put(O, #decodeSlice(#prePubOut(Pre), Idx, T, Strict)) ... </k>
+       <pre> Pre </pre> <pubOutIdx> Idx => Idx +Int encodedLen(T) </pubOutIdx> <strictDecode> Strict </strictDecode>
     requires Idx +Int encodedLen(T) <=Int size(#prePubOut(Pre))
-  rule <k> #input(boolOk(true), T, O, "public") => #put(O, #decodeSlice(#prePubOut(Pre), Idx, T)) ... </k>
-       <pre> Pre </pre> <pubOutIdx> Idx => Idx +Int encodedLen(T) </pubOutIdx> <genMode> false </genMode>
+  rule <k> #input(boolOk(true), T, O, "public") => #put(O, #decodeSlice(#prePubOut(Pre), Idx, T, Strict)) ... </k>
+       <pre> Pre </pre> <pubOutIdx> Idx => Idx +Int encodedLen(T) </pubOutIdx> <genMode> false </genMode> <strictDecode> Strict </strictDecode>
     requires Idx +Int encodedLen(T) >Int size(#prePubOut(Pre))
   rule <k> #input(boolOk(true), T, O, "public") => .K ... </k> <mem> M => M[O <- defaultValue(T)] </mem>
        <pre> Pre </pre> <pubOutIdx> Idx => Idx +Int encodedLen(T) </pubOutIdx> <genMode> true </genMode>
        <needs> N => N ListItem(needPubOut(T)) </needs>
     requires Idx +Int encodedLen(T) >Int size(#prePubOut(Pre))
-  rule <k> #input(boolOk(true), T, O, "private") => #put(O, #decodeSlice(#prePrivate(Pre), Idx, T)) ... </k>
-       <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx>
+  rule <k> #input(boolOk(true), T, O, "private") => #put(O, #decodeSlice(#prePrivate(Pre), Idx, T, Strict)) ... </k>
+       <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx> <strictDecode> Strict </strictDecode>
     requires Idx +Int encodedLen(T) <=Int size(#prePrivate(Pre))
-  rule <k> #input(boolOk(true), T, O, "private") => #put(O, #decodeSlice(#prePrivate(Pre), Idx, T)) ... </k>
-       <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx> <genMode> false </genMode>
+  rule <k> #input(boolOk(true), T, O, "private") => #put(O, #decodeSlice(#prePrivate(Pre), Idx, T, Strict)) ... </k>
+       <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx> <genMode> false </genMode> <strictDecode> Strict </strictDecode>
     requires Idx +Int encodedLen(T) >Int size(#prePrivate(Pre))
   rule <k> #input(boolOk(true), T, O, "private") => .K ... </k> <mem> M => M[O <- defaultValue(T)] </mem>
        <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx> <genMode> true </genMode>
        <needs> N => N ListItem(needPriv(T)) </needs>
     requires Idx +Int encodedLen(T) >Int size(#prePrivate(Pre))
   // The Rust code indexes the slice directly and panics past the end; we report it.
-  syntax ValueResult ::= #decodeSlice(List, Int, IrType) [function, total]
-  rule #decodeSlice(L, Idx, T) => vErr("transcript index out of range") requires Idx +Int encodedLen(T) >Int size(L)
-  rule #decodeSlice(L, Idx, T) => #toValue(decodeValue(range(L, Idx, size(L) -Int Idx -Int encodedLen(T)), T))
+  // (The Rust code indexes the transcript slice directly and panics with an
+  // index-out-of-range when it is too short; here that is an error.)
+  syntax ValueResult ::= #decodeSlice(List, Int, IrType, Bool) [function, total]
+  rule #decodeSlice(L, Idx, T, _) => vErr("transcript index out of range") requires Idx +Int encodedLen(T) >Int size(L)
+  rule #decodeSlice(L, Idx, T, Strict) => #toValue(decodeStrict(range(L, Idx, size(L) -Int Idx -Int encodedLen(T)), T, Strict))
     requires Idx +Int encodedLen(T) <=Int size(L)
   syntax ValueResult ::= #toValue(DecodeResult) [function, total]
   rule #toValue(decOk(V)) => vOk(V)

@@ -40,6 +40,10 @@ def default_definition() -> Path:
     return Path(__file__).resolve().parent.parent / 'semantics' / 'zkir-kompiled'
 
 
+def default_ext_definition() -> Path:
+    return Path(__file__).resolve().parent.parent / 'semantics' / 'zkir-ext-kompiled'
+
+
 # --- preimage term ---------------------------------------------------------------------
 
 def klist(items: list[KInner]) -> KInner:
@@ -178,7 +182,11 @@ def point(t: KInner):
     return (tok_int(t.args[0]), tok_int(t.args[1]))
 
 
-def encode_value(t: KInner) -> tuple[str, list[int]]:
+def enc_chunks(b: bytes) -> list[int]:
+    return [int.from_bytes(b[i:i + 31], 'little') for i in range(0, len(b), 31)]
+
+
+def encode_value(t: KInner, ext: bool = False) -> tuple[str, list[int]]:
     assert isinstance(t, KApply), t
     lbl = t.label.name
     a = t.args
@@ -187,7 +195,13 @@ def encode_value(t: KInner) -> tuple[str, list[int]]:
             return 'Native', [tok_int(a[0])]
         case 'bytes32V':
             b = tok_bytes(a[0])
-            return 'Bytes32', [int.from_bytes(b[:31], 'little'), b[31]]
+            return ('Bytes' if ext else 'Bytes32'), [int.from_bytes(b[:31], 'little'), b[31]]
+        case 'boolV':
+            return 'Bool', [1 if (a[0].token if isinstance(a[0], KToken) else a[0].label.name) == 'true' else 0]
+        case 'byteV':
+            return 'Byte', [tok_int(a[0])]
+        case 'bytesV':
+            return 'Bytes', enc_chunks(tok_bytes(a[0]))
         case 'jubjubPointV':
             p = point(a[0]) or (0, 1)
             return 'JubjubPoint', [p[0], p[1]]
@@ -218,15 +232,23 @@ def encode_value(t: KInner) -> tuple[str, list[int]]:
 
 
 SYMBOL_TO_TYPE = {v: k for k, v in zkir_kast.TYPE_SYMBOLS.items()}
+SYMBOL_TO_TYPE.update({'Bool': 'Bool', 'Byte': 'Byte'})
+
+
+def type_of_symbol(t: KInner) -> str:
+    assert isinstance(t, KApply)
+    if t.label.name == 'BytesN':
+        return f'Bytes<{tok_int(t.args[0])}>'
+    return SYMBOL_TO_TYPE[t.label.name]
 
 
 def need(t: KInner) -> tuple[str, Any]:
     assert isinstance(t, KApply)
     match t.label.name:
         case 'needPubOut':
-            return ('pubOut', SYMBOL_TO_TYPE[t.args[0].label.name])
+            return ('pubOut', type_of_symbol(t.args[0]))
         case 'needPriv':
-            return ('priv', SYMBOL_TO_TYPE[t.args[0].label.name])
+            return ('priv', type_of_symbol(t.args[0]))
         case 'needPubIn':
             return ('pubIn', tok_int(t.args[0]))
         case 'needComm':
@@ -242,8 +264,9 @@ def skip(t: KInner):
 
 
 class Runner:
-    def __init__(self, definition: Path | None = None):
-        self.krun = KRun(definition or default_definition())
+    def __init__(self, definition: Path | None = None, ext: bool = False):
+        self.ext = ext
+        self.krun = KRun(definition or (default_ext_definition() if ext else default_definition()))
 
     def run(self, program: KInner, preimage: dict[str, Any], depth: int | None = None, gen: bool = False) -> dict[str, Any]:
         job = KApply('genJob' if gen else 'job', [program, preimage_term(preimage)])
@@ -262,7 +285,7 @@ class Runner:
             out['error'] = tok_str(status.args[0])
         memory = {}
         for k, v in map_items(find_cell(cfg, '<mem>')):
-            variant, enc = encode_value(v)
+            variant, enc = encode_value(v, self.ext)
             memory[tok_str(k)] = {'variant': variant, 'encoded': [str(e) for e in enc]}
         out['memory'] = memory
         out['pis'] = [str(tok_int(x)) for x in list_items(find_cell(cfg, '<pi>'))]
@@ -286,7 +309,7 @@ class Runner:
         return out
 
     def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False) -> dict[str, Any]:
-        return self.run(zkir_kast.load_program(path), preimage, gen=gen)
+        return self.run(zkir_kast.load_program(path, ext=self.ext), preimage, gen=gen)
 
 
 def main() -> int:
@@ -294,8 +317,9 @@ def main() -> int:
     ap.add_argument('file', type=Path)
     ap.add_argument('preimage', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
+    ap.add_argument('--ext', action='store_true')
     args = ap.parse_args()
-    runner = Runner(args.definition)
+    runner = Runner(args.definition, ext=args.ext)
     with open(args.preimage) as f:
         pre = json.load(f)
     print(json.dumps(runner.run_file(args.file, pre), indent=1))

@@ -1,0 +1,67 @@
+{
+  "version": {
+    "major": 3,
+    "minor": 0
+  },
+  "inputs": [
+    {
+      "name": "%p0",
+      "type": "Point<Jubjub>"
+    },
+    {
+      "name": "%p1",
+      "type": "Point<Jubjub>"
+    },
+    {
+      "name": "%bit",
+      "type": "Scalar<BLS12-381>"
+    }
+  ],
+  "outputs": [],
+  "do_communications_commitment": false,
+  "instructions": [
+    {
+      "op": "test_eq",
+      "a": "%p0",
+      "b": "%p1",
+      "output": "%v0"
+    },
+    {
+      "op": "assert",
+      "cond": "%v0"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%p0",
+      "b": "%p1"
+    },
+    {
+      "op": "cond_select",
+      "bit": "%bit",
+      "a": "%p0",
+      "b": "%p1",
+      "output": "%p2"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%p2",
+      "b": "%p0"
+    },
+    {
+      "op": "neg",
+      "a": "%p0",
+      "output": "%p0_neg"
+    },
+    {
+      "op": "private_input",
+      "type": "Point<Jubjub>",
+      "guard": null,
+      "output": "%p0_neg_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%p0_neg",
+      "b": "%p0_neg_priv"
+    }
+  ]
+}

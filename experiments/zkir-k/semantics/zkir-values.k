@@ -221,19 +221,29 @@ module ZKIR-VALUES
   rule #wrapPoint(Q, jubjubPoint())     => jubjubPoint(Q)
   rule #wrapPoint(_, _)                 => native(0) [owise]
 
+  // Strict decoding re-encodes the value and demands the original elements
+  // (midnight-zkir 2ffe2d1 `decode_offcircuit`); 92e8bdd3 does not check.
+  syntax DecodeResult ::= decodeStrict(List, IrType, Bool) [function, total]
+  rule decodeStrict(L, T, false) => decodeValue(L, T)
+  rule decodeStrict(L, T, true) => #canonical(decodeValue(L, T), L, T)
+  syntax DecodeResult ::= #canonical(DecodeResult, List, IrType) [function, total]
+  rule #canonical(decErr(S), _, _) => decErr(S)
+  rule #canonical(decOk(V), L, _) => decOk(V) requires encodeValue(V) ==K L
+  rule #canonical(decOk(V), L, T) => decErr("The encoded value of type " +String typeName(T) +String " is not in canonical form") requires encodeValue(V) =/=K L
+
   // Decode a whole raw vector by a list of types (inputs of a program):
   // decodeMany(raw, types) is decManyOk(values) or decErr; the Rust code
   // reports running out of inputs and leftover inputs as separate errors.
   syntax DecodeMany ::= decManyOk(List) | decManyErr(String)
-  syntax DecodeMany ::= decodeInputs(List, TypedIds, Int) [function, total]   // (raw, inputs, index)
-  rule decodeInputs(Raw, .TypedIds, Idx) => decManyOk(.List) requires Idx ==Int size(Raw)
-  rule decodeInputs(Raw, .TypedIds, Idx) => decManyErr("Expected " +String Int2String(Idx) +String " raw inputs, received " +String Int2String(size(Raw)))
+  syntax DecodeMany ::= decodeInputs(List, TypedIds, Int, Bool) [function, total]   // (raw, inputs, index, strict)
+  rule decodeInputs(Raw, .TypedIds, Idx, _) => decManyOk(.List) requires Idx ==Int size(Raw)
+  rule decodeInputs(Raw, .TypedIds, Idx, _) => decManyErr("Expected " +String Int2String(Idx) +String " raw inputs, received " +String Int2String(size(Raw)))
     requires Idx =/=Int size(Raw)
-  rule decodeInputs(Raw, (typedId(N, T), Rest), Idx)
+  rule decodeInputs(Raw, (typedId(N, T), _), Idx, _)
     => decManyErr("Not enough raw inputs: ran out at index " +String Int2String(Idx) +String " while decoding " +String N)
     requires Idx +Int encodedLen(T) >Int size(Raw)
-  rule decodeInputs(Raw, (typedId(N, T), Rest), Idx)
-    => #consDecoded(decodeValue(range(Raw, Idx, size(Raw) -Int Idx -Int encodedLen(T)), T), N, decodeInputs(Raw, Rest, Idx +Int encodedLen(T)))
+  rule decodeInputs(Raw, (typedId(N, T), Rest), Idx, Strict)
+    => #consDecoded(decodeStrict(range(Raw, Idx, size(Raw) -Int Idx -Int encodedLen(T)), T, Strict), N, decodeInputs(Raw, Rest, Idx +Int encodedLen(T), Strict))
     requires Idx +Int encodedLen(T) <=Int size(Raw)
   syntax DecodeMany ::= #consDecoded(DecodeResult, String, DecodeMany) [function, total]
   rule #consDecoded(decErr(S), _, _) => decManyErr(S)

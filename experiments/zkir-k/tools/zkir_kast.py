@@ -52,6 +52,14 @@ class ZkirFormatError(ValueError):
     """The JSON does not deserialize as ZKIR 3.0 (mirrors serde errors)."""
 
 
+# Surface selection: False = midnight-ledger 92e8bdd3 (34 instructions, 13 types);
+# True = midnight-zkir 2ffe2d1 (ZKIR-EXT: Bool, Byte, Bytes<n>, nine more instructions,
+# reverse_bytes removed).
+EXT = False
+EXT_TYPES = {'Bool': 'Bool', 'Byte': 'Byte'}
+EXT_OPS = {'and', 'or', 'xor', 'concat', 'slice', 'nth', 'reverse', 'load_constant', 'sha512'}
+
+
 # --- leaf builders -----------------------------------------------------------
 
 def klist(cons: str, nil: str, items: list[KInner]) -> KInner:
@@ -62,9 +70,16 @@ def klist(cons: str, nil: str, items: list[KInner]) -> KInner:
 
 
 def ir_type(name: Any) -> KInner:
-    if not isinstance(name, str) or name not in TYPE_SYMBOLS:
-        raise ZkirFormatError(f'unknown IR type {name!r}')
-    return KApply(TYPE_SYMBOLS[name])
+    if isinstance(name, str) and name in TYPE_SYMBOLS:
+        return KApply(TYPE_SYMBOLS[name])
+    if EXT and isinstance(name, str):
+        if name in EXT_TYPES:
+            return KApply(EXT_TYPES[name])
+        if name.startswith('Bytes<') and name.endswith('>') and name[6:-1].isdigit():
+            n = int(name[6:-1])
+            if 1 <= n <= (1 << 24):
+                return KApply('BytesN', [intToken(n)])
+    raise ZkirFormatError(f'unknown IR type {name!r}')
 
 
 def immediate(text: str) -> int:
@@ -229,8 +244,34 @@ def instruction(ins: Any) -> KInner:
             _need(ins, 'bytes', 'type', 'output')
             return KApply('from_bytes32', [operand(ins['bytes']), ir_type(ins['type']), identifier(ins['output'])])
         case 'reverse_bytes':
+            if EXT:
+                raise ZkirFormatError("unknown instruction op 'reverse_bytes' (removed at midnight-zkir 2ffe2d1; use reverse)")
             _need(ins, 'bytes', 'output')
             return KApply('reverse_bytes', [operand(ins['bytes']), identifier(ins['output'])])
+        case 'and' | 'or' | 'xor' if EXT:
+            _need(ins, 'inputs', 'output')
+            return KApply(op, [operands(ins['inputs']), identifier(ins['output'])])
+        case 'concat' if EXT:
+            _need(ins, 'inputs', 'output')
+            return KApply('concat', [operands(ins['inputs']), identifier(ins['output'])])
+        case 'slice' if EXT:
+            _need(ins, 'bytes', 'start', 'len', 'output')
+            return KApply('slice', [operand(ins['bytes']), u32(ins['start'], 'start'), u32(ins['len'], 'len'), identifier(ins['output'])])
+        case 'nth' if EXT:
+            _need(ins, 'bytes', 'index', 'output')
+            return KApply('nth', [operand(ins['bytes']), u32(ins['index'], 'index'), identifier(ins['output'])])
+        case 'reverse' if EXT:
+            _need(ins, 'bytes', 'output')
+            return KApply('reverse', [operand(ins['bytes']), identifier(ins['output'])])
+        case 'load_constant' if EXT:
+            _need(ins, 'type', 'encoding', 'output')
+            if not isinstance(ins['encoding'], list):
+                raise ZkirFormatError('load_constant encoding must be a list of hex immediates')
+            enc = klist('operands', '.operands', [KApply('imm', [intToken(immediate(e))]) for e in ins['encoding']])
+            return KApply('load_constant', [ir_type(ins['type']), enc, identifier(ins['output'])])
+        case 'sha512' if EXT:
+            _need(ins, 'alignment', 'inputs', 'output')
+            return KApply('sha512', [alignment(ins['alignment']), operands(ins['inputs']), identifier(ins['output'])])
         case 'bytes32_into_low_high':
             _need(ins, 'bytes', 'outputs')
             lo, hi = pair(ins['outputs'], 'bytes32_into_low_high outputs')
@@ -311,7 +352,10 @@ def program(doc: Any) -> KInner:
     ])
 
 
-def load_program(path: Path) -> KInner:
+def load_program(path: Path, ext: bool | None = None) -> KInner:
+    global EXT
+    if ext is not None:
+        EXT = ext
     with open(path) as f:
         return program(json.load(f))
 
@@ -337,9 +381,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument('command', choices=['kore', 'kast', 'check'])
     ap.add_argument('file', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
+    ap.add_argument('--ext', action='store_true', help='accept the midnight-zkir 2ffe2d1 surface (ZKIR-EXT)')
     args = ap.parse_args(argv)
     try:
-        term = load_program(args.file)
+        term = load_program(args.file, ext=args.ext)
     except ZkirFormatError as e:
         print(f'format error: {e}', file=sys.stderr)
         return 2

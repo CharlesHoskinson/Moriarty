@@ -321,17 +321,17 @@ module ZKIR-CONSTRAINTS
   rule eval(gate(fromBytes32(B, T, O)), M, _, Chips) => #and(#need(rd(B, M)), #and(#chipFor(T, Chips), #matches(#fromB32c(rd(B, M), T), rdId(O, M), "from_bytes32 output")))
   syntax ValueResult ::= #fromB32c(ValueResult, IrType) [function, total]
   rule #fromB32c(vOk(bytes32(B)), T) => fromBytes32V(T, B)
-  rule #fromB32c(vOk(V), _) => vErr("cannot convert " +String tn(V) +String " to Bytes32")
+  rule #fromB32c(vOk(V), _) => vErr("cannot convert " +String tn(V) +String " to Bytes32") [owise]
   rule #fromB32c(vErr(S), _) => vErr(S)
   rule eval(gate(reverseBytes(B, O)), M, _, _) => #and(#need(rd(B, M)), #matches(#revOf(rd(B, M)), rdId(O, M), "reverse_bytes output"))
   syntax ValueResult ::= #revOf(ValueResult) [function, total]
   rule #revOf(vOk(bytes32(B))) => vOk(bytes32(reverseBytes(B)))
-  rule #revOf(vOk(V)) => vErr("cannot convert " +String tn(V) +String " to Bytes32")
+  rule #revOf(vOk(V)) => vErr("cannot convert " +String tn(V) +String " to Bytes32") [owise]
   rule #revOf(vErr(S)) => vErr(S)
   rule eval(gate(bytes32IntoLowHigh(B, L, H)), M, _, _) => #and(#need(rd(B, M)), #lowHighMatch(rd(B, M), L, H, M))
   syntax Outcome ::= #lowHighMatch(ValueResult, String, String, Map) [function, total]
   rule #lowHighMatch(vOk(bytes32(B)), L, H, M) => #pairMatch(bytes32IntoLowHighV(B), L, H, M)
-  rule #lowHighMatch(vOk(V), _, _, _) => synthErr("cannot convert " +String tn(V) +String " to Bytes32")
+  rule #lowHighMatch(vOk(V), _, _, _) => synthErr("cannot convert " +String tn(V) +String " to Bytes32") [owise]
   rule #lowHighMatch(vErr(S), _, _, _) => unknown(S)
   // bytes32_from_low_high: high must be Native in circuit, low may be any
   // field element (finding 8); low's byte 31 must be zero

@@ -130,6 +130,13 @@ CASES.append(('k01_jubjub_from_coordinates_parity_only', 'K1 (new)',
     'ok', 'ok', 'from_coordinates', 'violated',
     'off-circuit only the parity of x is used (decompression), so a wrong x yields the real point; in-circuit (x, y) must lie on the curve'))
 
+CASES.append(('k02_transcript_too_short_panics', 'K2 (new)',
+    program([('%a', NATIVE)], [
+        {'op': 'private_input', 'guard': None, 'type': NATIVE, 'output': '%x'},
+        {'op': 'add', 'a': '%a', 'b': '%x', 'output': '%y'}]), [1],
+    'error', 'oracle-failed', 'private_input', 'unknown',
+    'an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports an error'))
+
 CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
     program([('%d', NATIVE), ('%m', NATIVE)], [
         {'op': 'reconstitute_field', 'divisor': '%d', 'modulus': '%m', 'bits': 8, 'output': '%o'}]),

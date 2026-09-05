@@ -1,0 +1,10 @@
+# k-rust compatibility attempt, 2026-09-05
+
+k-rust 0.4.0 built from repos/midnightntwrk/k-rust (687ccd0) with cargo build --release -p k-rust (4m35s).
+
+1. krust krun toolchain-check/lesson-02-a.k --main-module LESSON-02-A --sort Color -e 'colorOf(Banana())': exit 0 in 2.9 s, result Yellow.
+2. krust kast semantics/zkir-syntax.k --module ZKIR-SYNTAX --sort IrType --expression 'native()': exit 0 in 3.5 s, result `Native`(.KList).
+3. krust krun semantics/zkir.k --main-module ZKIR --sort Job -e '<job term of test_minimal_proof>': no result within the 10-minute tool limit; killed.
+4. timeout 1500 krust kcompile semantics/zkir.k --main-module ZKIR --syntax-module ZKIR-VM-SYNTAX: exit 124 (timed out after 25 minutes, 17+ minutes CPU, ~105 MB RSS, no output, no KORE emitted).
+
+Verdict: the k-rust frontend accepts the definition's syntax but does not finish compiling the full definition in 25 minutes; canonical K compiles it in 20 s.

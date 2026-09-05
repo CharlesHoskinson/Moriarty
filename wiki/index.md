@@ -42,7 +42,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
 
 - [ZKIR semantics in K: plan](zkir-k-semantics-plan.md) — the synthesis:
   configuration, sorts, rule shape, pin, field representation, parsing route,
-  test oracle, and the first milestones.
+  test oracle, and the milestones with their results.
+- [The ZKIR semantics in K, as built](zkir/zkir-k-definition.md) — module
+  layout, what a run produces, the three layers of checking against the Rust
+  crate, the divergences found, and the Agda and k-rust oracles.
 - [K Framework overview](k-framework/k-framework-overview.md) — what K is,
   repository layout, install paths, toolchain commands, backends.
 - [K tutorial section 1](k-framework/k-tutorial-basic.md) — lessons 1.1 to

@@ -35,6 +35,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO = ROOT.parent.parent
 ORACLE = Path.home() / 'Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-oracle'
+ORACLE_EXT = Path.home() / 'Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-oracle'
 
 CORPORA = {
     'ledger9-92e8bdd3-tests': ROOT / 'corpus' / 'ledger9-92e8bdd3-tests',
@@ -45,10 +46,13 @@ CORPORA = {
 }
 
 
+ORACLE_BIN = ORACLE
+
+
 def oracle(program: Path, preimage: dict) -> dict:
     with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
         json.dump(preimage, f)
-    res = subprocess.run([str(ORACLE), str(program), f.name], capture_output=True, text=True)
+    res = subprocess.run([str(ORACLE_BIN), str(program), f.name], capture_output=True, text=True)
     if res.returncode != 0:
         return {'status': 'oracle-failed', 'error': res.stderr[-500:]}
     return json.loads(res.stdout)
@@ -118,8 +122,17 @@ def main() -> int:
     ap.add_argument('--seed', type=int, default=2026)
     ap.add_argument('--no-perturb', action='store_true')
     ap.add_argument('--attempts', type=int, default=8)
+    ap.add_argument('--ext', action='store_true', help='ZKIR-EXT definition, midnight-zkir 2ffe2d1 oracle and corpus')
     args = ap.parse_args()
-    runner = Runner()
+    global ORACLE_BIN, CORPORA
+    if args.ext:
+        ORACLE_BIN = ORACLE_EXT
+        CORPORA = {
+            'midnight-zkir-2ffe2d1-tests': ROOT / 'corpus' / 'midnight-zkir-2ffe2d1-tests',
+            'midnight-zkir-2ffe2d1-precompiles': ROOT / 'corpus' / 'midnight-zkir-2ffe2d1-precompiles',
+            'handmade': ROOT / 'corpus' / 'handmade',
+        }
+    runner = Runner(ext=args.ext)
     rows = []
     failures = 0
     t0 = time.time()
@@ -131,7 +144,7 @@ def main() -> int:
             if doc.get('version', {}).get('major') != 3:
                 continue
             try:
-                program = zkir_kast.load_program(path)
+                program = zkir_kast.load_program(path, ext=args.ext)
             except zkir_kast.ZkirFormatError:
                 continue   # rejected before preprocess by both sides
             rng = random.Random(f'{args.seed}:{path.name}')

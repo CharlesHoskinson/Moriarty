@@ -105,6 +105,14 @@ ENCODED_LEN = {
 
 def random_encoded(ir_type: str, rng: random.Random) -> list[int]:
     """A valid raw encoding of a random value of the given type."""
+    if ir_type == 'Bool':
+        return [rng.randrange(2)]
+    if ir_type == 'Byte':
+        return [rng.randrange(256)]
+    if ir_type.startswith('Bytes<') and ir_type != 'Bytes<32>':
+        n = int(ir_type[6:-1])
+        b = bytes(rng.randrange(256) for _ in range(n))
+        return [int.from_bytes(b[i:i + 31], 'little') for i in range(0, n, 31)]
     match ir_type:
         case 'Scalar<BLS12-381>':
             return [rng.randrange(R)]

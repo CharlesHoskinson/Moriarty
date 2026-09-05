@@ -167,3 +167,21 @@ Assembled a 56-program version-3 corpus under `experiments/zkir-k/corpus/`
 artifacts) plus 7 handmade negatives; `tools/check_corpus.py` passes 63/63
 (CLM-0724, evidence/zkir-k-milestone2-corpus-check-2026-09-05.txt). Finding: the
 ledger's precompiles at 92e8bdd3 are still ZKIR v2 (CLM-0725).
+
+## [2026-09-05] semantics | ZKIR VM, constraint checker, oracles (milestones 3 to 6)
+
+Built the executable K definition under `experiments/zkir-k/semantics/`
+(fields, curves, values and encodings, Poseidon, hash-to-curve, SHA-256,
+Keccak-256, SHA-512, the VM with constraint emission, the constraint checker,
+the `ZKIR-EXT` surface of midnight-zkir 2ffe2d1) and the pyk tooling under
+`tools/`. Two Rust oracles (`zkir-oracle` harnesses in worktrees of
+midnight-ledger 92e8bdd3 and midnight-zkir 2ffe2d1) give the crate's own
+`preprocess`. Results: 41/41 value unit checks, 18/18 hash known answers,
+314/314 differential agreements at 92e8bdd3 and 366/366 at 2ffe2d1, all gates
+holding on every successful run, 14/14 divergence cases (the review's findings
+plus two new ones: K1, Jubjub `from_coordinates` uses only the parity of `x`
+off-circuit; K2, a short transcript panics the crate). The arc-zkir v3 Agda
+development type-checks but cannot execute programs. New page
+`wiki/zkir/zkir-k-definition.md`; plan milestones marked done; K1 recorded in
+`contradictions.md`. Receipts: `evidence/zkir-k-*-2026-09-05.txt`,
+`evidence/arc-zkir-agda-typecheck-2026-09-05.txt`.
