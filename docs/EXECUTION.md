@@ -35,9 +35,13 @@ commit `5d38637` corrected it and independent re-review approved all code and
 normative artifacts. The closed validator recomputes ten local package gates
 and validates published receipts. These are not the 24 XML release gates.
 
-Continue with the reviewed
-[S02 contract plan](superpowers/plans/2026-09-04-moriarty-s02-package-contract.md),
-then the distinct model implementations, correspondence checks, and comparison.
+The [S02 contract plan](superpowers/plans/2026-09-04-moriarty-s02-package-contract.md)
+is implemented and independently reviewed. Its registry and OpenSpec remain
+specification-only. Next, write and execute the common-model implementation
+plan against the reviewed
+[observation and authorization design](superpowers/specs/2026-09-04-moriarty-s02-observation-authorization-design.md),
+then build the distinct candidates, independent correspondence checks, negative
+controls, and actual model-checking evidence before the comparison decision.
 
 S02 uses Quint models and the Quint CLI with the Apalache backend, as directed
 by the user. The reviewed model-comparison design is preparation, not an

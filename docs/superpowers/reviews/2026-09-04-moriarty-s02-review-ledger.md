@@ -25,9 +25,34 @@ rerun those commands and correctly noted that a final diff cannot prove TDD
 chronology. The controller separately reran the focused test and read-only S01
 validator successfully. The diff changes no S01 normative input or artifact.
 
+## Contract Task 2 and whole-contract review
+
+Independent review approved Task 2's specification compliance and quality and
+the whole contract subproject through `02aba01`, with no material finding.
+The review checked all ten normative scenarios, the closed registry, all four
+representations, both workloads and signing profiles, candidate rejection and
+stop dispositions, full E00 comparison, critical-control exceptions, and
+manifest closure. All ten declared input SHA-256 pins independently matched.
+
+The implementer recorded the missing-package RED, two focused passing tests,
+284 full-suite tests, and the passing S01 validator. The reviewer did not rerun
+tests and did not claim to prove test chronology from the final diff. No model,
+execution result, selected architecture, S02 pass, or scope motion was claimed.
+
+## Common observation and authorization design
+
+The next design separates wallet/escrow effects from Core payments, requires
+per-principal authorization and incoming consideration, and specifies parent
+and residual consumption plus separately authorized cancellation recovery.
+Independent review found two issues: signing must follow complete pre-sign
+checks, and recovery witnesses need an explicit acceptance mapping. Commit
+`d742a5b` corrected both. Re-review approved the bounded design with no remaining
+material issue. Two recovery subscenarios are mandatory under S02-05/S02-09;
+the original registry witness identifiers remain unchanged.
+
 ## Next work
 
-Complete and independently review Contract Task 2, the specification-only
-OpenSpec package. Then plan and execute the common model and four distinct
+The contract subproject is complete and remains specification-only. Plan and
+execute the common model and four distinct
 candidate representations before correspondence, negative controls, actual
 Quint/Apalache checking, and the selection or stop decision.
