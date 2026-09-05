@@ -41,7 +41,7 @@ pure def authorityObservationMatchesA(op: Operation,
 - [ ] Add the following first actual assertion, with imports of effects, observations, policies, candidate_a_types/programs and the new adapter. Stub adaptAuthorityA with AuthorityInvalidRequestA only after this test is written. Retain the complete source/import closure and typecheck/test receipt for behavioral RED before replacing the stub.
 
 ```quint
-pure val emptyPlanForAdapterTest: AResolvedPlan = {
+pure val emptyAdapterPlan: AResolvedPlan = {
   identity: InstallmentPlanA, operations: List()}
 pure val firstRequest: AAuthorityRequest = {
   before: {program: installmentProgram,
@@ -52,7 +52,7 @@ pure val firstRequest: AAuthorityRequest = {
 pure val parentKeyA = {domain: InstallmentDomain, principal: Alice, nonce: 0}
 run firstFillActualInputTest = {
   match adaptAuthorityA(firstRequest, OpFillSlot({parent: parentKeyA, slot: 1}),
-    emptyPlanForAdapterTest, PublicDisplay) {
+    emptyAdapterPlan, PublicDisplay) {
     | AuthorityAdaptedA(obs) => all {
         obs.input == ChoiceLike({id: "fill1", chooser: Bob, chosen: 1}),
         obs.proposedSuccessor.state.continuation == N2,
@@ -69,6 +69,10 @@ run firstFillActualInputTest = {
 The empty plan is intentionally unvalidated adapter data, never an admissible
 execution plan. This unit must preserve even malformed plan payloads verbatim;
 the next boundary unit checks the one-to-four-operation plan domain/fidelity.
+Fixture names must not end in `Test`: the installed test discovery also selects
+such pure values, which are not Boolean tests. The original example's suffix
+caused an Expected boolean evaluator panic; retain that receipt as a plan/test
+discovery correction, not a behavioral adapter failure.
 
 - [ ] Implement adaptation with this decision tree. Require validOperation and now != Time0. On cancellation require validState and NoAInput, emit the unchanged/no-effects/NoCoreProjection observation with CancellationCallA. Otherwise evaluate computeTransaction; preserve every noncomputed diagnostic in AuthorityComputationDiagnosticA. On computed raw, call extractCommittedEffects; preserve every failed extraction in AuthorityExtractionDiagnosticA. On extracted effects emit the complete observation with AgreementCallA(request), actual projected input/time/result, actual successor and ordered effects. Error outcome is Rejected(CoreRejected(raw.error)); accepted outcome is the exact operation-label table in the design. Do not derive money from outcome labels.
 - [ ] Implement the binding check exactly as follows; the adapter's checks enforce call-kind validity and invalid lifecycle input rejection.
