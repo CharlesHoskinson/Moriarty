@@ -21,15 +21,21 @@ A3Task2 accepted c3c89fa: all five tests pass, including twelve ordinary
 scenarios under both profiles, real funding/disposition and retained refusals.
 A3Task3 source/tests/samples accepted926b350:17tests and recursive typecheck,
 all24positivewitnesses in100samples, independent source review and root exact
-archive/terminal intake. Full A3 still awaits shared final regressions.
-A2Task3 adversarial/harness work explicitly dispatched to a1_installment_plan
-after Task2 acceptance. Each has a brief and unique ignored report/receipts.
+archive/terminal intake. A2Task3 accepted bfc7832:17tests, recursive typecheck,
+all25positivewitnesses in100samples and independent source/118archive-member audit.
+Shared final regressions are terminal green:40boundary,15adapter,441Python tests.
+All2673source/input snapshot files and final8lifecycle source pins match.
+Root aggregate manifests locally accept A2/A3; cross-provider Council remains open.
 Addendum a314549 uses one recursive full-closure typecheck per lifecycle and
 one root shared regression receipt after BOTH final source closures freeze.
 Preliminary A4/A5 intake findings committed5ab0b55; no factoring implemented.
 A4 export/replay design adopted effb7af. Concrete producer plan assigned to
 execution_adversarial_tests and independent checker plan to a0_final_review;
 no A4 behavioral edits before reviewed exact subplans/inventory/schema.
+A5 offline nullary-binding control fcd28f2 passes its correct invariant and finds
+the deliberate state1 counterexample. This is not Candidate A verification.
+A5 concrete isolated factoring plan is assigned to a1_installment_plan; no
+factored Candidate A source or expensive checker job is dispatched yet.
 Other B work stays out of scope. A1 evidence is planning/static, not runtime.
 Do not re-run completed A0 commands. Evidence is under
 evidence/s02-candidate-a-completion/a0/ with replayable validation command.
