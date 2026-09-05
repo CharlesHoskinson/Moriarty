@@ -31,13 +31,16 @@ will grow by merging evidence into durable topic pages.
   prompts, evidence-gated sprints, intent correctness, CAKE and ERC review,
   backend stop test, and incremental decision graph.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
-  evidence state, and next falsification test.
+  evidence state, branch-only S02 foundation progress, Council restart status,
+  and next falsification test.
 
 ## Active specification artifacts
 
 - [Prompt v1.3 execution audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md) — signing, parser, effect-completeness, and validator findings with execution dispositions.
 - [S01 intent-theorem package](../openspec/changes/s01-intent-theorem-freeze/README.md) — completed, independently reviewed specification package whose ten local predicates passed at S3; mechanization, full effect completeness, runtime verification, backend and ledger correspondence, ACTUS, pilots, and all 24 prompt release gates remain open at this boundary.
 - [S01 evidence manifest](../evidence/s01-intent-theorem-freeze/evidence-manifest.json) — reproducible local package-gate evidence for the candidate-unmechanized theorem and exact-transfer falsifier; it grants no signing authority and establishes no proof, backend, ledger, ACTUS, or pilot result.
+- [Council review requirements](../docs/COUNCIL_REVIEWS.md) — requested reviewer identities, binding requirements, and the still-open S01 backfill and S02 review queue.
+- [Council runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md) — inspected missing carrier, requested-versus-observed model-route limits, and the pending runtime implementation boundary.
 - [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
 - [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.

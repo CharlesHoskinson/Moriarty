@@ -202,3 +202,18 @@ Fable reviewed one frozen prompt draft. The single correction pass produced
 prompt version 1.2 with execution-state authorization, cryptographic lifecycle
 bindings, typed verification certificates, and a separate confidential trust
 profile. Semantic scope `0.0.0-e00.2` did not change.
+
+## [2026-09-05] checkpoint | Record branch-only S02 progress and Council restart decision
+
+Recorded the effect foundation candidate and corrected receipt commit
+`1bd4bff04fc24855b1c45ff95b1eab137909434d`. Recorded the exact-parent
+consumption foundation at `8b905114c1cec79faf555974c0267f183ca31399` and its
+honest receipt whitespace correction at
+`6a60a645c03acad83b7cbc6b85d43996cd40ca65`. All three commits remain only on
+`s02-model-comparison`. They are not integrated or Council-approved.
+
+Recorded the 2026-09-05 user decision to authorize the narrow Foreman runtime
+binding fixes, GitHub publication and merge, the documented official model-route
+limitations, and Council resumption. Runtime implementation remains pending.
+No Council review was dispatched. Full S02 and S03 through S15 remain
+incomplete. Historical log entries remain unchanged above this entry.

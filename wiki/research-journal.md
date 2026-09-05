@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T00:00:31Z
+updated_at: 2026-09-05T02:24:03Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -579,3 +579,51 @@ confidence high; lifecycle status S3. The theorem remains unmechanized and
 both local certificates deny signing. S02 now owns the four-model Quint
 comparison; all later proof, backend, ledger, ACTUS, pilot, and release
 obligations remain open.
+
+## Iteration S02: record branch-only foundations and resume Council preparation
+
+- Timestamp: 2026-09-05T02:24:03Z
+- Main repository base: `5f692a4f0192158c955a95584a146d6703d01d3d`
+- State: intermediate branch work exists, but runtime implementation and Council review remain pending
+
+### Intermediate progress and user decision
+
+**CLM-0138.** Repository observation: the S02 effect foundation candidate and its honest
+receipt correction are committed on `s02-model-comparison` through
+`1bd4bff04fc24855b1c45ff95b1eab137909434d`. The exact-parent consumption
+foundation is committed at `8b905114c1cec79faf555974c0267f183ca31399`.
+Its honest receipt whitespace correction is committed at
+`6a60a645c03acad83b7cbc6b85d43996cd40ca65`. None of these commits is an
+ancestor of `main` at this observation. They have no Council approval and do
+not complete S02.
+
+User decision: on 2026-09-05 UTC, the user approved the narrow Foreman runtime
+binding fixes in the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md).
+The user also approved GitHub publication and merge for those fixes. The user
+accepted the documented limits of the official requested-versus-observed model
+routes and approved resumption of the Council workflow. The runtime change is
+not yet implemented, and no Council member has received the review bundle.
+
+Claim metadata:
+
+- Sources: SRC-0031 at XML S02 and W1, and SRC-0033 at the S02 execution-evidence boundary.
+- Local locators: the three full branch commits above, the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md), and the [Council review requirements](../docs/COUNCIL_REVIEWS.md).
+- Commit dates: the branch commits were created on 2026-09-04 MDT. The user decision was recorded on 2026-09-05 UTC.
+- Authority: normative task input, local repository observation, and direct user decision.
+- Scope: unreleased S02 preparation under semantic scope `0.0.0-e00.2`.
+- Evidence kind: repository observation and decision.
+- Reproduction: commit presence and branch containment inspected. Branch execution evidence was not reproduced for this journal update.
+- Confidence: high for repository containment and the user decision.
+- Lifecycle status: S3 for the branch-only foundations and S2 for the pending runtime and Council work.
+
+### Program boundary and next falsification test
+
+Full S02 remains incomplete. No four-candidate comparison, architecture
+selection, Council verdict, integration decision, or S02 gate follows from the
+two foundations. S03 through S15 also remain incomplete.
+
+Implement and verify the approved narrow runtime binding carrier before Council
+dispatch. Then bind the requested and observed model-route evidence to the
+review record. Resume Council only after the runtime contract can preserve the
+immutable review bytes, ready-token hash, contract hash, prompt hash, and
+reviewer identity without post-response stamping.
