@@ -15,8 +15,13 @@ typechecks passed, exact8module/12import evidence archived. A2Task1 accepted at
 approval and root exact-source/archive/terminal-receipt audits. Each fixture unit
 passed its two tests; these do not execute either full authority lifecycle.
 A2Task2 actual lifecycle/helpers/tests dispatched to a1_installment_plan;
-A3Task2 to execution_adversarial_tests. Each has a brief and unique ignored
-report/receipts. No Task3 until root accepts Task2 source and runtime evidence.
+A3Task2 accepted c3c89fa: all five tests pass, including twelve ordinary
+scenarios under both profiles, real funding/disposition and retained refusals.
+A3Task3 stale/adversarial/harness work dispatched to execution_adversarial_tests;
+A2Task2 corrected seven-test GREEN still awaits terminal intake. Each has a
+brief and unique ignored report/receipts. No A2Task3 before Task2 acceptance.
+Addendum a314549 uses one recursive full-closure typecheck per lifecycle and
+one root shared regression receipt after BOTH final source closures freeze.
 Preliminary A4/A5 intake findings committed5ab0b55; no factoring implemented.
 Other B work stays out of scope. A1 evidence is planning/static, not runtime.
 Do not re-run completed A0 commands. Evidence is under
