@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T18:37:39Z
+updated_at: 2026-09-05T19:05:01Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1614,3 +1614,30 @@ the correct invariant passes depth2 and the deliberately wrong invariant yields
 a state1 counterexample. It validates that offline command path, not Candidate A
 semantics or an expression-sharing performance improvement. An isolated factoring
 plan is being prepared before any new expensive Candidate A verification run.
+
+### Candidate A independent replay implementation begins
+
+**CLM-0167.** Experiment and repository observation: `9f9cfda` implements the
+first independent replay unit, strict immutable carriers and the frozen Python
+Core bridge. Five tests pass; disabling duplicate-map rejection produced the
+required compiling assertion failure with the other four tests passing. Root
+reviewed the complete source and audited3329original Python environment files,
+eight command stages, source archives and unchanged before/after pins. Missing-
+module collection errors and an initial recorder-order diagnostic are retained,
+not counted as behavioral RED. Evidence is under
+`evidence/s02-candidate-a-completion/a4/checker-task1/` on the experimental branch.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local A4 carrier/Core bridge unit; observed date2026-09-05 UTC;
+reproduction reproduced for named checks; confidence high for those observations;
+lifecycle S3 experimental branch. Session measurement34 and fact82 record this
+unit. It does not implement full authorization replay or admit integrated traces.
+The runtime archive is not a full OS image or authenticated execution attestation.
+
+Plan adoption `d4f6196` precedes this unit. Immutable addendum `ab7c827` corrects
+a shared arithmetic error: all78unchanged cases total1557events, not1757.
+Swap negative controls total391events, not591; no case or scheduled event was
+removed. The exact corrected inventory is committed. Producer/A5 plans remain
+under review. Released Council capability was inspected without provider calls
+or Foreman edits; the required coordinator remains unavailable. A4–A7 and exact
+cross-provider Council acceptance remain open.

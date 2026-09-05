@@ -527,3 +527,11 @@ both final17-test lifecycle suites,100samples each/all required witnesses,
 shared40boundary/15adapter/441Python regressions and exact source/input intake.
 A2/A3 are locally accepted; Council and A4–A7 stay open. A5 nullary tool control
 `fcd28f2` is diagnostic only. No Foreman repairs or main integration occurred.
+
+## [2026-09-05] execution | Begin independent Candidate A replay
+
+CLM-0167 records checker Task1 `9f9cfda`: strict carriers, actual Python Core
+refund/rollback tests, compiling negative control and five passing tests.
+Root source and original-runtime audit admits only this unit. Interface addendum
+`ab7c827` preserves78cases and corrects their event sum to1557. Full replay,
+factored checking and Council remain open; no Foreman repairs were resumed.

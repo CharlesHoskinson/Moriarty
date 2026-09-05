@@ -103,7 +103,12 @@ Shared final regressions pass40boundary/15adapter/441Python tests; aggregate
 acceptance `28d35d8` maps every A2/A3 EARS requirement to its finite evidence.
 Its archive retains2673source/input files and all8final lifecycle source pins.
 This is local acceptance, not Council or model checking. A4 design is `effb7af`;
-its producer and independent checker concrete plans precede implementation.
+checker plan `d4f6196` and interface correction `ab7c827` fix the unchanged
+78-case inventory at1557events. Checker Task1 `9f9cfda` implements strict carriers
+and the frozen Core bridge: five tests pass after the compiling negative control.
+Root audited original source/runtime receipts. Independent authority replay is
+in progress; the actual integrated producer and A5 factoring plans are under
+review. No A4 integrated-history or A5 Candidate A checker pass is claimed.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.
