@@ -90,6 +90,30 @@ module authorization {
     ...state, signing: state.signing.put(policy.body.key,
       PreparedSigning({policy: policy, signer: signer, snapshot: signingSnapshot(state.context, policy.body)})),
   }
-  pure def canSign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): bool = false
-  pure def applySign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): SigningState[s,c,a,p] = state
+  pure def fixtureParent(signed: SignedPolicy[s,c,a,p]): Parent[SignedPolicy[s,c,a,p]] = {
+    key: signed.policy.body.key, policy: signed, source: Escrow({owner: Alice, asset: TokenA}),
+    recipient: Bob, asset: TokenA, budget: 10, slots: Map(1 -> 5, 2 -> 5),
+  }
+  // Registering the parent materializes its unclaimed accounting cell; signing
+  // never transfers money, consumes a nonce, or asserts a recovery succeeded.
+  pure def applySign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): SigningState[s,c,a,p] = {
+    val signed = {policy: policy, signer: signer, token: token}
+    val parent = fixtureParent(signed)
+    val nextParents = if (isParentKey(policy.body.key))
+      state.context.parents.put(policy.body.key, ParentLive({parent: parent, entry: initialEntry(parent)}))
+      else state.context.parents
+    {...state, context: {...state.context, registry: state.context.registry.put(policy.body.key, AuthorityRegistered(signed)),
+        parents: nextParents}, signing: state.signing.put(policy.body.key, CompletedSigning(signed))}
+  }
+  pure def canSign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): bool =
+    if (validSigningState(state) and validPolicy(policy) and policyParentDependencies(policy.body).subseteq(AUTHORITY_KEYS))
+      match state.signing.get(policy.body.key) {
+        | PreparedSigning(checked) => checked.policy == policy and checked.signer == signer
+            and signer == policy.body.key.principal and Set(0, 1).contains(token)
+            and state.context.registry.get(policy.body.key) == AuthorityUnused
+            and checked.snapshot == signingSnapshot(state.context, policy.body)
+            and validAuthorityContext(applySign(state, policy, signer, token).context)
+        | _ => false
+      }
+    else false
 }
