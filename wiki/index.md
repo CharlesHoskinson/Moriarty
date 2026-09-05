@@ -33,7 +33,8 @@ will grow by merging evidence into durable topic pages.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, branch-only S02 foundation progress, Council restart status,
   historical Foreman repair attempts, the Moriarty-only workflow reset,
-  four-alternative S02 coverage, and next falsification test.
+  four-alternative S02 coverage, delegated design, the branch observation-carrier
+  implementation, and next falsification test.
 
 ## Active specification artifacts
 

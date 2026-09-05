@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T07:43:00Z
+updated_at: 2026-09-05T08:10:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -827,3 +827,40 @@ The Astra route used the explicitly selected native model after its CLI credenti
 failed before proposing. Fable metadata reports the requested canonical model
 plus auxiliary Haiku usage; Grok reports the requested alias's `grok-4.6-build`
 route. These observations are not model-identity attestations or Council admission.
+
+### First implemented unit from the delegated design
+
+**CLM-0145.** Experiment observation: the S02 branch now contains the neutral
+observation carrier, structural/emission predicates, concrete example harness,
+and deterministic tests. The reviewed correction is committed at
+`45883ba949f18f580b14c6cd17303b719ef8f700`. The current receipt reports 37 passing
+observation tests and both declared-example witnesses in 1,000 sampled traces.
+These observations check supplied examples; they do not execute a candidate,
+authorize effects, refund escrow, or establish Core correspondence.
+
+Test-first construction preserved fail-closed stubs and failing positive tests.
+Self-review added failing cases for wallet-to-wallet effects and multiple deposits.
+An independent GPT-6 source review then found the missing frozen-Core
+nonnegative-time constraint and a public rollback coverage gap. Three additional
+negative-time tests failed before the guard correction. The final tests cover
+that guard and all rollback dimensions through the public validator. The narrow
+re-review remains pending at this record; no Council gate is claimed.
+
+Claim metadata:
+
+- Sources: SRC-0035 delegated design; SRC-0033 comparison boundary; frozen Core source at the branch commit below.
+- Repository: local Moriarty, branch `s02-model-comparison`, commit `45883ba949f18f580b14c6cd17303b719ef8f700`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators on that branch: `specs/quint/s02/observations.qnt`, `observations_harness.qnt`, `observations_test.qnt`, and `evidence/s02-model-comparison/observations/current.json`.
+- Evidence: the current pointer selects `minimum-time-correction/manifest.json`; initial receipts and red commits remain preserved.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: local executable tests, sampled structural checks, and independent source review.
+- Scope: first common-foundation unit; unchanged Core `0.0.0-e00.2`.
+- Evidence kind: experiment observation.
+- Reproduction: reproduced at the pinned content; raw command output and exact source hashes are preserved on the branch.
+- Confidence: high for the recorded outcomes, not for unperformed correspondence or authorization work.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+Next implement branch policies and neutral plan views, followed by signing,
+execution verification, atomic parent transitions, and financial recovery under
+both profiles. All four candidate representations, final model checking, S01
+Council backfill, S03–S15, and all 24 XML release gates remain open.

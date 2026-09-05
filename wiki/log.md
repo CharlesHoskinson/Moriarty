@@ -346,3 +346,12 @@ with explicit majority choices and preserved dissent. Superseded the earlier typ
 sketch and queued observation tests before authorization implementation. Private
 reasoning and credentials were not imported. This is delegated design signoff,
 not strict Council admission, architecture selection, or an implementation gate.
+
+## [2026-09-05] implementation | Execute the first common Quint unit
+
+Recorded CLM-0145 for S02 branch commit
+`45883ba949f18f580b14c6cd17303b719ef8f700`. Preserved initial failing tests,
+emission regressions, independent review findings, and the corrected 37-test
+observation carrier with sampled declared-example witnesses. The source remains
+on the experimental branch pending further review and integration. Authorization,
+recovery, candidate execution, correspondence, and all affected gates remain open.
