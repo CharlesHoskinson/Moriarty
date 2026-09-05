@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T02:24:03Z
+updated_at: 2026-09-05T03:07:37Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -627,3 +627,34 @@ dispatch. Then bind the requested and observed model-route evidence to the
 review record. Resume Council only after the runtime contract can preserve the
 immutable review bytes, ready-token hash, contract hash, prompt hash, and
 reviewer identity without post-response stamping.
+
+### Council repair candidate, not gate completion
+
+**CLM-0139.** Repository observation: Foreman now has a Task 1 candidate at
+`ac7c2deff6e39144c29836611ee85800ffed41c8` on branch
+`foreman/council-binding-20260905/implement/binding`. It adds canonical
+ready-token hashing and an immutable review-delivery preparation boundary.
+The worker round ended incomplete. Test typing errors and missing report
+evidence prevent acceptance. The single-review execution path remains unimplemented.
+No reviewed fix has reached GitHub, and no Moriarty Council gate passed.
+
+A correction dispatch stopped before provider execution with the scanner's
+`bound_exceeded` result. The wrapper described this as secret material, but
+the scanner did not report a secret finding. Removing the unused root
+dependency install from the worktree restored the unchanged scan to `clean`.
+The install remains recoverable outside the worktree. Council dependencies
+remain installed. The original execution contract governs the resumed attempt.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council and S02 obligations, and SRC-0033 at the execution-evidence boundary.
+- Local locators: Foreman commit above and Moriarty checkpoint fact 26.
+- External run receipts: `/home/charl/.foreman/runs/council-binding-20260905/`, including `execution-contract.json` and `secret-scan-open.trace`.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, experimental branch identified above.
+- Observed at: 2026-09-05T03:07:37Z. Commit date: 2026-09-05 UTC.
+- Authority: local repository and execution observations.
+- Scope: unreleased Council enablement only. Moriarty Core scope remains `0.0.0-e00.2`.
+- Evidence kind: repository observation and experiment observation.
+- Reproduction: partially reproduced. The scan result was reproduced, but Task 1 acceptance and Council execution remain pending.
+- Confidence: high for the committed candidate and scan disposition.
+- Lifecycle status: S3. No release, integration, or Council-approval claim.

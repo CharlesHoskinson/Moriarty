@@ -227,3 +227,13 @@ source and binary context, protected live work, and the official 42-page Grok
 diagnosis, complete-card coverage, and explicit scrutiny of cleanup claims.
 The XML parser accepted the assignment. No root cause, remediation, Council
 approval, or containment guarantee follows from creating this prompt.
+
+## [2026-09-05] checkpoint | Resume the original v1.3 workstream
+
+Recorded Foreman candidate `ac7c2deff6e39144c29836611ee85800ffed41c8`
+and its incomplete status in research-journal claim CLM-0139. Task 1 needs
+correction. Task 2 and all requested Council gates remain pending.
+Recorded the scanner resource-limit refusal separately from a secret finding.
+The unchanged scanner passed after the unused root dependency install left
+the worktree. The install remains recoverable in the external run directory.
+No security policy changed, no GitHub merge occurred, and no gate passed.

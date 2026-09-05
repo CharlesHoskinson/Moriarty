@@ -32,7 +32,7 @@ will grow by merging evidence into durable topic pages.
   backend stop test, and incremental decision graph.
 - [Research journal](research-journal.md) — iteration decisions, semantic scope,
   evidence state, branch-only S02 foundation progress, Council restart status,
-  and next falsification test.
+  incomplete Foreman delivery candidate, and next falsification test.
 
 ## Active specification artifacts
 
