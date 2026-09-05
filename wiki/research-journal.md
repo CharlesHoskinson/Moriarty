@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T22:45:00Z
+updated_at: 2026-09-05T23:52:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1922,3 +1922,40 @@ experimental branch. Evidence is under
 `evidence/s02-candidate-a-completion/a5/corpus-task2/` on that branch. Full A4
 native export/replay, Task6 acceptance, full A5, Council, integration and
 publication remain open. No Foreman development resumed.
+
+## CLM-0175 — Funding-pilot compilation stop and reproduced alias control
+
+Experiment observation: resume intake revalidated the preserved Task3 source,
+five terminal command receipts and the original archive. Prefix checks and
+both sampled runs passed in those receipts. Original compilation failed with
+QNT404 `AuthorityKey`, retaining empty stdout. Factored compilation and all
+model-checker commands remain unperformed. Empty stdout is not a successful
+generated-input baseline.
+
+A separately reviewed generic-alias control reproduced the suspected frontend
+mechanism with the same pinned Quint runtime. The original toy typechecks but
+fails compilation with QNT404 `Key`. A second driver adds one explicit alias
+import and changes only its module name; both commands then exit 0. Root and
+an independent reviewer checked original source/runtime pins, archives and
+outer/child exits, and inspected the complete generated init/step/safety bodies.
+No model checker or simulator ran in this control. Inference: this supports
+an explicit-import compilation view for the actual adapters; that proposed
+remedy has not been executed or admitted.
+
+Repository observation: experimental commit `a09d34a` preserves both units at
+`evidence/s02-candidate-a-completion/a5/pilot-compile-stop/` and
+`evidence/s02-candidate-a-completion/a5/alias-visibility-control/`. The control
+archive SHA256 is
+`9b42e0a060bfad2c6338da4b31111a70ec97588bf8789a062608b4c57287cc36`.
+The actual Moriarty model and frozen runtime bytes remain unchanged.
+
+Open question: the earlier A4 Task6 run has no terminal receipt and its old
+session cannot be reattached in this resumed turn. Its partial output cannot
+close the gate or establish process liveness. Original artifacts remain in
+place; no duplicate run was launched.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope bounded compiler diagnosis; observed date 2026-09-05 UTC; reproduction
+reproduced for the four frontend commands and receipt intake; confidence high
+for those observations; lifecycle S3 experimental branch. Actual-model repair,
+paired compilation-size review, A4/A5, Council and integration remain open.

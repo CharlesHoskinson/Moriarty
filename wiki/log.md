@@ -601,3 +601,14 @@ the independently validated 515-member lossless archive. Session fact93 and
 scoped measurement38 record this boundary. Task3 is dispatched through tests,
 sampling and paired compile only; root's generated-input gate precedes checker
 execution. Full A4/A5, Council and implementation integration remain open.
+
+## [2026-09-05] resume | Diagnose the funding-pilot compilation stop
+
+CLM-0175 records experimental `a09d34a`: fresh intake of the preserved pilot
+source and original receipts, followed by a reviewed four-command alias
+visibility control. The tiny original typechecks and fails compilation;
+the direct-import variant typechecks and compiles. Original failures and
+successful control bytes are archived and independently reviewed. No actual
+pilot remedy or checker run occurred. The roadmap now names the compilation
+view and paired-input gate. A4 Task6 terminal ownership remains unresolved;
+its old session was not restarted. Full A4/A5 and the XML program remain open.

@@ -124,8 +124,10 @@ compatibility amendment `4465863` then replaces nonworking parameterized exports
 with exact literal-bound driver templates. Correction `5843ff6` changes the native
 variable-order expectation based on a real toy trace; all 79 tests pass again.
 These are focused synthetic tests, not actual 78-shard package admission.
-The complete Task6 plan `cd06756` is adopted, its substitution RED is recorded,
-and the broad pre-export synthetic run is active against frozen source. Producer
+The complete Task6 plan `cd06756` is adopted and its substitution RED is recorded.
+The broad pre-export synthetic run has no terminal receipt at resume; its old
+session cannot be reattached here, so completion and process liveness remain
+unknown. Preserve the original run and resolve ownership before native export. Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
 aggregate recursive typecheck, all12native tests,13Python tests and independently
 audited15-stage original receipts. Its archive retains3230members, including
@@ -148,10 +150,19 @@ source members, exactly 244 tests per side, six equivalence tests, both
 the Core53 comparison. Its 515-member original archive is preserved losslessly
 in 15 bounded parts with independent byte validation. The missing-uv failure and later exact-alias probe
 failure remain intact; the reviewed offline real-uv/verified-symlink corrections
-change neither test bytes nor requested child commands. Task3 is dispatched only
-through exact prefix tests, samples and paired compilation. Root must inspect
-both generated inputs and their size/resource metrics before either depth-five
-checker command. No funding-pilot model-checking pass is claimed.
+change neither test bytes nor requested child commands. Task3 reached a preserved
+compilation stop: prefix checks and both sampled runs passed, but original
+compilation exited 1 with QNT404 `AuthorityKey`. Factored compilation and all
+checker invocations remain unperformed. Resume intake revalidated the original
+source, five terminal receipts and lossless archive. A separately reviewed tiny
+generic-alias control then reproduced the compile-only failure; adding one
+explicit alias import made that toy compile. This is a frontend diagnosis,
+not a repaired actual pilot or H1 result. The next gate is a reviewed
+compilation view preserving original files and semantic bodies, followed by
+the prescribed validation and paired generated-input/resource inspection
+before either depth-five checker command. Evidence is under experimental
+`a5/pilot-compile-stop/` and `a5/alias-visibility-control/`.
+No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 

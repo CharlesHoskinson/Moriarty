@@ -24,6 +24,9 @@ them merely because full A5 remains open.
 - [x] Audit the complete 244-test original and factored corpora, six finite full-record equivalence tests and both 100-sample lifecycle witness inventories (`9ccbf0e`).
 - [x] Preserve both environment failures, exact runtime amendments, all 441 original Python identities and the complete Core53 comparison (`9ccbf0e`).
 - [x] Retain all 52 original command stages in a lossless independently audited archive and obtain scoped nonauthor review (`9ccbf0e`).
+- [x] Preserve and independently revalidate Task3's prefix/sample evidence and original QNT404 compilation stop (`a5/pilot-compile-stop/` on the experimental branch).
+- [x] Reproduce the alias-visibility mechanism in an isolated four-command frontend control, retaining original failure and explicit-import success (`a5/alias-visibility-control/`).
+- [ ] Review and validate a compilation view for the actual original/factored pilots without changing frozen source bytes or semantic bodies.
 - [ ] Complete Task3 prefix tests, samples and paired compilation; review generated inputs before any checker invocation.
 - [ ] Obtain terminal bounded funding-pilot safety and nonvacuity results under the adopted limits.
 - [ ] Adopt and complete the full A5 property/domain campaign; a pilot does not close these obligations.
