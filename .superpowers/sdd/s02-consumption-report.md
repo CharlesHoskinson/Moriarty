@@ -105,10 +105,36 @@ the complete claimed parent, `paid=5`, `remainingAllowance=5`, `revision=2`,
 used slot one, and `cancelled=true`.
 
 The requested focused Python test reported `3 passed`. The S01 validator
-recomputed S01-01 through S01-10 as true. `git diff --check` exited `0`.
+recomputed S01-01 through S01-10 as true. The worker's pre-staging
+`git diff --check` exited `0`; it did not include the untracked receipts.
 All exact final commands, raw streams, exit codes, output hashes, and ITF hashes
 are recorded in `evidence/s02-model-comparison/consumption/final/commands.txt`
 and `manifest.json`.
+
+## Controller verification and integration hold
+
+The controller committed the candidate at
+`8b905114c1cec79faf555974c0267f183ca31399`, without integrating it into main.
+The controller separately reran all three typechecks, sixteen Quint tests,
+the full Python suite (`285 passed in 8.95s`), and the ten S01 checks.
+All these commands exited zero. The controller also checked all four source
+digests, both ITF digests, and both complete terminal states.
+
+The staged full-diff whitespace check exited `2`. A fresh
+`git diff 7d1517c 8b90511 --check` reproduces trailing-space findings only in
+`pure/repl.stdout.txt`, `pure/repl-corrected.stdout.txt`, and
+`pure/repl-final.stdout.txt` under the consumption evidence directory. These
+are raw Quint output bytes. They are preserved unchanged. The source-only
+`git diff 7d1517c 8b90511 --check -- specs/quint/s02` exits zero. Do not
+describe the complete candidate diff as whitespace-clean or treat the earlier
+unstaged check as coverage of newly added receipts. The controller's initial
+command batch committed the candidate after the check failed; that commit is
+not an acceptance decision.
+
+The implementation remains pending the requested three-provider Council review.
+The Council runtime binding gap and model-identity policy decision are recorded
+on main in `docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md`.
+No package gate or integration approval follows from this verification.
 
 ## Diagnostics and corrections
 

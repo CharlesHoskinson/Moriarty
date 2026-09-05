@@ -21,13 +21,20 @@ fresh receipts and explicitly retrospective process reconstruction. Original raw
 process output was unavailable. Do not mark this task complete yet.
 The controller independently ran ten Quint tests and a 100-sample safety run
 with both deposit/refund witnesses at 100/100. This is a non-candidate harness.
-The next consumption foundation plan is on main at 9450d15. It has not executed.
+The consumption foundation plan at 9450d15 was implemented at 8b90511.
+Sixteen Quint tests, all three typechecks, sampled witnesses, and two complete
+cancellation paths are recorded. The controller reran the tests and regression
+checks. This remains an unintegrated bookkeeping candidate, not a gate result.
+The full candidate whitespace check detects trailing spaces in raw REPL output;
+those bytes are preserved and the scope limitation is documented in the report.
 The user added mandatory GPT-6 Astra/Grok 4.6/Fable 5.1 council review for gates.
 Main 6e83f56 records the policy and S01 backfill queue in docs/COUNCIL_REVIEWS.md.
 Foreman runtime verification and soft setup passed. Exact council canaries and
-review quorum remain pending. Separate agent foreman_model_update is updating
-the Foreman skill from Scrapling-retrieved official model cards. Do not confuse
-that parallel Foreman task with Moriarty implementation or council approval.
+review quorum remain pending. The parallel Foreman skill update was committed
+at 244e7c0 and 45121c7. Main b0141f9 records actual model routing probes and
+a missing post-preflight review-binding carrier in the Council runtime.
+User direction is pending on that runtime change and CLI identity policy.
+Do not confuse setup probes or the Foreman skill update with Council approval.
 After these foundations, build the full authority interface and four distinct
 candidate representations, then correspondence/mutations/Quint Apalache checking
 and selection. No candidate model or S02 gate has passed.

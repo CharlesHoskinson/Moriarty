@@ -20,6 +20,12 @@ the 10,000-sample safety/witness run, both intentional negated-witness
 violations, JSON ITF inspection, focused Python check, S01 validator, and
 diff check.
 
+The recorded worker diff check ran before the new files were staged. It did
+not inspect untracked receipts. The controller's complete candidate diff check
+exits `2` for trailing spaces in the three raw REPL stdout files under `pure/`.
+Those bytes remain unchanged. Source-only whitespace checks pass. See the
+task report for the exact comparison commands; no full-diff pass is claimed.
+
 The two top-level ITF files are the requested complete terminal paths. Their
 `status: violation` values refer only to intentional negated witnesses used to
 produce reaching traces. The traces demonstrate cancellation reachability;
