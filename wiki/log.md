@@ -414,3 +414,13 @@ of the new evaluator. Archived both behavioral RED source closures, final raw
 receipts, and scoped native reviews. Task 3 follows without another common-design
 vote. Candidate correspondence, Council acceptance, and XML gates remain open;
 the full product goal is active, not a guaranteed overnight completion.
+
+## [2026-09-05] implementation | Execute Candidate A control flow and ordered inputs
+
+Recorded CLM-0152 for source `d3f5dd6` and evidence `a0fb15f`. If/When,
+bounded quiescence, and ordered input application now execute against the frozen
+semantics. Independent tests cover the maximum reduction path and input-boundary
+cases; separate Python installment vectors remain reference-only. Preserved
+source-bound failures and passing receipts, including the boundary report's
+explicit archive limit and test-only correction. Task 4 is underway; no Council,
+correspondence, model-checking, candidate selection, or XML gate is claimed.

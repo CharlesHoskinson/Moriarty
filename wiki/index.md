@@ -35,7 +35,7 @@ will grow by merging evidence into durable topic pages.
   historical Foreman repair attempts, the Moriarty-only workflow reset,
   four-alternative S02 coverage, delegated design, the branch observation-carrier
   implementation, atomic settlement, rejected attempts, and executed installment
-  races with signed recovery, Candidate A's finite domain and Close/Pay interpreter,
+  races with signed recovery, Candidate A's reductions and ordered input interpreter,
   and next falsification test.
 
 ## Active specification artifacts

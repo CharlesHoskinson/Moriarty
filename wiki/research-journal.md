@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T10:31:17Z
+updated_at: 2026-09-05T10:44:19Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1132,3 +1132,49 @@ application. Full transaction rollback, candidate authority integration, A–D
 comparison, exact-provider Council acceptance, and all broader XML gates remain
 open. The product goal is active; no uninterrupted-runtime or morning-completion
 guarantee is inferred from that status. Foreman development remains closed.
+
+### Candidate A executes control flow and ordered input application
+
+**CLM-0152.** Experiment observation: source
+`d3f5dd6e60ca937dfc4840d34204bf00436bdc48` implements the frozen If/When
+reductions, ordered input scan, and fixed 22-call reduction-to-quiescence fold.
+Every admitted constructor now has implemented reduction behavior. Optional
+choices preserve absence versus zero; deadline equality selects timeout before
+input application. A bounds mismatch does not prevent a later matching case
+from accepting, and nonpositive deposits require exact identity/quantity match.
+Finite-domain and internal-precondition diagnostics remain distinct from Core
+errors; whole-transaction evaluation is the next unit.
+
+Root receipts record 52 core tests, four independently authored boundary tests,
+and 327 Python tests passing. The maximum-path test executes 15 descending
+non-Close reductions and six canonical refunds before quiescence on call 22.
+It is a boundary witness, not exhaustive proof over the admitted program space.
+The separate boundary suite also tests maximum-deposit potential preservation
+and actual-clock retention. A wrong test expectation omitted the terminal Close
+refund after Pay; only the test was corrected, with no product defect inferred.
+
+The 22 new independent Python workload tests at `c8cedc1` exercise the proposed
+two-When installment tree, separate five-unit fills, ten/five owner refunds,
+deadline commit/reject pairs, and complete invalid-request rollback. They import
+only frozen Core constructors/evaluation, not the Quint evaluator or any authority
+layer. Agreement-legal recovery does not establish authorization to recover.
+
+Claim metadata:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 adopted common design.
+- Repository: local Moriarty, branch `s02-model-comparison`, source commit above, evidence `a0fb15f9a3d92c67cdac214bbd87e57ce788adfe`.
+- Local locators on that branch: `specs/quint/s02/candidate_a_core.qnt`, `candidate_a_types.qnt`, `candidate_a_core_test.qnt`, `candidate_a_boundary_test.qnt`, `tests/test_s02_candidate_a_installment_reference.py`, and `evidence/s02-model-comparison/candidate-a-control-flow/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-candidate-a-control-flow.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: deterministic author tests, independent root reruns, scoped nonauthor native source reviews.
+- Scope: Candidate A plan Task 3 and selected independent Python workload vectors; frozen Core unchanged.
+- Evidence kind: experiment observation.
+- Reproduction: primary-author RED six-file import closure and exact root final receipts preserved; boundary-author original RED test source/full raw output not archived, diagnostic excerpt and correction disclosed.
+- Confidence: high for the recorded bounded results, not unperformed correspondence or exhaustive checking.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+Task 4 is assigned: full transaction source ordering, exact rejection rollback,
+and before/input/after evaluation. Stateful candidate traces, neutral projections,
+independent correspondence, A–D comparison and selection, exact-provider Council
+acceptance, and all broader XML gates remain open. Continue Moriarty; do not
+reopen Foreman repairs or substitute these native reviews for Council acceptance.
