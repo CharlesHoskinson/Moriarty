@@ -284,3 +284,13 @@ recorded separately from its successful deterministic gate and fresh reports.
 Independent queue task 1460 passed the complete Council package check.
 Queue task 1461 starts the missing single-review execution implementation.
 These intermediate results do not complete the Foreman repair or S02.
+
+## [2026-09-05] recovery | Preserve the unfinished review runtime
+
+Recorded CLM-0141 and checkpoint fact 35. Preserved the 25-file Task 2 draft
+in Foreman commit `1fb1548d02c98e81ce9b7953a26cca2d2750bdf8` and archived
+its incomplete reports and raw test receipts. Selected vendor terminal
+metadata identifies the 75-turn limit as the stop reason. Dispatched bounded
+completion task 1462 through the same successor contract's resume allowance.
+The watchdog was armed. These are historical dispatch facts, not continuing
+liveness, passing checks, independent review, or publication claims.

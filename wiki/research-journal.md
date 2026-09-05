@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T03:43:29Z
+updated_at: 2026-09-05T04:39:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -691,3 +691,28 @@ Claim metadata:
 - Reproduction: handoff comparison reproduced; final package verification and reviews pending.
 - Confidence: high for authorization, contract creation, and preserved commits.
 - Lifecycle status: S3. No GitHub merge or Moriarty Council gate follows.
+
+### Review-runtime recovery checkpoint
+
+**CLM-0141.** Repository observation: the successor's unfinished Task 2 draft
+is preserved at `1fb1548d02c98e81ce9b7953a26cca2d2750bdf8`. The Grok event
+log records `max_turns_reached` with limit 75 at 2026-09-05T04:19:39.568Z.
+This terminal record does not establish a PID-namespace failure. Both worker
+reports remained incomplete. The controller archived those reports and the
+raw test logs before dispatching recovery task 1462 under the same successor
+contract's resume allowance. No verification, Council, or release approval
+follows from this recovery checkpoint.
+
+Claim metadata:
+
+- Sources: SRC-0031 at the Council obligations and SRC-0033 at the execution-evidence boundary.
+- Local locator: Moriarty checkpoint fact 35.
+- External receipts: `/home/charl/.foreman/runs/council-binding-20260905-successor1/task2-attempt1-receipts/` and `task2-resume1.md` in the same run directory.
+- Repository: `https://github.com/CharlesHoskinson/foreman.git`, default branch `main`, candidate branch `foreman/council-binding-20260905-successor1/implement/binding-fresh`, full commit above.
+- Observed at: 2026-09-05T04:39:00Z. Commit date: 2026-09-05 UTC.
+- Authority: local repository and vendor terminal metadata.
+- Scope: unreleased Council enablement; Core remains `0.0.0-e00.2`.
+- Evidence kind: repository observation.
+- Reproduction: partially reproduced; recovery and final acceptance remain pending.
+- Confidence: high for preserved commit, stop metadata, and dispatch.
+- Lifecycle status: S3. No Moriarty Council gate or GitHub merge is claimed.
