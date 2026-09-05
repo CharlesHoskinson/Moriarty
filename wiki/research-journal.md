@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T19:39:29Z
+updated_at: 2026-09-05T19:56:16Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1678,3 +1678,34 @@ failed export is claimed. A case-sharded addendum is being planned, preserving
 all78cases/1557events and full records, original receipts and mutant obligations.
 It changes transport, not model semantics. A4–A7 and exact-provider Council stay
 open; Foreman development remains closed and no providers were dispatched.
+
+### Candidate A actual computation observer and bounded transport
+
+**CLM-0169.** Experiment and repository observation: producerTask0/1 `5616bcd`
+implements the actual second-evaluation observer, cancellation-without-Core
+behavior and ordered plan computation records. Two inventory tests and four
+Quint observer tests pass; recursive typecheck passes. Root audited all nine
+original command stages, every before/after source snapshot,8102runtime pins
+and exact stream hashes. Genuine inventory/computation controls are retained.
+Two additional parser failures are preserved; a narrow sequential-match syntax
+correction changes no predicate. Diagnostic/order tests are supplemental GREEN,
+not claimed failing-first controls. This is not full case execution or replay.
+
+Transport plan `5829639` specifies78 native case shards and schema3 admission,
+with all1557events, complete records, local adjacency and explicit unsigned
+per-case initialization. It does not fabricate cross-shard edges. Separate
+staging/root-case-pin/seal phases prevent producer self-admission. Utility plan
+`22cdec6` specifies strict standard-library streaming JSON and original controls.
+These CT001–010/ST001–009 EARS obligations have corresponding OpenSpec scenarios;
+strict A4 specification validation passes on main. That validation is structural,
+not runtime evidence. Both implementation tasks are now dispatched.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local producer observer unit and adopted transport plans;
+observed date2026-09-05 UTC; reproduction reproduced for named checks;
+confidence high for those observations; lifecycle S3 experimental branch.
+Original producer evidence is under
+`evidence/s02-candidate-a-completion/a4/producer-task1/` on that branch.
+The future shared JSON utility is a disclosed common lexical dependency, not
+shared authority semantics. Largest-case native feasibility, complete exports,
+independent replay, bounded model checking, Council and integration remain open.

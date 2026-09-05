@@ -109,9 +109,14 @@ implement strict carriers, actual frozen Python Core evaluation, independent
 authority rules, all expected ordinary/negative histories and provenance checks.
 All17 current tests pass; compiling negative controls and exact original
 source/runtime receipts are independently audited. Actual integrated exports and
-Task6 mutant acceptance remain open. The two-long-ITF transport exceeds installed
-Node's hard single-string cap; a case-sharded transport addendum is being reviewed
-without removing any of the78cases/1557events.
+Task6 mutant acceptance remain open. Producer observer5616bcd now passes its
+recursive typecheck and four computation/order/diagnostic/cancellation tests;
+two inventory tests also pass. Root admitted nine original receipt stages.
+The two-long-ITF transport exceeds installed Node's hard single-string cap;
+case-sharded transport5829639 and streaming utility plan22cdec6 are adopted
+without removing any of the78cases/1557events. Their CT/ST EARS and OpenSpec
+requirements are recorded; strict structural validation passes. Producer case
+lowering/native wrappers and streaming reader implementation are dispatched.
 
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;

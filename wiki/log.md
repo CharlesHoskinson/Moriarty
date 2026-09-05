@@ -545,3 +545,11 @@ its38-source receipts and shared runtime bytes are retained. Full factored corpu
 comparison is dispatched. The two-long-ITF export exceeds Node's string cap;
 a coverage-preserving case-sharded transport is under review. Actual integrated
 replay, bounded model checking, Council and integration are not yet accepted.
+
+## [2026-09-05] execution | Record actual computations and adopt bounded transport
+
+CLM-0169 records producer `5616bcd`: four Quint/two inventory tests, recursive
+typecheck, original controls and root nine-stage/8102runtime-pin audit. Plans
+`5829639`/`22cdec6` preserve78cases/1557events through native shards and strict
+streaming admission. CT/ST EARS and OpenSpec scenarios validate structurally.
+Case lowering and reader implementation are dispatched; full A4 remains open.
