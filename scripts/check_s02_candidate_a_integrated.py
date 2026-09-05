@@ -45,7 +45,7 @@ QNT_TESTS=('specs/quint/s02/candidate_a_integrated_wrappers_typecheck.qnt',
     'specs/quint/s02/candidate_a_authority_installment_test.qnt','specs/quint/s02/candidate_a_authority_swap_test.qnt')
 RAW_NAMES = frozenset(f'raw/case-{i:03d}.itf.json' for i in range(78))
 CASE_NAMES = frozenset(f'cases/case-{i:03d}.json' for i in range(78))
-VARS=('authorityState','latestEvent','caseIndex','cursor')
+VARS=('authorityState','caseIndex','cursor','latestEvent')
 EVENT_FIELDS=frozenset(('case_id','profile','sequence','kind','arguments','observed_guard','computations','before','after','provenance'))
 RENAME={'case_id':'caseId','profile':'profile','sequence':'sequence','kind':'kind','arguments':'arguments','observed_guard':'observedGuard','computations':'computations'}
 

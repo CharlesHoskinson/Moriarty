@@ -161,7 +161,7 @@ def synthetic_shard(tmp_path, ordinal=36, raw_change=None, case_change=None):
     meta = {'format': 'ITF', 'format-description': 'https://apalache-mc.org/docs/adr/015adr-trace.html',
             'source': ENTRIES[d['case_id']], 'status': 'ok',
             'description': 'synthetic unit; not generator evidence', 'timestamp': 0}
-    raw = {'#meta': meta, 'vars': list(VARS), 'states': states}
+    raw = {'#meta': meta, 'vars': ['authorityState', 'caseIndex', 'cursor', 'latestEvent'], 'states': states}
     if raw_change is not None: raw_change(raw)
     raw_path = tmp_path/f'raw-{ordinal}.json'
     with raw_path.open('wb') as stream:
