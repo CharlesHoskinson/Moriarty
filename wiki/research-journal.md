@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T10:44:19Z
+updated_at: 2026-09-05T11:39:46Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1178,3 +1178,60 @@ and before/input/after evaluation. Stateful candidate traces, neutral projection
 independent correspondence, A–D comparison and selection, exact-provider Council
 acceptance, and all broader XML gates remain open. Continue Moriarty; do not
 reopen Foreman repairs or substitute these native reviews for Council acceptance.
+
+### Candidate A transactions, projections, swap and installment execution
+
+**CLM-0153.** Experiment observation: transaction source
+`ea35cada6bf84a016ec568834242628ee8ccfa76` implements the full frozen decision
+tree and complete rejection rollback. Projection source
+`d4a714ce6013e8237ff9ef07b6b661c52a421e8c` exports every result field and derives
+ordered effects, including the deposit between pre-input and post-input payments.
+Root receipts at those milestones record 75 core tests, four boundary tests,
+327 Python tests, and 26 projection tests passing. Separate native evidence audits
+verified all 23 transaction and 34 projection pins; those audits did not rerun tests.
+
+**CLM-0154.** Experiment observation: swap harness source
+`3c648ec50c7eb63fd4fc78742846a722446f0892` begins with an empty agreement and
+real funding wallets. Actual transactions produce deposits, settlement, voluntary
+refunds, deadline cleanup and retained deadline-input rejection. Root independently
+ran 19 tests and 1,000 bounded Rust traces; all action witnesses were positive
+and every sampled trace reached terminal. There is no unconditional stutter or
+initializer-selected financial outcome. Diagnostics fail safety and are not Core
+rejections. Those local checks recompute the producer; they are not an independent
+semantic oracle or exhaustive verification.
+
+**CLM-0155.** Experiment observation: installment source
+`c002a8417f668c44fa8aa76ec5d5f31f6758c422` executes two separate five-unit fills
+through distinct When boundaries and actual ten/five-unit recovery refunds.
+Root independently ran 23 installment tests, 19 swap regression tests and 1,000
+bounded installment traces with every action witness positive and every trace
+terminal. A rejected recovery input at the deadline is retained before a real
+NoInput cleanup. The separate cancellation adapter retains the agreement, emits
+no effects and supplies NoCoreProjection; it does not fabricate a Core result.
+The initial minimum time is two, not the Python workload fixture's one; later
+correspondence must evaluate the actual exported before-state.
+
+Shared claim metadata for CLM-0153 through CLM-0155:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 adopted design.
+- Repository: local Moriarty, branch `s02-model-comparison`; exact source commits above.
+- Evidence commits: transaction `18d8a5ca0ef5fe1434306e4a2a3b45ea744e1c9d`; projection `4dfdb388d5129c5fa730dd7ef0458017bd0a484c`; harnesses `a4677cd985a540d9c560de2ad7d882495fc92b78`, archive audit `2b04d23e4ca33e30ce00ba52cc889a877c606e3f`.
+- Local locators on that branch: `evidence/s02-model-comparison/candidate-a-transactions/manifest.json`, `candidate-a-projection/manifest.json`, `candidate-a-swap/manifest.json`, and `candidate-a-installment/manifest.json`.
+- Reviews: `docs/superpowers/reviews/2026-09-05-moriarty-s02-candidate-a-transactions-projection-evidence.md`, `2026-09-05-moriarty-s02-candidate-a-swap.md`, `2026-09-05-moriarty-s02-candidate-a-installment.md`, and `2026-09-05-moriarty-s02-candidate-a-harness-evidence.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC; updated observation 11:39:46 UTC.
+- Authority: author tests, nonauthor root execution/source inspection, scoped native reviews. The harness author audited root-created archives, not its own source independently.
+- Scope: Candidate A plan Tasks 4–6, agreement-only semantics and projections; frozen Core/swap unchanged.
+- Evidence kind: experiment observation and repository observation.
+- Reproduction: exact root receipts, typed RED closures, author reports and six byte-identical raw harness ITFs preserved. All 58 harness manifest pins verified; a tool-version locator was clarified without changing author receipts.
+- Confidence: high for recorded bounded results; no unperformed correspondence or exhaustive checking claim.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+Task 7 remains in progress: a serialization-only exporter and independently
+implemented Python checker must compare actual raw results, projections and
+ordered effects. Early review found checker gaps in residual continuation,
+duplicate sparse-map keys, exact node identity and raw provenance linkage;
+the required regression controls and final actual-corpus comparison are not yet
+complete. No S02 or Council gate follows from a passing checker scaffold.
+Authority integration, alternatives B–D, architecture comparison/selection,
+exhaustive Quint/Apalache evidence, S03–S15 and all broader XML gates remain open.
+No Git remote is configured, so local commits are not GitHub publication.

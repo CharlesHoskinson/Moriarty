@@ -424,3 +424,14 @@ cases; separate Python installment vectors remain reference-only. Preserved
 source-bound failures and passing receipts, including the boundary report's
 explicit archive limit and test-only correction. Task 4 is underway; no Council,
 correspondence, model-checking, candidate selection, or XML gate is claimed.
+
+## [2026-09-05] implementation | Execute Candidate A transactions and workloads
+
+Recorded CLM-0153 through CLM-0155: full transaction rollback, complete neutral
+projections and ordered deposit effects, actual swap funding/settlement/refunds,
+and separate installment fills/recovery. Source milestones ea35cad, d4a714c,
+3c648ec and c002a84 are preserved on the S02 branch. Archived root tests and
+1,000-trace runs for each harness at a4677cd; archive audit at 2b04d23 verified
+58 pins and exact original ITF/report bytes. Independent Python correspondence
+is under implementation and review, not passed. No Council, authority integration,
+exhaustive verification, architecture selection or XML release gate is claimed.
