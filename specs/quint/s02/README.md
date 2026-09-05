@@ -25,8 +25,12 @@ a constructed signed context; run it with `--init=rejectionInit
 --step=rejectionStep`. Rejection preserves money and is not settlement.
 
 External evidence dispositions are trusted abstractions. They do not derive
-candidate semantics, cryptographic validity, or Core correspondence. Actual
-installment lifecycle coverage is a separate incremental harness. Candidate
+candidate semantics, cryptographic validity, or Core correspondence.
+`installment_harness.qnt` separately executes both-profile initial fill/cancel
+races, explicit stale-loser rejection, and then either both fills or a separately
+checked/signed recovery of ten or five. Its scope and root receipts are in
+`installment/`; it does not trace funding, time evolution, or a second concurrent
+slot-two/cancellation race. Candidate
 A–D execution, independent correspondence, mutation controls, Quint/Apalache
 checking, architecture selection, and requested Council gates remain required.
 

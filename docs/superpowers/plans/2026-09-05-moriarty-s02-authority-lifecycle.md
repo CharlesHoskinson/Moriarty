@@ -61,39 +61,48 @@ receipts below `evidence/s02-model-comparison/authorization/` and `execution/`.
 Progress note (2026-09-05): common evidence bindings and atomic commit code are
 implemented and reviewed at source `46fe589` / evidence `0d5926b`. The full
 signing-to-settlement harness covers prefunded swap escrow under both profiles.
-Keep the broader boxes below open until actual concurrent parent attempts,
-classified rejection, and both recovery paths execute. A constructed context or
-generic parent-update helper does not close a lifecycle obligation.
+The subsequent rejection unit is source `38cf13d` / evidence `4f3bb75`.
+Actual concurrent parent attempts and all three financial outcomes now execute
+under both profiles at installment source `d1c475f` / evidence `f4c7bc5`.
+The latter has independent root tests and sampled traces, not merely constructed
+parent contexts. Candidate semantics, exhaustive checking, and Council acceptance
+remain separate and open.
 
 - [x] Persistent signing: test-first carriers and pure guards; check -> sign
   stateful paths for both profiles. Reject wrong signer, altered checked policy,
   stale key/state/ledger/environment/parent dependency, and duplicate signing.
   Permit Alice and Bob checks to coexist and sign without mutual invalidation.
-- [ ] Full current evidence: test-first attempt/verification records and common
+- [x] Full current evidence: test-first attempt/verification records and common
   verification guard. Reject missing debit authority, effects-free unauthorized
   cancellation, missing/invalid evidence, artifact/plan/full-observation mutation,
   and stale time/context. Preserve separately prepared fill/cancel attempts.
-- [ ] Atomic fill: apply financial transfer and parent/authority consumption in
+- [x] Atomic fill: apply financial transfer and parent/authority consumption in
   one transition. First use consumes nonce 0 and retains exact parent; second use
   requires exact residual, uses slot 2 once, and couples revisions. Reject generic
   consumed-policy reuse, duplicate/out-of-order slots, and enlarged residuals.
-- [ ] Atomic cancellation: no transfer, but verified exact-parent cancellation
+- [x] Atomic cancellation: no transfer, but verified exact-parent cancellation
   authority is required. Exercise cancel-wins and fill-wins; record loser rejection
   without mutating money or authority. Re-resolve/reverify fresh cancellation after
   a first-fill winner. Cancelled accounting retains historical remaining allowance.
-- [ ] Atomic recovery: use separate nonce 1 and the complete check/sign/verify/
+- [x] Atomic recovery: use separate nonce 1 and the complete check/sign/verify/
   commit pipeline. Initial positive fixtures sign after cancellation is known.
   Refund actual escrow only if equal to the expected remaining fixture budget.
   Exercise recovery of 10 before any fill and 5 after first fill under both
   profiles, preserve cancelled parent accounting, reject a second refund, and
   prevent slot 2 after cancellation. Do not introduce policy supersession.
-- [ ] Real terminality and enabledness: completed payment or completed recovery
+- [x] Real terminality and enabledness: completed payment or completed recovery
   with no unresolved attempt. First fill is nonterminal. Any backend terminal
   stutter is explicitly terminal-guarded; no blanket stutter or artificial
   environment action may hide finite-domain deadlock.
 - [ ] For each new action, preserve meaningful failing tests, passing deterministic
   paths, and sampled reachability before proceeding. Typecheck concrete aliases;
   run effects/consumption/observation/policy regressions and the Python suite.
+  Coverage note: the installment author preserved development-stage RED reports,
+  not historical scaffold-source commits or a separate RED receipt for each thin
+  action. All 21 actions have reachable witnesses; root independently reran the
+  lifecycle/control suites and 1,000 sampled traces. Do not describe that narrower
+  evidence as the complete per-action archive. Earlier foundation regressions
+  remain separately pinned to their unchanged source bytes.
 - [ ] Independently review the complete common package and obtain the requested
   GPT-6 Astra / Fable 5.1 / Grok 4.6 Council gate reviews with dissent preserved.
   Proposal authorship is not implementation review. Never substitute helper-model

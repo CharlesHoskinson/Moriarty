@@ -61,3 +61,18 @@ validity is a trusted external-verifier abstraction, not effect derivation or
 cryptographic proof. No Core interpreter, candidate A–D semantics, independent
 correspondence, exhaustive model checking, Council acceptance, or release gate
 follows. Exact root runtime receipts are recorded separately from source review.
+
+## Final source and evidence review
+
+The same independent reviewer inspected the separately authored negative tests
+and all final receipts at `f4c7bc5`. Verdict: clean, with no source, test-semantic,
+or evidence discrepancy. All 18 pins match, and all 11 Quint sources match
+`d1c475f86ad0147d0ca1205eab05f2be694cee4f`.
+
+Root receipts support 12 lifecycle tests, nine independently authored negative
+tests, and 1,000 sampled executions of `installmentSafety`. All 28 witnesses are
+positive. Terminal outcomes are payment after/before 118/135, recovery-ten
+after/before 263/249, and recovery-five after/before 124/111; these sum to 1,000.
+Fresh Python and local S01 receipts report 286 tests and ten checks respectively.
+The development RED limitations and test-construction corrections are accurately
+disclosed. No additional runtime tests were performed by this evidence reviewer.
