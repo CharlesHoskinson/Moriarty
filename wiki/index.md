@@ -34,7 +34,8 @@ will grow by merging evidence into durable topic pages.
   evidence state, branch-only S02 foundation progress, Council restart status,
   historical Foreman repair attempts, the Moriarty-only workflow reset,
   four-alternative S02 coverage, delegated design, the branch observation-carrier
-  implementation, and next falsification test.
+  implementation, verified atomic settlement and rejected-attempt units,
+  and next falsification test.
 
 ## Active specification artifacts
 

@@ -1001,3 +1001,46 @@ Claim metadata:
 cryptographic proof. Generic parent commit helpers exist, but actual stateful
 fill/cancel races, rejected-attempt handling, and signed recovery paths remain
 next. S02, its Council gates, A–D comparison, and the full XML program stay open.
+
+### Rejected attempts retain evidence without moving funds
+
+**CLM-0149.** Experiment observation: branch source `38cf13d` and evidence
+`4f3bb75` implement explicit rejection at verification and commit boundaries.
+Each rejection retains the original attempt, supplied evidence, current context,
+derived reason, and boundary stage. Rejection changes only the attempt cell;
+it cannot reverse a winning commit or count as financial settlement.
+
+Pinned corrected runs report 21 rejection tests, two rejection pipeline tests,
+and 1,000 sampled traces from a constructed signed swap context. There are 504
+missing-proof rejections and 496 verified attempts followed by an anchor change
+and stale-context rejection. The invariant checks preserved money, registry,
+parent accounting, candidate state, and exact nonterminal enabledness. Standalone
+typecheck, eight settlement regressions, 42 adversarial regressions, 286 Python
+tests, and ten local S01 checks passed in these branch runs.
+
+Independent native Astra source review found one diagnostic issue: an accepted
+Core projection hid a consumed-slot conflict behind a generic unauthorized
+label. The failing regression, correction, and clean narrow re-review are
+preserved. Final independent evidence review checked all 25 pins, including
+13 Quint sources matching the source commit, with no discrepancy. These reviews
+are scoped native checks, not Council acceptance.
+
+Claim metadata:
+
+- Sources: SRC-0035 adopted design; SRC-0033 comparison boundary.
+- Repository: local Moriarty, branch `s02-model-comparison`, source `38cf13d`, evidence `4f3bb75`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators: `specs/quint/s02/execution.qnt`, `rejection_test.qnt`, `rejection_harness.qnt`, `rejection_pipeline_test.qnt`, and `evidence/s02-model-comparison/rejection/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-rejected-attempts.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: deterministic tests, sampled rejection traces, independent source review and correction re-review.
+- Scope: common rejected-attempt records; trusted external evidence; constructed signed swap base; unchanged frozen Core.
+- Evidence kind: experiment observation.
+- Reproduction: source and receipt pins with complete terminal outputs; disabled-scaffold RED at `8d78662` and classifier RED at `1a23366`.
+- Confidence: high for these recorded results, not unperformed candidate execution, cryptography, or exhaustive checking.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+The parallel installment harness remains unfinished at this checkpoint. Its
+initial signing/race setup is development work, not full lifecycle evidence.
+Continue actual race winners, rejected losers, second-fill completion, and
+separately signed recoveries of ten or five. No S02, Council, A–D selection, or
+XML release gate is closed. Foreman development remains closed.

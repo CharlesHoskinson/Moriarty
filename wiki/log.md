@@ -384,3 +384,12 @@ the correction and complete RED/GREEN reports are preserved. Independent source
 and evidence review is clean. Candidate semantics and cryptography are not
 derived by trusted validity flags. Next are classified rejection, parent races,
 and signed recovery, with no S02 or Council gate claimed.
+
+## [2026-09-05] implementation | Retain classified rejected attempts
+
+Recorded CLM-0149 for corrected source `38cf13d` and evidence `4f3bb75` on the
+S02 branch. Rejection preserves original observations and proofs without moving
+money. A review-found diagnostic issue was reproduced before correction; source
+re-review is clean. Corrected deterministic, sampled, and regression receipts
+are pinned. The parallel installment lifecycle remains in progress, with no
+financial recovery, S02 acceptance, Council gate, or architecture choice claimed.
