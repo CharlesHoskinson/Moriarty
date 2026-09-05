@@ -9,11 +9,11 @@ and recovery transitions before starting candidate A–D semantics.
 the source of design choices. No new human approval or repeated proposal vote.
 No Foreman repairs. Frozen Core and prior evidence remain immutable.
 
-**Files:** `specs/quint/s02/authorization.qnt` for pure lifecycle guards and
-updates; concrete `authorization_harness.qnt` and `authorization_test.qnt` for
-state transitions and deterministic paths; additional scenario files if needed
-to keep fixture responsibilities separate. Receipts live below
-`evidence/s02-model-comparison/authorization/`.
+**Files:** `specs/quint/s02/authorization.qnt` owns signing and context validation;
+`execution.qnt` owns per-operation evidence and atomic execution. Each has its
+own concrete `_harness.qnt` and `_test.qnt`; additional scenario files keep
+fixture responsibilities separate. These remain one common package, with
+receipts below `evidence/s02-model-comparison/authorization/` and `execution/`.
 
 ## Type and authority boundaries
 
@@ -46,6 +46,15 @@ to keep fixture responsibilities separate. Receipts live below
   policy constraints, applicable residual authority, and freshness. Commit
   rechecks the verified observation/context. No direct effects application may
   bypass the boundary.
+- An attempt binds its finite ID, proposing actor, operation, full observation,
+  and actual prepared context. The actor has no authority merely by proposing;
+  required signed policies determine permission. Evidence binds that entire
+  attempt. Separate initial/fresh cancellation IDs retain both race attempts.
+- Evidence disposition models an external verifier's result. It is not itself
+  a cryptographic verifier or candidate interpreter. Later A–D adapters must
+  derive valid effect evidence from actual execution, not choose a free validity
+  flag for an arbitrary proposed successor. Common fixture evidence is explicitly
+  supplied for declared effects. This trust boundary must remain visible in claims.
 
 ## Implementation and verification sequence
 
