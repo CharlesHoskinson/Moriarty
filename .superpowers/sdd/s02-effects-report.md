@@ -106,3 +106,29 @@ tests. The report preserves that correction and the failed literal command.
 
 The generated run is sampled simulation. It is not Apalache model checking.
 This foundation does not provide candidate or S02-gate evidence.
+
+## Evidence correction
+
+The first-task `.txt` files were generated with Quint `--out`. They are
+structured compiler JSON, not raw console receipts. I retain those files and
+do not use them as command provenance.
+
+Fresh command provenance and separate raw stdout and stderr are preserved in
+`evidence/s02-model-comparison/foundation/fresh-receipts.md`. The matching
+manifest is `fresh-manifest.json`. The fresh receipt uses the exact worktree,
+argv, exit status, safety invariant, witness names, 10,000 sample count, seed,
+and ITF output path. The fresh ITF is
+`effects-fresh-0.itf.json` with SHA-256
+`ed144b8e17e85e4cdd7cbd22db8e9102fb66f56ab7f67c50fae4a4cb6a4e7fb1`.
+
+The fresh corrected test command passes ten tests. The fresh literal
+`--match '.*'` command exits 1 because Quint selects imported definitions.
+The report records that diagnostic as an actual tool behavior.
+
+The original process did not retain raw missing-import RED or deposit-only
+incremental output. I do not claim reconstructed output as original history.
+The retrospective reconstruction and its exact temporary inputs, commands,
+exit statuses, and raw output hashes are in
+`evidence/s02-model-comparison/foundation/retrospective/reconstruction-report.md`.
+The reconstructed missing-import stderr and deposit-only stdout are preserved
+under that directory.
