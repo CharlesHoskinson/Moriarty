@@ -32,3 +32,13 @@ structural tests to Core execution, correspondence, authorization, or S02 eviden
 
 Correction verification and any subsequent reviewer disposition are recorded
 separately; do not treat this initial review as an approval of unseen edits.
+
+## Correction re-review
+
+The same independent reviewer inspected `ba26098..45883ba` read-only and found
+both findings resolved, with no new Critical, Important, or Minor issue in that
+delta. All four correction source pins and four receipt pins matched. It
+confirmed that the current pointer resolves correctly and historical evidence
+is unchanged; it did not repeat the suite. Its technical disposition permits
+subsequent integration within the structural scope only. Council and S02 gate
+obligations remain separate.

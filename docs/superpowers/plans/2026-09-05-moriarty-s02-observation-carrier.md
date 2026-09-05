@@ -27,7 +27,7 @@
 `paymentTransfer(payment)`, and `projectionSupportsCoreEvidence(projection)`.
 All are pure. Generic continuation parameters use inferred lowercase type variables.
 
-- [ ] Write concrete scenario tests first. Use a total six-account map, a single
+- [x] Write concrete scenario tests first. Use a total six-account map, a single
   `settle` choice key, neutral continuation strings, and these declared fixtures:
 
 ```quint
@@ -60,7 +60,7 @@ pure val rejected: CoreResultObservation[str] = {
   payment asset mismatch and nonpositive quantity rejected; ordered escrow payout
   projection mismatch rejected; NoCoreProjection cannot support CoreResultEvidence.
 
-- [ ] Add carrier declarations and false-returning guard stubs only. The carrier
+- [x] Add carrier declarations and false-returning guard stubs only. The carrier
   matches the old sketch's complete Core records plus these corrected sums:
 
 ```quint
@@ -78,12 +78,12 @@ type DisplayProjection = PublicDisplay | AlternateDisplay
   neutral input and display while making coreProjection optional. None of these
   type declarations interprets the generic payloads.
 
-- [ ] Run `quint typecheck specs/quint/s02/observations_test.qnt`, then
+- [x] Run `quint typecheck specs/quint/s02/observations_test.qnt`, then
   `quint test specs/quint/s02/observations_test.qnt --match 'Test$'`.
   The meaningful RED must be failed positive assertions against false stubs,
   not a missing import, parser failure, or nonexistent test selector.
 
-- [ ] Replace stubs with the exact structural predicates below. Preserve string
+- [x] Replace stubs with the exact structural predicates below. Preserve string
   carriers; do not coerce unknown values. A Core payment injects to an escrow-to-
   wallet transfer; wallet-to-escrow deposit occurrences do not inject to payments.
 
@@ -152,7 +152,7 @@ pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = m
   Exercise every rollback mutation through the public validator as well as its
   helper. These corrections restore frozen constraints; they do not change Core.
 
-- [ ] Add a minimal concrete harness that first checks the deposit fixture and
+- [x] Add a minimal concrete harness that first checks the deposit fixture and
   then checks the rejection fixture, with state `{phase: int, valid: bool}`.
   `init` sets phase 0 and valid true. The first action requires phase 0 and writes
   phase 1 with `validCoreObservation(ids,before,acceptedDeposit,List(deposit))`;
@@ -162,10 +162,10 @@ pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = m
   `phase == 2`; safety is the state-dependent valid flag. Phase 2 is terminal.
   This harness tests predicates on declared examples, not candidate transitions.
 
-- [ ] Run typecheck, all deterministic tests, and
+- [x] Run typecheck, all deterministic tests, and
   `quint run specs/quint/s02/observations_harness.qnt --main observations_harness --invariant safety --witnesses checkedDeposit checkedRejection --max-samples 1000 --max-steps 3 --seed 42`.
   Require both witnesses, no invariant violation, and explicit terminal stopping.
-- [ ] Run the unchanged effect and consumption tests plus `git diff --check`.
+- [x] Run the unchanged effect and consumption tests plus `git diff --check`.
   Review the predicates against the frozen Core source, especially zero-reduction
   accepted deposits and full rollback. Commit only this unit and its test evidence.
 
