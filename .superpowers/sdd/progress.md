@@ -1,5 +1,37 @@
 # Current execution progress
 
+## Current override, 2026-09-05 20:53 UTC
+
+Main roadmap/wiki through CLM-0171 at5e948f5; session fact89. Native-order
+correction5843ff6 is admitted with79 tests, four original stages/220source
+members and full artifact/runtime audit. Current checker SHA is
+b46af0796b9a6e868cfdbdde67b162ebc98d006daf9a07345d43c70290ff3bfd.
+
+Task6 plan cd06756 and native compatibility amendment4465863 are adopted.
+Task6 appended tests are frozen at
+b84ec39090328490f54f480da094852a0f27f600ff74f0c7931b2d65651c5db2.
+The original substitution omitted-guard RED failed behaviorally and the checker
+was restored exactly. Agent a0 owns broad114 synthetic run session5645; no actual
+package test yet. No source changes while producer commands are active.
+
+Producer parameter-instance/export diagnostics are preserved; a literal-body
+toy probe passes bound32 and exact alphabetical raw variable order. This is not
+Candidate A native feasibility. All78 wrapper bodies are now mechanically
+derived from the unchanged shared driver template, which remains a source root.
+Producer owns renewed aggregate parse53189 and intended two-fault RED38261;
+final12Quint/13Python and all78wrapper typechecks are pending. Task3 exporter
+adaptation is under review in its ignored plan; no exporter implementation yet.
+
+A5 agent owns original87642/factored92142 corpus loops. Both adapter15 and
+boundary40 test suites and their typechecks pass; both installment typechecks
+are active. Full244test corpus perlane, equivalence, samples, freshPython/Core,
+pilot/fullcampaign remain open. Shared helper/runtime bytes remain frozen.
+No root-owned running job. No Foreman edits, provider dispatch, full A4/A5,
+Council, integration, publication or automatic product-loop claim.
+
+This block supersedes all status/next-step instructions below. Session
+20260905T161538Z-60de62 remains open; do not begin it again after compaction.
+
 ## Latest execution override, 2026-09-05 20:30 UTC
 
 Producerobserver/inventory/recorderTask0–1 admitted5616bcd:4Quint+2Python tests,
