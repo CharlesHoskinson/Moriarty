@@ -82,6 +82,9 @@ module authorization {
     if (validSigningState(state) and validPolicy(policy) and policyParentDependencies(policy.body).subseteq(AUTHORITY_KEYS)) {
       val expected = {policy: policy, signer: signer, snapshot: signingSnapshot(state.context, policy.body)}
       signer == policy.body.key.principal and state.context.registry.get(policy.body.key) == AuthorityUnused
+        // The only parent workload in this finite fixture belongs to Alice.
+        // Reject unsupported parent keys before creating an unsignable check.
+        and (not(isParentKey(policy.body.key)) or policy.body.key.principal == Alice)
         and policy.body.implementationVersion == state.context.environment.implementationVersion
         and policy.body.enforcementMechanism == state.context.environment.enforcementMechanism
         and state.signing.get(policy.body.key) != PreparedSigning(expected)
