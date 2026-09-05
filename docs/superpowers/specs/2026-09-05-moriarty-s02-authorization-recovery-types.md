@@ -11,8 +11,8 @@ The three carrier issues identified in the initial draft are corrected below.
 Transaction time is bound explicitly. Core choice identifiers remain strings.
 Error and warning carriers preserve the declared frozen Python values; separate
 validation predicates constrain valid observations to frozen emission rules.
-This remains a proposed type sketch awaiting explicit user signoff, not a
-validated model or a Council decision.
+This remains a proposed type sketch awaiting the user-delegated three-expert
+design decision, not a validated model or a Council gate decision.
 
 No model logic is authorized by this draft or its file presence.
 
@@ -582,13 +582,19 @@ Any future sampled run is simulation evidence only. Every external evidence
 disposition remains a modeled premise, even when its value is `EvidenceValid`.
 No model value may be described as a real signature or proof.
 
-## Required signoff and remaining user choice
+## Delegated design signoff
 
-The Quint modeling workflow requires explicit user approval of this type sketch
-before any model logic is written. That approval has not occurred.
+The user subsequently delegated this design decision to GPT-6 Astra, Fable 5.1,
+and Grok 4.6 acting as formal-methods experts, and instructed the workstream to
+implement their agreed design while the user is AFK. This supersedes the earlier
+request for direct human approval. Do not ask for that approval again.
 
-No reviewed semantic choice is reopened. The only minimal user choice is the
-implementation review boundary:
+The three proposals must still be received and reconciled before model logic is
+written. Record the agreed changes and preserve any unresolved dissent. Their
+decision supplies design signoff only: it does not establish model-checking
+results, architecture selection, S02 acceptance, or a requested Council gate.
+
+The proposed implementation review boundaries for that decision are:
 
 1. **Recommended:** approve `observations.qnt`, `authorization.qnt`, the two
    profile harnesses, and recovery scenarios as one common-foundation package;

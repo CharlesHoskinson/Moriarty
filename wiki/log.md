@@ -321,3 +321,10 @@ The user subsequently delegated the corrected type-sketch decision to the three
 requested formal-methods experts and reaffirmed full-program completion.
 That decision remains pending. No model logic, architecture
 selection, Council verdict, or release gate was added by this reset.
+
+## [2026-09-05] correction | Remove superseded direct-approval instructions
+
+Aligned the type sketch and wiki index with the user delegation already recorded
+in CLM-0143 and `docs/MORIARTY_RESTART.md`. The three-expert design decision remains
+pending; the old direct-human-approval request must not block continuation.
+This is an instruction correction, not design consensus or implementation evidence.
