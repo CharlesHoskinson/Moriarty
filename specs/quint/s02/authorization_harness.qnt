@@ -59,5 +59,5 @@ module authorization_harness {
     or canSign(signingState, activeAlice, Alice, 0) or canSign(signingState, activeBob, Bob, 0)
   val noMoneyChanged = signingState.context.ledger == initialSigning.context.ledger
   val signingSafety = noMoneyChanged and validSigningState(signingState)
-    and (signingFinished or signingEnabled)
+    and (signingFinished or signingEnabled) and (not(signingFinished) or not(signingEnabled))
 }
