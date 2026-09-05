@@ -19,6 +19,14 @@ Execution depends on completed S01, the reviewed S02 design, and the closed
 requirements registry. The prompt, frozen S01 outputs, Core, swap, acquired
 receipts, and semantic scope remain unchanged.
 
+The common observation and authorization supplement is also a pinned design
+dependency: `docs/superpowers/specs/2026-09-04-moriarty-s02-observation-authorization-design.md`
+at SHA-256
+`1adc668e970d35a492e272f4f22ac468dccfd690b2c2e1a0ce3ac62030d3ae25`.
+It fixes the shared transfer, ledger, observation, authority, pre-sign, and
+recovery interfaces used by the bounded experiment. It does not select an
+architecture or establish a proof.
+
 ## Immutable inputs
 
 The future validator must compare the following files to reviewed pins before it
@@ -154,6 +162,15 @@ evidence.
 Every action has an explicit guard and assigns all state variables. The model
 must record genuine terminal states separately from unexpected nonterminal
 deadlocks. It must not add a blanket stutter action to hide a deadlock.
+
+The witness mapping retains all ten registry scenarios. Under S02-05 and
+S02-09, every candidate and both signing profiles must cover the additional
+recovery paths `cancel-wins/recovery-before-any-fill` and
+`fill-wins/recovery-after-first-fill`, including final escrow, payment, refund,
+and authority states. The `SignAfterResolve` path must record a successful
+complete-plan pre-sign check before signing; the `SignBeforeResolve` path must
+not label a concrete plan pre-sign verified. Execution checks remain separate
+from both pre-sign paths.
 
 ## Evidence manifest
 

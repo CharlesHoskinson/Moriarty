@@ -83,3 +83,19 @@ def test_s02_contract_is_complete_but_not_execution_evidence():
     assert "0.0.0-e00.2" in text
     assert "candidate-unmechanized" in text
     assert "277" in text
+
+
+def test_s02_binds_observation_supplement_and_recovery_subscenarios():
+    import hashlib
+
+    supplement = ROOT / "docs/superpowers/specs/2026-09-04-moriarty-s02-observation-authorization-design.md"
+    design = (CHANGE / "design.md").read_text()
+    spec = (CHANGE / "specs/architecture-comparison/spec.md").read_text()
+    assert supplement.name in design
+    assert hashlib.sha256(supplement.read_bytes()).hexdigest() in design
+    for identifier in (
+        "cancel-wins/recovery-before-any-fill",
+        "fill-wins/recovery-after-first-fill",
+    ):
+        assert identifier in design and identifier in spec
+    assert "pre-sign" in spec
