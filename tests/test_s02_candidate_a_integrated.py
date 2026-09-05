@@ -124,3 +124,13 @@ def test_observed_raw_is_not_forged_projection():
         latest=e['latest']; claimed=latest['arguments']['command'].value['attempt']['observation']['coreProjection'].value
         raw=latest['computations'][0]['evaluation'].value
         assert claimed['reductions']==raw['reductions']+1
+
+def test_binding_checks_observed_field():
+    from copy import deepcopy
+    from scripts.check_s02_candidate_a_integrated import bind_event,RENAME
+    event={k:0 for k in RENAME}; event['profile']='SignBeforeResolve'
+    event.update(before={},after={},provenance={'input_path':'swap.itf.json','input_sha256':'0'*64,'before_index':0,'after_index':0})
+    raw={'states':[{'authorityState':{},'latestEvent':{v:event[k] for k,v in RENAME.items()}}]}
+    bind_event(event,raw,0,'swap.itf.json','0'*64)
+    bad=deepcopy(event); bad['profile']='SignAfterResolve'
+    with pytest.raises(Invalid,match='raw provenance field profile'): bind_event(bad,raw,0,'swap.itf.json','0'*64)
