@@ -92,4 +92,8 @@ module candidate_a_authority_swap {
   pure def expectedFinalLedgerS(s: ScenarioS): Ledger = if (s.mode == SettleS)
     LEDGER_KEYS.mapBy(_ => 0).put((Wallet(Bob), TokenA), 10).put((Wallet(Alice), TokenB), 20)
     else if (rejectedS(s.mode) or s.funded == 0) ledgerS(s.funded) else ledgerS(0)
+  pure val staleScenarioS: ScenarioS = {funded: 2, mode: SettleS}
+  pure val staleRouteS: List[CommandS] = fundingRouteS(staleScenarioS)
+    .concat(preparePairS(DispositionAttempt, Alice)).concat(preparePairS(DispositionAttempt, Bob))
+    .concat(List(ProposeS(DispositionAttempt), VerifyS(DispositionAttempt), AdvanceS(Time100), RejectVerifiedS(DispositionAttempt)))
 }
