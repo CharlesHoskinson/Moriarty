@@ -126,3 +126,127 @@ def inventory():
     assert sum(c["event_count"] for c in cases) == 1557
     assert len({c["case_id"] for c in cases}) == len(cases)
     return {"schema_version": 2, "cases": cases}
+
+
+import json
+
+IDS = {"first": "FirstFillAttempt", "second": "SecondFillAttempt", "cancel": "CancelAttempt",
+       "fresh-cancel": "FreshCancelAttempt", "recovery": "RecoveryAttempt", "fund1": "FundingOneAttempt",
+       "fund2": "FundingTwoAttempt", "disposition": "DispositionAttempt"}
+MODES = dict(zip(I_MODES, ("Choice2I", "Timeout100I", "Timeout101I", "Refuse100I", "Refuse101I")))
+EMODES = {"normal": "NormalEvidenceA4", "parent": "ParentEvidenceA4",
+          "signer": "WrongSignerEvidenceA4", "nonce": "WrongNonceEvidenceA4"}
+
+def quint_instruction(selector):
+    parts = selector.split(":")
+    head, verb = parts[:2]
+    if head == "I":
+        simple = {"prepare-parent": "PrepareParentI", "sign-parent": "SignParentI",
+                  "prepare-recovery": "PrepareRecoveryI", "sign-recovery": "SignRecoveryI",
+                  "advance": "AdvanceI", "reject-recovery": "RejectRecoveryI"}
+        cmd = simple.get(verb)
+        if cmd is None:
+            tag = {"propose": "ProposeI", "verify": "VerifyI", "commit": "CommitI", "reject-stale": "RejectStaleI"}[verb]
+            cmd = f"{tag}({IDS[parts[2]]})"
+        return f"LifecycleIA4({cmd})"
+    if head == "S":
+        if verb in ("prepare", "sign"):
+            cmd = f"{'PrepareS' if verb == 'prepare' else 'SignS'}({{id: {IDS[parts[2]]}, principal: {parts[3]}}})"
+        elif verb == "advance":
+            cmd = f"AdvanceS(Time{parts[2]})"
+        else:
+            tag = {"propose": "ProposeS", "verify": "VerifyS", "commit": "CommitS",
+                   "reject-proposed": "RejectProposedS", "reject-verified": "RejectVerifiedS"}[verb]
+            cmd = f"{tag}({IDS[parts[2]]})"
+        return f"LifecycleSA4({cmd})"
+    if head == "P":
+        if verb == "cancel-parent": return "ParentCancellationA4"
+        if verb == "slot": return f"ParentSlotA4({int(parts[2])})"
+        return f"{'ReplayProposalA4' if verb == 'propose' else 'ReplayCommitA4'}({IDS[parts[2]]})"
+    if head == "M":
+        return f"MutateA4({'ProposedDerivationA4' if verb == 'proposed' else 'VerifiedDerivationA4'})"
+    if head == "C" and verb == "propose":
+        return f"DirectLifecycleIA4(ProposeI({IDS[parts[2]]}))"
+    if head == "C" and verb in ("prepare", "sign"):
+        tag = "PrepareS" if verb == "prepare" else "SignS"
+        return f"DirectLifecycleSA4({tag}({{id: {IDS[parts[2]]}, principal: {parts[3]}}}))"
+    simple = {"prepare-recovery": "LifecycleIA4(PrepareRecoveryI)", "prepare-parent": "DirectLifecycleIA4(PrepareParentI)",
+              "financial-recovery": "RecoveryFinancialA4", "duplicate-cancel": "DuplicateCancellationA4",
+              "sign-disposition": "StaleSignA4", "plan": "BadPlanA4", "bad-prepare": "BadPrepareA4",
+              "bad-plan-propose": "BadProposeA4", "core": "WrongCoreA4"}
+    if verb in simple: return simple[verb]
+    if verb == "reject-verified": return f"RejectConstructedA4({IDS[parts[2]]})"
+    if verb in ("verify", "reject"):
+        tag = "VerifyEvidenceA4" if verb == "verify" else "RejectEvidenceA4"
+        return f"{tag}({{id: {IDS[parts[2]]}, mode: {EMODES[parts[3]]}}})"
+    raise ValueError(f"unknown selector {selector}")
+
+def quint_scenario(desc):
+    name = desc["scenario"]
+    if desc["lifecycle"] == "installment":
+        if name == "two-fills": return "InstallmentScenarioA4(TwoFillsI)"
+        _, residual, mode = name.split("-", 2)
+        return f"InstallmentScenarioA4(RecoverI({{residual: {'true' if residual == 'r1' else 'false'}, mode: {MODES[mode]}}}))"
+    funded = int(name[6])
+    mode = name.split("-", 1)[1]
+    if mode == "settle": value = "SettleS"
+    elif mode == "refund": value = "RefundS"
+    elif mode.startswith("timeout"): value = f"TimeoutS(Time{mode[7:]})"
+    else: value = f"RefuseS({{now: Time{mode[6:9]}, chosen: {mode[-1]}}})"
+    return f"SwapScenarioA4({{funded: {funded}, mode: {value}}})"
+
+def quint_case(desc, steps):
+    descriptor = "{" + ", ".join(f"{key}: {json.dumps(desc[source])}" for key, source in
+        (("caseId", "case_id"), ("lifecycle", "lifecycle"), ("profile", "profile"), ("scenario", "scenario"), ("control", "control"))) + "}"
+    lowered = []
+    for selector in steps[1:-1]:
+        kind = "adversarial-derivation" if selector.startswith("M:") else "denied-probe" if selector.startswith(("D:", "P:")) else "transition"
+        lowered.append(f'{{kind: "{kind}", instruction: {checked_quint_instruction(selector)}}}')
+    return f"{{descriptor: {descriptor}, scenario: {quint_scenario(desc)}, profile: {desc['profile']}, steps: List(" + ",\n".join(lowered) + ")}"
+
+def quint_cases():
+    imports = "\n".join(f'  import {name}.* from "./{name}"' for name in
+        ("effects", "consumption", "observations", "policies", "authorization", "execution",
+         "candidate_a_types", "candidate_a_programs", "candidate_a_core", "candidate_a_projection",
+         "candidate_a_authority_adapter", "candidate_a_authority_boundary",
+         "candidate_a_authority_installment_fixtures", "candidate_a_authority_installment",
+         "candidate_a_authority_swap_fixtures", "candidate_a_authority_swap", "candidate_a_integrated_observer",
+         "candidate_a_integrated_lowering"))
+    body = []
+    for lifecycle, name in (("installment", "INSTALLMENT_CASES_A4"), ("swap", "SWAP_CASES_A4")):
+        values = [quint_case(d, steps) for d, steps in instructions() if d["lifecycle"] == lifecycle]
+        body.append(f"pure val {name}: List[A4Case] = List(\n" + ",\n".join(values) + ")")
+    return "module candidate_a_integrated_cases {\n" + imports + "\n" + "\n".join(body) + "\n}\n"
+
+def checked_quint_instruction(selector):
+    allowed = {s for _, steps in instructions() for s in steps[1:-1]}
+    if type(selector) is not str or selector not in allowed:
+        raise ValueError("selector outside fixed inventory")
+    return quint_instruction(selector)
+
+def case_wrapper(global_index):
+    from pathlib import Path
+    rows = inventory()["cases"]
+    if type(global_index) is not int or not 0 <= global_index < len(rows):
+        raise ValueError("fixed case index")
+    installment = global_index < 32
+    table = "INSTALLMENT_CASES_A4" if installment else "SWAP_CASES_A4"
+    local_index = global_index if installment else global_index - 32
+    name = f"candidate_a_integrated_case_{global_index:03d}"
+    template = (Path(__file__).resolve().parents[1] /
+                "specs/quint/s02/candidate_a_integrated_driver.qnt").read_text(encoding="utf-8")
+    header = "module candidate_a_integrated_driver {\n"
+    if not template.startswith(header) or not template.endswith("}\n"):
+        raise ValueError("driver template framing")
+    body = template[len(header):-2]
+    replacements = {
+        "const CASE_A4: A4Case\n": f"pure val CASE_A4: A4Case = {table}.nth({local_index})\n",
+        "const CASE_INDEX_A4: int\n": f"pure val CASE_INDEX_A4: int = {global_index}\n",
+    }
+    for original, literal in replacements.items():
+        if body.count(original) != 1:
+            raise ValueError("driver template parameter inventory")
+        body = body.replace(original, literal)
+    return (f"module {name} {{\n"
+            'import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"\n'
+            + body + "}\n")

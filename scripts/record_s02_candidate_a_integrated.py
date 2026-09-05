@@ -22,9 +22,8 @@ PYTHON_MANIFEST = ROOT / ".superpowers/sdd/a4-checker-task1-receipts/python-envi
 PYTHON_ARCHIVE = PYTHON_MANIFEST.with_suffix(".tar.gz")
 PYTHON_MANIFEST_SHA = "cd004057c4067bf7cc536d2cec5038add88d0852c1a7de5030e402ff2204f9c4"
 PYTHON_ARCHIVE_SHA = "7363d106d464f976af2a0e7f1f56e3c7bed237c7a3396a60d073369add068dac"
-ROOTS = (
-    "specs/quint/s02/candidate_a_integrated_installment_export.qnt",
-    "specs/quint/s02/candidate_a_integrated_swap_export.qnt",
+ROOTS = tuple(f"specs/quint/s02/candidate_a_integrated_case_{index:03d}.qnt" for index in range(78)) + (
+    "specs/quint/s02/candidate_a_integrated_wrappers_typecheck.qnt",
     "specs/quint/s02/candidate_a_integrated_export_test.qnt",
     "specs/quint/s02/candidate_a_authority_installment_test.qnt",
     "specs/quint/s02/candidate_a_authority_swap_test.qnt",
@@ -36,6 +35,7 @@ PYTHON = (
     "scripts/s02_candidate_a_integrated_inventory.py", "scripts/export_s02_candidate_a_integrated.py",
     "scripts/record_s02_candidate_a_integrated.py", "tests/test_s02_candidate_a_integrated.py",
     "tests/test_s02_candidate_a_integrated_export.py",
+    "scripts/a4_json_stream.py", "tests/test_a4_json_stream.py",
 )
 IMPORTS = re.compile(r'^\s*import\s+[^\n]*?\s+from\s+"([^"]+)"', re.MULTILINE)
 
