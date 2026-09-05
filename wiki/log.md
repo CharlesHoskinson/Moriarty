@@ -1,5 +1,13 @@
 # Wiki log
 
+## [2026-09-04] checkpoint | Complete S01 and begin S02 contract
+
+Independent re-review approved the settlement correction with no remaining
+material finding. Closed S01's seven bounded specification tasks and retained
+the unmechanized theorem and signing-denied local experiment limits. Updated
+the program register and index to the reviewed S02 contract plan. No model
+comparison, architecture selection, or later release gate is claimed.
+
 ## [2026-09-04] correction | Separate settlement process from receipt
 
 Corrected the S01 alias against XML v1.3: `settlement` names the process, while

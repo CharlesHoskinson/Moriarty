@@ -57,14 +57,14 @@ def test_s01_contract_reports_local_gate_without_closing_unverified_work() -> No
     assert "ten local package predicates passed" in readme
     assert "24 prompt release gates remain open" in readme
     assert "specified-only" in readme
-    assert "Task 7" in readme and "in progress" in readme
+    assert "S01 specification package complete" in readme
     assert "requirements, not passed results" not in readme
     assert "have not been implemented" not in readme
     assert "requirements, not passed results" not in proposal
     assert "supplies no aggregate validation result" not in design
     assert "recomputed-package-gate-passed" in design
     assert "- [x] 6. Record the evidence-only scope transition." in tasks
-    assert "- [ ] 7. Verify S01 and prepare S02." in tasks
+    assert "- [x] 7. Verify S01 and prepare S02." in tasks
 
     text = "\n".join(
         path.read_text(encoding="utf-8")

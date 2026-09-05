@@ -10,8 +10,9 @@ architecture decision. S04 remains responsible for mechanization.
 The evidence manifest binds immutable inputs and exact outputs with SHA-256
 digests. The validator recomputed each local acceptance predicate from
 repository files and recorded `recomputed-package-gate-passed`. This bounded S3
-package result is not a mechanized theorem, does not complete Task 7, and does
-not pass any of the 24 prompt release gates.
+package result is not a mechanized theorem and does not pass any of the 24
+prompt release gates. Task 7 separately completed whole-package verification
+and independent review, including the settlement-process correction.
 
 ## Negative controls
 

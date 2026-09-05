@@ -16,7 +16,8 @@ Core architectures. The package must expose incomplete evidence and ambiguity.
 The normative specification defines all ten predicates. These predicates are
 requirements, and the repository validator has now recomputed each one as
 passing for the bounded local S01 package. This S3 result is not a mechanized
-theorem, Task 7 completion, or passage of any prompt release gate.
+theorem or passage of any prompt release gate. Task 7 separately completed
+verification and independent review after the settlement-process correction.
 
 ## Failure outcomes
 

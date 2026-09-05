@@ -75,23 +75,32 @@ closure, but identified one P2 terminology error: required XML alias
 `settlement` referred to `SettlementReceipt`, an evidence object, rather than
 the protocol-specific settlement process defined by XML v1.3.
 
-The correction must introduce a separate `SettlementProcess`, move the alias,
-retain the receipt's evidence meaning, add a distinction regression, and update
-only the affected normative pin before recomputing receipts. This is a
+The correction introduces a separate `SettlementProcess`, moves the alias,
+retains the receipt's evidence meaning, adds a distinction regression, and updates
+only the affected normative pin before recomputing receipts. Commit `5d38637`
+implements this correction. This is a
 specification correction within S01, not a Core semantic motion. The prior
 manifest is preserved byte-for-byte under
 `raw/repository-observations/2026-09-04-s01-pre-settlement-correction-manifest.json`.
 Its SHA-256 is `e58efb60c4c8e85d9ff2de878bc0b9628c08b79430a5aa00a0ce397618d507bd`.
 The original 20-pin comparison remains a historical review observation; the
-revised terminology pin requires new independent review.
+revised terminology pin received new independent review.
 
 The reviewer found no other material issue. Six whole-branch blank-line-at-EOF
 warnings are a documented, nonblocking style exception; see the final
-verification record. S01 remains open until the semantic correction is reviewed.
+verification record.
 
-## Open work
+The independent re-review approved the whole-S01 code and normative artifacts
+at `5d38637`, with no remaining material finding. It checked all ten gates,
+the four correction regression cases, and all 20 committed pins. The new
+terminology pin matches the reviewed bytes; the other 19 pins are unchanged.
+The provenance handoff archives SRC-0032 and registers the revised manifest as
+SRC-0034. S01 completion does not pass any later release gate.
 
-The settlement terminology correction, its independent re-review, and final
-whole-S01 completion transition remain outstanding at this ledger revision.
+## Next obligation
+
+Execute the reviewed S02 contract plan, build and model-check all four distinct
+Quint architecture alternatives, and make an evidence-backed selection or stop
+decision. The full XML program remains active.
 The earlier Tasks 1 and 4 review is recorded in the
 [execution audit](2026-09-04-moriarty-v1.3-execution-audit.md).

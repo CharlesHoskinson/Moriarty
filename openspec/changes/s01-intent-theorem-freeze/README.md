@@ -1,11 +1,12 @@
 # s01-intent-theorem-freeze
 
-Status: ten local package predicates passed; Task 7 verification and review in progress
+Status: S01 specification package complete; ten local package predicates passed
 
 This package specifies the architecture-neutral S01 intent-safety gate. The
 validator recomputed all ten local package predicates and returned
-`recomputed-package-gate-passed`. This S3 result does not complete Task 7. All
-24 prompt release gates remain open. Mechanization, authenticated complete-effect
+`recomputed-package-gate-passed`. Task 7 verification and independent review
+are complete after the settlement-process terminology correction. All
+24 prompt release gates remain open at this S01 boundary. Mechanization, authenticated complete-effect
 verification, runtime `SignBeforeResolve` verification, backend and ledger
 correspondence, ACTUS work, and human pilots remain specified-only.
 
@@ -51,6 +52,8 @@ and check rejection, restoration, malformed inputs, and duplicate transfers.
 
 The [evidence manifest](../../../evidence/s01-intent-theorem-freeze/evidence-manifest.json)
 binds the local S01 inputs, outputs, and limitations. The [execution audit](../../../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
-records the remaining obligations. The candidate theorem is unmechanized, the
-local checker grants no signing authority, and Task 7 final verification and
-independent review remain open.
+records the original obligations and their dispositions. The
+[final verification](../../../docs/superpowers/reviews/2026-09-04-moriarty-s01-final-verification.md)
+and [review ledger](../../../docs/superpowers/reviews/2026-09-04-moriarty-s01-review-ledger.md)
+record completion. The candidate theorem is unmechanized and the local checker
+grants no signing authority. S02 owns the next architecture experiment.

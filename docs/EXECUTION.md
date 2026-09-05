@@ -29,13 +29,15 @@ and research evidence. Do not commit credentials or unredacted environments.
 
 ## Current execution boundary
 
-The audited S01 starting increment, audit resolutions, and registries are
-integrated into `main`. Tasks 1 through 5 have passed independent review.
-The closed validator recomputes the ten local S01 package gates and validates
-the published receipts. The Task 6 wiki handoff is committed in the implementation
-branch. Whole-S01 review found a settlement-process/receipt terminology mismatch;
-correct it and obtain re-review before the completion transition. These package
-gates are not the 24 XML release gates.
+S01's seven tasks are complete within the specification and local experiment
+boundary. Whole-package review found a settlement-process/receipt mismatch;
+commit `5d38637` corrected it and independent re-review approved all code and
+normative artifacts. The closed validator recomputes ten local package gates
+and validates published receipts. These are not the 24 XML release gates.
+
+Continue with the reviewed
+[S02 contract plan](superpowers/plans/2026-09-04-moriarty-s02-package-contract.md),
+then the distinct model implementations, correspondence checks, and comparison.
 
 S02 uses Quint models and the Quint CLI with the Apalache backend, as directed
 by the user. The reviewed model-comparison design is preparation, not an

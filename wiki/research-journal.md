@@ -563,3 +563,19 @@ repository evidence; scope S01 specification correction with unchanged Core
 scope `0.0.0-e00.2`; evidence repository and experiment observation;
 reproduction reproduced; confidence high; lifecycle status S3. Independent
 re-review and Task 7 completion remain open at this observation.
+
+### S01 completion disposition
+
+**CLM-0137.** Independent re-review approved the corrected S01 code and
+normative artifacts at commit `5d3863793660d551b3e30a88e322d5c9a497d33c` with
+no remaining material finding. S01's seven tasks are complete as a bounded
+specification and local experiment package. The correction and provenance
+history are preserved in the [review ledger](../docs/superpowers/reviews/2026-09-04-moriarty-s01-review-ledger.md)
+and [final verification record](../docs/superpowers/reviews/2026-09-04-moriarty-s01-final-verification.md).
+Source: SRC-0034 at the corrected manifest and its committed artifacts;
+observed 2026-09-05; authority experimental repository evidence; scope S01
+completion only; evidence repository observation; reproduction reproduced;
+confidence high; lifecycle status S3. The theorem remains unmechanized and
+both local certificates deny signing. S02 now owns the four-model Quint
+comparison; all later proof, backend, ledger, ACTUS, pilot, and release
+obligations remain open.
