@@ -365,8 +365,8 @@ endmodule
 ```
 
 Key considerations for K Framework integration:
-1. **Mathematical Builtin Mapping:** Large primes ($r, s, p, q, \ell$) exceed standard machine integer ranges and must be represented using K's arbitrary-precision integer builtin `Int` (CLM-0442; SRC-0006 k-rust/crates/k-rust-backend/src/builtins.rs; repository observation; inspection; high; S4). Refer to [K Builtins](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/k-framework/k-builtins.md).
+1. **Mathematical Builtin Mapping:** Large primes ($r, s, p, q, \ell$) exceed standard machine integer ranges and must be represented using K's arbitrary-precision integer builtin `Int` (CLM-0442; SRC-0006 k-rust/crates/k-rust-backend/src/builtins.rs; repository observation; inspection; high; S4). Refer to [K Builtins](../k-framework/k-builtins.md).
 2. **Canonicity Invariant:** In K rules, every field element must be normalized modulo its respective prime modulus at every rewrite step to preserve canonicity.
 3. **Edwards vs Weierstrass Point Sorts:** Point constructors in K must account for the identity flag on Weierstrass curves while allowing direct affine coordinate manipulation on Jubjub and Curve25519.
 
-For detailed execution and constraint semantics, refer to [ZKIR Instruction Set](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-instruction-set.md) and [ZKIR Virtual Machine Semantics](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-vm-semantics.md).
+For detailed execution and constraint semantics, refer to [ZKIR Instruction Set](zkir-instruction-set.md) and [ZKIR Virtual Machine Semantics](zkir-vm-semantics.md).

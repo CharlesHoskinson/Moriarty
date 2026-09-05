@@ -3,7 +3,7 @@ id: zkir.k-semantics.plan
 type: semantics
 title: ZKIR semantics in K, plan
 status: active
-updated_at: 2026-09-03T14:55:21Z
+updated_at: 2026-09-05T17:05:00Z
 sources:
   - SRC-0023
   - SRC-0025
@@ -72,7 +72,7 @@ The E00 experiment already holds ZKIR 3 artifacts compiled from the Moriarty esc
 
 ## Milestones
 
-1. Install K v7.1.337 with `kup` on WSL2; run the tutorial's first lesson to confirm the toolchain (specified-only).
+1. Install K v7.1.337 with `kup` on WSL2; run the tutorial's first lesson to confirm the toolchain. Done 2026-09-05: `kup install k --version v7.1.337` resolved to the pinned commit 4a46d123 from the K binary cache in under three minutes; lesson 1.2 compiles and runs under both the LLVM and the Haskell backend, and pyk 7.1.337 (PyPI `kframework`, uv dependency group `zkir-k`) parses, converts KAST to KORE and back, and runs a program against the compiled definition. Rerunnable as `experiments/zkir-k/toolchain-check/check_k_toolchain.sh` (CLM-0723; evidence/k-toolchain-install-2026-09-05.md; executed test; reproduced; high; S1). Two facts for milestone 2: pyk reads `compiled.json`, so every ZKIR definition must be compiled with `--emit-json`; and kup does not put pyk on the path, so the Python side runs through `uv run --group zkir-k`.
 2. Module `ZKIR-SYNTAX`: abstract sorts and well-formedness checks, plus the pyk JSON-to-KAST preprocessor (single assignment, declared types, input count). Test: every precompile parses.
 3. Module `ZKIR-FIELD` and `ZKIR-TYPES`: field arithmetic, curve constructors, Bytes32 conversions with unit claims for inverse and encode/decode round trips.
 4. Module `ZKIR-VM`: the 34 instruction rules, each updating `mem`, `pi`, `skips`, cursors and `constraints`. Test: oracle 1 over the precompile corpus.

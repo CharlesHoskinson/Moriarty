@@ -313,4 +313,4 @@ Let $\mathcal{Z} = \text{compactc}_{\text{v3}}(C)$ be the emitted ZKIR v3 progra
 
 This formal linkage guarantees that proofs verified on-chain guarantee the behavioral integrity of the original high-level Compact contract code.
 
-For further architectural context and semantics execution rules, refer to [ZKIR Instruction Set](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-instruction-set.md), [ZKIR Type System](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-type-system.md), and [ZKIR Virtual Machine Semantics](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-vm-semantics.md).
+For further architectural context and semantics execution rules, refer to [ZKIR Instruction Set](zkir-instruction-set.md), [ZKIR Type System](zkir-type-system.md), and [ZKIR Virtual Machine Semantics](zkir-vm-semantics.md).

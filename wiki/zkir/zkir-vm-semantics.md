@@ -389,4 +389,4 @@ endmodule
 
 This K semantics provides an executable, mathematically rigorous formal foundation for validating compiler correctness, generating test oracles, and proving cross-layer equivalence with Midnight contracts.
 
-For further architectural context, refer to [ZKIR Instruction Set](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-instruction-set.md), [ZKIR Type System](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/zkir-type-system.md), and [Compact to ZKIR Pipeline](file:///home/charl/Moriarty/.worktrees/zkir-k-semantics/wiki/zkir/compact-to-zkir-pipeline.md).
+For further architectural context, refer to [ZKIR Instruction Set](zkir-instruction-set.md), [ZKIR Type System](zkir-type-system.md), and [Compact to ZKIR Pipeline](compact-to-zkir-pipeline.md).

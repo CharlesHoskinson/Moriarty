@@ -142,3 +142,17 @@ as extractor. Wrote seven K pages, seven ZKIR pages, and the ZKIR-in-K plan (adv
 recorded the ledger-8 versus ledger-9 pin conflict and the 34 versus 42
 instruction drift as contradictions. Claude subagents were abandoned for this
 ingest after repeated API overload failures; all reading was done by agy.
+
+## [2026-09-05] toolchain | K v7.1.337 installed and checked (milestone 1)
+
+Installed `kup` 0.2.6 into the Nix profile and K v7.1.337 at the pinned commit
+4a46d123 from the K binary cache (2m 29s, no source build). Lesson 1.2 of the K
+tutorial compiles and runs on the LLVM and Haskell backends; pyk 7.1.337 from
+PyPI (`kframework`, uv group `zkir-k`) round-trips KAST through KORE and runs a
+program. Check script and receipt: `experiments/zkir-k/toolchain-check/`,
+`evidence/k-toolchain-install-2026-09-05.md` (CLM-0723). Plan page milestone 1
+marked done; next is milestone 2, module `ZKIR-SYNTAX` and the pyk
+JSON-to-KAST preprocessor.
+Also repaired the five ZKIR pages from the 2026-09-03 ingest that linked
+sibling pages and arc-zkir Agda modules by absolute `file:///home/charl/...`
+URIs; they now use relative paths (`../../repos/...` for pinned sources).

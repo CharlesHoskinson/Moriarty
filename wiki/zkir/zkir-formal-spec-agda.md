@@ -35,7 +35,7 @@ The agent file reveals the authors' formalization discipline: formalize distribu
 
 ### Abstract syntax and data structures
 
-The formal abstract syntax of ZKIR v3 is mechanized in [`Syntax.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Syntax.agda) and documented in `docs/zkir-v3-spec.md` §5 (CLM-0606; SRC-0025 src/zkir-v3/Syntax.agda; source fact; not reproduced; high; S4).
+The formal abstract syntax of ZKIR v3 is mechanized in [`Syntax.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Syntax.agda) and documented in `docs/zkir-v3-spec.md` §5 (CLM-0606; SRC-0025 src/zkir-v3/Syntax.agda; source fact; not reproduced; high; S4).
 A ZKIR circuit is represented by the record `IrSource`:
 
 ```agda
@@ -63,7 +63,7 @@ No immediate representation exists for non-native field types or curve points (C
 A declared input is a pair `TypedIdentifier` combining a name and an `IrType` (CLM-0606; SRC-0025 src/zkir-v3/Syntax.agda; source fact; not reproduced; high; S4).
 The minor version `IrMinorVersion` contains only the constructor `V0` (CLM-0606; SRC-0025 src/zkir-v3/Syntax.agda; source fact; not reproduced; high; S4).
 
-ZKIR v3 specifies exactly 13 types in `IrType`, mechanized in [`Types.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Types.agda) and matching `zkir-v3/src/ir_types.rs` (CLM-0607; SRC-0025 src/zkir-v3/Types.agda; source fact; not reproduced; high; S4):
+ZKIR v3 specifies exactly 13 types in `IrType`, mechanized in [`Types.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Types.agda) and matching `zkir-v3/src/ir_types.rs` (CLM-0607; SRC-0025 src/zkir-v3/Types.agda; source fact; not reproduced; high; S4):
 1. `Native`: element of the BLS12-381 scalar field `Fr`, with encoded length 1.
 2. `Bytes32`: 32-byte sequence represented as two field elements, with encoded length 2.
 3. `JubjubPoint`: point on the embedded twisted Edwards curve Jubjub, encoded as affine coordinates `(x, y)` with encoded length 2.
@@ -87,7 +87,7 @@ The instruction set consists of 34 variants in `Instruction`:
 ### Operational semantics (off-circuit witness generation)
 
 The operational semantics, designated *preprocess*, represents witness generation executed by the prover before proving (CLM-0609; SRC-0025 docs/zkir-v3-spec.md §6; source fact; not reproduced; high; S4).
-It is mechanized as a deterministic step function in [`Semantics.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Semantics.agda) and discussed in [zkir-vm-semantics.md](zkir-vm-semantics.md).
+It is mechanized as a deterministic step function in [`Semantics.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Semantics.agda) and discussed in [zkir-vm-semantics.md](zkir-vm-semantics.md).
 The prover executes a circuit with a proof preimage `P` of type `ProofPreimage`:
 
 ```agda
@@ -122,7 +122,7 @@ When both conditions hold, `preprocess S P` evaluates to `just s` (CLM-0611; SRC
 ### Circuit semantics (in-circuit constraint synthesis)
 
 The circuit semantics formalizes the constraint system synthesized from `IrSource` alone, without knowledge of the preimage (CLM-0612; SRC-0025 docs/zkir-v3-spec.md §7; source fact; not reproduced; high; S4).
-Synthesis is mechanized in [`Circuit.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Circuit.agda) as a total function `synth : IrSource → Circuit` (CLM-0612; SRC-0025 src/zkir-v3/Circuit.agda; source fact; not reproduced; high; S4).
+Synthesis is mechanized in [`Circuit.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Circuit.agda) as a total function `synth : IrSource → Circuit` (CLM-0612; SRC-0025 src/zkir-v3/Circuit.agda; source fact; not reproduced; high; S4).
 A circuit is represented by the record `Circuit`:
 
 ```agda
@@ -147,7 +147,7 @@ For any run `(P, s)`, the canonical witness is defined by `witness-of P s = mk-w
 
 ## The cryptographic trust base and the `--safe` discipline
 
-The cryptographic primitives and algebraic axioms are encapsulated in the record `Assumptions` in [`Assumptions.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Assumptions.agda) (CLM-0614; SRC-0025 src/zkir-v3/Assumptions.agda; source fact; not reproduced; high; S4).
+The cryptographic primitives and algebraic axioms are encapsulated in the record `Assumptions` in [`Assumptions.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Assumptions.agda) (CLM-0614; SRC-0025 src/zkir-v3/Assumptions.agda; source fact; not reproduced; high; S4).
 Every module in `src/zkir-v3` parameterizes over `Assumptions`:
 
 ```agda
@@ -179,7 +179,7 @@ All definitions and theorem signatures are cited verbatim from the Agda source f
 ### 1. Circuit faithfulness (Property P5)
 
 Circuit faithfulness establishes that witness generation succeeds if and only if the synthesized circuit accepts the canonical witness (CLM-0619; SRC-0025 docs/zkir-v3-spec.md §8.3; source fact; not reproduced; high; S4).
-The program-level theorem is mechanized in [`CircuitProof.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitProof.agda) (CLM-0619; SRC-0025 src/zkir-v3/CircuitProof.agda; source fact; not reproduced; high; S4):
+The program-level theorem is mechanized in [`CircuitProof.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitProof.agda) (CLM-0619; SRC-0025 src/zkir-v3/CircuitProof.agda; source fact; not reproduced; high; S4):
 
 ```agda
 circuit-faithful : ∀ {S P s st0}
@@ -225,7 +225,7 @@ The backward spine `BwdWalk` can be projected directly from an operational run u
 ### 2. Statement soundness
 
 Statement soundness establishes that every satisfying circuit witness corresponds to a genuine operational execution agreeing on public inputs (CLM-0622; SRC-0025 docs/zkir-v3-spec.md §8.4; source fact; not reproduced; high; S4).
-The result is mechanized in [`StatementSoundness.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/StatementSoundness.agda) (CLM-0622; SRC-0025 src/zkir-v3/StatementSoundness.agda; source fact; not reproduced; high; S4).
+The result is mechanized in [`StatementSoundness.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/StatementSoundness.agda) (CLM-0622; SRC-0025 src/zkir-v3/StatementSoundness.agda; source fact; not reproduced; high; S4).
 The realizer record `SubRealizer` packages the extracted witness data:
 
 ```agda
@@ -287,7 +287,7 @@ Plain-language meaning: every canonical witness produced by an honest preprocess
 ### 3. Extraction uniqueness
 
 Extraction uniqueness proves that the extracted execution explaining a satisfying witness is mathematically unique (CLM-0624; SRC-0025 docs/zkir-v3-spec.md §8.4; source fact; not reproduced; high; S4).
-The theorems are mechanized in [`StatementUniqueness.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/StatementUniqueness.agda) (CLM-0624; SRC-0025 src/zkir-v3/StatementUniqueness.agda; source fact; not reproduced; high; S4):
+The theorems are mechanized in [`StatementUniqueness.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/StatementUniqueness.agda) (CLM-0624; SRC-0025 src/zkir-v3/StatementUniqueness.agda; source fact; not reproduced; high; S4):
 
 ```agda
 statement-unique : ∀ {S w} → producer-SA S → WInputs w (IrSource.inputs S)
@@ -323,21 +323,21 @@ Assumptions → Types → Encoding → Syntax → Semantics → SemanticsPropert
 
 | Module | Contents and Primary Definitions | Lines / Bytes |
 |---|---|---|
-| [`Assumptions.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Assumptions.agda) | Cryptographic trust base record: carrier types (`Fr`, `Alignment`, curves), field arithmetic, bit decomposition, Jubjub/foreign curve contracts, hash functions, non-triviality `1ᶠ≢0ᶠ`, Group C round-trips. | 557 lines / 28.5 KB |
-| [`Types.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Types.agda) | Definitions of `IrType` (13 constructors), `IrValue` (13 constructors), `encoded-len`, `typeof`, decidable type equality `_≟T_`. | 387 lines / 17.9 KB |
-| [`Encoding.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Encoding.agda) | Wire format transformations `encode : IrValue → List Fr` and `decode : IrType → List Fr → Maybe IrValue`. | 96 lines / 4.0 KB |
-| [`Syntax.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Syntax.agda) | Abstract syntax: `Identifier`, `Operand` (`var`, `imm`), `TypedIdentifier`, `IrMinorVersion` (`V0`), the 34 `Instruction` variants, and record `IrSource`. | 296 lines / 8.2 KB |
-| [`Semantics.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Semantics.agda) | Operational semantics interpreter: `ProofPreimage`, `State`, `step`, `run`, `init`, `preprocess`. | 577 lines / 27.5 KB |
-| [`SemanticsProperties.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/SemanticsProperties.agda) | Structural properties of operational semantics: store ordering `_⊑_`, domain growth `step-dom`, memory extension `run-extends`, run inversion `run-inv`, and `preprocess-walk-consumed`. | 772 lines / 40.1 KB |
-| [`Circuit.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Circuit.agda) | Constraint vocabulary `Constraint`, witness model `CircuitWitness`, satisfaction relations `holds` and `satisfies`, and synthesis function `synth`. | 939 lines / 40.5 KB |
-| [`CircuitBridge.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitBridge.agda) | Bridge definitions: canonical witness constructor `witness-of`, constraint monotonicity `holds-mono`, constraint lowering `holds-lower`, and constraint extractor `csOf`. | 1,173 lines / 55.2 KB |
-| [`CircuitFaithfulness.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitFaithfulness.agda) | Forward faithfulness: per-instruction forward lemmas `*-fwd` and program-level induction `forward`. | 2,828 lines / 125.9 KB |
-| [`CircuitBackward.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitBackward.agda) | Backward step reconstruction: 43 per-instruction inversion lemmas `*-bwd` reconstructing operational transitions from constraint satisfaction. | 2,130 lines / 106.9 KB |
-| [`Obligations.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Obligations.agda) | Static producer checks: single assignment `producer-SA`/`producer-SA?`, value typing `producer-WT`/`producer-WT?`, bit bounds `producer-WF2`/`producer-WF2?`, and transfer theorem `preprocessʳ-agree`. | 2,499 lines / 129.2 KB |
-| [`CircuitProof.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitProof.agda) | Program-level theorem assembly: `BwdWalk`, `bwd-go`, run-spine projection `preprocess→BwdWalk`, `backward`, `forward-sa`, and headline theorem `circuit-faithful`. | 2,151 lines / 112.2 KB |
-| [`StatementSoundness.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/StatementSoundness.agda) | Statement soundness: witness shape predicate `WShape`/`WShape?`, preimage construction `build`, record `SubRealizer`, `statement-sound`, `extractor-complete`, and `preprocess→WShape`. | 6,144 lines / 318.6 KB |
-| [`StatementUniqueness.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/StatementUniqueness.agda) | Extraction uniqueness: transcript pinning lemmas, `statement-unique`, and exactly-one packaging `statement-sound-unique`. | 915 lines / 47.6 KB |
-| [`Main.agda`](file:///home/charl/Moriarty/repos/input-output-hk/arc-zkir/src/zkir-v3/Main.agda) | Aggregation module importing all files above, verifying whole-development compilation under `--safe`. | 27 lines / 1.0 KB |
+| [`Assumptions.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Assumptions.agda) | Cryptographic trust base record: carrier types (`Fr`, `Alignment`, curves), field arithmetic, bit decomposition, Jubjub/foreign curve contracts, hash functions, non-triviality `1ᶠ≢0ᶠ`, Group C round-trips. | 557 lines / 28.5 KB |
+| [`Types.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Types.agda) | Definitions of `IrType` (13 constructors), `IrValue` (13 constructors), `encoded-len`, `typeof`, decidable type equality `_≟T_`. | 387 lines / 17.9 KB |
+| [`Encoding.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Encoding.agda) | Wire format transformations `encode : IrValue → List Fr` and `decode : IrType → List Fr → Maybe IrValue`. | 96 lines / 4.0 KB |
+| [`Syntax.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Syntax.agda) | Abstract syntax: `Identifier`, `Operand` (`var`, `imm`), `TypedIdentifier`, `IrMinorVersion` (`V0`), the 34 `Instruction` variants, and record `IrSource`. | 296 lines / 8.2 KB |
+| [`Semantics.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Semantics.agda) | Operational semantics interpreter: `ProofPreimage`, `State`, `step`, `run`, `init`, `preprocess`. | 577 lines / 27.5 KB |
+| [`SemanticsProperties.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/SemanticsProperties.agda) | Structural properties of operational semantics: store ordering `_⊑_`, domain growth `step-dom`, memory extension `run-extends`, run inversion `run-inv`, and `preprocess-walk-consumed`. | 772 lines / 40.1 KB |
+| [`Circuit.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Circuit.agda) | Constraint vocabulary `Constraint`, witness model `CircuitWitness`, satisfaction relations `holds` and `satisfies`, and synthesis function `synth`. | 939 lines / 40.5 KB |
+| [`CircuitBridge.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitBridge.agda) | Bridge definitions: canonical witness constructor `witness-of`, constraint monotonicity `holds-mono`, constraint lowering `holds-lower`, and constraint extractor `csOf`. | 1,173 lines / 55.2 KB |
+| [`CircuitFaithfulness.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitFaithfulness.agda) | Forward faithfulness: per-instruction forward lemmas `*-fwd` and program-level induction `forward`. | 2,828 lines / 125.9 KB |
+| [`CircuitBackward.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitBackward.agda) | Backward step reconstruction: 43 per-instruction inversion lemmas `*-bwd` reconstructing operational transitions from constraint satisfaction. | 2,130 lines / 106.9 KB |
+| [`Obligations.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Obligations.agda) | Static producer checks: single assignment `producer-SA`/`producer-SA?`, value typing `producer-WT`/`producer-WT?`, bit bounds `producer-WF2`/`producer-WF2?`, and transfer theorem `preprocessʳ-agree`. | 2,499 lines / 129.2 KB |
+| [`CircuitProof.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/CircuitProof.agda) | Program-level theorem assembly: `BwdWalk`, `bwd-go`, run-spine projection `preprocess→BwdWalk`, `backward`, `forward-sa`, and headline theorem `circuit-faithful`. | 2,151 lines / 112.2 KB |
+| [`StatementSoundness.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/StatementSoundness.agda) | Statement soundness: witness shape predicate `WShape`/`WShape?`, preimage construction `build`, record `SubRealizer`, `statement-sound`, `extractor-complete`, and `preprocess→WShape`. | 6,144 lines / 318.6 KB |
+| [`StatementUniqueness.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/StatementUniqueness.agda) | Extraction uniqueness: transcript pinning lemmas, `statement-unique`, and exactly-one packaging `statement-sound-unique`. | 915 lines / 47.6 KB |
+| [`Main.agda`](../../repos/input-output-hk/arc-zkir/src/zkir-v3/Main.agda) | Aggregation module importing all files above, verifying whole-development compilation under `--safe`. | 27 lines / 1.0 KB |
 
 ## Evolution from ZKIR v2 to ZKIR v3
 
