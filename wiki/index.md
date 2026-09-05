@@ -39,7 +39,8 @@ will grow by merging evidence into durable topic pages.
   actual swap and installment traces, the completed finite-record Python comparison,
   the completed authority observation adapter with explicit historical RED
   limitations, both offline Apalache heap failures, and the candidate-specific
-  signing/verification/commit boundary under implementation.
+  signing/verification/commit boundary under implementation, and the reviewed
+  native Candidate B design with explicit stranded-escrow and clock boundaries.
 
 ## Active specification artifacts
 

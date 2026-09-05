@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T13:19:00Z
+updated_at: 2026-09-05T14:07:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1349,3 +1349,48 @@ exports follow. Candidate B fifth/sixth drafts were rejected and preserved at
 disproved the draft's negative-deposit error classification. B–D implementations,
 comparison/selection, S02, Council/S01 backfill, S03–S15, ACTUS and 24 XML release
 gates remain open. The full goal remains active; Foreman repairs remain closed.
+
+### Candidate B native obligation-graph design adopted after corrections
+
+**CLM-0159.** Repository observation and delegated design decision: branch commit
+`fe011a17a5d9e1c4d48bed07fafe4b92c4f2c916` adopts an independently reviewed
+native obligation-graph experiment, replacing the rejected draft as B's
+implementation contract. Its evaluator must compute from native obligations,
+dependencies, exclusions, accounts and choices, not call A or relabel A's answer.
+A separate narrower library mapping supports frozen-Python comparison.
+
+The review caught a comparison-domain error: minimumTime1 excluded the original
+swap's Time0 deposit. A retained root frozen-Python probe accepts the same
+deposit10 at now0 from minimumTime0 but rejects it from minimumTime1. The adopted
+design restores initial Time0 and its ordinary successor clocks. Authority
+fixture clocks remain a separate boundary. The probe's initial formatting error
+is retained and is not counted as a semantic result.
+
+The design also distinguishes financial completion from a structurally exhausted
+graph and stranded escrow. An admitted single-deposit graph can exhaust its
+frontier while retaining funds; this is a static design consequence awaiting
+an actual B experiment, not a reproduced B counterexample. Required negative
+witnesses must expose it, and B cannot claim universal generic non-locking.
+Deadline/no-timeout priority, complete successor checks and mapping diagnostics
+are explicit. Native re-review cleared the exact corrected design bytes; root
+adopted them under existing user-delegated authority, not as Council approval.
+
+Claim metadata:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 common design.
+- Repository: local Moriarty, branch `s02-model-comparison`, full commit above.
+- Locators on that branch: `docs/superpowers/specs/2026-09-05-moriarty-s02-candidate-b-native-graph-design.md` and `evidence/s02-model-comparison/candidate-b-native-design-review/`.
+- Final reviewed design SHA-256: `2cc795c4ad3a83c3b7b5ecf6ff39ef0af486a0ae1a864fa2fe3e0b24fe2f70ac`; original exact bytes and review/adoption dispositions retained.
+- Observed and commit date: 2026-09-05 UTC; this entry 14:07 UTC.
+- Authority: adopted experimental design, native nonauthor Astra review and a source-pinned frozen-Python probe; not the exact-provider Council.
+- Scope: B's staged native-model design and the frozen comparison-clock probe.
+- Evidence kind: repository observation, experiment observation and delegated recommendation.
+- Reproduction: frozen-Python clock probe reproduced; B implementation and runtime experiments specified-only.
+- Confidence: high for the documented design/review and probe; no checked B invariant or architecture choice.
+- Lifecycle status: S2 written experimental design; source/evidence committed on the experimental branch, not a main-integrated B implementation.
+
+B implementation starts with concrete carriers, generic validation and literal
+graphs. A's authority-boundary implementation is under final verification, not
+accepted here. Complete A lifecycles, B–D comparison, model checking, Council,
+S03–S15, ACTUS and the XML release gates remain open. Foreman repairs stay closed;
+the full Moriarty goal remains active and no GitHub publication is claimed.

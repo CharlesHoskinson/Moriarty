@@ -456,3 +456,12 @@ explicit incomplete historical RED provenance. Preserved offline Apalache 4 GiB/
 8 GiB heap failures at 93fce82 without claiming checked states or a counterexample.
 Boundary plan 5b1f1fb is adopted and implementation has begun; B fifth/sixth
 drafts remain unadopted. No full A, S02, Council or XML gate is claimed.
+
+## [2026-09-05] design | Adopt the corrected native Candidate B experiment
+
+Recorded CLM-0159 for branch commit fe011a1. Independent design review caught
+the Time0 comparison mismatch, generic stranded/exhausted outcomes and ambiguous
+deadline precedence. The corrected design is adopted with exact-byte review and
+a retained frozen-Python probe. B implementation and its negative experiments
+remain specified-only. A's final authority-boundary checks are in progress, not
+accepted by this entry. No S02, Council, model-checking or XML gate is claimed.
