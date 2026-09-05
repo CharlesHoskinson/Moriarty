@@ -156,3 +156,14 @@ JSON-to-KAST preprocessor.
 Also repaired the five ZKIR pages from the 2026-09-03 ingest that linked
 sibling pages and arc-zkir Agda modules by absolute `file:///home/charl/...`
 URIs; they now use relative paths (`../../repos/...` for pinned sources).
+
+## [2026-09-05] semantics | ZKIR-SYNTAX, ZKIR-WF and the pyk preprocessor (milestone 2)
+
+Wrote `experiments/zkir-k/semantics/zkir-syntax.k` (abstract syntax of the
+34-instruction, 13-type surface at 92e8bdd3, `reads`/`writes`, static
+well-formedness) and `tools/zkir_kast.py` (JSON to K term, serde-faithful).
+Assembled a 56-program version-3 corpus under `experiments/zkir-k/corpus/`
+(the crate's inline test programs, midnight-zkir micro-dao precompiles, Moriarty
+artifacts) plus 7 handmade negatives; `tools/check_corpus.py` passes 63/63
+(CLM-0724, evidence/zkir-k-milestone2-corpus-check-2026-09-05.txt). Finding: the
+ledger's precompiles at 92e8bdd3 are still ZKIR v2 (CLM-0725).

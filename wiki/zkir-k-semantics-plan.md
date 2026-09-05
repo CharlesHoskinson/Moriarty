@@ -3,7 +3,7 @@ id: zkir.k-semantics.plan
 type: semantics
 title: ZKIR semantics in K, plan
 status: active
-updated_at: 2026-09-05T17:05:00Z
+updated_at: 2026-09-05T18:10:00Z
 sources:
   - SRC-0023
   - SRC-0025
@@ -73,7 +73,7 @@ The E00 experiment already holds ZKIR 3 artifacts compiled from the Moriarty esc
 ## Milestones
 
 1. Install K v7.1.337 with `kup` on WSL2; run the tutorial's first lesson to confirm the toolchain. Done 2026-09-05: `kup install k --version v7.1.337` resolved to the pinned commit 4a46d123 from the K binary cache in under three minutes; lesson 1.2 compiles and runs under both the LLVM and the Haskell backend, and pyk 7.1.337 (PyPI `kframework`, uv dependency group `zkir-k`) parses, converts KAST to KORE and back, and runs a program against the compiled definition. Rerunnable as `experiments/zkir-k/toolchain-check/check_k_toolchain.sh` (CLM-0723; evidence/k-toolchain-install-2026-09-05.md; executed test; reproduced; high; S1). Two facts for milestone 2: pyk reads `compiled.json`, so every ZKIR definition must be compiled with `--emit-json`; and kup does not put pyk on the path, so the Python side runs through `uv run --group zkir-k`.
-2. Module `ZKIR-SYNTAX`: abstract sorts and well-formedness checks, plus the pyk JSON-to-KAST preprocessor (single assignment, declared types, input count). Test: every precompile parses.
+2. Module `ZKIR-SYNTAX`: abstract sorts and well-formedness checks, plus the pyk JSON-to-KAST preprocessor (single assignment, declared types, input count). Test: every precompile parses. Done 2026-09-05: `experiments/zkir-k/semantics/zkir-syntax.k` declares the 34 instructions, 13 types, operands, guards and alignments with `symbol` names equal to the JSON `op` keys, plus `reads`, `writes` and encoded lengths; module `ZKIR-WF` checks minor version, distinct inputs, single assignment, definition before use, immediate range, `output` and `div_mod_power_of_two` arities and the bit bounds of `ir_vm.rs`. `tools/zkir_kast.py` mirrors the serde layer of `ir.rs` (variables start with `%`, little-endian hex immediates below r, `guard: null`, tagged alignments). The corpus is 56 version-3 programs (43 inline programs from the crate's own tests at 92e8bdd3, 6 micro-dao precompiles from midnight-zkir 2ffe2d1, 7 Moriarty escrow and swap artifacts) plus 7 handmade negatives; all 63 give the expected outcome in 13 s (CLM-0724; evidence/zkir-k-milestone2-corpus-check-2026-09-05.txt; executed test; reproduced; high; S1). Two facts learned: the ledger's own `zkir-precompiles/` at 92e8bdd3 are still version 2, so the crate's test programs are the only spec-commit corpus; and the Rust preprocess does not enforce single assignment (`memory.insert` overwrites), so that check is stricter than the crate by design (CLM-0725; repos/_extracts/ledger9-92e8bdd3-zkir-v3-src/zkir-v3/src/ir_vm.rs; repository observation; reproduced; high; S4).
 3. Module `ZKIR-FIELD` and `ZKIR-TYPES`: field arithmetic, curve constructors, Bytes32 conversions with unit claims for inverse and encode/decode round trips.
 4. Module `ZKIR-VM`: the 34 instruction rules, each updating `mem`, `pi`, `skips`, cursors and `constraints`. Test: oracle 1 over the precompile corpus.
 5. Constraint checker and the 13 divergence tests (oracle 2).
