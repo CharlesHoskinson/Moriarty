@@ -56,3 +56,28 @@ The contract subproject is complete and remains specification-only. Plan and
 execute the common model and four distinct
 candidate representations before correspondence, negative controls, actual
 Quint/Apalache checking, and the selection or stop decision.
+
+## Effect foundation review
+
+Task review of `aea316c..d069800` found no defect in transfer arithmetic,
+multiplicity checks, guarded actions, or the OpenSpec supplement binding.
+It verified source/evidence hashes and the three-state deposit/refund ITF.
+The reviewer did not approve the task because command provenance was incomplete.
+Quint structured compiler output does not preserve console witness counts.
+The report also lacked original RED and incremental-run output.
+
+The implementer must preserve exact commands, exit codes, and console output.
+Recovered historical evidence must identify its source.
+Any reconstructed check must be labeled retrospective, not original chronology.
+The controller separately ran ten Quint tests, both witnesses in 100 sampled
+traces, three Python contract tests, and the ten S01 gates successfully.
+Those checks do not substitute for the missing original process record.
+
+Commit `1bd4bff` adds fresh console receipts with exact commands and exit codes.
+It also preserves reconstructed missing-import and deposit-only checks.
+The original process output was unavailable, so the reconstruction is explicitly retrospective.
+This correction remains unapproved at the current integration boundary.
+
+The user now requires GPT-6 Astra, Grok 4.6, and Fable 5.1 council review for each gate.
+The next acceptance review must follow `docs/COUNCIL_REVIEWS.md` from main.
+Prior same-family task reviews cannot substitute for that three-provider council.
