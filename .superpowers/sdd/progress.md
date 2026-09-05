@@ -14,12 +14,14 @@ typechecks passed, exact8module/12import evidence archived. A2Task1 accepted at
 35959ae and A3Task1 at3f440d2: genuine compiling RED/GREEN, nonauthor source
 approval and root exact-source/archive/terminal-receipt audits. Each fixture unit
 passed its two tests; these do not execute either full authority lifecycle.
-A2Task2 actual lifecycle/helpers/tests dispatched to a1_installment_plan;
+A2Task2 accepted955f56b: seven tests and recursive typecheck pass, with original
+compiling freshCancellationTest RED, independent source review and root audit
+of all four stage closures and91original archive members.
 A3Task2 accepted c3c89fa: all five tests pass, including twelve ordinary
 scenarios under both profiles, real funding/disposition and retained refusals.
 A3Task3 stale/adversarial/harness work dispatched to execution_adversarial_tests;
-A2Task2 corrected seven-test GREEN still awaits terminal intake. Each has a
-brief and unique ignored report/receipts. No A2Task3 before Task2 acceptance.
+A2Task3 adversarial/harness work explicitly dispatched to a1_installment_plan
+after Task2 acceptance. Each has a brief and unique ignored report/receipts.
 Addendum a314549 uses one recursive full-closure typecheck per lifecycle and
 one root shared regression receipt after BOTH final source closures freeze.
 Preliminary A4/A5 intake findings committed5ab0b55; no factoring implemented.
