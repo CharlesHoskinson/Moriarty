@@ -94,4 +94,11 @@ module authorization_test {
     registry: parentRegistered.context.registry.put(parentKey, AuthorityUnused)})))
   run parentAuthorityCannotLoseEntryTest = assert(not(validAuthorityContext({...parentRegistered.context,
     parents: parentRegistered.context.parents.put(parentKey, ParentVacant)})))
+  run unsupportedParentPreparationTest = assert(Set(Bob, Mallory).forall(principal => {
+    val key = {...parentKey, principal: principal}
+    val unsupported: TestPolicy = {...parentBefore, body: {...parentBody, key: key, debitLocations: Set(),
+      capabilities: Set(CancelCapability), clauses: List({...cancelInitialClause,
+        operation: OpCancelParent(key), conditions: List(InputIs(NoInput))})}}
+    validPolicy(unsupported) and not(canPrepareSigning(parentSigningInitial, unsupported, principal))
+  }))
 }
