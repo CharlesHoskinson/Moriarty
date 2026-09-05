@@ -1,6 +1,20 @@
 # Current execution progress
 
-## A4 implementation override, 2026-09-05
+## A4/A5 implementation override, 2026-09-05
+
+CheckerTasks1–5 are locally admitted through17 GREEN tests. Tasks3/4 reconstruct
+all46 ordinary and32 negative/stale case histories (78cases/1557events), with
+original compiling controls, independent source reviews and root receipt audits.
+These are expected histories, not actual Quint export acceptance. ProducerTask1
+is executing. The planned two-long-ITF transport exceeds Node's hard string cap;
+a case-sharded addendum is being planned without removing any case/event/check.
+A5 plan900bb20 and kernelTask1 are locally admitted: sole supplied-result guard
+restoration, recursive RED/GREEN typechecks and all6 kernel tests. Shared runtime
+bytes are retained losslessly in bounded Git parts. Full derived-corpus Task2,
+pilot, full A5 campaign, exact-provider Council and A7 remain open. This paragraph
+supersedes the older task-status sentences below.
+
+## Earlier A4 implementation override, 2026-09-05
 
 A4 checker plan adopted d4f6196; immutable replay-interface addendum ab7c827
 fixes arithmetic to78cases/1557events with no removed cases. CheckerTask1 is
