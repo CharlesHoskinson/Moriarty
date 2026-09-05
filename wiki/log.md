@@ -512,3 +512,10 @@ CLM-0164 records `955f56b`: seven tests covering both races, two fills, fresh
 cancellation and nonce1 recovery/refusal. Original compiling RED, final GREEN,
 independent source approval and exact receipt/archive audit are preserved.
 Task3 is dispatched; full A2 and shared regressions remain open.
+
+## [2026-09-05] execution | Exercise swap adversarial and action paths
+
+CLM-0165 records `926b350`:17 tests, all24 required witnesses in100 samples,
+independent source review and exact archive/runtime intake. Full A3 still needs
+shared regressions. A4 design `effb7af` is adopted; separate concrete producer
+and checker plans are not yet behavioral implementation or correspondence.

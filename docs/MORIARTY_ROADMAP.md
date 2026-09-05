@@ -96,8 +96,11 @@ implemented and locally reviewed, with original compiling RED/GREEN preserved.
 Swap ordinary authority routes (`c3c89fa`) now pass five tests, including all
 twelve ordinary scenarios under both profiles. Installment authority routes
 (`955f56b`) pass seven tests, including both race orders, two fills, fresh
-cancellation and nonce1 recovery/refusal cases. Both adversarial/action-harness
-tasks follow; shared regressions and full A2/A3 acceptance remain open.
+cancellation and nonce1 recovery/refusal cases. Swap adversarial/action-harness
+unit `926b350` passes17 tests and reaches all24 required witnesses in100 samples;
+installment adversarial checks are in progress. Shared regressions and full
+A2/A3 acceptance remain open. A4 export/replay design is adopted at `effb7af`;
+its producer and independent checker concrete plans precede implementation.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.

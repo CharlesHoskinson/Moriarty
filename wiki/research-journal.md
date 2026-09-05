@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T17:56:00Z
+updated_at: 2026-09-05T18:12:07Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1551,3 +1551,35 @@ observations; lifecycle S3 experimental branch. Root audited author runtime
 without duplicating it. Task3 is dispatched after admission; adversarial/action
 witnesses and shared final regressions remain open. No full A2, correspondence,
 model checking, Council, integration or broader XML gate is accepted.
+
+### Candidate A swap adversarial and action unit admitted
+
+**CLM-0165.** Experiment and repository observation: `926b350` implements swap
+Task3 with original compiling generic-verifier RED and corrected A-specific
+verification. Seventeen tests and the recursive typecheck pass. The actual
+hundred-sample run reports no swapSafetyS violation and all24 required witnesses
+nonzero. Profile completions are54 after-resolution and46 before-resolution.
+This samples the declared finite routes, not arbitrary concurrent interleavings.
+
+The six negative tests cover stale signing/verified records, fully rebound
+observation mutations, invalid second operation, wrong Core chooser/signer/nonce,
+and stale plan facts. Constructed verified tampering is explicitly a boundary
+control, not a reachable successful verification. Nonauthor final source/spec
+review approved; root audited43original archive members,32RED/GREEN source
+snapshots, the exact sole correction, all terminal receipts and raw witness
+counts. Evidence is at `evidence/s02-candidate-a-completion/a3/task3/` in that
+experimental commit, with replayable validation, review and author archive.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope finite swap adversarial/action unit; observed date2026-09-05 UTC;
+reproduction reproduced for named checks; confidence high for those observations;
+lifecycle S3 experimental branch. No per-sample ITF output was requested or
+retained. Raw command seed42 and printed reproduction hint0x153 remain distinct.
+Shared final regressions and full A3 acceptance remain open.
+
+Bounded A4 export/replay design `effb7af` is independently reviewed and adopted
+under the XML's delegated planning authority. Separate producer/checker concrete
+plans must freeze exact schema, expanded inventory and behavioral tests before
+implementation. The design preserves schema1, actual-vs-claimed computation,
+retained rejection histories and explicit denied probes/case boundaries. This
+is planning, not integrated correspondence, model checking or Council acceptance.
