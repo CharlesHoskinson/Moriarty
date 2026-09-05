@@ -21,8 +21,75 @@ module authorization {
   type SigningState[s,c,a,p] = {context: AuthorityContext[s,c,a,p],
     signing: AuthorityKey -> SigningRecord[s,c,a,p]}
 
-  pure def canPrepareSigning(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal): bool = false
-  pure def applyPrepareSigning(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal): SigningState[s,c,a,p] = state
+  pure def isParentKey(key: AuthorityKey): bool = key.domain == InstallmentDomain and key.nonce == 0
+  pure def validSignedPolicy(signed: SignedPolicy[s,c,a,p]): bool = validPolicy(signed.policy)
+    and signed.signer == signed.policy.body.key.principal and Set(0, 1).contains(signed.token)
+  pure def validAuthorityCell(key: AuthorityKey, cell: AuthorityCell[s,c,a,p]): bool = match cell {
+    | AuthorityUnused => true
+    | AuthorityRegistered(signed) => validSignedPolicy(signed) and signed.policy.body.key == key
+    | AuthorityConsumed(consumed) => validSignedPolicy(consumed.signed)
+        and consumed.signed.policy.body.key == key and consumed.revision >= 1
+  }
+  pure def validParentCell(key: AuthorityKey, cell: ParentCell[s,c,a,p], authority: AuthorityCell[s,c,a,p]): bool = match cell {
+    | ParentVacant => not(isParentKey(key)) or authority == AuthorityUnused
+    | ParentLive(live) => live.parent.key == key and validParent(live.parent)
+        and validEntry(live.parent, live.entry) and validSignedPolicy(live.parent.policy)
+        and live.parent.policy.policy.body.key == key and match authority {
+          | AuthorityRegistered(signed) => signed == live.parent.policy and live.entry == initialEntry(live.parent)
+          | AuthorityConsumed(consumed) => consumed.signed == live.parent.policy
+              and consumed.revision == live.entry.revision and live.entry.revision > 0
+          | AuthorityUnused => false
+        }
+  }
+  pure def validAuthorityContext(context: AuthorityContext[s,c,a,p]): bool =
+    if (context.registry.keys() == AUTHORITY_KEYS and context.parents.keys() == AUTHORITY_KEYS)
+      validLedger(context.ledger) and validEnvironment(context.environment)
+        and AUTHORITY_KEYS.forall(key => validAuthorityCell(key, context.registry.get(key))
+          and validParentCell(key, context.parents.get(key), context.registry.get(key)))
+    else false
+  pure def parentFacts(cell: ParentCell[s,c,a,p]): ParentFacts = match cell {
+    | ParentVacant => ParentAbsent
+    | ParentLive(live) => ParentPresent({cancelled: live.entry.cancelled, usedSlots: live.entry.usedSlots,
+        paid: live.entry.paid, remainingAllowance: live.entry.remainingAllowance, revision: live.entry.revision})
+  }
+  // Callers must validate the context before treating this projection as authentic.
+  pure def contextPolicyFacts(context: AuthorityContext[s,c,a,p]): PolicyFacts = {
+    ledger: context.ledger, environment: context.environment,
+    parents: context.parents.keys().mapBy(key => parentFacts(context.parents.get(key))),
+  }
+  pure def operationParents(op: Operation): Set[AuthorityKey] = match op {
+    | OpFillSlot(fill) => Set(fill.parent)
+    | OpCancelParent(parent) => Set(parent)
+    | OpRecover(recovery) => Set(recovery.parent)
+    | _ => Set()
+  }
+  pure def policyParentDependencies(body: PolicyBody): Set[AuthorityKey] = body.clauses.foldl(Set(), (deps, clause) =>
+    clause.conditions.foldl(deps.union(operationParents(clause.operation)), (acc, condition) => match condition {
+      | ParentMatches(parent) => acc.union(Set(parent.key))
+      | _ => acc
+    }))
+  // Preconditions: complete maps and finite dependency keys. Never bind unrelated
+  // registry cells: one signer's registration must not invalidate the other.
+  pure def signingSnapshot(context: AuthorityContext[s,c,a,p], body: PolicyBody): SigningSnapshot[s,c,a,p] = {
+    val deps = policyParentDependencies(body)
+    {candidate: context.candidate, ledger: context.ledger, environment: context.environment,
+      keyCell: context.registry.get(body.key), parentCells: deps.mapBy(key => context.parents.get(key)),
+      parentAuthorities: deps.mapBy(key => context.registry.get(key))}
+  }
+  pure def validSigningState(state: SigningState[s,c,a,p]): bool = validAuthorityContext(state.context)
+    and state.signing.keys() == AUTHORITY_KEYS
+  pure def canPrepareSigning(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal): bool =
+    if (validSigningState(state) and validPolicy(policy) and policyParentDependencies(policy.body).subseteq(AUTHORITY_KEYS)) {
+      val expected = {policy: policy, signer: signer, snapshot: signingSnapshot(state.context, policy.body)}
+      signer == policy.body.key.principal and state.context.registry.get(policy.body.key) == AuthorityUnused
+        and policy.body.implementationVersion == state.context.environment.implementationVersion
+        and policy.body.enforcementMechanism == state.context.environment.enforcementMechanism
+        and state.signing.get(policy.body.key) != PreparedSigning(expected)
+    } else false
+  pure def applyPrepareSigning(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal): SigningState[s,c,a,p] = {
+    ...state, signing: state.signing.put(policy.body.key,
+      PreparedSigning({policy: policy, signer: signer, snapshot: signingSnapshot(state.context, policy.body)})),
+  }
   pure def canSign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): bool = false
   pure def applySign(state: SigningState[s,c,a,p], policy: Policy[s,c,a,p], signer: Principal, token: int): SigningState[s,c,a,p] = state
 }
