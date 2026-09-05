@@ -1,5 +1,27 @@
 # Current execution progress
 
+## Latest execution override, 2026-09-05 20:08 UTC
+
+Producerobserver/inventory/recorderTask0–1 admitted5616bcd:4Quint+2Python tests,
+recursivetypecheck, originalbehavioralcontrols,9stage/36source/8102runtimeaudit.
+Case-shardedtransport5829639 preserves78cases/1557events after localNode hard
+stringcap finding; streamingutilityplan22cdec6 is implemented at reader62b7b30
+and writerfdb81c7,42tests with originalduplicatekey/shortwrite RED/GREEN.
+Mainroadmap/wiki throughCLM0169, main8dca45e; CT/ST EARS/OpenSpec valid.
+
+Current lanes: producerTask2 lowering/driver/78nativewrappers (noexports yet);
+checkerTask5schema3streamingsupplement waits for producer4108terminal editwindow;
+A5Task2 alloriginal/factoredcorpus loops87642/92142 concurrently2, each20commands.
+Its boundaryRED typecheck0/517.244s and reboundForgeryEqualTest QNT508exit1/
+473.375s are retained; exactwrapper restored and generator--check0. Bothadapter
+entries each pass15tests; full244run corpus perlane remainsinprogress.
+No root-owned running jobs at this override. Agents own/polltheirhandles.
+All A4/A5fullacceptance, A6Council and A7integration remainopen.
+NoForemanrepairs, remotepublication or productautomaticloop claims.
+
+This block supersedes stale next-step/status sentences below; originalhistory
+is retained. Current open session20260905T161538Z-60de62 mustnotberebegun.
+
 ## A4/A5 implementation override, 2026-09-05
 
 CheckerTasks1–5 are locally admitted through17 GREEN tests. Tasks3/4 reconstruct
