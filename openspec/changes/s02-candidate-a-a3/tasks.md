@@ -2,7 +2,9 @@
 
 Partial progress: Task1 literal fixtures/tests accepted at `3f440d2`, with
 compiling RED/GREEN, nonauthor source approval and root receipt/archive audit.
-Task2 lifecycle implementation is dispatched; the complete A3 package is open.
+Task2 ordinary authority routes are accepted at `c3c89fa`: five tests and
+recursive typecheck pass, with original compiling RED and exact evidence audit.
+Task3 stale/adversarial/action-witness work is dispatched; full A3 stays open.
 
 - [ ] Verify the exact dependencies and source pins.
 - [ ] Read XML phase A3 and its named scenario inventory.

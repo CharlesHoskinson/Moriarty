@@ -497,3 +497,11 @@ CLM-0162 records installment `35959ae` and swap `3f440d2`: compiling assertion
 RED, two corrected tests each, nonauthor source review and root evidence intake.
 Their actual authority lifecycle tasks are dispatched next. The installment
 backend-identity timing limit is explicit. Neither full A2/A3 nor Council passed.
+
+## [2026-09-05] execution | Execute swap authority routes
+
+CLM-0163 records `c3c89fa`: five tests, twelve ordinary scenarios under both
+profiles, actual funding/disposition/refusal paths, original compiling RED and
+independent source/evidence intake. Stale/adversarial harness tests follow.
+Reviewed addendum `a314549` consolidates equivalent static/shared regressions;
+it removes no lifecycle test, witness or semantic obligation.

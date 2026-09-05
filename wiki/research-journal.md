@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T17:29:39Z
+updated_at: 2026-09-05T17:44:02Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1494,3 +1494,34 @@ lifecycle S3 experimental branch. A2/A3 Task2 actual authority routes are
 dispatched independently; no full lifecycle or Council acceptance follows.
 Preliminary export/checking intake is preserved at `5ab0b55`; it is not an
 adopted factoring plan or a successful model check. Main remains status-only.
+
+### Candidate A swap ordinary authority routes execute
+
+**CLM-0163.** Experiment and repository observation: commit
+`c3c89faef1b5723c1520a05c88eb26ff4529d6c5` implements swap Task2. Five named tests
+and the recursive typecheck pass. The deterministic matrix executes twelve
+ordinary scenarios under both signing profiles through actual A guards and
+common updates: sequential Alice/Bob funding, nonce1 dispositions, funded
+settlement/refunds/timeouts, exact retained supplied-deadline and empty-timeout
+refusals, and replay rejection. This is finite guarded-prefix execution, not
+the separate stateful harness or arbitrary-interleaving verification.
+
+The compiling unchanged-CommitS scaffold failed fundingTest with QNT508 before
+the sole correction restored applyCommit. Nonauthor final source review approved;
+root audited both fifteen-file closures, raw terminal results, exact correction
+and the original evidence archive. Evidence is committed under
+`evidence/s02-candidate-a-completion/a3/task2/` with manifest, validation, review
+and author archive. Root audited author runtime, rather than duplicating it.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope ordinary swap authority routes; observed date 2026-09-05 UTC; reproduction
+reproduced for the named finite checks; confidence high for those observations;
+lifecycle S3 experimental branch. Task3 stale binding/adversarial/action witnesses,
+shared regressions, integrated correspondence, explicit model checking and Council
+remain open. A2 Task2 corrected checks are in progress; no outcome is inferred.
+
+Verification addendum `a314549` consolidates equivalent typechecking based on
+installed Quint source inspection and an unused-invalid-declaration control,
+with independent review. Both final lifecycle closures must be frozen and bound
+before one shared boundary/adapter/Python regression receipt serves both units.
+All own tests, witnesses, properties and original source-plan hashes remain intact.
