@@ -50,12 +50,51 @@ ORACLE_BIN = ORACLE
 
 
 def oracle(program: Path, preimage: dict) -> dict:
-    with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile('w', suffix='.json') as f:
         json.dump(preimage, f)
-    res = subprocess.run([str(ORACLE_BIN), str(program), f.name], capture_output=True, text=True)
-    if res.returncode != 0:
-        return {'status': 'oracle-failed', 'error': res.stderr[-500:]}
+        f.flush()
+        res = subprocess.run([str(ORACLE_BIN), str(program), f.name], capture_output=True, text=True)
+    if res.returncode == 101:   # Rust panic (unwinding abort)
+        return {'status': 'panic', 'error': res.stderr.strip()[-500:]}
+    if res.returncode != 0:      # load error or preimage error: reported before preprocess
+        return {'status': 'load-error', 'error': res.stderr.strip()[-500:]}
     return json.loads(res.stdout)
+
+
+# Error classes: both sides' messages are mapped to a small vocabulary and the
+# classes must agree; formatting differences (K prints decimals, Rust prints
+# little-endian hex) are not compared.
+ERROR_CLASSES = [
+    ('variable-not-found', r'variable not found|register .* is not in the witness'),
+    ('type-conversion', r'cannot convert'),
+    ('excessive-bits', r'Excessive bit (count|bound)'),
+    ('bit-bound', r'Bit bound failed'),
+    ('boolean', r'Expected boolean|Boolean gate'),
+    ('assertion', r'Failed direct assertion'),
+    ('equality', r'Equality constraint failed'),
+    ('unsupported-op', r'Unsupported|Cannot build|Cannot extract|Concat expects|expects Byte'),
+    ('decode', r'Failed to decode|not in canonical form|Bytes32 decoding|Not enough raw inputs|Expected \d+ raw inputs|slice out of bounds|nth out of bounds|slice length'),
+    ('transcript-short', r'transcript index out of range|range end index|index out of range'),
+    ('transcript-unconsumed', r'Transcripts not fully consumed'),
+    ('commitment', r'communications? (commitment|randomness)|Communications commitment'),
+    ('impact-mismatch', r'Public transcript input mismatch'),
+    ('output', r'^Output|Output position|output: signature'),
+    ('div-mod-arity', r'DivModPowerOfTwo requires|div_mod_power_of_two requires'),
+    ('alignment', r'did not match alignment|alignment'),
+    ('inverse', r'cannot invert zero'),
+    ('overflow', r'overflows field'),
+    ('low-high', r'Bytes32FromLowHigh|low operand|high operand'),
+    ('reassignment', r'reassignment of'),
+    ('wf', r'wfError|duplicate input|undefined variable|immediate out of field'),
+]
+
+
+def err_class(msg: str) -> str:
+    import re
+    for name, pat in ERROR_CLASSES:
+        if re.search(pat, msg or '', re.I):
+            return name
+    return 'other:' + (msg or '')[:40]
 
 
 def strs(xs):
@@ -68,7 +107,7 @@ def build_preimage(runner: Runner, program, doc: dict, rng: random.Random, small
     rand = rng.randrange(zv.R)
     pre = {'inputs': strs(inputs), 'binding_input': str(rng.randrange(zv.R)),
            'private_transcript': [], 'public_transcript_inputs': [], 'public_transcript_outputs': []}
-    if seed_pre:
+    if seed_pre and seed_pre.get('inputs'):
         # the crate's own test values, when they are literals (manifest test_preimage)
         for key in ('inputs', 'private_transcript', 'public_transcript_outputs', 'binding_input'):
             if key in seed_pre:
@@ -99,6 +138,11 @@ def compare(k: dict, r: dict) -> list[str]:
     diffs = []
     if k['status'] != r['status']:
         return [f"status K={k['status']} ({k.get('error', '')[:80]}) Rust={r['status']} ({r.get('error', '')[:80]})"]
+    if k['status'] in ('error', 'panic'):
+        ck, cr = err_class(k.get('error', '')), err_class(r.get('error', ''))
+        if ck != cr:
+            diffs.append(f"error class K={ck} ('{k.get('error', '')[:60]}') Rust={cr} ('{r.get('error', '')[:60]}')")
+        return diffs
     if k['status'] != 'ok':
         return diffs
     if k['pis'] != r['pis']:
@@ -111,8 +155,10 @@ def compare(k: dict, r: dict) -> list[str]:
             diffs.append(f'{name}: missing in K')
         elif name not in rm:
             diffs.append(f'{name}: missing in Rust')
-        elif km[name] != rm[name]:
-            diffs.append(f"{name}: K={km[name]} Rust={rm[name]}")
+        else:
+            a, b = km[name], rm[name]
+            if a['encoded'] != b['encoded'] or a.get('type') != b.get('type'):
+                diffs.append(f"{name}: K={a} Rust={b}")
     return diffs
 
 
@@ -135,6 +181,7 @@ def main() -> int:
     runner = Runner(ext=args.ext)
     rows = []
     failures = 0
+    oracle2_flags = []
     t0 = time.time()
     for corpus, directory in CORPORA.items():
         for path in sorted(directory.glob('*.zkir')):
@@ -145,8 +192,13 @@ def main() -> int:
                 continue
             try:
                 program = zkir_kast.load_program(path, ext=args.ext)
-            except zkir_kast.ZkirFormatError:
-                continue   # rejected before preprocess by both sides
+            except zkir_kast.ZkirFormatError as e:
+                # the crate's `IrSource::load` must reject it as well
+                r = oracle(path, {'inputs': [], 'binding_input': '0'})
+                ok = r['status'] == 'load-error'
+                failures += not ok
+                rows.append((corpus, path.name, 'format', f"K=format-error Rust={r['status']} ({str(e)[:60]})", [] if ok else [f"Rust accepted a program the preprocessor rejects: {r.get('error', '')[:100]}"]))
+                continue
             rng = random.Random(f'{args.seed}:{path.name}')
             manifest = directory / 'manifest.json'
             seed_pre = None
@@ -173,24 +225,51 @@ def main() -> int:
                     same = k.get('error', '')[:20] == r.get('error', '')[:20]
                     note = f" msg K='{k.get('error', '')[:70]}'" + ('' if same else f" Rust='{r.get('error', '')[:70]}'")
                 viol = k.get('violations', [])
+                if k['status'] == 'ok' and viol:
+                    oracle2_flags.append((path.name, viol))
                 vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
                 rows.append((corpus, path.name, f'run{attempt}', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} passes={passes} {time.time() - t1:.1f}s{note}{vnote}", diffs))
                 if k['status'] == 'ok' and r['status'] == 'ok':
-                    if not args.no_perturb and pre['inputs']:
-                        pert = json.loads(json.dumps(pre))
-                        pert['inputs'][0] = str(rng.randrange(zv.R))
-                        k2 = runner.run(program, pert)
-                        r2 = oracle(path, pert)
-                        d2 = compare(k2, r2)
-                        failures += bool(d2)
-                        rows.append((corpus, path.name, 'perturbed', f"K={k2['status']} Rust={r2['status']} regs={len(k2.get('memory', {}))}", d2))
+                    if not args.no_perturb:
+                        variants = []
+                        if pre['inputs']:
+                            pert = json.loads(json.dumps(pre))
+                            pert['inputs'][0] = str(rng.randrange(zv.R))
+                            variants.append(('perturbed-raw', pert))
+                            # a valid random value of the declared type at a random input position
+                            offs, pos = 0, rng.randrange(len(doc['inputs']))
+                            for i, entry in enumerate(doc['inputs']):
+                                w = zv.ENCODED_LEN.get(entry['type']) or len(zv.random_encoded(entry['type'], rng))
+                                if i == pos:
+                                    pert2 = json.loads(json.dumps(pre))
+                                    pert2['inputs'][offs:offs + w] = strs(zv.random_encoded(entry['type'], rng))
+                                    variants.append(('perturbed-typed', pert2))
+                                    break
+                                offs += w
+                        if pre['public_transcript_inputs']:
+                            pert3 = json.loads(json.dumps(pre))
+                            j = rng.randrange(len(pert3['public_transcript_inputs']))
+                            pert3['public_transcript_inputs'][j] = str((int(pert3['public_transcript_inputs'][j]) + 1) % zv.R)
+                            variants.append(('wrong-pubin', pert3))
+                        if pre.get('communications_commitment'):
+                            pert4 = json.loads(json.dumps(pre))
+                            pert4['communications_commitment'][0] = str((int(pert4['communications_commitment'][0]) + 1) % zv.R)
+                            variants.append(('wrong-comm', pert4))
+                        for label, p2 in variants:
+                            k2 = runner.run(program, p2)
+                            r2 = oracle(path, p2)
+                            d2 = compare(k2, r2)
+                            failures += bool(d2)
+                            rows.append((corpus, path.name, label, f"K={k2['status']} Rust={r2['status']} regs={len(k2.get('memory', {}))}" + (f" msg K='{k2.get('error', '')[:50]}'" if k2['status'] != 'ok' else ''), d2))
                     break
     for corpus, name, label, summary, diffs in rows:
         print(f"{'PASS' if not diffs else 'FAIL'}  {corpus:34} {name:52} {label:9} {summary}")
         for d in diffs[:8]:
             print(f'        {d}')
     oks = sum(1 for r in rows if r[3].startswith('K=ok Rust=ok'))
-    print(f'\n{len(rows)} comparisons ({oks} successful runs), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
+    errs = sum(1 for r in rows if r[3].startswith('K=error Rust=error') or r[3].startswith('K=panic Rust=panic'))
+    print(f'\n{len(rows)} comparisons: {oks} successful-run agreements, {errs} error-run agreements (status and error class), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
+    print(f'oracle 2: {len(oracle2_flags)} successful K runs with a non-holding gate' + (': ' + '; '.join(f'{n} {v[0][0]}[{v[0][1][:40]}]' for n, v in oracle2_flags[:10]) if oracle2_flags else ''))
     return 1 if failures else 0
 
 

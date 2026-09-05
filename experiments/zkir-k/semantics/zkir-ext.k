@@ -171,6 +171,19 @@ module ZKIR-EXT
   // neg on a Bool is logical negation at 2ffe2d1 (neg.rs)
   rule negV(boolV(B)) => vOk(boolV(notBool B))
 
+  // test_eq at 2ffe2d1 (eq.rs): Bool and Byte pairs compare by value; any two
+  // byte strings compare as vectors, so unequal lengths are simply false
+  rule eqDispatch(boolV(_), boolV(_)) => eqValue()
+  rule eqDispatch(byteV(_), byteV(_)) => eqValue()
+  rule eqDispatch(bytesV(_), bytesV(_)) => eqValue()
+  rule eqDispatch(bytesV(_), bytes32(_)) => eqFalse()
+  rule eqDispatch(bytes32(_), bytesV(_)) => eqFalse()
+  // in circuit, select has no arm for any byte-string length (select.rs),
+  // and test_eq requires equal lengths
+  rule #eqSupported(vOk(bytesV(_)), vOk(bytesV(_)), "cond_select") => synthErr("Unsupported cond_select: Bytes ? Bytes")
+  rule #eqSupported(vOk(bytesV(_)), vOk(bytes32(_)), "test_eq") => synthErr("Unsupported test_eq: byte strings of different length")
+  rule #eqSupported(vOk(bytes32(_)), vOk(bytesV(_)), "test_eq") => synthErr("Unsupported test_eq: byte strings of different length")
+
   // --- boolean gates ---------------------------------------------------------------------
   rule <k> #exec(andI(Is, O)) => #put(O, #boolGate(resolveAll(Is, M), "and")) ... </k> <mem> M </mem> <status> ok() </status>
   rule <k> #exec(orI(Is, O))  => #put(O, #boolGate(resolveAll(Is, M), "or"))  ... </k> <mem> M </mem> <status> ok() </status>
@@ -188,19 +201,18 @@ module ZKIR-EXT
   rule #boolFold(ListItem(boolV(B)) Vs, "or", Acc)  => #boolFold(Vs, "or", Acc orBool B)
   rule #boolFold(ListItem(boolV(B)) Vs, "xor", Acc) => #boolFold(Vs, "xor", Acc xorBool B)
   rule #boolFold(ListItem(V:Value) _, _, _) => vErr("Boolean gate expects Bool inputs, found " +String tn(V)) [owise]
-  rule #boolFold(ListItem(_) _, _, _) => vErr("Boolean gate expects Bool inputs") [owise]
 
   // --- byte strings ------------------------------------------------------------------------
   rule <k> #exec(concat(Is, O)) => #put(O, #concat(resolveAll(Is, M), .Bytes)) ... </k> <mem> M </mem> <status> ok() </status>
   syntax ValueResult ::= #concat(ValuesResult, Bytes) [function, total]
   rule #concat(vsErr(S), _) => vErr(S)
   rule #concat(vsOk(.List), Acc) => vErr("Concat requires at least one byte of input") requires lengthBytes(Acc) ==Int 0
-  rule #concat(vsOk(.List), Acc) => vOk(mkBytes(Acc)) requires lengthBytes(Acc) >Int 0
+  rule #concat(vsOk(.List), Acc) => vErr("Concat result length exceeds MAX_BYTES_LEN") requires lengthBytes(Acc) >Int 16777216
+  rule #concat(vsOk(.List), Acc) => vOk(mkBytes(Acc)) requires lengthBytes(Acc) >Int 0 andBool lengthBytes(Acc) <=Int 16777216
   rule #concat(vsOk(ListItem(byteV(X)) Vs), Acc) => #concat(vsOk(Vs), Acc +Bytes Int2Bytes(1, X, LE))
   rule #concat(vsOk(ListItem(bytesV(B)) Vs), Acc) => #concat(vsOk(Vs), Acc +Bytes B)
   rule #concat(vsOk(ListItem(bytes32(B)) Vs), Acc) => #concat(vsOk(Vs), Acc +Bytes B)
   rule #concat(vsOk(ListItem(V:Value) _), _) => vErr("Concat expects Byte or Bytes inputs, found " +String tn(V)) [owise]
-  rule #concat(vsOk(ListItem(_) _), _) => vErr("Concat expects Byte or Bytes inputs") [owise]
 
   rule <k> #exec(slice(B, S, L, O)) => #put(O, #slice(resolve(B, M), S, L)) ... </k> <mem> M </mem> <status> ok() </status>
   syntax ValueResult ::= #slice(ValueResult, Int, Int) [function, total]
@@ -258,7 +270,7 @@ module ZKIR-EXT
   rule eval(gate(slice(B, S, L, O)), M, _, _) => #matches(#slice(rd(B, M), S, L), rdId(O, M), "slice output")
   rule eval(gate(nth(B, I, O)), M, _, _)  => #matches(#nth(rd(B, M), I), rdId(O, M), "nth output")
   rule eval(gate(reverse(B, O)), M, _, _) => #matches(#rev(rd(B, M)), rdId(O, M), "reverse output")
-  rule eval(gate(loadConstant(T, Es, O)), M, _, _) => #matches(#toValue(decodeStrict(#immInts(Es), T, true)), rdId(O, M), "load_constant output")
+  rule eval(gate(loadConstant(T, Es, O)), M, _, Chips) => #and(#chipFor(T, Chips), #matches(#toValue(decodeStrict(#immInts(Es), T, true)), rdId(O, M), "load_constant output"))
   rule eval(gate(sha512(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_512", Chips), #matches(#sha512V(resolveAll(Xs, M), Al), rdId(O, M), "sha512 output")))
   rule #chipsOfInstrs((sha512(_, _, _) ; Is)) => SetItem("sha2_512") |Set #chipsOfInstrs(Is)
 endmodule

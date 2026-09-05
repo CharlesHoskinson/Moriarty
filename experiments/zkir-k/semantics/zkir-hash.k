@@ -12,7 +12,7 @@
 //   sha256(Bytes)           FIPS 180-4.
 //   keccak256(Bytes)        Keccak-f[1600], rate 1088, pad 0x01 .. 0x80 (pre-NIST).
 //
-// The Rust Poseidon CPU code folds partial rounds in pairs ("round skips"); that
+// The Rust Poseidon CPU code folds partial rounds three at a time ("round skips", NB_SKIPS_CPU = 2); that
 // is an algebraic rewrite of the plain round function implemented here, and the
 // differential tests against the crate confirm the outputs agree.
 requires "zkir-field.k"
@@ -147,14 +147,16 @@ module ZKIR-HASH
   syntax Int ::= "#m32" [function, total]
   rule #m32 => 4294967295
   syntax Int ::= rotr32(Int, Int) [function, total]
-  rule rotr32(X, N) => ((X >>Int N) |Int (X <<Int (32 -Int N))) &Int #m32
+  rule rotr32(X, N) => ((X >>Int N) |Int (X <<Int (32 -Int N))) &Int #m32 requires N >=Int 0 andBool N <Int 32
+  rule rotr32(X, _) => X &Int #m32 [owise]
   syntax Int ::= add32(Int, Int) [function, total]
   rule add32(A, B) => (A +Int B) &Int #m32
 
   syntax List ::= "#shaKs" [function, total]
   rule #shaKs => ListItem(1116352408) ListItem(1899447441) ListItem(3049323471) ListItem(3921009573) ListItem(961987163) ListItem(1508970993) ListItem(2453635748) ListItem(2870763221) ListItem(3624381080) ListItem(310598401) ListItem(607225278) ListItem(1426881987) ListItem(1925078388) ListItem(2162078206) ListItem(2614888103) ListItem(3248222580) ListItem(3835390401) ListItem(4022224774) ListItem(264347078) ListItem(604807628) ListItem(770255983) ListItem(1249150122) ListItem(1555081692) ListItem(1996064986) ListItem(2554220882) ListItem(2821834349) ListItem(2952996808) ListItem(3210313671) ListItem(3336571891) ListItem(3584528711) ListItem(113926993) ListItem(338241895) ListItem(666307205) ListItem(773529912) ListItem(1294757372) ListItem(1396182291) ListItem(1695183700) ListItem(1986661051) ListItem(2177026350) ListItem(2456956037) ListItem(2730485921) ListItem(2820302411) ListItem(3259730800) ListItem(3345764771) ListItem(3516065817) ListItem(3600352804) ListItem(4094571909) ListItem(275423344) ListItem(430227734) ListItem(506948616) ListItem(659060556) ListItem(883997877) ListItem(958139571) ListItem(1322822218) ListItem(1537002063) ListItem(1747873779) ListItem(1955562222) ListItem(2024104815) ListItem(2227730452) ListItem(2361852424) ListItem(2428436474) ListItem(2756734187) ListItem(3204031479) ListItem(3329325298)
   syntax Int ::= shaK(Int) [function, total]
-  rule shaK(I) => {#shaKs[I]}:>Int
+  rule shaK(I) => {#shaKs[I]}:>Int requires I >=Int 0 andBool I <Int 64
+  rule shaK(_) => 0 [owise]
 
   syntax Bytes ::= sha256Bytes(Bytes) [function, total]
   rule sha256Bytes(M) => #shaBlocks(#shaPad(M), 0,
@@ -209,17 +211,19 @@ module ZKIR-HASH
   syntax Int ::= "#m64" [function, total]
   rule #m64 => 18446744073709551615
   syntax Int ::= rotl64(Int, Int) [function, total]
-  rule rotl64(X, 0) => X
-  rule rotl64(X, N) => ((X <<Int N) |Int (X >>Int (64 -Int N))) &Int #m64 requires N >Int 0
+  rule rotl64(X, N) => ((X <<Int N) |Int (X >>Int (64 -Int N))) &Int #m64 requires N >Int 0 andBool N <Int 64
+  rule rotl64(X, _) => X &Int #m64 [owise]
 
   syntax List ::= "#keccakRCs" [function, total]
   rule #keccakRCs => ListItem(1) ListItem(32898) ListItem(9223372036854808714) ListItem(9223372039002292224) ListItem(32907) ListItem(2147483649) ListItem(9223372039002292353) ListItem(9223372036854808585) ListItem(138) ListItem(136) ListItem(2147516425) ListItem(2147483658) ListItem(2147516555) ListItem(9223372036854775947) ListItem(9223372036854808713) ListItem(9223372036854808579) ListItem(9223372036854808578) ListItem(9223372036854775936) ListItem(32778) ListItem(9223372039002259466) ListItem(9223372039002292353) ListItem(9223372036854808704) ListItem(2147483649) ListItem(9223372039002292232)
   syntax Int ::= keccakRC(Int) [function, total]
-  rule keccakRC(I) => {#keccakRCs[I]}:>Int
+  rule keccakRC(I) => {#keccakRCs[I]}:>Int requires I >=Int 0 andBool I <Int 24
+  rule keccakRC(_) => 0 [owise]
   syntax List ::= "#keccakRots" [function, total]
   rule #keccakRots => ListItem(0) ListItem(1) ListItem(62) ListItem(28) ListItem(27) ListItem(36) ListItem(44) ListItem(6) ListItem(55) ListItem(20) ListItem(3) ListItem(10) ListItem(43) ListItem(25) ListItem(39) ListItem(41) ListItem(45) ListItem(15) ListItem(21) ListItem(8) ListItem(18) ListItem(2) ListItem(61) ListItem(56) ListItem(14)
   syntax Int ::= keccakRot(Int) [function, total]   // rotation offset for lane index x + 5y
-  rule keccakRot(I) => {#keccakRots[I]}:>Int
+  rule keccakRot(I) => {#keccakRots[I]}:>Int requires I >=Int 0 andBool I <Int 25
+  rule keccakRot(_) => 0 [owise]
 
   syntax Int ::= lane(List, Int, Int) [function, total]   // (state, x, y)
   rule lane(S, X, Y) => {S[(X modInt 5) +Int 5 *Int (Y modInt 5)]}:>Int

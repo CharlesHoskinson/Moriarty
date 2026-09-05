@@ -234,9 +234,9 @@ endmodule
 //      exactly as many values as the signature declares, `div_mod_power_of_two`
 //      names exactly two outputs, `encode` names exactly encodedLen(type)
 //      outputs (checked at run time, since the type is dynamic; not here);
-//   6. bit widths: constrain_bits < FR_BITS; div_mod_power_of_two,
-//      reconstitute_field and less_than at most FR_BYTES_STORED * 8 = 248
-//      (the Rust bounds, `ir_vm.rs`).
+//   6. bit widths: constrain_bits and less_than below FR_BITS = 255;
+//      div_mod_power_of_two and reconstitute_field at most
+//      FR_BYTES_STORED * 8 = 248 (the Rust bounds, `ir_vm.rs`).
 // Everything else (types of operands, guard values, transcript lengths) is
 // dynamic and belongs to ZKIR-VM.
 module ZKIR-WF
@@ -295,8 +295,8 @@ module ZKIR-WF
     requires lenOperands(Vs) =/=Int N
   rule #checkArity(divModPowerOfTwo(_, _, Os), _) => wfError("div_mod_power_of_two requires exactly 2 outputs")
     requires lenIds(Os) =/=Int 2
-  rule #checkArity(divModPowerOfTwo(_, B, _), _) => wfError("div_mod_power_of_two: excessive bit count")
-    requires B >Int #frBytesStored *Int 8
+  rule #checkArity(divModPowerOfTwo(_, B, Os), _) => wfError("div_mod_power_of_two: excessive bit count")
+    requires lenIds(Os) ==Int 2 andBool B >Int #frBytesStored *Int 8
   rule #checkArity(reconstituteField(_, _, B, _), _) => wfError("reconstitute_field: excessive bit count")
     requires B >Int #frBytesStored *Int 8
   rule #checkArity(constrainBits(_, B), _) => wfError("constrain_bits: excessive bit bound")

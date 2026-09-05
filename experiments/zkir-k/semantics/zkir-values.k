@@ -88,7 +88,8 @@ module ZKIR-VALUES
   // --- Foreign-field limb encoding -------------------------------------------------
   // encForeign(x, p, log2Base, nbLimbs): list of native elements.
   syntax List ::= encForeign(Int, Int, Int, Int) [function, total]
-  rule encForeign(X, P, L, NB) => #groupLimbs(fsub(X, 1, P), L, NB, 254 /Int L)
+  rule encForeign(X, P, L, NB) => #groupLimbs(fsub(X, 1, P), L, NB, 254 /Int L) requires L >Int 0 andBool P >Int 0
+  rule encForeign(_, _, _, _) => .List [owise]
   // #groupLimbs(e, log2Base, limbsLeft, perBatch): successive batches of perBatch limbs
   syntax List ::= #groupLimbs(Int, Int, Int, Int) [function, total]
   rule #groupLimbs(_, _, NB, _) => .List requires NB <=Int 0
@@ -98,10 +99,11 @@ module ZKIR-VALUES
   // decForeign(fields, p, log2Base, nbLimbs): the element, or -1 when the
   // encoding is invalid (wrong count, batch too large, non-zero tail limbs).
   syntax Int ::= decForeign(List, Int, Int, Int) [function, total]
+  rule decForeign(_, _, L, _) => -1 requires L <=Int 0 orBool L >Int 254
   rule decForeign(Fs, P, L, NB) => -1
-    requires size(Fs) =/=Int (NB +Int (254 /Int L) -Int 1) /Int (254 /Int L)
+    requires L >Int 0 andBool L <=Int 254 andBool size(Fs) =/=Int (NB +Int (254 /Int L) -Int 1) /Int (254 /Int L)
   rule decForeign(Fs, P, L, NB) => #decForeign(Fs, P, L, NB, 254 /Int L, 0, 0)
-    requires size(Fs) ==Int (NB +Int (254 /Int L) -Int 1) /Int (254 /Int L)
+    requires L >Int 0 andBool L <=Int 254 andBool size(Fs) ==Int (NB +Int (254 /Int L) -Int 1) /Int (254 /Int L)
   // #decForeign(fields, p, log2, nb, perBatch, accumulated, limbsSeen)
   syntax Int ::= #decForeign(List, Int, Int, Int, Int, Int, Int) [function, total]
   rule #decForeign(.List, P, L, NB, _, Acc, _) => fadd(Acc, 1, P)
@@ -131,9 +133,10 @@ module ZKIR-VALUES
   // --- Value encoding (encode_offcircuit) ---------------------------------------------
   syntax List ::= encodeValue(Value) [function, total]
   rule encodeValue(native(X))            => ListItem(X)
-  rule encodeValue(bytes32(B))           => ListItem(Bytes2Int(substrBytes(B, 0, 31), LE, Unsigned)) ListItem(B[31])
+  rule encodeValue(bytes32(B))           => ListItem(Bytes2Int(substrBytes(B, 0, 31), LE, Unsigned)) ListItem(B[31]) requires lengthBytes(B) ==Int 32
+  rule encodeValue(bytes32(B))           => .List requires lengthBytes(B) =/=Int 32   // not a value the VM constructs
   rule encodeValue(jubjubPoint(pt(X, Y))) => ListItem(X) ListItem(Y)
-  rule encodeValue(jubjubPoint(inf()))   => ListItem(0) ListItem(1)
+  rule encodeValue(jubjubPoint(inf()))   => ListItem(0) ListItem(1)   // Edwards values never carry inf(); total-function completeness only
   rule encodeValue(jubjubScalar(S))      => ListItem(S)
   rule encodeValue(secp256k1Point(Q))    => encWPoint(Q, #k256P)
   rule encodeValue(secp256k1Base(X))     => encField64(X, #k256P)
@@ -146,18 +149,20 @@ module ZKIR-VALUES
   rule encodeValue(curve25519Scalar(X))  => encForeign(X, #c25519L, 51, 5)
 
   // --- Value decoding (decode_offcircuit) -------------------------------------------------
-  syntax DecodeResult ::= decOk(Value) | decErr(String)
+  syntax DecodeResult ::= decOk(Value) | decErr(String) | decPanic(String)   // decPanic: a Rust assert! fires
 
   syntax DecodeResult ::= decodeValue(List, IrType) [function, total]
-  rule decodeValue(ListItem(X), native()) => decOk(native(X))
+  // a raw element is an Fr, so it must already lie in [0, r)
+  rule decodeValue(ListItem(X), native()) => decOk(native(X)) requires X >=Int 0 andBool X <Int #blsScalarModulus
+  rule decodeValue(ListItem(X), native()) => decErr("is not a canonical field element") requires X <Int 0 orBool X >=Int #blsScalarModulus
   rule decodeValue(Fs, native()) => decErr("Failed to decode as Native") requires size(Fs) =/=Int 1
 
   // Bytes32: the Rust decoder asserts (panics) when the low element uses byte
-  // 31 or the high element exceeds one byte; both are errors here.
+  // 31 or the high element exceeds one byte (encode.rs assert_eq!)
   rule decodeValue(ListItem(Lo) ListItem(Hi), bytes32())
     => decOk(bytes32(replaceAtBytes(Int2Bytes(32, Lo, LE), 31, Int2Bytes(1, Hi, LE))))
     requires fitsBits(Lo, 248) andBool fitsBits(Hi, 8)
-  rule decodeValue(ListItem(Lo) ListItem(Hi), bytes32()) => decErr("Bytes32 decoding assertion failed")
+  rule decodeValue(ListItem(Lo) ListItem(Hi), bytes32()) => decPanic("assertion failed: Bytes32 low element uses byte 31 or high element exceeds a byte")
     requires notBool (fitsBits(Lo, 248) andBool fitsBits(Hi, 8))
   rule decodeValue(Fs, bytes32()) => decErr("Failed to decode as Bytes32") requires size(Fs) =/=Int 2
 
@@ -228,28 +233,10 @@ module ZKIR-VALUES
   rule decodeStrict(L, T, true) => #canonical(decodeValue(L, T), L, T)
   syntax DecodeResult ::= #canonical(DecodeResult, List, IrType) [function, total]
   rule #canonical(decErr(S), _, _) => decErr(S)
+  rule #canonical(decPanic(S), _, _) => decPanic(S)
   rule #canonical(decOk(V), L, _) => decOk(V) requires encodeValue(V) ==K L
   rule #canonical(decOk(V), L, T) => decErr("The encoded value of type " +String typeName(T) +String " is not in canonical form") requires encodeValue(V) =/=K L
 
-  // Decode a whole raw vector by a list of types (inputs of a program):
-  // decodeMany(raw, types) is decManyOk(values) or decErr; the Rust code
-  // reports running out of inputs and leftover inputs as separate errors.
-  syntax DecodeMany ::= decManyOk(List) | decManyErr(String)
-  syntax DecodeMany ::= decodeInputs(List, TypedIds, Int, Bool) [function, total]   // (raw, inputs, index, strict)
-  rule decodeInputs(Raw, .TypedIds, Idx, _) => decManyOk(.List) requires Idx ==Int size(Raw)
-  rule decodeInputs(Raw, .TypedIds, Idx, _) => decManyErr("Expected " +String Int2String(Idx) +String " raw inputs, received " +String Int2String(size(Raw)))
-    requires Idx =/=Int size(Raw)
-  rule decodeInputs(Raw, (typedId(N, T), _), Idx, _)
-    => decManyErr("Not enough raw inputs: ran out at index " +String Int2String(Idx) +String " while decoding " +String N)
-    requires Idx +Int encodedLen(T) >Int size(Raw)
-  rule decodeInputs(Raw, (typedId(N, T), Rest), Idx, Strict)
-    => #consDecoded(decodeStrict(range(Raw, Idx, size(Raw) -Int Idx -Int encodedLen(T)), T, Strict), N, decodeInputs(Raw, Rest, Idx +Int encodedLen(T), Strict))
-    requires Idx +Int encodedLen(T) <=Int size(Raw)
-  syntax DecodeMany ::= #consDecoded(DecodeResult, String, DecodeMany) [function, total]
-  rule #consDecoded(decErr(S), _, _) => decManyErr(S)
-  rule #consDecoded(decOk(_), _, decManyErr(S)) => decManyErr(S)
-  rule #consDecoded(decOk(V), N, decManyOk(L)) => decManyOk(ListItem(binding(N, V)) L)
-  syntax Binding ::= binding(String, Value)
 
   // --- Bytes32 helpers ------------------------------------------------------------------
   // Canonical little-endian 32-byte form of a field element (into_bytes32).
