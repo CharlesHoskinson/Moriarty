@@ -119,17 +119,22 @@ requirements are recorded; strict structural validation passes. Streaming reader
 `62b7b30` and writer/hash utility `fdb81c7` are implemented and locally admitted:
 all 42 utility tests pass, with original duplicate-key and short-write controls.
 Sharded checker supplement `26c9cc5` passes 79 tests (37 checker plus 42 utility).
-Root reviewed its source and audited all ten original receipt stages. These are
-focused synthetic tests, not actual 78-shard package admission. Producer case
-lowering/native wrappers are under recorded validation; full export, replay and
-Task6 semantic/locator/package controls remain open.
+Root reviewed its source and audited all ten original receipt stages. Native
+compatibility amendment `4465863` then replaces nonworking parameterized exports
+with exact literal-bound driver templates. Correction `5843ff6` changes the native
+variable-order expectation based on a real toy trace; all 79 tests pass again.
+These are focused synthetic tests, not actual 78-shard package admission.
+The complete Task6 plan `cd06756` is adopted, its substitution RED is recorded,
+and the broad pre-export synthetic run is active against frozen source. Producer
+case lowering/native wrappers are under recorded validation; full export, replay
+and final semantic/locator/package acceptance remain open.
 
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;
 root audited all38 original source members per stage and retained the shared
 runtime archive losslessly. Full original/factored corpus comparison is running;
-both adapter suites pass their 15 tests and both authority-boundary recursive
-typechecks have terminal exit 0. The remaining corpus/equivalence/sample checks
+both adapter suites pass their 15 tests and both authority-boundary suites pass
+all 40 tests after successful recursive typechecks. The remaining corpus/equivalence/sample checks
 are not yet accepted. No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 

@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T20:24:19Z
+updated_at: 2026-09-05T20:50:01Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1743,3 +1743,39 @@ closure. A5 original/factored corpus commands remain active, with both adapter
 These partial results do not admit the complete equivalence corpus. Actual
 native feasibility/exports, all 78-case replay and Task6 mutants, A5 model
 checking, Council and integration remain open. No Foreman repairs resumed.
+
+### Native transport compatibility corrected; adversarial execution starts
+
+**CLM-0171.** Experiment and repository observation: the producer's original
+parameterized wrapper did not export its imported state/actions transitively
+(QNT404). A small named-instance re-export also lost its bound constant (QNT500).
+Neither failure is a Candidate A semantic negative control. A small literal-body
+probe passes its bound-ordinal32 assertion and native one-step run, which exposes
+the exact variable order authorityState, caseIndex, cursor, latestEvent.
+Amendment `4465863` therefore preserves the full shared driver through mechanically
+generated literal wrappers and corrects the transport order expectation.
+
+Correction `5843ff6` changes only the checker tuple and an independent fixture
+literal. Both honest-shard tests fail at the old exact-order predicate; all 79
+tests pass after correction. Root reviewed the diff and audited four original
+stages, 220 source/reference members, retained artifact files and 3329 runtime
+files. Evidence is under `evidence/s02-candidate-a-completion/a4/native-order/`
+on the experimental branch. The toy probe is not Candidate A lifecycle or
+largest-case feasibility evidence.
+
+Plan `cd06756` preserves all 27 semantic triples, one substitution triple, five
+locator triples and seven actual-package controls. Its T6S requirements and
+native-compatibility NW requirements have OpenSpec counterparts on main; strict
+specification validation passes. Implementation has now observed the genuine
+omitted-equality substitution failure and restored the admitted checker exactly.
+The planned 114-instance pre-export synthetic run is active; no final result or
+actual-package acceptance is claimed. Producer Task2 validation runs against the
+frozen appended test source. Any correction requires a new coordinated source window.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local transport compatibility and ongoing finite test execution; observed
+date 2026-09-05 UTC; reproduction reproduced for the named completed correction
+checks; confidence high for those observations; lifecycle S3 experimental branch.
+A5 original/factored adapter and boundary suites each pass 15 and 40 tests;
+both installment recursive typechecks remain active. Full A4/A5, requested
+Council, integration and publication remain open.

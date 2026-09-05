@@ -561,3 +561,11 @@ CLM-0170 records reader `62b7b30`, writer/hash `fdb81c7` and sharded checker
 Root source review and original receipt audits retain both behavioral failures
 and the separate intermediate fixture correction. Producer validation resumes;
 full native package acceptance and A5 model checking remain open.
+
+## [2026-09-05] execution | Correct native compatibility and start mutation campaign
+
+CLM-0171 records the native wrapper diagnostics, successful literal toy probe and
+two-line native-order correction `5843ff6`, with 79 passing tests and root
+original-byte audit. Plan `cd06756` retains every adversarial control. Its genuine
+substitution RED is recorded and the broad synthetic run is active. Producer
+validation and paired A5 corpus checks continue; no complete A4/A5 pass is claimed.
