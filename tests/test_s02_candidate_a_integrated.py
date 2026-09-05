@@ -72,3 +72,26 @@ def test_transfer_order():
     assert can_transfer(ledger,(one,two))
     assert not can_transfer(ledger,(two,one))
     assert transfers(ledger,(one,two))==ledger
+
+from scripts.a4_cases import initial,ordinary,I_SCENARIOS,S_SCENARIOS,PROFILES,prefix,program,policy_for,planned
+from scripts.a4_authority import a_execution,plan_valid
+
+def test_independent_initial_coupling():
+    assert a_execution(initial('installment')) and a_execution(initial('swap'))
+    assert initial('installment')['authority']['context']['ledger'][(V('Escrow',r(owner=V('Alice'),asset=V('TokenA'))),V('TokenA'))]==10
+
+@pytest.mark.parametrize('profile',PROFILES)
+@pytest.mark.parametrize('loop,scenarios',(('installment',I_SCENARIOS),('swap',S_SCENARIOS)))
+def test_independent_ordinary_routes(profile,loop,scenarios):
+    for scenario in scenarios:
+        state=prefix(loop,scenario,profile,len(ordinary(loop,scenario)))
+        assert a_execution(state)
+        assert all(cell.tag not in ('ProposedAttempt','VerifiedOperation') for _,cell in state['attempts'].pairs)
+    assert len(scenarios)==(11 if loop=='installment' else 12)
+
+def test_complete_parent_program_plan():
+    p=policy_for('installment','two-fills','SignAfterResolve','FirstFillAttempt')
+    assert len(p['binding'].value['identity']['operations'])==4
+    assert plan_valid(p['binding'].value['identity'])
+    assert len(program('installment')['nodes'].pairs)==16
+    assert planned('installment','recover-r1-refuse100','RecoveryAttempt')['coreProjection'].value['reductions']==0
