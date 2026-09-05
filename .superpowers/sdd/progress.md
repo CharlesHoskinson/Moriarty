@@ -1,20 +1,27 @@
 # Current execution progress
 
-## Latest execution override, 2026-09-05 20:08 UTC
+## Latest execution override, 2026-09-05 20:30 UTC
 
 Producerobserver/inventory/recorderTask0–1 admitted5616bcd:4Quint+2Python tests,
 recursivetypecheck, originalbehavioralcontrols,9stage/36source/8102runtimeaudit.
 Case-shardedtransport5829639 preserves78cases/1557events after localNode hard
 stringcap finding; streamingutilityplan22cdec6 is implemented at reader62b7b30
 and writerfdb81c7,42tests with originalduplicatekey/shortwrite RED/GREEN.
-Mainroadmap/wiki throughCLM0169, main8dca45e; CT/ST EARS/OpenSpec valid.
+Sharded checker supplement is admitted at26c9cc5:37checker+42utility tests,
+ten original stages and420source members independently audited. Main roadmap/wiki
+through CLM-0170 at a8f3df8; session fact88 and measurement36 record this unit.
+CT/ST EARS/OpenSpec remain valid. Exact-source frozen checker window is released.
 
 Current lanes: producerTask2 lowering/driver/78nativewrappers (noexports yet);
-checkerTask5schema3streamingsupplement waits for producer4108terminal editwindow;
+producer static aggregate parse confirms all78wrappers, one driver and no
+78-fold body duplication; scoped two-fault RED is next/running. Checker agent
+prepares only a new ignored Task6 adaptation plan, not tracked source changes.
 A5Task2 alloriginal/factoredcorpus loops87642/92142 concurrently2, each20commands.
 Its boundaryRED typecheck0/517.244s and reboundForgeryEqualTest QNT508exit1/
 473.375s are retained; exactwrapper restored and generator--check0. Bothadapter
-entries each pass15tests; full244run corpus perlane remainsinprogress.
+entries each pass15tests; both boundary typechecks pass within original limits
+(834.577s original,1129.745s factored). Both40-test boundary commands are active;
+full244run corpus perlane remainsinprogress. No pilot has been launched.
 No root-owned running jobs at this override. Agents own/polltheirhandles.
 All A4/A5fullacceptance, A6Council and A7integration remainopen.
 NoForemanrepairs, remotepublication or productautomaticloop claims.
