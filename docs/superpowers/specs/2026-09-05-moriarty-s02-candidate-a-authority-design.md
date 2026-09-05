@@ -73,7 +73,8 @@ call `extractCommittedEffects` with that exact result and project the entire
 result using `projectResult`. Populate predecessor from request.before, successor
 from unchanged program plus actual result.state, input from projectInput, time
 from timeValue, call from AgreementCallA(request), and the exact extracted effects.
-Only this successful extraction produces effectEvidence=EvidenceValid.
+For non-cancellation operations, only this successful extraction produces
+effectEvidence=EvidenceValid.
 
 Actual Core rejection is still AuthorityAdaptedA: retain its exact error, original
 state, empty payments/warnings/effects and zero reductions. Its outcome is
@@ -84,7 +85,11 @@ Cancellation is the sole lifecycle-only adapter path. Require validOperation(op)
 an admitted predecessor, NoAInput, and a non-Time0 request clock. Return the
 unchanged predecessor as successor, NoInput, empty effects, NoCoreProjection,
 Cancellation outcome and CancellationCallA({before,now}). It does not call the
-Core interpreter. The common parent/signature gates decide whether it is allowed.
+Core interpreter. Its checked identity/empty-effect lifecycle derivation supplies
+effectEvidence=EvidenceValid, not EvidenceUnavailable. That tag does not assert
+a Core result or authorize cancellation; the unchanged common parent/signature
+gates decide whether it is allowed. Requiring extraction for this lifecycle-only
+case would make every cancellation unexecutable at the common boundary.
 
 For non-cancellation, require validOperation(op) and a non-Time0 request clock.
 Do not prefilter malformed agreement requests or errors out of the evaluator.

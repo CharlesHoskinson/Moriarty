@@ -15,6 +15,7 @@
 - Signature authenticity remains a finite symbolic external premise.
 - Actual Core rejection and evaluator diagnostics remain distinct.
 - Cancellation changes authority only: unchanged agreement, empty effects, NoCoreProjection.
+- Valid cancellation derives EvidenceValid from its checked lifecycle identity/empty effects, not from a fabricated Core extraction; non-cancellation requires actual extraction.
 - A plan ID alone proves no fidelity; carry the complete AResolvedPlan payload.
 - This adapter carries plans; it does not validate plan fidelity, sign, verify or commit.
 - Native review is not Council acceptance, model checking or S02 completion.
