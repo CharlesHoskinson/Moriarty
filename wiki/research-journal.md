@@ -843,8 +843,10 @@ Self-review added failing cases for wallet-to-wallet effects and multiple deposi
 An independent GPT-6 source review then found the missing frozen-Core
 nonnegative-time constraint and a public rollback coverage gap. Three additional
 negative-time tests failed before the guard correction. The final tests cover
-that guard and all rollback dimensions through the public validator. The narrow
-re-review remains pending at this record; no Council gate is claimed.
+that guard and all rollback dimensions through the public validator. The subsequent
+narrow re-review confirmed both findings resolved and all correction source/receipt
+pins matching, with no new issue in the delta. This remains one source review,
+not a Council gate.
 
 Claim metadata:
 
