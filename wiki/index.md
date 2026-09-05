@@ -44,6 +44,13 @@ will grow by merging evidence into durable topic pages.
 
 ## Active specification artifacts
 
+- [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
+  Candidate A completion dependencies, and the still-open S01–S15 program.
+- [EARS and OpenSpec package index](../openspec/WORK-PACKAGES-EARS.md) — A0–A7
+  completion changes, all sprint contracts, and the complete release-gate mapping.
+- [Candidate A completion XML](../deliverables/moriarty-candidate-a-completion-prompt-2026-09-05.xml) —
+  focused handoff with prior-source references and corrected lifecycle requirements.
+
 - [Moriarty restart](../docs/MORIARTY_RESTART.md) — Foreman development closed by user direction; resume S02 from preserved foundations, with type-sketch approval and acceptance reviews distinct from implementation.
 - [Prompt v1.3 execution audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md) — signing, parser, effect-completeness, and validator findings with execution dispositions.
 - [S01 intent-theorem package](../openspec/changes/s01-intent-theorem-freeze/README.md) — completed, independently reviewed specification package whose ten local predicates passed at S3; mechanization, full effect completeness, runtime verification, backend and ledger correspondence, ACTUS, pilots, and all 24 prompt release gates remain open at this boundary.

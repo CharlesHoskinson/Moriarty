@@ -465,3 +465,13 @@ deadline precedence. The corrected design is adopted with exact-byte review and
 a retained frozen-Python probe. B implementation and its negative experiments
 remain specified-only. A's final authority-boundary checks are in progress, not
 accepted by this entry. No S02, Council, model-checking or XML gate is claimed.
+
+## [2026-09-05] handoff | Save roadmap, EARS/OpenSpec contracts and Candidate A prompt
+
+Saved the user's requested roadmap and focused Candidate A XML handoff.
+The package index maps A0–A7, S01–S15 and G01–G24 into EARS and OpenSpec.
+Existing adopted S01/S02 packages remain unchanged.
+The new contracts do not establish implementation or gate completion.
+The roadmap flags consumed-nonce and revision errors in the unadopted installment draft.
+The snapshot directory preserves its exact original bytes and the boundary author evidence.
+Database integrity and document-validation receipts accompany the final snapshot manifest.
