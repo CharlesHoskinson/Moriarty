@@ -59,6 +59,13 @@ module observations {
     | Wallet(_) => false
     | Escrow(_) => true
   }
+  pure def isDepositTransfer(t: Transfer): bool = match t.source {
+    | Escrow(_) => false
+    | Wallet(_) => match t.destination {
+        | Escrow(_) => true
+        | Wallet(_) => false
+      }
+  }
   pure def rejectionPreserved(before: CoreStateObservation[c], r: CoreResultObservation[c],
                               transfers: List[Transfer]): bool =
     not(r.accepted) and r.state == before and r.warnings == List() and r.payments == List()
@@ -72,6 +79,8 @@ module observations {
       and r.warnings.foldl(true, (ok, w) => ok and validFrozenCoreWarning(w))
       and r.payments.foldl(true, (ok, p) => ok and validCorePayment(p))
       and validEffects(transfers)
+      and transfers.foldl(true, (ok, t) => ok and (isEscrowTransfer(t) or isDepositTransfer(t)))
+      and transfers.select(t => isDepositTransfer(t)).length() <= 1
       and (if (r.accepted)
         r.state.minimumTime >= before.minimumTime
           and r.payments.foldl(List(), (acc, p) => acc.append(paymentTransfer(p)))

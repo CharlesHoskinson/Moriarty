@@ -139,6 +139,12 @@ pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = m
   The structural validator deliberately does not decide whether a candidate
   computed the correct continuation, balances, or reduction count.
 
+  Self-review correction: the frozen Core accepts at most one supplied deposit
+  per transaction. Require every non-payment transfer to be wallet-to-escrow and
+  permit at most one such occurrence. Otherwise wallet-to-wallet effects vanish
+  from the payment filter. The two regression cases are preserved in commit
+  `2f1a856`; both fail before this correction.
+
 - [ ] Add a minimal concrete harness that first checks the deposit fixture and
   then checks the rejection fixture, with state `{phase: int, valid: bool}`.
   `init` sets phase 0 and valid true. The first action requires phase 0 and writes
