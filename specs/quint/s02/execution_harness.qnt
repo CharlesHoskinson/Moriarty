@@ -37,9 +37,17 @@ module execution_harness {
     canPropose(executionState, DispositionAttempt, OpSettle, settleObservation, Bob),
     executionState' = applyPropose(executionState, DispositionAttempt, OpSettle, settleObservation, Bob),
   }
-  action step = proposeSettlement
+  action verifySettlement = all {
+    canVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
+    executionState' = applyVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
+  }
+  action step = any {proposeSettlement, verifySettlement}
   val settlementProposed = match executionState.attempts.get(DispositionAttempt) {
     | ProposedAttempt(_) => true
+    | _ => false
+  }
+  val settlementVerified = match executionState.attempts.get(DispositionAttempt) {
+    | VerifiedOperation(_) => true
     | _ => false
   }
   val proposalPreservesMoney = executionState.authority.context.ledger == fundedLedger

@@ -12,4 +12,9 @@ module execution_test {
   run cannotVerifyWithoutAttemptTest = assert(not(canVerify(signedAfter, DispositionAttempt,
     settlementEvidence(signedAfter, aliceAfter, bobAfter))))
   run cannotCommitWithoutVerificationTest = assert(not(canCommit(signedAfter, DispositionAttempt)))
+  run verifySettlementTest = init.then(proposeSettlement).then(verifySettlement).expect(settlementVerified)
+  pure val proposedAfter = applyPropose(signedAfter, DispositionAttempt, OpSettle, settleObservation, Bob)
+  pure val proposedBefore = applyPropose(signedBefore, DispositionAttempt, OpSettle, settleObservation, Bob)
+  run verifyBeforeResolutionTest = assert(canVerify(proposedBefore, DispositionAttempt,
+    settlementEvidence(signedBefore, aliceBefore, bobBefore)))
 }
