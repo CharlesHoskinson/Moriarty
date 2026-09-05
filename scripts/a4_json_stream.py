@@ -158,3 +158,81 @@ def iter_array_document(stream: BinaryIO, target: str, *, chunk_size: int = 6553
     if reader.peek(): raise JsonStreamError('trailing JSON data')
     if target not in seen: raise JsonStreamError('selected array missing')
     yield ('end', target, count)
+
+
+def _write_all(stream, data):
+    view = memoryview(data)
+    while view:
+        written = stream.write(view)
+        if type(written) is not int or written <= 0 or written > len(view):
+            raise JsonStreamError('invalid binary write progress')
+        view = view[written:]
+
+
+def _emit(stream, value):
+    encoder = json.JSONEncoder(ensure_ascii=False, allow_nan=False, separators=(',', ':'))
+
+    def validate(item):
+        if type(item) is dict:
+            for key, child in item.items():
+                if type(key) is not str: raise JsonStreamError('JSON object key string required')
+                validate(child)
+        elif type(item) is list:
+            for child in item: validate(child)
+        elif item is not None and type(item) not in (str, bool, int, float):
+            raise JsonStreamError('JSON value type required')
+
+    try:
+        validate(value)
+        for chunk in encoder.iterencode(value): _write_all(stream, chunk.encode('utf-8'))
+    except RecursionError as error:
+        raise ResourceLimit('JSON output nesting limit') from error
+    except (TypeError, ValueError, UnicodeError) as error:
+        raise JsonStreamError('JSON output encoding failed') from error
+
+
+def write_array_document(stream: BinaryIO, target: str, items: Iterable[object], *,
+                         before=(), after=()) -> int:
+    if type(target) is not str: raise JsonStreamError('target field string required')
+    seen = {target}
+    first = True
+
+    def field(name, value):
+        nonlocal first
+        if type(name) is not str or name in seen: raise JsonStreamError('duplicate or invalid output field')
+        seen.add(name)
+        if not first: _write_all(stream, b',')
+        _emit(stream, name)
+        _write_all(stream, b':')
+        _emit(stream, value)
+        first = False
+
+    _write_all(stream, b'{')
+    for name, value in before: field(name, value)
+    if not first: _write_all(stream, b',')
+    _emit(stream, target)
+    _write_all(stream, b':[')
+    count = 0
+    for value in items:
+        if count: _write_all(stream, b',')
+        _emit(stream, value)
+        count += 1
+    _write_all(stream, b']')
+    first = False
+    for name, value in after: field(name, value)
+    _write_all(stream, b'}\n')
+    return count
+
+
+def hash_stream(stream: BinaryIO, *, chunk_size: int = 1048576) -> tuple[str, int]:
+    if type(chunk_size) is not int or chunk_size <= 0:
+        raise JsonStreamError('positive hash chunk size required')
+    digest = hashlib.sha256()
+    count = 0
+    while True:
+        data = stream.read(chunk_size)
+        if type(data) is not bytes: raise JsonStreamError('binary hash input required')
+        if not data: break
+        digest.update(data)
+        count += len(data)
+    return digest.hexdigest(), count

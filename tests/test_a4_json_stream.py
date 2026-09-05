@@ -81,3 +81,57 @@ def test_transport_has_no_semantic_imports():
         if isinstance(node, ast.Import): names.extend(alias.name.split('.')[0] for alias in node.names)
         elif isinstance(node, ast.ImportFrom): names.append((node.module or '').split('.')[0])
     assert set(names) <= {'codecs', 'hashlib', 'json', 'math', 'typing'}
+
+import hashlib
+from scripts.a4_json_stream import write_array_document, hash_stream
+
+
+class ShortOutput(io.BytesIO):
+    def write(self, data):
+        return super().write(data[:3])
+
+
+def test_writer_short_write_roundtrip_red():
+    sink = ShortOutput()
+    values = [{'text': 'é😀', 'nested': [1, True, None]}, [], 'tail']
+    count = write_array_document(sink, 'states', iter(values), before=(('head', 2),), after=(('tail', False),))
+    raw = sink.getvalue()
+    assert json.loads(raw) == {'head': 2, 'states': values, 'tail': False}
+    assert count == 3
+    assert events(raw, 1)[-1] == ('end', 'states', 3)
+
+
+def test_writer_lazy_items_empty_and_hash_chunks():
+    sink = io.BytesIO()
+
+    def values():
+        assert sink.getvalue().endswith(b'[')
+        yield 1
+        assert sink.getvalue().endswith(b'1')
+        yield 2
+
+    assert write_array_document(sink, 'states', values()) == 2
+    raw = sink.getvalue()
+    for size in (1, 3, 64):
+        assert hash_stream(BoundedInput(raw, size), chunk_size=size) == (hashlib.sha256(raw).hexdigest(), len(raw))
+    empty = io.BytesIO()
+    assert write_array_document(empty, 'states', ()) == 0
+    assert events(empty.getvalue()) == [('end', 'states', 0)]
+
+
+@pytest.mark.parametrize('before,after', [((('states', 1),), ()), ((('x', 1), ('x', 2)), ()), ((('x', 1),), (('x', 2),))])
+def test_writer_rejects_duplicate_or_reserved_fields(before, after):
+    with pytest.raises(JsonStreamError): write_array_document(io.BytesIO(), 'states', (), before=before, after=after)
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), float('-inf'), object(), '\ud800', {1: 'x', '1': 'y'}, (1, 2)])
+def test_writer_rejects_unencodable_values(value):
+    with pytest.raises(JsonStreamError): write_array_document(io.BytesIO(), 'states', (value,))
+
+
+def test_writer_and_hash_reject_invalid_progress_or_streams():
+    class Stalled:
+        def write(self, value): return 0
+    with pytest.raises(JsonStreamError): write_array_document(Stalled(), 'states', ())
+    with pytest.raises(JsonStreamError): hash_stream(io.StringIO('not binary'))
+    with pytest.raises(JsonStreamError): hash_stream(io.BytesIO(), chunk_size=True)
