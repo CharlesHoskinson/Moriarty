@@ -24,7 +24,7 @@ specification. It preserves all78cases/1557events and fixes a measured local
 tool string-size incompatibility. The following remain implementation gates:
 
 - [x] Implement and independently review strict bounded JSON transport (42 tests; `62b7b30` and `fdb81c7`).
-- [ ] Implement all78 literal native wrappers and exact global ordinal controls.
+- [x] Implement all78 literal native wrappers and exact global ordinal controls (`8be3cef`, complete aggregate typecheck, 12 native tests and root original evidence intake).
 - [ ] Retain largest-case native pilot bytes, full terminal witness and peak RSS.
 - [ ] Export all78 native cases with original source/runtime/terminal receipts.
 - [ ] Stage case bytes, obtain independent root case-pin admission, then seal.
