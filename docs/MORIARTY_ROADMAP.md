@@ -141,13 +141,17 @@ and final semantic/locator/package acceptance remain open.
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;
 root audited all38 original source members per stage and retained the shared
-runtime archive losslessly. Root has now audited all 40 original/factored corpus
-commands and exactly 244 tests per side. The author reports all six equivalence
-tests, both 100-sample runs/all25-and-24witnesses, complete 441 Python tests and
-the Core53 comparison passed. Full Task2 admission is under independent source
-and original-evidence review. The missing-uv failure and later exact-alias probe
+runtime archive losslessly. Task2 is locally admitted at `9ccbf0e`: root and a
+separate nonauthor reviewer checked all 52 terminal commands, 3650 archived
+source members, exactly 244 tests per side, six equivalence tests, both
+100-sample runs with all 25/24 witnesses, the complete 441-test Python suite and
+the Core53 comparison. Its 515-member original archive is preserved losslessly
+in 15 bounded parts with independent byte validation. The missing-uv failure and later exact-alias probe
 failure remain intact; the reviewed offline real-uv/verified-symlink corrections
-change neither test bytes nor requested child commands. No Task3 pilot has run.
+change neither test bytes nor requested child commands. Task3 is dispatched only
+through exact prefix tests, samples and paired compilation. Root must inspect
+both generated inputs and their size/resource metrics before either depth-five
+checker command. No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 

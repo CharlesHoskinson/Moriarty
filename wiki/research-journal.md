@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T22:23:00Z
+updated_at: 2026-09-05T22:45:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1870,3 +1870,55 @@ Evidence is under `evidence/s02-candidate-a-completion/a4/recorder-streaming/`,
 `exporter-source/` and `native-resources/` on that branch. Largest-case native
 pilot, all exports, complete replay, A5 model checking, Council and integration
 remain open.
+
+### Admit the complete finite factoring corpus and dispatch its bounded pilot
+
+**CLM-0174.** Experiment and repository observation: experimental commit
+`9ccbf0e` admits A5 Task2 after root and nonauthor source/evidence review. Root
+independently reverse-transformed all 26 derivatives without using their
+generator, checked all 28 original pins, 18 exact identity wrappers, three
+delegates and 30 frozen files, and audited all 52 original terminal commands.
+The actual source archives retain 3650 members. Original and factored corpora
+each passed exactly 244 ordered tests; all six full-record equivalence tests
+passed; both 100-sample lifecycle runs reached every required 25/24 witness.
+
+The fresh 441-test Python collection and passing JUnit identities match exactly,
+with no skips or exclusions. All 2691 fixture/source inputs remain frozen. The
+independent concrete Core comparison reports complete-inventory agreement for
+53 cases from 14 original ITFs. Both prior environment failures remain unchanged:
+the missing real uv command and the lexical python/python3 probe mismatch before
+pytest. The adopted real-uv supplement and exact symlink correction alter
+neither test bytes nor requested child argv. These failures are not semantic
+counterexamples or suppressed test cases.
+
+The separate nonauthor reviewer checked these source, receipt, fixture/runtime,
+JUnit and Core obligations and found no material blocker in this bounded unit.
+That reviewer authored earlier dependencies; this overlap remains disclosed.
+This is not the requested cross-provider Council. The original author report
+and index remain at SHA256 `e035e32986e2cbc19d54aef1055f2994be46949fc23c1629be19e1ed5b8a9322`
+and `7db8df0bc6079fec9fcda16fef9c0b45fab887af963f4a81cecb59d631d1e1d7`.
+
+Root's fresh lossless archive audit checked all 515 outer members and every
+nested source archive. Fifteen ordered parts preserve the original
+744523649-byte tar, SHA256
+`c3d2d97103b714c60762853ba087e338aaa901c841e4669e8bccfad3b6868ae1`.
+The already admitted shared runtime/Python archives remain explicit references,
+not silently replaced snapshots. Root's two terminal-audit schema/regex draft
+errors were corrected without changing implementation or original evidence.
+
+Task3 dispatch binds actual base
+`9ccbf0ed571e4055bc05962e5681fdf2fa75ad96` separately from the immutable
+`900bb20` runtime bootstrap. It authorizes only the exact original/factored
+funding modules, complete four-route prefix test, samples and paired compile.
+Root must inspect original generated JSON, size/object counts and resources
+before either depth-five checker command. No resource escalation, predicate
+weakening, full campaign or successful model-checking result is inferred.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope locally admitted finite A5 Task2 and a separately gated next experiment;
+observed date 2026-09-05 UTC; reproduction reproduced for the named root-audited
+original checks; confidence high for those observations; lifecycle S3
+experimental branch. Evidence is under
+`evidence/s02-candidate-a-completion/a5/corpus-task2/` on that branch. Full A4
+native export/replay, Task6 acceptance, full A5, Council, integration and
+publication remain open. No Foreman development resumed.

@@ -590,3 +590,14 @@ corpus commands and 244 tests per side. Complete A5 Task2 intake is now under
 independent review after reported equivalence, sampling, 441 Python and Core53
 success. Both environment failures remain preserved. No native pilot, complete
 A4/A5, Council or implementation integration is claimed.
+
+## [2026-09-05] execution | Admit the finite factoring corpus
+
+CLM-0174 records experimental `9ccbf0e`: exact 244/244 corpus tests, six
+equivalence tests, both lifecycle witness inventories, the complete 441-test
+Python retry and Core53 comparison, with root and nonauthor original-byte
+intake. All 52 original stages and both environment failures are preserved in
+the independently validated 515-member lossless archive. Session fact93 and
+scoped measurement38 record this boundary. Task3 is dispatched through tests,
+sampling and paired compile only; root's generated-input gate precedes checker
+execution. Full A4/A5, Council and implementation integration remain open.
