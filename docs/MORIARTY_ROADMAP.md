@@ -90,16 +90,19 @@ The [package index](../openspec/WORK-PACKAGES-EARS.md) maps all packages.
 Eight Candidate A changes refine S02.
 The program change covers S01–S15 and G01–G24.
 Existing adopted S01/S02 packages remain unchanged.
-A0 local intake and A1 reviewed plans are accepted; A2–A7 remain open.
+A0–A3 are locally accepted; A4–A7 and cross-provider Council remain open.
 A2 installment fixtures (`35959ae`) and A3 swap fixtures (`3f440d2`) are
 implemented and locally reviewed, with original compiling RED/GREEN preserved.
 Swap ordinary authority routes (`c3c89fa`) now pass five tests, including all
 twelve ordinary scenarios under both profiles. Installment authority routes
 (`955f56b`) pass seven tests, including both race orders, two fills, fresh
 cancellation and nonce1 recovery/refusal cases. Swap adversarial/action-harness
-unit `926b350` passes17 tests and reaches all24 required witnesses in100 samples;
-installment adversarial checks are in progress. Shared regressions and full
-A2/A3 acceptance remain open. A4 export/replay design is adopted at `effb7af`;
+unit `926b350` passes17 tests and reaches all24 required witnesses in100 samples.
+Installment Task3 `bfc7832` passes17 tests and all25 witnesses in100 samples.
+Shared final regressions pass40boundary/15adapter/441Python tests; aggregate
+acceptance `28d35d8` maps every A2/A3 EARS requirement to its finite evidence.
+Its archive retains2673source/input files and all8final lifecycle source pins.
+This is local acceptance, not Council or model checking. A4 design is `effb7af`;
 its producer and independent checker concrete plans precede implementation.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
@@ -109,8 +112,8 @@ No phase below is checked off merely because its plan exists.
 | --- | --- | --- | --- |
 | A0 | Local intake accepted; Council open | Existing `d14cfea` | Evidence `0190cb9`/`95899b3`: independent 40-test and 100-trace results, native source review, sixteen-file closure and 149-member archive audit |
 | A1 | Local plans adopted; behavioral acceptance remains A2/A3 | A0; adopted authority design | Commit `82d2c0b`: nonauthor review, two final static typechecks, eight exact assembled modules and twelve pinned frozen imports |
-| A2 | Actual A installment authority lifecycle | A1 | Both race orders, second fill, fresh cancellation attempt, newly signed recovery ten/five and deadline cases; deterministic tests and per-action witnesses |
-| A3 | Actual A swap authority lifecycle | A1; shared adapter/boundary | Separate depositor signatures, disposition signatures, real funds, settlement/refunds/timeouts, staleness, explicit no-effect rejection |
+| A2 | Local lifecycle accepted; Council open | A1 | `bfc7832`/`28d35d8`:17tests,100samples,25positive witnesses, both profiles, compiling RED/GREEN and native source/evidence review |
+| A3 | Local lifecycle accepted; Council open | A1; shared adapter/boundary | `926b350`/`28d35d8`:17tests,100samples,24positive witnesses, actual deposits/disposition/refusal/staleness, shared final regressions |
 | A4 | Integrated exports and independent comparison | A2 + A3 | Complete mandatory inventory, source-pinned schema, full Python result/effect comparison, separately checked authority history and killed mutants |
 | A5 | Bounded model-checking evidence | Stable A2/A3; factoring may be investigated earlier | Reviewed semantics-preserving factoring, explicit model bounds/properties, terminal checker receipts and exact limitations |
 | A6 | Candidate A acceptance dossier and Council | A0–A5 | Per-obligation validator, independent source/evidence review, exact requested provider verdicts and resolved material dissent |

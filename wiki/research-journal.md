@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T18:12:07Z
+updated_at: 2026-09-05T18:37:39Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1583,3 +1583,34 @@ plans must freeze exact schema, expanded inventory and behavioral tests before
 implementation. The design preserves schema1, actual-vs-claimed computation,
 retained rejection histories and explicit denied probes/case boundaries. This
 is planning, not integrated correspondence, model checking or Council acceptance.
+
+### Candidate A lifecycle local requirements accepted
+
+**CLM-0166.** Experiment and repository observation: installment Task3 `bfc7832`
+passes17tests, its recursive typecheck and100scheduled traces with all25required
+witnesses positive, profile completions50/50. The original compiling generic-
+verifier RED fails changedUnusedNodeTest; restoring only the A guard produces
+GREEN. Nonauthor source review and root audit bind118original archive members,
+five sixteen-file stage closures, separate streams and unchanged source/tool pins.
+
+Aggregate acceptance `28d35d8` maps A2-I01–I11 and A3-S01–S08 to deterministic
+tests and action-family witnesses. Final shared regressions pass40boundary tests,
+15adapter tests and441Python tests. Root audited the2673-file source/input archive
+and all8final lifecycle source pins. Exact external graph and DeFiFormal fixture
+bytes are included; Python package versions, not a full virtualenv image, are
+retained. Git freshness cannot detect later changes in those external fixtures.
+Typed measurements26/27/29–33 bind the results to experimental source28d35d8;
+measurement28 is retained and superseded33 to correct its omitted match argument.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local A2/A3 finite lifecycle acceptance; observed date2026-09-05 UTC;
+reproduction reproduced for named checks; confidence high for those observations;
+lifecycle S3 experimental branch. No per-sample ITF or unrestricted interleaving
+proof is claimed. A4 exports/replay, A5 bounded checking, A6 Council and A7
+integration remain open. Native reviewers do not substitute for requested vendors.
+
+A5 tool control `fcd28f2` checks only a tiny unrelated nullary-binding example:
+the correct invariant passes depth2 and the deliberately wrong invariant yields
+a state1 counterexample. It validates that offline command path, not Candidate A
+semantics or an expression-sharing performance improvement. An isolated factoring
+plan is being prepared before any new expensive Candidate A verification run.

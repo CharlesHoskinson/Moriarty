@@ -519,3 +519,11 @@ CLM-0165 records `926b350`:17 tests, all24 required witnesses in100 samples,
 independent source review and exact archive/runtime intake. Full A3 still needs
 shared regressions. A4 design `effb7af` is adopted; separate concrete producer
 and checker plans are not yet behavioral implementation or correspondence.
+
+## [2026-09-05] execution | Accept local Candidate A lifecycles
+
+CLM-0166 records installment Task3 `bfc7832` and aggregate `28d35d8`:
+both final17-test lifecycle suites,100samples each/all required witnesses,
+shared40boundary/15adapter/441Python regressions and exact source/input intake.
+A2/A3 are locally accepted; Council and A4–A7 stay open. A5 nullary tool control
+`fcd28f2` is diagnostic only. No Foreman repairs or main integration occurred.

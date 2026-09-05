@@ -1,6 +1,7 @@
 # A2: Complete actual installment authority lifecycle
 
-Status: specified-only completion contract.
+Status: locally executed and reviewed at experimental aggregate `28d35d8`;
+required cross-provider Council and integration remain open.
 Existing source status is recorded in the roadmap.
 This package does not create a passed gate.
 

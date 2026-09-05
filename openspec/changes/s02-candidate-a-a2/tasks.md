@@ -1,24 +1,24 @@
 # A2 tasks
 
-Partial progress: Task1 literal fixtures/tests accepted at `35959ae`, with
-compiling RED/GREEN, nonauthor source approval and root receipt/archive audit.
-Task2 deterministic authority routes are accepted at `955f56b`: seven tests and
-recursive typecheck pass, with original compiling RED and independent source/
-receipt admission. Task3 adversarial controls and action harness are dispatched;
-shared final regressions and the complete A2 package remain open.
+Local acceptance: aggregate `28d35d8` binds final source, all three task archives,
+requirement mappings and shared final regressions. Task3 `bfc7832` passes17tests
+and100samples with all25witnesses positive.
+Both profiles are covered. These are finite observations, not model checking.
+Cross-provider Council and integration remain open under A6/A7.
 
-- [ ] Verify the exact dependencies and source pins.
-- [ ] Read XML phase A2 and its named scenario inventory.
+- [x] Verify the exact dependencies and source pins.
+- [x] Read XML phase A2 and its named scenario inventory.
 - [x] Complete its concrete implementation plan before behavioral edits (A1 `82d2c0b`).
-- [ ] Add the specified behavioral tests before implementation.
-- [ ] Retain compiling RED sources and terminal receipts.
-- [ ] Produce the exact outputs listed in README.md.
-- [ ] Execute each positive and failure scenario.
-- [ ] Preserve complete source closures and raw results.
-- [ ] Write `evidence/s02-candidate-a-completion/a2/manifest.json`.
-- [ ] Recompute `evidence/s02-candidate-a-completion/a2/validation.json` from evidence.
-- [ ] Obtain the required independent review.
-- [ ] Commit only the admitted package files.
+- [x] Add the specified behavioral tests before implementation.
+- [x] Retain compiling RED sources and terminal receipts.
+- [x] Produce the exact outputs listed in README.md.
+- [x] Execute each positive and failure scenario.
+- [x] Preserve complete source closures and raw results.
+- [x] Write `evidence/s02-candidate-a-completion/a2/manifest.json`.
+- [x] Recompute `evidence/s02-candidate-a-completion/a2/validation.json` from evidence.
+- [x] Obtain native non-author source review and independent root evidence intake.
+- [ ] Obtain required cross-provider Council coverage (A6; native review is not a substitute).
+- [x] Commit only the locally admitted package files.
 
 ## Specification structure check
 
@@ -26,7 +26,6 @@ shared final regressions and the complete A2 package remain open.
 openspec validate s02-candidate-a-a2 --strict --no-interactive
 ```
 
-This command validates specification structure only.
-Use the XML commands for existing boundary runtime checks.
-Derive exact new runtime commands in the phase implementation plan.
-Do not mark runtime tasks complete from this command.
+This command validates specification structure only. Runtime commands and
+terminal receipts are retained in the phase and shared-final evidence manifests
+on s02-model-comparison. No XML release gate is accepted by this local checklist.
