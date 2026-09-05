@@ -374,3 +374,13 @@ admission-correction re-review are clean. Preserved RED/green source commits,
 raw sampled evidence, and the asynchronous RED timing disclosure. Next is
 per-operation verification and atomic lifecycle commitment, not another design
 vote or Foreman repair. No financial recovery or S02 gate is claimed.
+
+## [2026-09-05] implementation | Execute the atomic settlement envelope
+
+Recorded CLM-0148 for source `46fe589` / evidence `0d5926b`. Both profiles execute
+symbolic signing through verified atomic settlement from prefunded swap escrow.
+Separate adversarial tests exposed an invented Core result on cancellation;
+the correction and complete RED/GREEN reports are preserved. Independent source
+and evidence review is clean. Candidate semantics and cryptography are not
+derived by trusted validity flags. Next are classified rejection, parent races,
+and signed recovery, with no S02 or Council gate claimed.

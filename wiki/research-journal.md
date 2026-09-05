@@ -959,3 +959,45 @@ A–D semantics, or Core correspondence follows from this signing unit. Construc
 cancelled contexts in guard tests are not cancellation traces. Next implement
 per-operation verification and the common commit boundary. Council gates and the
 full XML program remain open; Foreman development remains closed.
+
+### Verified execution envelope reaches atomic settlement
+
+**CLM-0148.** Experiment observation: branch source `46fe589` and evidence
+`0d5926b` implement full per-operation evidence bindings and atomic execution.
+The concrete swap harness starts with prefunded escrow and unsigned policies,
+then executes check, sign, propose, verify, and commit under both profiles.
+Commit rechecks the actual current context immediately before one atomic update
+of financial effects, authority consumption, candidate state, and attempt status.
+
+Pinned receipts report eight pipeline tests, forty-two separately authored
+adversarial tests, and one thousand sampled executions. Every sampled trace
+reaches settlement: 494 after-resolution and 506 before-resolution. Invariants
+check conservation, exact final money and consumed authorities, nonterminal
+enabledness, and no enabled action after settlement. Foundation regressions
+10/16/37/72/41, Python 286, and ten local S01 checks also pass at their pinned
+runs. These measurements are not claims about unperformed candidate execution.
+
+The separate test author exposed accepted Core projection on effects-free
+cancellation. Its failing test is preserved; the corrected guard requires
+`NoCoreProjection`. Independent native Astra source and evidence review is clean,
+with all forty-seven manifest pins matching. The reviewer additionally checked
+constructed parent update results; those checks are not parent lifecycle traces.
+
+Claim metadata:
+
+- Sources: SRC-0035 adopted design; SRC-0033 comparison boundary.
+- Repository: local Moriarty, branch `s02-model-comparison`, source `46fe589`, evidence `0d5926b`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators: `specs/quint/s02/execution.qnt`, `execution_harness.qnt`, `execution_test.qnt`, `execution_adversarial_test.qnt`, and `evidence/s02-model-comparison/execution/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-execution-envelope.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: deterministic tests, sampled envelope execution, independent source/evidence review.
+- Scope: common execution envelope with trusted external evidence dispositions; prefunded swap settlement; unchanged frozen Core.
+- Evidence kind: experiment observation.
+- Reproduction: source/receipt hashes and complete adversarial RED/GREEN report preserved. The initially misstated RED command was corrected transparently; the author's lost standalone typecheck result is not counted as success.
+- Confidence: high for recorded envelope results, not cryptography, candidate semantics, or correspondence.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+`EvidenceValid` is an abstract verifier result, not a candidate interpreter or
+cryptographic proof. Generic parent commit helpers exist, but actual stateful
+fill/cancel races, rejected-attempt handling, and signed recovery paths remain
+next. S02, its Council gates, A–D comparison, and the full XML program stay open.
