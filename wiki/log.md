@@ -217,3 +217,13 @@ binding fixes, GitHub publication and merge, the documented official model-route
 limitations, and Council resumption. Runtime implementation remains pending.
 No Council review was dispatched. Full S02 and S03 through S15 remain
 incomplete. Historical log entries remain unchanged above this entry.
+
+## [2026-09-05] assignment | Investigate Foreman PID-namespace degradation
+
+Created the [Fable research assignment](../deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml)
+for the user's separate session. It includes the observed launcher warning,
+source and binary context, protected live work, and the official 42-page Grok
+4.6 card with its preserved PDF digest. The assignment requires read-only
+diagnosis, complete-card coverage, and explicit scrutiny of cleanup claims.
+The XML parser accepted the assignment. No root cause, remediation, Council
+approval, or containment guarantee follows from creating this prompt.
