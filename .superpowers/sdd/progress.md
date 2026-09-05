@@ -1,5 +1,18 @@
 # Current execution progress
 
+## A4 implementation override, 2026-09-05
+
+A4 checker plan adopted d4f6196; immutable replay-interface addendum ab7c827
+fixes arithmetic to78cases/1557events with no removed cases. CheckerTask1 is
+locally admitted: compiling duplicate-map RED, five GREEN tests, root source
+review and exact audit of3329environmentfiles/eightreceiptstages. Evidence is
+under evidence/s02-candidate-a-completion/a4/checker-task1/. Authority replay is
+the next bounded checker task. Producer and A5 plans remain under root review;
+no integrated histories or Candidate A model-checking pass is claimed.
+Council availability was rechecked on released Foreman387dcd7; install integrity
+passes but required coordinator is unavailable. No providers dispatched or
+Foreman edits. Council and A4–A7 acceptance remain open.
+
 ## Candidate A execution handoff override, 2026-09-05 16:35 UTC
 
 A0 local boundary intake complete: source d14cfea, evidence 0190cb9 plus the
