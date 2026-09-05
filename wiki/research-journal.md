@@ -866,3 +866,50 @@ Next implement branch policies and neutral plan views, followed by signing,
 execution verification, atomic parent transitions, and financial recovery under
 both profiles. All four candidate representations, final model checking, S01
 Council backfill, S03–S15, and all 24 XML release gates remain open.
+
+### Branch policies implemented and independently reviewed
+
+**CLM-0146.** Experiment observation: S02 branch commit `320dc53` implements
+unsigned branch policies and complete neutral plan bindings. The pinned receipts
+report 72 passing Quint policy tests, with effects/consumption/observation
+regressions of 10/16/37, 286 Python tests, and ten local S01 checks passing.
+The preceding fail-closed RED commit `07bf706` preserves five expected assertion
+failures. These measurements concern the pinned code, not unperformed lifecycle
+execution or exhaustive model checking.
+
+The policies enforce input-based settlement/refund alternatives, all debit-owner
+requirements, effects-free cancellation authority, both signing-profile bounds,
+complete after-resolution operation matching, and recovery amount constraints.
+Neutral context facts and plan views still require authentic derivation by later
+lifecycle code and candidate adapters. No signature, atomic commit, financial
+recovery trace, Core correspondence, or A–D candidate is implemented by this unit.
+
+An independent native GPT-6 Astra review found no actionable correctness issue
+within this scope and confirmed all fourteen manifest pins. A focused TypeScript
+REPL probe accepted the correct second-fill context and rejected its predecessor;
+an initial Rust REPL probe failed with a loader assertion and is not positive
+evidence. The existing Rust test receipts are the test-count evidence. This is
+one implementation review, not the requested three-vendor Council gate.
+
+Separately, commit `7cccc5a` adds both mandatory recovery subscenarios to the
+closed requirements registry without fabricating traces. Its independent
+mechanical transcription review was clean. The registry remains specified-only.
+
+Claim metadata:
+
+- Sources: SRC-0035 adopted design; SRC-0033 comparison boundary.
+- Repository: local Moriarty, branch `s02-model-comparison`, implementation `320dc53`, reviewed handoff `a6f9c30`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators: `specs/quint/s02/policies.qnt`, `policies_harness.qnt`, `policies_test.qnt`, and `evidence/s02-model-comparison/policies/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-policy-branches.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: local deterministic execution and independent source review.
+- Scope: pure policy unit; unchanged frozen Core `0.0.0-e00.2`; Alice-only installment/recovery debit fixture.
+- Evidence kind: experiment observation.
+- Reproduction: raw outputs and exact source/receipt digests preserved at the pinned commit.
+- Confidence: high for recorded outcomes; no claim for unimplemented lifecycle or correspondence.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+Next execute `docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle.md`:
+persistent signing, fresh evidence, and atomic fill/cancel/recovery transitions.
+The full XML goal remains active. Foreman repairs remain closed; neither the
+finished design proposals nor the completed observation/policy units need restart.

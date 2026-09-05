@@ -355,3 +355,12 @@ emission regressions, independent review findings, and the corrected 37-test
 observation carrier with sampled declared-example witnesses. The source remains
 on the experimental branch pending further review and integration. Authorization,
 recovery, candidate execution, correspondence, and all affected gates remain open.
+
+## [2026-09-05] implementation | Enforce branch policies and complete plan bindings
+
+Recorded CLM-0146 for branch `320dc53` and clean independent Astra review at
+`a6f9c30`. Preserved meaningful RED and passing policy/regression receipts.
+Recovery requirements are now explicit at `7cccc5a`, with a clean independent
+transcription review. These are unsigned constraints and required scenarios,
+not executed signing/recovery or passed S02 gates. Next work is the authority
+lifecycle, with the full XML goal active and Foreman development still closed.
