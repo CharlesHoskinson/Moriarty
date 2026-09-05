@@ -2,6 +2,28 @@
 
 ## 2026-09-05 current override
 
+Latest continuation, 2026-09-05 UTC: Candidate A agreement semantic-unit Tasks
+1–8 are complete at source2f53817/evidencea9deaec/aggregate0266df2/auditd7384d2.
+Candidate A authority observation adapter is committed at
+e84f737dc97cf923579f8a59c91ee04c03ff0233, with native nonauthor source review.
+Its author records15tests,100/100 adaptation witnesses and441Python tests;
+root confirmed47byte-identical archived receipts and13source-closure files.
+Root's separate adapter tests now pass15/15 and its100-sample run has no safety
+violation and100/100actual adaptation witnesses, both terminalexit0. Historical RED lacks source-byte snapshots; this is
+explicitly disclosed, not reconstructed or counted as full TDD compliance.
+
+Current implementation plan: docs/superpowers/plans/2026-09-05-moriarty-s02-candidate-a-authority-boundary.md,
+adopted5b1f1fb. execution_adversarial_tests owns its four new boundary files and
+unique report/receipts. Implement real funding, full-plan fidelity, both-profile
+signing and guarded verify/commit/rejection. Do not repeat the adapter or generic
+foundation units. Both complete A lifecycles and actual integrated exports follow.
+Both offline Apalache attempts (4GiB,8GiB) exhausted heap in InlinePass before
+checking states; evidence93fce82 preserves this, no counterexample or S02 stop.
+B fifth/sixth drafts remain rejected and archivedd69ca69; no B implementation.
+Exact-provider Council, B–D, S02 acceptance and full XML obligations remain open.
+The remainder of this current-override section records earlier foundation
+milestones; its old next-step instructions are superseded by this paragraph.
+
 This block supersedes obsolete Foreman/type-approval instructions below.
 Foreman development is closed by the user. The three requested formal-design
 proposals are preserved in main cba9e72; the adopted decision preserves dissent.
