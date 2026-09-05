@@ -43,11 +43,11 @@ will grow by merging evidence into durable topic pages.
 - [S01 evidence manifest](../evidence/s01-intent-theorem-freeze/evidence-manifest.json) — reproducible local package-gate evidence for the candidate-unmechanized theorem and exact-transfer falsifier; it grants no signing authority and establishes no proof, backend, ledger, ACTUS, or pilot result.
 - [Council review requirements](../docs/COUNCIL_REVIEWS.md) — requested reviewer identities, binding requirements, and the still-open S01 backfill and S02 review queue.
 - [Council runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md) — inspected missing carrier, requested-versus-observed model-route limits, and the pending runtime implementation boundary.
-- [S02 authorization and recovery type sketch](../docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md) — corrected carrier proposal awaiting the delegated Astra/Fable/Grok design decision; no further direct human approval is required, and no model implementation or gate result is claimed.
+- [S02 delegated common-design decision](../docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md) — three completed expert proposals, majority choices and preserved dissent, superseding the earlier carrier sketch; implementation and Council gates remain open.
 - [Foreman PID-namespace research assignment](../deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml) — read-only Fable handoff for the observed launcher degradation and complete Grok 4.6 model-card review; research results remain pending.
 - [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
 - [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
-- [OpenSpec work packages](../openspec/WORK-PACKAGES.md) — twelve evidence-gated sprint instruction sets.
+- [Earlier OpenSpec work packages](../openspec/WORK-PACKAGES.md) — the preceding twelve-package program, not the controlling XML v1.3 S01–S15 sequence.
 - [Semantics, intent, compiler, proof, SDK, and ACTUS prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — version 1.3 assignment with an exact intent-refinement theorem, standards review, and a no-exclusion 277-vector ACTUS completion gate.
 - [ACTUS public-source acquisition manifest](../evidence/actus-public-source-acquisition-2026-09-03.json) — 270 fetched public URLs, one explicit robots failure, 220 documentation host rewrites, 14 repository pins, 32 taxonomy rows, and all 277 reference fixtures.
 - [ACTUS public code survey](../evidence/actus-public-code-survey-2026-09-03.json) — executable contract surface, Haskell harness gaps, private Java boundary, license constraints, and prompt consequences.
@@ -56,6 +56,8 @@ will grow by merging evidence into durable topic pages.
 
 ## Workstream pages
 
-The consolidated decision report maps these pages to all 18 controlling
-deliverables. Narrower pages for migration, governance, APIs, and user research
-will be added as those workstreams produce independent evidence.
+The earlier consolidated decision report maps these pages to its 18 deliverables.
+The controlling XML v1.3 now requires D01–D22 and S01–S15; the old report and
+twelve-package manifest do not establish completion of that larger program.
+Narrower pages for migration, governance, APIs, and user research will be added
+as those workstreams produce independent evidence.

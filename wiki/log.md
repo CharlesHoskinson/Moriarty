@@ -328,3 +328,21 @@ Aligned the type sketch and wiki index with the user delegation already recorded
 in CLM-0143 and `docs/MORIARTY_RESTART.md`. The three-expert design decision remains
 pending; the old direct-human-approval request must not block continuation.
 This is an instruction correction, not design consensus or implementation evidence.
+
+## [2026-09-05] correction | Distinguish the current full program from its predecessor
+
+Corrected the wiki schema's obsolete 18-output count and labeled the index's
+twelve-package link as the preceding program. XML v1.3 `required_deliverables`
+and `sprint_sequence` require D01–D22 and S01–S15. Preserved the historical package
+manifest and reports; their presence is not evidence that the current program,
+including ACTUS, is complete. This is source-fact alignment with SRC-0031,
+not a new experiment or a passed gate.
+
+## [2026-09-05] decision | Reconcile the three S02 design proposals
+
+Added SRC-0035 and CLM-0144. Preserved the identical frozen prompt, all three final
+public proposals, selected metadata, and source digests. Adopted the common design
+with explicit majority choices and preserved dissent. Superseded the earlier type
+sketch and queued observation tests before authorization implementation. Private
+reasoning and credentials were not imported. This is delegated design signoff,
+not strict Council admission, architecture selection, or an implementation gate.

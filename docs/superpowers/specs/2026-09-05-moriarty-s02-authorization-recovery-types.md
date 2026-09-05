@@ -1,5 +1,9 @@
 # S02 authorization and recovery type sketch
 
+Superseded design: use the [delegated three-expert decision](2026-09-05-moriarty-s02-common-design-decision.md)
+for implementation. This earlier sketch is retained to make the reviewed defects
+and their dispositions inspectable; its inline types are not the corrected source.
+
 Status: specified-only planning draft. Classification: recommendation derived
 from the independently reviewed S02 designs. This document is not an
 implementation, model result, Council decision, proof, candidate result, or S02

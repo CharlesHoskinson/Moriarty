@@ -13,7 +13,9 @@ Marlowe-to-Compact/ZKIR design study.
 - `evidence/` contains inventories, repository locks, deployment records, and
   experiment manifests.
 - `experiments/` contains executable or fully specified benchmarks and tests.
-- `deliverables/` contains the 18 requested outputs and the final report.
+- `deliverables/` contains requested outputs and reports. The controlling XML
+  v1.3 requires 22 deliverables, D01–D22; the earlier 18-output report does not
+  satisfy the additional ACTUS obligations by its presence.
 
 ## Operations
 

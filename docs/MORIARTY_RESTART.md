@@ -37,9 +37,10 @@ financial recovery, candidate execution, or correspondence.
 
 ## Actual implementation queue
 
-1. Obtain the delegated three-expert decision on the [corrected common type sketch](superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
+1. Apply the completed [delegated three-expert design decision](superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md), which supersedes the earlier [type sketch](superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
    The user selects GPT-6 Astra, Fable 5.1, and Grok 4.6 as formal-methods experts.
-   Their agreed design supplies the delegated design signoff, not an implementation gate.
+   Their proposals and the explicit majority/disagreement dispositions supply the
+   delegated design decision, not an implementation gate or a claim of unanimity.
    Preserve unresolved disagreement instead of manufacturing consensus.
    The recommended boundary is one observation/authorization/recovery foundation.
    No additional human type-sketch approval is required by the latest instruction.

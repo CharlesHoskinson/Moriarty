@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T07:15:00Z
+updated_at: 2026-09-05T07:43:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -18,6 +18,7 @@ sources:
   - SRC-0032
   - SRC-0033
   - SRC-0034
+  - SRC-0035
 ---
 
 # Moriarty research journal
@@ -789,3 +790,40 @@ The user's continuation instruction covers the complete XML program, not S02
 alone. The app goal was initially paused. The user resumed it, and a subsequent
 goal-tool inspection confirmed `active`. This restores product-owned continuation,
 not evidence that any sprint or release gate is complete.
+
+### Delegated S02 common-foundation design
+
+**CLM-0144.** Repository observation and design recommendation: all three requested
+experts returned independent amendments against identical frozen inline sources.
+The [decision](../docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md)
+adopts a combined foundation by two-to-one preference while preserving Fable's
+split-review dissent. Astra and Fable support consumed-parent authority with
+explicit exact-parent residual applicability; Grok's registered-through-residual
+alternative is preserved but not selected. All agree that the current sketch
+needs correction and that neither architecture selection nor implementation
+acceptance follows from their advice.
+
+The design adds branch policies, optional Core projections, explicit
+operation-specific authorization, per-key and per-operation lifecycle records,
+current evidence checks, atomic registry/financial updates, and independently
+signed recovery. The complete disposition table also records disagreements about
+time, freshness, policy supersession, display binding, and terminal stuttering.
+No unanimity, actual model counterexample, or completed Council gate is claimed.
+
+Claim metadata:
+
+- Sources: SRC-0035 public proposal receipt; SRC-0031 XML S02; SRC-0033 frozen comparison design.
+- Local locator: [immutable proposals and receipt](../raw/reviews/s02-common-design-2026-09-05/receipt.json).
+- Repository: local Moriarty main source `76228d99960a78aba052aa481565d06b7a1762db`; foundation source `6a60a645c03acad83b7cbc6b85d43996cd40ca65`.
+- Observed and decision date: 2026-09-05 UTC.
+- Authority: experimental model advice and user-delegated local design decision.
+- Scope: common S02 foundation, unchanged Core `0.0.0-e00.2`.
+- Evidence kind: repository observation and recommendation.
+- Reproduction: not applicable to source-level design advice; no model tests were run by the proposal authors.
+- Confidence: high for receipt contents; proposed correctness remains to be tested.
+- Lifecycle status: S2. A–D implementations and all applicable gates remain open.
+
+The Astra route used the explicitly selected native model after its CLI credential
+failed before proposing. Fable metadata reports the requested canonical model
+plus auxiliary Haiku usage; Grok reports the requested alias's `grok-4.6-build`
+route. These observations are not model-identity attestations or Council admission.
