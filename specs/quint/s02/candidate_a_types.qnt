@@ -22,12 +22,13 @@ module candidate_a_types {
     | ChoiceInputA({id: AChoiceId, chooser: Principal, chosen: int})
   type AInput = NoAInput | PresentAInput(ASuppliedInput)
   type AReduction = {state: AState, payments: List[CorePayment], warnings: List[CoreWarning], reductions: int}
-  // Development/domain diagnostics are not Core errors or semantic outcomes.
-  // Task 3 must remove ReductionUnavailableA for every valid frozen constructor.
-  type AReductionStep = QuiescentA(AState) | ReducedA(AReduction)
-    | ReductionUnavailableA | ReductionOutsideDomainA
-  type AReductionEvaluation = ReductionCompleteA(AReduction) | ReductionBoundFailureA
+  // Domain/bound diagnostics are not Core errors or semantic outcomes.
+  // All four admitted frozen constructors now have implemented reductions.
+  type AReductionStep = QuiescentA(AState) | ReducedA(AReduction) | ReductionOutsideDomainA
+  type AReductionEvaluation = ReductionCompleteA(AReduction) | ReductionBoundFailureA | QuiescenceOutsideDomainA
   type AInputResult = {state: AState, error: CoreError}
+  // These diagnostics are not Core errors or successful input applications.
+  type AInputEvaluation = InputAppliedA(AInputResult) | InputOutsideDomainA | InputPreconditionFailureA
   type ATransactionResult = {accepted: bool, state: AState, error: CoreError,
     payments: List[CorePayment], warnings: List[CoreWarning], reductions: int}
   type ATransactionEvaluation = TransactionComputedA(ATransactionResult) | OutsideModelDomainA

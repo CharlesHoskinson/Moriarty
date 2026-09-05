@@ -3,15 +3,17 @@ module candidate_a_core {
   import observations.* from "./observations"
   import candidate_a_types.* from "./candidate_a_types"
 
+  // Internal precondition: admitted observation and total state choice map.
+  // Public reduction/input entry points validate their finite-domain inputs.
+  pure def evaluateObservation(observation: AObservation, state: AState): bool = match observation {
+    | ChoiceEqualsA(choice) => state.choices.get(choice.id) == IntValue(choice.expected)
+  }
+
   // This gate means the one-step evaluator is implemented for this valid state;
   // an empty Close is included and yields QuiescentA, not a counted reduction.
-  pure def canReduceOnce(program: AProgram, state: AState): bool =
-    if (validState(program, state)) match program.nodes.get(state.continuation) {
-      | CloseA => true | PayA(_) => true | IfA(_) => false | WhenA(_) => false
-    } else false
+  pure def canReduceOnce(program: AProgram, state: AState): bool = validState(program, state)
 
-  // Only the frozen Close/Pay clauses (core.py:228-253) are implemented here.
-  // If/When remain explicitly unavailable until Task 3, never false quiescence.
+  // All frozen reduction clauses (core.py:228-272), in their source order.
   // Bad finite-domain calls are diagnostics, not Python Core errors.
   pure def reduceOnce(program: AProgram, state: AState): AReductionStep =
     if (not(validState(program, state))) ReductionOutsideDomainA
@@ -43,7 +45,89 @@ module candidate_a_core {
           ReducedA({state: {...state, continuation: pay.continuation, accounts: nextAccounts},
             payments: payments, warnings: warnings, reductions: 1})
         }
-      | IfA(_) => ReductionUnavailableA
-      | WhenA(_) => ReductionUnavailableA
+      | IfA(branch) => ReducedA({state: {...state, continuation:
+          if (evaluateObservation(branch.observation, state)) branch.thenNode else branch.elseNode},
+          payments: List(), warnings: List(), reductions: 1})
+      | WhenA(waiting) => if (timeValue(state.minimumTime) >= timeValue(waiting.timeout))
+          ReducedA({state: {...state, continuation: waiting.timeoutNode},
+            payments: List(), warnings: List(), reductions: 1})
+        else QuiescentA(state)
+    }
+
+  type ReductionAccumulatorA = {done: bool, outside: bool, result: AReduction}
+  // At most 15 descending non-Close nodes plus six Close refunds; call 22
+  // observes quiescence. Completed accumulators are retained, not recounted.
+  pure def reduceToQuiescence(program: AProgram, state: AState): AReductionEvaluation =
+    if (not(validState(program, state))) QuiescenceOutsideDomainA
+    else {
+      val initial: ReductionAccumulatorA = {done: false, outside: false,
+        result: {state: state, payments: List(), warnings: List(), reductions: 0}}
+      val accumulated = List(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21).foldl(initial, (acc, _) =>
+          if (acc.done or acc.outside) acc
+          else match reduceOnce(program, acc.result.state) {
+            | QuiescentA(_) => {...acc, done: true}
+            | ReductionOutsideDomainA => {...acc, outside: true}
+            | ReducedA(delta) => {...acc, result: {state: delta.state,
+                payments: delta.payments.foldl(acc.result.payments, (items, payment) => items.append(payment)),
+                warnings: delta.warnings.foldl(acc.result.warnings, (items, warning) => items.append(warning)),
+                reductions: acc.result.reductions + delta.reductions}}
+          })
+      if (accumulated.outside) QuiescenceOutsideDomainA
+      else if (accumulated.done) ReductionCompleteA(accumulated.result)
+      else ReductionBoundFailureA
+    }
+
+  // Restricted internal modeling API: supplied input on a valid unexpired
+  // When after quiescence. Task 4 must perform timeout-priority reduction first
+  // and handle NoAInput separately. This is not a public transaction result.
+  pure def canApplyInput(program: AProgram, state: AState, supplied: ASuppliedInput): bool =
+    if (validState(program, state) and validInput(PresentAInput(supplied)))
+      match program.nodes.get(state.continuation) {
+        | WhenA(waiting) => timeValue(state.minimumTime) < timeValue(waiting.timeout)
+        | _ => false
+      }
+    else false
+
+  type InputScanA = {done: bool, boundsMismatch: bool, result: AInputResult}
+  pure def applyInput(program: AProgram, state: AState, supplied: ASuppliedInput): AInputEvaluation =
+    if (not(validState(program, state)) or not(validInput(PresentAInput(supplied)))) InputOutsideDomainA
+    else if (not(canApplyInput(program, state, supplied))) InputPreconditionFailureA
+    else match program.nodes.get(state.continuation) {
+      | WhenA(waiting) => {
+          val initial: InputScanA = {done: false, boundsMismatch: false,
+            result: {state: state, error: CoreErrorCode("no_matching_input")}}
+          val scanned = waiting.cases.foldl(initial, (acc, oneCase) =>
+            if (acc.done) acc
+            else match oneCase.caseAction {
+              | DepositA(deposit) => match supplied {
+                  | DepositInputA(input) => {
+                      val required = match deposit.amount { | ConstantA(quantity) => quantity }
+                      if (deposit.account != input.account or deposit.depositor != input.depositor
+                          or required != input.quantity) acc
+                      else if (input.quantity <= 0) {...acc, done: true,
+                        result: {state: state, error: CoreErrorCode("non_positive_deposit")}}
+                      else {...acc, done: true, result: {state: {...state,
+                        continuation: oneCase.continuation,
+                        accounts: state.accounts.put(deposit.account, state.accounts.get(deposit.account) + input.quantity)},
+                        error: NoCoreError}}
+                    }
+                  | _ => acc
+                }
+              | ChoiceA(choice) => match supplied {
+                  | ChoiceInputA(input) =>
+                      if (choice.id != input.id or choice.chooser != input.chooser) acc
+                      else if (input.chosen < choice.lower or input.chosen > choice.upper)
+                        {...acc, boundsMismatch: true}
+                      else {...acc, done: true, result: {state: {...state,
+                        continuation: oneCase.continuation, choices: state.choices.put(choice.id, IntValue(input.chosen))},
+                        error: NoCoreError}}
+                  | _ => acc
+                }
+            })
+          InputAppliedA(if (not(scanned.done) and scanned.boundsMismatch)
+            {state: state, error: CoreErrorCode("choice_out_of_bounds")} else scanned.result)
+        }
+      | _ => InputPreconditionFailureA
     }
 }

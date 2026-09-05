@@ -60,17 +60,203 @@ module candidate_a_core_test {
     assert(reduceOnce(payProgram(-1), before) == ReducedA({state: {...before, continuation: N0}, payments: List(),
       warnings: List({code: "non_positive_payment", requested: IntValue(-1), paid: IntValue(0)}), reductions: 1}))
   }
-  run unsupportedIfWhenUnavailableTest = assert(
+  run allFrozenConstructorsSupportedTest = assert(
     validState(canonicalSwap, emptyAState(N3)) and validState(canonicalSwap, emptyAState(N6))
-      and not(canReduceOnce(canonicalSwap, emptyAState(N3)))
-      and not(canReduceOnce(canonicalSwap, emptyAState(N6)))
-      and reduceOnce(canonicalSwap, emptyAState(N3)) == ReductionUnavailableA
-      and reduceOnce(canonicalSwap, emptyAState(N6)) == ReductionUnavailableA)
+      and canReduceOnce(canonicalSwap, emptyAState(N3))
+      and canReduceOnce(canonicalSwap, emptyAState(N6)))
   run invalidDomainDistinctTest = {
     val malformed = {...emptyAState(N0), accounts: Map()}
     assert(not(canReduceOnce(closeProgram, malformed))
       and reduceOnce(closeProgram, malformed) == ReductionOutsideDomainA
       and reduceOnce(payProgram(21), fundedState(N1, 10)) == ReductionOutsideDomainA)
+  }
+
+  pure def waitingProgram(cases: List[ACase]): AProgram = {root: N3,
+    nodes: closeProgram.nodes.put(N3, WhenA({cases: cases, timeout: Time100, timeoutNode: N0}))}
+  pure def choiceCase(lower: int, upper: int, successor: NodeId): ACase = {
+    caseAction: ChoiceA({id: SettleId, chooser: Bob, lower: lower, upper: upper}), continuation: successor}
+  pure def depositCase(quantity: int, successor: NodeId): ACase = {
+    caseAction: DepositA({account: aliceA, depositor: Alice, amount: ConstantA(quantity)}), continuation: successor}
+  pure def chosenInput(who: Principal, chosen: int): ASuppliedInput =
+    ChoiceInputA({id: SettleId, chooser: who, chosen: chosen})
+  pure def depositInput(quantity: int): ASuppliedInput =
+    DepositInputA({account: aliceA, depositor: Alice, quantity: quantity})
+  pure val zeroBranchProgram: AProgram = {root: N2, nodes: closeProgram.nodes.put(N2,
+    IfA({observation: ChoiceEqualsA({id: SettleId, expected: 0}), thenNode: N1, elseNode: N0}))}
+  pure val ascendingNodes = List(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15)
+  pure val maximalReductionProgram: AProgram = {root: N15, nodes: A_NODE_IDS.mapBy(node =>
+    if (node == N0) CloseA else PayA({account: aliceA, payee: Bob, amount: ConstantA(0),
+      continuation: ascendingNodes.nth(rank(node) - 1)}))}
+
+  run ifAbsentEqualsZeroFalseTest = {
+    val before = emptyAState(N2)
+    assert(not(evaluateObservation(ChoiceEqualsA({id: SettleId, expected: 0}), before))
+      and reduceOnce(zeroBranchProgram, before) == ReducedA({
+        state: {...before, continuation: N0}, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run ifStoredZeroTrueTest = {
+    val before = {...emptyAState(N2), choices: emptyAState(N2).choices.put(SettleId, IntValue(0))}
+    assert(evaluateObservation(ChoiceEqualsA({id: SettleId, expected: 0}), before)
+      and reduceOnce(zeroBranchProgram, before) == ReducedA({
+        state: {...before, continuation: N1}, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run ifStoredMismatchFalseTest = {
+    val before = {...fundedState(N2, 5), choices: fundedState(N2, 5).choices.put(SettleId, IntValue(1))}
+    assert(reduceOnce(zeroBranchProgram, before) == ReducedA({
+      state: {...before, continuation: N0}, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run whenBeforeDeadlineQuiescentTest = {
+    val before = fundedState(N3, 10)
+    assert(reduceOnce(waitingProgram(List()), before) == QuiescentA(before))
+  }
+  run timeoutAtDeadlineStepTest = {
+    val before = {...fundedState(N3, 10), minimumTime: Time100}
+    assert(reduceOnce(waitingProgram(List()), before) == ReducedA({
+      state: {...before, continuation: N0}, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run timeoutAfterDeadlineStepTest = {
+    val before = {...fundedState(N3, 10), minimumTime: Time101}
+    assert(reduceOnce(waitingProgram(List()), before) == ReducedA({
+      state: {...before, continuation: N0}, payments: List(), warnings: List(), reductions: 1}))
+  }
+  run quiescentWaitingZeroCountTest = {
+    val before = fundedState(N3, 10)
+    assert(reduceToQuiescence(waitingProgram(List()), before) == ReductionCompleteA({
+      state: before, payments: List(), warnings: List(), reductions: 0}))
+  }
+  run quiescentEmptyCloseZeroCountTest = assert(reduceToQuiescence(closeProgram, emptyAState(N0))
+    == ReductionCompleteA({state: emptyAState(N0), payments: List(), warnings: List(), reductions: 0}))
+  run reductionBoundCompleteTest = {
+    val before = {...emptyAState(N15), accounts: CORE_ACCOUNTS.mapBy(_ => 1)}
+    val expectedWarnings = ascendingNodes.tail().foldl(List(), (acc, _) => acc.append(
+      {code: "non_positive_payment", requested: IntValue(0), paid: IntValue(0)}))
+    val expectedPayments = CANONICAL_ACCOUNTS.foldl(List(), (acc, account) => acc.append(
+      {source: account, recipient: account.owner, asset: account.asset, quantity: 1}))
+    assert(validState(maximalReductionProgram, before)
+      and reduceToQuiescence(maximalReductionProgram, before) == ReductionCompleteA({
+        state: emptyAState(N0), payments: expectedPayments, warnings: expectedWarnings, reductions: 21}))
+  }
+  run quiescencePreservesPaymentWarningOrderTest = {
+    val program = {root: N2, nodes: payProgram(10).nodes.put(N2,
+      PayA({account: aliceA, payee: Mallory, amount: ConstantA(-1), continuation: N1}))}
+    val before = {...fundedState(N2, 4), accounts: fundedState(N2, 4).accounts.put(bobB, 7)}
+    assert(reduceToQuiescence(program, before) == ReductionCompleteA({
+      state: {...before, continuation: N0, accounts: CORE_ACCOUNTS.mapBy(_ => 0)},
+      payments: List({source: aliceA, recipient: Bob, asset: TokenA, quantity: 4},
+        {source: bobB, recipient: Bob, asset: TokenB, quantity: 7}),
+      warnings: List({code: "non_positive_payment", requested: IntValue(-1), paid: IntValue(0)},
+        {code: "partial_payment", requested: IntValue(10), paid: IntValue(4)}), reductions: 3}))
+  }
+  run deadlineReductionRefundsBeforeInputTest = {
+    val before = {...fundedState(N3, 10), minimumTime: Time100}
+    val program = waitingProgram(List(choiceCase(0, 1, N1)))
+    assert(reduceToQuiescence(program, before) == ReductionCompleteA({
+      state: {...before, continuation: N0, accounts: CORE_ACCOUNTS.mapBy(_ => 0)},
+      payments: List({source: aliceA, recipient: Alice, asset: TokenA, quantity: 10}),
+      warnings: List(), reductions: 2})
+      and applyInput(program, before, chosenInput(Bob, 1)) == InputPreconditionFailureA)
+  }
+  run literalFixturesBoundCompleteTest = assert(
+    Set(closeProgram, canonicalSwap, zeroBranchProgram, waitingProgram(List()), payProgram(-1),
+      payProgram(0), payProgram(1), payProgram(5), payProgram(10), payProgram(20), maximalReductionProgram)
+      .forall(program => A_TIMES.forall(time => match reduceToQuiescence(program,
+        {...emptyAState(program.root), minimumTime: time}) {
+          | ReductionCompleteA(_) => true | _ => false
+        })))
+  run firstAcceptingCaseOrderTest = {
+    val program = waitingProgram(List(choiceCase(0, 1, N1), choiceCase(0, 1, N2)))
+    val before = fundedState(N3, 10)
+    assert(canApplyInput(program, before, chosenInput(Bob, 1))
+      and applyInput(program, before, chosenInput(Bob, 1)) == InputAppliedA({
+        state: {...before, continuation: N1, choices: before.choices.put(SettleId, IntValue(1))}, error: NoCoreError}))
+  }
+  run laterChoiceCaseCanAcceptTest = {
+    val program = waitingProgram(List(choiceCase(0, 0, N1), choiceCase(1, 1, N2)))
+    val before = fundedState(N3, 10)
+    assert(applyInput(program, before, chosenInput(Bob, 1)) == InputAppliedA({
+      state: {...before, continuation: N2, choices: before.choices.put(SettleId, IntValue(1))}, error: NoCoreError}))
+  }
+  run choiceBoundsMismatchOnlyAfterScanTest = {
+    val program = waitingProgram(List(choiceCase(0, 0, N1), choiceCase(1, 1, N2)))
+    val before = fundedState(N3, 10)
+    assert(applyInput(program, before, chosenInput(Bob, 2)) == InputAppliedA({
+      state: before, error: CoreErrorCode("choice_out_of_bounds")}))
+  }
+  run wrongChooserNoMatchingInputTest = {
+    val before = fundedState(N3, 10)
+    assert(applyInput(waitingProgram(List(choiceCase(0, 1, N1))), before, chosenInput(Mallory, 2))
+      == InputAppliedA({state: before, error: CoreErrorCode("no_matching_input")}))
+  }
+  run wrongChoiceIdNoMatchingInputTest = {
+    val before = fundedState(N3, 10)
+    assert(applyInput(waitingProgram(List(choiceCase(0, 1, N1))), before,
+      ChoiceInputA({id: OtherId, chooser: Bob, chosen: 2}))
+      == InputAppliedA({state: before, error: CoreErrorCode("no_matching_input")}))
+  }
+  run matchedNonpositiveDepositTest = {
+    val before = fundedState(N3, 10)
+    assert(Set(-1, 0).forall(quantity => applyInput(waitingProgram(List(depositCase(quantity, N1))),
+      before, depositInput(quantity)) == InputAppliedA({
+        state: before, error: CoreErrorCode("non_positive_deposit")})))
+  }
+  run mismatchedNonpositiveDepositTest = {
+    val before = fundedState(N3, 10)
+    assert(applyInput(waitingProgram(List(depositCase(10, N1))), before, depositInput(0))
+      == InputAppliedA({state: before, error: CoreErrorCode("no_matching_input")}))
+  }
+  run matchingDepositAddsAndAdvancesTest = {
+    val before = fundedState(N3, 4)
+    assert(applyInput(waitingProgram(List(depositCase(10, N1))), before, depositInput(10))
+      == InputAppliedA({state: {...before, continuation: N1, accounts: before.accounts.put(aliceA, 14)},
+        error: NoCoreError}))
+  }
+  run depositAtPotentialBoundaryTest = {
+    val before = fundedState(N3, 280)
+    val expected = {...before, continuation: N2, accounts: before.accounts.put(aliceA, 300)}
+    val program = waitingProgram(List(depositCase(20, N2)))
+    assert(validState(program, before) and validState(program, expected)
+      and applyInput(program, before, depositInput(20)) == InputAppliedA({state: expected, error: NoCoreError}))
+  }
+  run firstMatchingDepositOrderTest = {
+    val before = fundedState(N3, 0)
+    assert(applyInput(waitingProgram(List(depositCase(5, N1), depositCase(5, N2))), before, depositInput(5))
+      == InputAppliedA({state: {...before, continuation: N1, accounts: before.accounts.put(aliceA, 5)},
+        error: NoCoreError}))
+  }
+  run wrongDepositIdentityNoMatchingInputTest = {
+    val before = fundedState(N3, 10)
+    val program = waitingProgram(List(depositCase(10, N1)))
+    assert(Set(DepositInputA({account: aliceA, depositor: Mallory, quantity: 10}),
+      DepositInputA({account: bobB, depositor: Alice, quantity: 10})).forall(supplied =>
+        applyInput(program, before, supplied) == InputAppliedA({
+          state: before, error: CoreErrorCode("no_matching_input")})))
+  }
+  run emptyOrWrongKindNoMatchingInputTest = {
+    val before = fundedState(N3, 10)
+    assert(Set(waitingProgram(List()), waitingProgram(List(depositCase(10, N1)))).forall(program =>
+      applyInput(program, before, chosenInput(Bob, 1)) == InputAppliedA({
+        state: before, error: CoreErrorCode("no_matching_input")}))
+      and applyInput(waitingProgram(List(choiceCase(0, 1, N1))), before, depositInput(10))
+        == InputAppliedA({state: before, error: CoreErrorCode("no_matching_input")}))
+  }
+  run inputPreconditionDiagnosticTest = {
+    val supplied = chosenInput(Bob, 1)
+    val program = waitingProgram(List(choiceCase(0, 1, N1)))
+    assert(Set(Time100, Time101).forall(time =>
+      not(canApplyInput(program, {...emptyAState(N3), minimumTime: time}, supplied))
+        and applyInput(program, {...emptyAState(N3), minimumTime: time}, supplied) == InputPreconditionFailureA)
+      and applyInput(closeProgram, emptyAState(N0), supplied) == InputPreconditionFailureA
+      and applyInput(canonicalSwap, emptyAState(N3), supplied) == InputPreconditionFailureA
+      and applyInput(payProgram(10), emptyAState(N1), supplied) == InputPreconditionFailureA)
+  }
+  run task3DomainDiagnosticTest = {
+    val invalidState = {...emptyAState(N3), choices: Map()}
+    val program = waitingProgram(List())
+    assert(reduceToQuiescence(program, invalidState) == QuiescenceOutsideDomainA
+      and applyInput(program, invalidState, chosenInput(Bob, 1)) == InputOutsideDomainA
+      and applyInput(program, emptyAState(N3), chosenInput(Bob, 3)) == InputOutsideDomainA
+      and not(canApplyInput(program, emptyAState(N3), depositInput(22)))
+      and applyInput(program, emptyAState(N3), depositInput(22)) == InputOutsideDomainA)
   }
 
   run finiteProgramDomainTest = assert(validProgram(closeProgram)
