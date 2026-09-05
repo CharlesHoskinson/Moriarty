@@ -91,7 +91,9 @@ Eight Candidate A changes refine S02.
 The program change covers S01–S15 and G01–G24.
 Existing adopted S01/S02 packages remain unchanged.
 A0 local intake and A1 reviewed plans are accepted; A2–A7 remain open.
-A2 installment and A3 swap fixture tasks have been dispatched independently.
+A2 installment fixtures (`35959ae`) and A3 swap fixtures (`3f440d2`) are
+implemented and locally reviewed, with original compiling RED/GREEN preserved.
+Actual lifecycle helpers/tests are the next dispatched tasks; A2/A3 remain open.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.

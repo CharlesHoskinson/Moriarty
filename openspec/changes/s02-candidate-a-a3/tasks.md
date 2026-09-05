@@ -1,11 +1,12 @@
 # A3 tasks
 
-All implementation and acceptance tasks remain unchecked in this new contract.
-Existing work must receive evidence intake, not duplicate implementation.
+Partial progress: Task1 literal fixtures/tests accepted at `3f440d2`, with
+compiling RED/GREEN, nonauthor source approval and root receipt/archive audit.
+Task2 lifecycle implementation is dispatched; the complete A3 package is open.
 
 - [ ] Verify the exact dependencies and source pins.
 - [ ] Read XML phase A3 and its named scenario inventory.
-- [ ] Complete its concrete implementation plan before behavioral edits.
+- [x] Complete its concrete implementation plan before behavioral edits (A1 `82d2c0b`).
 - [ ] Add the specified behavioral tests before implementation.
 - [ ] Retain compiling RED sources and terminal receipts.
 - [ ] Produce the exact outputs listed in README.md.

@@ -490,3 +490,10 @@ CLM-0161 records reviewed concrete installment/swap plans at `82d2c0b`, two
 passing static typechecks, exact assembly/import evidence and explicit finite
 scope limits. A2/A3 fixture tasks were dispatched independently with genuine
 RED/GREEN requirements. No lifecycle runtime, Council or A acceptance is claimed.
+
+## [2026-09-05] execution | Implement Candidate A authority fixtures
+
+CLM-0162 records installment `35959ae` and swap `3f440d2`: compiling assertion
+RED, two corrected tests each, nonauthor source review and root evidence intake.
+Their actual authority lifecycle tasks are dispatched next. The installment
+backend-identity timing limit is explicit. Neither full A2/A3 nor Council passed.

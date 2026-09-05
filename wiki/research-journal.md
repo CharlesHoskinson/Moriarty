@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T17:13:45Z
+updated_at: 2026-09-05T17:29:39Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1463,3 +1463,34 @@ separate native owners, each requiring original compiling RED then GREEN before
 independent review. Dispatch is not a result or a promise of process liveness.
 Both lifecycle packages, A4–A7, Council and broader S02/XML gates remain open.
 Main records progress only; Candidate A remains unintegrated with no Git remote.
+
+### Candidate A fixture units implemented and admitted
+
+**CLM-0162.** Experiment and repository observation: installment fixture unit
+`35959ae64e157e7c2253fdce786976237532d13b` and swap fixture unit
+`3f440d2494cf41db289905b15663559e400a6387` preserve actual compiling assertion
+failures followed by two passing corrected tests each. Installment RED omitted
+the fourth parent-plan operation; swap RED expected settlement reductions2
+instead of3. Tests and common semantics were unchanged during correction.
+
+Nonauthor source review approved both corrected two-file units. Root audited
+the exact fourteen-file stage closures, terminal outputs, sole intended source
+corrections and byte-identical original evidence archives. Receipts are under
+`evidence/s02-candidate-a-completion/a2/task1/` and `a3/task1/` in the named
+experimental commits, each with manifest, validation command/result, review and
+author-evidence archive. Runtime was executed by authors; root independently
+audited it and did not duplicate those focused commands.
+
+The installment recorder added a separate Rust binary identity receipt after
+RED and before GREEN. Earlier A0/A3 receipts pin the same digest; this does not
+create a retrospective per-command RED backend pin. The unsupported binary
+version query is retained, with installed-directory version distinct from a
+successful self-report. No original receipt was rewritten.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope two literal fixture units; observed date 2026-09-05 UTC; reproduction
+reproduced for named checks only; confidence high for those finite observations;
+lifecycle S3 experimental branch. A2/A3 Task2 actual authority routes are
+dispatched independently; no full lifecycle or Council acceptance follows.
+Preliminary export/checking intake is preserved at `5ab0b55`; it is not an
+adopted factoring plan or a successful model check. Main remains status-only.
