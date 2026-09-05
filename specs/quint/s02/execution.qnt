@@ -110,6 +110,47 @@ module execution {
   pure def applyVerify(state: ExecutionState[s,c,a,p], id: AttemptId, evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = {
     ...state, attempts: state.attempts.put(id, VerifiedOperation({attempt: evidence.effect.attempt, evidence: evidence})),
   }
-  pure def canCommit(state: ExecutionState[s,c,a,p], id: AttemptId): bool = false
-  pure def applyCommit(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = state
+  pure def canCommit(state: ExecutionState[s,c,a,p], id: AttemptId): bool =
+    if (validExecutionState(state)) match state.attempts.get(id) {
+      | VerifiedOperation(verified) => verified.attempt.id == id
+          and verificationValid(state.authority.context, verified.attempt, verified.evidence)
+      | _ => false
+    } else false
+  // Guards establish live exact parent entries before these updates are used.
+  pure def committedParents(context: AuthorityContext[s,c,a,p], op: Operation): AuthorityKey -> ParentCell[s,c,a,p] = match op {
+    | OpFillSlot(fill) => match context.parents.get(fill.parent) {
+        | ParentVacant => context.parents
+        | ParentLive(live) => context.parents.put(fill.parent, ParentLive({...live,
+            entry: applyConsumeSlot(live.parent, live.entry, fill.slot)}))
+      }
+    | OpCancelParent(parent) => match context.parents.get(parent) {
+        | ParentVacant => context.parents
+        | ParentLive(live) => context.parents.put(parent, ParentLive({...live,
+            entry: applyCancelParent(live.parent, live.entry)}))
+      }
+    | _ => context.parents
+  }
+  pure def committedRevision(context: AuthorityContext[s,c,a,p], key: AuthorityKey, op: Operation): int =
+    if (operationParents(op).contains(key) and isParentKey(key)) match context.parents.get(key) {
+      | ParentVacant => 0
+      | ParentLive(live) => live.entry.revision + 1
+    } else 1
+  pure def committedContext(verified: VerifiedAttempt[s,c,a,p]): AuthorityContext[s,c,a,p] = {
+    val attempt = verified.attempt
+    val before = attempt.context
+    val needed = requiredKeys(attempt.operation, attempt.observation.effects)
+    val registry = needed.fold(before.registry, (acc, key) => acc.put(key,
+      AuthorityConsumed({signed: verified.evidence.signatures.get(key).signed,
+        revision: committedRevision(before, key, attempt.operation)})))
+    {...before, candidate: attempt.observation.proposedSuccessor,
+      ledger: applyTransfers(before.ledger, attempt.observation.effects), registry: registry,
+      parents: committedParents(before, attempt.operation)}
+  }
+  // The guarded action performs this single state assignment: money, parent
+  // accounting, authority consumption, and attempt status change atomically.
+  pure def applyCommit(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = match state.attempts.get(id) {
+    | VerifiedOperation(verified) => {...state, authority: {...state.authority, context: committedContext(verified)},
+        attempts: state.attempts.put(id, ExecutedOperation(verified))}
+    | _ => state
+  }
 }
