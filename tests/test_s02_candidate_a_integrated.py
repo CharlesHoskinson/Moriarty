@@ -37,3 +37,38 @@ def test_frozen_oracle_close_refund_and_rollback():
     refused,none=oracle(change(request,input=supplied))
     assert refused==r(accepted=False,state=state,error=V('CoreErrorCode','contract_closed'),payments=(),warnings=(),reductions=0)
     assert none==()
+
+from scripts.a4_authority import transfers,can_transfer,LEDGER_KEYS
+from scripts.a4_authority import KEYS,IDS,can_reject,reject
+from scripts.a4_carrier import change
+
+def test_uncoupled_rejection_is_reachable():
+    program=r(root=V('N0'),nodes=M(tuple((V('N'+str(i)),V('CloseA')) for i in range(16))))
+    from scripts.a4_agreement import ACCOUNTS,CHOICES
+    accounts=M(tuple((a,1 if a==r(owner=V('Alice'),asset=V('TokenA')) else 0) for a in ACCOUNTS))
+    before=r(program=program,state=r(continuation=V('N0'),accounts=accounts,
+        choices=M(tuple((c,V('NoInt')) for c in CHOICES)),minimumTime=V('Time2')))
+    context=r(candidate=before,ledger=M(tuple((k,0) for k in LEDGER_KEYS)),
+        environment=r(physicalTime=2,anchor=0,implementationVersion=0,enforcementMechanism=0),
+        registry=M(tuple((k,V('AuthorityUnused')) for k in KEYS)),parents=M(tuple((k,V('ParentVacant')) for k in KEYS)))
+    obs=r(predecessor=before,proposedSuccessor=before,artifactAndCall=V('AgreementCallA',r(before=before,input=V('NoAInput'),now=V('Time2'))),
+        resolvedPlan=r(identity=V('SwapPlanA'),operations=()),transactionTime=2,input=V('NoInput'),effects=(),
+        outcome=V('DeadlineRefund'),coreProjection=V('NoCoreProjection'),effectEvidence=V('EvidenceValid'),display=V('PublicDisplay'))
+    attempt=r(id=V('DispositionAttempt'),actor=V('Alice'),operation=V('OpDeadlineRefund'),observation=obs,context=context)
+    evidence=r(effect=r(attempt=attempt,disposition=V('EvidenceValid')),signatures=M(()))
+    state=r(authority=r(context=context,signing=M(tuple((k,V('NoSigningCheck')) for k in KEYS))),
+        attempts=M(tuple((i,V('NoAttempt')) for i in IDS)).put(attempt['id'],V('ProposedAttempt',attempt)))
+    typed(state,'Execution'); typed(evidence,'Evidence')
+    assert can_reject(state,attempt['id'],evidence)
+    result=reject(state,attempt['id'],evidence)
+    assert result['authority']==state['authority']
+    assert result['attempts'][attempt['id']].value['reason']==V('UnauthorizedEffect')
+
+def test_transfer_order():
+    alice=V('Wallet',V('Alice')); bob=V('Wallet',V('Bob')); a=V('TokenA')
+    ledger=M(tuple((k,10 if k==(alice,a) else 0) for k in LEDGER_KEYS))
+    one=r(source=alice,destination=bob,asset=a,quantity=10)
+    two=r(source=bob,destination=alice,asset=a,quantity=10)
+    assert can_transfer(ledger,(one,two))
+    assert not can_transfer(ledger,(two,one))
+    assert transfers(ledger,(one,two))==ledger
