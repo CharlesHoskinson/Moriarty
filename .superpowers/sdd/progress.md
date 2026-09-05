@@ -1,11 +1,39 @@
 # Current execution progress
 
-## Current override, 2026-09-05 22:41 UTC
+## Resume checkpoint, 2026-09-05 23:51 UTC
+
+Resumed from experimental HEAD9ccbf0e. Root revalidated the original Task3
+source, five terminal receipts and all83 stopped-pilot archive members.
+Typecheck, prefixes and both sample commands passed in those original
+receipts; original compilation failed with QNT404 AuthorityKey. Factored
+compilation, both checkers and neverPrepared were not run. Sources and the
+failed original stdout remain unchanged, including the empty generated file.
+
+The independently reviewed alias-visibility control is complete. Original
+toy typecheck exits0 and compile exits1/QNT404 Key. Adding one explicit Key
+import in a separate driver gives typecheck0/compile0. Root and independent
+review intook all four stages and inspected the generated module/actions/
+invariant. Original control files, reviews and root audit are preserved in
+evidence/s02-candidate-a-completion/a5/alias-visibility-control/.
+This is a frontend diagnosis only; the real pilot remains unrepaired.
+Next: review a compilation view preserving frozen original/factored bytes,
+validate it under the existing contract, then inspect paired generated inputs
+before authorizing checker runs. No model or runtime change was made here.
+
+A4 Task6 has no green-tests/result.json. Its old session5645 cannot be
+reattached in this resumed turn. The retained stdout has54 dots, with no
+terminal pytest summary; that is not a passed gate or liveness evidence.
+Do not restart its expensive controls or overwrite the retained artifacts.
+Resolve ownership/terminal status before native export. The test-file diff
+and unrelated Candidate B draft remain untouched. Full A4/A5, Council,
+architecture selection and the remaining XML program remain open.
+
+## Current override, 2026-09-05 23:04 UTC
 
 Candidate A execution remains active in this turn. Session
-20260905T161538Z-60de62 remains open through fact92 and measurement37 in
-main's session database. Do not begin it again. Main HEADa7dced1 records
-CLM-0173. Experimental HEAD1df388a admits RH002. No automatic product loop,
+20260905T161538Z-60de62 remains open through fact93 and measurement38 in
+main's session database. Do not begin it again. Main HEADb1db423 records
+CLM-0174. Experimental HEAD9ccbf0e admits A5 Task2. No automatic product loop,
 Council dispatch, full A4/A5 completion or publication is claimed.
 
 Admitted experimental units since the previous checkpoint: all78 native
@@ -26,30 +54,47 @@ preserved. Real uv and exact python3 alias amendments supplied the passing
 retry without test/source changes. The nonauthor review found no material
 blocker in this bounded unit, with explicit prior-dependency authorship and
 finite-check limits. Root's fresh archive audit passed:515 members,15 lossless
-parts,744523649bytes, SHAc3d2d971... . Task2 is admitted for a narrow experimental
-commit, with all28 newly derived source/manifest files and root evidence.
-No Task3 pilot is yet dispatched. All A5 author command sessions are closed;
-do not restart them.
+parts,744523649bytes, SHAc3d2d971... . Task2 is admitted and committed at9ccbf0e,
+with all28 newly derived source/manifest files and root evidence. All52 Task2
+command sessions are closed; do not restart them.
 
 Only the A4 Task6 broad synthetic test session5645 remains agent-owned and
-running. Latest report:47 passing instances; claimed-reductions triple passed
-and effects-order started. No failures or source changes. Test/checker hashes
+running. Latest report:50 passing instances; plan-omission triple passed and
+unused-program started. No failures or source changes. Test/checker hashes
 remain b84ec390.../b46af079... . Do not restart or omit its controls. After full
 synthetic admission, all final sources must be frozen before measured largest
 native export, all78 exports, stage/case-pin admission/seal and independent
 complete replay. No actual-package acceptance is claimed.
 
 Task2 source inventory/report/index remain frozen at97fad041...,
-e035e329.../7db8df0b... . Following admission, dispatch only the adopted Task3
-prefix tests, samples and paired compile; root must inspect exact generated
-JSON/size metrics before bounded checker commands. Do not increase resources,
-change predicates or launch a full campaign from pilot authority.
+e035e329.../7db8df0b... . Task3 is dispatched at exact9ccbf0ed571e4055bc05962e5681fdf2fa75ad96;
+separate task3-dispatch.json SHA51ca1328... retains immutable bootstrap900bb20.
+The exact3 pilot files were written test-first. Root and nonauthor source
+review found no material defect; all3 exact plan blocks/five declaration-import
+changes/22 full-record prefix pairs preserve the bounded design. Original and
+factored pilot/test SHAs aree8ef6d8d.../2f5fcc10.../31b2b760... . Wrapper
+run-task3.py SHAbeacf086... and all source/dispatch bytes are frozen.
+Typecheck96727 closed0,347.435s. Prefix test48715 closed0,335.175s,exactone
+allPilotPrefixesTest. Root independently audited both73-member source archives,
+both5-member dispatch archives and original outer terminal postcheck records.
+Agent a1 now owns original100-sample session82258. Factored sample and paired
+compile remain sequentially gated. Root must inspect both exact generated
+JSON inputs/size/object/resource metrics before either checker command.
+No checker is authorized, no heap/depth/wall escalation, no full campaign.
+Ignored root source/receipt audits and independent source review are retained
+under .superpowers/sdd/a5-task3-*. They are not a model-checking verdict.
+
+The read-only A4 largest-pilot note is .superpowers/sdd/a4-largest-pilot-readiness.md,
+SHAd6425b26... . It identifies cases014/044 and exact900s measured recipes.
+No native pilot launched. It does not weaken the full78 package contract;
+source freeze/fullTask6 admission remain prerequisites.
 
 Unrelated Candidate B draft is still untracked and must remain untouched.
 No Foreman edits or new harness repairs. Exact-vendor Council remains an
 external gate, not fulfilled by the local agents. This block supersedes all
 status and next-step instructions below. Root's short audit commands are
-terminal at this checkpoint; the narrow Task2 commit is the next local action.
+terminal at this checkpoint. Only agent-owned5645 and82258 are active;
+query the owners for newer terminal state instead of restarting from this note.
 
 ## Current override, 2026-09-05 21:27 UTC
 
