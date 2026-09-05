@@ -95,3 +95,32 @@ def test_complete_parent_program_plan():
     assert plan_valid(p['binding'].value['identity'])
     assert len(program('installment')['nodes'].pairs)==16
     assert planned('installment','recover-r1-refuse100','RecoveryAttempt')['coreProjection'].value['reductions']==0
+
+from scripts.a4_inventory import descriptors,history,terminal
+
+def test_inventory_is_not_submission_defined():
+    ds=descriptors(); assert len(ds)==78 and len({d['case_id'] for d in ds})==78
+    assert sum(len(history(d)) for d in ds)==1557
+    totals={}
+    for d in ds:
+        family=d['lifecycle']+'/'+('ordinary' if d['control']=='ordinary' else 'verified-stale' if d['control']=='verified-stale' else 'negative')
+        totals[family]=totals.get(family,0)+len(history(d))
+    assert totals=={'installment/ordinary':516,'swap/ordinary':484,'swap/verified-stale':44,'installment/negative':122,'swap/negative':391}
+
+def test_denials_rejections_and_derivations_are_distinct():
+    for d in descriptors():
+        for event in history(d):
+            latest=event['latest']; kind=latest['kind']
+            if kind=='denied-probe': assert event['before']==event['after'] and latest['observedGuard'] is False
+            if kind=='adversarial-derivation': assert event['before']['authority']==event['after']['authority']
+            if kind=='transition' and latest['arguments']['command'].tag.startswith('Reject'):
+                assert event['before']['authority']==event['after']['authority']
+                assert event['before']['attempts']!=event['after']['attempts']
+
+def test_observed_raw_is_not_forged_projection():
+    for d in descriptors():
+        if d['control']!='reductions': continue
+        e=next(x for x in history(d) if x['latest']['kind']=='adversarial-derivation')
+        latest=e['latest']; claimed=latest['arguments']['command'].value['attempt']['observation']['coreProjection'].value
+        raw=latest['computations'][0]['evaluation'].value
+        assert claimed['reductions']==raw['reductions']+1
