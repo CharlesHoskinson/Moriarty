@@ -393,3 +393,14 @@ money. A review-found diagnostic issue was reproduced before correction; source
 re-review is clean. Corrected deterministic, sampled, and regression receipts
 are pinned. The parallel installment lifecycle remains in progress, with no
 financial recovery, S02 acceptance, Council gate, or architecture choice claimed.
+
+## [2026-09-05] implementation | Execute installment races and signed recovery
+
+Recorded CLM-0150 for source `d1c475f` / evidence `f4c7bc5`. Both profiles execute
+the initial race, retain the stale loser, and reach either full payment or
+separately signed recovery of ten or five. Independent root runtime checks and
+source/evidence review are clean. Explicitly retained the prefunding, fixed-time,
+trusted-verifier, sampling, and development-archive limitations. Prepared the
+transition to actual Candidate A semantics; Council and all XML gates remain
+open. Released-tool inspection is recorded in `docs/COUNCIL_REVIEWS.md` without
+reopening Foreman repairs.

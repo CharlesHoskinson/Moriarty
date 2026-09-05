@@ -71,3 +71,28 @@ Its original process output was unavailable.
 The correction labels reconstructed RED and incremental runs as retrospective.
 The council must evaluate that limitation against the claimed acceptance boundary.
 Neither that foundation nor its receipts establish a candidate-model or S02 gate result.
+
+## Released-tool observation on 2026-09-05
+
+Repository observation: the inspected Foreman checkout is
+`00c342bd449948ab2ea5ca0b9d0c890614dd81d6` (PR 56 merge). Its installed-runtime
+verification returned `Pass` with manifest digest
+`c0350e9d6cb7a44014c68f1c8e8538af0caccf767772d0c56561eb9007f30418`.
+The released Council README still states that the review coordinator and durable
+runtime are not implemented. Its available runtime entry points are preflight
+and specification-correctness admission, not a complete live-review coordinator.
+No configured session tool supplied an additional Council review runtime.
+
+This is an observed tooling limitation, not an approval, abstention, or a failed
+Moriarty architecture. No Council review was dispatched or counted by this check.
+Do not reopen the retired Foreman repair workstream or silently use its unmerged
+repair candidate. Continue local Moriarty implementation and evidence collection
+without integration or Council-gate claims. An operator-applied review path must
+still satisfy the complete existing protocol before any result can be admitted;
+the absence of a coordinator does not waive exact identity, ready tokens,
+terminal transport, immutable artifacts, or dissent requirements.
+
+The common-model review bundle must cover the accumulated observation, policy,
+signing, execution, rejection, and installment units, not merely the historical
+effect foundation. It must preserve each unit's narrower evidence limits.
+Candidate A–D selection and S01 backfill remain separate acceptance obligations.

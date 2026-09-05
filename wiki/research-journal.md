@@ -1044,3 +1044,53 @@ initial signing/race setup is development work, not full lifecycle evidence.
 Continue actual race winners, rejected losers, second-fill completion, and
 separately signed recoveries of ten or five. No S02, Council, A–D selection, or
 XML release gate is closed. Foreman development remains closed.
+
+### Installment races reach payment or separately signed recovery
+
+**CLM-0150.** Experiment observation: common installment implementation `8d8e8fe`,
+independent tests `d1c475f`, and evidence `f4c7bc5` now execute the parent lifecycle
+under both signing profiles. Initial state is unsigned and prefunded. Both
+first-fill and cancellation attempts must be verified against the same current
+revision before either commits. The winner changes financial/authority state
+atomically; the loser retains an explicit stale rejection.
+
+The remaining path either completes slot two through the exact consumed-parent
+residual or separately checks, signs, verifies, and commits nonce-one recovery.
+Cancellation does not refund funds by itself. Recovery reads actual escrow while
+the policy independently pins the expected ten or five, and it preserves the
+cancelled parent and nonce-zero history.
+
+| Terminal path | Alice refund | Bob payment | Escrow | Root sampled traces |
+| --- | ---: | ---: | ---: | ---: |
+| Both installments complete | 0 | 10 | 0 | 253 |
+| Cancellation wins, recovery ten | 10 | 0 | 0 | 512 |
+| First fill wins, fresh cancellation, recovery five | 5 | 5 | 0 | 235 |
+
+The root's 1,000-trace run reached all 28 witnesses and all six profile/outcome
+combinations without an `installmentSafety` violation. Root also reran the 12
+lifecycle tests and nine separately authored negative tests. Fresh repository
+regressions report 286 Python tests and ten local S01 checks. Independent source,
+test-semantic, and evidence review is clean: all 18 pins match, including eleven
+Quint sources at the recorded source commit.
+
+Claim metadata:
+
+- Sources: SRC-0035 adopted design; SRC-0033 comparison boundary.
+- Repository: local Moriarty, branch `s02-model-comparison`, source `d1c475f`, evidence `f4c7bc5`; worktree `/home/charl/Moriarty/.worktrees/s01-audit-start`.
+- Local locators: `specs/quint/s02/installment_fixtures.qnt`, `installment_harness.qnt`, `installment_test.qnt`, `installment_adversarial_test.qnt`, and `evidence/s02-model-comparison/installment/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-installment-lifecycle.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: separate implementation/test authors, independent root tests and sampling, independent source and evidence review.
+- Scope: common lifecycle, fixed time two, prefunded escrow, trusted external-verifier dispositions, unchanged frozen Core.
+- Evidence kind: experiment observation.
+- Reproduction: all current sources and complete final receipts pinned. Development RED reports are not an archived scaffold-source history; that limit and test-construction corrections are disclosed.
+- Confidence: high for recorded bounded results, not exhaustive checking or semantic correspondence.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+This fixture races initial fill/cancellation, then selects one successor branch;
+it does not test a second concurrent slot-two/cancellation race. Constructed
+refund mutations are guard checks, not the full S02 negative-control inventory.
+Candidate A–D interpreters, independent Core correspondence, Quint/Apalache
+checking, selection, Council acceptance, and all broader XML gates remain open.
+The next semantic implementation is Candidate A's agreement interpreter, not a
+shared validity flag standing in for candidate execution.
