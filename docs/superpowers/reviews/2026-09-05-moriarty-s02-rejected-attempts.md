@@ -62,3 +62,19 @@ Evidence dispositions remain trusted external-verifier abstractions. A retained
 `CoreRejected` records a reported known error; no independent Core execution,
 cryptographic verification, candidate A–D semantics, exhaustive checking,
 Council acceptance, or release claim follows from this unit.
+
+## Final evidence review
+
+Corrected source is committed at `38cf13df8fbc9cfce3dacad093dcc05215fc39f3`;
+receipts and manifest are at `4f3bb75`. The independent reviewer checked all
+25 manifest pins and confirmed that all 13 pinned Quint sources match that
+source commit. Complete terminal receipts support 21 rejection tests, two
+pipeline tests, and 1,000 sampled traces: 504 missing-proof and 496 stale-commit
+rejections. Eight settlement regressions, 42 adversarial regressions, 286 Python
+tests, ten local S01 checks, and standalone typecheck also have successful
+terminal receipts. Both RED commits remain available.
+
+Evidence verdict: clean, with no discrepancies. This was a read-only source and
+receipt check; the reviewer did not repeat runtime tests. It closes this scoped
+unit review only. Stateful installment races and signed recovery are separate
+in-progress work, not part of this rejection manifest.
