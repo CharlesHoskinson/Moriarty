@@ -49,7 +49,7 @@ to keep fixture responsibilities separate. Receipts live below
 
 ## Implementation and verification sequence
 
-- [ ] Persistent signing: test-first carriers and pure guards; check -> sign
+- [x] Persistent signing: test-first carriers and pure guards; check -> sign
   stateful paths for both profiles. Reject wrong signer, altered checked policy,
   stale key/state/ledger/environment/parent dependency, and duplicate signing.
   Permit Alice and Bob checks to coexist and sign without mutual invalidation.

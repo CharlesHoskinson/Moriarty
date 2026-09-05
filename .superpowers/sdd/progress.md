@@ -11,7 +11,10 @@ independent review corrections in 45883ba and clean narrow re-review. No S02 gat
 Recovery registry v2: committed 7cccc5a, independent transcription review clean.
 Branch policies/plan views: committed 320dc53, independent Astra review clean;
 72 deterministic Quint tests with receipts, not lifecycle/recovery execution.
-Next: persistent signing, full verification, atomic parent updates, and actual
+Persistent signing: implemented at cbd1f1d, corrected at f2941d4; independent
+Astra review and narrow re-review clean. Current receipt selects 41 tests and
+1,000 sampled signing traces. This is symbolic signing, not execution verification.
+Next: full per-operation evidence verification, atomic parent updates, and actual
 recovery, under docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle.md.
 Do not rebuild the completed policy unit or re-run its design vote.
 Do not re-dispatch the finished three-expert design or observation implementation.
