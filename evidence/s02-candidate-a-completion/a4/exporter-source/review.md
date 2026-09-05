@@ -3,7 +3,7 @@
 Decision: accept the bounded structural exporter source unit. Full native
 package and actual-package tests remain open. This is not Council acceptance.
 
-Root read all640lines of the new exporter, its complete test append, the full
+Root read all649lines of the new exporter, its complete test append, the full
 author report and the previously adopted1062-line plan. Independent assembly
 checking matches all prescribed source blocks exactly, with only the explicitly
 superseded verify_pins definition and its blank separator removed. The first
