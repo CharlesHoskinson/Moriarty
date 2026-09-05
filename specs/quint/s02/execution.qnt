@@ -18,8 +18,12 @@ module execution {
   type EvidenceBundle[s,c,a,p] = {effect: EffectProof[s,c,a,p],
     signatures: AuthorityKey -> SignatureProof[s,c,a,p]}
   type VerifiedAttempt[s,c,a,p] = {attempt: PreparedAttempt[s,c,a,p], evidence: EvidenceBundle[s,c,a,p]}
+  type RejectionStage = VerificationBoundary | CommitBoundary
+  type RejectedAttempt[s,c,a,p] = {attempt: PreparedAttempt[s,c,a,p], evidence: EvidenceBundle[s,c,a,p],
+    observedContext: AuthorityContext[s,c,a,p], reason: RejectionReason, stage: RejectionStage}
   type AttemptRecord[s,c,a,p] = NoAttempt | ProposedAttempt(PreparedAttempt[s,c,a,p])
     | VerifiedOperation(VerifiedAttempt[s,c,a,p]) | ExecutedOperation(VerifiedAttempt[s,c,a,p])
+    | RejectedOperation(RejectedAttempt[s,c,a,p])
   type ExecutionState[s,c,a,p] = {authority: SigningState[s,c,a,p],
     attempts: AttemptId -> AttemptRecord[s,c,a,p]}
   pure val ATTEMPT_IDS = Set(FundingOneAttempt, FundingTwoAttempt, DispositionAttempt,
@@ -120,6 +124,14 @@ module execution {
           and verificationValid(state.authority.context, verified.attempt, verified.evidence)
       | _ => false
     } else false
+  pure def rejectionReason(context: AuthorityContext[s,c,a,p], attempt: PreparedAttempt[s,c,a,p],
+                            evidence: EvidenceBundle[s,c,a,p]): RejectionReason = UnauthorizedEffect
+  pure def canRejectProposed(state: ExecutionState[s,c,a,p], id: AttemptId,
+                             evidence: EvidenceBundle[s,c,a,p]): bool = false
+  pure def applyRejectProposed(state: ExecutionState[s,c,a,p], id: AttemptId,
+                               evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = state
+  pure def canRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): bool = false
+  pure def applyRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = state
   // Guards establish live exact parent entries before these updates are used.
   pure def committedParents(context: AuthorityContext[s,c,a,p], op: Operation): AuthorityKey -> ParentCell[s,c,a,p] = match op {
     | OpFillSlot(fill) => match context.parents.get(fill.parent) {
