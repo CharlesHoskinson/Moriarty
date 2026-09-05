@@ -1,6 +1,7 @@
 # A4 tasks
 
-All implementation and acceptance tasks remain unchecked in this new contract.
+Whole-phase implementation and acceptance tasks remain open in this contract.
+Narrower admitted implementation units are identified in the refinements below.
 Existing work must receive evidence intake, not duplicate implementation.
 
 - [ ] Verify the exact dependencies and source pins.
@@ -22,12 +23,24 @@ Experimental plan5829639 adopts CT-001–CT-010 in the case-sharded-transport
 specification. It preserves all78cases/1557events and fixes a measured local
 tool string-size incompatibility. The following remain implementation gates:
 
-- [ ] Implement and independently review strict bounded JSON transport.
+- [x] Implement and independently review strict bounded JSON transport (42 tests; `62b7b30` and `fdb81c7`).
 - [ ] Implement all78 literal native wrappers and exact global ordinal controls.
 - [ ] Retain largest-case native pilot bytes, full terminal witness and peak RSS.
 - [ ] Export all78 native cases with original source/runtime/terminal receipts.
 - [ ] Stage case bytes, obtain independent root case-pin admission, then seal.
 - [ ] Run complete streaming semantic/provenance admission and every mutant triple.
+
+## Sharded adversarial refinement
+
+T6S001–007 are specified in sharded-adversarial-tests. Plan `cd06756` preserves
+all required control families. Sharded checker `26c9cc5` passes its focused
+79-test checker/utility run; it is not complete package or Task6 acceptance.
+
+- [ ] Retain the substitution behavioral RED and restore the exact checker source.
+- [ ] Pass every synthetic semantic, locator, lexical and path control with original artifacts.
+- [ ] Admit the actual native package against the final test source pins.
+- [ ] Pass all seven package controls and eight complete honest traversals.
+- [ ] Run the final suite and direct CLI with no exclusions.
 
 ## Specification structure check command
 
