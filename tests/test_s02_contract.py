@@ -56,3 +56,30 @@ def test_s02_requirement_vocabulary_is_closed():
     assert value["verification_backend"] == "quint-apalache"
     assert value["evidence"] == []
     assert value["selected_candidate"] is None
+
+
+def test_s02_contract_is_complete_but_not_execution_evidence():
+    paths = {
+        ".openspec.yaml", "README.md", "proposal.md", "design.md", "tasks.md",
+        "specs/architecture-comparison/spec.md",
+    }
+    assert {str(p.relative_to(CHANGE)) for p in CHANGE.rglob("*") if p.is_file()} == paths
+    text = "\n".join((CHANGE / path).read_text() for path in sorted(paths))
+    for heading in (
+        "Dependencies", "Immutable inputs", "Exact outputs", "Acceptance predicates",
+        "Negative controls", "Evidence manifest", "Failure outcomes", "Rollback",
+        "Semantic-scope transition",
+    ):
+        assert heading in text
+    readme = (CHANGE / "README.md").read_text()
+    assert "Status: specified-only" in readme
+    assert "No architecture has been selected" in readme
+    assert "not passed results" in readme
+    spec = (CHANGE / "specs/architecture-comparison/spec.md").read_text()
+    assert spec.count("#### Scenario:") == 10
+    for n in range(1, 11):
+        assert f"S02-{n:02}" in spec
+    assert "--backend apalache" in text
+    assert "0.0.0-e00.2" in text
+    assert "candidate-unmechanized" in text
+    assert "277" in text
