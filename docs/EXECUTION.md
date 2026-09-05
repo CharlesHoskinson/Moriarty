@@ -22,6 +22,11 @@ every required identifier and predicate. Empty evidence lists mean unassessed wo
 9. Commit task artifacts and integrate reviewed increments into `main`.
 10. Continue until the prompt's evidence-backed terminal decision is complete.
 
+The user's subsequent [council requirement](COUNCIL_REVIEWS.md) applies before
+gate closure. Use GPT-6 Astra, Grok 4.6, and Fable 5.1 through Foreman-owned
+review paths. Backfill S01's completed gates without relabeling their prior
+reviews as council evidence. No council verdict has been obtained yet.
+
 Use the runtime goal for continuation. Do not add a second concurrent scheduler
 that writes to the same checkout. Runtime database and WAL files stay local.
 Commit the typed checkpoint export, program register, code, specifications, tests,
