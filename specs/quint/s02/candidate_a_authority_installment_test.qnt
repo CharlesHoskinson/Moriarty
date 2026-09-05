@@ -109,4 +109,104 @@ run recoveryMatrixTest = assert(PROFILES_I.forall(p => SCENARIOS_I.exclude(Set(T
       and done.authority.context.ledger == (if (residualI(s)) ledgerI(0, 5, 5) else ledgerI(0, 10, 0))
       and recoveryPreservesI(done))
 })))
+
+pure def rejectedUnchangedI(before: AAuthorityExecution, id: AttemptId, evidence: AAuthorityEvidence,
+  expectedReason: RejectionReason): bool = {
+  val after = applyRejectProposedAuthorityA(before, id, evidence)
+  canRejectProposedAuthorityA(before, id, evidence) and match before.attempts.get(id) {
+    | ProposedAttempt(attempt) => after == {...before, attempts: before.attempts.put(id, RejectedOperation({
+        attempt: attempt, evidence: evidence, observedContext: before.authority.context,
+        reason: expectedReason, stage: VerificationBoundary}))}
+    | _ => false }
+}
+run negativeAuthorityTest = assert(PROFILES_I.forall(p => {
+  val s = RecoverI({residual: false, mode: Choice2I})
+  val registered = runPrefixI(s, p, 2)
+  val cancelled = runPrefixI(s, p, 8)
+  val obs = expectedObservationI(RecoveryAttempt, s)
+  val noCancel = applyPropose(registered.state, RecoveryAttempt, recoverI, obs, Alice)
+  val unsigned = applyPropose(cancelled.state, RecoveryAttempt, recoverI, obs, Alice)
+  registered.ok and cancelled.ok
+    and not(operationFinancialGuard(registered.state.authority.context, recoverI, obs.effects))
+    and not(canCommandI(registered.state, s, p, PrepareRecoveryI))
+    and canPropose(registered.state, RecoveryAttempt, recoverI, obs, Alice)
+    and canPropose(cancelled.state, RecoveryAttempt, recoverI, obs, Alice)
+    and match noCancel.attempts.get(RecoveryAttempt) {
+      | ProposedAttempt(a) => {
+          val e = evidenceI(a, recoveryPolicyI(s, p))
+          not(canVerifyAuthorityA(noCancel, RecoveryAttempt, e))
+            and authorityRejectionReasonA(noCancel, a, e) == ConsumptionConflict
+            and rejectedUnchangedI(noCancel, RecoveryAttempt, e, ConsumptionConflict)
+        } | _ => false }
+    and match unsigned.attempts.get(RecoveryAttempt) {
+      | ProposedAttempt(a) => {
+          val e = evidenceI(a, recoveryPolicyI(s, p))
+          val old = evidenceI(a, parentPolicyI(p))
+          not(canVerifyAuthorityA(unsigned, RecoveryAttempt, e))
+            and authorityRejectionReasonA(unsigned, a, e) == UnauthorizedEffect
+            and not(canVerifyAuthorityA(unsigned, RecoveryAttempt, old))
+            and authorityRejectionReasonA(unsigned, a, old) == EvidenceMissing
+            and rejectedUnchangedI(unsigned, RecoveryAttempt, e, UnauthorizedEffect)
+            and rejectedUnchangedI(unsigned, RecoveryAttempt, old, EvidenceMissing)
+        } | _ => false }
+    and not(canPrepareSigningAuthorityA(cancelled.state.authority, parentPolicyI(p), Alice))
+}))
+run duplicateTest = assert(PROFILES_I.forall(p => SCENARIOS_I.forall(s => {
+  val result = runPrefixI(s, p, routeI(s).length())
+  result.ok and ATTEMPT_IDS.forall(id => match result.state.attempts.get(id) {
+    | ExecutedOperation(done) => not(canCommitAuthorityA(result.state, id))
+        and not(canPropose(result.state, id, done.attempt.operation, done.attempt.observation, done.attempt.actor))
+    | _ => true })
+    and (if (cancelledI(result.state)) match result.state.authority.context.parents.get(parentKeyI) {
+      | ParentLive(live) => not(canCancelParent(live.parent, live.entry, live.entry))
+          and not(canConsumeSlot(live.parent, live.entry, 1, live.entry))
+          and not(canConsumeSlot(live.parent, live.entry, 2, live.entry))
+      | _ => false } else true)
+})))
+run changedUnusedNodeTest = assert({
+  val s = TwoFillsI
+  val p = SignBeforeResolve
+  val ready = runPrefixI(s, p, 4)
+  match ready.state.attempts.get(FirstFillAttempt) {
+    | ProposedAttempt(a) => {
+        val changed = {...a, observation: {...a.observation, proposedSuccessor: {...a.observation.proposedSuccessor,
+          program: {...programI, nodes: programI.nodes.put(N15, PayA({account: aliceA, payee: Bob, amount: ConstantA(5), continuation: N0}))}}}}
+        val forged = {...ready.state, attempts: ready.state.attempts.put(FirstFillAttempt, ProposedAttempt(changed))}
+        val e = evidenceI(changed, parentPolicyI(p))
+        ready.ok and not(canCommandI(forged, s, p, VerifyI(FirstFillAttempt)))
+          and authorityRejectionReasonA(forged, changed, e) == UnauthorizedEffect
+          and rejectedUnchangedI(forged, FirstFillAttempt, e, UnauthorizedEffect)
+      } | _ => false }
+})
+run freshDuplicateCancellationTest = assert(PROFILES_I.forall(p => {
+  val s = RecoverI({residual: false, mode: Choice2I})
+  val base = runPrefixI(s, p, 8)
+  val proposed = applyPropose(base.state, FreshCancelAttempt, cancelI, expectedObservationI(CancelAttempt, s), Alice)
+  base.ok and canPropose(base.state, FreshCancelAttempt, cancelI, expectedObservationI(CancelAttempt, s), Alice)
+    and match proposed.attempts.get(FreshCancelAttempt) {
+      | ProposedAttempt(a) => {
+          val e = evidenceI(a, parentPolicyI(p))
+          not(canVerifyAuthorityA(proposed, FreshCancelAttempt, e))
+            and authorityRejectionReasonA(proposed, a, e) == ConsumptionConflict
+            and rejectedUnchangedI(proposed, FreshCancelAttempt, e, ConsumptionConflict)
+        } | _ => false }
+}))
+
+import candidate_a_authority_installment_harness as H from "./candidate_a_authority_installment_harness"
+action initCaseI(s: ScenarioI, p: SigningProfile): bool = all {
+  H::state' = unsignedI, H::scenario' = s, H::profile' = p, H::cursor' = 0, H::history' = List(), H::lastAtomicI' = true }
+run initialWitnessesFalseTest = H::init.expect(not(H::actionWitnessI or H::allCasesWitnessI))
+run residualRecoveryActionTest = initCaseI(RecoverI({residual: true, mode: Choice2I}), SignAfterResolve)
+  .then(16.reps(_ => H::step)).expect(H::allCasesWitnessI and H::installmentSafetyI and financialTerminalI(H::state))
+run beforeRecoveryActionTest = initCaseI(RecoverI({residual: true, mode: Choice2I}), SignBeforeResolve)
+  .then(16.reps(_ => H::step)).expect(H::allCasesWitnessI and H::installmentSafetyI and financialTerminalI(H::state))
+run timeout101ActionTest = initCaseI(RecoverI({residual: true, mode: Timeout101I}), SignAfterResolve)
+  .then(17.reps(_ => H::step)).expect(H::allCasesWitnessI and H::clockAdvancedI and H::recoveryCommittedI)
+run refused100ActionTest = initCaseI(RecoverI({residual: false, mode: Refuse100I}), SignBeforeResolve)
+  .then(13.reps(_ => H::step)).expect(H::allCasesWitnessI and H::recoveryRejectedI and not(financialTerminalI(H::state)))
+run routeBoundsTest = assert(SCENARIOS_I.forall(s => routeI(s).length() <= 17)
+  and routeI(RecoverI({residual: true, mode: Timeout101I})).length() == 17
+  and routeI(RecoverI({residual: true, mode: Choice2I})).length() == 16
+  and routeI(RecoverI({residual: false, mode: Refuse100I})).length() == 13
+  and routeI(TwoFillsI).length() == 11)
 }
