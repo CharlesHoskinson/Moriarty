@@ -19,4 +19,17 @@ module candidate_a_programs {
       continuation: N4}), timeout: Time100, timeoutNode: N0}))
     .put(N6, WhenA({cases: List({caseAction: DepositA({account: aliceA, depositor: Alice, amount: ConstantA(10)}),
       continuation: N5}), timeout: Time100, timeoutNode: N0}))}
+  // Literal existing-constructor installment fixture: installment-two-when-v1.
+  // Each Pay stops at the next unexpired When; fill2 needs a second transaction.
+  pure val installmentProgram: AProgram = {root: N4, nodes: closeProgram.nodes
+    .put(N1, PayA({account: aliceA, payee: Bob, amount: ConstantA(5), continuation: N0}))
+    .put(N2, WhenA({cases: List(
+      {caseAction: ChoiceA({id: SecondFillId, chooser: Bob, lower: 1, upper: 1}), continuation: N1},
+      {caseAction: ChoiceA({id: RecoveryId, chooser: Alice, lower: 1, upper: 1}), continuation: N0}),
+      timeout: Time100, timeoutNode: N0}))
+    .put(N3, PayA({account: aliceA, payee: Bob, amount: ConstantA(5), continuation: N2}))
+    .put(N4, WhenA({cases: List(
+      {caseAction: ChoiceA({id: FirstFillId, chooser: Bob, lower: 1, upper: 1}), continuation: N3},
+      {caseAction: ChoiceA({id: RecoveryId, chooser: Alice, lower: 1, upper: 1}), continuation: N0}),
+      timeout: Time100, timeoutNode: N0}))}
 }
