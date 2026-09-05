@@ -1,6 +1,6 @@
 # S02 common observation and authorization design
 
-Status: draft for independent design review. Classification: repository
+Status: independently reviewed bounded experiment design. Classification: repository
 observation and proposed bounded-model specification. No model has run and no
 architecture is selected by this document.
 
@@ -194,3 +194,7 @@ signed execution verification and follows the frozen S01 profile boundaries.
 It also closes the recovery witness mapping through two mandatory subscenarios
 under existing registry identifiers and gates S02-05/S02-09. Debit coverage is
 explicitly insufficient without each policy's incoming and conditional terms.
+
+Independent re-review approved these corrections at `d742a5b` with no remaining
+material design issue. That approval does not establish model execution,
+implementation correspondence, or a proof.
