@@ -32,20 +32,62 @@ module execution_harness {
       bobKey -> {attempt: attempt, signed: {policy: bob, signer: Bob, token: 0}, disposition: EvidenceValid})}
   }
   var executionState: FixtureExecution
-  action init = executionState' = signedAfter
+  var selectedProfile: SigningProfile
+  action initSignedAfter = all {executionState' = signedAfter, selectedProfile' = SignAfterResolve}
+  action initAfter = all {executionState' = executionInitial, selectedProfile' = SignAfterResolve}
+  action initBefore = all {executionState' = executionInitial, selectedProfile' = SignBeforeResolve}
+  action init = any {initAfter, initBefore}
+  val activeAlice = if (selectedProfile == SignAfterResolve) aliceAfter else aliceBefore
+  val activeBob = if (selectedProfile == SignAfterResolve) bobAfter else bobBefore
+  val signaturesReady = executionState.authority.context.registry.get(aliceKey)
+      == AuthorityRegistered({policy: activeAlice, signer: Alice, token: 0})
+    and executionState.authority.context.registry.get(bobKey)
+      == AuthorityRegistered({policy: activeBob, signer: Bob, token: 0})
+  action prepareAlice = all {
+    canPrepareSigning(executionState.authority, activeAlice, Alice),
+    executionState' = {...executionState, authority: applyPrepareSigning(executionState.authority, activeAlice, Alice)},
+    selectedProfile' = selectedProfile,
+  }
+  action prepareBob = all {
+    canPrepareSigning(executionState.authority, activeBob, Bob),
+    executionState' = {...executionState, authority: applyPrepareSigning(executionState.authority, activeBob, Bob)},
+    selectedProfile' = selectedProfile,
+  }
+  action signAlice = all {
+    canSign(executionState.authority, activeAlice, Alice, 0),
+    executionState' = {...executionState, authority: applySign(executionState.authority, activeAlice, Alice, 0)},
+    selectedProfile' = selectedProfile,
+  }
+  action signBob = all {
+    canSign(executionState.authority, activeBob, Bob, 0),
+    executionState' = {...executionState, authority: applySign(executionState.authority, activeBob, Bob, 0)},
+    selectedProfile' = selectedProfile,
+  }
   action proposeSettlement = all {
+    signaturesReady,
     canPropose(executionState, DispositionAttempt, OpSettle, settleObservation, Bob),
     executionState' = applyPropose(executionState, DispositionAttempt, OpSettle, settleObservation, Bob),
+    selectedProfile' = selectedProfile,
   }
   action verifySettlement = all {
-    canVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
-    executionState' = applyVerify(executionState, DispositionAttempt, settlementEvidence(executionState, aliceAfter, bobAfter)),
+    canVerify(executionState, DispositionAttempt, settlementEvidence(executionState, activeAlice, activeBob)),
+    executionState' = applyVerify(executionState, DispositionAttempt, settlementEvidence(executionState, activeAlice, activeBob)),
+    selectedProfile' = selectedProfile,
   }
   action commitSettlement = all {
     canCommit(executionState, DispositionAttempt),
     executionState' = applyCommit(executionState, DispositionAttempt),
+    selectedProfile' = selectedProfile,
   }
-  action step = any {proposeSettlement, verifySettlement, commitSettlement}
+  action step = any {prepareAlice, prepareBob, signAlice, signBob, proposeSettlement, verifySettlement, commitSettlement}
+  val aliceChecked = match executionState.authority.signing.get(aliceKey) {
+    | PreparedSigning(_) => true
+    | _ => false
+  }
+  val bobChecked = match executionState.authority.signing.get(bobKey) {
+    | PreparedSigning(_) => true
+    | _ => false
+  }
   val settlementProposed = match executionState.attempts.get(DispositionAttempt) {
     | ProposedAttempt(_) => true
     | _ => false
@@ -63,7 +105,27 @@ module execution_harness {
     and balance(executionState.authority.context.ledger, Wallet(Alice), TokenB) == 20
     and balance(executionState.authority.context.ledger, aliceEscrow, TokenA) == 0
     and balance(executionState.authority.context.ledger, bobEscrow, TokenB) == 0
+  val settlementAuthorityConsumed = executionState.authority.context.registry.get(aliceKey)
+      == AuthorityConsumed({signed: {policy: activeAlice, signer: Alice, token: 0}, revision: 1})
+    and executionState.authority.context.registry.get(bobKey)
+      == AuthorityConsumed({signed: {policy: activeBob, signer: Bob, token: 0}, revision: 1})
+  val completeAfter = selectedProfile == SignAfterResolve and settlementCommitted
+  val completeBefore = selectedProfile == SignBeforeResolve and settlementCommitted
+  val noOutstandingAttempt = ATTEMPT_IDS.forall(id => match executionState.attempts.get(id) {
+    | NoAttempt => true
+    | ExecutedOperation(_) => true
+    | _ => false
+  })
+  val executionEnabled = canPrepareSigning(executionState.authority, activeAlice, Alice)
+    or canPrepareSigning(executionState.authority, activeBob, Bob)
+    or canSign(executionState.authority, activeAlice, Alice, 0)
+    or canSign(executionState.authority, activeBob, Bob, 0)
+    or (signaturesReady and canPropose(executionState, DispositionAttempt, OpSettle, settleObservation, Bob))
+    or canVerify(executionState, DispositionAttempt, settlementEvidence(executionState, activeAlice, activeBob))
+    or canCommit(executionState, DispositionAttempt)
   val executionSafety = validExecutionState(executionState)
     and ASSETS.forall(asset => totalAsset(executionState.authority.context.ledger, asset) == totalAsset(fundedLedger, asset))
-    and (if (settlementCommitted) settlementMoney else proposalPreservesMoney)
+    and (if (settlementCommitted) settlementMoney and settlementAuthorityConsumed
+      and executionState.authority.context.candidate == "closed" and noOutstandingAttempt and not(executionEnabled)
+      else proposalPreservesMoney and executionEnabled)
 }
