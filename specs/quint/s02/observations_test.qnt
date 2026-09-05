@@ -74,6 +74,11 @@ module observations_test {
     not(validCoreObservation(CHOICE_IDS, {...before, minimumTime: 2}, acceptedDeposit, List(deposit))))
   run inventedDepositPaymentTest = init.expect(
     not(validCoreObservation(CHOICE_IDS, before, {...acceptedDeposit, payments: List(alicePayment)}, List(deposit))))
+  run walletToWalletIsNotCoreDepositTest = init.expect(
+    not(validCoreObservation(CHOICE_IDS, before, acceptedDeposit,
+      List({...deposit, destination: Wallet(Mallory)}))))
+  run multipleDepositsAreNotOneCoreInputTest = init.expect(
+    not(validCoreObservation(CHOICE_IDS, before, acceptedDeposit, List(deposit, deposit))))
   run paymentInjectionTest = init.expect(paymentTransfer(alicePayment) == aliceRefund)
   run orderedRefundTest = init.expect(validCoreObservation(CHOICE_IDS, funded, refundResult, List(aliceRefund, bobRefund)))
   run reversedRefundTest = init.expect(not(validCoreObservation(CHOICE_IDS, funded, refundResult, List(bobRefund, aliceRefund))))

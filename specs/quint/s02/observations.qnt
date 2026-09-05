@@ -35,17 +35,51 @@ module observations {
   pure val CORE_ACCOUNTS: Set[CoreAccount] =
     PRINCIPALS.map(p => ASSETS.map(a => {owner: p, asset: a})).flatten()
 
-  // Fail-closed scaffolding: replaced only after the positive tests fail.
-  pure def validFrozenCoreError(error: CoreError): bool = false
-  pure def validFrozenCoreWarning(w: CoreWarning): bool = false
-  pure def validCoreState(ids: Set[str], s: CoreStateObservation[c]): bool = false
-  pure def paymentTransfer(p: CorePayment): Transfer = {
-    source: Escrow(p.source), destination: Wallet(p.recipient), asset: p.asset, quantity: 0,
+  pure def validFrozenCoreError(error: CoreError): bool = match error {
+    | NoCoreError => true
+    | CoreErrorCode(code) => Set("time_before_state", "contract_closed", "input_required",
+        "no_matching_input", "choice_out_of_bounds", "non_positive_deposit").contains(code)
   }
-  pure def validCorePayment(p: CorePayment): bool = false
+  pure def validFrozenCoreWarning(w: CoreWarning): bool = match w.requested {
+    | NoInt => false
+    | IntValue(requested) => match w.paid {
+        | NoInt => false
+        | IntValue(paid) => (w.code == "non_positive_payment" and requested <= 0 and paid == 0)
+            or (w.code == "partial_payment" and requested > 0 and paid >= 0 and paid < requested)
+      }
+  }
+  pure def validCoreState(ids: Set[str], s: CoreStateObservation[c]): bool =
+    s.accounts.keys() == CORE_ACCOUNTS and s.accounts.keys().forall(k => s.accounts.get(k) >= 0)
+      and s.choices.keys() == ids
+  pure def paymentTransfer(p: CorePayment): Transfer = {
+    source: Escrow(p.source), destination: Wallet(p.recipient), asset: p.asset, quantity: p.quantity,
+  }
+  pure def validCorePayment(p: CorePayment): bool = p.asset == p.source.asset and p.quantity > 0
+  pure def isEscrowTransfer(t: Transfer): bool = match t.source {
+    | Wallet(_) => false
+    | Escrow(_) => true
+  }
   pure def rejectionPreserved(before: CoreStateObservation[c], r: CoreResultObservation[c],
-                              transfers: List[Transfer]): bool = false
+                              transfers: List[Transfer]): bool =
+    not(r.accepted) and r.state == before and r.warnings == List() and r.payments == List()
+      and transfers == List() and r.reductions == 0
+  // Structural/emission consistency only. Candidate execution and the independent
+  // checker must establish the actual balances, continuation, and reduction count.
   pure def validCoreObservation(ids: Set[str], before: CoreStateObservation[c],
-                               r: CoreResultObservation[c], transfers: List[Transfer]): bool = false
-  pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = false
+                               r: CoreResultObservation[c], transfers: List[Transfer]): bool =
+    validCoreState(ids, before) and validCoreState(ids, r.state) and validFrozenCoreError(r.error)
+      and (r.accepted == (r.error == NoCoreError)) and r.reductions >= 0
+      and r.warnings.foldl(true, (ok, w) => ok and validFrozenCoreWarning(w))
+      and r.payments.foldl(true, (ok, p) => ok and validCorePayment(p))
+      and validEffects(transfers)
+      and (if (r.accepted)
+        r.state.minimumTime >= before.minimumTime
+          and r.payments.foldl(List(), (acc, p) => acc.append(paymentTransfer(p)))
+            == transfers.select(t => isEscrowTransfer(t))
+        else rejectionPreserved(before, r, transfers))
+  // Necessary carrier applicability, never sufficient evidence of correspondence.
+  pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = match projection {
+    | NoCoreProjection => false
+    | CoreProjected(_) => true
+  }
 }
