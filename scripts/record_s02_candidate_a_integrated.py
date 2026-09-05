@@ -13,6 +13,10 @@ import time
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+from scripts.a4_json_stream import hash_stream
+
 STAGES = ROOT / ".superpowers/sdd/a4-producer-receipts"
 DISPATCH = ROOT / ".superpowers/sdd/a4-producer-dispatch.json"
 SHARED_DISPATCH = ROOT / ".superpowers/sdd/a5-factoring-receipts/dispatch.json"
@@ -40,6 +44,10 @@ PYTHON = (
 IMPORTS = re.compile(r'^\s*import\s+[^\n]*?\s+from\s+"([^"]+)"', re.MULTILINE)
 
 def sha(data): return hashlib.sha256(data).hexdigest()
+
+def artifact_hash(path):
+    with path.open("rb") as stream:
+        return hash_stream(stream)[0]
 
 def write_json(path, value):
     with path.open("x", encoding="utf-8") as stream:
@@ -208,7 +216,7 @@ def main(argv=None):
     source_stable = before == after and missing_before == missing_after
     recorder_exit = (completed.returncode if completed.returncode >= 0 else 128 - completed.returncode)
     if not source_stable or not runtime_stable: recorder_exit = 2
-    artifacts = {path.name: sha(path.read_bytes()) for path in sorted(stage.glob("*.itf.json"))}
+    artifacts = {path.name: artifact_hash(path) for path in sorted(stage.glob("*.itf.json"))}
     receipt = {"command": command, "executed_command": actual_command, "cwd": str(ROOT),
         "beforeDispatchCommit": dispatch["beforeDispatchCommit"], "sourceCommit": source_commit, "dirty_before": dirty,
         "sourceCommitAfter": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),

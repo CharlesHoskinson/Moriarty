@@ -66,3 +66,44 @@ def test_wrapper_renderer_rejects_nonfinite_indices(index):
     from scripts.s02_candidate_a_integrated_inventory import case_wrapper
     with pytest.raises(ValueError, match="fixed case index"):
         case_wrapper(index)
+
+
+def test_recorder_artifact_hash_uses_bounded_reads():
+    import hashlib
+    import io
+    from scripts.record_s02_candidate_a_integrated import artifact_hash
+    payload = b"original native bytes" * 100_001
+    sizes = []
+    class GuardedReader(io.BytesIO):
+        def read(self, size=-1):
+            assert 0 < size <= 1_048_576, "whole/oversized native artifact read"
+            sizes.append(size)
+            return super().read(size)
+    class GuardedPath:
+        def read_bytes(self):
+            raise AssertionError("whole native artifact read_bytes")
+        def open(self, mode):
+            assert mode == "rb"
+            return GuardedReader(payload)
+    assert artifact_hash(GuardedPath()) == hashlib.sha256(payload).hexdigest()
+    assert len(sizes) >= 3 and all(size == 1_048_576 for size in sizes)
+
+
+def test_recorder_main_publishes_streamed_artifact_hashes():
+    import ast
+    import inspect
+    import scripts.record_s02_candidate_a_integrated as recorder
+    tree = ast.parse(inspect.getsource(recorder.main))
+    assignments = {target.id: node.value for node in ast.walk(tree)
+                   if isinstance(node, ast.Assign) for target in node.targets
+                   if isinstance(target, ast.Name)}
+    artifact_map = assignments["artifacts"]
+    assert isinstance(artifact_map, ast.DictComp)
+    assert ast.dump(artifact_map.value) == ast.dump(ast.parse("artifact_hash(path)", mode="eval").body)
+    assert ast.dump(artifact_map.generators[0].iter) == ast.dump(
+        ast.parse('sorted(stage.glob("*.itf.json"))', mode="eval").body)
+    receipt = assignments["receipt"]
+    assert isinstance(receipt, ast.Dict)
+    published = {key.value: value for key, value in zip(receipt.keys, receipt.values)
+                 if isinstance(key, ast.Constant)}
+    assert isinstance(published["artifacts"], ast.Name) and published["artifacts"].id == "artifacts"
