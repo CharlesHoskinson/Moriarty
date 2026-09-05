@@ -19,12 +19,17 @@ compiling freshCancellationTest RED, independent source review and root audit
 of all four stage closures and91original archive members.
 A3Task2 accepted c3c89fa: all five tests pass, including twelve ordinary
 scenarios under both profiles, real funding/disposition and retained refusals.
-A3Task3 stale/adversarial/harness work dispatched to execution_adversarial_tests;
+A3Task3 source/tests/samples accepted926b350:17tests and recursive typecheck,
+all24positivewitnesses in100samples, independent source review and root exact
+archive/terminal intake. Full A3 still awaits shared final regressions.
 A2Task3 adversarial/harness work explicitly dispatched to a1_installment_plan
 after Task2 acceptance. Each has a brief and unique ignored report/receipts.
 Addendum a314549 uses one recursive full-closure typecheck per lifecycle and
 one root shared regression receipt after BOTH final source closures freeze.
 Preliminary A4/A5 intake findings committed5ab0b55; no factoring implemented.
+A4 export/replay design adopted effb7af. Concrete producer plan assigned to
+execution_adversarial_tests and independent checker plan to a0_final_review;
+no A4 behavioral edits before reviewed exact subplans/inventory/schema.
 Other B work stays out of scope. A1 evidence is planning/static, not runtime.
 Do not re-run completed A0 commands. Evidence is under
 evidence/s02-candidate-a-completion/a0/ with replayable validation command.
