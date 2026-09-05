@@ -435,3 +435,15 @@ and separate installment fills/recovery. Source milestones ea35cad, d4a714c,
 58 pins and exact original ITF/report bytes. Independent Python correspondence
 is under implementation and review, not passed. No Council, authority integration,
 exhaustive verification, architecture selection or XML release gate is claimed.
+
+## [2026-09-05] implementation | Complete the Candidate A semantic-unit handoff
+
+Recorded CLM-0156 for source 2f53817, evidence a9deaec, aggregate 0266df2 and
+archive audit d7384d2. Final branch receipts record 441 Python tests, 84 checker
+tests and complete-inventory agreement on 53 actual cases from 14 ITFs. Nine
+semantic mutation triples are committed. Source review's missing-inventory
+finding is corrected; selected-record mode is explicitly weaker. Disclosed shared
+model/checker authorship and preserved the unproductive Apalache preflight without
+claiming verification or a counterexample. Candidate B's fourth draft remains
+unadopted. Authority integration and all broader S02/Council/XML obligations remain
+open; main's separate tests are not the branch suite. Continue Moriarty only.

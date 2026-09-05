@@ -36,7 +36,8 @@ will grow by merging evidence into durable topic pages.
   four-alternative S02 coverage, delegated design, the branch observation-carrier
   implementation, atomic settlement, rejected attempts, and executed installment
   races with signed recovery, Candidate A's full transaction/projection interpreter,
-  actual swap and installment traces, and the pending independent correspondence check.
+  actual swap and installment traces, the completed finite-record Python comparison,
+  and pending candidate-specific authority integration.
 
 ## Active specification artifacts
 

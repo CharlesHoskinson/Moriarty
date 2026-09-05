@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T11:39:46Z
+updated_at: 2026-09-05T12:17:54Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1235,3 +1235,55 @@ complete. No S02 or Council gate follows from a passing checker scaffold.
 Authority integration, alternatives B–D, architecture comparison/selection,
 exhaustive Quint/Apalache evidence, S03–S15 and all broader XML gates remain open.
 No Git remote is configured, so local commits are not GitHub publication.
+
+### Candidate A finite-record correspondence and semantic-unit handoff
+
+**CLM-0156.** Experiment observation: checker source
+`2f53817de7dad8553b5ecb43746b676006a2d28e` completes the Candidate A
+agreement semantic-unit plan Tasks 1–8 at a local experimental boundary.
+The final root receipts record 441 branch Python tests, including 84 checker
+tests, and zero differences across all 53 actual exported cases from 14 ITFs
+with 76 retained provenance occurrences. These are milestone results, not
+all-program correspondence or exhaustive verification. The main branch's
+separate test measurement remains 284; implementation remains on the S02 branch.
+
+The checker evaluates frozen Python semantics with a separately implemented
+decoder and compares raw results, full projections and ordered effects. The
+final default CLI requires the complete pinned ITF inventory: missing records
+are rejected. Selected-record comparison requires explicit `--allow-subset`
+and reports that weaker scope. Nine archived semantic mutations retain their
+modified cases, matching raw trace and failing CLI receipt. Source review
+and archive review are preserved. Separate reference implementation is not
+independent authorship: the takeover checker author also authored the model.
+Root and scoped nonauthor native reviews do not substitute for Council acceptance.
+
+The Apalache preflight produced no verification result. Root stopped its owned
+server after observing a wildcard listener; a later offline invocation refused
+the input format before checking. Neither outcome is a counterexample or an
+architecture failure. Candidate B's fourth draft is preserved as unadopted:
+its concrete node table, request/error carrier, finite input domains and exact
+Core-result mapping still need correction before implementation.
+
+Claim metadata:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 adopted common design.
+- Repository: local Moriarty, branch `s02-model-comparison`; checker source commit above; producer `02a4e94b604760e54b04f94c0dc089ede0de938b`.
+- Evidence: `a9deaecd7fde2c0e7048d0af4e0bbb8d0c760683`; aggregate handoff `0266df2b759b40a1e832875f98f90bf68114bd79`; archive audit `d7384d2c8b2c86ac73d3c9f881a1ba66775f10ab`.
+- Local locators on that branch: `evidence/s02-model-comparison/candidate-a-correspondence/manifest.json`, its `export/` and `checker-stages/mutations/` directories, and `evidence/s02-candidate-a-core/evidence-manifest.json`.
+- Reviews: `docs/superpowers/reviews/2026-09-05-moriarty-s02-candidate-a-correspondence.md`, `2026-09-05-moriarty-s02-candidate-a-correspondence-evidence.md`, and `2026-09-05-moriarty-s02-candidate-b-draft-intake.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC; final journal observation 12:17:54 UTC.
+- Authority: deterministic author tests, root execution and source inspection, scoped native source/archive reviews; shared model/checker authorship disclosed.
+- Scope: Candidate A agreement semantic-unit Tasks 1–8 only; frozen Python Core and swap unchanged.
+- Evidence kind: experiment observation and repository observation.
+- Reproduction: reproduced finite-record comparison with committed corpus, exact source pins and retained mutation inputs; final archive audit verified 121 pins, and root verified all 27 aggregate handoff pins.
+- Confidence: high for recorded bounded results; no exhaustive or all-program claim.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+This supersedes the preceding Task 7 in-progress status, not the broader open
+obligations. Next is a reviewed candidate-specific authority integration contract
+that binds actual Core inputs/results/effects to signing, verification and atomic
+commitment under both profiles, including installment races and nonce-one recovery.
+B–D implementation and comparison, justified selection, exact-provider Council
+reviews and S01 backfill, S03–S15, ACTUS and all release gates remain open.
+The full product goal remains active. Foreman repairs remain closed by user
+direction. There is still no configured Git remote or GitHub publication claim.
