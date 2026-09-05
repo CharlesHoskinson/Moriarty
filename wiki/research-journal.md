@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T12:17:54Z
+updated_at: 2026-09-05T13:19:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1287,3 +1287,65 @@ B–D implementation and comparison, justified selection, exact-provider Council
 reviews and S01 backfill, S03–S15, ACTUS and all release gates remain open.
 The full product goal remains active. Foreman repairs remain closed by user
 direction. There is still no configured Git remote or GitHub publication claim.
+
+### Candidate A authority adapter and actual offline-check resource boundary
+
+**CLM-0157.** Experiment observation: source
+`e84f737dc97cf923579f8a59c91ee04c03ff0233` implements the Candidate A authority
+observation adapter. Actual request/program/state/input/time and full computed
+results/effects are bound by recomputation and equality. Cancellation is a
+separate checked identity with empty effects and NoCoreProjection; its evidence
+tag is not a Core computation or signing authority. Supplied plan payloads are
+carried verbatim, not authorized by this adapter.
+
+Root's terminal reruns passed all 15 named adapter tests and 100 sampled traces,
+with no adapterBindingSafety violation and 100 adapterProducedFirstFill witnesses.
+This is one deterministic adaptation path, not an authority-commitment or
+exhaustive witness. The author's separate terminal receipts record both
+typechecks and 441 Python tests. Native nonauthor source review found no blocking
+adapter defect. Root verified all 54 artifact/source pins, the external tool pin,
+47 byte-identical archived payloads and the 13-file live source closure.
+
+Evidence `46946aa55682090ebfe31e6e1a3e2b477028dc12` explicitly records an original
+process deviation: the first-fill RED was a name-resolution failure, while the
+genuine cancellation RED lacks retained historical source bytes. Ten added
+tests are supplemental regressions, not newly observed REDs. Source review
+accepts the tested implementation for integration without retroactively
+certifying complete failing-first evidence or waiving any XML/Council gate.
+
+**CLM-0158.** Experiment observation: a direct offline Apalache route accepted
+the single-module flattened Quint JSON with the required `.qnt.json` suffix.
+The 93,413,860-byte input was parsed and typechecked, but both 4 GiB and 8 GiB
+heap runs terminated with exit 255 in InlinePass after 275.18 and 410.265 seconds,
+respectively. Neither checked states, produced an invariant result or supplied
+a counterexample. No listener was started for these direct runs. The generated
+input remains local and hash-pinned, not committed; exact commands, source/tool
+pins and byte-preserved command/detailed logs are committed in
+`93fce82250cf6f0f68114b4d2b5c373cc9b7390d`. This supersedes the previous
+preflight-only status, not the open model-checking obligation. Root stopped
+memory escalation; semantics-preserving model factoring remains required.
+
+Claim metadata:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 adopted common design.
+- Repository: local Moriarty, branch `s02-model-comparison`; full source/evidence commits above; no configured remote.
+- Locators on that branch: `evidence/s02-model-comparison/candidate-a-authority-adapter/manifest.json`, `root-reruns.json`, `author-report.md`, and `evidence/s02-model-comparison/candidate-a-apalache-offline/manifest.json`.
+- Review: `docs/superpowers/reviews/2026-09-05-moriarty-s02-candidate-a-authority-adapter.md`.
+- Observed and commit date: 2026-09-05 UTC; this journal entry 13:19 UTC.
+- Authority: local experimental implementation, actual author/root execution receipts and native source review, not exact-provider Council.
+- Scope: Candidate A adapter only and terminal offline resource failures; frozen Core/swap unchanged. Main's test measurement remains separate from the S02 branch.
+- Evidence kind: experiment observation and repository observation.
+- Reproduction: reproduced adapter tests/sample and observed offline terminal failures; incomplete historical RED source closure remains explicit; no formal verification result.
+- Confidence: high for the recorded source, finite tests and terminal process outcomes; no universal correspondence or architecture-failure inference.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+The next concrete boundary plan is adopted at
+`5b1f1fb76c1f17a91335c4c9ea3fb621343a3324`: actual funding under both signing
+profiles, full-plan fidelity, guarded verification/atomic commitment and reachable
+rejection retaining the original evidence. Implementation has begun, with no
+passing boundary result claimed here. Both complete A lifecycles and integrated
+exports follow. Candidate B fifth/sixth drafts were rejected and preserved at
+`d69ca6999263db400c5e9f7e793fda4e164c274d`; an actual frozen Python diagnostic
+disproved the draft's negative-deposit error classification. B–D implementations,
+comparison/selection, S02, Council/S01 backfill, S03–S15, ACTUS and 24 XML release
+gates remain open. The full goal remains active; Foreman repairs remain closed.

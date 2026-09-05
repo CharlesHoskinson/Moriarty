@@ -37,7 +37,9 @@ will grow by merging evidence into durable topic pages.
   implementation, atomic settlement, rejected attempts, and executed installment
   races with signed recovery, Candidate A's full transaction/projection interpreter,
   actual swap and installment traces, the completed finite-record Python comparison,
-  and pending candidate-specific authority integration.
+  the completed authority observation adapter with explicit historical RED
+  limitations, both offline Apalache heap failures, and the candidate-specific
+  signing/verification/commit boundary under implementation.
 
 ## Active specification artifacts
 

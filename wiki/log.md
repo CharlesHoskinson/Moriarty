@@ -447,3 +447,12 @@ model/checker authorship and preserved the unproductive Apalache preflight witho
 claiming verification or a counterexample. Candidate B's fourth draft remains
 unadopted. Authority integration and all broader S02/Council/XML obligations remain
 open; main's separate tests are not the branch suite. Continue Moriarty only.
+
+## [2026-09-05] implementation | Bind actual A observations and retain offline failures
+
+Recorded CLM-0157/0158: authority adapter source e84f737/evidence 46946aa,
+root 15-test and 100-witness confirmation, complete final source closure and
+explicit incomplete historical RED provenance. Preserved offline Apalache 4 GiB/
+8 GiB heap failures at 93fce82 without claiming checked states or a counterexample.
+Boundary plan 5b1f1fb is adopted and implementation has begun; B fifth/sixth
+drafts remain unadopted. No full A, S02, Council or XML gate is claimed.
