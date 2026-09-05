@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "package": "S02",
   "status": "specified-only",
   "prompt_sha256": "86b80dd1cbd14d1e5759988be9f619355495fc10c4e2fb6b6d9162367670ddcd",
@@ -34,6 +34,48 @@
     "fill-wins",
     "after-resolve-execution",
     "before-resolve-execution"
+  ],
+  "required_subscenarios": [
+    {
+      "id": "cancel-wins/recovery-before-any-fill",
+      "witness_id": "cancel-wins",
+      "workload": "two-installment-obligation",
+      "candidates": ["A", "B", "C", "D"],
+      "signing_profiles": ["SignAfterResolve", "SignBeforeResolve"],
+      "package_gates": ["S02-05", "S02-09"],
+      "required_events": ["parent-cancelled", "recovery-signed", "recovery-verified", "recovery-committed"],
+      "terminal": {
+        "escrow": 0,
+        "paid_to_bob": 0,
+        "refunded_to_alice": 10,
+        "parent_cancelled": true,
+        "used_slots": [],
+        "parent_nonce": 0,
+        "recovery_nonce": 1,
+        "recovery_consumed": true,
+        "second_slot_authorized": false
+      }
+    },
+    {
+      "id": "fill-wins/recovery-after-first-fill",
+      "witness_id": "fill-wins",
+      "workload": "two-installment-obligation",
+      "candidates": ["A", "B", "C", "D"],
+      "signing_profiles": ["SignAfterResolve", "SignBeforeResolve"],
+      "package_gates": ["S02-05", "S02-09"],
+      "required_events": ["first-fill-committed", "stale-cancel-rejected", "fresh-parent-cancelled", "recovery-signed", "recovery-verified", "recovery-committed"],
+      "terminal": {
+        "escrow": 0,
+        "paid_to_bob": 5,
+        "refunded_to_alice": 5,
+        "parent_cancelled": true,
+        "used_slots": [1],
+        "parent_nonce": 0,
+        "recovery_nonce": 1,
+        "recovery_consumed": true,
+        "second_slot_authorized": false
+      }
+    }
   ],
   "controls": [
     "missing-deposit-dependency",
