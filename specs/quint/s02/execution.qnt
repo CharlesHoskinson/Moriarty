@@ -124,14 +124,84 @@ module execution {
           and verificationValid(state.authority.context, verified.attempt, verified.evidence)
       | _ => false
     } else false
+  // This classifier is called only for a failed boundary. It never changes
+  // the candidate's observation or fabricates a Core error for an envelope
+  // rejection. CoreRejected retains a reported, known error under the same
+  // external-verifier abstraction; it is not an independent Core derivation.
+  pure def consumptionConflict(context: AuthorityContext[s,c,a,p], op: Operation): bool = match op {
+    | OpFillSlot(fill) => match context.parents.get(fill.parent) {
+        | ParentVacant => true
+        | ParentLive(live) => not(canConsumeSlot(live.parent, live.entry, fill.slot, live.entry))
+      }
+    | OpCancelParent(parent) => match context.parents.get(parent) {
+        | ParentVacant => true
+        | ParentLive(live) => not(canCancelParent(live.parent, live.entry, live.entry))
+      }
+    | OpRecover(recovery) => match context.parents.get(recovery.parent) {
+        | ParentVacant => true
+        | ParentLive(live) => not(live.entry.cancelled) or live.entry.remainingAllowance <= 0
+      }
+    | _ => false
+  }
   pure def rejectionReason(context: AuthorityContext[s,c,a,p], attempt: PreparedAttempt[s,c,a,p],
-                            evidence: EvidenceBundle[s,c,a,p]): RejectionReason = UnauthorizedEffect
+                            evidence: EvidenceBundle[s,c,a,p]): RejectionReason = {
+    val obs = attempt.observation
+    val supplied = evidence.signatures.keys()
+    val stale = attempt.context != context or obs.predecessor != context.candidate
+      or obs.transactionTime != context.environment.physicalTime or evidence.effect.attempt != attempt
+      or supplied.exists(key => evidence.signatures.get(key).attempt != attempt)
+    if (stale) StaleBindings
+    else if (not(validAuthorityContext(context)) or not(validOperation(attempt.operation))) UnauthorizedEffect
+    else {
+      val needed = requiredKeys(attempt.operation, obs.effects)
+      val missing = not(needed.subseteq(supplied)) or obs.effectEvidence == EvidenceUnavailable
+        or evidence.effect.disposition == EvidenceUnavailable
+        or supplied.exists(key => evidence.signatures.get(key).disposition == EvidenceUnavailable)
+      val invalid = supplied != needed or obs.effectEvidence != EvidenceValid
+        or evidence.effect.disposition != EvidenceValid
+        or supplied.exists(key => evidence.signatures.get(key).disposition != EvidenceValid)
+      if (missing) EvidenceMissing
+      else if (invalid) UnauthorizedEffect
+      else match obs.coreProjection {
+        | CoreProjected(result) =>
+            if (not(result.accepted) and result.error != NoCoreError and validFrozenCoreError(result.error)
+              and not(isCancellation(attempt.operation))) CoreRejected(result.error)
+            else UnauthorizedEffect
+        | NoCoreProjection => if (consumptionConflict(context, attempt.operation)) ConsumptionConflict
+            else UnauthorizedEffect
+      }
+    }
+  }
+  pure def isCancellation(op: Operation): bool = match op {
+    | OpCancelParent(_) => true
+    | _ => false
+  }
   pure def canRejectProposed(state: ExecutionState[s,c,a,p], id: AttemptId,
-                             evidence: EvidenceBundle[s,c,a,p]): bool = false
+                             evidence: EvidenceBundle[s,c,a,p]): bool =
+    if (validExecutionState(state)) match state.attempts.get(id) {
+      | ProposedAttempt(attempt) => attempt.id == id
+          and not(verificationValid(state.authority.context, attempt, evidence))
+      | _ => false
+    } else false
   pure def applyRejectProposed(state: ExecutionState[s,c,a,p], id: AttemptId,
-                               evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = state
-  pure def canRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): bool = false
-  pure def applyRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = state
+                               evidence: EvidenceBundle[s,c,a,p]): ExecutionState[s,c,a,p] = match state.attempts.get(id) {
+    | ProposedAttempt(attempt) => {...state, attempts: state.attempts.put(id, RejectedOperation({
+        attempt: attempt, evidence: evidence, observedContext: state.authority.context,
+        reason: rejectionReason(state.authority.context, attempt, evidence), stage: VerificationBoundary}))}
+    | _ => state
+  }
+  pure def canRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): bool =
+    if (validExecutionState(state)) match state.attempts.get(id) {
+      | VerifiedOperation(verified) => verified.attempt.id == id
+          and not(verificationValid(state.authority.context, verified.attempt, verified.evidence))
+      | _ => false
+    } else false
+  pure def applyRejectVerified(state: ExecutionState[s,c,a,p], id: AttemptId): ExecutionState[s,c,a,p] = match state.attempts.get(id) {
+    | VerifiedOperation(verified) => {...state, attempts: state.attempts.put(id, RejectedOperation({
+        attempt: verified.attempt, evidence: verified.evidence, observedContext: state.authority.context,
+        reason: rejectionReason(state.authority.context, verified.attempt, verified.evidence), stage: CommitBoundary}))}
+    | _ => state
+  }
   // Guards establish live exact parent entries before these updates are used.
   pure def committedParents(context: AuthorityContext[s,c,a,p], op: Operation): AuthorityKey -> ParentCell[s,c,a,p] = match op {
     | OpFillSlot(fill) => match context.parents.get(fill.parent) {

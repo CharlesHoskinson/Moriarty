@@ -50,4 +50,49 @@ module rejection_test {
   run stalePrecedesMissingTest = assert(rejectionReason(staleContext, attempt, missing) == StaleBindings)
   run substitutionClassificationTest = assert(rejectionReason(attempt.context, attempt,
     {...evidence, effect: {...evidence.effect, attempt: {...attempt, actor: Alice}}}) == StaleBindings)
+  run unavailableAndInvalidEvidenceDifferTest = assert(
+    rejectionReason(attempt.context, attempt, {...evidence, effect: {...evidence.effect, disposition: EvidenceUnavailable}})
+      == EvidenceMissing
+    and rejectionReason(attempt.context, attempt, {...evidence, effect: {...evidence.effect, disposition: EvidenceInvalid}})
+      == UnauthorizedEffect)
+  run unavailableAndInvalidSignatureDifferTest = assert(Set(aliceKey, bobKey).forall(key => {
+    val proof = evidence.signatures.get(key)
+    rejectionReason(attempt.context, attempt, {...evidence,
+      signatures: evidence.signatures.put(key, {...proof, disposition: EvidenceUnavailable})}) == EvidenceMissing
+    and rejectionReason(attempt.context, attempt, {...evidence,
+      signatures: evidence.signatures.put(key, {...proof, disposition: EvidenceInvalid})}) == UnauthorizedEffect
+  }))
+  pure val parentInitialSigning = {...signingInitial,
+    context: {...signingInitial.context, candidate: "unfilled", ledger: installmentFacts.ledger}}
+  pure val parentSigned = applySign(applyPrepareSigning(parentInitialSigning, parentBefore, Alice), parentBefore, Alice, 0)
+  pure val signedParent = {policy: parentBefore, signer: Alice, token: 0}
+  pure val parent = fixtureParent(signedParent)
+  pure val residualContext = {...parentSigned.context, candidate: "first-filled", ledger: afterFillFacts.ledger,
+    registry: parentSigned.context.registry.put(parentKey, AuthorityConsumed({signed: signedParent, revision: 1})),
+    parents: parentSigned.context.parents.put(parentKey, ParentLive({parent: parent,
+      entry: applyConsumeSlot(parent, initialEntry(parent), 1)}))}
+  pure val acceptedCore: CoreResultObservation[str] = {accepted: true, error: NoCoreError,
+    warnings: List(), payments: List(), reductions: 0,
+    state: {accounts: CORE_ACCOUNTS.mapBy(_ => 0), choices: Map(), continuation: "closed", minimumTime: 2}}
+  pure def repeatAttempt(projection: CoreProjection[str]): PreparedAttempt[str,str,str,str] = {
+    id: FirstFillAttempt, actor: Bob, operation: fillOne, context: residualContext,
+    observation: {...fillObservation, predecessor: "first-filled", coreProjection: projection}}
+  pure def repeatEvidence(other: PreparedAttempt[str,str,str,str]): EvidenceBundle[str,str,str,str] = {
+    effect: {attempt: other, disposition: EvidenceValid}, signatures: Map(parentKey -> {
+      attempt: other, signed: signedParent, disposition: EvidenceValid})}
+  // Constructed conflicting context checks diagnostic precedence only. The
+  // reported Core carrier is not execution/correspondence evidence.
+  run acceptedCoreDoesNotHideConsumptionConflictTest = assert(Set(NoCoreProjection, CoreProjected(acceptedCore)).forall(projection => {
+    val other = repeatAttempt(projection)
+    validAuthorityContext(residualContext) and not(verificationValid(residualContext, other, repeatEvidence(other)))
+      and rejectionReason(residualContext, other, repeatEvidence(other)) == ConsumptionConflict
+  }))
+  run reportedCoreRejectionPrecedesConsumptionTest = {
+    val other = repeatAttempt(CoreProjected({...acceptedCore, accepted: false, error: CoreErrorCode("input_required")}))
+    assert(rejectionReason(residualContext, other, repeatEvidence(other)) == CoreRejected(CoreErrorCode("input_required")))
+  }
+  run unknownCoreErrorIsNotReportedAsCoreRejectionTest = {
+    val other = repeatAttempt(CoreProjected({...acceptedCore, accepted: false, error: CoreErrorCode("invented-error")}))
+    assert(rejectionReason(residualContext, other, repeatEvidence(other)) == UnauthorizedEffect)
+  }
 }
