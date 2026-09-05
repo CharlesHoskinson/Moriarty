@@ -53,18 +53,18 @@ No other existing value changes.
 constraint: SignBeforeResolve may sign recovery earlier. Later path checking must
 enforce the true causal lifecycle and observe these events in that path.
 
-- [ ] Update the closed-key and schema-version assertions; add a test comparing
+- [x] Update the closed-key and schema-version assertions; add a test comparing
   `value["required_subscenarios"]` to the exact JSON above loaded as a Python
   literal. Add assertions that each record's `witness_id` is in the preserved
   witness list, candidates/profiles exactly match the registry, and final money
   sums to ten. Do not replace existing exact-vocabulary assertions.
-- [ ] Run `/home/charl/Moriarty/.venv/bin/python -m pytest tests/test_s02_contract.py -q`.
+- [x] Run `/home/charl/Moriarty/.venv/bin/python -m pytest tests/test_s02_contract.py -q`.
   RED must report the missing required field/version, not an import or syntax error.
-- [ ] Add exactly the field above and schema version 2 to the JSON registry.
-- [ ] Run the focused test command again, then
+- [x] Add exactly the field above and schema version 2 to the JSON registry.
+- [x] Run the focused test command again, then
   `/home/charl/Moriarty/.venv/bin/python scripts/validate_s01_intent_evidence.py`
   and `git diff --check`. Require the S01 gate to remain unchanged.
-- [ ] Self-review exact preservation of the original identifier lists and
+- [x] Self-review exact preservation of the original identifier lists and
   specification-only status. Write the requested scratch report with RED/GREEN
   outputs and files changed. Do not claim a model trace, validator, or passed S02 gate.
-- [ ] Controller obtains independent spec/quality review and commits the two files.
+- [x] Controller obtains independent spec/quality review and commits the two files.

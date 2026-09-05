@@ -1,5 +1,23 @@
 # Current execution progress
 
+## 2026-09-05 current override
+
+This block supersedes obsolete Foreman/type-approval instructions below.
+Foreman development is closed by the user. The three requested formal-design
+proposals are preserved in main cba9e72; the adopted decision preserves dissent.
+No further human type approval is required. Council gate reviews remain open.
+Observation carrier: complete as a structural unit (941a6fb..fd40bf9), with
+independent review corrections in 45883ba and clean narrow re-review. No S02 gate.
+Recovery registry v2: committed 7cccc5a, independent transcription review clean.
+Branch policies/plan views: committed 320dc53, independent Astra review clean;
+72 deterministic Quint tests with receipts, not lifecycle/recovery execution.
+Next: persistent signing, full verification, atomic parent updates, and actual
+recovery, under docs/superpowers/plans/2026-09-05-moriarty-s02-authority-lifecycle.md.
+Do not rebuild the completed policy unit or re-run its design vote.
+Do not re-dispatch the finished three-expert design or observation implementation.
+
+## Earlier progress (historical)
+
 S01 is COMPLETE and integrated into main at 96782de. Independent whole-package
 review approved code, the settlement-process correction, provenance, and status
 handoff. Main checkpoint af3abfe closes obligation 1 and opens S02 obligation 2.

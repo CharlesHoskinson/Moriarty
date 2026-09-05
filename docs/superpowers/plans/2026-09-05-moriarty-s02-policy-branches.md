@@ -43,16 +43,16 @@ Pure policy helpers remain separately importable inside the combined S02 package
 
 ## Execution
 
-- [ ] Introduce typed carriers and fail-closed public predicates; write behavior
+- [x] Introduce typed carriers and fail-closed public predicates; write behavior
   tests for settlement/refund branches and record meaningful RED assertions.
-- [ ] Implement pure conditions, effect bounds, capabilities, operation keys,
+- [x] Implement pure conditions, effect bounds, capabilities, operation keys,
   complete profile-specific bindings, and all-debit-owner policy checking.
-- [ ] Cover positive settlement/refund/fill/cancel/recovery constraints and
+- [x] Cover positive settlement/refund/fill/cancel/recovery constraints and
   adversarial missing legs, multiplicity, wrong keys/capabilities, stale time,
   altered parent facts, plan/artifact/state/effect substitutions, and label/display
   independence. Recovery examples are policy checks only, never recovery traces.
-- [ ] Typecheck, run focused Quint tests and existing unit regressions. Preserve
+- [x] Typecheck, run focused Quint tests and existing unit regressions. Preserve
   command output and hashes; do not describe tests as exhaustive model checking.
-- [ ] Obtain independent implementation review, address findings, and commit.
+- [x] Obtain independent implementation review, address findings, and commit.
 - [ ] Continue with persistent signatures, per-operation evidence, and atomic
   authorization/consumption/recovery transitions before candidate A–D execution.
