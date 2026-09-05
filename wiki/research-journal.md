@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T08:10:00Z
+updated_at: 2026-09-05T10:31:17Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1094,3 +1094,41 @@ Candidate A–D interpreters, independent Core correspondence, Quint/Apalache
 checking, selection, Council acceptance, and all broader XML gates remain open.
 The next semantic implementation is Candidate A's agreement interpreter, not a
 shared validity flag standing in for candidate execution.
+
+### Candidate A begins executing the frozen agreement semantics
+
+**CLM-0151.** Experiment observation: source commit
+`068b7cdd6d15bbb28659f56c062c8f93bccd290a` implements Candidate A's finite
+program/state/input domain, literal canonical swap node table, and exact one-step
+Close/Pay interpreter. Close uses canonical first-positive-account refund order.
+Pay preserves the frozen partial/nonpositive warnings, paid quantity, remaining
+accounts, continuation, and reduction count. Valid If/When nodes remain explicitly
+unavailable in this increment; malformed-domain diagnostics are not Core errors.
+
+Root verification at that source reports 26 Quint tests and 305 Python tests
+passing, including 19 new independent complete-result reference vectors. Those
+vectors cover selected rollback, deadline, warning, choice ordering, and deposit
+insertion boundaries; they do not compare Python against Quint yet. Separate
+nonauthor native source reviews found no actionable issues in their scoped units.
+The two development stages preserve exact failing source import closures and
+author terminal outputs, rather than relying on a narrative of earlier failures.
+
+Claim metadata:
+
+- Sources: SRC-0031 XML S02; SRC-0033 comparison boundary; SRC-0035 adopted common design.
+- Repository: local Moriarty, branch `s02-model-comparison`, source commit above, evidence `982bdd8db4ab42b9bd9c40e451cdb283a94201ee`.
+- Local locators on that branch: `specs/quint/s02/candidate_a_core.qnt`, `candidate_a_types.qnt`, `candidate_a_programs.qnt`, `candidate_a_core_test.qnt`, `tests/test_s02_candidate_a_reference_vectors.py`, and `evidence/s02-model-comparison/candidate-a-close-pay/manifest.json`.
+- Plan and review: `docs/superpowers/plans/2026-09-05-moriarty-s02-candidate-a-core.md` and `docs/superpowers/reviews/2026-09-05-moriarty-s02-candidate-a-close-pay.md` on that branch.
+- Observed and commit date: 2026-09-05 UTC.
+- Authority: deterministic author tests, independent root reruns, scoped nonauthor native source reviews.
+- Scope: Candidate A plan Tasks 1–2; frozen Core unchanged; no stateful candidate trace yet.
+- Evidence kind: experiment observation.
+- Reproduction: complete root receipts, source pins, and both RED closures preserved.
+- Confidence: high for recorded deterministic results, not unperformed correspondence or model checking.
+- Lifecycle status: S3 experimental branch, not main-integrated implementation or release.
+
+Task 3 is assigned next: If/When semantics, bounded quiescence, and ordered input
+application. Full transaction rollback, candidate authority integration, A–D
+comparison, exact-provider Council acceptance, and all broader XML gates remain
+open. The product goal is active; no uninterrupted-runtime or morning-completion
+guarantee is inferred from that status. Foreman development remains closed.

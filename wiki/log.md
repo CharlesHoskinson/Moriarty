@@ -404,3 +404,13 @@ trusted-verifier, sampling, and development-archive limitations. Prepared the
 transition to actual Candidate A semantics; Council and all XML gates remain
 open. Released-tool inspection is recorded in `docs/COUNCIL_REVIEWS.md` without
 reopening Foreman repairs.
+
+## [2026-09-05] implementation | Begin Candidate A agreement interpretation
+
+Recorded CLM-0151 for source `068b7cd` and evidence `982bdd8` on the S02 branch.
+The finite domain and Close/Pay interpreter are implemented and independently
+tested; selected complete-result Python reference vectors remain independent
+of the new evaluator. Archived both behavioral RED source closures, final raw
+receipts, and scoped native reviews. Task 3 follows without another common-design
+vote. Candidate correspondence, Council acceptance, and XML gates remain open;
+the full product goal is active, not a guaranteed overnight completion.
