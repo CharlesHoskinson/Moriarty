@@ -102,7 +102,8 @@ pure def validFrozenCoreWarning(w: CoreWarning): bool = match w.requested {
     }
 }
 pure def validCoreState(ids: Set[str], s: CoreStateObservation[c]): bool =
-  s.accounts.keys() == CORE_ACCOUNTS and s.accounts.keys().forall(k => s.accounts.get(k) >= 0)
+  s.minimumTime >= 0 and s.accounts.keys() == CORE_ACCOUNTS
+    and s.accounts.keys().forall(k => s.accounts.get(k) >= 0)
     and s.choices.keys() == ids
 pure def paymentTransfer(p: CorePayment): Transfer = {
   source: Escrow(p.source), destination: Wallet(p.recipient), asset: p.asset, quantity: p.quantity,
@@ -144,6 +145,12 @@ pure def projectionSupportsCoreEvidence(projection: CoreProjection[c]): bool = m
   permit at most one such occurrence. Otherwise wallet-to-wallet effects vanish
   from the payment filter. The two regression cases are preserved in commit
   `2f1a856`; both fail before this correction.
+
+  Independent-review correction: frozen `State.__post_init__` rejects negative
+  minimum time. The original plan omitted this guard. Add standalone, rejected,
+  and accepted negative-time tests before enforcing `minimumTime >= 0`.
+  Exercise every rollback mutation through the public validator as well as its
+  helper. These corrections restore frozen constraints; they do not change Core.
 
 - [ ] Add a minimal concrete harness that first checks the deposit fixture and
   then checks the rejection fixture, with state `{phase: int, valid: bool}`.

@@ -28,3 +28,12 @@ reduction counts. Complete independent codecs and correspondence remain required
 All common authorization/recovery, candidate A–D, mutation, Quint/Apalache, and
 requested Council acceptance obligations remain open. This receipt passes no
 S02 or XML release gate.
+
+## Independent review correction
+
+`current.json` now selects `minimum-time-correction/manifest.json`. The original
+manifest and outputs above remain immutable historical evidence. Independent
+review found a missing nonnegative minimum-time guard and incomplete public
+rollback-mutation coverage. Three new negative-time tests failed before the
+guard was added. The corrected unit passes 37 deterministic tests and retains
+both structural witnesses in 1,000 sampled traces. The claim boundary is unchanged.

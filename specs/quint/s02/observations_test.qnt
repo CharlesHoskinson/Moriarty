@@ -50,21 +50,40 @@ module observations_test {
   run accountDomainTest = init.expect(not(validCoreState(CHOICE_IDS, {...before, accounts: Map()})))
   run negativeAccountTest = init.expect(
     not(validCoreState(CHOICE_IDS, {...before, accounts: before.accounts.put(aliceAccount, -1)})))
+  run negativeMinimumTimeTest = init.expect(not(validCoreState(CHOICE_IDS, {...before, minimumTime: -1})))
+  run negativeRejectedMinimumTimeTest = {
+    val badBefore = {...before, minimumTime: -1}
+    init.expect(not(validCoreObservation(CHOICE_IDS, badBefore, {...rejected, state: badBefore}, List())))
+  }
+  run negativeAcceptedMinimumTimeTest = init.expect(
+    not(validCoreObservation(CHOICE_IDS, {...before, minimumTime: -2},
+      {...acceptedDeposit, state: {...acceptedDeposit.state, minimumTime: -1}}, List(deposit))))
   run acceptedDepositTest = init.expect(validCoreObservation(CHOICE_IDS, before, acceptedDeposit, List(deposit)))
   run rejectionTest = init.expect(validCoreObservation(CHOICE_IDS, before, rejected, List()))
   run rejectionTimeMutationTest = init.expect(
     not(validCoreObservation(CHOICE_IDS, before, {...rejected, state: {...before, minimumTime: 1}}, List())))
   run rejectionContinuationMutationTest = init.expect(
-    not(rejectionPreserved(before, {...rejected, state: {...before, continuation: "closed"}}, List())))
+    not(rejectionPreserved(before, {...rejected, state: {...before, continuation: "closed"}}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before, {...rejected, state: {...before, continuation: "closed"}}, List())))
   run rejectionAccountMutationTest = init.expect(
-    not(rejectionPreserved(before, {...rejected, state: {...before, accounts: before.accounts.put(aliceAccount, 1)}}, List())))
+    not(rejectionPreserved(before, {...rejected, state: {...before, accounts: before.accounts.put(aliceAccount, 1)}}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before, {...rejected, state: {...before, accounts: before.accounts.put(aliceAccount, 1)}}, List())))
   run rejectionChoiceMutationTest = init.expect(
-    not(rejectionPreserved(before, {...rejected, state: {...before, choices: Map("settle" -> IntValue(0))}}, List())))
-  run rejectionEffectsMutationTest = init.expect(not(rejectionPreserved(before, rejected, List(deposit))))
-  run rejectionPaymentsMutationTest = init.expect(not(rejectionPreserved(before, {...rejected, payments: List(alicePayment)}, List())))
+    not(rejectionPreserved(before, {...rejected, state: {...before, choices: Map("settle" -> IntValue(0))}}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before, {...rejected, state: {...before, choices: Map("settle" -> IntValue(0))}}, List())))
+  run rejectionEffectsMutationTest = init.expect(
+    not(rejectionPreserved(before, rejected, List(deposit)))
+    and not(validCoreObservation(CHOICE_IDS, before, rejected, List(deposit))))
+  run rejectionPaymentsMutationTest = init.expect(
+    not(rejectionPreserved(before, {...rejected, payments: List(alicePayment)}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before, {...rejected, payments: List(alicePayment)}, List())))
   run rejectionWarningsMutationTest = init.expect(
-    not(rejectionPreserved(before, {...rejected, warnings: List({code: "partial_payment", requested: IntValue(10), paid: IntValue(5)})}, List())))
-  run rejectionReductionsMutationTest = init.expect(not(rejectionPreserved(before, {...rejected, reductions: 1}, List())))
+    not(rejectionPreserved(before, {...rejected, warnings: List({code: "partial_payment", requested: IntValue(10), paid: IntValue(5)})}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before,
+      {...rejected, warnings: List({code: "partial_payment", requested: IntValue(10), paid: IntValue(5)})}, List())))
+  run rejectionReductionsMutationTest = init.expect(
+    not(rejectionPreserved(before, {...rejected, reductions: 1}, List()))
+    and not(validCoreObservation(CHOICE_IDS, before, {...rejected, reductions: 1}, List())))
   run acceptedErrorMismatchTest = init.expect(
     not(validCoreObservation(CHOICE_IDS, before, {...acceptedDeposit, error: CoreErrorCode("input_required")}, List(deposit)))
     and not(validCoreObservation(CHOICE_IDS, before, {...rejected, error: NoCoreError}, List())))

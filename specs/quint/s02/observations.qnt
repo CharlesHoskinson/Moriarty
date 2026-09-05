@@ -49,7 +49,8 @@ module observations {
       }
   }
   pure def validCoreState(ids: Set[str], s: CoreStateObservation[c]): bool =
-    s.accounts.keys() == CORE_ACCOUNTS and s.accounts.keys().forall(k => s.accounts.get(k) >= 0)
+    s.minimumTime >= 0 and s.accounts.keys() == CORE_ACCOUNTS
+      and s.accounts.keys().forall(k => s.accounts.get(k) >= 0)
       and s.choices.keys() == ids
   pure def paymentTransfer(p: CorePayment): Transfer = {
     source: Escrow(p.source), destination: Wallet(p.recipient), asset: p.asset, quantity: p.quantity,
