@@ -130,22 +130,25 @@ case lowering and all78native wrappers are now admitted at `8be3cef`: complete
 aggregate recursive typecheck, all12native tests,13Python tests and independently
 audited15-stage original receipts. Its archive retains3230members, including
 the separate compatibility diagnostics and genuine two-fault behavioral RED.
-RH001 streaming recorder hashing has15author-observed Python passes and awaits
-root admission. Sharded exporter plan `e221eaf` is adopted; implementation is
-next after RH001 admission. Largest-case native feasibility, full export, replay
+RH001 streaming recorder hashing is admitted at `b08a2da` with 15 passing tests.
+Structural exporter `9a263d7` passes 55 non-package tests; its four actual-package
+tests remain mandatory and unexecuted. Receipt-only runner `1df388a` passes 41
+controls, including measured short children and all-path owned-group cleanup;
+root audited their original source/runtime and process evidence. This is not
+actual Candidate A resource feasibility. Largest-case native feasibility, full export, replay
 and final semantic/locator/package acceptance remain open.
 
 A5 plan `900bb20` and kernel `d824fa3` are locally admitted. Recursive typecheck
 and all six kernel tests pass after a genuine supplied-result mismatch RED;
 root audited all38 original source members per stage and retained the shared
-runtime archive losslessly. The original corpus has completed20commands and
-all244tests. The factored corpus and six-test equivalence sequence continue;
-both adapter/boundary suites and the factored75-test Core suite pass. Fresh
-historical Python collection found441tests, but execution stopped at440passes
-and one missing-uv environment failure. Its original receipts are retained;
-an offline pinned launch supplement is planned, and Core53 has not run after
-that failure. The remaining corpus/equivalence/sample and regression checks
-are not yet accepted. No integrated-history acceptance, Candidate A model-checking pass,
+runtime archive losslessly. Root has now audited all 40 original/factored corpus
+commands and exactly 244 tests per side. The author reports all six equivalence
+tests, both 100-sample runs/all25-and-24witnesses, complete 441 Python tests and
+the Core53 comparison passed. Full Task2 admission is under independent source
+and original-evidence review. The missing-uv failure and later exact-alias probe
+failure remain intact; the reviewed offline real-uv/verified-symlink corrections
+change neither test bytes nor requested child commands. No Task3 pilot has run.
+No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
 
 The XML handoff expands these dependencies into executable acceptance contracts.

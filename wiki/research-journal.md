@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T21:56:00Z
+updated_at: 2026-09-05T22:23:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1819,3 +1819,54 @@ branch. Root evidence is under
 `evidence/s02-candidate-a-completion/a4/producer-task2/` on that branch.
 Full A4–A7, requested cross-provider Council, implementation integration and
 publication remain open. No Foreman repairs resumed.
+
+### Admit structural export and measured invocation units
+
+**CLM-0173.** Experiment and repository observation: RH001 `b08a2da` replaces
+whole-native-file hashing on the actual recorder path with the admitted bounded
+streaming hash. The original guarded-read failure and all 15 corrected producer
+tests are retained; root audited 480 original source members and 8102 runtime
+pins. Structural exporter `9a263d7` preserves the exact 78-case/1557-event
+inventory, typed carriers, independent local histories and root admission before
+sealing. Its two original omission/reorder failures and 55 passing non-package
+tests are independently audited. Four actual-package tests remain present and
+unexecuted; no native export or parser invocation is inferred from synthetic
+parser controls. The archive preserves 515 original files and 13 test symlinks.
+
+Receipt-only runner `1df388a` adds measured GNU time output, strict 23-field and
+exact-command validation, bounded wall time and owned-group cleanup on every
+post-spawn termination path. Its genuine empty-present completeness failure and
+41 passing controls include actual short processes, timeout, ordinary leader
+exit with a lingering child, and a command-substitution control. Root audited
+20 declared source members, 8089 runtime/reference pins and 21 actual capture
+records. Inner receipt presence is never semantic acceptance. The original
+archive is SHA256
+`c748f2da10df4e9a145127c5f626b3d7a6603c885e89885e24a99c10641f2822`.
+These local process controls do not establish Candidate A memory feasibility or
+PID-namespace isolation. No Foreman development resumed.
+
+Root's completed A5 corpus intake verifies all 40 original/factored commands,
+2720 archived source members and exactly 244 ordered tests per side. The author
+also reports terminal success for all six full-record equivalence tests, both
+100-sample lifecycle runs with all 25/24 witnesses, the corrected complete
+441-test Python suite and the 53-case independent Core comparison. Overall
+Task2 source/evidence admission remains in progress with a separate nonauthor
+review. These finite checks are not bounded model checking or arbitrary-trace
+equivalence.
+
+Both environment failures remain intact: the original missing-uv test failure
+and the later lexical python-versus-python3 probe mismatch before pytest. The
+adopted offline real-uv supplement and exact symlink amendment change neither
+tests nor requested child commands. Fresh collection and all passing JUnit
+cases are required to match the original 441 IDs. The current broad Task6 run
+continues on its original frozen source; no final synthetic or actual-package
+acceptance is claimed.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope admitted local A4 source/process units and explicitly partial A5 intake;
+observed date 2026-09-05 UTC; reproduction reproduced for the named root-audited
+units; confidence high for those observations; lifecycle S3 experimental branch.
+Evidence is under `evidence/s02-candidate-a-completion/a4/recorder-streaming/`,
+`exporter-source/` and `native-resources/` on that branch. Largest-case native
+pilot, all exports, complete replay, A5 model checking, Council and integration
+remain open.

@@ -5,13 +5,16 @@
 WHEN capture starts, the runner SHALL require a positive integer wall budget,
 nonempty string argv, absent receipt directory and absent inner receipt. It
 SHALL create outputs exclusively and preserve launch failures without inventing
-inner evidence.
+inner evidence. The resolved inner receipt SHALL remain outside the dedicated
+outer directory; existing or dangling symlink targets SHALL be rejected.
 
 #### Scenario: Existing outputs prevent execution
 
 - **WHEN** a receipt destination or inner receipt already exists
 - **THEN** launch fails before command execution and originals stay unchanged
 - **AND** invalid boolean or nonpositive budgets also fail before creation
+- **AND** inner aliases of reserved sidecars, including parent-path spellings,
+  fail without creating output
 
 ### Requirement: RH004 pinned measured invocation
 

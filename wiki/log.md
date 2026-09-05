@@ -579,3 +579,14 @@ A5 original corpus passes all 244 tests; factored and equivalence runs continue.
 The historical Python rerun retains its 440-pass/one-failure missing-uv result;
 an offline pinned environment supplement is planned, with no exclusions or retry
 claimed. Actual native exports, full replay and A5 model checking remain open.
+
+## [2026-09-05] execution | Admit export and measured native-runner source units
+
+CLM-0173 records streamed hashing `b08a2da`, structural exporter `9a263d7` and
+receipt-only measured runner `1df388a`, with independent original-byte intake.
+The respective focused gates pass 15, 55 and 41 tests; four actual-package
+exporter tests remain mandatory and unexecuted. Root verifies all 40 paired
+corpus commands and 244 tests per side. Complete A5 Task2 intake is now under
+independent review after reported equivalence, sampling, 441 Python and Core53
+success. Both environment failures remain preserved. No native pilot, complete
+A4/A5, Council or implementation integration is claimed.
