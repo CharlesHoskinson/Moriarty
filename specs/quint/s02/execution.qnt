@@ -82,9 +82,13 @@ module execution {
             }
       }
   }
-  pure def projectionAdmitsExecution(projection: CoreProjection[c]): bool = match projection {
-    | NoCoreProjection => true
-    | CoreProjected(result) => result.accepted and result.error == NoCoreError
+  pure def projectionAdmitsExecution(op: Operation, projection: CoreProjection[c]): bool = match op {
+    // Lifecycle cancellation is not a Core transaction and cannot invent one.
+    | OpCancelParent(_) => projection == NoCoreProjection
+    | _ => match projection {
+        | NoCoreProjection => true
+        | CoreProjected(result) => result.accepted and result.error == NoCoreError
+      }
   }
   pure def verificationValid(context: AuthorityContext[s,c,a,p], attempt: PreparedAttempt[s,c,a,p],
                              evidence: EvidenceBundle[s,c,a,p]): bool =
@@ -95,7 +99,7 @@ module execution {
         and attempt.context == context and attempt.observation.predecessor == context.candidate
         and attempt.observation.transactionTime == context.environment.physicalTime
         and attempt.observation.effectEvidence == EvidenceValid
-        and projectionAdmitsExecution(attempt.observation.coreProjection)
+        and projectionAdmitsExecution(attempt.operation, attempt.observation.coreProjection)
         and evidence.effect.disposition == EvidenceValid and evidence.effect.attempt == attempt
         and canApply(context.ledger, attempt.observation.effects)
         and operationFinancialGuard(context, attempt.operation, attempt.observation.effects)
