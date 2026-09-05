@@ -237,3 +237,21 @@ Recorded the scanner resource-limit refusal separately from a secret finding.
 The unchanged scanner passed after the unused root dependency install left
 the worktree. The install remains recoverable in the external run directory.
 No security policy changed, no GitHub merge occurred, and no gate passed.
+
+## [2026-09-05] checkpoint | Record Council repair escalation
+
+Foreman correction candidate `b65d8ad7d30dcc9d1563750fc45608ddd8f67219`
+completed its focused worker gate. The independent full package check then
+failed with five ESLint errors. Foreman Endstop recorded `Escalated` with
+reason `verify_blocking_after_correction` at 2026-09-05T03:21:48Z.
+The contract permits no further repair dispatch without successor authority.
+No GitHub merge or Council gate passed.
+
+Direct filesystem inspection found the ignored Task 1 and correction test
+receipts. Earlier absence claims based on file discovery are superseded.
+The original worker report and receipts remain preserved in the external run
+archive. The controller did not reconstruct historical test execution.
+
+Added the unapproved S02 authorization/recovery type sketch. Its main-review
+hold names missing transaction-time bindings, premature choice identifiers,
+and incomplete Core carrier comparison. No Quint model logic was added.
