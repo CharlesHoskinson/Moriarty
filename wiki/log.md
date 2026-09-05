@@ -483,3 +483,10 @@ native source/spec review, full Quint closure and exact archive checks, and
 the disclosed historical Python closure gap. A0 evidence is committed on the
 experimental branch at 0190cb9 and 95899b3. A1 plans follow; no Council, whole A,
 model-checking, integration or full XML gate is claimed.
+
+## [2026-09-05] execution | Adopt Candidate A lifecycle plans
+
+CLM-0161 records reviewed concrete installment/swap plans at `82d2c0b`, two
+passing static typechecks, exact assembly/import evidence and explicit finite
+scope limits. A2/A3 fixture tasks were dispatched independently with genuine
+RED/GREEN requirements. No lifecycle runtime, Council or A acceptance is claimed.

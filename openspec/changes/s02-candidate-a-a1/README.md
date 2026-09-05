@@ -1,8 +1,8 @@
 # A1: Correct and adopt concrete lifecycle plans
 
-Status: specified-only completion contract.
-Existing source status is recorded in the roadmap.
-This package does not create a passed gate.
+Status: local A1 planning accepted at experimental-branch commit `82d2c0b`.
+Both plans have nonauthor semantic approval and passing final static typechecks.
+This is not A2/A3 behavioral acceptance or a Council/release gate.
 
 ## Dependencies
 
@@ -22,8 +22,9 @@ Preserve common authorization and frozen Python semantics.
 - `evidence/s02-candidate-a-completion/a1/manifest.json`
 - `evidence/s02-candidate-a-completion/a1/validation.json`
 - `evidence/s02-candidate-a-completion/a1/review.md`
-- `evidence/s02-candidate-a-completion/a1/manifest.json`
-- `evidence/s02-candidate-a-completion/a1/validation.json`
+- Exact assembled source modules and two raw typecheck receipts in the same directory.
+
+These outputs are committed on `s02-model-comparison`, not integrated into main.
 
 ## Acceptance
 

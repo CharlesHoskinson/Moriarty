@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T16:35:22Z
+updated_at: 2026-09-05T17:13:45Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1431,3 +1431,35 @@ correspondence, bounded model checking, Council, A acceptance, B–D/S02 and all
 later XML obligations remain open. Foreman development remains closed.
 The product goal was observed marked blocked during this execution turn;
 the current turn is working, but no automatic background loop is claimed.
+
+### Candidate A A1 plans adopted; fixture implementation dispatched
+
+**CLM-0161.** Repository and experiment observation: local commit
+`82d2c0b1d35ecf2f954603e4b8d54b248bda2663` on `s02-model-comparison`
+adopts corrected installment and swap plans. Independent native nonauthor
+review approved both after exact-rejection assertion corrections. Root's two
+final assembled-plan typechecks terminated with exit0. The evidence binds eight
+assembled modules, twelve frozen imports and both exact plan digests. A replayable
+diagnostic rejects missing/failed terminal results and altered plan hashes.
+
+The plans cover original-signature fresh cancellation, revision2 after two fills,
+new nonce1 recovery, canonical raw swap timing, actual two-party funding and
+disposition, complete refusal records and finite action witnesses. The explicit
+route bounds are17/19 transitions with command budgets20/22. Sampling is not
+proof; arbitrary interleavings remain a separate A5 obligation. PreparedAttempt
+actor metadata is not authenticated by the unchanged common contracts.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope local A1 planning/static compatibility; observed date 2026-09-05 UTC;
+reproduction reproduced for static checks only; confidence high for those checks;
+lifecycle S3 experimental branch. Evidence is
+`evidence/s02-candidate-a-completion/a1/{manifest,validation}.json`, `review.md`,
+two raw typecheck receipts and exact assembled source bytes at the named commit.
+Archived source trailing blank lines are preserved byte-for-byte; the commit
+whitespace check excluded that immutable assembled-source directory only.
+
+A2 Task1 installment fixtures and A3 Task1 swap fixtures were dispatched to
+separate native owners, each requiring original compiling RED then GREEN before
+independent review. Dispatch is not a result or a promise of process liveness.
+Both lifecycle packages, A4–A7, Council and broader S02/XML gates remain open.
+Main records progress only; Candidate A remains unintegrated with no Git remote.

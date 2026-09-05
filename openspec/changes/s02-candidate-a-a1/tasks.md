@@ -1,20 +1,21 @@
 # A1 tasks
 
-All implementation and acceptance tasks remain unchecked in this new contract.
-Existing work must receive evidence intake, not duplicate implementation.
+Local planning acceptance is recorded at `82d2c0b` on `s02-model-comparison`.
+The generic behavioral rows below belong to A2/A3 execution and remain open;
+they are not prerequisites falsely claimed complete by static plan adoption.
 
-- [ ] Verify the exact dependencies and source pins.
-- [ ] Read XML phase A1 and its named scenario inventory.
-- [ ] Complete its concrete implementation plan before behavioral edits.
+- [x] Verify the exact dependencies and source pins.
+- [x] Read XML phase A1 and its named scenario inventory.
+- [x] Complete its concrete implementation plan before behavioral edits.
 - [ ] Add the specified behavioral tests before implementation.
 - [ ] Retain compiling RED sources and terminal receipts.
-- [ ] Produce the exact outputs listed in README.md.
+- [x] Produce the exact planning outputs listed in README.md.
 - [ ] Execute each positive and failure scenario.
-- [ ] Preserve complete source closures and raw results.
-- [ ] Write `evidence/s02-candidate-a-completion/a1/manifest.json`.
-- [ ] Recompute `evidence/s02-candidate-a-completion/a1/validation.json` from evidence.
-- [ ] Obtain the required independent review.
-- [ ] Commit only the admitted package files.
+- [x] Preserve complete plan-assembly closures and raw static results.
+- [x] Write `evidence/s02-candidate-a-completion/a1/manifest.json`.
+- [x] Recompute `evidence/s02-candidate-a-completion/a1/validation.json` from evidence.
+- [x] Obtain the required local independent plan review; Council remains A6.
+- [x] Commit only the admitted package files.
 
 ## Specification structure check
 

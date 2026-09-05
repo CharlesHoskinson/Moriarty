@@ -90,7 +90,8 @@ The [package index](../openspec/WORK-PACKAGES-EARS.md) maps all packages.
 Eight Candidate A changes refine S02.
 The program change covers S01–S15 and G01–G24.
 Existing adopted S01/S02 packages remain unchanged.
-A0 local intake is accepted; A1–A7 completion tasks remain open.
+A0 local intake and A1 reviewed plans are accepted; A2–A7 remain open.
+A2 installment and A3 swap fixture tasks have been dispatched independently.
 
 The XML handoff expands these dependencies into executable acceptance contracts.
 No phase below is checked off merely because its plan exists.
@@ -98,7 +99,7 @@ No phase below is checked off merely because its plan exists.
 | ID | Remaining deliverable | Depends on | Completion evidence |
 | --- | --- | --- | --- |
 | A0 | Local intake accepted; Council open | Existing `d14cfea` | Evidence `0190cb9`/`95899b3`: independent 40-test and 100-trace results, native source review, sixteen-file closure and 149-member archive audit |
-| A1 | Correct and adopt concrete lifecycle plans | A0; adopted authority design | Exact typed interfaces, independent literal plans/facts, both-profile scenario inventory, reviewed fixes to draft errors |
+| A1 | Local plans adopted; behavioral acceptance remains A2/A3 | A0; adopted authority design | Commit `82d2c0b`: nonauthor review, two final static typechecks, eight exact assembled modules and twelve pinned frozen imports |
 | A2 | Actual A installment authority lifecycle | A1 | Both race orders, second fill, fresh cancellation attempt, newly signed recovery ten/five and deadline cases; deterministic tests and per-action witnesses |
 | A3 | Actual A swap authority lifecycle | A1; shared adapter/boundary | Separate depositor signatures, disposition signatures, real funds, settlement/refunds/timeouts, staleness, explicit no-effect rejection |
 | A4 | Integrated exports and independent comparison | A2 + A3 | Complete mandatory inventory, source-pinned schema, full Python result/effect comparison, separately checked authority history and killed mutants |
@@ -106,10 +107,12 @@ No phase below is checked off merely because its plan exists.
 | A6 | Candidate A acceptance dossier and Council | A0–A5 | Per-obligation validator, independent source/evidence review, exact requested provider verdicts and resolved material dissent |
 | A7 | Commit and integrate only admitted work | A6 and repository review policy | Explicit commits, reviewed merge, clean source pins; push only to verified configured remote |
 
-### Draft-plan corrections required before execution
+### Historical draft-plan corrections, resolved by A1
 
-The preserved `2026-09-05-moriarty-s02-candidate-a-authority-installment.md`
-is an unadopted draft, not the contract to execute unchanged:
+The original archived `2026-09-05-moriarty-s02-candidate-a-authority-installment.md`
+was unadopted. Commit `82d2c0b` replaces it on the experimental branch with
+reviewed installment and swap plans. The original snapshot retains the following
+draft errors for provenance; they are corrected in the adopted plans:
 
 1. It incorrectly calls for preparing/signing the original parent nonce again
    after a fill. `canPrepareSigning` requires AuthorityUnused. Instead, the
