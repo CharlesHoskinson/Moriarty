@@ -41,9 +41,9 @@ will grow by merging evidence into durable topic pages.
   limitations, both offline Apalache heap failures, and the candidate-specific
   signing/verification/commit boundary under implementation, and the reviewed
   native Candidate B design with explicit stranded-escrow and clock boundaries.
-- [Candidate A continuation evidence](research-journal.md#clm-0185--source-gate-admitted-canonical-export-still-fails) —
-  admitted A4 source gate, another canonical case014 heap failure, and the
-  reviewed A5 dispatch freeze; exports and bounded verification remain open.
+- [Candidate A continuation evidence](research-journal.md#clm-0186--checkpoint-after-the-a5-view-typecheck) —
+  admitted A4 source gate and failed-export preservation, successful A5 view
+  typecheck, and saved follow-up drafts; exports and verification remain open.
 
 ## K Framework and ZKIR semantics
 

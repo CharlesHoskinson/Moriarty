@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T08:22:00Z
+updated_at: 2026-09-06T18:49:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2448,3 +2448,61 @@ named native commands and scoped reviews, specified-only for new A5 native
 stages; confidence high within those limits; lifecycle S3 experimental branch.
 All78/1557 export acceptance, final full suites, package controls, paired
 flattened compilation, solver/H1 evidence and A4/A5 completion remain open.
+
+## CLM-0186 — Checkpoint after the A5 view typecheck
+
+Experiment observation: the first unused-helper-view native stage completed
+at actual 088145/0, after launch a2ef84/session11465. The original result records
+child exit0, no timeout, empty stdout/stderr, unchanged runtime and source pins,
+and 306.781 seconds for the helper interval. Raw GNU time records 5:05.78 and
+maximum RSS 1,985,648 KiB. The helper's wall limit covers its native child;
+this is not an RH002 end-to-end resource guarantee. Root intake 043ae8/0
+checked the original transport, 165 input pins, all 157 source-archive members,
+the held 36-input dispatch and absence of both observed completed groups.
+The intake is SHA256
+`9808f35ae3bd217c2ab44711bff4e1510e958539a668362ff7889e4dab23791d`;
+originals remain under experimental
+`.superpowers/sdd/a5-factoring-receipts/pilot-unused-helper-view/typecheck/`.
+No prefix-test stage or allow record exists at this checkpoint. Later prefix,
+witness, compile, size and solver gates remain unexecuted for this view.
+
+The failed A4 case014 capture now has independent preservation review
+`33134844075052fccc42712b924697c1df3fefa4f0bc696263dc495006ce0add`
+and root admission
+`d685bccb5dd404c526e3a16e766d40726f3e6f44ceadc448b026d0af83b05ea7`
+(actual 0f77ba/0). The audit binds 443 originals and five transport responses.
+This closes failure preservation only; the consumed export remains failed.
+
+Repository observation: an exact-byte Rust-input spool design is preserved at
+`.superpowers/sdd/a4-literal-v1-20260906/spool-transport-design.md`, SHA256
+`4c9e9de5fae95d3eb289b66d162401a60f870d927adb8662c1401b0f66e1ed64`.
+Its source/design-feasibility review is not implementation adoption. Root held
+the proposal because the failing allocation has not been localized. Pinned
+source shows that type application resolution transforms lookup definitions
+before inference, so the 18.7MB pre-typecheck parse is not an upper bound on
+the later request. A finer phase-observer proposal is unfinished. No copied
+runtime patch was implemented or admitted.
+
+The full-A5 remaining-acceptance map is SHA256
+`6b23a2c5c83179acd0d0a16feae192ef57bf985961a1793a236cfbb7c2f1104d`.
+A subsequent full-campaign draft is retained at
+`docs/superpowers/specs/2026-09-06-candidate-a-full-verification-campaign-design.md`,
+SHA256 `358fa1d13950e2e1d1ca0c4568c3215d45f1373cb7381bf7cc94943f229ddfde`.
+It is unreviewed and unadopted. The pruned pilot view cannot substitute for
+complete lifecycle and adverse-interleaving inputs. Agent turns stopped at
+the reported usage limit; no missing review is treated as approval.
+
+Resume at experimental commit `fbea1cee5de497a3e58fe3081bb49b4059edd97b`.
+Keep the 121-file A4 map and 36-input A5 freeze; the checkpoint recheck found
+the latter unchanged. Start with a fresh process observation and root scheduling
+record before the once-only A5 prefix test. Complete the A4 phase-discrimination
+plan/review before any further expensive A4 run. Original commands and consumed
+stages must not be restarted. Final A4 full suites include all current177
+nodes, retaining all174 original identities; the older115 estimate is not
+the current full-suite target.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope one A5 typecheck, A4 failure preservation and unexecuted follow-up designs;
+observed date 2026-09-06 UTC; reproduction reproduced for the named original
+run and root intake, specified-only for drafts; confidence high within those
+limits; lifecycle S3 experimental branch. Full A4/A5 acceptance remains open.

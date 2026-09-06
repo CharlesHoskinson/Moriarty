@@ -170,7 +170,8 @@ typecheck have passed their scoped checks and independent review. All three
 native source test suites also passed (12, 17 and 17 tests). Root admitted
 Gate1 and committed the source at `fbea1cee`. The new canonical case014 still
 exhausted the JavaScript heap, with no ITF; canonical export acceptance remains
-open. CLM-0185 records the original evidence and limits.
+open. Its failed capture is independently reviewed and root admitted for
+preservation only. CLM-0186 records the checkpoint and next steps.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -261,8 +262,9 @@ intakes remain immutable. See CLM-0183 in the research journal for current
 evidence pins. A fresh 24-file compiler view with symmetric removal of13 unused
 swap helpers has passed actual-source and materialized-view review. This is
 copied-source preservation only. Its 36-input dispatch freeze also passed
-independent review; native stages, paired flattened compilation and bounded
-verification remain open. See CLM-0185.
+independent review. The copied-view native typecheck passed with root intake
+of its 165 input pins and 157 archived members. Prefix/witness tests, paired
+flattened compilation and bounded verification remain open. See CLM-0186.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

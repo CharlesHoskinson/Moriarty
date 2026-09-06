@@ -818,3 +818,11 @@ committed at experimental `fbea1cee`. The new canonical case014 ended in
 JavaScript heap exhaustion without an ITF; its independent preservation audit
 and source investigation are pending. A5's 36-input dispatch freeze passed
 independent review. Full exports, bounded verification and A4/A5 remain open.
+
+## [2026-09-06] checkpoint | A5 typecheck complete; export remedy open
+
+CLM-0186 records the successful A5 copied-view typecheck and root input/archive
+intake, plus independent/root preservation of the failed A4 canonical export.
+The A4 transport proposal remains held pending better failure localization;
+the full A5 campaign draft is unreviewed. Source freezes remain held, the next
+A5 prefix test is unlaunched, and all original receipts are retained.
