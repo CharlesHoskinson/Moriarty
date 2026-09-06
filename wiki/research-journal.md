@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T03:04:34Z
+updated_at: 2026-09-06T03:42:09Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2066,3 +2066,56 @@ scope amended preliminary-test admission and bounded compiler diagnostic;
 observed date2026-09-06UTC; reproduction reproduced for the admitted original
 tests, observer controls and terminal diagnostic; confidence high for those
 observations with stated gaps; lifecycle S3 experimental branch.
+
+
+## CLM-0178 — Parser preserved; largest native export failed
+
+Repository observation: experimental
+`320ed9b64afdf468e6bc8d72da99924e3ffaaf71` preserves the independently
+reviewed final-source parser package at
+`evidence/s02-candidate-a-completion/a4/final-source-parser/`.
+The archive SHA256 is
+`7233f85c03bfacf80d83d50a657a10f05a23d4863c157ecc81a4c37b13ee8119`.
+Its 290 original members retain the authentic parser, recorder and outer zero
+exits, both complete 121-source copies, recorded runtime references and raw
+38,527,047-byte IR with 99 modules and 122 unique typedefs. Independent and
+root standalone audits passed; the independent comparison matched every
+archived original to its retained bytes. This admits the parser prerequisite;
+the exporter still owes its own fresh parser calls.
+
+Experiment observation: the separately dispatched largest case014 native
+export at source `08e426c7163880b9312f1f1f029a4dde9d0e7593` failed.
+Original stderr reports JavaScript heap exhaustion. Node exited -6; recorder,
+RH002 and actual outer returned 134. There is no ITF, and no invariant or
+witness acceptance follows. The 900-second outer bound did not expire and
+unforced cleanup completed. Original GNU-time measurements cover the whole
+recorder and descendants: wall 5:56.80 and maximum RSS 4,371,180 KiB. They do
+not locate an internal phase or establish a configured heap cap. Independent
+intake SHA256
+`4259ddd09d8073edb158a2140f0d78cfcf7ea1e4c607d1303ccc8aeb38d3924b`
+and root admission
+`f0676a056c57464478954ecc9ae622acfee14102bfcec8079b6900584dc3f758`
+retain failed preservation only. Originals remain under experimental
+`.superpowers/sdd/a4-producer-receipts/case-014-export/`,
+`.superpowers/sdd/a4-largest-native-pilot-014/` and
+`.superpowers/sdd/a4-pilot014-transport-20260906/`.
+The canonical stage is consumed; case044, structural intake and all78 have not
+run. A separate run-phase observer design is specified-only.
+
+Repository observation: experimental
+`4006244885c7cf34562fe54cbb76856142b0d244` now preserves CLM-0177's
+compiler diagnostic under `a5/compile-phase-diagnostic-preservation/`.
+Archive SHA256
+`9b3e13c42c4942f0d2440b49c2340054a38b1811b8165d49721e95b9e3858158`
+retains all 282 original members with independent and root package review.
+The independently reviewed no-flatten design uses the existing compiler flag
+and requires a tiny capability control before one full contrast. Its exact
+implementation plan is under review; neither invocation has run.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope parser prerequisite and bounded diagnostic preservation; observed date
+2026-09-06 UTC; reproduction reproduced for original parser and failed native
+invocations, specified-only for the proposed next diagnostics; confidence high
+for terminal observations with the stated limits; lifecycle S3 experimental
+branch, S2 for next designs. Native feasibility, final115, H1, bounded solver
+verification, full A4/A5, Council and integration remain open.

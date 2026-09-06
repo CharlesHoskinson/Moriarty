@@ -141,9 +141,17 @@ and 141-member compact package under `a4/pre-native-aggregate-admission/`.
 The old parent exit remains unknown; the fresh transport retains an explicit
 polling-metadata gap. The earlier retained17 package remains at `bcdd627` under
 `a4/pre-native-recovery-admission/`. Native78-case acceptance and the final115
-suite remain required. The reviewed final-source aggregate parser capture has
-an authentic terminal; its complete source/runtime intake is pending. Largest
-native cases014/044 must be separately measured and admitted before all78.
+suite remain required. The final-source aggregate parser passed independent
+and root intake; experimental `320ed9b64afdf468e6bc8d72da99924e3ffaaf71`
+preserves its 290 original members under `a4/final-source-parser/`.
+The original IR has 99 modules and 122 unique typedefs; the complete 121-source
+and recorded runtime closures match. This accepts the parser prerequisite only.
+The next case014 native export failed with JavaScript heap exhaustion: Node
+exited -6, recorder and actual outer exited 134, and no ITF was produced.
+Cleanup completed without an outer timeout. Independent and root intake admit
+failed evidence preservation. Its canonical stage is consumed; case044 and
+all78 remain unexecuted. A separate run-phase diagnostic design is under review.
+Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
 aggregate recursive typecheck, all12native tests,13Python tests and independently
@@ -202,7 +210,11 @@ separate from recorder/outer zero for preservation. Outputs and GNU-time
 resources are empty. Independent and root preservation intake passed; H1 and
 paired compilation remain unresolved. The original diagnostic is retained at
 `.superpowers/sdd/a5-compiler-phase-diagnostic-20260906/` in the experimental
-worktree; durable packaging is in progress.
+worktree. Experimental `4006244885c7cf34562fe54cbb76856142b0d244`
+preserves the independently reviewed 282-member archive under
+`a5/compile-phase-diagnostic-preservation/`. A separate reviewed design proposes
+the existing `--flatten=false` route with a tiny control before one full
+invocation; its exact implementation plan remains under review and unexecuted.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

@@ -721,3 +721,15 @@ were found and fixed; all six check layers were rerun green (receipts
 Structural edit, cadence revision gated by a displacement check, and a
 machine-tell audit on every chapter, each verified fact for fact against
 its original; no habit rose across the set.
+
+
+## [2026-09-06] experiment | A4 parser preserved and case014 heap failure
+
+CLM-0178 records experimental320ed9b's independently reviewed final-source
+parser archive and case014's authentic Node-6/outer134 heap failure with no
+ITF. The canonical failed stage remains consumed; case044 and all78 have not
+run. Experimental4006244 preserves the reviewed A5 compiler-phase diagnostic
+archive. The next A4 run-phase and A5 no-flatten diagnostics remain
+specified-only. Updated roadmap, index and research journal keep native
+feasibility, final115, H1 and Council open. No model or native command changed
+in this documentation update.
