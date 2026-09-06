@@ -1,4 +1,15 @@
-# Moriarty execution roadmap and Candidate A handoff
+# Moriarty roadmap — ACTUS/DeFi/PCD planning reset
+
+**Current direction, 2026-09-06:** the user superseded the A4/A5 completion loop.
+Read the [postmortem](postmortems/2026-09-06-moriarty-verification-detour.md),
+[mandatory footguns](FOOTGUNS.md), [PCD research](research/2026-09-06-pcd-bounded-dsl.md)
+and [new design-cycle plan](superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md).
+Start with ACTUS and DeFi requirements, then propose unified semantics and a
+developer mock with proof-carrying transactions. Those designs are not complete.
+A4/A5 remain unfinished historical experiments; do not automatically resume
+their commands, source freezes or continuation queue.
+
+## Historical Candidate A handoff (preserved below)
 
 Recorded 2026-09-05 UTC. This is the durable roadmap requested after the overnight
 session. It is not a release verdict or a replacement for the controlling XML.

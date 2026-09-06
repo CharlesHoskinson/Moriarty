@@ -3,7 +3,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-05T23:59:00Z
+updated_at: 2026-09-06T19:25:00Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -22,6 +22,8 @@ sources:
   - SRC-0023
   - SRC-0026
   - SRC-0039
+  - SRC-0040
+  - SRC-0041
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -70,3 +72,39 @@ sources:
 | Source identifier collision between two workstreams | Two branches each allocated `SRC-0023` to `SRC-0026`: the main line to the CAKE, NEAR Intents and Moriarty intent-research sources, the ZKIR K line to the K monorepo, the kframework.org crawls and arc-zkir; discovered at the merge of `zkir-k-semantics` into main on 2026-09-05 (CLM-0758; evidence/source-inventory.csv; repository observation; reproduced; high; S1) | The ZKIR K line's four sources were renumbered to `SRC-0036` to `SRC-0039` across the wiki and the inventory at merge time; the raw reviewer transcripts under `experiments/zkir-k/review-2026-09-05/reports/*.events.jsonl` keep the old numbers as recorded; identifiers are allocated from the inventory's current maximum, never from a branch's own count |
 | Extension `load_constant` of a Jubjub value with no Jubjub input or transcript entry | At `midnight-zkir` 2ffe2d1, `used_chips` enables the Jubjub chip only from the input types and the `public_input`/`private_input` types; a program whose only Jubjub value comes from `load_constant` passes `preprocess` (K and the crate both succeed) while the K gate reports `synthErr: chip not initialised for JubjubPoint`, the target contract fails `chips.gating`, and the crate's circuit panics at synthesis with `ZkStdLibArch must enable jubjub` under the MockProver (CLM-0764; experiments/zkir-k/corpus/divergence/k08_load_constant_jubjub_chip.zkir and experiments/zkir-k/plan-iter3/upstream-issues/K7.md; executed test; reproduced; high; S1) | K7: same class as K4, on the extension surface only; found by the target contract's chip-gating obligation and confirmed by the circuit oracle; draft issue written |
 | `reconstitute_field` with `bits` 0 | At `92e8bdd3` (and `2ffe2d1`) `IrSource::load` accepts `bits: 0`; `preprocess` then rejects every value ("Excessive bit bound", the divisor bound becomes 255 bits) and key generation panics in the decomposition chip's assertion rather than returning a synthesis error; the definition's static check and the target contract now reject the program up front (`wf` and the both-stage obligation `width.reconstitute_field.assertion`, which also covers 255 bits and above, where the same assertion fails, while 249 to 254 bits key), reproduced with the circuit oracle in keygen mode (CLM-0770; experiments/zkir-k/corpus/handmade-negative/reconstitute_bits_0.zkir and experiments/zkir-k/plan-iter3/upstream-issues/K8.md; executed test; reproduced; high; S1) | K8: availability, same class as K5; found by the third-iteration audit of the target contract; draft issue written |
+
+
+## CLM-0188: ACTUS business-day wording and PCD version limits
+
+**ACTUS source contradiction (SRC-0029, direct inspection 2026-09-06).** At
+techspec commit `94ef09e4992f79d573f84f41d8480f557365870e`,
+`actus-techspecs.tex` around lines480–495 describes shifting to a non-working
+day. At dictionary commit `356f7663f26091105cc4fef4ae3496942dcf0ebf`,
+`actus-dictionary.json`, `businessDayConvention`, describes shifting to a
+business day. The dictionary also repeats acronym SCMP for its final option,
+where the identifier distinguishes the calculate/shift case. Preserve original
+identifiers/spellings; do not silently generate a parser from these acronyms.
+
+Provisional disposition (recommendation): use the dictionary's business-day
+meaning as the interpretation to test, keep calculation and payment dates
+separate, and confirm against relevant fixtures and independent semantics in
+the next target study. This is not yet a verified compatibility resolution.
+Authority normative source conflict; scope pinned ACTUS source interpretation;
+reproduction direct source read only; confidence high that the conflict exists,
+unknown for complete convention coverage; lifecycle S2 design obligation.
+
+**HyperNova version limit (SRC-0040).** The acquired CMU author PDF, SHA256
+`4c3319b2cf751fd49dea527a7a719099d1d21656b77e3258e5c0fa1f9ffbd9fb`,
+does not contain the NovaBlindFold name present in latest ePrint metadata read
+by the practical-research lane. The mirror's exact revision is unstated.
+Disposition: derive claims from the acquired bytes only; do not transfer the
+latest revision's sections or security conclusions onto that mirror. This is a
+version mismatch, not evidence that either construction is incorrect. Authority
+primary descriptive research; scope source-version correspondence; confidence
+high for the bounded limitation; reproduction PDF read, no implementation;
+lifecycle S2 research input.
+
+**Recovery precedence (SRC-0041).** Prior Candidate A continuation prose remains
+historically accurate about unfinished work but conflicts with the latest task
+order. The 2026-09-06 user reset controls. New footguns and roadmap notices
+supersede automatic continuation without rewriting the old failed-run evidence.

@@ -826,3 +826,15 @@ intake, plus independent/root preservation of the failed A4 canonical export.
 The A4 transport proposal remains held pending better failure localization;
 the full A5 campaign draft is unreviewed. Source freezes remain held, the next
 A5 prefix test is unlaunched, and all original receipts are retained.
+
+
+## [2026-09-06] reset | ACTUS/DeFi-first semantics and proof-carrying transactions
+
+CLM-0187 records the user-directed replacement of the A4/A5 completion loop.
+Added the postmortem, mandatory footguns linked from AGENTS.md, PCD research and
+new design-cycle plan. Three bounded research lanes supplied source findings;
+Scrapling preserved five primary PDFs with access limitations and hashes.
+CLM-0188 records ACTUS business-day wording and HyperNova version limits.
+Initial target sampling is not complete implementation coverage. No native
+A4/A5 run, production DSL, mock application or proof backend was implemented by
+this documentation/research reset. Old experimental evidence is retained.

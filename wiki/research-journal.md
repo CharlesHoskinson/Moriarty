@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T18:49:00Z
+updated_at: 2026-09-06T19:25:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -19,6 +19,8 @@ sources:
   - SRC-0033
   - SRC-0034
   - SRC-0035
+  - SRC-0040
+  - SRC-0041
 ---
 
 # Moriarty research journal
@@ -2506,3 +2508,54 @@ scope one A5 typecheck, A4 failure preservation and unexecuted follow-up designs
 observed date 2026-09-06 UTC; reproduction reproduced for the named original
 run and root intake, specified-only for drafts; confidence high within those
 limits; lifecycle S3 experimental branch. Full A4/A5 acceptance remains open.
+
+
+## CLM-0187: User reset after verification detour
+
+Source fact: the [2026-09-06 user directive](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
+(SRC-0041) supersedes the A4/A5 completion loop. The current deliverables are a
+postmortem, repository footguns, PCD research and a new ACTUS/DeFi-first design
+cycle. Earlier CLM-0186 continuation instructions are historical and no longer
+authorize native work. A4/A5 remain unfinished, not accepted or erased.
+
+Repository observation: the original DeFi and v1.3 ACTUS assignments already
+supplied implementation targets. The [postmortem](../docs/postmortems/2026-09-06-moriarty-verification-detour.md)
+identifies the lead agent's failure to let those targets govern the execution
+order. E00's narrow generated Compact swap remains useful, with mock proof
+compilation and no general compiler/proof claim. Candidate A evidence remains
+at experimental commit `fbea1cee5de497a3e58fe3081bb49b4059edd97b`.
+
+Research observation: three bounded research lanes inspected foundational PCD,
+practical folding/target constraints and local ACTUS/DeFi semantics. Five primary
+PDFs were acquired using Scrapling and hashed in [SRC-0040's manifest](../evidence/moriarty-reset-2026-09-06/research-manifest.json).
+IACR robots restrictions and a Midnight robots 429 were retained as access
+limitations. [The research](../docs/research/2026-09-06-pcd-bounded-dsl.md)
+distinguishes contract properties, transaction execution, history compliance
+and compiler/ledger correspondence. PCD requires a defined local relation;
+cryptographic history compliance alone does not establish global exclusive
+spending or oracle truth. No proof backend was selected or tested.
+
+Repository observation: [target sampling](../evidence/moriarty-reset-2026-09-06/target-study.json)
+covered representative ACTUS loans, options, swaps and guarantees plus DeFi
+AMM, lending, mandate and conditional-position models. The direct inventory
+read found 19 JSON fixture files containing 277 fixtures; this is source inventory,
+not a test pass or a complete target study. Full pinned commits are in the
+observation. [The new plan](../docs/superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md)
+requires the full target matrix before semantic selection, then exact bounded
+properties, PCD acceptance and a developer mock. These future outputs remain
+specified-only. [Footguns](../docs/FOOTGUNS.md) are linked from AGENTS.md.
+
+Inference/recommendation: future experiments must resolve a named target or
+interface question within a declared resource ceiling. Retaining authentic
+receipts does not justify continuing an obsolete campaign. The observed old
+runner counter is preserved separately and does not establish a project-wide
+bill or an exact amount of wasted work.
+
+Claim metadata: sources SRC-0016, SRC-0029, SRC-0030, SRC-0031, SRC-0040,
+SRC-0041; authority normative task input, primary descriptive research and
+repository observation; date 2026-09-06; scope proposed Moriarty semantics and
+planning reset, S2; reproduction source acquisition and local inventory only,
+not reproduced for a PCD implementation; confidence high for the scope change
+and source inventory, medium for proposed architecture, unknown for backend
+compatibility. Current-next: target study and semantic/interface proposal, not
+A4/A5 execution.

@@ -3,6 +3,22 @@
 Read this page before searching externally. The wiki is initially sparse and
 will grow by merging evidence into durable topic pages.
 
+## Current direction — 2026-09-06 reset
+
+The [user reset](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
+supersedes the old A4/A5 execution loop. Its results and unfinished obligations
+remain historical evidence. The current work is ACTUS/DeFi-led language design:
+
+- [Postmortem](../docs/postmortems/2026-09-06-moriarty-verification-detour.md)
+  and [mandatory footguns](../docs/FOOTGUNS.md).
+- [PCD research](../docs/research/2026-09-06-pcd-bounded-dsl.md): proof-carrying
+  transactions, bounded correctness and backend questions.
+- [New design cycle](../docs/superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md):
+  target study, unified-semantics proposal and developer mock.
+- [Journal CLM-0187](research-journal.md#clm-0187-user-reset-after-verification-detour)
+  records the scope change. Older continuation instructions below do not
+  authorize automatic native work.
+
 ## Foundations
 
 - [LLM Wiki research workflow](sources/llm-wiki-pattern.md) — provenance and

@@ -1,0 +1,1555 @@
+           Proof-Carrying Data and Hearsay Arguments
+                      from Signature Cards
+                                   Alessandro Chiesa∗ Eran Tromer
+                                  Massachusetts Institute of Technology
+                           Computer Science and Artificial Intelligence Laboratory
+                               32 Vassar St., Cambridge, MA 02139, USA
+                                     {alexch,tromer}@csail.mit.edu
+
+Abstract:
+Design of secure systems can often be expressed as ensuring that some property is maintained at every
+step of a distributed computation among mutually-untrusting parties. Special cases include integrity of
+programs running on untrusted platforms, various forms of confidentiality and side-channel resilience,
+and domain-specific invariants.
+We propose a new approach, proof-carrying data (PCD), which circumnavigates the threat of faults and
+leakage by reasoning about properties of the output data, independently of the preceding computation.
+In PCD, the system designer prescribes the desired properties of the computation’s outputs. Correspond-
+ing proofs are attached to every message flowing through the system, and are mutually verified by the
+system’s components. Each such proof attests that the message’s data and all of its history comply with
+the specified properties.
+We construct a general protocol compiler that generates, propagates and verifies such proofs of compli-
+ance, while preserving the dynamics and efficiency of the original computation. Our main technical tool
+is the cryptographic construction of short non-interactive arguments (computationally-sound proofs) for
+statements whose truth depends on “hearsay evidence”: previous arguments about other statements. To
+this end, we attain a particularly strong proof of knowledge.
+We realize the above, under standard cryptographic assumptions, in a model where the prover has black-
+box access to some simple functionality — essentially, a signature card.
+Keywords: secure distributed systems; computationally-sound proofs
+
+
+1    Introduction                                                     be any property that is expressible as a predicate
+                                                                      that efficiently checks each party’s actions.
+   Security in distributed systems typically re-
+                                                                         Our approach, proof-carrying data (PCD), is
+quires maintaining properties across the compu-
+                                                                      based on augmenting every message passed in the
+tation of multiple, potentially malicious, parties.
+                                                                      distributed computation with a short proof string
+Even when human participants are honest, the
+                                                                      attesting to the fact that the message’s data, along
+computational devices they use may be faulty (due
+                                                                      with all of the distributed computation leading to
+to bugs or transient errors [11]), leaky (e.g., covert
+                                                                      that message, satisfies the desired property. These
+and side channels [48]) or adversarial (e.g., due to
+                                                                      proofs are efficiently produced, verified and aggre-
+components from untrusted sources [12]).
+                                                                      gated at every node. Ultimately, the proof string
+   We address the general problem of secure dis-
+                                                                      attached to the system’s final output attests that the
+tributed computation when all parties are mutually
+                                                                      whole computation had the desired property.
+untrusting and potentially malicious. Computation
+may be dynamic and interactive, and “secure” may
+    ∗ I dedicate this paper to my father Corrado Chiesa. He was
+
+a loving dad and wonderful person.
+
+
+                                                                  1
+1.1   Motivation and Goals                                   a proof fails, the computation is locally aborted
+                                                             and outputs a proof of the wrongdoing. Dam-
+Motivation. Let us consider a few examples of se-
+                                                             age is thus controlled and attributed. In principle
+curity properties whose attainment, in the general
+                                                             this may be realized at any scale, from individ-
+case and under minimal assumptions, is a major
+                                                             ual chips to whole organizational units.
+open problem — and how they can be approached
+in the framework of proof-carrying data.
+                                                           Many applications involve multiple such goals.
+• Integrity. Consider parties engaged in a dis-            For example, in cloud computing, clients are typi-
+  tributed computation. Each party is supposed to          cally interested in both integrity [38] and confiden-
+  transmit messages produced by executing some             tiality [62]. Further details and examples appear in
+  program on his own inputs and earlier mes-               Section 5.
+  sages received from other parties. Can we ob-            Goals. Generalizing the above, we can state our
+  tain evidence that the computation’s final output        goal: a compiler that, given a protocol for dis-
+  is indeed the result of correctly following the          tributed computation, and a security property (in
+  prescribed program in the aforementioned pro-            the form of a predicate to be verified at every node
+  cess? For example, if the computation consists           of the computation), yields an augmented protocol
+  of a physics simulation (whether realistic or that       that verifies the security property.
+  of a virtual online world), can we obtain evi-              We wish this compiler to respect the original
+  dence that all parties have “obeyed the laws of          distributed computation, i.e., it should preserve
+  physics”?                                                communication, dynamics and efficiency:
+• Information flow control. Confidentiality and
+  privacy are typically expressed as a negative • Preserve the communication graph: Parties
+  condition forbidding certain effects. However,       should not be required to engage in additional
+  following the approach of information flow con-      communication channels beyond those of the
+  trol (IFC) [27][55], one may instead reason          original distributed computation. For example:
+  about what computation is allowed and on what        protecting the distributed computation carried
+  inputs.                                              out by a system of hardware components should
+  Thus, within a distributed computation, we can       not require each chip to continuously communi-
+  define the security property of intermediate re-     cate with all other chips; agents executing in the
+  sults as being “consistent with a distributed        “cloud” should remain trustworthy even when
+  computation that follows the IFC rules”. In IFC,     their owners are offline; and parties should be
+  intermediate results are labeled according to        able to conduct joint computation on a remote
+  their confidentiality; PCD augments these with a     island and later re-join a larger multiparty com-
+  proof string attesting to the validity of the label. putation.
+  Ultimately, a censor at the system perimeter lets • Allow dynamic computations: The compiler
+  through only the “non-secret” outputs, by veri-      should allow for inputs that are provided on the
+  fying their associated label and proof string. Be-   fly (e.g., determined by human interaction, ran-
+  cause verification inspects only the (augmented)     dom processes, or nondeterministic choices).
+  output, it is inherently unaffected by anomalies • Minimize the blowup in communication and
+  (faults and leakage) in the preceding computa-       computation: The induced overhead in com-
+  tion; only the censor needs to be trusted to prop-   munication between parties, and computation
+  erly verify proof strings.                           within parties, should be kept at a minimum
+• Fault isolation and accountability. Consider a       (e.g., at most a local polynomial blowup).
+  distributed system consisting of numerous un-
+  reliable components. Let any communication This implies, in particular, that scalability is pre-
+  across component boundaries carry a concise served: if the original computation can be jointly
+  proof of correctness, and let each component conducted by numerous parties, then the compiler
+  verify the proofs of its inputs and generate produces a secure distributed computation has the
+  proofs for its outputs. Whenever verification of same property.
+
+
+                                                       2
+                                  Alice                 Bob                              See Figure 2 for a high-level diagram of this idea.1
+                                              y                     z                    We thus define and construct a proof-carrying data
+                                  x, F                   G                               (PCD) system primitive that fully encapsulates the
+                                            πy for               πz for                  proof system machinery, and provides a simple but
+                                          “y = F (x)”        “z = G(F (x))”              very general “interface” to be used in applications.
+                                                                                            PCD generalizes the “incrementally verifiable
+                                      Figure 1: The “F and G” example.                   computation” of Valiant [68]. The latter com-
+                                                                                         piles a (possibly super-polynomial-time) machine
+                                                                                         into a new machine that always maintains a proof
+                            1.2   Our Approach                                           for the correctness of its internal state. PCD ex-
+                                                                                         tends this in several essential ways: allowing for
+                            Proof system. In our approach, proof-carrying                the computation to be dynamic (interactive and
+                            data, every piece of data flowing through a dis-             nondeterministic); allowing for multiple parties
+                            tributed computation is augmented by a short proof           and arbitrary communication graphs; and allow-
+                            string that certifies the data as compliant with some        ing for an arbitrary compliance predicate, instead
+                            desired property. These proofs can be propagated             of considering only the special case of correct-
+Sunday, November 15, 2009
+                            and aggregated as the computation proceeds.                  ness. These greatly expand expressibility, but en-
+                               Let us illustrate our approach by a simple sce-           tail significant technical challenges (for example,
+                            nario. Alice has some input x and a function F .             dynamic computation forces us to recursively ag-
+                            She computes y := F (x) at a great expense, along            gregate proofs in polynomially-long chains, in-
+                            with a proof string πy for the claim “y = F (x)”,            stead of the logarithmically-deep trees of [68], and
+                            and then publishes the pair (“y = F (x)”, πy ) on            this requires a much stronger knowledge extrac-
+                            her webpage. A week later, Bob comes across Al-              tor). Crucially, our construction circumvents a ma-
+                            ice’s webpage, notices the usefulness of F (x), and          jor barrier which precluded a satisfying proof of
+                            and wants to use it as part of his computations: he          security even for the simpler functionality of in-
+                            picks a function G and computes z := G(y). To                crementally verifiable computation.2
+                            convince others that the combined result is correct,
+                            Bob also generates a new proof string πz for the             Construction and tools. Our main techni-
+                            claim “z = G(F (x))”, using both the transcript of           cal tool, potentially of independent interest, is
+                            his own computation of G on y, and Alice’s proof             assisted-prover hearsay-argument (APHA) sys-
+                            string πy . (See Figure 1 for a diagram.) Crucially,         tems.     These are short non-interactive argu-
+                            Bob does not have to recompute F (x). The size of            ments (computationally-sound proofs) for state-
+                            πz is merely polylogarithmic in Bob’s own work               ments whose truth depends on “hearsay evidence”
+                            (i.e., the time to compute G on y and the size of            from previous arguments, in the sense of the
+                            the statement “z = G(F (x))”), and is essentially            above “F and G” example. As pointed out by
+                            independent of the past work by Alice.                       Valiant [68], this is not implied by standard sound-
+                               We generalize the above scenario to any dis-                  1 Moreover, we obtain a proof-of-knowledge property (see
+                            tributed computation. Also, we generalize “cor-              [34, Sec. 4.7] for the definition), which implies that not only
+                            rectness” to be any property that should hold at             does there exist a C-compliant computation consistent with the
+                            every node of the computation. More precisely,               output, but moreover this computation was actually “known”
+                                                                                         to whoever produced the proof. This is essential for applica-
+                            we consider properties that can be expressed as              tions that employ cryptographic functionality that is secure only
+                            a requirement that every step in the computa-                against computationally-bounded adversaries, since an efficient
+                            tion satisfies some compliance predicate C com-              cheating prover can only “know” efficient C-compliant compu-
+                                                                                         tation.
+                            putable in polynomial time; we call this notion C-               2 Valiant [68] offers two constructions: one that assumes the
+                            compliance. Thus, each party receives inputs that            existence of a cryptographic primitive that is nonstandard and
+                            are augmented with proof strings, computes some              arguably implausible [68, Theorem 1], and one whose overall
+                            outputs, and augments each of the outputs with a             security is conjectured directly without any reduction [68, Sec-
+                                                                                         tion 1.3 under “The Noninteractive CS Knowledge Assump-
+                            new proof string that will convince the next party           tion”]. The difficulty seems inherent; see Section 3.2. In our
+                            (or the verifier of the ultimate output) that the out-       model, we attain provable security under standard generic cryp-
+                            put is consistent with a C-compliant computation.            tographic assumptions.
+
+
+                                                                                     3
+                          m1 , π                                      m7 ,
+                                  1           m 4, π 4                       π7
+                                              m                                     final
+                               , π2             5,
+                                                   π
+                           m2                                              π6      verifier
+                                   m3 , π3
+                                                      5
+                                                                    m 6,
+
+
+     Figure 2: A distributed computation in which parties send messages mi augmented by proof strings πi .
+
+
+ness: the latter merely says that if the verifier for a       input x with some fresh randomness r, and outputs
+statement “z = G(F (x))” is convinced then there              r along with a signature on (x, r) under a secret
+exists a witness for that statement. But if the wit-          key sk embedded in the oracle. This is discussed
+ness is supposed to contain a proof string πy for             next.
+another statement y = F (x), the mere existence
+of πy (that would be accepted by the verifier) is             1.3   Model and Trust
+useless: such πy may exist regardless of the truth               We assume that all parties have black-box
+of the statement “y = F (x)”, since the sound-                access to the aforementioned signed-input-and-
+ness of the argument is merely computational. We              randomness functionality. Concretely, we think of
+actually need to show that if the proof string for            this oracle as realized by hardware tokens, such
+“z = G(F (x))” was generated efficiently, then                as existing signature cards, TPM chips or smart-
+a valid proof string for “y = F (x)” can be gen-              cards. It can also be implemented by a trusted In-
+erated with essentially the same efficiency (and              ternet service (see [21] for a demonstration). Alter-
+acceptance probability) and is thus also convinc-             native realizations include obfuscation and multi-
+ing. Technically, this is captured by a particularly          party computation; see Section 3.6 for further dis-
+strong proof-of-knowledge property.                           cussion.
+   Our construction of APHA systems is built                     Comparable assumptions have been used in pre-
+on argument systems [37][14]. Specifically, we                vious works, as setup assumptions to achieve
+use universal arguments [6] which (following [43]             universally-composable functionality that is oth-
+and computationally-sound proofs [53]) invoke the             erwise impossible [16]. In this context, Hofheinz
+PCP theorem [5] to achieve compact proofs and ef-             et al. [39] assume signature cards similar to ours.
+ficient verification.                                         The main differences in the requisite functional-
+   However, such argument systems do not by                   ity is that we require the card to generate random
+themselves suffice: where they offer a strong                 strings and include them in its output and signa-
+proof-of-knowledge property [30][68], they do so              ture (a pseudorandom generator suffices — see
+by relying on random oracles, which precludes                 Section 3.6), and to use slightly stronger signature
+nesting of proofs since the underlying PCP system             schemes (see Section 2).
+does not relativize [31][18]. Even in the restricted             The more general result of Katz [42] assumes
+case of incrementally-verifiable computation [68],            that parties can embed functionality of their choice
+this difficulty precluded a satisfying proof of secu-         in secure tokens and send it to each other; follow-
+rity.                                                         up works in similar models include [54][17][25].
+   We address this problem, both in general and for           However, in our case we cannot afford a model
+the special case of [68], by extending the model              where parties generate tokens and send them to
+with a new assumption: an oracle that is invoked              all other parties, since this does not preserve the
+by the prover, but not by the verifier. The former            communication graph of the original computation.
+facilitates knowledge extraction, while the latter            Thus, our model is closer to that of [39].
+allows for aggregation of proof strings. The oracle              For simplicity, we assume the following setup
+provides a simple signed-input-and-randomness                 and trust model. A trusted party generates a signa-
+functionality: for every invocation, it augments the          ture key pair (sk, vk) and many signed-input-and-
+
+
+                                                          4
+                                 collision-resistant         dard generic assumptions: collision-resistant hash-
+                                       hashing               ing schemes and signature schemes (see Figure 3).
+                       universal             signature       Distributed computations and proof-carrying
+                      arguments               schemes        data. We propose proof-carrying data (PCD) as
+                                 }    APHA
+                                     systems
+                                                             a framework for expressing and enforcing secu-
+                                                             rity properties, and formally define proof-carrying
+                                                             data (PCD) systems that capture the requisite pro-
+                                                             tocol compiler and computationally-sound proof
+                                                             system. We construct this primitive under the same
+                                      PCD                    assumptions as above (see Figure 3).
+                                     systems                 Applications. We discuss a number of open prob-
+                          assisted-prover model              lems in the security of real-world applications,
+                               (SIR oracle)                  where PCD offers a powerful solution approach by
+                                                             circumventing current difficulties.
+ Figure 3: Collision-resistant hashing schemes imply
+   Saturday, November 14, 2009
+
+ public-coin constant-round universal arguments and          1.5   Previous Approaches
+ secure signature schemes (with the additional prop-            Proof aggregation As discussed in Section 1.2,
+ erty discussed in Section 2). From these two, we de-           our aggregation-of-proofs approach is related to
+ rive APHA systems, and then PCD systems.
+                                                                incrementally verifiable computation [68]. Both
+                                                                are built on top of efficient argument sys-
+                                                                tems [37][14]: specifically, CS proofs [53] and
+randomness tokens containing sk. Each party is
+                                                                universal arguments [6].
+told vk and receives a token. All parties trust the
+                                                                   Metaproofs [65] also involve recursive aggrega-
+manufacturer and the tokens, in the sense that each
+                                                                tion of proofs, but using very different techniques;
+party, upon seeing a signature on some (x, r) that
+                                                                these seek statistical soundness rather than con-
+verifies under vk, believes that the signature was
+                                                                ciseness and efficient verification.
+produced by some token queried on (x, |r|).
+                                                                   Signatures of knowledge [19] and their main ap-
+   One can easily adapt this to a certificate-
+                                                                plication of delegatable anonymous credentials [8]
+authority model where each token uses its own se-
+                                                                yield proofs that are aggregatable, but at the ex-
+cret key sk, and publishes the corresponding public
+                                                                pense of the proof size or the number of times ag-
+key vk along with a certificate for vk (i.e., a signa-
+                                                                gregation (in their case, delegation) is allowed.
+ture under the key of a trusted certificate author-
+      3
+ity).
+                                                                The problem of ensuring properties of a distributed
+                                                                computation has been previously studied by a va-
+1.4 Our Results
+                                                                riety of approaches.
+   In summary, we present the following results:
+                                                                Secure multiparty computation. Secure multi-
+An argument system for hearsay. We define party computation [36][9][20] considers the prob-
+assisted-prover hearsay-argument (APHA) sys- lem of correctly executing multiparty protocols in
+tems: non-interactive arguments for NP which can the presence of adversaries. Our approach follows
+efficiently prove statements that recursively rely on that of [36] in that parties prove to each other, by
+earlier APHA proof strings, using a very strong cryptographic means, that they have been behav-
+proof-of-knowledge property. We construct these ing correctly. The main differences are as follows.
+in a model where the prover has black-box access First, we address a more general setting, where
+to a simple stateless functionality, namely sign- the computation does not have to be known in ad-
+ing (under a secret key) every input along with vance to the parties. Second, [36][9][20] is unscal-
+fresh randomness. Our construction relies on stan- able in the sense of not preserving the communi-
+    3 Technically, this variant is realized by tweaking the PCD cation graph of the original computation: even the
+machine of Section 4.3 to verify the authority’s signature on simple “F and G” example of Section 1.2, would
+this vk.                                                        require everyone on the Internet to talk to each
+
+
+                                                         5
+other. By contrast, in the PCD approach, parties                  mary). However, the two approaches can be com-
+perform only local computation to produce proof                   posed: a potentially powerful way to express se-
+strings “on the fly”, and attach them to outgoing                 curity properties is to require messages to be cor-
+data packets. Conversely, the constructions in this               rectly produced by some program prg that has de-
+paper are not zero-knowledge.4                                    sired properties (e.g., type safety), and then prove
+Distributed algorithms.                   Distributed algo- these properties of prg using proof-carrying code.
+rithms [52] typically address achieving specific Here, the PCD compliance predicate C consists of
+properties of a global nature (e.g., consensus). running the PCC verifier on prg and then executing
+By contrast, we offer a general protocol compiler prg.
+for ensuring local properties of individual steps
+                                                                  Dynamic analysis. Dynamic analysis monitors
+in the distributed computation. In this sense the
+                                                                  the properties of a program’s execution at run time
+problems are complementary. Indeed, trusted
+                                                                  (e.g., [59][66][46]). Our approach can be inter-
+tokens turn out to be a powerful tool for global
+                                                                  preted as extending dynamic analysis to the dis-
+properties as well, as shown by A2M [22] and
+                                                                  tributed setting, by allowing parties to (implicitly)
+TrInc [50].
+                                                                  monitor the program execution of all prior parties
+Platforms, languages, and static analysis. In- without actually being present during the execu-
+tegrity can be achieved by running on suitable tions.
+fault-tolerant systems. Confidentiality can be
+achieved by platforms with suitable information Fabric. The Fabric system [51] is similar to PCD
+flow control mechanisms [27][55], e.g., at the in motivation, but takes a very different approach.
+operating-system level [47][69]. Various invari- Fabric addresses execution in a network of nodes
+ants can be achieved by statically analyzing pro- which have partial trust in each other. Nodes
+grams, and by programming language mechanisms express their information flow and trust policies,
+such as type systems [3][26].                                     and the Fabric platform (through a combination of
+    The inherent limitations of these approaches static and runtime techniques) ensures that com-
+(beside their difficulty) is that the output of such putation and data will be delegated across nodes
+computation can be trusted only if one trusts the only when requisite trust relations exist for pre-
+whole platform that executed it; this renders them serving the information flow policy. Thus, Fab-
+ineffective in the setting of mutually-untrusting ric is a practical system that allows “as much del-
+distributed parties.                                              egation as we are sure is safe” across a system of
+Proof-carrying code. Proof-carrying code (PCC) partially-trusting nodes (where a violated trust re-
+[56] addresses scenarios in which a host wishes to lation will undermine security). In contrast, PCD
+execute code received from untrusted producers, allows (somewhat different) security properties to
+and would like to ascertain that the code adheres be preserved across an arbitrary network of fully-
+to some rules (e.g., because the execution envi- mistrustful nodes, but with a much higher over-
+ronment is not inherently confining). In the PCC head.
+approach, the producer augments the code with
+formal, efficiently-checkable proofs of the desired
+properties — typically, using the aforementioned 1.6 Organization
+language or static analysis techniques. Such sys-
+tems have been built for scenarios such as packet                    In Section 2, we set up preliminaries. In Sec-
+filter code [57], mobile agents [58] and compiled tion 3, we define and construct hearsay-argument
+Java programs [23].                                               systems, and discuss the inherent difficulties in-
+    PCC and PCD thus address disjoint scenarios, volved as well as their resolution by assisted-
+by different techniques (see Table 1 for a sum- prover model. In Section 4, we define proof-
+    4 Zero-knowledge PCD systems are naturally defined, and
+                                                                  carrying data systems and construct them using the
+necessary for some of our suggested applications. We do not
+                                                                  results of the previous sections. In Section 5, we
+see fundamental barriers to their existence. Their efficient con- discuss some potential applications. In Section 6,
+struction is a subject of present investigation.                  we conclude and suggest open problems.
+
+
+                                                          6
+                                             Proof-carrying data           Proof-carrying code
+                      Message                         data                     executable code
+                  Statement about             specific past history         all future executions
+                   Proof method                 cryptography +                 formal methods
+                                             compliance predicate
+                 Main computation                    prover                        verifier
+                    executed by                     (sender)                        (host)
+              Recursively aggregatable                 yes                           n/a
+
+                  Table 1: Comparison between proof-carrying data and proof-carrying code.
+
+
+2   Preliminaries                                           |M | + |x| + timeM (x, w). Beyond the usual com-
+                                                            putational soundness required of an argument sys-
+General notation. We let  denote the empty                 tem, universal arguments also satisfy a weak proof-
+string, and N the positive integers. For n ∈ N,             of-knowledge property. This property (defined in
+we denote by [n] the set {1, . . . , n}. We say that        [6]) is essential in one of our proofs.
+a function µ : N → [0, 1] is negligible if, for ev-
+                                                               The universal argument construction of Barak
+ery positive polynomial p, µ(n) < 1/p(n) for all
+                                                            and Goldreich [6] is a public-coin, 4-message
+sufficiently large n.
+                                                            protocol built from any collision-resistant hash-
+   If M is a Turing machine, then hM i is its
+                                                            ing scheme ([35, Sec. 6.2.2.2]). The aforemen-
+description (on occasion identified with M ) and
+                                                            tioned efficiency comes from the use of a PCP sys-
+timeM (x) is the time that M takes to halt on in-
+                                                            tem for compressing proofs (following Micali [53]
+put a string x. If C is a circuit C, then hCi is its
+                                                            and Kilian [44]). While PCP constructions are
+representation and |C| is its size. For a probability
+                                                            notorious for being efficient only in the asymp-
+distribution D, we denote by y ← D drawing an
+                                                            totic sense, there are indications [10] that recent
+element from D. Similarly, y ← M (x) denotes
+                                                            progress approaches practicality.
+the output of the machine or circuit M on input x;
+if M is a probabilistic machine then y is a random             The universal argument construction of Barak
+variable.                                                   and Goldreich [6] is a public-coin, 4-message
+                                                            protocol built from any collision-resistant hash-
+   For a directed graph G = (V, E), and ver-
+                                                            ing scheme ([35, Sec. 6.2.2.2]). The aforemen-
+tex v ∈ V , in(v) are the incoming edges of v,
+                                                            tioned efficiency comes from the use of a PCP
+out(v) its outgoing edges, parents(v) are its neigh-
+                                                            system [5] for compressing proofs (following Mi-
+bors across in(v), and children(v) are its neighbors
+                                                            cali [53] and Kilian [44]). While PCP construc-
+across out(v).
+                                                            tions are notorious for being efficient only in the
+Universal arguments. We use universal argu-                 asymptotic sense, there are indications [10] that re-
+ments [6], a variant of CS proofs [53]. These are           cent progress approaches practicality.
+an efficient interactive argument system for prov-
+ing membership into the universal set SU , defined          Signature schemes. We denote a signature
+as the set of all tuples y = (M, x, t) for which            scheme SIG by a triple (GSIG , SSIG , VSIG ) consist-
+there exists a witness w such that M (x, w) accepts         ing of the key generation, signing, and verification
+within t steps. We denote by RU the witness rela-           algorithms respectively. (See [35, Sec. 6.1].)
+tion of the universal set, and by RU (y) the set of            We use signature schemes that, beyond satis-
+valid witnesses for a given instance y.                     fying the standard property of security against
+   A universal argument consists of a prover PUA            chosen message attack, also satisfy the (indepen-
+and a verifier VUA . For an instance y = (M, x, t),         dent) property of security against signature-only
+universal arguments are efficient in the sense that         forgery: it is infeasible for a chosen-message at-
+the complexity of the verifier VUA is polynomial            tack to forge a hitherto-unseen signature that is
+in |y|, i.e., in poly(|M | + |x| + log t). Moreover,        valid for any message (the forger is not required
+the complexity of the prover PUA is polynomial in           to say which one).
+
+
+                                                        7
+    It is simple to construct such a scheme: start                 earlier, recursive invocations of the proof system
+from a signature scheme that is secure against                     (as in the “F and G” example of Section 1.2).
+chosen message attack, and modify its signature                       At a high level, our goal is a proof system with
+algorithm to append the message to the signa-                      the following features:
+ture (and modify the verification algorithm accord-                • Non-interactive, so that (i) its proof strings
+ingly). However, the parameters of our construc-                      can be forwarded and included as part of the
+tion require concise signatures whose length is in-                   “hearsay evidence” for subsequent proofs, and
+dependent of the message (i.e., merely polynomial                     so that (ii) its proof strings can be used to aug-
+in the security parameter).                                           ment unidirectional communication in proof-
+    This can be achieved using a hash-then-sign                       carrying data.
+approach. Starting with any super-secure signa-                    • Efficient, so that proof strings (and their verifi-
+ture scheme5 (G0SIG , SSIG   0       0
+                                 , VSIG ) and a collision-            cation) are much shorter than the time to decide
+resistant hashing scheme Hs ([35, Sec. 6.2.2.2]),                     statements they attest to.
+we derive (GSIG , SSIG , VSIG ) as follows. The key                • Aggregatable, which means that it can generate
+generation algorithm GSIG invokes (sk0 , vk0 ) ←                      an argument for a statement decided by a proce-
+G0SIG , and generates a public seed s for the hash                    dure that verifies “hearsay evidence” that is the
+function. To sign a message m, SSIG ((sk0 , s), m)                    aggregation of at most polynomially many argu-
+computes h = Hs (m) and σ 0 = SSIG               0
+                                                    (sk, h),          ments.
+                               0
+and outputs σ = (h, σ ). To verify an alleged                      We call an argument system that satisfies the above
+signature σ = (h, σ 0 ) for m, VSIG ((vk, s), m, σ)                set of properties a hearsay-argument system. In
+computes h̃ = Hs (m), verifies h = h̃ and runs                     our construction the prover is assisted by an or-
+   0
+VSIG  (vk0 , h, σ 0 ). Security is easily verified.                acle, so we define and obtain an assisted-prover
+    The super-secure signature schemes used above                  hearsay-argument system.
+are known to exist if one-way functions exist                         Next, we explain why achieving the above prop-
+[35, Theorem 6.5.2]. Moreover, there are ef-                       erties involves a fundamental difficulty, and show
+ficient constructions based on the computational                   how we resolve it by introducing an assisted
+Diffie-Hellman assumption in bilinear groups [13],                 prover. After that, we define the new argument
+and generic transformations from regular signature                 system, then state which assumptions are sufficient
+schemes [40].                                                      to construct it, and then exhibit a construction for
+    Therefore, in the rest of this paper, when we                  those assumptions. Finally, we discuss the realiz-
+mention a signature scheme SIG, we shall assume                    ability of an assisted prover.
+that it is secure against chosen message attack and
+against signature-only forgery, and that it produces
+                                                                   3.2   Difficulties and Our Solution
+short signatures. This is without loss of generality,
+because our constructions already assume the exis-               In constructing an argument system that satisfies
+tence of collision-resistant hashing schemes (e.g.,           the properties discussed in Section 3.1, two oppos-
+to obtain universal arguments).                               ing requirements arise:
+                                                              1. We must not use oracles. While we know
+                                                                  how to construct efficient argument systems us-
+3 An Argument System for Hearsay                                  ing different approaches (using a short PCP
+3.1 Overview                                                      and a Merkle tree [44][53][6], or using a long
+   We introduce a new argument system for NP,                     PCP and homomorphic encryption [41]), all
+which can prove statements based on “hearsay ev-                  known efficient argument system constructions
+idence”, i.e., statements expressed by a decision                 are based on the PCP theorem, and there is
+procedure that itself relies on proofs generated by               some evidence that this is inherent [63]. Since
+                                                                  the PCP theorem does not relativize [31] (not
+   5 A super-secure signature scheme (also called a strongly
+                                                                  even with respect to a random oracle [18]),
+unforgeable signature scheme) is one where no new message-
+signature pair can be forged, even for messages that were al-
+                                                                  these systems cannot prove statements that are
+ready signed by the chosen-message oracle. See [35, Section       decided by a procedure that accesses an oracle.
+6.5.2].                                                           Thus, to allow recursive aggregation of proofs,
+
+
+                                                               8
+   it seems the system cannot rely on oracles.              tive blowup can be tolerated at every extrac-
+2. We must use oracles. Efficient non-interactive           tion step. Conversely, PCD systems must handle
+   argument systems for NP are only known to ex-            polynomially-long chains of proofs, and can thus
+   ist in the random oracle model, where the ver-           tolerate an additive blowup per extraction step;
+   ifier needs access to the random oracle. More-           hence the knowledge extractor can do little more
+   over and more fundamentally, in order to prove           than merely run the prover.
+   statements involving “hearsay evidence”, we
+                                                            Our solution. We manage to simultaneously
+   need a proof-of-knowledge property — as dis-
+                                                            satisfy the above requirements, by requiring the
+   cussed in Section 1.2, mere soundness does
+                                                            prover to access an oracle but not requiring the ver-
+   not suffice. To support repeated aggregation of
+                                                            ifier to do so. A high-level description follows.
+   such proofs, the proof-of-knowledge must be
+                                                               We start with the interactive protocol for public-
+   of a very strong form: a very efficient online
+                                                            coin, constant-round universal arguments. By
+   [60][30] knowledge extractor with a tight suc-
+                                                            granting the prover access to a signed-input-and-
+   cess probability. The only known approach to
+                                                            randomness oracle (informally defined in Sec-
+   such knowledge extraction is to force the prover
+                                                            tion 1.4 and to be formally defined in Section 3.4),
+   to expose the witness in queries to an oracle.
+                                                            we turn this into a non-interactive protocol: the
+Previous difficulties. The tension between                  prover obtains the public-coin challenges from the
+the above two requirements arises in Valiant’s              oracle instead of the verifier (in a way that also en-
+work [68]. On one hand, he uses CS proofs as non-           forces the proper temporal dependence).
+interactive arguments. Hence, his construction is              The oracle signs its answers using a public-key
+ill-defined: it requires generating (PCP-based) CS          signature scheme, so that the oracle’s random an-
+proofs for statements decided by a procedure that           swers are verifiable without access to the oracle.
+needs oracle access. Therefore, one can at best             This asymmetry breaks the tension of the two re-
+conjecture (as done in [68]) that the construction,         quirements above, i.e., it breaks the “PCP vs. ora-
+once the random oracle has been instantiated by an          cles” tension.
+appropriate function ensemble, is secure.                      Additionally, we require the prover to obtain a
+   Moreover, in order to prove the existence of an          signature for the witness that he uses to generate
+efficient knowledge extractor with a tight success          an argument, thus forcing the prover to query the
+probability, he exhibits a procedure that examines          oracle with the witness. This yields a very strong
+a prover’s calls to the random oracle. However,             form of proof-of-knowledge property.
+once the random oracle has been instantiated, the              We exploit two (related) properties of the ora-
+procedure fails since there are no oracle calls to          cle: explicitness and temporal dependence. See-
+examine.                                                    ing the oracle’s signature on (x, r) implies that r
+   This difficulty seems inherent: Valiant’s con-           was drawn at random after x was explicitly written
+struction uses an online knowledge extractor that           down. In the construction, x will be (for example)
+observes an execution of a prover only through its          a purported prover message in an interactive argu-
+inputs, outputs, and oracle calls (of which there are       ment, and r will be the verifier’s (public-coin) re-
+none after instantiation), and the online knowledge         sponse. Such forcing of temporal ordering is rem-
+extractor must be able to extract a witness of size         iniscent of the Fiat-Shamir heuristic [29]. Extrac-
+3n given a proof string of size only n. The exis-           tion of witnesses from oracle queries was used by
+tence of such a procedure would imply that for any          Pass [60], Fischlin [30] and Valiant [68]. Our ap-
+NP language, the witnesses can be compressed by             proach of using signatures to force oracle queries
+a factor of 3, which seems unlikely.                        is similar in spirit to that of Chandran et al. [17].
+   Lastly, note that the proof-of-knowledge prop-              The introduction of an oracle accessible by the
+erty we require is even stronger than [68] aimed            prover is, of course, an extra requirement of our
+for, in terms of the knowledge extractor’s tight-           model. Yet given the discussion above, it seems
+ness.     This is because incrementally verifi-             inevitable. In Section 3.6, we argue that the spe-
+able computation allows proofs to be aggregated             cific oracle that we choose, a signed-input-and-
+in a logarithmically-deep tree, so a multiplica-            randomness oracle, is reasonable in practice.
+
+
+                                                        9
+3.3    Definition of APHA Systems                                VAPHA , LE produces a valid witness for y in the
+  We define assisted-prover hearsay-argument                     following sense. By examining only the oracle
+(APHA) systems and discuss their properties.                     query-answer transcript hPe(vk), Oi of Pe, LE pro-
+An APHA system is a triple of machines                           duces a list of triples {(yi , πi , wi )}i with the prop-
+(GAPHA , PAPHA , VAPHA ) that works as follows:                  erty that there exists some triple (yj , πj , wj ) for
+                                                                 which yj = y, πj = π, and for every such triple
+• the oracle generator GAPHA : for a security pa-
+                                                                 wj is a valid witness for y. This implication holds
+   rameter κ ∈ N, GAPHA (1κ ) outputs the descrip-
+                                                                 with all but negligible probability (over the out-
+   tion of a probabilistic stateless oracle O to as-
+                               6
+                                                                 put of GAPHA ). Note that LE is not explicitly told
+   sist the prover, together with O’s verification
+                                                                 which y or π to look for. Formally:
+   key vk;
+• the prover PAPHA : for a verification key vk, an Definition 1 (APHA System). An assisted-prover
+   instance y = (M, x, t), and a string w such that hearsay-argument system with security parame-
+   (y, w) is in the witness relation RU of the uni- ter κ is a triple of polynomial-time machines
+   versal set SU (i.e., the machine M , on input x (GAPHA , PAPHA , VAPHA ), where GAPHA is a proba-
+                                             O
+   and w, accepts within t steps), PAPHA          (vk, y, w) bilistic, PAPHA is deterministic with oracle access,
+   outputs a proof string π for the claim that y ∈ and VAPHA is a deterministic, that satisfies the fol-
+   SU ; and                                                      lowing conditions:
+• the verifier VAPHA : for a verification key vk, an • Efficient verification: There exists a polyno-
+   instance y, and a proof string π, VAPHA (vk, y, π)               mial p such that for any κ ∈ N, (O, vk) ∈
+   accepts if π convinces him that y ∈ SU .                         GAPHA (1κ ), instance y = (M, x, t), and proof
+The triple (GAPHA , PAPHA , VAPHA ) must satisfy                    string π,
+three properties — the first two are essentially the
+verifying and proving complexity requirements of                           timeVAPHA (vk, y, π) ≤ p(κ + |y|) .
+computationally-sound proofs and universal argu-
+ments, and the third one is a form of proof-of-                     In particular, |π| ≤ p(κ + |y|), i.e., the
+knowledge property (that is strictly stronger than                  proof string length is poly(κ + |hM i| + |x|) +
+the regular one [34, Sec. 4.7]).                                    polylog(t).
+   First, proof strings generated by the prover • Completeness via a relatively-efficient prover:
+should be efficiently verifiable by the verifier:                   For every κ ∈ N and (y, w) ∈ RU ,
+VAPHA halts in time that is polynomial in the se-                         h
+curity parameter κ and the length of the instance                      Pr   VAPHA (vk,y, π) = 1
+y; in particular, the length of a proof string π is                                     (O, vk) ← GAPHA (1κ ) ;
+also so bounded.                                                                                                  i
+                                                                                                 O
+   Second, the prover should be able to prove true                                      π ← PAPHA      (vk, y, w) = 1
+theorems using a reasonable amount of resources:
+whenever it is indeed the case that (y, w) ∈ RU ,                   (where the probability is taken over the inter-
+   O                                                                nal randomness of GAPHA and O). Further-
+PAPHA (vk, y, w) always convinces VAPHA ; more-
+over, PAPHA halts in time that is polynomial in the                 more, there exists a polynomial p such that for
+security parameter κ, the size of the description of                every κ ∈ N, (O, vk) ∈ GAPHA (1κ ), and
+M , the length of x, and timeM (x, w). (Note that                   ((M, x, t), w) ∈ RU ,
+timeM (x, w) is the actual time it takes for M to
+                                                                         timePAPHA    vk, (M, x, t), w ≤
+                                                                                                         
+halt on input x and w, and not the upper bound t.)                              O
+
+   Third, there exists a fixed list extractor circuit                    p κ + |hM i| + |x| + timeM (x, w) .
+                                                                                                                  
+LE of size poly(κ) such that, for any (possibly
+cheating) prover circuit Pe of size poly(κ) that                    Note that timeM (x, w) ≤ t.
+outputs an instance y and proof π that convince • List extraction: There exists a list extractor cir-
+    6 While our constructions are given for a probabilistic ora-
+                                                                    cuit LE such that for every (possibly cheating)
+cle, in Section 3.6 we discuss how to “derandomize” the oracle      prover circuit Pe of size poly(κ), for all suffi-
+and make it deterministic.                                          ciently large κ, if Pe convinces VAPHA then LE
+
+
+                                                           10
+  extracts a list containing a witness:                     machine defined as follows: On input (x, s)
+     h                                                      where x ∈ {0, 1}∗ and s ≥ 0, Osk1 ,sk2 does the
+  Pr VAPHA (vk, y, π) = 1 −→                                following:
+                                                           1. r ← {0, 1}s
+           ∃ (yi , πi , wi ) ∈ extlist s.t. yi = y, πi = π
+                                                              2. If s = 0, σ ← SSIG (sk1 , (x, r))
+        and ∀ (yi , πi , wi ) ∈ extlist                       3. If s > 0, σ ← SSIG (sk2 , (x, r))
+                                                            4. Output (r, σ)
+        s.t. yi = y, πi = π : (yi , wi ) ∈ RU
+                                                               Our main technical result is constructing APHA
+       (O, vk) ← GAPHA (1κ ) ; (y, π) ← PeO (vk) ; systems from constant-round public-coin universal
+                                       i                   arguments and signature schemes:
+       extlist ← LE Pe(vk), O              > 1 − µ(κ)
+                                                     Theorem 3.1 (APHA from universal arguments
+   (where the probability is taken over the internal and signatures). APHA systems whose oracle is
+   randomness of GAPHA and O), for some negli- signed-input-and-randomness can be built from
+   gible function µ. Furthermore, |LE| is poly(κ). any signature scheme and (public-coin, constant-
+                                                     round) universal arguments.
+Proof of knowledge. The list-extraction property
+implies the standard proof-of-knowledge property,       Such public-coin, constant-round universal ar-
+in which a knowledge extractor directly outputs guments are known to exist if collision-resistant
+a witness corresponding to an instance-proof pair hashing schemes exist [6, Theorem 1.1], and like-
+that convinces the verifier (indeed, the knowledge wise for signatures schemes (see Section 2). We
+extractor need only run the list extractor LE and thus deduce the existence of APHA systems under
+locate the relevant triple in the list).             a mild, generic assumption:
+Adaptive soundness. As always, proof-of-
+knowledge implies soundness: if the prover con- Corollary 3.2 (Existence of APHA systems). As-
+vinces the verifier (with probability better than suming the existence of collision-resistant hashing
+1/p(κ)) then a witness can be extracted with schemes, there exist APHA systems whose oracle
+nonzero probability and thus exists. Moreover, is signed-input-and-randomness.
+APHA systems are adaptively sound, i.e., sound-         Let us proceed to prove Theorem 3.1 by con-
+ness holds even when the prover choose the in- structing an APHA system, following the intuition
+stance for which he wishes to produce a proof presented in Section 3.2. The oracle generator
+string. In particular, the instance may depend on G
+                                                        APHA is constructed as follows.
+the oracle and vk.
+                                                     Algorithm 1 (GAPHA ). The oracle generator
+3.4 Construction of an APHA System                   GAPHA , on input a security parameter κ ∈ N, does
+   In the assisted-prover model, every party has the following:
+black-box access to a certain functionality. In our 1. (sk1 , vk1 ) ← GSIG (1κ )
+case, the black-box functionality is defined as fol- 2. (sk2 , vk2 ) ← GSIG (1κ )
+lows.7                                               3. vk ≡ (vk1 , vk2 )
+Definition 2 (Signed-Input-and-Randomness 4. hOi ≡ hOsk1 ,sk2 i, where Osk1 ,sk2 is a SIR
+functionality). Let SIG = (GSIG , SSIG , VSIG ) be       oracle
+a signature scheme. Let κ ∈ N be the security        5.  Output (hOi, vk)
+parameter of SIG. Given sk1 and sk2 (generated                      To prove y ∈ SU , we will not invoke universal
+by GSIG (1κ )), the signed-input-and-randomness arguments directly on the instance y = (M, x, t),
+(SIR) functionality with respect to sk1 and sk2 , but rather on an a slightly larger augmented in-
+denoted Osk1 ,sk2 , is given by the probabilistic stance yaug = (Maug , xaug , taug ). The augmented
+   7 The need for two separate keys arises for technical reasons decider machine Maug invokes M to check an (al-
+of avoiding thorny dependencies across the transitions in the leged) witness w for y, and also verifies an (al-
+proof (Section 3.5).                                             leged) signature on y and w. (The prover will be
+
+
+                                                       11
+forced to query the oracle on w in order to obtain                    first message, to obtain resp1 , the prover’s first
+such a signature, and this will facilitate knowledge                  response.
+extraction.) Let us define the subroutine AUG that 5. Simulate VUA ’s second message. Call O with
+maps y to yaug :                                                      query q2 = (resp1 , a1 ), p2 (|yaug |) to obtain
+                                                                                                                  
+
+Algorithm 2 (AUG). Let p(κ, m) be a polyno-                           answer a2 = (r2 , σ2 ).
+mial that bounds the running time of VSIG with se-                 6. Compute      PUA ’s second message. Continue the
+curity parameter κ on messages of length at most                      above     execution   of PUA (yaug , w), using r2 as
+m. Fix a security parameter κ ∈ N and let                             the  verifier’s  second   message, to obtain resp2 ,
+                          κ
+(O, vk) ∈ GAPHA (1 ) and parse vk as (vk1 , vk2 ).                    the  prover’s   second  (and  last) response.
+Let y = (M, x, t) be an instance, and let σ be an 7. Package the signature and (part of) the tran-
+(alleged) signature on a witness for y. The subrou-                   script into a preliminary proof string. Define
+tine AUG, on input (vk1 , σ, y), does the following:                  π 0 ≡ (σ, tr), where tr ≡ (a1 , resp1 , a2 , resp2 ).
+                                                                   8. Obtain a signature on the instance and pre-
+1. xaug ≡ (vk1 , σ, y)                                                liminary proof. Call O with query q3 ≡
+2. taug ≡ t + p(κ, m) where                                           ((“proof”, π 0 ), 0) to obtain answer a3 =
+     m ≡ |((“inst-wit”, y, 1t ), )|                                  (, σ 0 ).
+                                                                                                                      0   0
+3. Define Maug to be the machine that, on input 9. Output the signed proof. Output π ≡ (π , σ ).
+     (x, w), works as follows
+      (a) Let b1 be the output of                                  Algorithm 4 (VAPHA ). Fix a security parameter κ
+           VSIG (vk1 , ((“inst-wit”, y, w), ), σ)                 and let (O, vk) ∈ GAPHA (1κ ). Let y = (M, x, t)
+      (b) Let b2 be the output of M (x, w) after run- be an instance and let π be an (alleged) proof string
+           ning for t steps                                        for “y ∈ SU ”. The verifier VAPHA (vk, y, π) does
+      (c) Output b1 ∧ b2                                           the following:
+4. Output yaug ≡ (Maug , xaug , taug )                             1. Parse vk as (vk1 , vk2 ); parse π as (π 0 , σ 0 ),
+   We proceed to describe the construction of the                     where π 0 ≡ (σ, tr), tr ≡ (a1 , resp1 , a2 , resp2 ),
+prover PAPHA and verifier VAPHA . Let p1 and p2                       a1 = (r1 , σ1 ), and a2 = (r2 , σ2 ).
+be polynomials such that, given an instance y of 2. Verify that the signature is valid. Check that
+length n, the first message of VUA has length p1 (n)                  VSIG (vk1 , ((“proof”, π 0 ), 0), σ 0 ) = 1.
+and the second message of VUA has length p2 (n). 3. Compute the augmented instance.
+                                                                 8
+
+                                                                      yaug ← AUG(vk1 , σ, y).
+Algorithm 3 (PAPHA ). Fix a security parameter κ
+                                    κ
+and let (O, vk) ∈ GAPHA (1 ). Let y = (M, x, t)                    4. Verify that the transcript is consistent. Check
+be an instance and w be a string, supposedly such                     that:
+that (y, w) ∈ RU . The prover PAPHA (vk, y, w) O                       (a) VSIG (vk2 , (yaug , r1 ), σ1 ) = 1 and
+does the following:                                                         |r1 | = p1 (|yaug |)
+                                                                       (b) VSIG (vk2 , ((resp1 , a1 ), r2 ), σ1 ) = 1 and
+1. Obtain a signature of the witness. Call O with
+                                                                            |r2 | = p2 (|yaug |).
+     query q0 ≡ ((“inst-wit”, y, w), 0) to obtain
+     answer a0 = (, σ).                                           5. Verify    that the transcript is convincing. Check
+                                                                      that the third step of VUA (yaug ), using r1 and r2
+2. Compute the augmented instance. Parse vk as
+                                                                      as the verifier’s first and second messages, and
+     (vk1 , vk2 ); compute yaug ← AUG(vk1 , σ, y).
+                                                                      using resp1 and resp2 as the prover’s first and
+3. Simulate VUA ’s first message.                Call O with
+                                                                      second messages, accepts.
+     query q1 ≡ yaug , p1 (|yaug |) to obtain answer
+                                         
+
+     a1 = (r1 , σ1 ).
+4. Compute PUA ’s first message. Execute the first 3.5 Correctness of the APHA Construction
+     step of PUA (yaug , w), using r1 as the verifier’s               We complete the proof of Theorem 3.1 by show-
+    8 For convenience, the construction here is specialized to the
+                                                                   ing that the above construction is indeed an APHA
+2-round (4-message) universal arguments protocol of [6]. It
+                                                                   system.   Efficient verifiability, as well as complete-
+naturally generalizes to any constant-round public-coin proto-     ness  via  a relatively-efficient prover, follow easily
+col.                                                               from the construction.
+
+
+                                                            12
+                                                 PAPHA           (“inst-wit”, y, w), 0
+                                                                       a0 = (!, σ)              O
+    PUA          r1       VUA                                        yaug , p1 (|yaug |)
+
+               resp1
+                                                                       a1 = (r1 , σ1 )          O
+                                                   PUA            (resp1 , a1 ), p2 (|yaug |)
+                 r2                                                    a2 = (r2 , σ2 )          O
+                                                                                                             ?
+               resp2                                                                !
+                                                                     (“proof”, π ), 0                     y ∈ SU
+                                                                       a3 = (!, σ3 )            O
+                                                                                                       VAPHA
+                                                                        π = (π ! , σ ! )
+                                                                                                         VUA
+
+    Figure 4: Diagram for the construction of PAPHA ; recall that tr ≡ (a1 , resp1 , a2 , resp2 ) and π 0 ≡ (σ, tr).
+
+
+    The remaining property, list-extraction, is ful-           via black-box access to the functionality proved
+filled by the following list extractor LE:                     for the preceding one.
+Algorithm 5 (LE). Given vk and a prover-oracle       First construction: adaptivity. Starting from a
+interaction transcript hPe(vk), Oi, LE(hPe(vk), Oi)  universal-argument system (PUA , VUA ), which has
+does the following:                                  a weak proof-of-knowledge (PoK) property, we
+1. extlist ← newLIST()                               show how to construct a pair of machines (P1 , V1 )
+2. In      the         transcript    hPe(vk), Oi,    for which the weak PoK property holds even when
+                                                      let
+   (q1 , a1 ), . . . , (ql , al ) be the query-answerthe prover itself adaptively chooses the claimed in-
+   pairs in which the query is of the form           stance y. The prover has oracle access to a func-
+   qi = ((“proof”, πi0 ), 0).                        tionality O1 that outputs random strings upon re-
+                                                     quest; the prover interacts with O1 , and then out-
+3. for i ∈ [l] do:
+                                                     puts an instance y and a proof string π1 for the
+    (a) Parse πi0 as (σi , tri ) and ai as (, σi0 ).
+                                                     claim “y ∈ SU ”. When verifying the output of
+    (b) Find some (q, a) in hPe(vk), Oi such that
+                                                     the prover, we allow V1 to see all the query-answer
+         a = (, σi ) and q is of the form q =
+                                                     pairs of the prover to O1 .
+         ((“inst-wit”, y, w), 0). If none exists,
+                                                        V1 works by requiring a (possibly cheating)
+         output ⊥ and abort.
+                                                     prover Pe1 to produce a transcript of the universal-
+    (c) Add (y, (πi0 , σi0 ), w) to extlist.
+                                                     argument protocol which VUA would have ac-
+4. Output extlist.
+                                                     cepted, and, moreover, by verifying that the
+                                                     public-coin challenges in the transcript were ob-
+Claim 3.3. LE fulfills the list-extraction property
+                                                     tained by Pe1 , in the right order, as answers from
+of (GAPHA , PAPHA , VAPHA ).
+                                                     O1 .
+   The following is an overview of the proof struc-     We show that whenever a prover Pe1 convinces
+ture; see [21] for details.                          V1 on some instance y of its choice, Pe1 can be
+                                                     converted into a cheating PeUA that convinces VUA
+                                                     on y, from which a witness for “y ∈ SU ” can be
+Proof sketch. To prove the success of LE, we de-
+                                                     extracted using the universal-argument knowledge
+fine a sequence of intermediate constructions of in-
+                                                     extractor EUA . We thus obtain a knowledge extrac-
+creasing power, starting from universal-argument
+                                                     tor E1 .
+systems (with a weak proof of knowledge prop-
+erty) and ending at APHA systems (with full- Second step: stateless oracle. Starting from the
+fledged list extraction). Each construction is built pair of machines (P1 , V1 ), we show how to con-
+
+
+                                                          13
+struct a triple of machines (G2 , P2 , V2 ) for which        is used just in the proof of correctness of LE, in a
+the weak PoK property still holds. This time, the            reduction from failure of LE to forgeability of sig-
+prover has oracle access to a stateless probabilistic        natures.9 Since signatures are forgeable with neg-
+oracle O2 generated by G2 , instead of the afore-            ligible probability, the polynomial loss of the weak
+mentioned stateful oracle O1 . On input x, O2 out-           PoK amounts to just a small increase in the secu-
+puts a random string r together with a signature on          rity parameter.
+(x, r). When verifying the output of the prover,                Thus, we show that whenever VAPHA accepts the
+this time V2 does not see the query-answer pairs             output of Pe we can (with all but for negligible
+of the prover to O2 . Instead, it verifies the signa-        probability) efficiently find a valid witness for the
+tures in the transcript provided by the prover, to be        instance output by Pe among the queries of Pe to O,
+convinced that the queries were made to O2 .                 which is the main ingredient of the proof of cor-
+   That is, V2 requires a (possibly cheating) prover         rectness of the list extractor LE.
+Pe2 to produce a proof string that V1 would have
+accepted, along with corresponding signatures that           3.6   Realizability of an Assisted Prover
+are valid under the verification key of O2 .                    Our construction attain APHA systems (and
+   As before (but by a different technique), we              eventually PCD systems) assuming black-box ac-
+show that whenever a prover Pe2 convinces V2 on              cess to single, fixed functionality: signed-input-
+some instance y of its choice, Pe2 can be converted          and-randomness. This functionality is stateless,
+into a prover Pe1 that convinces V1 on y, from               and is parametrized by a single concise secret (the
+which a witness for “y ∈ SU ” can be extracted               signing key sk).
+using the knowledge extractor E1 . We thus obtain     Communication. The communication between
+a knowledge extractor E2 .                            the prover and the oracle O is as low as one could
+                                                      hope for given our approach to knowledge extrac-
+Third step: list extraction. Starting from
+                                                      tion (see Section 3.2): linear in the witness size
+(G2 , P2 , V2 ), we show how to construct a triple
+                                                      |w|, and polynomial in the instance |y| and secu-
+of machines (GAPHA , PAPHA , VAPHA ) that is an
+                                                      rity parameter κ. Moreover, only four queries are
+APHA system. Similarly to the previous step,
+                                                      needed. Note that the total communication is lin-
+provers for VAPHA have access to a stateless
+                                                      ear in the length of the original witness w for the
+signed-input-and-randomness oracle O (follow-
+                                                      statement y = (M, x, t) ∈ SU , rather than (as in
+ing Definition 2), generated by GAPHA ; however,
+                                                      non-interactive CS proofs) a much longer PCP wit-
+(GAPHA , PAPHA , VAPHA ) satisfies a PoK property
+                                                      ness which contains the whole t-step execution of
+in a much stronger sense, specified by the APHA
+                                                      M (x, w).
+list-extraction property and its list-extractor LE.
+This “knowledge boosting” relies on forcing the Computation. Using the hash-then-sign approach,
+prover to explicitly state its witness in some query and typical hash function constructions, the com-
+to O.                                                 putational complexity of the signed-input-and-
+                                                      randomness functionality is essentially linear in its
+   VAPHA works by requiring the (possibly cheat-
+                                                      communication complexity size and polynomial in
+ing) prover P to produce a proof string that V2
+                e
+                                                      the security parameter.
+would have accepted; however, the proof string
+should not be about the claim “y ∈ SU ” (for some Realization.              How would such an oracle
+instance y chosen by the prover), but about some      be    provided       in    reality?        As noted ear-
+related claim “yaug ∈ SU ”, where yaug is derived     lier,    similar       requisites      arose     in related
+from y. Essentially, the prover can convince V2       works     [39][42][54][17][25][50].               One well-
+that “yaug ∈ SU ” only if it knows a signature, that  studied   option    is  to  use  a secure   hardware     token
+verifies under the verification key of O, for a valid that  is   tamper-proof       and    leak-proof.       Indeed,
+witness that “y ∈ SU ”. Thus, the prover is forced similar signing tokens are already prescribed by
+to explicitly query O on such a witness — and this German law [28]. Similarly, the functionality
+query can be found by the knowledge extractor.        can be embedded in cryptographic coprocessors,
+   Crucially, the knowledge extractor E2 is not in-      9 This is similar in spirit to the extractor abort lemma of
+
+voked by the APHA list extractor LE; rather, E2 Chandran et al. [17].
+
+
+                                                        14
+TPM chips, and general-purpose smartcard such          Each edge (u, v) is labeled by data(u, v), which is
+as TEMs [24]. Alternatively, one may hope that         the data that is (allegedly) output by the program
+this specific functionality can be obfuscated,         of u and is given as input to the program of v. Each
+either in the strict virtual-box-box sense [7] or (for source vertex has a single outgoing edge, carrying
+real-world security applications) in some heuristic    an input of the distributed computation; there are
+sense. Lastly, the functionality can be realized       no programs at sources, so we set their label to ⊥.
+via standard MPC techniques between multiple           The final output of the distributed computation is
+parties, tokens, or services, if the requisite fractionthe data carried along edges going into sinks.
+of honest participants is available.                      An augmented distributed computation tran-
+Removing randomness. The randomness of the             script   (abbreviated augmented transcript) is a
+signed-input-and-randomness functionality is not       quadruple     ADC = (G, code, data, proof) such
+essential: one could replace the fresh random bits     that (G,   code, data) is a transcript, and proof is an
+with pseudorandom bits obtained by a pseudoran-        additional   labeling on the edges of G, specifying
+dom function, applied to the input, whose seed is      proof   strings carried along those edges. (See Fig-
+kept secret. In this way, one only has to trust the    ure  5.)
+token to hide its secret bits (the signing key and the    Given a transcript DC = (G, code, data), at
+seed) and to operate correctly, but not to also gen-   times    we need to consider the part of the dis-
+erate random bits. Indeed, our constructions do not    tributed   computation up to a certain point. For an
+require the randomness from the token to be fresh edge (u, v) ∈ E, we define the transcript    0
+                                                                                                     of DC up
+                                                                                                     0      0
+for repeated queries with the same input, and se- to (u, v), denoted DC|(u,v) = (G , code , data ),
+curity holds even if the randomness comes from to be the labeled subgraph induced by the subset
+a pseudorandom function. Intuitively, this holds of vertices consisting of v, u and all ancestors of
+since even with a randomized oracle, adversaries u.
+can replay old answers.                                   A transcript captures the propagation of infor-
+                                                               mation via messages in the distributed computa-
+4     Proof-Carrying Data Systems                              tion, and thus the graph is acyclic by definition. A
+                                                               party performing several steps of computations on
+   We define and construct proof-carrying data
+                                                               different inputs at different times is represented by
+(PCD) systems, which realize the framework of
+                                                               distinct corresponding vertices.
+proof-carrying data. The following subsections are
+                                                                  Next, we define what we mean for a distributed
+organized as follows: in Section 4.1, we define the
+                                                               computation to be compliant, which is our no-
+notion of compliance for distributed computation;
+                                                               tion of “correctness with respect to some specifi-
+in Section 4.2, we define PCD systems and dis-
+                                                               cation”. We capture compliance via an efficiently
+cuss their properties; in Section 4.3, we construct
+                                                               computable predicate C that is required to hold
+a PCD system, and, in Section 4.4, we sketch its
+                                                               true at each vertex, when given the program of the
+correctness.
+                                                               vertex together with its inputs and (alleged) out-
+                                                               puts.
+4.1    Compliance of Computation
+  We begin by specifying our notion of distributed             Definition 4 (C-compliance). A compliance
+computation.                                                   predicate C is a polynomial-time computable
+                                                               predicate on strings. A distributed computa-
+Definition 3 (Distributed computation transcript).             tion transcript DC = (G, code, data) is C-
+A distributed computation transcript (abbreviated              compliant if for every vertex v ∈ V it holds
+transcript) is a triple DC = (G, code, data) repre-            that C data(in(v)), code(v), data(out(v)) = 1
+senting a directed acyclic multi-graph G = (V, E)              (where data(in(v)) denotes the list of data labels
+with labels code on the vertices and labels data on            on v’s parents, and analogously for data(out(v))).
+the edges. Vertices represent the computation of
+programs, and edges represent messages sent be- Alternatives. One may consider stronger forms
+tween these programs. Each non-source vertex v of compliance. For example, the compliance pred-
+is with labeled its program code, denoted code(v). icate could get as extra inputs the graph G and
+
+
+                                                          15
+                                                                                           zd , πd
+                                                  zb , πb
+                                         prgb                             prgd                             prgf
+             input                  πa
+             zin , πin prg   z a,                   zb !
+                                                           ,π                             zd! , πd!
+        ⊥                  a                                  b!        ze , πe                            zf , πf
+                            za !
+                                   ,π             zc , πc                                 ze! , πe!             z ,π
+                                    a!
+                                         prgc                             prge                              prgg out out
+                                                                                                                     output
+   Figure 5: Example of an augmented distributed computation transcript. Programs are denoted by prg’s, data
+   by z’s, and proof strings by π’s. The corresponding (non-augmented) distributed computation transcript is
+   with the proof strings omitted.
+
+
+the identity of the vertex v (so that the compliance                                              verification       compliance
+                                                                                                      key             predicate
+predicate “knows” which vertex in the graph it is
+examining). Stronger still, the compliance predi-                                                     vk                C
+cate could be global, and get as input the whole                                           zin1
+transcript DC = (G, code, data). However, our                                          πin1                  zout
+                                                                                                  prg
+goal is to realize PCD in a dynamic setting, where                                     zin2                  πout
+future computations have not happened yet (and
+might even be unknown) and past computations
+                                                                                          πin2
+have been long forgotten, so that compliance must
+indeed be decided locally. Therefore, we choose
+a local compliance predicate, which only gets as                          Figure 6: Computation of the new proof string
+input the information that is locally available at a                      πout for the output data zout using the PCD prover
+                                                                            O
+                                                                          PPCD (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 ).
+vertex, i.e., the program of the vertex together with                                    O
+                                                                               πout ← PPCD    (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 )
+its inputs and (alleged) outputs.
+                                                                          is an output consistent with a C-compliant tran-
+4.2     Definition of PCD Systems                                         script.11
+  We proceed to define proof-carrying data sys-                         • The PCD verifier VPCD : for a verification key
+tems, starting with their structure and an informal                       vk, a compliance predicate C, an output zout ,
+description of their properties.                                          and a proof string πout , VPCD (vk, C, zout , πout )
+                                                           Sunday, November 15, 2009
+
+                                                                          accepts if πout convinces him that zout is an out-
+4.2.1       Structure of PCD systems                                      put consistent with a C-compliant transcript.
+  A PCD system consists of a triple of machines,                           Using these algorithms, a distributed compu-
+(GPCD , PPCD , VPCD ), that works as follows:                           tation transcript is dynamically compiled into an
+• The PCD oracle generator GPCD : for a secu-                           augmented distributed computation transcript by
+  rity parameter κ, GPCD (1κ ) outputs the descrip-                     adding a proof string to each edge (see Figure 5).
+  tion of a probabilistic10 stateless oracle O, to-                     The process of generating proof strings is defined
+  gether with O’s verification key vk.                                  inductively, by having each (internal) vertex v in
+• The PCD prover PPCD : Let vk be a verifica-                           DC use PPCD to produce a new proof string πout for
+  tion key, let C be a compliance predicate, and                        its output zout (given its inputs, their inductively
+  let prg be a program with (alleged) output zout                       generated proof strings, its program, and output).
+  and two inputs zin1 and zin2 with correspond-                            More precisely, focusing on a particular edge
+  ing proof strings πin1 and πin2 (see Figure 6).                       (u, v) ∈ E, we recursively define the process of
+  Then PPCDO
+               (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 )          computing proof strings in DC up to (u, v); this
+  outputs a proof string πout for the claim that zout                     11 Without loss of generality, we restrict our attention to tran-
+
+                                                                        scripts for which programs have exactly two inputs and one out-
+  10 The oracle can be derandomized; see Section 3.6.                   put.
+
+
+                                                                   16
+process generates an augmented transcript of DC                            Third, soundness means that given a compliance
+up to (u, v). Let DC0 = DC|(u,v) be the transcript                      predicate C and an output string z that is not con-
+of DC up to (u, v), and proof 0 : E 0 → {0, 1}∗ an-                     sistent with any C-compliant transcript, no cheat-
+other label on the edges of DC0 that carries proof                      ing prover circuit Pe of size poly(κ) can generate a
+strings (in addition to the label data0 that carries                    convincing proof string π for z (except with non-
+the data). Initially, proof strings on the outgo-                       negligible probability, over the randomness of the
+ing edges of sources are set to ⊥. Then, taking                         oracle and its verification key).
+each non-source non-sink vertex w ∈ V 0 in some                            In order to preserve security for distributed com-
+topological order,12 let win1 ,win2 be the two parents                  putation that uses cryptographic functionality that
+of w, and let wout be its the single child in DC0 .                     is only computationally secure, we actually require
+Let zin1 = data(win1 , w), πin1 = proof 0 (win1 , w),                   a stronger property: proof of knowledge. A proof
+zin2 = data(win2 , w), πin2 = proof 0 (win2 , w),                       string π augmenting a piece of data z attests to the
+prg = code(w), and zout = data(w, wout ). Then,                         following. For any (possibly cheating) prover cir-
+recursively compute                                                     cuit Pe of size poly(κ), there exists a knowledge
+        O                                                               extractor EPCD circuit such that, for any output
+πout ← PPCD (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 ),
+                                                                        string z, if Pe produces a sufficiently convincing
+                                                                        proof string π for z, then EPCD can extract from
+and define πout ≡ proof 0 (w, wout ). The final out-
+                                                                        Pe a C-compliant transcript DC that has final out-
+put z of DC0 = DC|(u,v) has the proof string
+                                                                        put z. Also, |EPCD | is polynomial in |Pe| and the
+z = proof(u, v).
+                                                                        security parameter κ.13
+4.2.2     Properties of PCD (intuitive)
+   The triple (GPCD , PPCD , VPCD ) must satisfy
+three properties. Analogously to APHA systems,                          4.2.3     Properties of PCD (formal)
+the first two bound the complexity of proving
+and verifying, and the third is a strong proof-of-                         We proceed to capture the above intuition more
+knowledge property (which, in particular, implies                       formally. First, because provers and verifiers are
+soundness). These are adapted to the context of                         concatenated in a recursive structure, in order to
+distributed computation transcripts.                                    precisely quantify their complexity we need to de-
+   First, proof strings generated by the prover                         fine a recursive function over the transcript DC.
+should be efficiently verifiable by the verifier:                         The recursive function that characterizes the
+VPCD halts in time that is polynomial in the secu-                      complexity is as follows:
+rity parameter κ, the size of the description of C,
+the length of z, and the logarithm of the time it
+took to generate π. (Our parameters are even bet-                       Definition 5 (Recursive Time up to an Edge). Let
+ter; see the analysis in Section 4.2.3.)                                p be a positive polynomial, κ a security parame-
+   Second, the prover should be able to prove true                      ter, C a compliance predicate, and DC a transcript.
+statements using a reasonable amount of time.                           Given (u, v) ∈ E, we define the recursive time of
+Whenever it is indeed the case that a transcript DC                     DC|(u,v) , denoted Tp (κ, C, DC|(u,v) ), where Tp is
+is C-compliant, if the above recursive process is                       recursively defined as follows:
+used to generate a proof string π for the data z                        • If u is a source vertex,
+on some edge, then (z, π) are indeed accepted by
+VPCD . Moreover, the above recursive process runs
+                                                                                 Tp κ, C, DC|(u,v) ≡ p κ + |hCi| .
+                                                                                                               
+in time that is polynomial in the security parameter
+κ, the size of the description of C and the time it
+took to to verify C-compliance at every node.
+                                                                          13 Our construction attains a stronger definition, where a fixed
+  12 Formally, since G is acyclic, we are oblivious to the choice       knowledge extractor can extract from any convincing prover
+of temporal order. In reality the proof strings are computed            by observing only its output and its interaction with the oracle
+on-the-fly according to the temporal order by which the data            (analogously to the APHA list extraction property). We use the
+messages are generated; by causality, this order is topological.        above weaker definition for convenience of presentation.
+
+
+                                                                   17
+• Otherwise,                                                   (where the probability is taken over the internal
+                                                               randomness of GPCD and O).
+  Tp κ, C, DC|(u,v) ≡
+                   
+                                                               Furthermore, there exists a positive polynomial
+    timeC data(in(u)), code(u), data(out(u))
+                                                              p such that for every κ ∈ N, (O, vk) ∈
+                                                              GPCD (1κ ), C-compliant computation DC, and
+                 p κ + |hCi| + |data(u0 , u)|+
+         X
+    +                                                          edge (v, w) ∈ E with label z = data(v, w),
+       u0 ∈parents(u)
+                                                             timeAO (vk, C, DC|(u,v) ) ≤
+        log Tp κ, C, data(u0 , u), DC|(u0 ,u)     .
+                                                                 p κ + |hCi| + |z| + Tp κ, C, DC|(u,v)         .
+                                                                                                          
+
+
+                                                             • Proof-of-knowledge property: Let κ ∈ N. For
+   The essential property of this recursive func-              every (possibly cheating) prover circuit Pe of
+tion is that the cost of past computation de-                  size poly(κ), there exists a knowledge extractor
+cays as an iterated logarithm at every aggregation             circuit EPCD of size poly(κ) such that, for every
+step, and thus converges very quickly. Hence,                  polynomial p, compliance predicate C, output
+the time it takes to generate a proof πout is                  string z ∈ {0, 1}∗ , and for sufficiently large κ:
+essentially polynomial in the time it takes to                 if Pe convinces VPCD to accept z with non-
+merely locally check compliance, i.e., to compute              negligible probability,
+C((zin1 , zin2 ), prg, (zout )); and verification time is
+logarithmic in that.
+                                                                     h
+                                                                  Pr VPCD (vk,C, z, π) = 1
+   We can now state the definition of PCD systems.
+                                                                                (O, vk) ← GPCD (1κ ) ;
+Definition 6 (PCD System). A proof-carrying
+data system with security parameter κ is a triple of
+                                                                                                  i     1
+                                                                                π ← PeO (vk, C, z) >
+polynomial-time machines (GPCD , PPCD , VPCD ),                                                        p(κ)
+where GPCD is probabilistic, PPCD is determinis-
+                                                               (where the probability is taken over the inter-
+tic with oracle access, and VPCD is deterministic,
+                                                               nal randomness of GPCD and O), then EPCD
+that satisfies the following conditions:
+                                                               extracts a C-compliant distributed computation
+• Efficient verification: There exists a positive
+                                                               transcript DC consistent with the final output z
+   polynomial p such that for every κ ∈ N,
+                                                               (i.e., z = data(u, v) and (u, v) is the unique in-
+   (O, vk) ∈ GPCD (1κ ), compliance predicate C,
+                                                               coming edge to the unique sink vertex v) with
+   transcript DC, edge (u, v) ∈ E with label z =
+                                                               almost the same probability:
+   data(u, v), and proof string π,
+                                                                     h
+  timeVPCD (vk, C, z, π) ≤                                       Pr DC is C-compliant ∧ u, v ∈ V ∧
+  p κ + |hCi| + |z| + log Tp κ, C, DC|(u,v)             .
+                                                   
+                                                                     DC = DC|(u,v) ∧ z = data(u, v)
+  In particular, the proof string is short: |π|≤         (O, vk) ← GPCD (1κ ) ;
+  p κ + |hCi| + |z| + log Tp κ, C, DC|(u,v) .                                     i     1
+                                                                     O
+• Completeness via a relatively-efficient prover:          DC ← EPCD   (vk, C, z) >         − µ(κ)
+                                                                                       p(κ)
+  Let A be the process of computing proof strings
+  in DC up to (u, v), described above. For every     (where the probability is taken over the internal
+  κ ∈ N, compliance predicate C, C-compliant         randomness of GPCD and O), for some negligi-
+  transcript DC, and edge (u, v) ∈ E with label      ble function µ.
+  z = data(u, v),
+        h                                          4.3 Construction of a PCD System
+     Pr VPCD (vk, C, z, π) = 1                       We show the following:
+                 (O, vk) ← GPCD (1κ ) ;                      Theorem 4.1 (PCD from APHA). PCD systems
+                                                             can be built from APHA systems (using the same
+                                         i
+                          O
+                 π ← A (vk, C, DC|(u,v) ) = 1
+                                                             oracle).
+
+
+                                                        18
+                                                                                        vk,C
+   Combining this with Corollary 3.2, we deduce               (b) Define yin1 ≡ (MPCD        , (zin1 , din1 ), tin1 ).
+                                                                                                       0
+the existence of PCD systems under mild standard               (c) Verify that VAPHA (vk, yin1 , πin     1
+                                                                                                           ) = 1, oth-
+assumptions:                                                       erwise reject.
+                                                           3. Repeat steps 1 and 2 for zin2 and πin2 .
+Corollary 4.2 (Existence of PCD systems). As-
+suming the existence of collision-resistant hashing        4. Accept iff C((zin1 , zin2 ), prg, (zout )) accepts.
+schemes, there exist PCD systems whose oracle is              The PCD prover and verifier are then con-
+signed-input-and-randomness.                               structed as follows.
+   Given any APHA system (GAPHA , PAPHA ,                  Algorithm 7 (PPCD ). Fix κ ∈ N and let
+VAPHA ), such as those of Section 3, we construct          (O, vk) ∈ GPCD (1κ ). Let C be a compliance
+a PCD system (GPCD , PPCD , VPCD ) as follows.             predicate, zout the (alleged) output of a program
+   The oracle generator is the same (i.e., GPCD =          prg with inputs zin1 and zin2 (and corresponding
+GAPHA ). The PCD prover and verifier will invoke           proof strings πin1 and πin2 ). The PCD prover
+                                                             O
+those of APHA on specially crafted statements              PPCD  (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 ) does the
+“(MPCD , x, t) ∈ SU ”, where MPCD is a fixed PCD           following:
+machine (depending only on the compliance predi-           1. If πin1 =⊥, run C(⊥, ⊥, zin1 ) and let tin1 be the
+cate C and the verification key vk) which specifies           time C takes to halt. Otherwise, parse πin1 as
+how to aggregate proof strings, check C locally                   0
+                                                              (πin  1
+                                                                      , din1 , tin1 ).
+and generate the new proof string.                         2. If πin2 =⊥, run C(⊥, ⊥, zin2 ) and let tin2 be the
+   Specifically, MPCD gets as input a string                   time C takes to halt. Otherwise, parse πin2 as
+x = (zout , dout ), where zout is the alleged out-                0
+                                                               (πin   , din2 , tin2 ).
+                                                                    2
+put of the current vertex and dout is the num-             3. Run C((zin1 , zin2 ), u, (zout )) and let tC be the
+ber of past aggregations, and a witness w =                    time C takes to halt.
+(prg, zin1 , πin1 , zin2 , πin2 ) containing the program   4. Define t ≡ tC + tin1 + tin2 ,
+prg of the current vertex, together with its inputs            dout ≡ max{din1 , din2 } + 1,
+and their corresponding proof strings. The PCD                             vk,C
+                                                               y ≡ (MPCD          , (zout , dout ), t) and
+machine will accept only if
+                                                               w ≡ (prg, zin1 , πin1 , zin2 , πin2 ).
+1. it verifies, by invoking VAPHA , that the proof
+                                                           5. Compute π 0 ← PAPHA       O
+                                                                                               (vk, y, w).
+   strings of the inputs are valid, and                                              0
+2. C((zin1 , zin2 ), prg, (zout )) = 1, i.e.,              6. Define π ≡ (π , d, t).
+   C-compliance holds.                                     7. Output π.
+For the “base case” dout = 1, MPCD does not                    Algorithm 8 (VPCD ). Fix κ ∈ N and let (O, vk) ∈
+have previous proof strings to verify, so it will              GPCD (1κ ). Let C be a compliance predicate, z
+only check that C-compliance holds. Formally, the              an output string, and π a proof string. The PCD
+PCD machine is defined as follows:                             verifier VPCD (vk, C, z, π) does the following:
+Algorithm 6 (PCD Machine). Fix κ ∈ N and let 1. If π =⊥, output C(⊥, ⊥, z).
+(O, vk) ∈ GPCD (1κ ). Let C be a compliance 2. If π = (π 0 , d, t), define y ≡ (M vk,C , (z, d), t),
+                                                                                                     PCD
+predicate C, zout the (alleged) output of a pro-                  and output VAPHA (vk, y, π 0 ).
+gram prg with inputs zin1 and zin2 , and πin1 and
+πin2 proof strings. Define x ≡ (zout , dout ) and 4.4 Correctness of the PCD Construction
+w ≡ (prg, zin1 , πin1 , zin2 , πin2 ). The PCD machine           To complete the proof of Theorem 4.1, there re-
+                                                 vk,C
+with respect to C and vk, denoted MPCD                , is de- mains to show that the above construction is in-
+                            vk,C
+fined as follows: MPCD           , on input (x, w), does the deed a PCD system. Efficient verifiability, as well
+following:                                                     as completeness via a relatively-efficient prover,
+1. Base case. If πin1 =⊥, verify that dout = 1 and follow easily from the construction.
+   C(⊥, ⊥, zin1 ) = 1, otherwise reject.                         In the following, we sketch the proof of the PCD
+2. Recursive case. If πin1 6=⊥, parse πin1 as proof-of-knowledge property. For further details
+      0
+   (πin 1
+          , din1 , tin1 ), and do the following:               see the full version of this paper [21].
+    (a) Verify that dout > din1 > 0.                             The PCD knowledge extractor EPCD for a
+
+
+                                                       19
+(cheating) prover Pe, on input (vk, C, z) and with       leading to its (yet unknown) parents to expstack.
+oracle access to O, does the following.                  The labels on ADC are updated accordingly.
+1. Run PeO (vk, C, z) to get its output (z, π)
+   and to record its oracle queries and answers,         5   Applications and Design Patterns
+   hPe(vk, C, z), Oi.
+2. Apply the APHA list extractor LE to the                  Proof-carrying data is a flexible and powerful
+   recorded interaction Pe(vk), O , to extract a         framework that can be applied to security goals
+   list, extlist, of triples (yi , πi , wi ).            in many problem domains. Below are a some ex-
+3. Apply an offline reconstruction procedure             amples of domains where we envision applicabil-
+   which outputs a transcript of the “past” dis-         ity. We stress that this is intended as a glimpse of
+   tributed computation by looking only at extlist       things to come; full realizations, and evaluation of
+   and (z, π) (see below).                               concrete practicality, exceed the present scope.
+                                                         Distributed theorem proving. Proof-carrying
+   All our work thus far was aimed at making such        data can be interpreted as a new result in the theory
+offline reconstruction possible. The fact that the       of proofs: “distributed theorem proving” is feasi-
+transcript can be reconstructed from a single in-        ble. It was previously known, via probabilistically-
+vocation of Pe is essential: had we used a recursive     checkable proofs [5] and CS proofs [53], that one
+approach requiring multiple invocations, we would        can be convinced of a theorem much quicker than
+have experienced an exponential blowup as aggre-         by inspecting the theorem’s proof. However, con-
+gated proofs are recursively extracted.                  sider a theorem whose proof is built on various
+Offline reconstruction procedure. The procedure          (possibly nested) lemmas proved by different peo-
+performs a depth-first traversal of the implicit his-    ple. In order to quickly convince a verifier of the
+tory represented by extlist, starting from the root      theorem’s truth, in previous techniques we would
+implied by (z, π). It maintains the following data       have to obtain and concatenate the original (long)
+structures:                                              proofs of all the lemmas, and only then then use
+• An augmented distributed computation tran-             (for example) CS proofs to compress them. Our re-
+    script ADC, initially containing just the output     sults imply that compressed proofs for the lemmas
+    edge.                                                can be directly used to obtain a compressed proof
+• An exploration stack, denoted expstack, con-           of the reliant theorem, and moreover the latter’s
+    taining the set of edges of G that we have dis-      length is (essentially) independent of the length of
+    covered but not yet explored.                        the lemmas’ proofs.
+At a high level, the procedure operates iteratively      Multilevel security. As mentioned in Section 1.1,
+as follows. At every iteration, we pop the next          PCD may be used for information flow control.
+edge e to explore from expstack. Then, we check          For example, consider enforcing multilevel secu-
+ADC to see what is the APHA instance and proof           rity [2, Chap. 8.6] in a room full of data-processing
+string pair (ye , πe ) on the edge e, and look for       machines. We want to publish outputs labeled
+a corresponding triple of the form (ye , πe , wi ) in    “non-secret”, but are concerned that they may have
+the extracted list extlist. (From the APHA list-         been tainted by “secret” information (e.g., due to
+extraction property, this succeeds, and moreover         bugs, via software side channel attacks [15] or per-
+wi is a valid witness with all but negligible prob-      haps via literal eavesdropping [49][4][67]).
+ability.) If we have already seen the instance-             Suppose every “non-secret” input entering the
+witness pair (ye , wi ) on some edge edge e0 , we        system is digitally signed as such, by some classi-
+grow the graph of ADC by making the (hitherto un-        fier, under a verification key vkns . Suppose more-
+known) source vertex of e the same as the source of      over (for simplicity) that the scheduling of which-
+e0 . Otherwise, we grow ADC by making the source         program-to-apply-on-what-data is fully specified
+of e a new vertex v. If wi is a witness that uses the    in advance. Then we can define the compliance
+base case of the PCD machine, then v is a source         predicate C as verifying that, in the distributed
+vertex and we are done for his iteration. Otherwise      computation transcript, the output of every ver-
+v is a new internal vertex, and we add the edges         tex is either properly signed under vkns , or is the
+
+
+                                                    20
+result of correctly executing some program prg           conjecture that interesting financial settings can be
+on the vertex’s inputs and this is indeed the pre-       thus captured and allowed to proceed in a secure
+scribed program according to the schedule. Then,         distributed fashion. Potentially, this may capture
+every C-compliant distributed computation tran-          financial processes that are much richer than the
+script consists of applying the scheduled programs       consumer-vendor relations of traditional e-cash.
+to “non-secret” inputs. Thus, its final output is in-    Distributed dynamic program analysis. Con-
+dependent of secret inputs.                              sider, for example, taint propagation — a popular
+   The PCD system augments every message in              dynamic program analysis technique which tracks
+the system with a proof string that attests this C-      propagation of information inside programs. Cur-
+compliance. Eventually a censor at the system            rent systems (e.g., [59]) cannot securely span mu-
+perimeter inspects the final output by verifying         tually untrusting platforms. Since tainting rules
+its associated proof, and lets out only properly-        are easily expressed by a compliance predicate that
+verified messages (as in Figure 2). Because ver-         observes the computation of the program, PCD can
+ification is concerned with properties of the output     maintain tainting across a distributed computation.
+per se, security is unaffected by anomalies (faults
+and leakage) in the preceding computation.             Distributed type safety. Language-based type-
+                                                       safety mechanisms have tremendous expressive
+Bug attacks and IT supply chain. Faults can power, but are targeted at the case where the under-
+be devastating to security [11]. However, hard- lying execution platform can be trusted to enforce
+ware and software components are often produced type rules. Thus, they typically cannot be applied
+in far-away lands from parts of uncertain origin. across distributed systems consisting of multiple
+This IT supply chain issue forms risks to users and mutually-untrusting execution platforms. This bar-
+organizations [1][12][45][64]. Using PCD, one rier can be surmounted by using PCD to augment
+can achieve fault isolation and accountability at the typed values passing between systems with proofs
+level of system components, e.g., chips or software for the correctness of the type.
+modules, by having each component augment ev-
+ery output with a proof that its computation, in- Generalizing: design patterns. The PCD ap-
+cluding all history it relied on, were correct.        proach allows a system designer to “program in”
+                                                       the security requirement into a compliance predi-
+Simulations and MMO. Consider a simula- cate, and have it “magically” enforced by the PCD
+tion such as massively multiplayer online (MMO) system. As gleaned from the above examples, this
+worlds. These typically entail certain invariants programming can be nontrivial and requires vari-
+(“laws of physics”), together with inputs chosen at ous tricks. This is somewhat similar to the world
+human users’ discretion. A common security goal of software engineering, and indeed we can bor-
+is to ensure that a particular player does not cheat row some meta-techniques from that world. In
+(e.g., by modifying the game code). Today, this is particular, design patterns [32] are a very useful
+typically enforced by a centralized server, which is method for capturing common problems and so-
+unscalable. Attempts at secure peer-to-peer archi- lution techniques in a loosely-structured way. A
+tectures have seen very limited success [61][33]. number of such design patterns are already evi-
+PCD offers a potential solution approach when the dent in the above examples (e.g., using signatures
+underlying information flow has sufficient locality to designate parties or properties). We envision,
+(as is it the case for most simulations): start with a and are exploring, a library of such patterns to aid
+naive (insecure) peer-to-peer system, and enforce system designers.
+the invariants by augmenting every message with
+a proof of the requisite properties.
+Financial systems. As a special case of the above,
+                                                         6   Conclusions and Open Problems
+one can think of financial systems as a “game”              We envision proof-carrying data as a framework
+where parties perform local transactions subject to      for achieving security properties in a nonconven-
+certain rules. For example, in any transaction, the      tional way, which circumvents many difficulties
+total amount of money held by the parties must not       with current approaches. In PCD, faults and leak-
+increase unless the government is involved. We           age are acknowledged as an expected occurrence,
+
+
+                                                    21
+and rendered inconsequential by reasoning about                  Trojan detection using IC fingerprinting.       In
+properties of data which are independent of the                  SP ’07: Proceedings of the 2007 IEEE Sympo-
+preceding computation. The system designer pre-                  sium on Security and Privacy, pages 296–310,
+scribes the desired properties of the computation’s              Washington, DC, USA, 2007. IEEE Computer
+output; proofs of these properties are attached to               Society.
+                                                             [2] Ross J. Anderson. Security Engineering: A Guide
+the data flowing through the system, and are mutu-
+                                                                 to Building Dependable Distributed Systems. Wi-
+ally verified by the system’s components.
+                                                                 ley Publishing, 2nd edition, 2008.
+   This work shows explicit constructions of proof-          [3] Gregory R. Andrews and Richard P. Reitman. An
+carrying data, under standard assumptions, in the                axiomatic approach to information flow in pro-
+model where parties have black-box access to                     grams. ACM Transactions on Programming Lan-
+some functionality (e.g., a simple hardware token).              guages and Systems, 2(1):56–76, 1980.
+The problem of weakening this requirement, or                [4] Dmitri Asonov and Rakesh Agrawal. Keyboard
+formally proving that it is (in some sense) neces-               acoustic emanations. In SP ’04: Proceedings of the
+sary, remains open. A PCD system with the addi-                  2004 IEEE Symposium on Security and Privacy,
+tional property of zero-knowledge [37][34, Chap.                 pages 3–11, Washington, DC, USA, 2004. IEEE
+4] would be useful in many applications. Of partic-              Computer Society.
+                                                             [5] László Babai, Lance Fortnow, Leonid A. Levin,
+ular interest is surmounting the current inefficiency
+                                                                 and Mario Szegedy. Checking computations in
+of the underlying argument systems and obtaining                 polylogarithmic time. In STOC ’91: Proceedings
+a fully practical realization.                                   of the 23rd Annual ACM Symposium on Theory of
+   In this work we briefly touched upon potential                Computing, pages 21–32, New York, NY, USA,
+applications; this leaves many opportunities for                 1991. ACM.
+fleshing out the details, devising design patterns           [6] Boaz Barak and Oded Goldreich. Universal argu-
+and implementing real systems.                                   ments and their applications. In CCC ’02: Pro-
+                                                                 ceedings of the 17th IEEE Annual Conference on
+                                                                 Computational Complexity, pages 194–203, Wash-
+Acknowledgments                                                  ington, DC, USA, 2002. IEEE Computer Society.
+   We are indebted to Ron Rivest for his insight             [7] Boaz Barak, Oded Goldreich, Russell Impagli-
+and support during this investigation. Scott Aaron-              azzo, Steven Rudich, Amit Sahai, Salil P. Vadhan,
+son, Andrew Drucker and Paul Valiant provided                    and Ke Yang. On the (im)possibility of obfuscat-
+                                                                 ing programs. In CRYPTO ’01: Proceedings of the
+valuable pointers about the PCP vs. oracle diffi-
+                                                                 21st Annual International Cryptology Conference
+culty. Boaz Barak, Arnab Bhattacharyya and Or
+                                                                 on Advances in Cryptology, pages 1–18, London,
+Meir helped in the evaluation of argument systems                UK, 2001. Springer-Verlag.
+and the underlying PCPs. Stephen Chong, Greg                 [8] Mira Belenkiy, Jan Camenisch, Melissa Chase,
+Morrisett and Jeff Vaughan shared their perspec-                 Markulf Kohlweiss, Anna Lysyanskaya, and Ho-
+tive on applications of PCD in type safety. We                   vav Shacham. Randomizable proofs and del-
+thank Shafi Goldwasser, Frans Kaashoek, Nancy                    egatable anonymous credentials. In CRYPTO
+Lynch, Silvio Micali, Nickolai Zeldovich and the                 ’09: Proceedings of the 29th Annual International
+anonymous reviewers for valuable feedback.                       Cryptology Conference on Advances in Cryptol-
+                                                                 ogy, pages 108–125, Berlin, Heidelberg, 2009.
+   This work was supported by NSF grant NSF-                     Springer-Verlag.
+CNS-0808907 and AFRL grant FA8750-08-1-                      [9] Michael Ben-Or, Shafi Goldwasser, and Avi
+0088. Views and conclusions contained here are                   Wigderson. Completeness theorems for non-
+those of the authors and should not be interpreted               cryptographic fault-tolerant distributed computa-
+as necessarily representing the official policies or             tion. In STOC ’88: Proceedings of the 20th Annual
+endorsements, either express or implied, of AFRL,                ACM Symposium on Theory of Computing, pages
+NSF, the U.S. Government or any of its agencies.                 1–10, New York, NY, USA, 1988. ACM.
+                                                            [10] Arnab Bhattacharyya. Implementing probabilis-
+                                                                 tically checkable proofs of proximity. Techni-
+References                                                       cal Report MIT-CSAIL-TR-2005-051, MIT, 2005.
+                                                                 Available at http://dspace.mit.edu/handle/1721.1/
+ [1] Dakshi Agrawal,     Selcuk Baktir,    Deniz
+                                                                 30562.
+     Karakoyunlu, Pankaj Rohatgi, and Berk Sunar.
+
+
+                                                       22
+[11] Eli Biham and Adi Shamir. Differential fault anal-         csail.mit.edu/pcd.
+     ysis of secret key cryptosystems. In CRYPTO           [22] Byung-Gon Chun, Petros Maniatis, Scott Shenker,
+     ’97: Proceedings of the 17th Annual International          and John Kubiatowicz. Attested append-only
+     Cryptology Conference on Advances in Cryptol-              memory: making adversaries stick to their word.
+     ogy, pages 513–525, London, UK, 1997. Springer-            ACM SIGOPS Operating Systems Review, 41(6):
+     Verlag.                                                    189–204, 2007.
+[12] Eli Biham, Yaniv Carmeli, and Adi Shamir. Bug         [23] Christopher Colby, Peter Lee, and George C. Nec-
+     attacks. In CRYPTO ’08: Proceedings of the 28th            ula. A proof-carrying code architecture for java.
+     Annual International Cryptology Conference on              In CAV ’00: Proceedings of the 12th International
+     Advances in Cryptology, pages 221–240, Berlin,             Conference on Computer Aided Verification, pages
+     Heidelberg, 2008. Springer-Verlag.                         557–560, London, UK, 2000. Springer-Verlag.
+[13] Dan Boneh, Emily Shen, and Brent Waters.              [24] Victor Costan, Luis F. Sarmenta, Marten Dijk, and
+     Strongly unforgeable signatures based on compu-            Srinivas Devadas. The trusted execution module:
+     tational diffie-hellman. In PKC ’06: Proceedings           Commodity general-purpose trusted computing. In
+     of the 9th International Workshop on Practice and          CARDIS ’08: Proceedings of the 8th IFIP WG
+     Theory in Public Key Cryptography, pages 229–              8.8/11.2 International Conference on Smart Card
+     240, London, UK, 2006. Springer-Verlag.                    Research and Advanced Applications, pages 133–
+[14] Gilles Brassard, David Chaum, and Claude                   148, Berlin, Heidelberg, 2008. Springer-Verlag.
+     Crépeau. Minimum disclosure proofs of knowl-         [25] Ivan Damgård, Jesper Buus Nielsen, and Daniel
+     edge. Journal of Computer and System Sciences,             Wichs. Universally composable multiparty com-
+     37(2):156–189, 1988.                                       putation with partially isolated parties. In TCC
+[15] David Brumley and Dan Boneh. Remote timing                 ’09: Proceedings of the 6th Theory of Cryp-
+     attacks are practical. Computer Networks: The In-          tography Conference on Theory of Cryptogra-
+     ternational Journal of Computer and Telecommu-             phy, pages 315–331, Berlin, Heidelberg, 2009.
+     nications Networking, 48(5):701–716, 2005.                 Springer-Verlag.
+[16] Ran Canetti and Marc Fischlin. Universally com-       [26] Dorothy E. Denning. A lattice model of secure
+     posable commitments. In CRYPTO ’01: Proceed-               information flow. Communications of the ACM,
+     ings of the 21st Annual International Cryptology           19(5):236–243, 1976.
+     Conference on Advances in Cryptology, pages 19–       [27] Dorothy E. Denning and Peter J. Denning. Cer-
+     40, London, UK, 2001. Springer-Verlag.                     tification of programs for secure information
+[17] Nishanth Chandran, Vipul Goyal, and Amit Sahai.            flow. Communications of the ACM, 20(7):504–
+     New constructions for UC secure computation us-            513, 1977.
+     ing tamper-proof hardware. In EUROCRYPT ’08:          [28] Bundesministerium der Justiz.            Gesetz über
+     Proceedings of the 27th Annual International Con-          Rahmenbedingungen für elektronische Signa-
+     ference on Advances in Cryptology, pages 545–              turen. Bundesgesetzblatt I 2001, 876, May 2001.
+     562, Berlin, Heidelberg, 2008. Springer-Verlag.            online at http://bundesrecht.juris.de/bundesrecht/
+[18] Richard Chang, Suresh Chari, Desh Ranjan, and              sigg 2001/inhalt.html.
+     Pankaj Rohatgi. Relativization: a revisionistic       [29] Amos Fiat and Adi Shamir. How to prove your-
+     retrospective. Bulletin of the European Associ-            self: practical solutions to identification and signa-
+     ation for Theoretical Computer Science, 47:144–            ture problems. In CRYPTO ’86: Proceedings of
+     153, 1992.                                                 the 6th Annual International Cryptology Confer-
+[19] Melissa Chase and Anna Lysyanskaya. On signa-              ence on Advances in Cryptology, pages 186–194,
+     tures of knowledge. In CRYPTO ’06: Proceedings             London, UK, 1987. Springer-Verlag.
+     of the 26th Annual International Cryptology Con-      [30] Marc Fischlin. Communication-efficient non-
+     ference on Advances in Cryptology, pages 78–96,            interactive proofs of knowledge with online extrac-
+     London, UK, 2006. Springer-Verlag. Full version            tors. In CRYPTO ’05: Proceedings of the 25th
+     available at http://eprint.iacr.org/2006/184.              Annual International Cryptology Conference on
+[20] David Chaum, Claude Crépeau, and Ivan                     Advances in Cryptology, pages 152–168, London,
+     Damgård.       Multiparty unconditionally secure          UK, 2005. Springer-Verlag.
+     protocols. In STOC ’88: Proceedings of the 20th       [31] Lance Fortnow. The role of relativization in com-
+     Annual ACM Symposium on Theory of Computing,               plexity theory. Bulletin of the European Associ-
+     pages 11–19, New York, NY, USA, 1988. ACM.                 ation for Theoretical Computer Science, 52:229–
+[21] Alessandro Chiesa and Eran Tromer. Proof-                  244, 1994.
+     carrying data, 2009. Web site at http://projects.     [32] Erich Gamma, Richard Helm, Ralph Johnson,
+
+
+                                                      23
+     and John Vlissides. Design patterns: elements            Cryptology, pages 115–128, Berlin, Heidelberg,
+     of reusable object-oriented software. Addison-           2007. Springer-Verlag.
+     Wesley Longman Publishing Co., Inc., Boston,        [43] Joe Kilian. Zero-knowledge with log-space veri-
+     MA, USA, 1995.                                           fiers. In SFCS ’88: Proceedings of the 29th Annual
+[33] Chris GauthierDickey, Daniel Zappala, Virginia           Symposium on Foundations of Computer Science,
+     Lo, and James Marr. Low latency and cheat-proof          pages 25–35, Washington, DC, USA, 1988. IEEE
+     event ordering for peer-to-peer games. In NOSS-          Computer Society.
+     DAV ’04: Proceedings of the 14th International      [44] Joe Kilian. A note on efficient zero-knowledge
+     Workshop on Network and Operating Systems Sup-           proofs and arguments (extended abstract). In
+     port for Digital Audio and Video, pages 134–139,         STOC ’92: Proceedings of the 24th Annual ACM
+     New York, NY, USA, 2004. ACM.                            Symposium on Theory of Computing, pages 723–
+[34] Oded Goldreich. Foundations of Cryptography:             732, New York, NY, USA, 1992. ACM.
+     Volume 1, Basic Tools. Cambridge University         [45] Samuel T. King, Joseph Tucek, Anthony Cozzie,
+     Press, New York, NY, USA, 2000.                          Chris Grier, Weihang Jiang, and Yuanyuan Zhou.
+[35] Oded Goldreich. Foundations of Cryptography:             Designing and implementing malicious hardware.
+     Volume 2, Basic Applications. Cambridge Univer-          In LEET’08: Proceedings of the 1st USENIX
+     sity Press, New York, NY, USA, 2004.                     Workshop on Large-Scale Exploits and Emergent
+[36] Oded Goldreich, Silvio Micali, and Avi Wigder-           Threats, pages 1–8, Berkeley, CA, USA, 2008.
+     son. How to play any mental game. In STOC                USENIX Association.
+     ’87: Proceedings of the 19th Annual ACM Sym-        [46] Vladimir Kiriansky, Derek Bruening, and
+     posium on Theory of Computing, pages 218–229,            Saman P. Amarasinghe. Secure execution via
+     New York, NY, USA, 1987. ACM.                            program shepherding. In Proceedings of the 11th
+[37] Shafi Goldwasser, Silvio Micali, and Charles             USENIX Security Symposium, pages 191–206,
+     Rackoff. The knowledge complexity of interactive         Berkeley, CA, USA, 2002. USENIX Association.
+     proof systems. SIAM Journal on Computing, 18        [47] Maxwell Krohn, Alexander Yip, Micah Brodsky,
+     (1):186–208, 1989.                                       Natan Cliffer, M. Frans Kaashoek, Eddie Kohler,
+[38] Shafi Goldwasser, Yael Tauman Kalai, and Guy N.          and Robert Morris. Information flow control for
+     Rothblum. Delegating computation: interactive            standard os abstractions. In SOSP ’07: Proceed-
+     proofs for muggles. In STOC ’08: Proceedings             ings of the 21st ACM SIGOPS Symposium on Op-
+     of the 40th Annual ACM Symposium on Theory of            erating Systems Principles, pages 321–334, New
+     Computing, pages 113–122, New York, NY, USA,             York, NY, USA, 2007. ACM.
+     2008. ACM.                                          [48] Butler W. Lampson. A note on the confinement
+[39] Dennis Hofheinz, Jörn Müller-Quade, and Do-            problem. Communications of the ACM, 16(10):
+     minique Unruh. Universally composable zero-              613–615, 1973.
+     knowledge arguments and commitments from sig-       [49] Michael LeMay and Jack Tan. Acoustic surveil-
+     nature cards. In MoraviaCrypt ’05: Proceedings           lance of physically unmodified pcs. In SAM ’06:
+     of the 5th Central European Conference on Cryp-          Proceedings of the 2006 International Conference
+     tography, pages 93–103, 2005.                            on Security and Management, pages 328–334.
+[40] Qiong Huang, Duncan S. Wong, and Yiming Zhao.            CSREA Press, 2006.
+     Generic transformation to strongly unforgeable      [50] Dave Levin, John R. Douceur, Jacob R. Lorch, and
+     signatures. In ACNS ’07: Proceedings of the 5th          Thomas Moscibroda. TrInc: small trusted hard-
+     International Conference on Applied Cryptogra-           ware for large distributed systems. In NSDI’09:
+     phy and Network Security, pages 1–17, Berlin,            Proceedings of the 6th USENIX Symposium on
+     Heidelberg, 2007. Springer-Verlag.                       Networked Systems Design and Implementation,
+[41] Yuval Ishai, Eyal Kushilevitz, and Rafail Ostro-         pages 1–14, Berkeley, CA, USA, 2009. USENIX
+     vsky. Efficient arguments without short PCPs. In         Association.
+     CCC ’07: Proceedings of the Twenty-Second An-       [51] Jed Liu, Michael D. George, K. Vikram, Xin Qi,
+     nual IEEE Conference on Computational Com-               Lucas Waye, and Andrew C. Myers. Fabric: a plat-
+     plexity, pages 278–291, Washington, DC, USA,             form for secure distributed computation and stor-
+     2007. IEEE Computer Society.                             age. In SOSP ’09: Proceedings of the 22nd ACM
+[42] Jonathan Katz. Universally composable multi-             SIGOPS Symposium on Operating Systems Princi-
+     party computation using tamper-proof hardware.           ples, pages 321–334, New York, NY, USA, 2009.
+     In EUROCRYPT ’07: Proceedings of the 26th                ACM.
+     Annual International Conference on Advances in      [52] Nancy A. Lynch. Distributed Algorithms. Morgan
+
+
+                                                    24
+     Kaufmann Publishers, San Mateo, CA, 1996.                 Computational Complexity, pages 81–92, Wash-
+[53] Silvio Micali. Computationally sound proofs.              ington, DC, USA, 2009. IEEE Computer Society.
+     SIAM Journal on Computing, 30(4):1253–1298,          [64] Jarrod A. Roy, Farinaz Koushanfar, and Igor L.
+     2000.                                                     Markov. Circuit CAD tools as a security threat. In
+[54] Tal Moran and Gil Segev. David and goliath                HOST ’08: Proceedings of the 1st IEEE Interna-
+     commitments: Uc computation for asymmetric                tional Workshop on Hardware-Oriented Security
+     parties using tamper-proof hardware. In EURO-             and Trust, pages 65–66, Washington, DC, USA,
+     CRYPT ’08: Proceedings of the 27th Annual In-             2008. IEEE Computer Society.
+     ternational Conference on Advances in Cryptol-       [65] Alfredo De Santis and Moti Yung. Cryptograpic
+     ogy, pages 527–544, Berlin, Heidelberg, 2008.             applications of the non-interactive metaproof and
+     Springer-Verlag.                                          many-prover systems. In CRYPTO ’90: Pro-
+[55] Andrew C. Myers and Barbara Liskov. A de-                 ceedings of the 10th Annual International Cryptol-
+     centralized model for information flow control.           ogy Conference on Advances in Cryptology, pages
+     In SOSP ’97: Proceedings of the 16th ACM                  366–377, London, UK, 1991. Springer-Verlag.
+     SIGOPS Symposium on Operating Systems Princi-        [66] G. Edward Suh, Jae W. Lee, David Zhang, and
+     ples, pages 129–142, New York, NY, USA, 1997.             Srinivas Devadas. Secure program execution via
+     ACM.                                                      dynamic information flow tracking. In ASPLOS
+[56] George C. Necula. Proof-carrying code. In POPL            ’04: Proceedings of the 11th International Con-
+     ’97: Proceedings of the 24th ACM SIGPLAN-                 ference on Architectural Support for Programming
+     SIGACT Symposium on Principles of Program-                Languages and Operating Systems, pages 85–96,
+     ming Languages, pages 106–119, New York, NY,              New York, NY, USA, 2004. ACM.
+     USA, 1997. ACM.                                      [67] Eran Tromer and Adi Shamir. Acoustic crypt-
+[57] George C. Necula and Peter Lee. Safe kernel ex-           analysis, 2004. Eurocryt 2004 rump session; see
+     tensions without run-time checking. ACM SIGOPS            http://people.csail.mit.edu/tromer/acoustic.
+     Operating Systems Review, 30(SI):229–243, 1996.      [68] Paul Valiant. Incrementally verifiable computa-
+[58] George C. Necula and Peter Lee. Safe, un-                 tion or proofs of knowledge imply time/space effi-
+     trusted agents using proof-carrying code. In Mo-          ciency. In TCC ’08: Proceedings of the 5th Theory
+     bile Agents and Security, pages 61–91, London,            of Cryptography Conference on Theory of Cryp-
+     UK, 1998. Springer-Verlag.                                tography, pages 1–18, Berlin, Heidelberg, 2008.
+[59] Nicholas Nethercote and Julian Seward. Valgrind:          Springer-Verlag.
+     a framework for heavyweight dynamic binary in-       [69] Nickolai Zeldovich, Silas Boyd-Wickizer, Eddie
+     strumentation. In PLDI ’07: Proceedings of the            Kohler, and David Mazières. Making information
+     2007 ACM SIGPLAN Conference on Program-                   flow explicit in HiStar. In OSDI ’06: Proceed-
+     ming Language Design and Implementation, pages            ings of the 7th USENIX Symposium on Operating
+     89–100, New York, NY, USA, 2007. ACM.                     Systems Design and Implementation, pages 19–19,
+[60] Rafael Pass. On deniability in the common refer-          Berkeley, CA, USA, 2006. USENIX Association.
+     ence string and random oracle model. In CRYPTO
+     ’03: Proceedings of the 23rd Annual International
+     Cryptology Conference on Advances in Cryptol-
+     ogy, pages 316–337, London, UK, 2003. Springer-
+     Verlag.
+[61] Jeff Plummer. A flexible and expandable architec-
+     ture for computer games. Master’s thesis, Arizona
+     State University, 2004.
+[62] Thomas Ristenpart, Eran Tromer, Hovav Shacham,
+     and Stefan Savage. Hey, you, get off of my cloud!
+     Exploring information leakage in third-party com-
+     pute clouds. In CCS ’09: Proceedings of the 16th
+     ACM Conference on Computer and Communica-
+     tions Security, pages 199–212, New York, NY,
+     USA, 2009. ACM.
+[63] Guy N. Rothblum and Salil Vadhan. Are PCPs in-
+     herent in efficient arguments? In CCC ’09: Pro-
+     ceedings of the 24th IEEE Annual Conference on
+
+
+                                                     25
+

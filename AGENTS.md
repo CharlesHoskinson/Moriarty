@@ -3,6 +3,19 @@
 Read `WIKI_SCHEMA.md` and the controlling assignment under `raw/assignments/`
 before changing research artifacts.
 
+## Current direction and mandatory footguns
+
+Read [docs/FOOTGUNS.md](docs/FOOTGUNS.md) before planning, implementation,
+verification or recovery. The controlling direction is the
+[2026-09-06 user reset](raw/assignments/moriarty-target-first-reset-2026-09-06.md):
+study ACTUS and the DeFi Kernel first, then propose unified bounded semantics,
+proof-carrying transactions and a developer mock. Follow the
+[new design-cycle plan](docs/superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md).
+Old A4/A5 checkpoint obligations and completion loops are historical, unfinished
+work; they do not authorize automatic continuation. Preserve their evidence.
+Original assignments remain product requirements, subject to the latest user
+direction; their former execution order is superseded.
+
 ## Evidence discipline
 
 1. Query `wiki/index.md` before acquiring new material.
