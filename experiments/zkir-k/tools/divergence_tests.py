@@ -7,6 +7,10 @@ specific gate. Findings refer to arc-zkir docs/zkir-v3-divergence-review.md at
 midnight-ledger 92e8bdd3 (wiki/zkir/zkir-v3-divergence-review.md); "K1" is a
 candidate found while writing the K semantics.
 
+Each case also carries the outcome the circuit oracle (`zkir-circuit-oracle`,
+MockProver on the same preimage) must report, from the divergence-cases
+section of plan-iter3/circuit-comparison-table.md (`CIRCUIT` below).
+
 Usage: uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 Writes the programs to corpus/divergence/ and exits 0 iff every case matches.
 """
@@ -19,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import circuit_compare as cc  # noqa: E402
 import zkir_kast  # noqa: E402
 import zkir_values as zv  # noqa: E402
 from zkir_run import Runner  # noqa: E402
@@ -182,6 +187,33 @@ CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
     'divisor * 2^8 + modulus >= r: off-circuit overflow error; in circuit the sum would wrap mod r'))
 
 
+# The expected circuit-oracle outcome of every case (plan-iter3 M1), from the
+# "Divergence cases" section of plan-iter3/circuit-comparison-table.md: the
+# outcome and, for a panic, the message class of D2 / D1c / D10.
+CIRCUIT = {
+    'f02_assert_non_boolean': (cc.P, None),
+    'f03_guard_uncoupled': (cc.A, None),
+    'f04_less_than_odd_bits': (cc.P, None),
+    'f05_noncanonical_foreign_limbs': (cc.C, None),
+    'f06_cond_select_bytes32': (cc.X, 'Synthesis'),
+    'f07_constrain_eq_jubjub_scalar': (cc.X, 'Synthesis'),
+    'f08_bytes32_from_low_high_foreign_high': (cc.X, 'Synthesis'),
+    'f10_reconstitute_bits_256': (cc.P, None),
+    'f11_curve25519_torsion_point': (cc.P, None),
+    'f12_ec_mul_generator_p256': (cc.P, None),
+    'f13_chip_gating_from_bytes32': (cc.X, 'must enable secp256k1'),
+    'k01_jubjub_from_coordinates_parity_only': (cc.C, None),
+    'k01b_jubjub_from_coordinates_no_chip': (cc.X, 'must enable jubjub'),
+    'k03_bytes32_input_assertion_panics': (cc.X, None),
+    'k04_jubjub_scalar_from_native_chip': (cc.X, 'must enable jubjub'),
+    'k05_less_than_253_bits_keygen': (cc.X, 'Cannot bound'),
+    'k06_empty_impact_guard': (cc.P, None),
+    'k07_alignment_option_offcircuit': (cc.X, 'Synthesis'),
+    'k02_transcript_too_short_panics': (cc.X, 'out of range'),
+    'f01_reconstitute_overflow': (cc.P, None),
+}
+
+
 def oracle(path: Path, pre: dict) -> dict:
     with tempfile.NamedTemporaryFile('w', suffix='.json') as f:
         json.dump(pre, f)
@@ -232,9 +264,12 @@ def main() -> int:
                 detail = f'{targets[0][0]}: {targets[0][1]}' if targets[0][1] else targets[0][0]
             if k['status'] != 'ok' and not k.get('error', '').startswith('well'):
                 detail = detail + ' | ' + k.get('error', '')[:70]
-        ok = (k_status == exp_k) and (r['status'] == exp_r) and (outcome == exp_outcome) and (k_status != 'stuck')
+        exp_c, exp_c_msg = CIRCUIT[name]
+        c = cc.run_circuit_oracle(cc.CIRCUIT_ORACLE, path, pre)
+        c_ok = c.get('outcome') == exp_c and (exp_c_msg is None or exp_c_msg in c.get('message', ''))
+        ok = (k_status == exp_k) and (r['status'] == exp_r) and (outcome == exp_outcome) and (k_status != 'stuck') and c_ok
         failures += not ok
-        print(f"{'PASS' if ok else 'FAIL'}  {name:42} {finding:20} K={k_status:8} Rust={r['status']:6} gate={gate_sub}:{outcome}")
+        print(f"{'PASS' if ok else 'FAIL'}  {name:42} {finding:20} K={k_status:8} Rust={r['status']:6} gate={gate_sub}:{outcome} circuit={c.get('outcome')}")
         if k_status == 'ok' and r['status'] == 'ok' and 'memory' in r:
             km = {n: (v['type'], v['encoded']) for n, v in k['memory'].items()}
             rm = {n: (v['type'], v['encoded']) for n, v in r['memory'].items()}
@@ -243,8 +278,9 @@ def main() -> int:
                 print(f"        MEMORY DIFFERS: K={km} Rust={rm}")
         print(f"        {note}")
         print(f"        K: {detail[:100]} | Rust: {r.get('error', 'ok')[:100]}")
+        print(f"        circuit: {c.get('outcome')} {c.get('message', '')[:110]!r}" + (f" failures={c['failures'][:2]}" if c.get('failures') else '') + f" {c.get('elapsed_ms', 0)}ms")
         if not ok:
-            print(f"        expected K={exp_k} Rust={exp_r} outcome={exp_outcome}")
+            print(f"        expected K={exp_k} Rust={exp_r} outcome={exp_outcome} circuit={exp_c}" + (f" ({exp_c_msg!r} in message)" if exp_c_msg else ''))
     print(f'\n{len(CASES) - failures}/{len(CASES)} divergence cases behave as expected')
     return 1 if failures else 0
 
