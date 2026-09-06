@@ -9,6 +9,14 @@ cell for the honest preimage and the four preimage perturbations;
 `predict_injection` is the taint walk of D3/D4/D5 that decides the cell of a
 Native-register injection from the program and the K memory of the honest
 run; `choose_injections` picks the registers; `judge` compares.
+
+A K verdict `unconstrained` (plan-iter3 M2) is not a failure: the relation is
+satisfied and leaves the register a free cell (a guarded-off `public_input` /
+`private_input`, or a witness-assigned JubjubScalar). `first_bad` and
+`k_summary` skip it, so a run whose only non-`holds` verdicts are
+`unconstrained` is row `ok` (its `witness_space` flag is true), and
+`choose_injections` injects one such register (column `inject-unconstrained`,
+D5): the oracle must accept any value in a free cell that no consumer reads.
 """
 from __future__ import annotations
 
@@ -90,7 +98,7 @@ SEVERITY = ('violated', 'synthErr', 'unknown', 'unsupported')
 def first_bad(k: dict) -> tuple[str, str, str] | None:
     """The first non-holding verdict in emission order, `commGate` last (the crate
     checks the commitment after the last instruction)."""
-    bad = [v for v in k.get('all_verdicts', []) if v[0] != 'holds']
+    bad = [v for v in k.get('all_verdicts', []) if v[0] not in ('holds', 'unconstrained')]
     bad.sort(key=lambda v: v[2].startswith('commGate'))
     return tuple(bad[0]) if bad else None
 
@@ -567,11 +575,26 @@ def predict_injection(doc: dict, k: dict, reg: str, new: int) -> Expect:
     return Expect(frozenset({A}), None, 'inject: A (D3)', reason)
 
 
+def predict_unconstrained(doc: dict, k: dict, reg: str, new: int) -> Expect:
+    """D5: a register K reports `unconstrained` is a free cell. Injecting any
+    value is `A` when no consumer reads it in circuit; when a consumer stores
+    a recomputed value through `mem_insert` or a constraint reads it, the
+    injected memory is outside the witness space and the D3 walk decides."""
+    exp = predict_injection(doc, k, reg, new)
+    if exp.outcomes == frozenset({A}):
+        return Expect(exp.outcomes, None, 'inject-unconstrained: A (D5)', 'free cell, ' + exp.reason)
+    if exp.outcomes is None:
+        return Expect(None, None, 'undecided (D5)', exp.reason)
+    return Expect(exp.outcomes, None, f'inject-unconstrained: {exp.codes()} (D5 consumer, D3)', exp.reason)
+
+
 def choose_injections(doc: dict, k: dict) -> list[tuple[str, str, int, Expect]]:
     """One declared Native input, one computed Native register (mem_insert),
-    one bypass-stored Native register (D4) and one guarded-off Native
-    public_input register (D5) when the program has them; the first register
-    with a decided prediction of each kind."""
+    one bypass-stored Native register (D4) and one Native register whose
+    assigning verdict is `unconstrained` (D5, a guarded-off public_input /
+    private_input) when the program has them; the first register with a
+    decided prediction of each kind, and for D5 the first whose cell no
+    consumer reads."""
     mem = k['memory']
     natives = {r for r, e in mem.items() if e['type'] == 'Native'}
     chosen: list[tuple[str, str, int, Expect]] = []
@@ -589,22 +612,30 @@ def choose_injections(doc: dict, k: dict) -> list[tuple[str, str, int, Expect]]:
             chosen.append(best)
 
     pick('inject-input', [e['name'] for e in doc['inputs'] if e['name'] in natives])
-    computed, bypass, guard_off = [], [], []
+    computed, bypass = [], []
     for ins in doc['instructions']:
         op = ins['op']
         if op in ('public_input', 'private_input'):
-            g = ins.get('guard')
-            if op == 'public_input' and g is not None and ins['output'] in natives:
-                gv = zkir_kast.immediate(g) if not _is_reg(g) else (int(mem[g]['encoded'][0]) if g in natives else None)
-                if gv == 0:
-                    guard_off.append(ins['output'])
             continue
         for o in _writes(ins):
             if o in natives:
                 (bypass if op in BYPASS else computed).append(o)
     pick('inject-computed', computed)
     pick('inject-ignored', bypass, Expect(frozenset({A}), None, 'inject-ignored: A (D4)', 'output stored with memory.insert'))
-    pick('inject-guard-off', guard_off)
+    # D5: the registers K reports unconstrained (the guarded-off inputs; a
+    # JubjubScalar register is not Native and cannot be injected)
+    free = [r for r in k.get('unconstrained', []) if r in natives]
+    best = None
+    for r in free:
+        new = (int(mem[r]['encoded'][0]) + 1) % zv.R
+        exp = predict_unconstrained(doc, k, r, new)
+        rank = 0 if exp.outcomes == frozenset({A}) else (1 if exp.outcomes is not None else 2)
+        if best is None or rank < best[0]:
+            best = (rank, ('inject-unconstrained', r, new, exp))
+        if rank == 0:
+            break
+    if best:
+        chosen.append(best[1])
     return chosen
 
 

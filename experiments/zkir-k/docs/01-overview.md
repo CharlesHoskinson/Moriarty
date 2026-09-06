@@ -18,7 +18,7 @@ Four main modules give four compiled definitions: `ZKIR` and `ZKIR-EXT` run prog
 A ZKIR program has two halves in the crate. The off-circuit half, `IrSource::preprocess` in `ir_vm.rs`, computes the witness: it decodes the raw inputs, runs each `*_offcircuit` function, consumes the transcripts and builds the public-input vector. The in-circuit half, `Relation::circuit`, builds the PLONKish circuit from the same instructions. The definition models both at the level of instructions:
 
 - Off-circuit, `ZKIR-VM` in `zkir-vm.k` models the witness computation of `preprocess`, including its run-time checks and its error and panic points, and records the result in cells (`<mem>`, `<pi>`, `<skips>`, `<outputs>`, `<status>` and the transcript cursors). The differential harness measures how closely it follows the crate (see the checking pipeline below).
-- In-circuit, `ZKIR-CONSTRAINTS` in `zkir-constraints.k` gives every instruction a relation over registers: `gate(add(a, b, o))` states that `o` is the sum of `a` and `b` under the type dispatch of `add_incircuit`. Each gate is evaluated on the final witness and gets one of five outcomes: `holds`, `violated`, `synthErr`, `unknown` or `unsupported`.
+- In-circuit, `ZKIR-CONSTRAINTS` in `zkir-constraints.k` gives every instruction a relation over registers: `gate(add(a, b, o))` states that `o` is the sum of `a` and `b` under the type dispatch of `add_incircuit`. Each gate is evaluated on the final witness and gets one of six outcomes: `holds`, `violated`, `synthErr`, `unknown`, `unconstrained` or `unsupported`; the run then records whether the final memory is in the modelled witness space (08-constraints-and-verdicts.md).
 
 The definition does not model the PLONKish gate rows and copy wiring the circuit is compiled to, the auxiliary witness cells and assignment constraints of each type (byte range checks, on-curve and cofactor constraints, foreign limb ranges), or the internals of the hash gadgets. Chapter 15-design-rationale-and-limits.md explains why, and the last section of this chapter gives the consequences.
 
@@ -69,9 +69,10 @@ FILE.zkir (JSON)                          PREIMAGE.json
       <mem> <pi> <skips> <outputs> <status> <constraints> <chips> ...
                           |
                           v   eval (zkir-constraints.k), one verdict per constraint
-      <verdicts>: a list of verdict(C, O), with C a Constraint (gate, piGate, guardGate,
-                  bindGate, commGate, outputGate) and O one of
-                  holds() | violated(msg) | synthErr(msg) | unknown(msg) | unsupported(msg)
+      <verdicts>: a list of verdict(C, O), with C a Constraint (gate, inputGate, piGate,
+                  guardGate, bindGate, commGate, outputGate) and O one of
+                  holds() | violated(msg) | synthErr(msg) | unknown(msg) | unconstrained(msg) | unsupported(msg)
+      <witnessSpace>: every verdict holds or is unconstrained and every register is well typed
 ```
 
 The three entry points share the instruction rules. `job` runs any program the crate's `IrSource::load` accepts. `checkedJob` first evaluates `wf` and turns a failure into the run's error:

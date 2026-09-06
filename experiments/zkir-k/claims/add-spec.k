@@ -21,10 +21,13 @@ module ADD-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A) ListItem(B), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(add(var("%a"), var("%b"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(inputGate("%b", native())) ListItem(bindGate(0)) ListItem(gate(add(var("%a"), var("%b"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(inputGate("%b", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(add(var("%a"), var("%b"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>

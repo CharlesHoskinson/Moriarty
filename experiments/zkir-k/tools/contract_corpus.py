@@ -41,6 +41,8 @@ CORPORA = {
     'handmade-negative': False,
     'divergence': False,
 }
+# files of a base-surface directory that load with the extension surface
+EXT_FILES = {'k08_load_constant_jubjub_chip.zkir'}
 
 # file name -> the obligations expected to fail (a substring of the detail each),
 # or 'format' when the preprocessor rejects the file. Unlisted: every
@@ -50,6 +52,7 @@ EXPECTED: dict[str, dict[str, str] | str] = {
     'f13_chip_gating_from_bytes32.zkir': {'chips.gating': 'instruction 0 (from_bytes32) needs chip secp256k1'},
     'k04_jubjub_scalar_from_native_chip.zkir': {'chips.gating': 'instruction 0 (jubjub_scalar_from_native) needs chip jubjub'},
     'k01b_jubjub_from_coordinates_no_chip.zkir': {'chips.gating': 'instruction 0 (from_coordinates) needs chip jubjub'},
+    'k08_load_constant_jubjub_chip.zkir': {'chips.gating': 'instruction 0 (load_constant) needs chip jubjub'},
     # keygen width and synthesis alignment cases
     'k05_less_than_253_bits_keygen.zkir': {'width.less_than': 'bits 253 pads to 254'},
     'k07_alignment_option_offcircuit.zkir': {'alignment.persistent_hash': 'option segment'},
@@ -104,7 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             obs = None
             fmt_error = False
             try:
-                term = zkir_kast.load_program(path, ext=ext)
+                term = zkir_kast.load_program(path, ext=ext or path.name in EXT_FILES)
             except zkir_kast.ZkirFormatError as e:
                 fmt_error = True
                 line = f'format: {e}'

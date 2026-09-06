@@ -207,6 +207,7 @@ def main() -> int:
     rows = []
     failures = 0
     oracle2_flags = []
+    ws_rows: list[tuple[str, bool, list[str]]] = []   # (program, witness_space, unconstrained registers) of successful K runs
     t0 = time.time()
     for corpus, directory in CORPORA.items():
         for path in sorted(directory.glob('*.zkir')):
@@ -252,7 +253,11 @@ def main() -> int:
                 viol = k.get('violations', [])
                 if k['status'] == 'ok' and viol:
                     oracle2_flags.append((path.name, viol))
+                if k['status'] == 'ok':
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', [])))
                 vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
+                if k.get('unconstrained'):
+                    vnote += f" witness_space={str(k.get('witness_space', False)).lower()} unconstrained={','.join(k['unconstrained'][:6])}"
                 rows.append((corpus, path.name, f'run{attempt}', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} passes={passes} {time.time() - t1:.1f}s{note}{vnote}", diffs))
                 if args.circuit:
                     run_row = len(rows) - 1
@@ -310,6 +315,10 @@ def main() -> int:
     errs = sum(1 for r in rows if r[3].startswith('K=error Rust=error') or r[3].startswith('K=panic Rust=panic'))
     print(f'\n{len(rows)} comparisons: {oks} successful-run agreements, {errs} error-run agreements (status and error class), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
     print(f'oracle 2: {len(oracle2_flags)} successful K runs with a non-holding gate' + (': ' + '; '.join(f'{n} {v[0][0]}[{v[0][1][:40]}]' for n, v in oracle2_flags[:10]) if oracle2_flags else ''))
+    in_space = sum(1 for _, ws, _ in ws_rows if ws)
+    with_free = [(n, regs) for n, _, regs in ws_rows if regs]
+    print(f'witness space: {in_space} of {len(ws_rows)} successful K runs in the modelled witness space, {len(with_free)} with unconstrained registers'
+          + (': ' + '; '.join(f"{n} {','.join(regs[:4])}" for n, regs in with_free[:10]) if with_free else ''))
     if args.circuit:
         from collections import Counter
         entries = [e for es in circ.values() for e in es]

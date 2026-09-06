@@ -1,29 +1,30 @@
 # Constraints and verdicts
 
-A run of the definition builds two things from the same instruction list: the off-circuit witness of `IrSource::preprocess`, and a list of instruction-level in-circuit relations. After the last instruction, every relation is evaluated on the final memory, the public-input vector and the chip set, and each emitted constraint receives one `verdict(Constraint, Outcome)`. A run whose status is `ok` and whose every verdict is `holds()` establishes that this honest witness satisfies those relations, and nothing more: not that no other witness does, not that the Halo2 rows the crate would synthesise are uniquely determined, not that a proof exists. The checker establishes completeness of an instruction-level abstraction of `Relation::circuit` in `ir_vm.rs` at midnight-ledger 92e8bdd3 (plan decision CLM-0721).
+A run of the definition builds two things from the same instruction list: the off-circuit witness of `IrSource::preprocess`, and a list of instruction-level in-circuit relations. After the last instruction, every relation is evaluated on the final memory, the public-input vector and the chip set, and each emitted constraint receives one `verdict(Constraint, Outcome)`. The run then decides whether the final memory is a point of the modelled witness space: every verdict is `holds()` or `unconstrained(msg)`, and every register holds a well-typed value. A memory in that space is claimed to be accepted by the circuit up to a stated residual list (the section "What the witness space establishes"); the claim is tested against the crate's circuit under the MockProver, never proved. A run establishes nothing about other witnesses: not that no other witness satisfies the relations, not that the Halo2 rows the crate would synthesise are uniquely determined, not that a proof exists. The checker models an instruction-level abstraction of `Relation::circuit` in `ir_vm.rs` at midnight-ledger 92e8bdd3 (plan decision CLM-0721).
 
 The module is `ZKIR-CONSTRAINTS` in `zkir-constraints.k`, and the emission rules are in `zkir-vm.k`. Per-instruction relations of the base surface are in 07-instruction-reference.md, the extension `eval` rules of `zkir-ext.k` in 09-extension-surface.md, and the off-circuit versus in-circuit splits in 13-known-divergences.md.
 
 ## Instruction-level constraints
 
-`Constraint` has six constructors. None of them is a PLONKish gate row. `gate(I)` is the relation that `Relation::circuit` and the matching `*_incircuit` function enforce for instruction `I`, read off the chip calls they make.
+`Constraint` has seven constructors. None of them is a PLONKish gate row. `gate(I)` is the relation that `Relation::circuit` and the matching `*_incircuit` function enforce for instruction `I`, read off the chip calls they make.
 
 | Constructor | Relation |
 |---|---|
 | `gate(Instr)` | the in-circuit relation of that instruction over registers and immediates |
+| `inputGate(String, IrType)` | the declared input register holds a value of its declared type (`assign_incircuit` from the witness memory) |
 | `piGate(Int, Operand, Operand)` | public input `i` equals `g ? x : 0`, with `g` boolean and `x` Native |
 | `guardGate(Operand)` | the impact guard is boolean, including an empty impact |
 | `bindGate(Int)` | public input `i` equals the preimage binding input |
 | `commGate(Int, TypedIds, Int)` | public input `i` equals Poseidon of the opening, the re-encoded input registers and the encoded outputs |
 | `outputGate(Operands, IrTypes)` | output arity and per-position runtime type against the program signature |
 
-`job` sequences `#loadInputs`, `#seedPi`, the instruction list and `#verdicts`. The cells in `zkir-vm.k` are `<constraints>` (emitted list), `<chips>` (chip set), `<verdicts>` (evaluated list) and `<piIdx>` (constraint-side public-input counter).
+`job` sequences `#loadInputs`, `#seedPi`, the instruction list, `#verdicts` and `#witnessSpace`. The cells in `zkir-vm.k` are `<constraints>` (emitted list), `<chips>` (chip set), `<verdicts>` (evaluated list), `<witnessSpace>` (the membership decision), `<unconstrainedRegs>` (the registers whose assigning relation is `unconstrained`) and `<piIdx>` (constraint-side public-input counter).
 
 Instructions still emit after a witness failure. `#exec` is a no-op when `<status>` is `error` or `panic`, and later verdicts that need a missing register or public-input slot become `unknown` rather than `violated`. A failed static check under `checkedJob` sets `<status>` to `error` first and `job` then rewrites to `.K`, so no gate is emitted or evaluated.
 
 ### When each constructor is emitted
 
-`#seedPi` always appends `bindGate(0)`. When `<doComm>` is true it also appends `commGate(1, Ins, Rand)`, where `Ins` is the program input list and `Rand` is the opening, or `0` if the commitment is absent (the witness half then fails with `"Expected communications commitment"`). The witness half seeds `<pi>` with the binding input and, while still alive and when a commitment is present, with the commitment value. After an earlier decode failure the gates are still emitted and `<piIdx>` still advances to 1 or 2.
+The `job` rule appends one `inputGate(N, T)` per declared input to `<constraints>` before anything runs, in declaration order, whether or not the raw inputs decode: the circuit assigns every declared input from the witness memory before the binding input. `#seedPi` then always appends `bindGate(0)`. When `<doComm>` is true it also appends `commGate(1, Ins, Rand)`, where `Ins` is the program input list and `Rand` is the opening, or `0` if the commitment is absent (the witness half then fails with `"Expected communications commitment"`). The witness half seeds `<pi>` with the binding input and, while still alive and when a commitment is present, with the commitment value. After an earlier decode failure the gates are still emitted and `<piIdx>` still advances to 1 or 2.
 
 Every ordinary instruction emits `gate(I)` before `#exec(I)`:
 
@@ -36,7 +37,7 @@ rule <k> I:Instr => #exec(I) ... </k> <constraints> Cs => Cs ListItem(gate(I)) <
 
 ## Outcomes
 
-`Outcome` has five constructors. `eval` is total. `verdicts` maps each constraint to `verdict(C, eval(C, mem, pi, chips, outputs, binding))`, and `violations` is the sublist whose outcome is not `holds()`.
+`Outcome` has six constructors. `eval` is total. `verdicts` maps each constraint to `verdict(C, eval(C, mem, pi, chips, outputs, binding))`, and `violations` is the sublist whose outcome is neither `holds()` nor `unconstrained(msg)`.
 
 | Outcome | Meaning |
 |---|---|
@@ -44,7 +45,10 @@ rule <k> I:Instr => #exec(I) ... </k> <constraints> Cs => Cs ListItem(gate(I)) <
 | `violated(msg)` | a circuit for this instruction exists and rejects the witness |
 | `synthErr(msg)` | the circuit cannot be built |
 | `unknown(msg)` | a register or public-input slot the gate reads is absent |
+| `unconstrained(msg)` | the relation is satisfied and deliberately leaves the register a free cell beyond its type |
 | `unsupported(msg)` | no in-circuit relation is modelled for this gate |
+
+`unconstrained` is emitted in two places, both residual items of the soundness claim below. A `public_input` or `private_input` whose guard register holds `native(0)` reports `unconstrained("<op> guard is 0: register X is a free cell")` after the type and chip checks pass (`#guardedOff`): in circuit the guard is not read (`guard: _`), the register is assigned from the witness, pushed to no public input, and read by nothing in this relation, while the witness holds `defaultValue(T)`. An `inputGate`, `public_input` or `private_input` of type `JubjubScalar` reports `unconstrained("JubjubScalar canonicity: the assigned bits of X are not proven below the scalar field order")` (`#canonicity`): `EccChip::assign` in midnight-circuits 7.2.4 `ecc/native/edwards_chip.rs` assigns the 252 little-endian bits of the witness scalar with `enforced_canonical = false`, and nothing constrains the bit string below `#rJ`. The other two ways a JubjubScalar register is assigned are canonical and report `holds`: `jubjub_scalar_from_native` reduces through `BigUintGadget::div_rem`, whose `assert_lower_than` proves the remainder below the order (`jubjub_scalar_from_biguint` in `ir_instructions/encode.rs`), and the extension `load_constant` uses `assign_fixed`, fixed cells with `enforced_canonical = true`. `#and` returns the first non-`holds` outcome, and both `unconstrained` checks come last in their conjunctions, so a `violated` or `synthErr` on the same gate wins.
 
 `eval/6` (`eval(Constraint, Map, List, Set, List, Int)`) handles the three gates that need the outputs or the binding input. `bindGate(I)` is `holds` when `pi[I]` equals the binding, `unknown("public input vector incomplete")` when the vector is shorter than `I + 1`, and `violated("binding input differs")` otherwise. `commGate` has its own section below. `outputGate` is `synthErr("Output: signature declares N return values but instruction has M")` on an arity mismatch; otherwise `#outputTypes` is `holds` on matching runtime types, `synthErr("Output position I: signature declares T but operand has runtime type U")` on a mismatch, and `unknown` if a register is missing. Every other constraint falls through to `eval/4`, the per-instruction relation.
 
@@ -64,7 +68,7 @@ The `[owise]` rule is `unsupported("no in-circuit relation modelled for this ins
 
 `synthErr` also covers a missing in-circuit dispatch arm (`#eqSupported`: `JubjubScalar` equality, case `f07`, and `Bytes32` `cond_select`, case `f06`), a chip that `usedChips` did not initialise, a `less_than` padded bound above 253, a `constrain_bits` width above 255, and `div_mod_power_of_two` with a number of outputs other than 2.
 
-`assert` is `cond != 0` in circuit (`#nonZero`). Off-circuit `preprocess` requires a boolean, so `assert` of 2 fails the witness while the gate `holds` (case `f02`). `public_input` and `private_input` check that the register has the declared type (`violated` on a mismatch) and that the type's chip is initialised. The guard is not part of the gate (case `f03`).
+`assert` is `cond != 0` in circuit (`#nonZero`). Off-circuit `preprocess` requires a boolean, so `assert` of 2 fails the witness while the gate `holds` (case `f02`). `public_input`, `private_input` and `inputGate` check that the register has the declared type (`violated` on a mismatch) and that the type's chip is initialised. The guard is not read by the relation; a guard of 0 makes the verdict `unconstrained` (case `f03`).
 
 ## Chip gating
 
@@ -109,23 +113,34 @@ The in-circuit gate `commGate(I, Ins, Rand)` re-encodes the assigned input regis
 
 The two hashes agree when every input encoding is canonical. They differ when a foreign-field input is a non-canonical limb encoding of a reduced value: `preprocess` hashes the raw stream and accepts, while the circuit hashes the canonical re-encoding of the assigned value and rejects. Case `f05` (`corpus/divergence/f05_noncanonical_foreign_limbs.zkir`) is that split: status `ok`, `commGate` `violated`. A `holds` on `commGate` therefore proves agreement with the circuit's commitment, not with the raw-stream commitment of `preprocess`.
 
-## What `holds` establishes
+## What the witness space establishes
 
-A finished `ok` run whose `violations` list is empty proves that every emitted instruction-level relation is satisfied by the final `<mem>`, `<pi>` and `<outputs>`, that every chip those relations need is in `usedChips` of this program, that the widths they ask of the native gadget are inside the chip limits the checker models, and that the public-input vector matches the binding input, the guarded impacts, and, when the flag is set, the circuit-side communications commitment.
+`witnessSpace(verdicts, mem)` in `zkir-constraints.k` is true when every verdict is `holds()` or `unconstrained(msg)` (`#admissible`) and every value in `<mem>` is a term of sort `Value` (`wellTyped(values(mem))`). `#witnessSpace` writes it to `<witnessSpace>` after `#verdicts`, together with `unconstrainedRegs(verdicts)` in `<unconstrainedRegs>`: the declared input of an `inputGate` and the written registers of a `gate(I)` whose outcome is `unconstrained`. The predicate reads neither `<status>` nor the transcripts: a run that `preprocess` rejects can still have a memory in the space (case `f02`, `assert` of 2), and the oracle sees it only through a witness injection (the comparison table's D9).
 
-It does not prove the following, which the instruction-level abstraction omits.
+Typing discharges the assignment constraints of the types. A term of sort `Value` is by construction a canonical native field element, a point on its curve and in its prime-order subgroup, a byte string of its declared length, or a foreign element below its modulus, because the crate's typed `IrValue` (`JubjubPoint(JubjubSubgroup)`, `JubjubScalar(JubjubFr)`, `Bytes32([u8; 32])`, foreign bases and scalars as field types) cannot be malformed and the K decoders of `ZKIR-VALUES` build only such values. The per-type range, on-curve and cofactor constraints that the circuit places at assignment therefore hold on every register of a well-typed memory and are not evaluated a second time.
 
-- Auxiliary advice cells and copy wiring. Equality of two registers in a `gate` is value equality, not a permutation argument between named Halo2 cells.
-- Assignment constraints of each type: byte range checks, on-curve and cofactor constraints at assignment, and foreign-limb ranges. A value that `preprocess` placed in a register is treated as already well-typed. Only `from_coordinates` re-checks that the exact `(x, y)` is on the curve and in the prime-order subgroup (`#fromCoordsPt`). `into_coordinates` (`#coordsMatch`) rejects the secp256k1 and secp256r1 identity and compares the two output registers with `intoCoordinatesV`; it does not re-check curve or subgroup membership.
-- Canonicity of an assigned JubjubScalar. `AssignedScalarOfNativeCurve` is not proven canonical by assignment alone. `jubjub_scalar_from_native` reduces modulo `#rJ` and checks the chip, not a canonical bit decomposition.
-- Hash gadget internals. Hash gates compare the output with the concrete functions of `zkir-hash.k`. They do not replay round constraints, MDS wiring or sponge padding as Halo2 rows.
-- Prover-side panics inside chips. A hint that would abort the prover while the relation is unsatisfiable is `violated` (case `f11`). A missing chip or a width assert that aborts keygen is `synthErr`. Other panics inside midnight-circuits are not modelled.
+The projection from circuit cells to registers, stated in the header of `zkir-constraints.k`:
 
-A `holds` verdict on `assert` of a non-boolean non-zero, or on `public_input` whose off-circuit guard was false, is therefore expected: the circuit relation is weaker than, or different from, the witness check. When the off-circuit bound of `less_than` fails, the verdict is `unknown` rather than `holds`, because the output register is absent even though the padded relation would have accepted the inputs (case `f04`).
+1. Each named register is the value of the cell (or cell group) that the crate binds to that identifier: through `mem_insert` for every instruction output and for `public_input` / `private_input` registers, through `memory.insert` for the declared inputs (assigned from the witness by `assign_incircuit`) and for the outputs of `from_bytes32`, `reverse_bytes`, `bytes32_into_low_high` and `bytes32_from_low_high`. The K register holds the typed value of that cell.
+2. Auxiliary cells (bit decompositions, limbs, hash and curve gadget rows, lookup witnesses) are existentially quantified: a memory is in the modelled space when some assignment of the auxiliary cells satisfies the crate's constraints together with the projected registers. The model never names them.
+3. Copy wiring between named cells is value equality: where the crate copies a cell into a gadget through the permutation argument, the model states that the two registers hold the same value.
+
+The soundness claim: any memory in the modelled witness space, with its public-input vector, is accepted by the circuit up to the residual list below. Each item names a place where the circuit may accept a witness the model does not describe, or reject one it does.
+
+- Auxiliary cells: their existence is assumed, never constructed.
+- Copy wiring: modelled as value equality, not as the permutation.
+- Hash gadget internals: hash gates compare against the concrete functions of `ZKIR-HASH`, not against the gadget's rows.
+- Prover-side panics: a chip hint that aborts the prover is reported as `violated` or `synthErr`; other panics inside midnight-circuits are not modelled.
+- JubjubScalar canonicity: a JubjubScalar assigned from the witness (declared input, `public_input`, `private_input`) is 252 witness bits that nothing constrains below the scalar field order; visible as `unconstrained` on `inputGate` and on the two input gates.
+- Guarded-off inputs: the register of a `public_input` / `private_input` whose guard is 0 is assigned from the witness and pushed nowhere; the circuit leaves the cell free where the witness holds the type's default value; visible as `unconstrained` on that gate.
+
+The claim is tested, not proved. `tools/diff_test.py --circuit` runs the crate's circuit under the MockProver on every corpus witness, on Native injections into the preprocessed memory and on the divergence cases, and compares each outcome with `plan-iter3/circuit-comparison-table.md`. For an `unconstrained` register the harness injects an arbitrary value and expects `accepted` when no consumer reads the cell (D5); the receipt `evidence/zkir-k-circuit-differential-92e8bdd3-2026-09-06b.txt` records that cell on `%color.11` of swap `expire.zkir`. The JubjubScalar item has no injection column: `--inject` takes Native values only, and the typed interface cannot carry the non-canonical representative the free bits admit.
+
+A `holds` verdict on `assert` of a non-boolean non-zero is therefore expected: the circuit relation is weaker than the witness check. When the off-circuit bound of `less_than` fails, the verdict is `unknown` rather than `holds`, because the output register is absent even though the padded relation would have accepted the inputs (case `f04`). A memory outside the space, whether by a `violated`, `synthErr`, `unknown` or `unsupported` verdict, carries no claim about the circuit beyond the cell the comparison table assigns to that verdict.
 
 ## How the harness uses verdicts
 
-`tools/zkir_run.py` derives the run status from `<status>` and `<k>` alone. It pretty-prints each entry of `<verdicts>` into `all_verdicts` (triples `(outcome, message, gate)`) and `violations` (the triples whose outcome is not `holds`). `constraints` and `verdicts` are the lengths of the two cells. From the repository root, the handmade Poseidon program emits eight constraints and eight `holds` verdicts:
+`tools/zkir_run.py` derives the run status from `<status>` and `<k>` alone. It pretty-prints each entry of `<verdicts>` into `all_verdicts` (triples `(outcome, message, gate)`) and `violations` (the triples whose outcome is neither `holds` nor `unconstrained`), reads `<witnessSpace>` into `witness_space` and `<unconstrainedRegs>` into `unconstrained`. `constraints` and `verdicts` are the lengths of the two cells. From the repository root, the handmade Poseidon program emits eleven constraints and eleven `holds` verdicts:
 
 ```
 printf '%s\n' '{"inputs": ["5", "123456789", "987654321987654321"]}' > /tmp/transient_hash.json
@@ -134,10 +149,10 @@ uv run --group zkir-k python experiments/zkir-k/tools/zkir_run.py \
   /tmp/transient_hash.json
 ```
 
-The object has `"status": "ok"`, `"constraints": 8`, `"verdicts": 8` and `"violations": []`: `bindGate(0)`, four `transientHash` and three `hashToCurve`.
+The object has `"status": "ok"`, `"constraints": 11`, `"verdicts": 11`, `"violations": []`, `"witness_space": true` and `"unconstrained": []`: three `inputGate`, `bindGate(0)`, four `transientHash` and three `hashToCurve`.
 
-`tools/diff_test.py` appends an `ok` K run whose `violations` is non-empty to `oracle2_flags` and does not fail the comparison on that list. It prints `oracle 2: N successful K runs with a non-holding gate`, where successful means status `ok`. The receipts `evidence/zkir-k-differential-92e8bdd3-2026-09-05c.txt` and `evidence/zkir-k-differential-ext-2ffe2d1-2026-09-05c.txt` both report `N = 0`, over 358 base-surface comparisons (46 successful-run agreements) and 418 extension-surface comparisons (50 successful-run agreements). Error runs may carry non-holding verdicts: an `output` arity mismatch is `synthErr` on `outputGate` while the status is `error`.
+`tools/diff_test.py` appends an `ok` K run whose `violations` is non-empty to `oracle2_flags` and does not fail the comparison on that list. It prints `oracle 2: N successful K runs with a non-holding gate`, where successful means status `ok`, and `witness space: X of Y successful K runs in the modelled witness space, Z with unconstrained registers`, naming the registers. The receipts `evidence/zkir-k-circuit-differential-92e8bdd3-2026-09-06b.txt` and `evidence/zkir-k-circuit-differential-ext-2ffe2d1-2026-09-06b.txt` both report `N = 0` and every successful run in the space, over 358 base-surface comparisons (46 successful-run agreements) and 418 extension-surface comparisons (50 successful-run agreements). Error runs may carry non-holding verdicts: an `output` arity mismatch is `synthErr` on `outputGate` while the status is `error`.
 
-`tools/divergence_tests.py` selects one gate per case: the first verdict whose pretty-printed constraint, with underscores and spaces removed and lower-cased, starts with `gate(<op>(` or with the constructor name (`commGate(`, `guardGate(`). A missing emission is `no-such-gate`, not an inferred `holds`. The expected outcome is `holds`, `violated`, `synthErr`, `unknown`, or `n/a` when `checkedJob` stops on well-formedness before `#verdicts` (case `f10`). The receipt `evidence/zkir-k-divergence-tests-2026-09-05c.txt` records 20/20 matches.
+`tools/divergence_tests.py` selects one gate per case: the first verdict whose pretty-printed constraint, with underscores and spaces removed and lower-cased, starts with `gate(<op>(` or with the constructor name (`commGate(`, `guardGate(`). A missing emission is `no-such-gate`, not an inferred `holds`. The expected outcome is `holds`, `violated`, `synthErr`, `unknown`, `unconstrained`, or `n/a` when `checkedJob` stops on well-formedness before `#verdicts` (case `f10`). Case `k08` runs on the extension definition and the midnight-zkir 2ffe2d1 oracles. The receipt `evidence/zkir-k-divergence-tests-2026-09-06b.txt` records 21/21 matches.
 
-Evidence that the honest witness satisfies the modelled circuit relations therefore requires both a finished `ok` run and an empty `violations` list, produced from gates that were emitted. Status alone is not enough: case `f05` is `ok` with a `violated` gate. Even together they are not a proof of unique witnesses, of gadget soundness, or of keygen success on a program whose chips `used_chips` did not enable.
+Evidence that the honest witness is in the modelled witness space therefore requires a finished run with `witness_space` true, produced from gates that were emitted; the `unconstrained` list names the registers the claim leaves free. Status alone is not enough: case `f05` is `ok` with a `violated` gate. Even together they are not a proof of unique witnesses, of gadget soundness, or of keygen success on a program whose chips `used_chips` did not enable.

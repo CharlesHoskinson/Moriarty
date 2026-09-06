@@ -6,7 +6,10 @@ Written before the first `--circuit` run, from the spike receipt
 `ir_vm.rs` of both pinned crates, and chapter 08 (the K outcome model). Every
 comparison `tools/diff_test.py --circuit` and `tools/divergence_tests.py` makes
 must land in one of the cells below. A comparison outside the table is a
-blocking finding, reported in the receipt, not absorbed here.
+blocking finding, reported in the receipt, not absorbed here. Revised for M2:
+the outcome `unconstrained` and the constraint `inputGate` (chapter 08, "What
+the witness space establishes") change the `ok` row, the column
+`inject-guard-off` (now `inject-unconstrained`), D5 and two divergence cases.
 
 ## The two sides
 
@@ -21,7 +24,7 @@ failing constraints (`constraint-failure`) or `accepted`.
 
 | K summary (row) | Meaning |
 |---|---|
-| `ok` | status `ok`, every verdict `holds` |
+| `ok` | status `ok`, every verdict `holds` or `unconstrained` (the run's `witness_space` is true) |
 | `ok/violated` | status `ok`, some verdict `violated` (none `synthErr`) |
 | `ok/synthErr` | status `ok`, some verdict `synthErr` |
 | `ok/unknown` | status `ok`, some verdict `unknown`, none of the above |
@@ -43,7 +46,7 @@ crate places the commitment check.
 | wrong-comm | commitment value + 1 | both |
 | inject-input | `--inject`: a declared Native input register of the preprocessed memory set to `v + 1` | oracle only: K has no run on an injected memory |
 | inject-computed | `--inject`: a Native register written by an instruction set to `v + 1` | oracle only |
-| inject-guard-off | `--inject`: a Native `public_input` register whose guard evaluated to 0 set to `v + 1` (its witness value is the type default 0) | oracle only |
+| inject-unconstrained | `--inject`: a Native register whose assigning verdict is `unconstrained` (a `public_input` / `private_input` whose guard evaluated to 0; its witness value is the type default 0) set to `v + 1` | oracle only |
 | instance | `--instance`: one entry of the MockProver instance column + 1, witness untouched | oracle only |
 
 The four preimage perturbations are runs on a different preimage: K and the
@@ -60,9 +63,9 @@ Cell codes: `A` accepted, `P` preprocess-error, `W` witness-consistency-error,
 difference explained below; the code before it is the outcome expected in the
 cases the harness reaches.
 
-| K summary \ perturbation | honest | perturbed-raw | perturbed-typed | wrong-pubin | wrong-comm | inject-input | inject-computed | inject-guard-off | instance |
+| K summary \ perturbation | honest | perturbed-raw | perturbed-typed | wrong-pubin | wrong-comm | inject-input | inject-computed | inject-unconstrained | instance |
 |---|---|---|---|---|---|---|---|---|---|
-| `ok` | A | A | A | A | A | W / C / A, D3 | W, or A under D4 | W / C / A, D3 and D5 | C, D6 |
+| `ok` | A | A | A | A | A | W / C / A, D3 | W, or A under D4 | A, D5 (W / C under D3 when a consumer reads the cell) | C, D6 |
 | `ok/violated` | D1: C, W or X | D1 | D1 | D1 | D1 | n/r | n/r | n/r | n/r |
 | `ok/synthErr` | X, D2 | X, D2 | X, D2 | X, D2 | X, D2 | n/r | n/r | n/r | n/r |
 | `ok/unknown` | D7 (unreachable) | D7 | D7 | D7 | D7 | n/r | n/r | n/r | n/r |
@@ -160,15 +163,25 @@ output (`from_bytes32` to Native, both outputs of `bytes32_into_low_high`)
 can be injected. The harness injects one such register when the program
 has one and expects `A`.
 
-**D5. A guarded-off `public_input` is a free cell.** In circuit the guard is
-not read (`guard: _`); the register is assigned from the witness, pushed to
-no public input, and its `mem_insert` trivially agrees. K's gate for the
-instruction checks only the register's type and chip, so K says `holds`
-for any value and the oracle says `A` unless a consumer of D3 detects it
-(spike finding 3: `%amount.13` in `expire.zkir`). The typical Compact
-pattern feeds it to an `impact` under the same (off) guard or a
-`cond_select` on the same bit, which discards it, so `A` is the expected
-common cell; `W` and `C` are the D3 sub-cells.
+**D5. An `unconstrained` register is a free cell.** In circuit the guard of
+a `public_input` or `private_input` is not read (`guard: _`); when it is 0
+the register is assigned from the witness, pushed to no public input, and
+its `mem_insert` trivially agrees. K's gate for the instruction checks the
+register's type and chip and then reports `unconstrained` (M2), so the run
+stays in row `ok` and `tools/zkir_run.py` lists the register under
+`unconstrained`. The harness injects one such Native register: the oracle
+must say `A` when nothing in the circuit reads the cell (spike finding 3:
+`%amount.13`, and the receipt's `%color.11`, both in `expire.zkir`), which is
+the soundness claim of chapter 08 on a free cell. When a consumer of D3
+reads it, the injected memory is outside the modelled witness space and the
+D3 sub-cells `W` and `C` apply; the harness prefers a register no consumer
+reads. The typical Compact pattern feeds the register to an `impact` under
+the same (off) guard or a `cond_select` on the same bit, which discards it.
+The other `unconstrained` verdict, JubjubScalar canonicity on `inputGate`,
+`public_input` and `private_input` of that type, cannot be tested by
+injection: `--inject` takes Native values only, and the crate's typed
+`IrValue::JubjubScalar(JubjubFr)` cannot carry the non-canonical
+representative that the free bits admit.
 
 **D6. Instance perturbation.** Every pushed public input is
 `constrain_as_public_input`, an equality between an advice cell and the
@@ -217,6 +230,10 @@ the D2 message classes.
 - The instruction that fails: `verify` names regions and columns, not ZKIR
   instructions (spike finding 7); the harness compares outcomes, not
   locations.
+- A non-canonical JubjubScalar: the circuit's 252 assigned bits admit a
+  representative in `[r_J, 2^252)`, the typed witness interface does not,
+  so the `unconstrained` verdict on a witness-assigned JubjubScalar has no
+  oracle column (D5).
 
 ## Divergence cases
 
@@ -225,7 +242,7 @@ The expected oracle outcome added to each case of `divergence_tests.py`:
 | Case | K | Oracle | Cell |
 |---|---|---|---|
 | f02 | error, `assert` holds | P | D9 |
-| f03 | ok | A | `ok`/honest |
+| f03 | ok, `public_input` unconstrained | A | `ok`/honest, D5 |
 | f04 | error, `less_than` unknown | P | D9 |
 | f05 | ok, `commGate` violated | C | D1a |
 | f06 | ok, `cond_select` synthErr | X (unwrap of Synthesis) | D2 |
@@ -243,4 +260,5 @@ The expected oracle outcome added to each case of `divergence_tests.py`:
 | k06 | error, `guardGate` violated | P | D9 |
 | k07 | ok, `persistent_hash` synthErr | X (unwrap of Synthesis) | D2 |
 | k02 | panic | X (range end index out of range) | D10 |
+| k08 (extension surface, 2ffe2d1 oracles) | ok, `load_constant` synthErr | X (must enable jubjub) | D2 |
 | f01 | error, `reconstitute_field` unknown | P | D9 |

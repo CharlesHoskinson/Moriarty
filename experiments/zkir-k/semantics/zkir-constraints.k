@@ -1,14 +1,73 @@
-// Constraint checker (oracle 2, plan CLM-0716 item 2): does the witness in
-// <mem> satisfy the in-circuit relation of every emitted constraint?
+// Constraint checker (oracle 2, plan CLM-0716 item 2; plan-iter3 M2): does the
+// witness in <mem> satisfy the in-circuit relation of every emitted constraint,
+// and is that witness a point of the modelled witness space?
 //
 // A constraint is instruction-level: gate(I) is the relation that
 // `Relation::circuit` in ir_vm.rs (midnight-ledger 92e8bdd3) and the
 // `*_incircuit` functions of ir_instructions/*.rs enforce for instruction I,
-// read off the chip calls they make; piGate(i, g, x) is pi[i] = g ? x : 0 with
-// g boolean; bindGate(0) pins the binding input and commGate(1, inputs, rand) the commitment. The
-// relation is evaluated with concrete values, so this establishes only that the
-// honest witness satisfies the constraints (completeness), never that no other
-// witness does (CLM-0721).
+// read off the chip calls they make; inputGate(n, t) is the typed assignment
+// of the declared input n; piGate(i, g, x) is pi[i] = g ? x : 0 with g
+// boolean; bindGate(0) pins the binding input and commGate(1, inputs, rand)
+// the commitment; outputGate checks the output signature. Every relation is
+// evaluated with concrete values.
+//
+// Projection from circuit cells to registers. The circuit that
+// `Relation::circuit` synthesises has three kinds of cells.
+//   (1) Each named register is the value of the cell (or cell group) that the
+//       crate binds to that identifier: through `mem_insert` for every
+//       instruction output and for public_input / private_input registers,
+//       through `memory.insert` for the declared inputs (assigned from the
+//       witness by `assign_incircuit`) and for the outputs of from_bytes32,
+//       reverse_bytes, bytes32_into_low_high and bytes32_from_low_high. The K
+//       register holds the typed value of that cell.
+//   (2) Auxiliary cells (bit decompositions, limbs, hash and curve gadget
+//       rows, lookup witnesses) are existentially quantified: a memory is in
+//       the modelled space when some assignment of the auxiliary cells
+//       satisfies the crate's constraints together with the projected
+//       registers. The model never names them.
+//   (3) Copy wiring between named cells is value equality: where the crate
+//       copies a cell into a gadget through the permutation argument, the
+//       model states that the two registers hold the same value.
+//
+// The modelled witness space, witnessSpace(verdicts, mem), is the set of
+// memories on which every emitted relation holds or is unconstrained and
+// every register carries a well-typed Value. Typing discharges the assignment
+// constraints of the types: a term of sort Value is by construction a
+// canonical native field element, a point on its curve and in its
+// prime-order subgroup, a byte string of its declared length, or a foreign
+// element below its modulus, because the crate's typed `IrValue`
+// (JubjubPoint(JubjubSubgroup), JubjubScalar(JubjubFr), Bytes32([u8; 32]),
+// foreign bases and scalars as field types) cannot be malformed and the K
+// decoders of ZKIR-VALUES build only such values. The per-type range,
+// on-curve and cofactor constraints that the circuit places at assignment
+// therefore hold on every register of a well-typed memory and are not
+// evaluated a second time.
+//
+// Soundness claim. Any memory in the modelled witness space, with its
+// public-input vector, is accepted by the circuit up to the residual list
+// below; each item names a place where the circuit may accept a witness the
+// model does not describe, or reject one it does.
+//   auxiliary cells         their existence is assumed, never constructed
+//   copy wiring             modelled as value equality, not as the permutation
+//   hash gadget internals   hash gates compare against the concrete functions
+//                           of ZKIR-HASH, not against the gadget's rows
+//   prover-side panics      a chip hint that aborts the prover is reported as
+//                           violated or synthErr; other panics inside
+//                           midnight-circuits are not modelled
+//   JubjubScalar canonicity a JubjubScalar assigned from the witness (declared
+//                           input, public_input, private_input) is 252 witness
+//                           bits that nothing constrains below the scalar
+//                           field order; visible as unconstrained on inputGate
+//                           and on the two input gates
+//   guarded-off inputs      the register of a public_input / private_input
+//                           whose guard is 0 is assigned from the witness and
+//                           pushed nowhere; the circuit leaves the cell free
+//                           where the witness holds the type's default value;
+//                           visible as unconstrained on that gate
+// The claim is tested, not proved: tools/diff_test.py --circuit runs the
+// crate's circuit under the MockProver on the corpus witnesses, on Native
+// injections into them and on the divergence cases against
+// plan-iter3/circuit-comparison-table.md.
 //
 // Outcomes per constraint:
 //   holds()            the relation is satisfied
@@ -17,6 +76,9 @@
 //                      no arm for these types (Error::Synthesis) or a chip the
 //                      gate needs is not initialised (`used_chips`, finding 13)
 //   unknown(msg)       a register the gate reads is absent (witness stopped early)
+//   unconstrained(msg) the relation is satisfied and deliberately leaves the
+//                      register free beyond its type (the last two residual items)
+//   unsupported(msg)   no in-circuit relation is modelled for this gate
 //
 // Chip gating follows `IrSource::used_chips` (usedChips and chipOfType in
 // ZKIR-STATIC, zkir-static.k, shared with the target contract): a foreign chip
@@ -41,8 +103,10 @@ module ZKIR-CONSTRAINTS
                       | bindGate(Int)                      [symbol(bindGate)]    // pi[i] = binding input
                       | commGate(Int, TypedIds, Int)       [symbol(commGate)]    // pi[i] = poseidon(rand ++ enc(inputs) ++ enc(outputs))
                       | outputGate(Operands, IrTypes)      [symbol(outputGate)]  // arity and per-position types of the signature
+                      | inputGate(String, IrType)          [symbol(inputGate)]   // declared input n is assigned in circuit with type t
   syntax Outcome ::= holds() [symbol(holds)] | violated(String) [symbol(violated)]
                    | synthErr(String) [symbol(synthErr)] | unknown(String) [symbol(unknown)]
+                   | unconstrained(String) [symbol(unconstrained)]   // satisfied, and the register is a free cell beyond its type
                    | unsupported(String) [symbol(unsupported)]   // no in-circuit relation modelled for this gate
   syntax Verdict ::= verdict(Constraint, Outcome) [symbol(verdict)]
 
@@ -96,10 +160,36 @@ module ZKIR-CONSTRAINTS
   rule #typedOrSynth(vOk(V), T, I) => synthErr("Output position " +String Int2String(I) +String ": signature declares " +String typeName(T) +String " but operand has runtime type " +String tn(V)) requires typeOf(V) =/=K T
   rule eval(C, M, Pi, Chips, _, _) => eval(C, M, Pi, Chips) [owise]
 
-  syntax List ::= violations(List) [function, total]   // verdicts that are not holds()
+  syntax List ::= violations(List) [function, total]   // verdicts that are neither holds() nor unconstrained(_)
   rule violations(.List) => .List
   rule violations(ListItem(verdict(_, holds())) Vs) => violations(Vs)
+  rule violations(ListItem(verdict(_, unconstrained(_))) Vs) => violations(Vs)
   rule violations(ListItem(V) Vs) => ListItem(V) violations(Vs) [owise]
+
+  // --- The modelled witness space (header comment) --------------------------------------
+  // witnessSpace(verdicts, mem): every verdict is holds or unconstrained, and
+  // every register holds a term of sort Value, whose typing discharges the
+  // assignment constraints of its type.
+  syntax Bool ::= witnessSpace(List, Map) [function, total]
+  rule witnessSpace(Vs, M) => #admissible(Vs) andBool wellTyped(values(M))
+  syntax Bool ::= #admissible(List) [function, total]
+  rule #admissible(.List) => true
+  rule #admissible(ListItem(verdict(_, holds())) Vs) => #admissible(Vs)
+  rule #admissible(ListItem(verdict(_, unconstrained(_))) Vs) => #admissible(Vs)
+  rule #admissible(_) => false [owise]
+  syntax Bool ::= wellTyped(List) [function, total]
+  rule wellTyped(.List) => true
+  rule wellTyped(ListItem(_:Value) L) => wellTyped(L)
+  rule wellTyped(_) => false [owise]
+  // the registers whose assigning relation is unconstrained
+  syntax List ::= unconstrainedRegs(List) [function, total]
+  rule unconstrainedRegs(.List) => .List
+  rule unconstrainedRegs(ListItem(verdict(inputGate(N, _), unconstrained(_))) Vs) => ListItem(N) unconstrainedRegs(Vs)
+  rule unconstrainedRegs(ListItem(verdict(gate(I), unconstrained(_))) Vs) => #idsList(writes(I)) unconstrainedRegs(Vs)
+  rule unconstrainedRegs(ListItem(_) Vs) => unconstrainedRegs(Vs) [owise]
+  syntax List ::= #idsList(Ids) [function, total]
+  rule #idsList(.Ids) => .List
+  rule #idsList((X, Xs)) => ListItem(X) #idsList(Xs)
 
   // --- Reading the witness ------------------------------------------------------------
   syntax ValueResult ::= rd(Operand, Map) [function, total]
@@ -287,9 +377,33 @@ module ZKIR-CONSTRAINTS
   rule #jjOf(_) => vErr("not native") [owise]
 
   // public_input / private_input: the register holds a value of the declared
-  // type (assign_incircuit); the guard plays no part (finding 3)
-  rule eval(gate(publicInput(_, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #typed(rdId(O, M), T)))
-  rule eval(gate(privateInput(_, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #typed(rdId(O, M), T)))
+  // type (assign_incircuit from the witness memory); the guard is not read in
+  // circuit (`guard: _`, finding 3), so a guard of 0 leaves the register a
+  // free cell, where the witness holds defaultValue(T) (spike finding 3)
+  rule eval(gate(publicInput(G, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #and(#typed(rdId(O, M), T),
+      #and(#guardedOff(G, O, M, "public_input"), #canonicity(T, O)))))
+  rule eval(gate(privateInput(G, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #and(#typed(rdId(O, M), T),
+      #and(#guardedOff(G, O, M, "private_input"), #canonicity(T, O)))))
+  syntax Outcome ::= #guardedOff(Guard, String, Map, String) [function, total]
+  rule #guardedOff(guard(G), O, M, What) => unconstrained(What +String " guard is 0: register " +String O +String " is a free cell")
+    requires rd(G, M) ==K vOk(native(0))
+  rule #guardedOff(_, _, _, _) => holds() [owise]
+  // declared inputs: `assign_incircuit(std, layouter, &id.val_t, &[value])` on
+  // the witness value of the register (ir_vm.rs `circuit`, before the binding input)
+  rule eval(inputGate(N, T), M, _, Chips) => #and(#need(rdId(N, M)), #and(#chipFor(T, Chips), #and(#typed(rdId(N, M), T), #canonicity(T, N))))
+  // JubjubScalar canonicity. `EccChip::assign` (midnight-circuits 7.2.4,
+  // ecc/native/edwards_chip.rs) assigns the 252 little-endian bits of the
+  // witness scalar with enforced_canonical = false and nothing constrains the
+  // bit string below #rJ, so the cell admits the representatives in
+  // [#rJ, 2^252) that the typed witness cannot express. The other two ways a
+  // JubjubScalar register is assigned are canonical: jubjub_scalar_from_native
+  // reduces through `BigUintGadget::div_rem`, whose `assert_lower_than` proves
+  // the remainder below the order (ir_instructions/encode.rs
+  // `jubjub_scalar_from_biguint`), and the extension load_constant uses
+  // `assign_fixed`, fixed cells with enforced_canonical = true.
+  syntax Outcome ::= #canonicity(IrType, String) [function, total]
+  rule #canonicity(jubjubScalar(), N) => unconstrained("JubjubScalar canonicity: the assigned bits of " +String N +String " are not proven below the scalar field order")
+  rule #canonicity(_, _) => holds() [owise]
   syntax Outcome ::= #typed(ValueResult, IrType) [function, total]
   rule #typed(vOk(V), T) => holds() requires typeOf(V) ==K T
   rule #typed(vOk(V), T) => violated("register has type " +String tn(V) +String ", declared " +String typeName(T)) requires typeOf(V) =/=K T

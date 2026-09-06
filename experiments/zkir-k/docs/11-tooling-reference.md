@@ -161,7 +161,9 @@ Memory records come from `<mem>`, in K map order. Each register is `{variant, ty
 | `needs` | list of `[label, payload]` as above |
 | `verdicts` | count of `<verdicts>` |
 | `all_verdicts` | `[outcome, message, gate]` per `verdict` |
-| `violations` | the same triples with `outcome != "holds"`, gate cut to 120 characters |
+| `violations` | the same triples whose outcome is neither `holds` nor `unconstrained`, gate cut to 120 characters |
+| `witness_space` | the `<witnessSpace>` cell: every verdict holds or is unconstrained and every register is well typed |
+| `unconstrained` | the registers of `<unconstrainedRegs>`, whose assigning relation is `unconstrained` |
 | `outputs` | `"<type>:<enc0>,<enc1>,..."` per `<outputs>` value |
 
 A `--gen` run on `native_identity.zkir` with provisional commitment `0` and opening `9` prints the following, with whitespace condensed:

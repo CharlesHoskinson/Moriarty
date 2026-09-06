@@ -21,6 +21,7 @@ module SPEC-COMPILED-OBSERVABLE
         <constraints> .List => ?_ </constraints>
         <chips> .Set => ?_ </chips>
         <verdicts> .List => ?_ </verdicts>
+        <witnessSpace> false => ?_ </witnessSpace> <unconstrainedRegs> .List => ?_ </unconstrainedRegs>
         <piIdx> 0 => ?_ </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
     requires 0 <=Int A andBool A <Int #r

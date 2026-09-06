@@ -19,10 +19,13 @@ module MUL-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A) ListItem(B), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(mul(var("%a"), var("%b"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(inputGate("%b", native())) ListItem(bindGate(0)) ListItem(gate(mul(var("%a"), var("%b"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(inputGate("%b", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(mul(var("%a"), var("%b"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -43,10 +46,12 @@ module NEG-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(neg(var("%a"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(bindGate(0)) ListItem(gate(neg(var("%a"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(neg(var("%a"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -67,10 +72,12 @@ module COPY-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(copy(var("%a"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(bindGate(0)) ListItem(gate(copy(var("%a"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(copy(var("%a"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -93,10 +100,13 @@ module COND-SELECT-1-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A) ListItem(B), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(condSelect(imm(1), var("%a"), var("%b"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(inputGate("%b", native())) ListItem(bindGate(0)) ListItem(gate(condSelect(imm(1), var("%a"), var("%b"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(inputGate("%b", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(condSelect(imm(1), var("%a"), var("%b"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -117,10 +127,13 @@ module COND-SELECT-0-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(A) ListItem(B), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(condSelect(imm(0), var("%a"), var("%b"), "%o"))) </constraints>
+        <constraints> .List => ListItem(inputGate("%a", native())) ListItem(inputGate("%b", native())) ListItem(bindGate(0)) ListItem(gate(condSelect(imm(0), var("%a"), var("%b"), "%o"))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%a", native()), holds()))
+                            ListItem(verdict(inputGate("%b", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(condSelect(imm(0), var("%a"), var("%b"), "%o")), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -144,10 +157,12 @@ module CONSTRAIN-TO-BOOLEAN-OK-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(constrainToBoolean(var("%c")))) </constraints>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(constrainToBoolean(var("%c")))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(constrainToBoolean(var("%c"))), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -168,11 +183,13 @@ module CONSTRAIN-TO-BOOLEAN-FAIL-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(constrainToBoolean(var("%c")))) </constraints>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(constrainToBoolean(var("%c")))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(constrainToBoolean(var("%c"))),
                                              violated("constrain_to_boolean is not boolean: " +String Int2String(C)))) </verdicts>
+        <witnessSpace> false </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() => error("Expected boolean, found: " +String Int2String(C)) </status>
@@ -195,10 +212,12 @@ module ASSERT-OK-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(assert(var("%c")))) </constraints>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(assert(var("%c")))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(assert(var("%c"))), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -219,10 +238,12 @@ module ASSERT-FAIL-SPEC
         <doComm> false </doComm>
         <pre> preimage(.List, 0, noComm(), .List, .List, .List)
            => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
-        <constraints> .List => ListItem(bindGate(0)) ListItem(gate(assert(var("%c")))) </constraints>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(assert(var("%c")))) </constraints>
         <chips> .Set </chips>
-        <verdicts> .List => ListItem(verdict(bindGate(0), holds()))
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(assert(var("%c"))), violated("assert of zero"))) </verdicts>
+        <witnessSpace> false </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() => error("Failed direct assertion") </status>

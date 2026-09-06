@@ -16,6 +16,10 @@
 //                the witness cells; the remaining instructions still emit
 //                constraints. panic() marks the places where the Rust code aborts
 //                (index out of range, failed assertion) rather than returning Err.
+//   <verdicts>   one verdict per emitted constraint, evaluated on the final witness
+//   <witnessSpace>       witnessSpace(verdicts, mem) of ZKIR-CONSTRAINTS: the final
+//                memory is a point of the modelled witness space
+//   <unconstrainedRegs>  the registers whose assigning relation is unconstrained
 //
 // Entry points: job(P, Pre) runs P exactly as `IrSource::preprocess` would,
 // including its run-time checks, on any program `IrSource::load` accepts;
@@ -76,6 +80,8 @@ module ZKIR-VM
       <constraints> .List </constraints>
       <chips> .Set </chips>
       <verdicts> .List </verdicts>
+      <witnessSpace> false </witnessSpace>
+      <unconstrainedRegs> .List </unconstrainedRegs>
       <piIdx> 0 </piIdx>          // public inputs emitted so far on the constraint side
       <genMode> false </genMode>
       <needs> .List </needs>
@@ -102,11 +108,17 @@ module ZKIR-VM
   // a failed static check ends the run before anything executes
   rule <k> job(_, _) => .K ... </k> <status> error(_) </status>
 
+  // the circuit assigns every declared input from the witness before the
+  // binding input: one inputGate per input, emitted whether or not decoding succeeds
   rule <k> job(program(Mi, Ins, Outs, DoComm, Is), Pre) => #loadInputs(#preInputs(Pre), Ins, 0) ~> #seedPi(Ins) ~> Is ~> #verdicts </k>
        <pre> _ => Pre </pre> <status> ok() </status>
        <chips> _ => usedChips(program(Mi, Ins, Outs, DoComm, Is)) </chips>
        <outTypes> _ => Outs </outTypes>
        <doComm> _ => DoComm </doComm>
+       <constraints> Cs => Cs #inputGates(Ins) </constraints>
+  syntax List ::= #inputGates(TypedIds) [function, total]
+  rule #inputGates(.TypedIds) => .List
+  rule #inputGates((typedId(N, T), Rest)) => ListItem(inputGate(N, T)) #inputGates(Rest)
 
   syntax List ::= #preInputs(Preimage) [function, total]
   rule #preInputs(preimage(I, _, _, _, _, _)) => I
@@ -513,10 +525,14 @@ module ZKIR-VM
     requires typeOf(V) =/=K T
 
   // --- After the run: evaluate every emitted constraint against the witness ---------------------
-  syntax KItem ::= "#verdicts"
-  rule <k> #verdicts => .K ... </k> <constraints> Cs </constraints> <mem> M </mem> <pi> Pi </pi> <chips> Chips </chips>
+  syntax KItem ::= "#verdicts" | "#witnessSpace"
+  rule <k> #verdicts => #witnessSpace ... </k> <constraints> Cs </constraints> <mem> M </mem> <pi> Pi </pi> <chips> Chips </chips>
        <outputs> Os </outputs> <pre> Pre </pre>
        <verdicts> _ => verdicts(Cs, M, Pi, Chips, Os, #preBinding(Pre)) </verdicts>
+  // then decide membership of the final memory in the modelled witness space
+  rule <k> #witnessSpace => .K ... </k> <verdicts> Vs </verdicts> <mem> M </mem>
+       <witnessSpace> _ => witnessSpace(Vs, M) </witnessSpace>
+       <unconstrainedRegs> _ => unconstrainedRegs(Vs) </unconstrainedRegs>
 
   // --- End of program: transcript exhaustion and communications commitment ------------------
   syntax KItem ::= "#finish"

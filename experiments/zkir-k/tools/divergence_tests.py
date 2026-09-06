@@ -11,6 +11,11 @@ Each case also carries the outcome the circuit oracle (`zkir-circuit-oracle`,
 MockProver on the same preimage) must report, from the divergence-cases
 section of plan-iter3/circuit-comparison-table.md (`CIRCUIT` below).
 
+A case in `EXT_CASES` is on the extension surface: it runs on the ZKIR-EXT
+definition and the two midnight-zkir 2ffe2d1 oracles. A case whose program is
+`None` is read from `corpus/divergence/<name>.zkir` with the preimage
+`<name>.pre.json` beside it, instead of being written here.
+
 Usage: uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 Writes the programs to corpus/divergence/ and exits 0 iff every case matches.
 """
@@ -31,6 +36,7 @@ from zkir_run import Runner  # noqa: E402
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / 'corpus' / 'divergence'
 ORACLE = Path.home() / 'Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-oracle'
+ORACLE_EXT = Path.home() / 'Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-oracle'
 
 NATIVE = 'Scalar<BLS12-381>'
 
@@ -62,8 +68,8 @@ CASES.append(('f03_guard_uncoupled', 'Finding 3',
     program([('%g', NATIVE)], [
         {'op': 'public_input', 'guard': '%g', 'type': NATIVE, 'output': '%x'},
         {'op': 'add', 'a': '%x', 'b': '0x01', 'output': '%y'}]), [0],
-    'ok', 'ok', 'public_input', 'holds',
-    'an inactive guard yields the default value off-circuit; the gate never mentions the guard'))
+    'ok', 'ok', 'public_input', 'unconstrained',
+    'an inactive guard yields the default value off-circuit; the gate never reads the guard, and the register is a free cell in circuit (plan-iter3 M2)'))
 
 CASES.append(('f04_less_than_odd_bits', 'Finding 4',
     program([('%a', NATIVE), ('%b', NATIVE)], [
@@ -179,6 +185,11 @@ CASES.append(('k02_transcript_too_short_panics', 'K2 (new)',
     'panic', 'panic', 'private_input', 'unknown',
     'an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports the same panic'))
 
+CASES.append(('k08_load_constant_jubjub_chip', 'K7 (new)',
+    None, None,
+    'ok', 'ok', 'load_constant', 'synthErr',
+    'a load_constant of a Jubjub value with no Jubjub input or transcript entry: used_chips at 2ffe2d1 never enables the chip, so preprocess accepts while the K gate reports the chip uninitialised and synthesis panics (extension surface)'))
+
 CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
     program([('%d', NATIVE), ('%m', NATIVE)], [
         {'op': 'reconstitute_field', 'divisor': '%d', 'modulus': '%m', 'bits': 8, 'output': '%o'}]),
@@ -210,15 +221,18 @@ CIRCUIT = {
     'k06_empty_impact_guard': (cc.P, None),
     'k07_alignment_option_offcircuit': (cc.X, 'Synthesis'),
     'k02_transcript_too_short_panics': (cc.X, 'out of range'),
+    'k08_load_constant_jubjub_chip': (cc.X, 'must enable jubjub'),
     'f01_reconstitute_overflow': (cc.P, None),
 }
 
+EXT_CASES = {'k08_load_constant_jubjub_chip'}
 
-def oracle(path: Path, pre: dict) -> dict:
+
+def oracle(path: Path, pre: dict, ext: bool = False) -> dict:
     with tempfile.NamedTemporaryFile('w', suffix='.json') as f:
         json.dump(pre, f)
         f.flush()
-        res = subprocess.run([str(ORACLE), str(path), f.name], capture_output=True, text=True)
+        res = subprocess.run([str(ORACLE_EXT if ext else ORACLE), str(path), f.name], capture_output=True, text=True)
     if res.returncode == 101:
         return {'status': 'panic', 'error': res.stderr.strip()[-300:]}
     if res.returncode != 0:
@@ -228,15 +242,23 @@ def oracle(path: Path, pre: dict) -> dict:
 
 def main() -> int:
     OUT.mkdir(exist_ok=True)
-    runner = Runner()
+    runners: dict[bool, Runner] = {False: Runner()}
     failures = 0
     for name, finding, prog, raw, exp_k, exp_r, gate_sub, exp_outcome, note in CASES:
+        ext = name in EXT_CASES
+        if ext and True not in runners:
+            runners[True] = Runner(ext=True)
+        runner = runners[ext]
         path = OUT / f'{name}.zkir'
-        path.write_text(json.dumps(prog, indent=1) + '\n')
-        pre = {'inputs': [str(x) for x in raw], 'binding_input': '42'}
+        if prog is None:
+            prog = json.loads(path.read_text())
+            pre = json.loads(path.with_suffix('.pre.json').read_text())
+        else:
+            path.write_text(json.dumps(prog, indent=1) + '\n')
+            pre = {'inputs': [str(x) for x in raw], 'binding_input': '42'}
         if pre_extra := dict(EXTRA_PRE.get(name, {})):
             pre.update(pre_extra)
-        term = zkir_kast.load_program(path)
+        term = zkir_kast.load_program(path, ext=ext)
         if prog['do_communications_commitment']:
             # the raw-stream commitment the crate accepts, taken from a K generation run
             pre['communications_commitment'] = ['0', '7']
@@ -244,7 +266,7 @@ def main() -> int:
             comm = [x for kind, x in gen['needs'] if kind == 'comm']
             if comm:
                 pre['communications_commitment'] = [str(comm[0]), '7']
-        r = oracle(path, pre)
+        r = oracle(path, pre, ext)
         # the checked entry point: a well-formedness error ends the run before anything executes
         k = runner.run(term, pre, checked=True)
         if k['status'] == 'error' and k.get('error', '').startswith('well-formedness'):
@@ -265,7 +287,7 @@ def main() -> int:
             if k['status'] != 'ok' and not k.get('error', '').startswith('well'):
                 detail = detail + ' | ' + k.get('error', '')[:70]
         exp_c, exp_c_msg = CIRCUIT[name]
-        c = cc.run_circuit_oracle(cc.CIRCUIT_ORACLE, path, pre)
+        c = cc.run_circuit_oracle(cc.CIRCUIT_ORACLE_EXT if ext else cc.CIRCUIT_ORACLE, path, pre)
         c_ok = c.get('outcome') == exp_c and (exp_c_msg is None or exp_c_msg in c.get('message', ''))
         ok = (k_status == exp_k) and (r['status'] == exp_r) and (outcome == exp_outcome) and (k_status != 'stuck') and c_ok
         failures += not ok

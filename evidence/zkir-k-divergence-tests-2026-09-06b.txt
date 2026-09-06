@@ -1,0 +1,88 @@
+PASS  f02_assert_non_boolean                     Finding 2            K=error    Rust=error  gate=assert:holds circuit=preprocess-error
+        off-circuit demands cond == 1, the circuit only cond != 0
+        K: holds | Expected boolean, found: 2 | Rust: Expected boolean, found: 02
+        circuit: preprocess-error 'Expected boolean, found: 02' 0ms
+PASS  f03_guard_uncoupled                        Finding 3            K=ok       Rust=ok     gate=public_input:unconstrained circuit=accepted
+        an inactive guard yields the default value off-circuit; the gate never reads the guard, and the register is a free cell in circuit (plan-iter3 M2)
+        K: unconstrained: public_input guard is 0: register %x is a free cell | Rust: ok
+        circuit: accepted 'MockProver::verify ok' 5ms
+PASS  f04_less_than_odd_bits                     Finding 4            K=error    Rust=error  gate=less_than:unknown circuit=preprocess-error
+        a = 8 exceeds 3 bits off-circuit; the chip would accept the padded 4-bit bound (output absent, so unknown)
+        K: unknown: register %lt is not in the witness | Bit bound failed: 8 is not 3-bit | Rust: Bit bound failed: 08 is not 3-bit
+        circuit: preprocess-error 'Bit bound failed: 08 is not 3-bit' 0ms
+PASS  f05_noncanonical_foreign_limbs             Finding 5            K=ok       Rust=ok     gate=commGate:violated circuit=constraint-failure
+        limbs encoding p + 5 decode (reduced) as 5 off-circuit and the raw-stream commitment is accepted; in circuit the commitment is over the canonical re-encoding, so it differs
+        K: violated: communications commitment differs from poseidon(rand ++ encode(inputs) ++ encode(outputs)) | Rust: ok
+        circuit: constraint-failure '2 constraint failure(s)' failures=["Equality constraint not satisfied by cell (Column('Advice', 0 - ), in Region 35 ('permutation layout') at offset 19)", "Equality constraint not satisfied by cell (Column('Instance', 1 - ), outside any region, on row 1)"] 62ms
+PASS  f06_cond_select_bytes32                    Finding 6            K=ok       Rust=ok     gate=cond_select:synthErr circuit=panic
+        cond_select on Bytes32 is accepted off-circuit but has no in-circuit arm
+        K: synthErr: Unsupported cond_select: Bytes32 ? Bytes32 | Rust: ok
+        circuit: panic 'called `Result::unwrap()` on an `Err` value: Synthesis("Relation::circuit error: Synthesis(\\"Unsupported cond_' 2ms
+PASS  f07_constrain_eq_jubjub_scalar             Finding 7            K=ok       Rust=ok     gate=constrain_eq:synthErr circuit=panic
+        constrain_eq on JubjubScalar is accepted off-circuit but has no in-circuit arm
+        K: synthErr: Unsupported constrain_eq: JubjubScalar == JubjubScalar | Rust: ok
+        circuit: panic 'called `Result::unwrap()` on an `Err` value: Synthesis("Relation::circuit error: Synthesis(\\"Unsupported const' 2ms
+PASS  f08_bytes32_from_low_high_foreign_high     Finding 8            K=ok       Rust=ok     gate=bytes32_from_low_high:synthErr circuit=panic
+        a foreign high operand is accepted off-circuit, the circuit requires Native
+        K: synthErr: bytes32_from_low_high high: cannot convert Secp256k1Base to Native | Rust: ok
+        circuit: panic 'called `Result::unwrap()` on an `Err` value: Synthesis("Relation::circuit error: Synthesis(\\"cannot convert Se' 19ms
+PASS  f10_reconstitute_bits_256                  Finding 10           K=wfError  Rust=error  gate=reconstitute_field:n/a circuit=preprocess-error
+        bits >= 256 is rejected statically (Rust off-circuit: Excessive bit count; keygen would underflow)
+        K: well-formedness: reconstitute_field: excessive bit count | Rust: Excessive bit count
+        circuit: preprocess-error 'Excessive bit count' 0ms
+PASS  f11_curve25519_torsion_point               Finding 11           K=error    Rust=error  gate=from_coordinates:violated circuit=preprocess-error
+        (0, -1) has order 2: on the curve, not in the subgroup; off-circuit both sides error, in circuit the cofactor-cleared point is unsatisfiable (the crate hint would panic)
+        K: violated: from_coordinates: point is not in the prime-order subgroup | Cannot build a Curve25519Poin | Rust: Cannot build a Curve25519Point point from (0x0000000000000000000000000000000000000000000000000000000
+        circuit: preprocess-error 'Cannot build a Curve25519Point point from (0x0000000000000000000000000000000000000000000000000000000000000000,' 0ms
+PASS  f12_ec_mul_generator_p256                  Finding 12           K=error    Rust=error  gate=ec_mul_generator:synthErr circuit=preprocess-error
+        no generator for secp256r1 scalars on either side
+        K: synthErr: ec_mul_generator output: Unsupported EcMulGenerator for scalar of type Secp256r1Scalar | U | Rust: Unsupported EcMulGenerator for scalar of type Secp256r1Scalar
+        circuit: preprocess-error 'Unsupported EcMulGenerator for scalar of type Secp256r1Scalar' 0ms
+PASS  f13_chip_gating_from_bytes32               Finding 13           K=ok       Rust=ok     gate=from_bytes32:synthErr circuit=panic
+        the secp256k1 chip is never initialised (used_chips ignores from_bytes32)
+        K: synthErr: chip not initialised for Secp256k1Base | Rust: ok
+        circuit: panic 'ZkStdLibArch must enable secp256k1 at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnigh' 1ms
+PASS  k01_jubjub_from_coordinates_parity_only    K1 (new)             K=ok       Rust=ok     gate=from_coordinates:violated circuit=constraint-failure
+        off-circuit only the parity of x is used (decompression), so a wrong x yields the real point; in circuit (x, y) must lie on the curve (a Jubjub input enables the chip)
+        K: violated: from_coordinates: (x, y) is not on the curve | Rust: ok
+        circuit: constraint-failure '2 constraint failure(s)' failures=["Equality constraint not satisfied by cell (Column('Advice', 0 - ), in Region 0 ('assign_many (native)') at offset 0)", "Equality constraint not satisfied by cell (Column('Advice', 5 - ), in Region 8 ('assign mul') at offset 3)"] 10ms
+PASS  k01b_jubjub_from_coordinates_no_chip       K1 companion         K=ok       Rust=ok     gate=from_coordinates:synthErr circuit=panic
+        native from_coordinates uses the Jubjub chip, which used_chips never enables for it: keygen would panic
+        K: synthErr: chip not initialised for JubjubPoint | Rust: ok
+        circuit: panic 'ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-z' 1ms
+PASS  k03_bytes32_input_assertion_panics         K3 (new)             K=panic    Rust=panic  gate=reverse_bytes:unknown circuit=panic
+        a Bytes32 raw input whose low element uses byte 31 trips assert_eq! in the decoder: the crate panics, K reports a panic status
+        K: unknown: register %b is not in the witness | assertion failed: Bytes32 low element uses byte 31 or h | Rust: thread 'main' (56344) panicked at zkir-v3/src/ir_instructions/encode.rs:155:17:
+assertion `left == r
+        circuit: panic 'assertion `left == right` failed\n  left: 1\n right: 0 at zkir-v3/src/ir_instructions/encode.rs:155' 0ms
+PASS  k04_jubjub_scalar_from_native_chip         K4 (new)             K=ok       Rust=ok     gate=jubjub_scalar_from_native:synthErr circuit=panic
+        jubjub_scalar_from_native mints a JubjubScalar and its circuit arm calls std.jubjub(); used_chips does not enable the chip (finding 13 says from_bytes32 is the only such entry)
+        K: synthErr: chip not initialised for JubjubScalar | Rust: ok
+        circuit: panic 'ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-z' 4ms
+PASS  k05_less_than_253_bits_keygen              K5 (new)             K=ok       Rust=ok     gate=less_than:synthErr circuit=panic
+        bits 253 pads to 254 which exceeds MAX_BOUND_IN_BITS = 253 in bounded_of_element: preprocess accepts, keygen panics
+        K: synthErr: less_than: padded bound 254 exceeds MAX_BOUND_IN_BITS = 253 | Rust: ok
+        circuit: panic 'Cannot bound an element with a bound 254 > 253 = MAX_BOUND at /home/charl/.cargo/registry/src/index.crates.io-' 1ms
+PASS  k06_empty_impact_guard                     R3-2                 K=error    Rust=error  gate=guardGate:violated circuit=preprocess-error
+        an empty impact still converts its guard to a bit in circuit, so a non-boolean guard is unsatisfiable there too
+        K: violated: impact guard is not boolean: 2 | Expected boolean, found: 2 | Rust: Expected boolean, found: 02
+        circuit: preprocess-error 'Expected boolean, found: 02' 0ms
+PASS  k07_alignment_option_offcircuit            astra-R2 #4          K=ok       Rust=ok     gate=persistent_hash:synthErr circuit=panic
+        preprocess parses option alignments (selector 1 chooses the byte alternative); the circuit rejects them as not implemented
+        K: synthErr: persistent_hash output: synthesis: in-circuit decoding of alignment options is not yet imp | Rust: ok
+        circuit: panic 'called `Result::unwrap()` on an `Err` value: Synthesis("Relation::circuit error: Synthesis(\\"in-circuit decodi' 2ms
+PASS  k02_transcript_too_short_panics            K2 (new)             K=panic    Rust=panic  gate=private_input:unknown circuit=panic
+        an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports the same panic
+        K: unknown: register %x is not in the witness | range end index out of range: private transcript too sh | Rust: thread 'main' (56726) panicked at zkir-v3/src/ir_vm.rs:379:33:
+range end index 1 out of range for sl
+        circuit: panic 'range end index 1 out of range for slice of length 0 at zkir-v3/src/ir_vm.rs:379' 0ms
+PASS  k08_load_constant_jubjub_chip              K7 (new)             K=ok       Rust=ok     gate=load_constant:synthErr circuit=panic
+        a load_constant of a Jubjub value with no Jubjub input or transcript entry: used_chips at 2ffe2d1 never enables the chip, so preprocess accepts while the K gate reports the chip uninitialised and synthesis panics (extension surface)
+        K: synthErr: chip not initialised for JubjubPoint | Rust: ok
+        circuit: panic 'ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-z' 2ms
+PASS  f01_reconstitute_overflow                  Finding 1 (retired)  K=error    Rust=error  gate=reconstitute_field:unknown circuit=preprocess-error
+        divisor * 2^8 + modulus >= r: off-circuit overflow error; in circuit the sum would wrap mod r
+        K: unknown: register %o is not in the witness | Reconstituted element overflows field | Rust: Reconstituted element overflows field
+        circuit: preprocess-error 'Reconstituted element overflows field' 0ms
+
+21/21 divergence cases behave as expected

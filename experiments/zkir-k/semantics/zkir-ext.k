@@ -324,6 +324,9 @@ module ZKIR-EXT
   rule eval(gate(slice(B, S, L, O)), M, _, _) => #matches(#slice(rd(B, M), S, L), rdId(O, M), "slice output")
   rule eval(gate(nth(B, I, O)), M, _, _)  => #matches(#nth(rd(B, M), I), rdId(O, M), "nth output")
   rule eval(gate(reverse(B, O)), M, _, _) => #matches(#rev(rd(B, M)), rdId(O, M), "reverse output")
+  // load_constant assigns fixed cells (`assign_constant_incircuit`, `assign_fixed`):
+  // a JubjubScalar constant is canonical (enforced_canonical = true), so no
+  // unconstrained verdict, unlike the witness-assigned scalars of ZKIR-CONSTRAINTS
   rule eval(gate(loadConstant(T, Es, O)), M, _, Chips) => #and(#chipFor(T, Chips), #matches(#toValue(decodeStrict(#immInts(Es), T, true)), rdId(O, M), "load_constant output"))
   // in circuit, sha512 shares the byte-hash path of persistent_hash and keccak256
   // (ir_vm.rs `fab_decode_to_bytes`), so the alignment is decoded as in ZKIR-CONSTRAINTS

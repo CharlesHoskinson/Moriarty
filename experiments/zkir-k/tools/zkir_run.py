@@ -4,7 +4,11 @@
 the ZKIR definition, and returns a dict shaped like the Rust oracle's output:
   {status: 'ok'|'error', error?: str, memory: {id: {variant, encoded}},
    pis: [str], pi_skips: [None|int], cursors: (pubIn, pubOut, priv),
-   constraints: int}
+   constraints: int, verdicts: int, all_verdicts: [(outcome, message, gate)],
+   violations: [...] (the verdicts that are neither holds nor unconstrained),
+   witness_space: bool (the <witnessSpace> cell: every verdict holds or is
+   unconstrained and every register is well typed, plan-iter3 M2),
+   unconstrained: [id] (the registers whose assigning relation is unconstrained)}
 Memory values are re-encoded on the Python side with the same encoding as
 `encode_offcircuit` (the encodings are unit-tested against K in unit_values.py).
 
@@ -343,11 +347,14 @@ class Runner:
             gate = ' '.join(self.krun.pretty_print(v.args[0]).replace('\n', ' ').split())
             rec = (outcome.label.name, tok_str(outcome.args[0]) if outcome.args else '', gate)
             allv.append(rec)
-            if outcome.label.name != 'holds':
+            if outcome.label.name not in ('holds', 'unconstrained'):
                 bad.append((rec[0], rec[1], gate[:120]))
         out['verdicts'] = len(verdicts)
         out['all_verdicts'] = allv
         out['violations'] = bad
+        ws = find_cell(cfg, '<witnessSpace>')
+        out['witness_space'] = isinstance(ws, KToken) and ws.token == 'true'
+        out['unconstrained'] = [tok_str(x) for x in list_items(find_cell(cfg, '<unconstrainedRegs>'))]
         out['outputs'] = [type_string(v, self.ext) + ':' + ','.join(str(e) for e in encode_value(v, self.ext)[1]) for v in list_items(find_cell(cfg, '<outputs>'))]
         return out
 

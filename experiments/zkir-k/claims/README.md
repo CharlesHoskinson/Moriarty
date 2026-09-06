@@ -66,7 +66,7 @@ modulus, unless stated otherwise; the binding input is concrete.
 
 `add-spec.k`, `ADD-SPEC`. On `add %a %b -> %o` the run ends with status `ok`,
 `%o = (A + B) mod r`, the public-input vector is the binding input alone, and
-both emitted gates (binding input, add) hold on the witness. This is the
+every emitted gate (the two input gates, binding input, add) holds on the witness, so the final memory is in the modelled witness space. This is the
 baseline claim of the second iteration, recovered.
 
 `native-ops-spec.k`, one module per claim:
