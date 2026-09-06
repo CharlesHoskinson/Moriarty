@@ -133,10 +133,17 @@ runtime pins. This accepts delayed endpoint observations and a source-bound
 inference that the original worker assertions executed; it does not supply
 missing historical flags or parent after-pins. Four real process controls
 validate the new recorder's cleanup and failure handling. The exact remaining
-97 preliminary tests are now running in fresh paths, with the 114-node
-aggregate, native package and final 115-node suite still pending. The retained
-17 admission is preserved at experimental `bcdd627` under
-`a4/pre-native-recovery-admission/`.
+97 preliminary tests completed with authentic pytest, recorder and outer zero
+exits. Root and an independent reviewer admitted the exact disjoint 17+97
+preliminary gate, including each original child and JUnit binding. Experimental
+`08e426c7163880b9312f1f1f029a4dde9d0e7593` preserves the frozen Task6 source
+and 141-member compact package under `a4/pre-native-aggregate-admission/`.
+The old parent exit remains unknown; the fresh transport retains an explicit
+polling-metadata gap. The earlier retained17 package remains at `bcdd627` under
+`a4/pre-native-recovery-admission/`. Native78-case acceptance and the final115
+suite remain required. The reviewed final-source aggregate parser capture has
+an authentic terminal; its complete source/runtime intake is pending. Largest
+native cases014/044 must be separately measured and admitted before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
 aggregate recursive typecheck, all12native tests,13Python tests and independently
@@ -183,6 +190,19 @@ The view timeout package is preserved at experimental `bcdd627` under
 receipt, including the failed archival-audit attempt and its correction.
 Earlier evidence remains under `a5/pilot-compile-stop/` and
 `a5/alias-visibility-control/`.
+The separately reviewed compiler phase diagnostic ran once at experimental
+`07c3a5462154d45e733d01d8a8bae856cb0f63c4`, after seven observer controls and
+four direct/observed alias controls were admitted. Its 900-second timeout
+retains a seven-marker trace: load, parse and typecheck resolved Right, then
+compile was entered without a completion marker. This identifies only the new
+incomplete observed public compile interval, including observer I/O and
+scheduling margins; it does not identify an internal hotspot or the historical
+timeout phase. Original child -15 and complete forced SIGTERM cleanup remain
+separate from recorder/outer zero for preservation. Outputs and GNU-time
+resources are empty. Independent and root preservation intake passed; H1 and
+paired compilation remain unresolved. The original diagnostic is retained at
+`.superpowers/sdd/a5-compiler-phase-diagnostic-20260906/` in the experimental
+worktree; durable packaging is in progress.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

@@ -624,3 +624,15 @@ after archived-source review and full retained-file rehash; the old parent
 exit remains unknown. Four process controls and the durable recovery archive
 audit passed. The 97 exact fresh preliminary nodes are running; full A4/A5,
 Council and the XML program remain open.
+
+
+### 2026-09-06 — Preliminary gate accepted and compiler diagnostic preserved
+
+CLM-0177 records experimental08e426c's admitted amended A4 preliminary gate,
+its141-member compact archive and frozen Task6 source. Native78-case/final115
+acceptance remains open. The new once-only A5 diagnostic timed out with compile
+entered and no completion marker; prior load/parse/typecheck Right markers
+locate only this invocation's observed interval. Full original preservation
+intake passed; empty outputs, forced cleanup and H1 unresolved remain explicit.
+The final-source A4 parser capture has an authentic terminal under independent
+intake. No Council, model-checking or main implementation acceptance is claimed.

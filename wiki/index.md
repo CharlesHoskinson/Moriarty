@@ -45,9 +45,9 @@ will grow by merging evidence into durable topic pages.
 ## Active specification artifacts
 
 - [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — A0–A3 locally accepted;
-  A4 checker/producer units and 17 recovered child controls admitted; remaining
-  97 preliminary tests running. The full funding-pilot compilation view timed
-  out; full A4–A7 and Council remain open.
+  A4 checker/producer units and the amended17+97 preliminary gate admitted;
+  final native package remains open. The new compiler diagnostic timed out
+  after entering compile; H1, full A4–A7 and Council remain open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

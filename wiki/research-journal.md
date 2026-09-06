@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T01:07:01Z
+updated_at: 2026-09-06T03:04:34Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2018,3 +2018,51 @@ pilot gates, compilation timeout, lifecycle controls and retained admission;
 confidence high for those observations with the stated recovery limitations;
 lifecycle S3 experimental branch. Full A4/A5, Council and integration remain
 open. No timeout is represented as a model-checker result.
+
+
+## CLM-0177 — A4 preliminary gate admitted and new compiler interval observed
+
+Repository observation: experimental
+`08e426c7163880b9312f1f1f029a4dde9d0e7593` preserves root's independently
+reviewed A4 preliminary admission: exactly17 retained original controls plus97
+fresh JUnit instances. The original interrupted parent's exit remains unknown.
+The fresh pytest, recorder and actual outer exits are zero; all16 fresh child
+controls retain their own original report bindings. The complete independent
+intake checked both generated trees and frozen source/runtime inventories.
+The compact package retains141 original members, archive SHA256
+`20f9932bfd8c164e5f9de007452c855ae2f4af9c9e9aaf4380f493bb1224cacc`, under
+experimental `evidence/s02-candidate-a-completion/a4/pre-native-aggregate-admission/`.
+Independent and root archive audits passed. Large originals remain separately
+retained and hash-bound. The fresh87 returned outer responses retain the
+explicit intermediate polling-metadata gap; no missing history is invented.
+This is the amended preliminary gate, not final115 or native78-case acceptance.
+
+Experiment observation: the once-only compiler phase diagnostic at source
+`07c3a5462154d45e733d01d8a8bae856cb0f63c4` timed out after900seconds under
+the reviewed4096-MiB heap settings. Seven observer/fault controls and four
+actual direct/observed alias controls preceded its separate root dispatch.
+The original trace has seven markers: load, parse and typecheck resolved Right,
+then compile was entered without a completion marker. Inference: this locates
+an incomplete observed public compile interval in this new invocation, including
+observer I/O and promise scheduling margins. It does not identify an internal
+hotspot, locate the historical timeout, or prove the function was executing at
+the interruption instant.
+
+The time-wrapped child exited-15; forced SIGTERM cleanup completed. Recorder and
+actual outer exits were zero for evidence preservation only. Original stdout,
+stderr and GNU-time resources are empty, so no generated JSON or complete GNU
+resource measurements exist. Independent full intake SHA256
+`e4b745a1c7d09b0a8cc11a7cd3d3666da1bd8a1da3309bfaa4057d49669fb4f4`
+and root original-file/response/group checks admit preservation. Final intake
+SHA256 `f52aabfe60056dfce067edefb3cae9e6fd4863761d1fda2275927599ef4bcac6`
+binds255 prior originals; its authentic post-index transport remains separate.
+Originals are retained at experimental
+`.superpowers/sdd/a5-compiler-phase-diagnostic-20260906/`; durable packaging
+is underway. H1, paired compilation, bounded verification, full A4/A5,
+Council and integration remain open.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope amended preliminary-test admission and bounded compiler diagnostic;
+observed date2026-09-06UTC; reproduction reproduced for the admitted original
+tests, observer controls and terminal diagnostic; confidence high for those
+observations with stated gaps; lifecycle S3 experimental branch.
