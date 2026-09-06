@@ -398,7 +398,10 @@ function render(): void {
   const languageLink = el("a", "demo-badge", "Open executable R2");
   languageLink.setAttribute("href", "/language");
   const topActions = el("div", "top-actions");
+  const outcomeLink = el("a", "demo-badge", "Outcome intents");
+  outcomeLink.href = "/intents";
   topActions.append(el("span", "demo-badge", "Local mock · no live systems"), languageLink);
+  topActions.append(outcomeLink);
   topbar.append(brand, topActions);
 
   const hero = el("section", "hero");

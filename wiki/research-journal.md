@@ -3,8 +3,9 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T21:29:23.534731+00:00
+updated_at: 2026-09-06T22:00:49.403297+00:00
 sources:
+  - SRC-0050
   - SRC-0043
   - SRC-0044
   - SRC-0045
@@ -2706,3 +2707,38 @@ wrapper still require implementation; no native build or proof was run.
 Metadata: SRC-0045 commit `695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`, source
 observation and design recommendation, S2 specified-only; observed 2026-09-06;
 confidence high for named interfaces, unknown for financial circuit feasibility.
+
+## CLM-0198: Bounded outcomes authorize independently selected financial plans
+
+The [R2b workspace](../experiments/moriarty-developer-mock/README.md) signs
+canonical outcome authority before choosing either registered constant-product
+pool. Its loan settlement uses the same independent trace checker. The runtime
+re-evaluates registered programs and checks complete shared balances, gross
+principal debits across recipients, net credits including fees, exact structured
+assets, expiry and one-shot nonces. Concurrent simulation commits state and nonce
+once. Edited inputs and pending UI work cannot display mismatched evidence after
+the recorded corrections. Real contract/refinement/transition/history proofs
+remain unavailable; local signing is not a wallet mandate or ledger acceptance.
+
+Metadata: SRC-0042 pinned target inputs, SRC-0047 design input, SRC-0050 user
+authorization; observed 2026-09-06; experiment observation, S3 atomic local
+prototype; named checks reproduced in the [evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md)
+and source hash manifest; confidence high for those tested predicates, unknown
+for unimplemented real proof and distributed consumption. Example changes and
+reload reset the synthetic world; no durable replay protection is claimed.
+
+## CLM-0199: Held-out financial requirements remain outside the atomic profile
+
+The [held-out manifest](../evidence/moriarty-r2b-heldouts-2026-09-06/manifest.json)
+selects ACTUS NAM19's IPCI event at 2013-07-01, Maple F8 refinancing and Huma F23
+pending redemption. Each records separate authority, financial-state and lifecycle
+requirements. All need extensions. Source inspection of expected results is not
+execution or conformance; this sprint added no Core instruction for these cases.
+
+Metadata: SRC-0042 ACTUS tests `f7a8064872b69db1f0beabac771c99dc3ce0c397`,
+ACTUS techspec `94ef09e4992f79d573f84f41d8480f557365870e`, DeFiFormal
+`8ae0bbfaa3193078d1cabf6999db1382985b7f95`; SRC-0047 secondary lifecycle
+framing; observed 2026-09-06; pinned source observation and design disposition,
+S2; financial execution not reproduced; confidence high for source locators,
+medium for extension design. Native R3 remains specified-only, with certificates,
+private/residual composition and full ACTUS/DeFi coverage still open.

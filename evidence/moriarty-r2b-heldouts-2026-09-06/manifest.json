@@ -1,0 +1,156 @@
+{
+  "manifestVersion": "moriarty-r2b-heldouts/1",
+  "createdDate": "2026-09-06",
+  "scope": "R2b finite atomic outcome-profile held-out source intake",
+  "status": "design-only-not-implemented-not-conformance",
+  "constraints": {
+    "caseCount": 3,
+    "localSourcesOnly": true,
+    "coreExpanded": false,
+    "modelOrNativeProofRun": false,
+    "calculatedResultsClaimed": false,
+    "corpusRedesigned": false,
+    "allowedDispositions": [
+      "representable",
+      "rejected",
+      "needs-extension"
+    ]
+  },
+  "profileBaseline": {
+    "designSource": {
+      "path": "docs/superpowers/specs/2026-09-06-r2b-outcome-intents-design.md",
+      "sha256": "e213b62ec35823f1a3a075ef95d1fd454cf731c2d8d2387fb258fca1bd89c235",
+      "locator": "Only swap and loan settle actions enter this atomic adapter profile; no pending success"
+    },
+    "probeAction": {
+      "package": "Credit.FixedInstallment",
+      "action": "settle",
+      "source": "experiments/moriarty-developer-mock/src/language/packages.ts:110-125"
+    }
+  },
+  "supportingInput": {
+    "path": "raw/reports/intents-2026-09-06/intents.md",
+    "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+    "locators": [
+      "lines 1570-1607",
+      "lines 1609-1652"
+    ],
+    "authority": "secondary design/research evidence with opaque citations",
+    "standardsStatus": "not independently re-verified in this local-only intake"
+  },
+  "targetMapping": {
+    "path": "evidence/moriarty-design-sprint-2026-09-06/defi-72-requirements.csv",
+    "sha256": "59a2077b9341b9b880805b22ebaa10d23a1a78826b68c62877bc97f970f0a365",
+    "locators": [
+      "row ordinal 10: Maple",
+      "row ordinal 34: Huma Finance V2"
+    ],
+    "sourceCommit": "8ae0bbfaa3193078d1cabf6999db1382985b7f95"
+  },
+  "cases": [
+    {
+      "id": "ACTUS-NAM19-IPCI-2013-07-01",
+      "family": "ACTUS",
+      "source": {
+        "repository": "https://github.com/actusfrf/actus-tests.git",
+        "commit": "f7a8064872b69db1f0beabac771c99dc3ce0c397",
+        "path": "tests/actus-tests-nam.json",
+        "gitBlob": "5344260727106ab511d08a1aef4ea75449e18096",
+        "sha256": "bfc39c7a344b1243ce15accb9800837b3d87a050ffa435395595e4bf559e4a9b",
+        "locator": "/nam19/results/2; source lines 6413-6421",
+        "techspec": {
+          "repository": "https://github.com/actusfrf/actus-techspecs.git",
+          "commit": "94ef09e4992f79d573f84f41d8480f557365870e",
+          "path": "actus-techspecs.tex",
+          "gitBlob": "dabcd9d7993e4d44f30165438801a1bd8430a300",
+          "sha256": "ceab659d35dca615287360b9266cf105a9e2a79e99ee75253ea8b3abc5af91d9",
+          "locator": "NAM section beginning at line 1481; schedule includes IPCI"
+        }
+      },
+      "source_observation": {
+        "eventType": "IPCI",
+        "eventDate": "2013-07-01T00:00",
+        "payoff": "0",
+        "beforeNotionalPrincipal": "5000",
+        "afterNotionalPrincipal": "5236.461356333502",
+        "capitalizationEndDate": "2013-07-01T00:00:00"
+      },
+      "atomic_profile_probe": {
+        "action": "settle",
+        "result": "not-representable-by-existing-action",
+        "reason": "settle discharges already-created principal and interest dues; it does not capitalize accrued interest into notional"
+      },
+      "authority_result": "needs an explicit bounded permission to increase liability",
+      "financial_state_result": "needs a liability-increase transition preserving pre-event notional, capitalized amount, and post-event notional",
+      "lifecycle_result": "needs IPCI ordering and capitalization-boundary semantics",
+      "disposition": "needs-extension",
+      "evaluationStatus": "source-inspected-only"
+    },
+    {
+      "id": "DEFIFORMAL-MAPLE-F8-REFINANCE",
+      "family": "DeFi-lending",
+      "source": {
+        "repository": "https://github.com/CharlesHoskinson/defiformal.git",
+        "commit": "8ae0bbfaa3193078d1cabf6999db1382985b7f95",
+        "path": "expansion/02-lending/specs/maple.json",
+        "gitBlob": "7f10556b6e4bea00c14a38ed6d8fce6517a94da7",
+        "sha256": "4ea33181ca01c589af7764260e0bbd34d552163d196750cd4f85e09d61739061",
+        "locator": "/functionalObligations/7 (F8)",
+        "corpusLocator": "corpus50/lanes/lane1-dex-lending-cdp-lsd.json:176; /categories/1/protocols/4",
+        "targetLocator": "defi-72-requirements.csv ordinal 10"
+      },
+      "source_observation": {
+        "behavior": "a change of existing loan terms is proposed as a hash commitment and takes effect only after counterparty acceptance",
+        "namedFields": [
+          "_refinanceCommitment",
+          "_refinanceInterest"
+        ],
+        "sourceClassification": "DeFiFormal pinned repository observation"
+      },
+      "atomic_profile_probe": {
+        "action": "settle",
+        "result": "not-representable-by-existing-action",
+        "reason": "settle clears one fixed obligation and cannot propose, accept, or bind changed liability terms"
+      },
+      "authority_result": "needs distinct proposer and counterparty-acceptor authority bound to the committed replacement terms",
+      "financial_state_result": "needs independently recorded old liability, accrued refinance interest, and accepted replacement liability",
+      "lifecycle_result": "needs proposed and accepted states; terminal settlement alone loses the consent boundary",
+      "disposition": "needs-extension",
+      "evaluationStatus": "source-inspected-only"
+    },
+    {
+      "id": "DEFIFORMAL-HUMA-F23-PENDING-REDEMPTION",
+      "family": "DeFi-request-claim-redemption",
+      "source": {
+        "repository": "https://github.com/CharlesHoskinson/defiformal.git",
+        "commit": "8ae0bbfaa3193078d1cabf6999db1382985b7f95",
+        "path": "expansion/06-yield-vaults/specs/huma-finance-v2.json",
+        "gitBlob": "a1ce8d73ee38bac14d3c804235c72e897a045a18",
+        "sha256": "a61435266db37891d280cfa7dfe06356a32a17eab5f90f71a69ad9d861d98306",
+        "locator": "/functionalObligations/22 (F23)",
+        "corpusLocator": "corpus50/lanes/lane2-perps-yield-bridges-intents.json:200-218; /categories/1/protocols/4",
+        "targetLocator": "defi-72-requirements.csv ordinal 34"
+      },
+      "source_observation": {
+        "behavior": "redemption requests are batched by period, senior claims are filled first, shortfalls are pro-rated and rolled forward, and proceeds require a separate claim call",
+        "statesRequiredBySupportingInput": [
+          "Open",
+          "Pending",
+          "Claimable",
+          "Settled"
+        ],
+        "sourceClassification": "DeFiFormal pinned repository observation plus secondary intents-report lifecycle framing"
+      },
+      "atomic_profile_probe": {
+        "action": "settle",
+        "result": "rejected-by-profile",
+        "reason": "the atomic profile expressly has no pending success and settle cannot preserve a live redemption claim for a later call"
+      },
+      "authority_result": "needs request authority, later claim authority, and residual authority that does not grow while pending",
+      "financial_state_result": "needs shares locked or consumed together with an explicit live redemption obligation and later asset credit",
+      "lifecycle_result": "needs bounded Pending and Claimable states, rollover, ordering, and a separate claim transition",
+      "disposition": "needs-extension",
+      "evaluationStatus": "source-inspected-only"
+    }
+  ]
+}

@@ -3,8 +3,9 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-06T21:29:23.534731+00:00
+updated_at: 2026-09-06T22:00:49.403297+00:00
 sources:
+  - SRC-0050
   - SRC-0043
   - SRC-0044
   - SRC-0045
@@ -112,3 +113,16 @@ Compact's source recursion restriction is a different boundary. Native IVC
 success, accepted ledger proof format, multi-parent PCD semantics and private
 witness handoff each need separate evidence. No Moriarty cryptographic result
 was reproduced. Metadata and qualification are in journal CLM-0192–0193.
+
+## R2b local outcome authority boundary
+
+CLM-0198 adds an independent bounded trace checker and a runtime that recomputes
+one registered pool swap or loan settlement. Aggregate gross spending, permitted
+recipients, net goals, fees, expiry and one-shot consumption are tested locally.
+The [evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md) identifies
+source hashes and rejection/positive controls. These tests and Ed25519 signatures
+are not contract certificates, refinement proofs, PCD or ledger uniqueness.
+The four required real claims remain unavailable. CLM-0199 preserves held-out
+financial extensions before further Core design. Metadata: SRC-0042/0047/0050;
+2026-09-06; experiment observation, S3; tested predicates reproduced, confidence
+high within their scope. General proof obligations remain specified-only.

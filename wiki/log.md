@@ -865,3 +865,13 @@ canonical local signing and browser integration, with corrected review findings
 and source-scoped checks. CLM-0197 specifies the native loan IVC test; no native
 proof campaign or ledger run occurred. General DSL, conformance and real proofs
 remain open. Historical A4/A5 evidence is preserved.
+
+## 2026-09-06T22:00:49.403297+00:00 — R2b outcome-intent sprint
+
+- Added canonical signed outcome authority, independently chosen registered
+  pool plans, shared-balance execution and loan settlement through the same checker.
+- Added `/intents`, local expiry/nonces and receipts with mandatory proofs unavailable.
+- Preserved source-only NAM/refinance/pending-redemption held-outs and updated
+  journal CLM-0198/0199, assurance, index and the controlling amendment.
+- [Evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md) records checks,
+  review corrections and scope. R3 is the next bounded native deliverable; A4/A5 stay historical.

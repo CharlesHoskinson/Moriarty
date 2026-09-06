@@ -5,18 +5,20 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
-**Latest output:** [intents report integration](../deliverables/intents-report-integration-2026-09-06/README.md)
-— graph, authority/IntentIR/PlanIR/receipt distinctions and an R2b gate.
-The [developer workspace](../experiments/moriarty-developer-mock/README.md)
-now has a bounded executable loan/swap package DSL, generic evaluator,
-independent policy checks and local exact-plan Ed25519 signing. Its required
-real claims remain unavailable. See [R2 evidence](../evidence/moriarty-r2-language-2026-09-06/README.md).
+**Latest output:** [R2b outcome-intent workspace and evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
+At `/intents`, sign bounded outcome authority before choosing a pool route, or
+settle loan dues through the same checker. Independent gross debit/net goal
+checks, local expiry and atomic nonce consumption are implemented. Required
+real proofs remain unavailable; example changes/reload reset local nonce history.
+[Three held-out cases](../evidence/moriarty-r2b-heldouts-2026-09-06/README.md)
+remain needs-extension. The [intents amendment](../docs/research/2026-09-06-intents-report-integration.md)
+continues to control the scope. R2 exact-plan mode remains at `/language`.
 
 The [PCD report integration](../deliverables/pcd-report-integration-2026-09-06/README.md)
 and [ACTUS/DeFi target study](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
 remain controlling foundations. The [native R3 test](../experiments/moriarty-native-ivc-r3/README.md)
 is specified-only. No general DSL, contract theorem, complete conformance or
-real PCD integration is claimed complete. Journal CLM-0195–0197 records this step.
+real PCD integration is claimed complete. Journal CLM-0198–0199 records the latest step.
 
 The [user reset](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
 supersedes the old A4/A5 execution loop. Its results and unfinished obligations

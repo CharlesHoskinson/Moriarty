@@ -21,17 +21,22 @@ now contains the target matrices, semantic alternatives, proposed PCD contract
 and developer interface. The user approved starting the local developer mock
 with “begin”, then supplied a PCD report and identified Midnight Halo2/recursion.
 The [report reconciliation](docs/research/2026-09-06-pcd-report-integration.md)
-and its R0–R6 sequence now control execution. The first local mock is
-implemented with simulated evidence. Next: implement typed
-mandatory claims and a shared ACTUS/DeFi slice; prioritize the inspected native
-Midnight IVC route and separately test ledger acceptance and private witness
-handoff. Optional acceleration cannot bypass required proofs. Compact's lack
+and its R0–R6 sequence now control execution. The local mock, typed mandatory-claim interface, shared bounded loan/swap
+evaluator and R2b atomic outcome-intent profile are implemented as local
+experiments. See the [R2b evidence](evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
+Next is the specified R3 native financial IVC boundary: implement and review its
+bounded command before running it, prioritize the inspected native Midnight
+route, and separately test ledger acceptance and private witness handoff. Optional acceleration cannot bypass required proofs. Compact's lack
 of source recursion does not establish absence of backend recursive proofs.
 ACTUS conformance and real PCD integration remain open. No old loop resumes.
 
 The [intents report amendment](docs/research/2026-09-06-intents-report-integration.md)
 further controls execution: R2 is an exact-plan local prototype; R2b separates
-outcome IntentIR, authority, PlanIR, execution and receipts. Gross debit limits
+outcome IntentIR, authority, PlanIR, execution and receipts in a single-action
+atomic local profile. Its nonce history resets with the demo; pending progress,
+residual capabilities and multi-step composition remain unimplemented. The
+[three held-out cases](evidence/moriarty-r2b-heldouts-2026-09-06/README.md) are
+source-inspected requirements, not conformance results. Gross debit limits
 cannot be hidden by refunds; net goals include fees. Preserve obligations and
 residual authority in pending progress. Require refinement and positive feasible
 cases before promoting an adapter. The DeFi corpus is an implementation/test

@@ -1,6 +1,6 @@
 # Intents report integration
 
-Date: 2026-09-06. Status: S2 design amendment, with a restricted R2 prototype.
+Date: 2026-09-06. Status: S2 design amendment, with restricted R2 and R2b S3 local prototypes.
 The user supplied `intents.md` during the authorized shared-language sprint and
 asked to graph it and integrate its ideas. This amendment extends the
 [PCD sequence](2026-09-06-pcd-report-integration.md); it does not restart A4/A5.
@@ -119,3 +119,27 @@ The first two target families stay represented; asynchronous redemption is a
 later explicit lifecycle profile. Record representable/rejected/needs-extension
 with source locators and independent result fields. Their selection is a design
 decision, not an implementation or conformance result.
+
+## R2b implementation checkpoint
+
+The [atomic profile](../superpowers/specs/2026-09-06-r2b-outcome-intents-design.md)
+is implemented at `/intents`; [evidence](../../evidence/moriarty-r2b-outcomes-2026-09-06/README.md)
+records its actual checks. A signed outcome permits either of two registered pool
+plans. The same independent authority checker also checks transfer-backed loan
+settlement. Gross asset debit across recipients, net goals including fees, exact
+asset identities, expiry and principal/domain/nonce consumption are executable.
+The signer renders all canonical safety fields before signing. This is a local
+key trust record, not wallet or on-chain authority.
+
+The first implementation deliberately permits one registered financial action
+and at most four explicit fees. It has no partial fill, pending success or reusable
+residual capability. Remaining one-shot allowance is extinguished on commit.
+Example changes and reload reset synthetic balances and nonce history; the clock
+is an explicit monotone demo input. Concurrency checks protect this local world,
+not distributed uniqueness. Mandatory real claims remain unavailable.
+
+[Held-out source records](../../evidence/moriarty-r2b-heldouts-2026-09-06/README.md)
+freeze ACTUS NAM19 capitalization, Maple refinance and Huma pending redemption.
+All three need extensions; no new Core semantics or conformance result is claimed.
+The next bounded deliverable is R3's native proof-interface experiment. R4 owns
+private/residual composition, and R5 retains certificates and full target coverage.
