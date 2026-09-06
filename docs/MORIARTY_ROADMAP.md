@@ -166,9 +166,11 @@ the internal failing operation is unresolved. Independent and root review
 admit failed diagnostic preservation. The literal-case wrapper remedy is
 implemented under a frozen 121-file source map. Its fresh aggregate parse,
 all78 binding comparison, 58 exporter regressions and aggregate native
-typecheck have passed their scoped checks and independent review. The remaining
-native source suites and canonical export acceptance remain open; CLM-0184
-records the original evidence and limits.
+typecheck have passed their scoped checks and independent review. All three
+native source test suites also passed (12, 17 and 17 tests). Root admitted
+Gate1 and committed the source at `fbea1cee`. The new canonical case014 still
+exhausted the JavaScript heap, with no ITF; canonical export acceptance remains
+open. CLM-0185 records the original evidence and limits.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -258,8 +260,9 @@ root admission accept retained output structure only. Both earlier failed
 intakes remain immutable. See CLM-0183 in the research journal for current
 evidence pins. A fresh 24-file compiler view with symmetric removal of13 unused
 swap helpers has passed actual-source and materialized-view review. This is
-copied-source preservation only; its native stages, paired flattened compilation
-and bounded verification remain open. See CLM-0184.
+copied-source preservation only. Its 36-input dispatch freeze also passed
+independent review; native stages, paired flattened compilation and bounded
+verification remain open. See CLM-0185.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

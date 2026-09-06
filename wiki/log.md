@@ -797,3 +797,11 @@ native typecheck, with scoped independent reviews. The A5 unused-helper copied
 view also passed actual-source and materialized-view review. These are source
 and preparation gates; remaining native suites, canonical exports, paired
 compilation and bounded verification remain open.
+
+## [2026-09-06] experiment | Source gate admitted; canonical heap failure
+
+CLM-0185 records all four A4 source checks and joint root Gate1 admission,
+committed at experimental `fbea1cee`. The new canonical case014 ended in
+JavaScript heap exhaustion without an ITF; its independent preservation audit
+and source investigation are pending. A5's 36-input dispatch freeze passed
+independent review. Full exports, bounded verification and A4/A5 remain open.

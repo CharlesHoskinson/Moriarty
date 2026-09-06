@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T07:33:49Z
+updated_at: 2026-09-06T08:22:00Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2407,3 +2407,44 @@ scope the cited A4 source checks and A5 copied preparation; observed date
 independent checks; confidence high within those limits; lifecycle S3
 experimental branch. Final full suites, package controls, A4/A5 acceptance and
 H1 remain open.
+
+## CLM-0185 — Source gate admitted; canonical export still fails
+
+Experiment observation: all four required literal-wrapper source checks passed.
+The aggregate typecheck is recorded in CLM-0184. Export, installment and swap
+test suites ended at 1852ba/0, 545a4c/0 and 3e4d6c/0, with exactly 12, 17 and
+17 passing tests. Each has a separate independent capture review and root
+intake under experimental `.superpowers/sdd/a4-literal-v1-20260906/`.
+Their source/runtime endpoints remained stable, and RH002 cleanup was complete
+and unforced. The root source gate `review-source.md` is SHA256
+`bf6c86b7c5faec54e65076a66aec5607e1e3f50247e4fee9dfd90739a2e6a5f6`.
+Experimental commit `fbea1cee5de497a3e58fe3081bb49b4059edd97b` retains all
+121 source-map bytes and includes the 78 literal wrappers, exporter correction,
+regressions and adopted source plan. This admits the source gate only.
+
+The first new canonical case014 export ended at actual 2fa302/134. Its native
+process exited -6 with an explicit JavaScript heap exhaustion and produced no
+ITF. RH002 recorded 329.2869 seconds, complete resource capture, no timeout,
+stable source/runtime endpoints and ineligible receipt status. The original
+inner receipt is SHA256
+`11a405604255e6732717703132907a2224b6d51c1eaed7e377700115ebf20351`;
+all original transport responses are retained in `transport/case-014/`.
+Independent failure review and source investigation are pending. Case044 and
+the remaining canonical exports have not been launched on this source epoch.
+
+Repository observation: the A5 copied view now has a frozen 36-input dispatch
+at the same full experimental commit. Its `dispatch.json` is SHA256
+`e4497cc8193db857873898b0321c14c78fbafcb671ba59b3f76c87d9cea67d90`.
+Independent freeze review
+`f088b6da84df9c820660d4743a7602cb379969bc38c46a5307b784a7193219fc`
+passed; root read the complete report at 58c54a/0. No native A5 stage follows
+from that source-only review. The frozen view and source commit are held for
+the finite ten-stage experiment.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope four A4 source checks, one failed canonical export and A5 dispatch
+preservation; observed date 2026-09-06 UTC; reproduction reproduced for the
+named native commands and scoped reviews, specified-only for new A5 native
+stages; confidence high within those limits; lifecycle S3 experimental branch.
+All78/1557 export acceptance, final full suites, package controls, paired
+flattened compilation, solver/H1 evidence and A4/A5 completion remain open.
