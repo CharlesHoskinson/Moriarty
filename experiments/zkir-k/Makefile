@@ -3,8 +3,10 @@
 #   make kompile       the five definitions only
 #   make fast          the four quick layers (no differential runs)
 #   make zkir-contract kompile the target-contract definition (zkir-contract-main.k) only
-#   make contract      run the contract over the corpus, write a dated receipt
+#   make contract      run the contract over the corpus and the Moriarty contexts, write a dated receipt
 #   make contexts      the seven Moriarty transaction contexts on K, preprocess and the circuit oracle (M4)
+#   make circuit       the two differential runs in --circuit mode (MockProver oracle), dated receipts
+#   make provability   unknown-witness keygen over the corpus against the contract receipt of $(DATE) (M5b)
 # Run from experiments/zkir-k; Python goes through uv from the repository root.
 ROOT    := $(abspath ../..)
 UV      := cd $(ROOT) && uv run --group zkir-k python
@@ -13,7 +15,7 @@ DATE    ?= $(shell date +%F)
 RECEIPT := $(ROOT)/evidence
 DEFS    := zkir zkir-ext zkir-check zkir-test
 
-.PHONY: check kompile fast differential contract contexts zkir-contract $(DEFS)
+.PHONY: check kompile fast differential contract contexts circuit provability zkir-contract $(DEFS)
 
 kompile: $(DEFS) zkir-contract
 $(DEFS):
@@ -26,6 +28,13 @@ contract: zkir-contract
 
 contexts: zkir zkir-ext
 	$(UV) $(TOOLS)/moriarty_contexts.py --ext | tee $(RECEIPT)/zkir-k-moriarty-contexts-$(DATE).txt
+
+circuit: zkir zkir-ext
+	$(UV) $(TOOLS)/diff_test.py --circuit       | tee $(RECEIPT)/zkir-k-circuit-differential-92e8bdd3-$(DATE).txt
+	$(UV) $(TOOLS)/diff_test.py --ext --circuit | tee $(RECEIPT)/zkir-k-circuit-differential-ext-2ffe2d1-$(DATE).txt
+
+provability:
+	$(UV) $(TOOLS)/provability.py --contract-receipt $(RECEIPT)/zkir-k-contract-corpus-$(DATE).txt --out $(RECEIPT)/zkir-k-provability-$(DATE).txt
 
 fast: kompile
 	$(UV) $(TOOLS)/unit_values.py      | tee $(RECEIPT)/zkir-k-unit-values-$(DATE).txt

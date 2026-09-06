@@ -8,7 +8,10 @@ the ZKIR definition, and returns a dict shaped like the Rust oracle's output:
    violations: [...] (the verdicts that are neither holds nor unconstrained),
    witness_space: bool (the <witnessSpace> cell: every verdict holds or is
    unconstrained and every register is well typed, plan-iter3 M2),
-   unconstrained: [id] (the registers whose assigning relation is unconstrained)}
+   unconstrained: [id] (the registers whose assigning relation is unconstrained),
+   observable: {status, error?, outputs: [str], pis: [str]} (the <observable>
+   cell, obs(status, encoded outputs, public inputs): the observable semantics
+   [[P]](pre) of plan-iter3 M5b)}
 Memory values are re-encoded on the Python side with the same encoding as
 `encode_offcircuit` (the encodings are unit-tested against K in unit_values.py).
 
@@ -287,6 +290,23 @@ def need(t: KInner) -> tuple[str, Any]:
     raise ValueError(t.label.name)
 
 
+def observable(t: KInner) -> dict[str, Any] | None:
+    """The <observable> cell: obs(status, encoded outputs, public inputs), or
+    None while the run has not reached #observable (noObs())."""
+    assert isinstance(t, KApply)
+    if t.label.name == 'noObs':
+        return None
+    assert t.label.name == 'obs', t.label.name
+    status, outputs, pis = t.args
+    assert isinstance(status, KApply)
+    rec: dict[str, Any] = {'status': status.label.name}
+    if status.args:
+        rec['error'] = tok_str(status.args[0])
+    rec['outputs'] = [str(tok_int(x)) for x in list_items(outputs)]
+    rec['pis'] = [str(tok_int(x)) for x in list_items(pis)]
+    return rec
+
+
 def skip(t: KInner):
     assert isinstance(t, KApply)
     if t.label.name == 'skipNone':
@@ -356,6 +376,7 @@ class Runner:
         out['witness_space'] = isinstance(ws, KToken) and ws.token == 'true'
         out['unconstrained'] = [tok_str(x) for x in list_items(find_cell(cfg, '<unconstrainedRegs>'))]
         out['outputs'] = [type_string(v, self.ext) + ':' + ','.join(str(e) for e in encode_value(v, self.ext)[1]) for v in list_items(find_cell(cfg, '<outputs>'))]
+        out['observable'] = observable(find_cell(cfg, '<observable>'))
         return out
 
     def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False, checked: bool = False) -> dict[str, Any]:

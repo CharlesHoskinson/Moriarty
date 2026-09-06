@@ -28,6 +28,7 @@ module ADD-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(add(var("%a"), var("%b"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
+        <observable> noObs() => ?_ </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>

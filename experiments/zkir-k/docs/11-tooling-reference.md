@@ -165,6 +165,7 @@ Memory records come from `<mem>`, in K map order. Each register is `{variant, ty
 | `witness_space` | the `<witnessSpace>` cell: every verdict holds or is unconstrained and every register is well typed |
 | `unconstrained` | the registers of `<unconstrainedRegs>`, whose assigning relation is `unconstrained` |
 | `outputs` | `"<type>:<enc0>,<enc1>,..."` per `<outputs>` value |
+| `observable` | the `<observable>` cell, `obs(status, encoded outputs, public inputs)`, as `{status, error?, outputs, pis}` with decimal strings; `null` while the cell is `noObs()` (16-compilation-target-contract.md) |
 
 A `--gen` run on `native_identity.zkir` with provisional commitment `0` and opening `9` prints the following, with whitespace condensed:
 

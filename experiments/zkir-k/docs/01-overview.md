@@ -11,7 +11,7 @@ One set of K modules covers two surfaces of ZKIR:
 | the base surface | `ZKIR` in `zkir.k` | `midnight-ledger` at 92e8bdd3, `zkir-v3/src/` | 34 instructions, 13 types (`zkir-syntax.k`) |
 | the extension surface | `ZKIR-EXT` in `zkir-ext.k` | `midnight-zkir` at 2ffe2d1, `zkir/src/` | the base set plus `and`, `or`, `xor`, `concat`, `slice`, `nth`, `reverse`, `load_constant`, `sha512`, and the types `Bool`, `Byte`, `Bytes<n>` (`reverse_bytes` is removed) |
 
-Four main modules give four compiled definitions: `ZKIR` and `ZKIR-EXT` run programs, `ZKIR-CHECK` evaluates only the static well-formedness check, and `ZKIR-TEST` evaluates any function term for the unit tests. All four share the module files, so a change to a rule reaches every definition that imports it.
+Six main modules give six compiled definitions: `ZKIR` and `ZKIR-EXT` run programs, `ZKIR-CHECK` evaluates only the static well-formedness check, `ZKIR-CONTRACT-MAIN` evaluates the compilation target contract (16-compilation-target-contract.md), `ZKIR-TEST` evaluates any function term for the unit tests, and `ZKIR-SYMBOLIC` is the Haskell-backend definition the claims under `claims/` are proved on (`claims/README.md`). All six share the module files, so a change to a rule reaches every definition that imports it.
 
 ## What it models and what it does not
 
@@ -26,10 +26,10 @@ The definition does not model the PLONKish gate rows and copy wiring the circuit
 
 | Directory | Content |
 |---|---|
-| `semantics/` | the K modules listed below, and the four compiled definitions `zkir-kompiled/`, `zkir-ext-kompiled/`, `zkir-check-kompiled/`, `zkir-test-kompiled/` |
+| `semantics/` | the K modules listed below, and the six compiled definitions `zkir-kompiled/`, `zkir-ext-kompiled/`, `zkir-check-kompiled/`, `zkir-contract-main-kompiled/`, `zkir-test-kompiled/`, `zkir-symbolic-kompiled/` |
 | `tools/` | the pyk preprocessor `zkir_kast.py`, the runner `zkir_run.py`, the harnesses (`diff_test.py`, `divergence_tests.py`, `unit_values.py`, `unit_hash.py`, `check_corpus.py`), the generators (`gen_handmade.py`, `gen_constants.py`, `extract_test_inputs.py`) and the Python reference `zkir_values.py` |
 | `corpus/` | programs: `ledger9-92e8bdd3-tests/` (43), `midnight-zkir-2ffe2d1-tests/` (61), `midnight-zkir-2ffe2d1-precompiles/` (6), `handmade/` (9), `handmade-negative/` (7), `divergence/` (20) |
-| `docs/` | the fifteen chapters, `01-overview.md` to `15-design-rationale-and-limits.md` |
+| `docs/` | the sixteen chapters, `01-overview.md` to `16-compilation-target-contract.md` |
 
 The receipts of the checks are in `evidence/` at the repository root, named `zkir-k-*`. The Rust sources at the pinned commits and the two `zkir-oracle` harness binaries are under `repos/_build/`.
 
@@ -46,6 +46,8 @@ The receipts of the checks are in `evidence/` at the repository root, named `zki
 | `zkir-ops.k` | `ZKIR-OPS` | value-level helpers, one per Rust `*_offcircuit` function or conversion, each pure and with a result sort of its own: most return a `ValueResult` (`vOk(value)`, `vErr(message)` or `vPanic(message)`); `intoCoordinatesV` and `bytes32IntoLowHighV` return a `PairResult` (`pOk(v, w)` or `pErr(message)`), which the VM writes to two registers in the rule for `#put2` in `zkir-vm.k`; `constrainEqV` and `checkBits` return a `CheckResult` (`cOk()` or `cErr(message)`) |
 | `zkir-vm.k` | `ZKIR-VM-SYNTAX`, `ZKIR-VM` | the configuration, the `Preimage`, `Job` and `Need` sorts, and the witness computation of `preprocess`; each instruction appends `gate(I)` to `<constraints>`, except `impact` (a `guardGate` plus one `piGate` per operand) and `output` (an `outputGate`); the start of the run seeds `bindGate` and, under the commitment flag, `commGate` |
 | `zkir-constraints.k` | `ZKIR-CONSTRAINTS` | the `Constraint` sort (`gate`, `piGate`, `guardGate`, `bindGate`, `commGate`, `outputGate`), the `Outcome` sort, `verdict(Constraint, Outcome)` and `eval` |
+| `zkir-static.k` | `ZKIR-STATIC` | program-only facts shared by the checker and the contract: `usedChips`, `chipNeeds`, the static type environment (`inputEnv`, `bindOuts`, `stype`), the alignment shapes and the padded width of `less_than` |
+| `zkir-contract.k`, `zkir-contract-main.k` | `ZKIR-CONTRACT`, `ZKIR-CONTRACT-MAIN` | the compilation target contract `targetContract(P)`, twenty tier-one obligations over the program (16-compilation-target-contract.md), and its main module |
 | `zkir-ext.k` | `ZKIR-EXT-SYNTAX`, `ZKIR-EXT-VALUES`, `ZKIR-SHA512`, `ZKIR-EXT` | the extension surface of `midnight-zkir` 2ffe2d1 on top of the base modules, including `sha512Bytes` |
 | `zkir-sha512-constants.k` | `ZKIR-SHA512-CONSTANTS` | the FIPS 180-4 SHA-512 round constants and initial state |
 | `zkir.k` | `ZKIR` | main module for running `job(program, preimage)` |
@@ -106,7 +108,7 @@ Each of the tools below checks the definition and has a receipt under `evidence/
 |---|---|---|---|
 | unit checks of fields, curves and encodings | `unit_values.py` | an independent Python implementation (`zkir_values.py`) | 43 of 43 pass |
 | known-answer checks of the hashes | `unit_hash.py` | the oracle's register values, and `hashlib` for SHA-256 | 18 of 18 pass |
-| differential runs, base surface | `diff_test.py` | the oracle built from `midnight-ledger` 92e8bdd3 | 358 comparisons agree, 0 disagree: 46 successful runs, 309 error runs (status and error class), 3 programs rejected before the run by both the preprocessor and `IrSource::load`; no successful primary run has a non-holding gate |
+| differential runs, base surface | `diff_test.py` | the oracle built from `midnight-ledger` 92e8bdd3 | 365 comparisons agree, 0 disagree: 53 successful runs (46 on generated preimages, 7 on the transaction contexts of `corpus/moriarty-contexts/`), 309 error runs (status and error class), 3 programs rejected before the run by both the preprocessor and `IrSource::load`; no successful primary run has a non-holding gate |
 | differential runs, extension surface | `diff_test.py --ext` | the oracle built from `midnight-zkir` 2ffe2d1 | 418 comparisons agree, 0 disagree: 50 successful runs, 364 error runs, 4 rejected before the run; no successful primary run has a non-holding gate |
 | divergence cases | `divergence_tests.py` | the oracle, plus the expected outcome of one selected gate | 20 of 20 behave as expected |
 | corpus well-formedness | `check_corpus.py` | the expectation table in the tool | 63 programs as expected: the 43 crate tests, the 6 precompiles, the 7 handmade negatives and the 7 Moriarty artifacts under `experiments/moriarty-compact-escrow/output/zkir/` and `experiments/moriarty-core-swap/output/zkir/` |
@@ -132,6 +134,7 @@ For each program the harness draws typed inputs, runs `genJob` for up to eight p
 | Where do off-circuit and in-circuit behaviour differ, and which rows of `wiki/contradictions.md` record it? | 13-known-divergences.md |
 | How do I add an instruction, a type or a check? | 14-extending-the-semantics.md |
 | Why is the definition built this way, and what does it not cover? | 15-design-rationale-and-limits.md |
+| What must a compiler's ZKIR output satisfy, and what is the observable result a compiler-correctness statement quotes? | 16-compilation-target-contract.md |
 
 ## What a green run establishes
 

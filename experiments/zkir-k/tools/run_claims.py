@@ -16,8 +16,9 @@ kprove output is kept under --log-dir.
 
 The compiler-obligation template `spec_compiled_observable` writes the claim
 module for an observable-semantics obligation: after job(P, Pre) on the program
-P and the preimage Pre, the <status>, <outputs> and <pi> cells hold the expected
-(status, outputs, pis). The runner instantiates it once
+P and the preimage Pre, the <observable> cell holds obs(status, outputs, pis),
+the observable semantics [[P]](pre) of zkir-vm.k (`observable`), with the
+outputs encoded as field elements. The runner instantiates it once
 (claims/spec-compiled-observable.k) before running.
 """
 from __future__ import annotations
@@ -53,6 +54,9 @@ CLAIM_LIST: list[tuple[str, str, str]] = [
 # --- the compiler-obligation template -----------------------------------------------
 
 OTHER_CELLS = """\
+        <status> ok() => ?_ </status>
+        <outputs> .List => ?_ </outputs>
+        <pi> .List => ?_ </pi>
         <mem> .Map => ?_ </mem>
         <skips> .List => ?_ </skips>
         <pubInIdx> 0 => ?_ </pubInIdx> <pubOutIdx> 0 => ?_ </pubOutIdx> <privIdx> 0 => ?_ </privIdx>
@@ -75,10 +79,12 @@ def spec_compiled_observable(module: str, program: str, preimage: str,
 
     program, preimage: K terms of sorts Program and Preimage (the preimage may
     carry symbolic Int variables; constrain them in `requires`).
-    status, outputs, pis: the expected (Status, List, List) of the run.
+    status, outputs, pis: the expected (Status, List, List) of the run; the
+    outputs as the K List of their encoded field elements.
     The claim reads: job(program, preimage) from the initial configuration
-    finishes with <status> status, <outputs> outputs and <pi> pis; every other
-    cell is left existential.
+    finishes with <observable> obs(status, outputs, pis), the observable
+    semantics [[P]](pre) (zkir-vm.k `observable`); every other cell,
+    including <status>, <outputs> and <pi>, is left existential.
     """
     head = f'// {comment}\n' if comment else ''
     return f"""{head}requires "../semantics/zkir-symbolic.k"
@@ -87,9 +93,7 @@ module {module}
   imports ZKIR-SYMBOLIC
   claim <k> job({program},
                 {preimage}) => .K </k>
-        <status> ok() => {status} </status>
-        <outputs> .List => {outputs} </outputs>
-        <pi> .List => {pis} </pi>
+        <observable> noObs() => obs({status}, {outputs}, {pis}) </observable>
 {OTHER_CELLS}    requires {requires}
 endmodule
 """
@@ -108,8 +112,9 @@ def write_observable_instance() -> Path:
         comment='Claim (d): instance of the compiler-obligation template spec_compiled_observable\n'
                 '// (tools/run_claims.py). Generated; edit the template, not this file. The\n'
                 '// program add %a 1 -> %b ; impact 1 [%b] on a symbolic input A, with the\n'
-                '// public transcript input equal to the impacted value, finishes with\n'
-                '// (status ok, no outputs, public inputs [binding input 7, (A + 1) mod r]).')
+                '// public transcript input equal to the impacted value, has the observable\n'
+                '// result obs(ok, no outputs, public inputs [binding input 7, (A + 1) mod r])\n'
+                '// in the <observable> cell (zkir-vm.k `observable`, plan-iter3 M5b).')
     path = CLAIMS / 'spec-compiled-observable.k'
     path.write_text(text)
     return path

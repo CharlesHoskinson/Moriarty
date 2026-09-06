@@ -20,6 +20,9 @@
 //   <witnessSpace>       witnessSpace(verdicts, mem) of ZKIR-CONSTRAINTS: the final
 //                memory is a point of the modelled witness space
 //   <unconstrainedRegs>  the registers whose assigning relation is unconstrained
+//   <observable> the observable result of the run, obs(status, encoded outputs,
+//                public inputs): [[P]](pre) as the compiler-correctness statement
+//                quotes it (observable(...), after #witnessSpace)
 //
 // Entry points: job(P, Pre) runs P exactly as `IrSource::preprocess` would,
 // including its run-time checks, on any program `IrSource::load` accepts;
@@ -82,6 +85,7 @@ module ZKIR-VM
       <verdicts> .List </verdicts>
       <witnessSpace> false </witnessSpace>
       <unconstrainedRegs> .List </unconstrainedRegs>
+      <observable> noObs() </observable>
       <piIdx> 0 </piIdx>          // public inputs emitted so far on the constraint side
       <genMode> false </genMode>
       <needs> .List </needs>
@@ -105,8 +109,9 @@ module ZKIR-VM
   syntax KItem ::= #wfGate(WfResult)
   rule <k> #wfGate(wfOk()) => .K ... </k>
   rule <k> #wfGate(wfError(S)) => .K ... </k> <status> ok() => error("well-formedness: " +String S) </status>
-  // a failed static check ends the run before anything executes
-  rule <k> job(_, _) => .K ... </k> <status> error(_) </status>
+  // a failed static check ends the run before anything executes; the
+  // observable result is still recorded
+  rule <k> job(_, _) => #observable ... </k> <status> error(_) </status>
 
   // the circuit assigns every declared input from the witness before the
   // binding input: one inputGate per input, emitted whether or not decoding succeeds
@@ -530,9 +535,25 @@ module ZKIR-VM
        <outputs> Os </outputs> <pre> Pre </pre>
        <verdicts> _ => verdicts(Cs, M, Pi, Chips, Os, #preBinding(Pre)) </verdicts>
   // then decide membership of the final memory in the modelled witness space
-  rule <k> #witnessSpace => .K ... </k> <verdicts> Vs </verdicts> <mem> M </mem>
+  rule <k> #witnessSpace => #observable ... </k> <verdicts> Vs </verdicts> <mem> M </mem>
        <witnessSpace> _ => witnessSpace(Vs, M) </witnessSpace>
        <unconstrainedRegs> _ => unconstrainedRegs(Vs) </unconstrainedRegs>
+
+  // --- The observable semantics --------------------------------------------------------
+  // [[P]](pre) = observable(status, outputs, pi) = obs(status, encoded outputs,
+  // public inputs), one function over the final configuration: the status of
+  // the run, the values returned by `output` in order, each encoded as
+  // `encode_offcircuit` encodes it (encodeValue, the encoding the
+  // communications commitment hashes) and concatenated, and the public-input
+  // vector. A compiler-correctness statement quotes this triple and nothing
+  // else of the configuration; the memory, the verdicts and the witness space
+  // are the model's evidence for the triple, not part of the observation.
+  syntax Observable ::= obs(Status, List, List) [symbol(obs)] | noObs() [symbol(noObs)]
+  syntax Observable ::= observable(Status, List, List) [function, total]
+  rule observable(St, Os, Pi) => obs(St, #encodeAll(Os), Pi)
+  syntax KItem ::= "#observable"
+  rule <k> #observable => .K ... </k> <status> St </status> <outputs> Os </outputs> <pi> Pi </pi>
+       <observable> _ => observable(St, Os, Pi) </observable>
 
   // --- End of program: transcript exhaustion and communications commitment ------------------
   syntax KItem ::= "#finish"

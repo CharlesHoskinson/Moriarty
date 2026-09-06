@@ -18,7 +18,7 @@ The module is `ZKIR-CONSTRAINTS` in `zkir-constraints.k`, and the emission rules
 | `commGate(Int, TypedIds, Int)` | public input `i` equals Poseidon of the opening, the re-encoded input registers and the encoded outputs |
 | `outputGate(Operands, IrTypes)` | output arity and per-position runtime type against the program signature |
 
-`job` sequences `#loadInputs`, `#seedPi`, the instruction list, `#verdicts` and `#witnessSpace`. The cells in `zkir-vm.k` are `<constraints>` (emitted list), `<chips>` (chip set), `<verdicts>` (evaluated list), `<witnessSpace>` (the membership decision), `<unconstrainedRegs>` (the registers whose assigning relation is `unconstrained`) and `<piIdx>` (constraint-side public-input counter).
+`job` sequences `#loadInputs`, `#seedPi`, the instruction list, `#verdicts`, `#witnessSpace` and `#observable`. The cells in `zkir-vm.k` are `<constraints>` (emitted list), `<chips>` (chip set), `<verdicts>` (evaluated list), `<witnessSpace>` (the membership decision), `<unconstrainedRegs>` (the registers whose assigning relation is `unconstrained`), `<observable>` (the observable result `obs(status, encoded outputs, public inputs)`, 16-compilation-target-contract.md) and `<piIdx>` (constraint-side public-input counter).
 
 Instructions still emit after a witness failure. `#exec` is a no-op when `<status>` is `error` or `panic`, and later verdicts that need a missing register or public-input slot become `unknown` rather than `violated`. A failed static check under `checkedJob` sets `<status>` to `error` first and `job` then rewrites to `.K`, so no gate is emitted or evaluated.
 

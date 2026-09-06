@@ -1,17 +1,19 @@
 // Claim (d): instance of the compiler-obligation template spec_compiled_observable
 // (tools/run_claims.py). Generated; edit the template, not this file. The
 // program add %a 1 -> %b ; impact 1 [%b] on a symbolic input A, with the
-// public transcript input equal to the impacted value, finishes with
-// (status ok, no outputs, public inputs [binding input 7, (A + 1) mod r]).
+// public transcript input equal to the impacted value, has the observable
+// result obs(ok, no outputs, public inputs [binding input 7, (A + 1) mod r])
+// in the <observable> cell (zkir-vm.k `observable`, plan-iter3 M5b).
 requires "../semantics/zkir-symbolic.k"
 
 module SPEC-COMPILED-OBSERVABLE
   imports ZKIR-SYMBOLIC
   claim <k> job(program(0, (typedId("%a", native()), .TypedIds), .IrTypes, false, (add(var("%a"), imm(1), "%b") ; impact(imm(1), (var("%b"), .Operands)) ; .Instrs)),
                 preimage(ListItem(A:Int), 7, noComm(), .List, ListItem((A +Int 1) modInt #r), .List)) => .K </k>
-        <status> ok() => ok() </status>
-        <outputs> .List => .List </outputs>
-        <pi> .List => ListItem(7) ListItem((A +Int 1) modInt #r) </pi>
+        <observable> noObs() => obs(ok(), .List, ListItem(7) ListItem((A +Int 1) modInt #r)) </observable>
+        <status> ok() => ?_ </status>
+        <outputs> .List => ?_ </outputs>
+        <pi> .List => ?_ </pi>
         <mem> .Map => ?_ </mem>
         <skips> .List => ?_ </skips>
         <pubInIdx> 0 => ?_ </pubInIdx> <pubOutIdx> 0 => ?_ </pubOutIdx> <privIdx> 0 => ?_ </privIdx>

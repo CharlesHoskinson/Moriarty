@@ -22,6 +22,12 @@ memory and on an instance-column perturbation. Each outcome is compared with
 the cell of plan-iter3/circuit-comparison-table.md (circuit_compare.py); a
 comparison outside the table is a blocking finding listed at the end. The
 output of the other modes is unchanged.
+
+The seven Moriarty transaction contexts (corpus/moriarty-contexts, plan-iter3
+M4) are rows of the base-surface run: for every Moriarty program that has a
+context preimage, the row `context` compares K and the crate on that real
+preimage after the generated attempts, and `--circuit` runs the same circuit
+columns on it as on an honest generated run.
 """
 from __future__ import annotations
 
@@ -56,6 +62,21 @@ CORPORA = {
 
 
 ORACLE_BIN = ORACLE
+CONTEXTS = ROOT / 'corpus' / 'moriarty-contexts'
+CONTEXT_FAMILY = {'moriarty-core-swap': 'swap', 'moriarty-compact-escrow': 'escrow'}
+
+
+def context_preimages(corpus: str, path: Path) -> list[tuple[str, dict]]:
+    """The (artifact, preimage) pairs of corpus/moriarty-contexts for this program."""
+    family = CONTEXT_FAMILY.get(corpus)
+    if family is None or not (CONTEXTS / 'manifest.json').exists():
+        return []
+    manifest = json.loads((CONTEXTS / 'manifest.json').read_text())
+    out = []
+    for art, info in manifest['artifacts'].items():
+        if art.split('-', 1)[0] == family and info['circuit'] == path.stem:
+            out.append((art, json.loads((CONTEXTS / f'{art}.pre.json').read_text())))
+    return out
 
 
 def oracle(program: Path, preimage: dict) -> dict:
@@ -209,6 +230,16 @@ def main() -> int:
     oracle2_flags = []
     ws_rows: list[tuple[str, bool, list[str]]] = []   # (program, witness_space, unconstrained registers) of successful K runs
     t0 = time.time()
+
+    def circuit_columns(run_row: int, corpus: str, path: Path, doc: dict, k: dict, pre: dict) -> None:
+        """the injection and instance columns of the table, on an honest witness"""
+        crng = random.Random(f'{args.seed}:circuit:{path.name}')
+        for kind, reg, new, exp in cc.choose_injections(doc, k):
+            old = k['memory'][reg]['encoded'][0]
+            circuit(run_row, corpus, path, kind, k, pre, inject={reg: new}, exp=exp, detail=f'{reg} {old} -> {new}; {exp.reason[:110]}')
+        idx, inst, exp = cc.instance_perturbation(k, crng)
+        circuit(run_row, corpus, path, 'instance', k, pre, instance=inst, exp=exp, detail=exp.reason)
+
     for corpus, directory in CORPORA.items():
         for path in sorted(directory.glob('*.zkir')):
             if args.only and args.only not in path.name:
@@ -264,13 +295,7 @@ def main() -> int:
                     circuit(run_row, corpus, path, f'run{attempt}', k, pre)
                 if k['status'] == 'ok' and r['status'] == 'ok':
                     if args.circuit and cc.k_summary(k) == 'ok':
-                        # the injection and instance columns of the table, on the honest witness
-                        crng = random.Random(f'{args.seed}:circuit:{path.name}')
-                        for kind, reg, new, exp in cc.choose_injections(doc, k):
-                            old = k['memory'][reg]['encoded'][0]
-                            circuit(run_row, corpus, path, kind, k, pre, inject={reg: new}, exp=exp, detail=f'{reg} {old} -> {new}; {exp.reason[:110]}')
-                        idx, inst, exp = cc.instance_perturbation(k, crng)
-                        circuit(run_row, corpus, path, 'instance', k, pre, instance=inst, exp=exp, detail=exp.reason)
+                        circuit_columns(run_row, corpus, path, doc, k, pre)
                     if not args.no_perturb:
                         variants = []
                         if pre['inputs']:
@@ -305,6 +330,28 @@ def main() -> int:
                             if args.circuit:
                                 circuit(len(rows) - 1, corpus, path, label, k2, p2)
                     break
+            # the real transaction contexts of the Moriarty artifacts (M4), as further rows
+            for art, pre in context_preimages(corpus, path):
+                t1 = time.time()
+                k = runner.run(program, pre)
+                r = oracle(path, pre)
+                diffs = compare(k, r)
+                failures += bool(diffs)
+                viol = k.get('violations', [])
+                if k['status'] == 'ok' and viol:
+                    oracle2_flags.append((path.name, viol))
+                if k['status'] == 'ok':
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', [])))
+                note = f" msg K='{k.get('error', '')[:70]}'" if k['status'] != 'ok' else ''
+                vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
+                if k.get('unconstrained'):
+                    vnote += f" witness_space={str(k.get('witness_space', False)).lower()} unconstrained={','.join(k['unconstrained'][:6])}"
+                rows.append((corpus, path.name, 'context', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} {art} {time.time() - t1:.1f}s{note}{vnote}", diffs))
+                if args.circuit:
+                    run_row = len(rows) - 1
+                    circuit(run_row, corpus, path, 'context', k, pre)
+                    if k['status'] == 'ok' and r['status'] == 'ok' and cc.k_summary(k) == 'ok':
+                        circuit_columns(run_row, corpus, path, doc, k, pre)
     for i, (corpus, name, label, summary, diffs) in enumerate(rows):
         print(f"{'PASS' if not diffs else 'FAIL'}  {corpus:34} {name:52} {label:9} {summary}")
         for d in diffs[:8]:

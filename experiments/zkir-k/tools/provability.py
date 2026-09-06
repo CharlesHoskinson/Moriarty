@@ -14,8 +14,17 @@ Contract results come from the JSON-free lines of the contract-corpus receipt
 (`evidence/zkir-k-contract-corpus-<date>.txt`); programs absent from it (the
 Moriarty contexts, k08) are checked with `zkir_kast.py contract` on the fly.
 
+The negative controls are the programs whose contract fails on a program-only
+obligation that keygen also checks: the chip-gating, width and alignment cases
+of the divergence corpus, and the programs whose keygen fails on a
+witness-independent in-circuit check that the circuit.static obligations of
+plan-iter3 M5b decide (output typing, boolean gate arity, constant decoding,
+nth and slice bounds, unsupported dispatch arms). A program whose contract is
+met but whose keygen fails, or whose contract fails while keygen accepts, is a
+contradiction.
+
   uv run --group zkir-k python experiments/zkir-k/tools/provability.py \\
-      --out evidence/zkir-k-provability-2026-09-06.txt
+      --out evidence/zkir-k-provability-2026-09-06b.txt
 """
 from __future__ import annotations
 
@@ -40,7 +49,7 @@ ORACLE = {
 }
 PARAMS_DIR = BUILD / 'params'
 PARAMS_URL = 'https://srs.midnight.network/'
-DEFAULT_RECEIPT = REPO / 'evidence/zkir-k-contract-corpus-2026-09-06.txt'
+DEFAULT_RECEIPT = REPO / 'evidence/zkir-k-contract-corpus-2026-09-06c.txt'
 
 # corpus directory -> (contract surface is the extension, oracle binary)
 CORPORA = {
@@ -54,14 +63,26 @@ CORPORA = {
 # programs that only the extension surface accepts
 SURFACE_OVERRIDE = {'k08_load_constant_jubjub_chip.zkir': (True, 'X')}
 
-# divergence programs whose contract fails and which must fail keygen
+# programs (corpus/file) whose contract fails and which must fail keygen
 NEGATIVE_CONTROLS = [
-    'k04_jubjub_scalar_from_native_chip.zkir',
-    'k01b_jubjub_from_coordinates_no_chip.zkir',
-    'f13_chip_gating_from_bytes32.zkir',
-    'k05_less_than_253_bits_keygen.zkir',
-    'k07_alignment_option_offcircuit.zkir',
-    'k08_load_constant_jubjub_chip.zkir',
+    # chip gating, width and alignment (M5a)
+    'divergence/k04_jubjub_scalar_from_native_chip.zkir',
+    'divergence/k01b_jubjub_from_coordinates_no_chip.zkir',
+    'divergence/f13_chip_gating_from_bytes32.zkir',
+    'divergence/k05_less_than_253_bits_keygen.zkir',
+    'divergence/k07_alignment_option_offcircuit.zkir',
+    'divergence/k08_load_constant_jubjub_chip.zkir',
+    # the witness-independent in-circuit checks (circuit.static.*, M5b)
+    'ledger9-92e8bdd3-tests/output_operand_type_mismatch.zkir',
+    'midnight-zkir-2ffe2d1-tests/output_operand_type_mismatch.zkir',
+    'midnight-zkir-2ffe2d1-tests/test_bool_gate_empty_inputs_fails.zkir',
+    'midnight-zkir-2ffe2d1-tests/test_constant_bad_encoding_rejected.zkir',
+    'midnight-zkir-2ffe2d1-tests/test_nth_out_of_bounds_fails.zkir',
+    'midnight-zkir-2ffe2d1-tests/test_slice_out_of_bounds_fails.zkir',
+    'divergence/f06_cond_select_bytes32.zkir',
+    'divergence/f07_constrain_eq_jubjub_scalar.zkir',
+    'divergence/f08_bytes32_from_low_high_foreign_high.zkir',
+    'divergence/f12_ec_mul_generator_p256.zkir',
 ]
 NEGATIVE_OK = {'panic', 'synthesis-error'}
 
@@ -204,9 +225,9 @@ def main(argv: list[str] | None = None) -> int:
             ok = verdict.startswith('ok')
             if not ok:
                 not_keyed += 1
-                if path.name in NEGATIVE_CONTROLS:
+                if label in NEGATIVE_CONTROLS:
                     o = oracle(binary, path, '--keygen', timeout=args.timeout)
-                    negative_results[path.name] = o
+                    negative_results[label] = o
                     r(f'{label} [{binary}]: contract {verdict[:90]}{computed}; negative control keygen={o["outcome"]} {fmt(o, KEYGEN_KEYS)}')
                     if o['outcome'] == 'accepted':
                         findings.append(f'{label}: contract fails but keygen accepted')
@@ -258,21 +279,17 @@ def main(argv: list[str] | None = None) -> int:
     r()
 
     # ---- negative controls ----
-    r('== negative controls: divergence programs whose contract fails must fail keygen (panic or synthesis-error) ==')
+    r('== negative controls: programs whose contract fails must fail keygen (panic or synthesis-error) ==')
     neg_pass = 0
     for name in NEGATIVE_CONTROLS:
         o = negative_results.get(name)
         if o is None:
-            r(f'divergence/{name}: NOT RUN (contract did not fail; see the sweep above)')
-            findings.append(f'divergence/{name}: named as a negative control but its contract does not fail')
+            r(f'{name}: NOT RUN (contract did not fail; see the sweep above)')
+            findings.append(f'{name}: named as a negative control but its contract does not fail')
             continue
         good = o['outcome'] in NEGATIVE_OK
         neg_pass += good
-        r(f'divergence/{name}: keygen={o["outcome"]} -> {"as expected" if good else "UNEXPECTED"}; {json.dumps(o.get("message", ""))[:200]}')
-    extra = [n for n in negative_results if n not in NEGATIVE_CONTROLS]
-    for name in extra:
-        o = negative_results[name]
-        r(f'divergence/{name} (contract fails, not in the named set): keygen={o["outcome"]}; {json.dumps(o.get("message", ""))[:200]}')
+        r(f'{name}: keygen={o["outcome"]} -> {"as expected" if good else "UNEXPECTED"}; {json.dumps(o.get("message", ""))[:200]}')
     r()
 
     # ---- summary ----
@@ -287,11 +304,12 @@ def main(argv: list[str] | None = None) -> int:
         r('Contradictions between contract and keygen/prove (findings for the contract):')
         for f in findings:
             r(f'  - {f}')
-        r('  Each is a program whose contract obligations are all met or not applicable while the circuit cannot be keyed: the')
-        r('  in-circuit checks it fails (output signature vs operand type, gate arity, constant decoding, nth/slice bounds, the')
-        r('  unsupported in-circuit arms of cond_select/constrain_eq/bytes32_from_low_high/ec_mul_generator) have no obligation yet.')
+        r('  Each is a program whose contract obligations are all met or not applicable while the circuit cannot be keyed, or')
+        r('  whose contract fails while the circuit keys: an in-circuit check of keygen that the contract does not decide, or')
+        r('  an obligation stricter than keygen.')
     else:
-        r('No program contradicts its contract result.')
+        r('No program contradicts its contract result: every program whose tier-one obligations are met or not applicable keys,')
+        r('and every negative control fails keygen on the check its failed obligation names.')
     r.save()
     return 0 if not findings and neg_pass == len(NEGATIVE_CONTROLS) else 1
 

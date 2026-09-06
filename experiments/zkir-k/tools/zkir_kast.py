@@ -18,6 +18,13 @@ Usage:
   zkir_kast.py contract FILE.zkir [--definition DIR]
                                           run ZKIR-CONTRACT-MAIN, print the
                                           tier-one obligations as JSON
+  zkir_kast.py contract FILE.zkir --preimage PRE.json
+                                          the same, plus tier two (the run of
+                                          ZKIR-VM's job on the preimage: status,
+                                          error, witness space, unconstrained
+                                          registers, the observable triple) and
+                                          tier three (the circuit oracle's
+                                          outcome, when its binary exists)
 `--ext` accepts the midnight-zkir 2ffe2d1 surface for any command.
 """
 from __future__ import annotations
@@ -28,6 +35,8 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pyk.kast.inner import KApply, KInner, KSequence, KSort, KToken
 from pyk.kast.prelude.kbool import boolToken
@@ -455,12 +464,74 @@ def run_contract(krun: 'KRun', term: KInner) -> list[dict[str, Any]]:
     return obligations(krun.kore_to_kast(KoreParser(res.stdout).pattern()))
 
 
+def tier_one(obs: list[dict[str, Any]]) -> dict[str, Any]:
+    """The summary of the tier-one obligations: met when none failed."""
+    failed = [o['name'] for o in obs if o['status'] == 'failed']
+    return {'met': not failed, 'failed': failed,
+            'counts': {k: sum(o['status'] == k for o in obs) for k in ('met', 'failed', 'notApplicable', 'info')}}
+
+
+def tier_two(term: KInner, preimage: dict[str, Any], ext: bool, definition: Path | None = None) -> dict[str, Any]:
+    """Tier two of the contract: `job(P, Pre)` on ZKIR-VM (tools/zkir_run.py
+    `Runner.run`, the raw entry point of `preprocess`). Met when the run ends
+    with status ok and the final memory is in the modelled witness space."""
+    from zkir_run import Runner
+    k = Runner(definition, ext=ext).run(term, preimage)
+    rec: dict[str, Any] = {'status': k['status']}
+    if k.get('error') is not None:
+        rec['error'] = k['error']
+    rec['witness_space'] = k.get('witness_space', False)
+    rec['unconstrained'] = k.get('unconstrained', [])
+    rec['violations'] = [f'{o}[{m}] {g[:80]}' for o, m, g in k.get('violations', [])]
+    rec['observable'] = k.get('observable')
+    rec['met'] = k['status'] == 'ok' and rec['witness_space']
+    return rec
+
+
+def tier_three(path: Path, preimage: dict[str, Any], ext: bool) -> dict[str, Any]:
+    """Tier three: the outcome of `zkir-circuit-oracle` (preprocess,
+    MockProver::run, verify) on the program and preimage, or `not run` when
+    the binary of the surface's workspace does not exist."""
+    import circuit_compare as cc
+    binary = cc.CIRCUIT_ORACLE_EXT if ext else cc.CIRCUIT_ORACLE
+    if not binary.exists():
+        return {'outcome': 'not run', 'reason': f'oracle binary not found: {binary}', 'met': False}
+    res = cc.run_circuit_oracle(binary, path, preimage)
+    rec = {'outcome': res.get('outcome', 'load-error'), 'binary': str(binary)}
+    for key in ('message', 'k', 'elapsed_ms', 'failures'):
+        if key in res:
+            rec[key] = res[key] if key != 'failures' else res[key][:4]
+    rec['met'] = rec['outcome'] == 'accepted'
+    return rec
+
+
+def contract(path: Path, term: KInner, ext: bool, krun: 'KRun', preimage: dict[str, Any] | None = None,
+             preimage_path: Path | None = None, vm_definition: Path | None = None) -> dict[str, Any]:
+    """The contract of one program as a JSON-ready dict: the tier-one
+    obligations always (the program-only form); with a preimage, the summary
+    `tier_one`, `preimage_dependent` and `circuit` as well (plan-iter3 M5b)."""
+    obs = run_contract(krun, term)
+    doc: dict[str, Any] = {
+        'program': str(path),
+        'surface': 'extension' if ext else 'base',
+        'obligations': obs,
+    }
+    if preimage is not None:
+        doc['tier_one'] = tier_one(obs)
+        doc['preimage'] = str(preimage_path) if preimage_path else None
+        doc['preimage_dependent'] = tier_two(term, preimage, ext, vm_definition)
+        doc['circuit'] = tier_three(path, preimage, ext)
+    return doc
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('command', choices=['kore', 'kast', 'check', 'contract'])
     ap.add_argument('file', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
     ap.add_argument('--ext', action='store_true', help='accept the midnight-zkir 2ffe2d1 surface (ZKIR-EXT)')
+    ap.add_argument('--preimage', type=Path, default=None, help='contract only: run tiers two and three on this preimage JSON')
+    ap.add_argument('--vm-definition', type=Path, default=None, help='contract --preimage: kompiled ZKIR / ZKIR-EXT directory for tier two')
     args = ap.parse_args(argv)
     try:
         term = load_program(args.file, ext=args.ext)
@@ -473,16 +544,16 @@ def main(argv: list[str] | None = None) -> int:
     from pyk.ktool.krun import KRun
     if args.command == 'contract':
         krun = KRun(args.definition or default_definition('zkir-contract-main'))
+        preimage = None
+        if args.preimage is not None:
+            with open(args.preimage) as f:
+                preimage = json.load(f)
         try:
-            obs = run_contract(krun, term)
+            doc = contract(args.file, term, args.ext, krun, preimage, args.preimage, args.vm_definition)
         except RuntimeError as e:
             print(f'krun failed: {e}', file=sys.stderr)
             return 1
-        print(json.dumps({
-            'program': str(args.file),
-            'surface': 'extension' if args.ext else 'base',
-            'obligations': obs,
-        }, indent=2))
+        print(json.dumps(doc, indent=2))
         return 0
     krun = KRun(args.definition or default_definition())
     kore = krun.kast_to_kore(term, KSort('Program'))

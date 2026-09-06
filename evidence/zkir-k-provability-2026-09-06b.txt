@@ -1,0 +1,211 @@
+zkir-circuit-oracle provability receipt (plan-iter3 M5b)
+Date: 2026-09-06
+Host: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43, 6 CPUs
+Binaries: B = /home/charl/Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-circuit-oracle
+          X = /home/charl/Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-circuit-oracle
+Parameters: /home/charl/Moriarty/repos/_build/params/bls_midnight_2p{k}, the official Midnight KZG parameters fetched once from
+  https://srs.midnight.network/bls_midnight_2p{k} for k=0..17 (the host midnight-base-crypto downloads from) and verified against
+  the SHA-256 digests in base-crypto/src/data_provider.rs (EXPECTED_DATA); read by the oracle exactly as the crate's
+  test provider TestParams reads $MIDNIGHT_PP/bls_midnight_2p{k}. Proofs are verified with the crate's embedded
+  PARAMS_VERIFIER (transient-crypto/static/bls_midnight_2p14, same SRS). No unsafe_setup parameters were used.
+Contract results: evidence/zkir-k-contract-corpus-2026-09-06c.txt; programs absent from it are checked with zkir_kast.py contract (marked computed).
+Columns: keygen = outcome of --keygen (keygen_vk + keygen, unknown witness); prove = outcome of --prove (keygen, prove, VerifierKey::verify).
+Outcomes: accepted | panic | synthesis-error | params-unavailable | load-error | timeout; prove adds preprocess-error | witness-consistency-error | verify-failure.
+  midnight_zk_stdlib::setup_vk unwraps the keygen result ("keygen_vk should not fail"), so an unknown-witness synthesis error
+  surfaces as panic with the Synthesis message; synthesis-error is reserved for an Err returned by keygen_vk/keygen/prove.
+  optimal_k returns the cost-model k, which is below 9 for the small crate tests, so the parameter files k=0..17 are all needed.
+
+== keygen sweep: every corpus program whose contract has every obligation met or not applicable ==
+ledger9-92e8bdd3-tests/multi_output_native_pair.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=53 keygen_vk_ms=22 keygen_ms=28 peak_rss_kb=14088
+ledger9-92e8bdd3-tests/native_identity.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=53 keygen_vk_ms=25 keygen_ms=25 peak_rss_kb=13948
+ledger9-92e8bdd3-tests/native_via_copy.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=47 keygen_vk_ms=22 keygen_ms=23 peak_rss_kb=14556
+ledger9-92e8bdd3-tests/output_arity_mismatch.zkir [B]: contract FAILED wf: output: signature declares 1 return values but instruction has 2; circuit.stati; not keyed
+ledger9-92e8bdd3-tests/output_operand_type_mismatch.zkir [B]: contract FAILED circuit.static.output: instruction 0: output position 0: signature declares JubjubP; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9360 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Output position 0: signature declares JubjubPoint but operand has runtime type Native\\\")\") at /home/charl/.cargo/registr
+ledger9-92e8bdd3-tests/test_bytes32_low_high_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=79 keygen_vk_ms=35 keygen_ms=40 peak_rss_kb=16608
+ledger9-92e8bdd3-tests/test_bytes32_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=517 keygen_vk_ms=203 keygen_ms=244 peak_rss_kb=38164
+ledger9-92e8bdd3-tests/test_coordinates_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=186 keygen_vk_ms=71 keygen_ms=96 peak_rss_kb=21424
+ledger9-92e8bdd3-tests/test_curve25519_bytes32_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=440 keygen_vk_ms=178 keygen_ms=212 peak_rss_kb=37956
+ledger9-92e8bdd3-tests/test_curve25519_coordinates_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=277 keygen_vk_ms=106 keygen_ms=142 peak_rss_kb=25704
+ledger9-92e8bdd3-tests/test_curve25519_ec_mul_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=16 pk_k=16 vk_match=True elapsed_ms=9810 keygen_vk_ms=3735 keygen_ms=4488 peak_rss_kb=668956
+ledger9-92e8bdd3-tests/test_curve25519_point_constrain_eq_fails_on_unequal.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=283 keygen_vk_ms=109 keygen_ms=143 peak_rss_kb=26068
+ledger9-92e8bdd3-tests/test_curve25519_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=12 pk_k=12 vk_match=True elapsed_ms=737 keygen_vk_ms=282 keygen_ms=360 peak_rss_kb=59620
+ledger9-92e8bdd3-tests/test_divmod_proof.zkir [B]: contract ok (5 met, 9 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=70 keygen_vk_ms=30 keygen_ms=36 peak_rss_kb=16460
+ledger9-92e8bdd3-tests/test_ec_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=436 keygen_vk_ms=164 keygen_ms=205 peak_rss_kb=31560
+ledger9-92e8bdd3-tests/test_extension_attack.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=19 keygen_vk_ms=8 keygen_ms=9 peak_rss_kb=12760
+ledger9-92e8bdd3-tests/test_hash_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=49 keygen_vk_ms=21 keygen_ms=25 peak_rss_kb=14680
+ledger9-92e8bdd3-tests/test_htc_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=99 keygen_vk_ms=42 keygen_ms=52 peak_rss_kb=18188
+ledger9-92e8bdd3-tests/test_immediate_add_and_cond_select.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=24 keygen_vk_ms=9 keygen_ms=13 peak_rss_kb=13792
+ledger9-92e8bdd3-tests/test_immediate_copy.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=18 keygen_vk_ms=8 keygen_ms=8 peak_rss_kb=12840
+ledger9-92e8bdd3-tests/test_immediate_little_endian_encoding.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=20 keygen_vk_ms=7 keygen_ms=11 peak_rss_kb=12560
+ledger9-92e8bdd3-tests/test_immediate_little_endian_encoding_2.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=18 keygen_vk_ms=8 keygen_ms=9 peak_rss_kb=12320
+ledger9-92e8bdd3-tests/test_immediate_values.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=20 keygen_vk_ms=8 keygen_ms=10 peak_rss_kb=13132
+ledger9-92e8bdd3-tests/test_immediate_with_public_inputs.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=7 pk_k=7 vk_match=True elapsed_ms=50 keygen_vk_ms=22 keygen_ms=26 peak_rss_kb=13960
+ledger9-92e8bdd3-tests/test_impact_guarded_off_zeroes_public_input.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=7 pk_k=7 vk_match=True elapsed_ms=56 keygen_vk_ms=25 keygen_ms=27 peak_rss_kb=13872
+ledger9-92e8bdd3-tests/test_invalid_operand_malformed_identifier.zkir [B]: contract format: invalid operand format: 'foo'. Variables must start with '%', immediates must star; not keyed
+ledger9-92e8bdd3-tests/test_invalid_operand_no_percent_prefix.zkir [B]: contract format: invalid operand format: 'v_0'. Variables must start with '%', immediates must star; not keyed
+ledger9-92e8bdd3-tests/test_invalid_operand_odd_length_hex.zkir [B]: contract format: invalid hex immediate '0x1': odd length or non-hex character; not keyed
+ledger9-92e8bdd3-tests/test_jubjub_point_cond_select_fails_when_bit_zero.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=42 keygen_vk_ms=18 keygen_ms=21 peak_rss_kb=13988
+ledger9-92e8bdd3-tests/test_jubjub_point_constrain_eq_fails_on_unequal.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=38 keygen_vk_ms=15 keygen_ms=21 peak_rss_kb=13284
+ledger9-92e8bdd3-tests/test_jubjub_point_ops.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=42 keygen_vk_ms=18 keygen_ms=21 peak_rss_kb=14656
+ledger9-92e8bdd3-tests/test_jubjub_point_test_eq_unequal.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=43 keygen_vk_ms=18 keygen_ms=22 peak_rss_kb=14480
+ledger9-92e8bdd3-tests/test_keygen_and_serialize_eq.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=21 keygen_vk_ms=9 keygen_ms=10 peak_rss_kb=13124
+ledger9-92e8bdd3-tests/test_minimal_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=22 keygen_vk_ms=8 keygen_ms=12 peak_rss_kb=13164
+ledger9-92e8bdd3-tests/test_native_inv_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=22 keygen_vk_ms=9 keygen_ms=11 peak_rss_kb=13428
+ledger9-92e8bdd3-tests/test_reverse_bytes_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=62 keygen_vk_ms=26 keygen_ms=34 peak_rss_kb=14736
+ledger9-92e8bdd3-tests/test_secp256k1_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=332 keygen_vk_ms=126 keygen_ms=163 peak_rss_kb=27464
+ledger9-92e8bdd3-tests/test_secp256r1_bytes32_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=600 keygen_vk_ms=218 keygen_ms=284 peak_rss_kb=37760
+ledger9-92e8bdd3-tests/test_secp256r1_coordinates_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=243 keygen_vk_ms=93 keygen_ms=125 peak_rss_kb=20952
+ledger9-92e8bdd3-tests/test_secp256r1_ec_mul_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=6641 keygen_vk_ms=2367 keygen_ms=2953 peak_rss_kb=365456
+ledger9-92e8bdd3-tests/test_secp256r1_point_constrain_eq_fails_on_unequal.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=242 keygen_vk_ms=88 keygen_ms=127 peak_rss_kb=20740
+ledger9-92e8bdd3-tests/test_secp256r1_proof.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=424 keygen_vk_ms=152 keygen_ms=211 peak_rss_kb=28328
+ledger9-92e8bdd3-tests/test_std_hashes_proof.zkir [B]: contract ok (5 met, 9 n/a); keygen=accepted k=14 pk_k=14 vk_match=True elapsed_ms=2401 keygen_vk_ms=889 keygen_ms=1200 peak_rss_kb=236688
+midnight-zkir-2ffe2d1-precompiles/micro-dao__advance.zkir [X]: contract ok (5 met, 9 n/a); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=640 keygen_vk_ms=250 keygen_ms=347 peak_rss_kb=102644
+midnight-zkir-2ffe2d1-precompiles/micro-dao__buyIn.zkir [X]: contract ok (7 met, 7 n/a); keygen=accepted k=16 pk_k=16 vk_match=True elapsed_ms=5553 keygen_vk_ms=2018 keygen_ms=2907 peak_rss_kb=716972
+midnight-zkir-2ffe2d1-precompiles/micro-dao__cashOut.zkir [X]: contract ok (8 met, 6 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=2721 keygen_vk_ms=1037 keygen_ms=1396 peak_rss_kb=367352
+midnight-zkir-2ffe2d1-precompiles/micro-dao__setTopic.zkir [X]: contract ok (5 met, 9 n/a); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=652 keygen_vk_ms=258 keygen_ms=350 peak_rss_kb=103460
+midnight-zkir-2ffe2d1-precompiles/micro-dao__voteCommit.zkir [X]: contract ok (6 met, 8 n/a); keygen=accepted k=14 pk_k=14 vk_match=True elapsed_ms=1426 keygen_vk_ms=545 keygen_ms=731 peak_rss_kb=192560
+midnight-zkir-2ffe2d1-precompiles/micro-dao__voteReveal.zkir [X]: contract ok (6 met, 8 n/a); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=832 keygen_vk_ms=321 keygen_ms=422 peak_rss_kb=104828
+midnight-zkir-2ffe2d1-tests/bool_identity.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=38 keygen_vk_ms=15 keygen_ms=19 peak_rss_kb=14164
+midnight-zkir-2ffe2d1-tests/bool_via_neg.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=35 keygen_vk_ms=15 keygen_ms=18 peak_rss_kb=14328
+midnight-zkir-2ffe2d1-tests/byte_identity.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=65 keygen_vk_ms=27 keygen_ms=35 peak_rss_kb=16380
+midnight-zkir-2ffe2d1-tests/multi_output_native_pair.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=35 keygen_vk_ms=14 keygen_ms=17 peak_rss_kb=14324
+midnight-zkir-2ffe2d1-tests/native_identity.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=35 keygen_vk_ms=14 keygen_ms=18 peak_rss_kb=14152
+midnight-zkir-2ffe2d1-tests/native_via_copy.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=38 keygen_vk_ms=15 keygen_ms=21 peak_rss_kb=14292
+midnight-zkir-2ffe2d1-tests/output_arity_mismatch.zkir [X]: contract FAILED wf: output: signature declares 1 return values but instruction has 2; circuit.stati; not keyed
+midnight-zkir-2ffe2d1-tests/output_operand_type_mismatch.zkir [X]: contract FAILED circuit.static.output: instruction 0: output position 0: signature declares JubjubP; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9612 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Output position 0: signature declares JubjubPoint but operand has runtime type Native\\\")\") at /home/charl/.cargo/registr
+midnight-zkir-2ffe2d1-tests/test_bool_constrain_eq_fails_on_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=19 keygen_vk_ms=7 keygen_ms=9 peak_rss_kb=13120
+midnight-zkir-2ffe2d1-tests/test_bool_gate_empty_inputs_fails.zkir [X]: contract FAILED circuit.static.bool_gate: instruction 0: and: Boolean gate requires at least one in; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9860 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Boolean gate requires at least one input\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnig
+midnight-zkir-2ffe2d1-tests/test_bool_gate_wrong_result_fails.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=19 keygen_vk_ms=7 keygen_ms=9 peak_rss_kb=13816
+midnight-zkir-2ffe2d1-tests/test_bool_gates.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=25 keygen_vk_ms=10 keygen_ms=12 peak_rss_kb=13452
+midnight-zkir-2ffe2d1-tests/test_bool_ops.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=22 keygen_vk_ms=8 keygen_ms=11 peak_rss_kb=14100
+midnight-zkir-2ffe2d1-tests/test_byte_constrain_eq_fails_on_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=48 keygen_vk_ms=21 keygen_ms=26 peak_rss_kb=15248
+midnight-zkir-2ffe2d1-tests/test_byte_ops.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=52 keygen_vk_ms=22 keygen_ms=28 peak_rss_kb=15860
+midnight-zkir-2ffe2d1-tests/test_bytes32_low_high_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=68 keygen_vk_ms=27 keygen_ms=37 peak_rss_kb=17096
+midnight-zkir-2ffe2d1-tests/test_bytes32_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=516 keygen_vk_ms=191 keygen_ms=249 peak_rss_kb=38512
+midnight-zkir-2ffe2d1-tests/test_bytes_concat_and_nth.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=57 keygen_vk_ms=23 keygen_ms=31 peak_rss_kb=15356
+midnight-zkir-2ffe2d1-tests/test_bytes_n_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=75 keygen_vk_ms=32 keygen_ms=40 peak_rss_kb=15988
+midnight-zkir-2ffe2d1-tests/test_bytes_slice.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=59 keygen_vk_ms=24 keygen_ms=32 peak_rss_kb=15248
+midnight-zkir-2ffe2d1-tests/test_constant_bad_encoding_rejected.zkir [X]: contract FAILED circuit.static.constant: instruction 0: load_constant: Failed to decode as Native; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9860 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Failed to decode [Fq(0x0000000000000000000000000000000000000000000000000000000000000001), Fq(0x0000000000000000000000000000
+midnight-zkir-2ffe2d1-tests/test_constant_proof.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=67 keygen_vk_ms=29 keygen_ms=36 peak_rss_kb=16948
+midnight-zkir-2ffe2d1-tests/test_coordinates_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=200 keygen_vk_ms=73 keygen_ms=107 peak_rss_kb=21504
+midnight-zkir-2ffe2d1-tests/test_curve25519_bytes32_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=432 keygen_vk_ms=169 keygen_ms=210 peak_rss_kb=38600
+midnight-zkir-2ffe2d1-tests/test_curve25519_coordinates_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=274 keygen_vk_ms=106 keygen_ms=136 peak_rss_kb=26192
+midnight-zkir-2ffe2d1-tests/test_curve25519_ec_mul_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=16 pk_k=16 vk_match=True elapsed_ms=9654 keygen_vk_ms=3517 keygen_ms=4637 peak_rss_kb=667548
+midnight-zkir-2ffe2d1-tests/test_curve25519_point_constrain_eq_fails_on_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=358 keygen_vk_ms=126 keygen_ms=199 peak_rss_kb=26336
+midnight-zkir-2ffe2d1-tests/test_curve25519_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=12 pk_k=12 vk_match=True elapsed_ms=1022 keygen_vk_ms=432 keygen_ms=481 peak_rss_kb=61432
+midnight-zkir-2ffe2d1-tests/test_divmod_proof.zkir [X]: contract ok (5 met, 9 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=78 keygen_vk_ms=33 keygen_ms=41 peak_rss_kb=16656
+midnight-zkir-2ffe2d1-tests/test_ec_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=452 keygen_vk_ms=166 keygen_ms=218 peak_rss_kb=31892
+midnight-zkir-2ffe2d1-tests/test_extension_attack.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=27 keygen_vk_ms=11 keygen_ms=14 peak_rss_kb=12544
+midnight-zkir-2ffe2d1-tests/test_hash_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=61 keygen_vk_ms=21 keygen_ms=38 peak_rss_kb=14264
+midnight-zkir-2ffe2d1-tests/test_htc_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=186 keygen_vk_ms=84 keygen_ms=97 peak_rss_kb=18428
+midnight-zkir-2ffe2d1-tests/test_immediate_add_and_cond_select.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=34 keygen_vk_ms=18 keygen_ms=14 peak_rss_kb=13688
+midnight-zkir-2ffe2d1-tests/test_immediate_copy.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=24 keygen_vk_ms=10 keygen_ms=11 peak_rss_kb=12620
+midnight-zkir-2ffe2d1-tests/test_immediate_little_endian_encoding.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=29 keygen_vk_ms=9 keygen_ms=18 peak_rss_kb=12760
+midnight-zkir-2ffe2d1-tests/test_immediate_little_endian_encoding_2.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=35 keygen_vk_ms=11 keygen_ms=22 peak_rss_kb=12948
+midnight-zkir-2ffe2d1-tests/test_immediate_values.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=31 keygen_vk_ms=11 keygen_ms=18 peak_rss_kb=13400
+midnight-zkir-2ffe2d1-tests/test_immediate_with_public_inputs.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=7 pk_k=7 vk_match=True elapsed_ms=77 keygen_vk_ms=30 keygen_ms=44 peak_rss_kb=13832
+midnight-zkir-2ffe2d1-tests/test_impact_guarded_off_zeroes_public_input.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=7 pk_k=7 vk_match=True elapsed_ms=77 keygen_vk_ms=33 keygen_ms=40 peak_rss_kb=14240
+midnight-zkir-2ffe2d1-tests/test_invalid_operand_malformed_identifier.zkir [X]: contract format: invalid operand format: 'foo'. Variables must start with '%', immediates must star; not keyed
+midnight-zkir-2ffe2d1-tests/test_invalid_operand_no_percent_prefix.zkir [X]: contract format: invalid operand format: 'v_0'. Variables must start with '%', immediates must star; not keyed
+midnight-zkir-2ffe2d1-tests/test_invalid_operand_odd_length_hex.zkir [X]: contract format: invalid hex immediate '0x1': odd length or non-hex character; not keyed
+midnight-zkir-2ffe2d1-tests/test_jubjub_point_cond_select_fails_when_bit_zero.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=52 keygen_vk_ms=16 keygen_ms=33 peak_rss_kb=14160
+midnight-zkir-2ffe2d1-tests/test_jubjub_point_constrain_eq_fails_on_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=33 keygen_vk_ms=15 keygen_ms=15 peak_rss_kb=13356
+midnight-zkir-2ffe2d1-tests/test_jubjub_point_ops.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=6 pk_k=6 vk_match=True elapsed_ms=53 keygen_vk_ms=22 keygen_ms=28 peak_rss_kb=14740
+midnight-zkir-2ffe2d1-tests/test_jubjub_point_test_eq_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=56 keygen_vk_ms=19 keygen_ms=34 peak_rss_kb=14388
+midnight-zkir-2ffe2d1-tests/test_keygen_and_serialize_eq.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=27 keygen_vk_ms=10 keygen_ms=14 peak_rss_kb=12952
+midnight-zkir-2ffe2d1-tests/test_minimal_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=32 keygen_vk_ms=13 keygen_ms=16 peak_rss_kb=13000
+midnight-zkir-2ffe2d1-tests/test_native_inv_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=36 keygen_vk_ms=14 keygen_ms=19 peak_rss_kb=13532
+midnight-zkir-2ffe2d1-tests/test_nth_out_of_bounds_fails.zkir [X]: contract FAILED circuit.static.bytes_bounds: instruction 0: nth out of bounds: index 2 into Bytes<2; negative control keygen=panic elapsed_ms=2 peak_rss_kb=9692 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"nth out of bounds: index 2 into Bytes<2>\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnig
+midnight-zkir-2ffe2d1-tests/test_reverse_bytes_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=113 keygen_vk_ms=51 keygen_ms=59 peak_rss_kb=15056
+midnight-zkir-2ffe2d1-tests/test_secp256k1_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=420 keygen_vk_ms=147 keygen_ms=224 peak_rss_kb=28360
+midnight-zkir-2ffe2d1-tests/test_secp256r1_bytes32_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=760 keygen_vk_ms=305 keygen_ms=347 peak_rss_kb=38160
+midnight-zkir-2ffe2d1-tests/test_secp256r1_coordinates_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=250 keygen_vk_ms=90 keygen_ms=131 peak_rss_kb=21316
+midnight-zkir-2ffe2d1-tests/test_secp256r1_ec_mul_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=7349 keygen_vk_ms=2655 keygen_ms=3293 peak_rss_kb=367924
+midnight-zkir-2ffe2d1-tests/test_secp256r1_point_constrain_eq_fails_on_unequal.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=260 keygen_vk_ms=96 keygen_ms=135 peak_rss_kb=21212
+midnight-zkir-2ffe2d1-tests/test_secp256r1_proof.zkir [X]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=445 keygen_vk_ms=164 keygen_ms=216 peak_rss_kb=28684
+midnight-zkir-2ffe2d1-tests/test_sha512_proof.zkir [X]: contract ok (4 met, 10 n/a); keygen=accepted k=14 pk_k=14 vk_match=True elapsed_ms=1485 keygen_vk_ms=577 keygen_ms=789 peak_rss_kb=181120
+midnight-zkir-2ffe2d1-tests/test_slice_out_of_bounds_fails.zkir [X]: contract FAILED circuit.static.bytes_bounds: instruction 0: slice out of bounds: 2..2+3 into Bytes<; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9764 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"slice out of bounds: 2..2+3 into Bytes<4>\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midni
+midnight-zkir-2ffe2d1-tests/test_std_hashes_proof.zkir [X]: contract ok (5 met, 9 n/a); keygen=accepted k=14 pk_k=14 vk_match=True elapsed_ms=2753 keygen_vk_ms=1036 keygen_ms=1341 peak_rss_kb=235772
+handmade/curve_curve25519.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=16 pk_k=16 vk_match=True elapsed_ms=12148 keygen_vk_ms=4188 keygen_ms=6154 peak_rss_kb=697724
+handmade/curve_jubjub.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=319 keygen_vk_ms=122 keygen_ms=152 peak_rss_kb=21532
+handmade/curve_secp256k1.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=7117 keygen_vk_ms=2434 keygen_ms=3479 peak_rss_kb=368512
+handmade/curve_secp256r1.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=8389 keygen_vk_ms=2757 keygen_ms=4001 peak_rss_kb=367636
+handmade/native_bytes.zkir [B]: contract ok (8 met, 6 n/a); keygen=accepted k=11 pk_k=11 vk_match=True elapsed_ms=661 keygen_vk_ms=281 keygen_ms=274 peak_rss_kb=33752
+handmade/std_hashes.zkir [B]: contract ok (5 met, 9 n/a); keygen=accepted k=15 pk_k=15 vk_match=True elapsed_ms=9707 keygen_vk_ms=3376 keygen_ms=4542 peak_rss_kb=455952
+handmade/transcripts.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=311 keygen_vk_ms=126 keygen_ms=161 peak_rss_kb=20960
+handmade/transcripts_guard_off.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=278 keygen_vk_ms=118 keygen_ms=137 peak_rss_kb=20820
+handmade/transient_hash.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=10 pk_k=10 vk_match=True elapsed_ms=200 keygen_vk_ms=87 keygen_ms=99 peak_rss_kb=22696
+handmade-negative/divmod_outputs.zkir [B]: contract FAILED wf: div_mod_power_of_two requires exactly 2 outputs; not keyed
+handmade-negative/duplicate_input.zkir [B]: contract FAILED wf: duplicate input %a; not keyed
+handmade-negative/excessive_bits.zkir [B]: contract FAILED wf: constrain_bits: excessive bit bound; not keyed
+handmade-negative/immediate_out_of_range.zkir [B]: contract format: immediate '0x01000000ffffffffffffffff5bfefe02a4bd5305d8a10908d83933a748d7d9925357d; not keyed
+handmade-negative/reassignment.zkir [B]: contract FAILED wf: reassignment of %b; not keyed
+handmade-negative/undefined_variable.zkir [B]: contract FAILED wf: undefined variable %c; not keyed
+handmade-negative/wrong_version.zkir [B]: contract format: unhandled version: 3.1; not keyed
+divergence/f01_reconstitute_overflow.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=79 keygen_vk_ms=30 keygen_ms=47 peak_rss_kb=16196
+divergence/f02_assert_non_boolean.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=22 keygen_vk_ms=8 keygen_ms=11 peak_rss_kb=12724
+divergence/f03_guard_uncoupled.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=22 keygen_vk_ms=8 keygen_ms=11 peak_rss_kb=13260
+divergence/f04_less_than_odd_bits.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=30 keygen_vk_ms=12 keygen_ms=15 peak_rss_kb=13732
+divergence/f05_noncanonical_foreign_limbs.zkir [B]: contract ok (4 met, 10 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=225 keygen_vk_ms=86 keygen_ms=117 peak_rss_kb=20420
+divergence/f06_cond_select_bytes32.zkir [B]: contract FAILED circuit.static.dispatch: instruction 0: Unsupported cond_select: Bytes32 ? Bytes32; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9528 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported cond_select: Bytes32 ? Bytes32\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midn
+divergence/f07_constrain_eq_jubjub_scalar.zkir [B]: contract FAILED circuit.static.dispatch: instruction 0: Unsupported constrain_eq: JubjubScalar == J; negative control keygen=panic elapsed_ms=2 peak_rss_kb=9944 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported constrain_eq: JubjubScalar == JubjubScalar\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6
+divergence/f08_bytes32_from_low_high_foreign_high.zkir [B]: contract FAILED circuit.static.dispatch: instruction 0: bytes32_from_low_high high: cannot convert ; negative control keygen=panic elapsed_ms=19 peak_rss_kb=10856 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"cannot convert Secp256k1Base to \\\\\\\"Native\\\\\\\"\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6
+divergence/f10_reconstitute_bits_256.zkir [B]: contract FAILED wf: reconstitute_field: excessive bit count; width.reconstitute_field: instruction ; not keyed
+divergence/f11_curve25519_torsion_point.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=190 keygen_vk_ms=80 keygen_ms=95 peak_rss_kb=20748
+divergence/f12_ec_mul_generator_p256.zkir [B]: contract FAILED circuit.static.dispatch: instruction 0: Unsupported EcMulGenerator for scalar of ty; negative control keygen=panic elapsed_ms=27 peak_rss_kb=10608 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported EcMulGenerator for scalar of type Secp256r1Scalar\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-19
+divergence/f13_chip_gating_from_bytes32.zkir [B]: contract FAILED chips.gating: instruction 0 (from_bytes32) needs chip secp256k1, which used_chips d; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9604 message="ZkStdLibArch must enable secp256k1 at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:774"
+divergence/k01_jubjub_from_coordinates_parity_only.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=5 pk_k=5 vk_match=True elapsed_ms=37 keygen_vk_ms=16 keygen_ms=18 peak_rss_kb=13972
+divergence/k01b_jubjub_from_coordinates_no_chip.zkir [B]: contract FAILED chips.gating: instruction 0 (from_coordinates) needs chip jubjub, which used_chips ; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9580 message="ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+divergence/k02_transcript_too_short_panics.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=21 keygen_vk_ms=8 keygen_ms=11 peak_rss_kb=13100
+divergence/k03_bytes32_input_assertion_panics.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=65 keygen_vk_ms=29 keygen_ms=33 peak_rss_kb=14628
+divergence/k04_jubjub_scalar_from_native_chip.zkir [B]: contract FAILED chips.gating: instruction 0 (jubjub_scalar_from_native) needs chip jubjub, which us; negative control keygen=panic elapsed_ms=4 peak_rss_kb=10992 message="ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+divergence/k05_less_than_253_bits_keygen.zkir [B]: contract FAILED width.less_than: instruction 0: less_than: bits 253 pads to 254, above MAX_BOUND_IN; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9188 message="Cannot bound an element with a bound 254 > 253 = MAX_BOUND at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.2.4/src/field/native/native_gadget.rs:339"
+divergence/k06_empty_impact_guard.zkir [B]: contract ok (3 met, 11 n/a); keygen=accepted k=4 pk_k=4 vk_match=True elapsed_ms=28 keygen_vk_ms=12 keygen_ms=13 peak_rss_kb=13136
+divergence/k07_alignment_option_offcircuit.zkir [B]: contract FAILED alignment.persistent_hash: instruction 0: persistent_hash: alignment has an option ; negative control keygen=panic elapsed_ms=1 peak_rss_kb=9908 message="called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"in-circuit decoding of alignment options is not yet implemented!\\\")\") at /home/charl/.cargo/registry/src/index.crates.io
+divergence/k08_load_constant_jubjub_chip.zkir [X]: contract FAILED chips.gating: instruction 0 (load_constant) needs chip jubjub, which used_chips doe; negative control keygen=panic elapsed_ms=2 peak_rss_kb=9688 message="ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+
+== Moriarty contexts (corpus/moriarty-contexts/*.pre.json): contract, keygen, prove-and-verify ==
+swap-fundAlice (experiments/moriarty-core-swap/output/zkir/fundAlice.zkir) [B]: contract ok (5 met, 9 n/a) (computed); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=778 keygen_vk_ms=310 keygen_ms=425 peak_rss_kb=103564
+    prove=accepted k=13 n_pis=110 proof_bytes=5392 elapsed_ms=1582 keygen_ms=455 prove_ms=1068 verify_ms=18 peak_rss_kb=130392
+swap-fundBob (experiments/moriarty-core-swap/output/zkir/fundBob.zkir) [B]: contract ok (5 met, 9 n/a) (computed); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=924 keygen_vk_ms=368 keygen_ms=507 peak_rss_kb=102112
+    prove=accepted k=13 n_pis=110 proof_bytes=5392 elapsed_ms=1610 keygen_ms=433 prove_ms=1121 verify_ms=14 peak_rss_kb=130504
+swap-decide (experiments/moriarty-core-swap/output/zkir/decide.zkir) [B]: contract ok (5 met, 9 n/a) (computed); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=990 keygen_vk_ms=414 keygen_ms=522 peak_rss_kb=102248
+    prove=accepted k=13 n_pis=495 proof_bytes=5392 elapsed_ms=1601 keygen_ms=573 prove_ms=957 verify_ms=17 peak_rss_kb=132256
+swap-expire (experiments/moriarty-core-swap/output/zkir/expire.zkir) [B]: contract ok (3 met, 11 n/a) (computed); keygen=accepted k=9 pk_k=9 vk_match=True elapsed_ms=87 keygen_vk_ms=37 keygen_ms=45 peak_rss_kb=16708
+    prove=accepted k=9 n_pis=394 proof_bytes=3824 elapsed_ms=153 keygen_ms=45 prove_ms=89 verify_ms=15 peak_rss_kb=25880
+escrow-fund (experiments/moriarty-compact-escrow/output/zkir/fund.zkir) [B]: contract ok (5 met, 9 n/a) (computed); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=759 keygen_vk_ms=299 keygen_ms=417 peak_rss_kb=102180
+    prove=accepted k=13 n_pis=86 proof_bytes=5392 elapsed_ms=1678 keygen_ms=472 prove_ms=1146 verify_ms=18 peak_rss_kb=132232
+escrow-release (experiments/moriarty-compact-escrow/output/zkir/release.zkir) [B]: contract ok (5 met, 9 n/a) (computed); keygen=accepted k=13 pk_k=13 vk_match=True elapsed_ms=908 keygen_vk_ms=415 keygen_ms=445 peak_rss_kb=100568
+    prove=accepted k=13 n_pis=139 proof_bytes=5392 elapsed_ms=1749 keygen_ms=427 prove_ms=1265 verify_ms=15 peak_rss_kb=131056
+escrow-refundAfterTimeout (experiments/moriarty-compact-escrow/output/zkir/refundAfterTimeout.zkir) [B]: contract ok (3 met, 11 n/a) (computed); keygen=accepted k=8 pk_k=8 vk_match=True elapsed_ms=104 keygen_vk_ms=46 keygen_ms=54 peak_rss_kb=15012
+    prove=accepted k=8 n_pis=153 proof_bytes=3824 elapsed_ms=129 keygen_ms=40 prove_ms=69 verify_ms=16 peak_rss_kb=24108
+
+== handmade and crate-test programs with the preimages of the spike: prove-and-verify ==
+handmade/std_hashes.zkir + std_hashes.json [B]: prove=accepted k=15 n_pis=1 proof_bytes=9360 elapsed_ms=14067 keygen_ms=4345 prove_ms=7909 verify_ms=16 peak_rss_kb=641864
+ledger9-92e8bdd3-tests/test_curve25519_proof.zkir + test_curve25519_proof.json [B]: prove=accepted k=12 n_pis=1 proof_bytes=5232 elapsed_ms=1432 keygen_ms=493 prove_ms=807 verify_ms=20 peak_rss_kb=72096
+ledger9-92e8bdd3-tests/test_secp256k1_proof.zkir + test_secp256k1_proof.json [B]: prove=accepted k=10 n_pis=1 proof_bytes=5072 elapsed_ms=491 keygen_ms=200 prove_ms=224 verify_ms=15 peak_rss_kb=31408
+ledger9-92e8bdd3-tests/test_secp256r1_proof.zkir + test_secp256r1_proof.json [B]: prove=accepted k=10 n_pis=1 proof_bytes=5104 elapsed_ms=547 keygen_ms=233 prove_ms=229 verify_ms=13 peak_rss_kb=33012
+experiments/moriarty-core-swap/output/zkir/expire.zkir + expire.json [B]: prove=accepted k=9 n_pis=394 proof_bytes=3824 elapsed_ms=184 keygen_ms=41 prove_ms=119 verify_ms=19 peak_rss_kb=25904
+midnight-zkir-2ffe2d1-tests/test_curve25519_proof.zkir + ext_test_curve25519_proof.json [X]: prove=accepted k=12 n_pis=1 proof_bytes=5232 elapsed_ms=1540 keygen_ms=496 prove_ms=913 verify_ms=15 peak_rss_kb=72892
+
+== negative controls: programs whose contract fails must fail keygen (panic or synthesis-error) ==
+divergence/k04_jubjub_scalar_from_native_chip.zkir: keygen=panic -> as expected; "ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+divergence/k01b_jubjub_from_coordinates_no_chip.zkir: keygen=panic -> as expected; "ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+divergence/f13_chip_gating_from_bytes32.zkir: keygen=panic -> as expected; "ZkStdLibArch must enable secp256k1 at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:774"
+divergence/k05_less_than_253_bits_keygen.zkir: keygen=panic -> as expected; "Cannot bound an element with a bound 254 > 253 = MAX_BOUND at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.2.4/src/field/native/native_gadget.rs:339"
+divergence/k07_alignment_option_offcircuit.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"in-circuit decoding of alignment options is not yet implemented!\\\")\") at /home/charl/.cargo/registry
+divergence/k08_load_constant_jubjub_chip.zkir: keygen=panic -> as expected; "ZkStdLibArch must enable jubjub at /home/charl/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5/src/lib.rs:753"
+ledger9-92e8bdd3-tests/output_operand_type_mismatch.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Output position 0: signature declares JubjubPoint but operand has runtime type Native\\\")\") at /home/
+midnight-zkir-2ffe2d1-tests/output_operand_type_mismatch.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Output position 0: signature declares JubjubPoint but operand has runtime type Native\\\")\") at /home/
+midnight-zkir-2ffe2d1-tests/test_bool_gate_empty_inputs_fails.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Boolean gate requires at least one input\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-194
+midnight-zkir-2ffe2d1-tests/test_constant_bad_encoding_rejected.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Failed to decode [Fq(0x0000000000000000000000000000000000000000000000000000000000000001), Fq(0x00000000
+midnight-zkir-2ffe2d1-tests/test_nth_out_of_bounds_fails.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"nth out of bounds: index 2 into Bytes<2>\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-194
+midnight-zkir-2ffe2d1-tests/test_slice_out_of_bounds_fails.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"slice out of bounds: 2..2+3 into Bytes<4>\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-19
+divergence/f06_cond_select_bytes32.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported cond_select: Bytes32 ? Bytes32\\\")\") at /home/charl/.cargo/registry/src/index.crates.io-1
+divergence/f07_constrain_eq_jubjub_scalar.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported constrain_eq: JubjubScalar == JubjubScalar\\\")\") at /home/charl/.cargo/registry/src/index
+divergence/f08_bytes32_from_low_high_foreign_high.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"cannot convert Secp256k1Base to \\\\\\\"Native\\\\\\\"\\\")\") at /home/charl/.cargo/registry/src/index
+divergence/f12_ec_mul_generator_p256.zkir: keygen=panic -> as expected; "called `Result::unwrap()` on an `Err` value: Synthesis(\"Relation::circuit error: Synthesis(\\\"Unsupported EcMulGenerator for scalar of type Secp256r1Scalar\\\")\") at /home/charl/.cargo/registry/sr
+
+122 programs keyed (122 accepted); 32 not keyed (contract not met); 13 proved and verified (13 accepted); negative controls 16/16 failed keygen as expected; 0 contradictions; 139s
+No program contradicts its contract result: every program whose tier-one obligations are met or not applicable keys,
+and every negative control fails keygen on the check its failed obligation names.

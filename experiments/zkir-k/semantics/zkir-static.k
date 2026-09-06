@@ -69,7 +69,11 @@ module ZKIR-STATIC
   // inputs carry their declared type, and every instruction whose output type
   // is fixed by its operand types binds its outputs. A register whose type
   // cannot be told without a value (an unsupported operand combination, or
-  // concat on the extension surface) stays absent, and stype reports unknownT.
+  // concat of operands of unknown type on the extension surface) stays
+  // absent, and stype reports unknownT. The target contract (ZKIR-CONTRACT)
+  // decides the witness-independent in-circuit checks of `Relation::circuit`
+  // on this environment, so a binding here must be the type the circuit
+  // gives the register.
   syntax SType ::= known(IrType) [symbol(known)] | unknownT() [symbol(unknownT)]
   syntax SType ::= stype(Operand, Map) [function, total]
   rule stype(imm(_), _) => known(native())
@@ -123,7 +127,7 @@ module ZKIR-STATIC
   rule bindOuts(intoBytes32(_, O), E)              => E[O <- bytes32()]
   rule bindOuts(fromBytes32(_, T, O), E)           => E[O <- T]
   rule bindOuts(reverseBytes(_, O), E)             => E[O <- bytes32()]
-  rule bindOuts(bytes32IntoLowHigh(_, L, H), E)    => (E[L <- bytes32()])[H <- native()]
+  rule bindOuts(bytes32IntoLowHigh(_, L, H), E)    => (E[L <- native()])[H <- native()]   // low is from_bytes32(Native) of bytes 0..30
   rule bindOuts(bytes32FromLowHigh(_, _, O), E)    => E[O <- bytes32()]
   rule bindOuts(divModPowerOfTwo(_, _, Os), E)     => #bindAll(Os, native(), E)
   rule bindOuts(reconstituteField(_, _, _, O), E)  => E[O <- native()]

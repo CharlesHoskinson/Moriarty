@@ -11,6 +11,7 @@
 requires "zkir-vm.k"
 requires "zkir-ops.k"
 requires "zkir-sha512-constants.k"
+requires "zkir-contract.k"
 
 module ZKIR-EXT-SYNTAX
   imports ZKIR-SYNTAX
@@ -78,13 +79,43 @@ module ZKIR-EXT-STATIC
   rule bindOuts(andI(_, O), E)             => E[O <- boolT()]
   rule bindOuts(orI(_, O), E)              => E[O <- boolT()]
   rule bindOuts(xorI(_, O), E)             => E[O <- boolT()]
-  // concat: the length is the sum of the operand lengths, which the environment does not track
+  // concat: the length is the sum of the operand lengths when every operand type is known
+  rule bindOuts(concat(Is, O), E)          => #bind(O, #bytesType(#concatLen(Is, E)), E)
   rule bindOuts(slice(_, _, L, O), E)      => E[O <- bytes32()] requires L ==Int 32
   rule bindOuts(slice(_, _, L, O), E)      => E[O <- bytesT(L)] requires L =/=Int 32
   rule bindOuts(nth(_, _, O), E)           => E[O <- byteT()]
   rule bindOuts(reverse(B, O), E)          => #bind(O, stype(B, E), E)
   rule bindOuts(loadConstant(T, _, O), E)  => E[O <- T]
   rule bindOuts(sha512(_, _, O), E)        => E[O <- bytesT(64)]
+
+  // static byte-string lengths (`Vec<AssignedByte>` in circuit, so Bytes<n>
+  // only; a Byte is not a byte string): -1 when the type is unknown, -2 when
+  // it is not a byte string
+  syntax Int ::= staticBytesLen(SType) [function, total]
+  rule staticBytesLen(unknownT())       => -1
+  rule staticBytesLen(known(bytes32()))  => 32
+  rule staticBytesLen(known(bytesT(N)))  => N
+  rule staticBytesLen(_)                 => -2 [owise]
+  syntax SType ::= #bytesType(Int) [function, total]
+  rule #bytesType(32) => known(bytes32())
+  rule #bytesType(N)  => known(bytesT(N)) requires N >Int 0 andBool N =/=Int 32
+  rule #bytesType(_)  => unknownT() [owise]
+  // sum of the operand lengths of concat; -1 when any operand is unknown or not a byte string
+  syntax Int ::= #concatLen(Operands, Map) [function, total]
+  rule #concatLen(.Operands, _) => 0
+  rule #concatLen((X, Xs), E) => #concatLen2(#concatItemLen(stype(X, E)), #concatLen(Xs, E))
+  syntax Int ::= #concatItemLen(SType) [function, total]   // concat accepts Byte (one byte) and Bytes<n>
+  rule #concatItemLen(known(byteT())) => 1
+  rule #concatItemLen(S) => staticBytesLen(S) [owise]
+  syntax Int ::= #concatLen2(Int, Int) [function, total]
+  rule #concatLen2(A, B) => A +Int B requires A >=Int 0 andBool B >=Int 0
+  rule #concatLen2(_, _) => -1 [owise]
+
+  // the raw encoding of a load_constant (immediates only; the preprocessor emits no variables here)
+  syntax List ::= #immInts(Operands) [function, total]
+  rule #immInts(.Operands) => .List
+  rule #immInts((imm(I), Es)) => ListItem(I) #immInts(Es)
+  rule #immInts((var(_), Es)) => #immInts(Es)
 
   // the load_constant gate checks #chipFor of its type; sha512 needs the SHA-512 chip
   rule #chipNeedsOf(loadConstant(T, _, _), _) => chipOfType(T)
@@ -108,10 +139,12 @@ module ZKIR-EXT-STATIC
   rule alignmentOf(sha512(Al, _, _)) => someAlign(Al)
 endmodule
 
+// Values and the strict decoder of the extension surface; imported by
+// ZKIR-EXT and, for load_constant decoding, by ZKIR-EXT-CONTRACT (nothing of
+// ZKIR-OPS is needed here).
 module ZKIR-EXT-VALUES
   imports ZKIR-EXT-SYNTAX
   imports ZKIR-VALUES
-  imports ZKIR-OPS
 
   syntax Value ::= boolV(Bool)   [symbol(boolV)]
                  | byteV(Int)    [symbol(byteV)]
@@ -124,11 +157,7 @@ module ZKIR-EXT-VALUES
   rule defaultValue(bytesT(N)) => bytesV(padRightBytes(.Bytes, N, 0))
   // typeName arms for the three types are in ZKIR-EXT-SYNTAX
 
-  // any byte string value, of either representation
-  syntax BytesResult ::= asBytesAny(Value) [function, total]
-  rule asBytesAny(bytes32(B)) => bOk(B)
-  rule asBytesAny(bytesV(B))  => bOk(B)
-  rule asBytesAny(V) => bErr("cannot convert " +String tn(V) +String " to Bytes") [owise]
+  // any byte string value, of either representation (asBytesAny, in ZKIR-EXT)
   syntax Value ::= mkBytes(Bytes) [function, total]
   rule mkBytes(B) => bytes32(B) requires lengthBytes(B) ==Int 32
   rule mkBytes(B) => bytesV(B)  requires lengthBytes(B) =/=Int 32
@@ -257,6 +286,12 @@ module ZKIR-EXT
   rule #boolFold(ListItem(V:Value) _, _, _) => vErr("Boolean gate expects Bool inputs, found " +String tn(V)) [owise]
 
   // --- byte strings ------------------------------------------------------------------------
+  // any byte string value, of either representation
+  syntax BytesResult ::= asBytesAny(Value) [function, total]
+  rule asBytesAny(bytes32(B)) => bOk(B)
+  rule asBytesAny(bytesV(B))  => bOk(B)
+  rule asBytesAny(V) => bErr("cannot convert " +String tn(V) +String " to Bytes") [owise]
+
   rule <k> #exec(concat(Is, O)) => #put(O, #concat(resolveAll(Is, M), .Bytes)) ... </k> <mem> M </mem> <status> ok() </status>
   syntax ValueResult ::= #concat(ValuesResult, Bytes) [function, total]
   rule #concat(vsErr(S), _) => vErr(S)
@@ -297,10 +332,6 @@ module ZKIR-EXT
 
   // --- constants and sha512 ------------------------------------------------------------------
   rule <k> #exec(loadConstant(T, Es, O)) => #put(O, #toValue(decodeStrict(#immInts(Es), T, true))) ... </k> <status> ok() </status>
-  syntax List ::= #immInts(Operands) [function, total]
-  rule #immInts(.Operands) => .List
-  rule #immInts((imm(I), Es)) => ListItem(I) #immInts(Es)
-  rule #immInts((var(_), Es)) => #immInts(Es)
 
   rule <k> #exec(sha512(Al, Xs, O)) => #put(O, #sha512V(resolveAll(Xs, M), Al)) ... </k> <mem> M </mem> <status> ok() </status>
   syntax ValueResult ::= #sha512V(ValuesResult, Alignment) [function, total]
@@ -337,4 +368,102 @@ module ZKIR-EXT
   syntax ValueResult ::= #sha512C2(IntsResult, Alignment) [function, total]
   rule #sha512C2(isErr(S), _) => vErr(S)
   rule #sha512C2(isOk(L), Al) => #sha512V3(alignedBytesCircuit(Al, L))
+endmodule
+
+// The target contract on the extension surface (ZKIR-CONTRACT arms, plan-iter3
+// M5b): the witness-independent in-circuit checks of `Relation::circuit` at
+// 2ffe2d1 for the nine added instructions, decided on the static type
+// environment. Imported by ZKIR-CONTRACT-MAIN (zkir-contract-main.k).
+//   and / or / xor    `resolve_bit_list`: at least one input, and every input
+//                     converts to AssignedBit (a Bool)
+//   load_constant     `decode_offcircuit(encoding, val_t)` on the raw encoding:
+//                     the strict decoder of ZKIR-EXT-VALUES, as in the gate
+//   nth / slice       the operand converts to Vec<AssignedByte> (a Bytes<n>),
+//                     the index or range lies within the static length,
+//                     and a slice length is at least 1
+//   concat            at least one input, every input a Byte or Bytes<n>, and
+//                     the result within MAX_BYTES_LEN when every length is known
+//   reverse           the operand converts to Vec<AssignedByte>
+//   sha512            every input converts to AssignedNative
+//   neg               Bool is negated in circuit at 2ffe2d1 (neg.rs)
+//   cond_select       Bool and Byte pairs select in circuit (select.rs); byte
+//                     strings of any length do not
+//   constrain_eq, test_eq   Bool, Byte and equal-length Bytes<n> pairs compare
+//                     (constrain_eq.rs, eq.rs); a Bytes<n> against a Bytes<m>
+//                     with n =/= m is a different type in ZKIR-STATIC
+module ZKIR-EXT-CONTRACT
+  imports ZKIR-CONTRACT
+  imports ZKIR-EXT-STATIC
+  imports ZKIR-EXT-VALUES
+
+  rule tyStr(bytesT(N)) => "Bytes<" +String Int2String(N) +String ">"
+
+  // --- circuit.static.bool_gate ------------------------------------------------------------
+  rule applies(boolGate(), andI(_, _)) => true
+  rule applies(boolGate(), orI(_, _))  => true
+  rule applies(boolGate(), xorI(_, _)) => true
+  rule defect(boolGate(), andI(Is, _), E) => #boolGateDefect("and", Is, E)
+  rule defect(boolGate(), orI(Is, _), E)  => #boolGateDefect("or", Is, E)
+  rule defect(boolGate(), xorI(Is, _), E) => #boolGateDefect("xor", Is, E)
+  syntax String ::= #boolGateDefect(String, Operands, Map) [function, total]
+  rule #boolGateDefect(Op, .Operands, _) => Op +String ": Boolean gate requires at least one input"
+  rule #boolGateDefect(Op, Is, E) => #boolInputs(Op, Is, E) requires Is =/=K .Operands
+  syntax String ::= #boolInputs(String, Operands, Map) [function, total]
+  rule #boolInputs(_, .Operands, _) => ""
+  rule #boolInputs(Op, (X, Xs), E) => #first(#boolInput(Op, stype(X, E)), #boolInputs(Op, Xs, E))
+  syntax String ::= #boolInput(String, SType) [function, total]
+  rule #boolInput(Op, known(T)) => Op +String ": Boolean gate expects Bool inputs, found " +String tyStr(T) requires T =/=K boolT()
+  rule #boolInput(_, _) => "" [owise]
+
+  // --- circuit.static.constant --------------------------------------------------------------
+  rule applies(constant(), loadConstant(_, _, _)) => true
+  rule defect(constant(), loadConstant(T, Es, _), _) => #constDefect(decodeStrict(#immInts(Es), T, true))
+  syntax String ::= #constDefect(DecodeResult) [function, total]
+  rule #constDefect(decOk(_))    => ""
+  rule #constDefect(decErr(S))   => "load_constant: " +String S
+  rule #constDefect(decPanic(S)) => "load_constant: " +String S
+
+  // --- circuit.static.bytes_bounds ------------------------------------------------------------
+  rule applies(bytesBounds(), nth(_, _, _))      => true
+  rule applies(bytesBounds(), slice(_, _, _, _)) => true
+  rule defect(bytesBounds(), nth(B, I, _), E)      => #nthDefect(stype(B, E), I)
+  rule defect(bytesBounds(), slice(B, S, L, _), E) => #sliceDefect(stype(B, E), S, L)
+  syntax String ::= #nthDefect(SType, Int) [function, total]
+  rule #nthDefect(known(T), _) => "nth: cannot convert " +String tyStr(T) +String " to Bytes" requires staticBytesLen(known(T)) ==Int -2
+  rule #nthDefect(known(T), I) => "nth out of bounds: index " +String Int2String(I) +String " into Bytes<" +String Int2String(staticBytesLen(known(T))) +String ">"
+    requires staticBytesLen(known(T)) >=Int 0 andBool I >=Int staticBytesLen(known(T))
+  rule #nthDefect(_, _) => "" [owise]
+  syntax String ::= #sliceDefect(SType, Int, Int) [function, total]
+  rule #sliceDefect(known(T), _, _) => "slice: cannot convert " +String tyStr(T) +String " to Bytes" requires staticBytesLen(known(T)) ==Int -2
+  rule #sliceDefect(S0, _, 0) => "slice length must be at least 1" requires staticBytesLen(S0) =/=Int -2
+  rule #sliceDefect(known(T), S, L) => "slice out of bounds: " +String Int2String(S) +String ".." +String Int2String(S) +String "+" +String Int2String(L)
+      +String " into Bytes<" +String Int2String(staticBytesLen(known(T))) +String ">"
+    requires L >Int 0 andBool staticBytesLen(known(T)) >=Int 0 andBool S +Int L >Int staticBytesLen(known(T))
+  rule #sliceDefect(_, _, _) => "" [owise]
+
+  // --- circuit.static.dispatch: the added arms and instructions --------------------------------
+  rule negT(boolT())      => true
+  rule selectT(boolT())   => true
+  rule selectT(byteT())   => true
+  rule eqT(boolT())       => true
+  rule eqT(byteT())       => true
+  rule eqT(bytesT(_))     => true
+  rule dispatchDefect(concat(Is, _), E)     => #concatDefect(Is, E)
+  rule dispatchDefect(reverse(B, _), E)     => #bytesDefect("reverse", stype(B, E))
+  rule dispatchDefect(sha512(_, Xs, _), E)  => #nativesDefect("sha512", Xs, E)
+  syntax String ::= #concatDefect(Operands, Map) [function, total]
+  rule #concatDefect(.Operands, _) => "Concat requires at least one byte of input"
+  rule #concatDefect(Is, E) => #first(#concatInputs(Is, E), #concatSize(#concatLen(Is, E))) requires Is =/=K .Operands
+  syntax String ::= #concatInputs(Operands, Map) [function, total]
+  rule #concatInputs(.Operands, _) => ""
+  rule #concatInputs((X, Xs), E) => #first(#concatInput(stype(X, E)), #concatInputs(Xs, E))
+  syntax String ::= #concatInput(SType) [function, total]
+  rule #concatInput(known(T)) => "Concat expects Byte or Bytes inputs, found " +String tyStr(T) requires #concatItemLen(known(T)) ==Int -2
+  rule #concatInput(_) => "" [owise]
+  syntax String ::= #concatSize(Int) [function, total]
+  rule #concatSize(N) => "Concat result length " +String Int2String(N) +String " exceeds MAX_BYTES_LEN (16777216)" requires N >Int 16777216
+  rule #concatSize(_) => "" [owise]
+  syntax String ::= #bytesDefect(String, SType) [function, total]
+  rule #bytesDefect(What, known(T)) => What +String ": cannot convert " +String tyStr(T) +String " to Bytes" requires staticBytesLen(known(T)) ==Int -2
+  rule #bytesDefect(_, _) => "" [owise]
 endmodule
