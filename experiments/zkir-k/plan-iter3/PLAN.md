@@ -18,7 +18,7 @@ Off-circuit (witness) semantics of both pinned surfaces, complete and differenti
 
 ## What the crate allows, checked before planning
 
-- The base crate resolves midnight-proofs 0.7.3 and midnight-zk-stdlib 2.3.3; the extension crate resolves 0.8.2. One oracle build per version; the 0.8 `MockProver::run` sizes the circuit itself, the 0.7 path takes `k`.
+- Both zkir crates resolve midnight-proofs 0.8.2 and midnight-zk-stdlib 2.3.5 (the 0.7.3 and 2.3.3 entries in the base lockfile belong to the old v2 `zkir` crate, found during the spike). One oracle source serves both workspaces; `MockProver::run` sizes rows itself and `MidnightCircuit` takes `optimal_k`.
 - `Preprocessed` is a public struct and `IrSource::prove_unchecked` exists for malicious-prover tests, so a witness can be injected. But `IrValue` is typed (`JubjubPoint(JubjubSubgroup)`, `JubjubScalar(JubjubFr)`, `Bytes32([u8; 32])`): off-curve, out-of-subgroup, non-canonical and out-of-range values cannot be represented at that interface. Only `Native` values, the public-input vector, the binding input and the commitment can be perturbed there. Synthesis recomputes arithmetic and hash outputs and checks them against memory through `mem_insert`, so an injected register that disagrees surfaces as a synthesis error, not a constraint failure.
 - `optimal_k` searches 9 to 25; the ledger circuits may need 2^20 rows or more.
 - Real keygen synthesises with unknown witnesses and needs KZG parameters of the right size; the crate's tests use a `TestParams` provider reading `MIDNIGHT_PP/bls_midnight_2p{k}`.
@@ -54,7 +54,7 @@ The statement Moriarty's specification will make has two directions, and the pla
 
 ## Risks
 
-MockProver cost on the ledger circuits: M1a decides sampling before M1 commits. Two midnight-proofs versions: two oracle builds, pinned in the workspaces. Injected witnesses cannot express malformed typed values: accepted, and turned into the typing clause of M2 rather than an exit criterion. Haskell backend performance: a reduced symbolic module, off the critical path. Moriarty preimages need the Compact runtime and a transaction context: a two-day timebox with a hand-built fallback. Upstream drift since the pinned commits: the M0 script decides whether to re-pin before M1.
+MockProver cost on the ledger circuits: M1a decides sampling before M1 commits. One midnight-proofs version for both crates after all; one oracle source, two workspace builds. Injected witnesses cannot express malformed typed values: accepted, and turned into the typing clause of M2 rather than an exit criterion. Haskell backend performance: a reduced symbolic module, off the critical path. Moriarty preimages need the Compact runtime and a transaction context: a two-day timebox with a hand-built fallback. Upstream drift since the pinned commits: the M0 script decides whether to re-pin before M1.
 
 ## Process
 

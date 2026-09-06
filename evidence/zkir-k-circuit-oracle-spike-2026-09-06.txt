@@ -1,0 +1,161 @@
+zkir-circuit-oracle feasibility spike (plan-iter3 M1a) and first cut of M1
+Date: 2026-09-06
+Host: WSL2 Linux 6.18, 6 CPUs, 31 GB RAM; rustc/cargo from ~/.cargo; release profile.
+
+Crates
+  /home/charl/Moriarty/repos/_build/ledger-92e8bdd3/zkir-circuit-oracle        (midnight-ledger 92e8bdd3, crate midnight-zkir-v3)
+  /home/charl/Moriarty/repos/_build/midnight-zkir-2ffe2d1/zkir-circuit-oracle  (midnight-zkir 2ffe2d1, crate midnight-zkir)
+  Both are registered as workspace members (one line added to each workspace Cargo.toml).
+  Versioned copies (main.rs identical modulo the crate name; Cargo.toml differs in the path/version of the two
+  local dependencies): experiments/zkir-k/tools/circuit-oracle/{ledger-92e8bdd3,midnight-zkir-2ffe2d1}/
+  Spike inputs and the two helper scripts: experiments/zkir-k/tools/circuit-oracle/spike-2026-09-06/
+
+Resolved dependency versions (cargo tree -p midnight-zkir-v3 / -p midnight-zkir, depth 1)
+  base ledger-92e8bdd3:  midnight-proofs 0.8.2, midnight-zk-stdlib 2.3.5, midnight-circuits 7.2.4, midnight-curves 0.3.1
+  ext  midnight-zkir-2ffe2d1: midnight-proofs 0.8.2, midnight-zk-stdlib 2.3.5, midnight-circuits 7.2.4, midnight-curves 0.3.1
+  The plan's "What the crate allows" says the base crate resolves midnight-proofs 0.7.3 and stdlib 2.3.3. That is
+  wrong for zkir-v3: the 0.7.3/1.3.0 pair in the base lockfile belongs to the old `zkir` (v2) crate. Both oracles
+  therefore use the same API: MidnightCircuit::new(&ir, Value::known(instance), Value::known(preprocessed), Some(k))
+  with k = midnight_zk_stdlib::optimal_k(&ir), then MockProver::run(&circuit, vec![vec![], instance]) which sizes
+  the row count itself (RowSizer::min_k), then verify(). One oracle source serves both versions.
+
+Build commands
+  cd /home/charl/Moriarty/repos/_build/ledger-92e8bdd3 && cargo build --release -p zkir-circuit-oracle --offline
+  cd /home/charl/Moriarty/repos/_build/midnight-zkir-2ffe2d1 && cargo build --release -p zkir-circuit-oracle --offline
+  Binaries: <workspace>/target/release/zkir-circuit-oracle
+
+Usage
+  zkir-circuit-oracle PROGRAM.zkir PREIMAGE.json [--inject INJECT.json] [--pis PIS.json] [--binding-input DEC]
+                      [--instance PIS.json] [--model-only]
+  One JSON line: outcome in {preprocess-error, witness-consistency-error, synthesis-error, constraint-failure,
+  panic, accepted} (+ model-only for --model-only), k, rows (2^k allocated by MockProver), usable_rows,
+  elapsed_ms, preprocess_ms, optimal_k_ms, mockprover_run_ms, verify_ms, peak_rss_kb (VmHWM), message,
+  failures (constraint failures as strings), injected, pis, trace_errors.
+  Classification: preprocess Err -> preprocess-error; MockProver::run Err with the crate's tracing ERROR event
+  "Misalignment between `prepare` and `synthesize` runs" (emitted only by mem_insert / pi_push in ir_vm.rs; captured
+  with a tracing-subscriber layer) -> witness-consistency-error; any other MockProver::run Err -> synthesis-error;
+  verify Err(failures) -> constraint-failure; caught panic (std::panic::catch_unwind + panic hook) -> panic.
+  Exit code 0 for every classified outcome, 2 when the program or preimage file does not load.
+  --inject replaces Preprocessed.memory entries (Native only) before the circuit is built; --pis / --binding-input
+  replace the other public fields of Preprocessed (the MockProver instance column follows pis); --instance changes
+  only the instance column handed to MockProver, which is the way to reach a genuine constraint failure.
+
+Preimages
+  (a) handmade/std_hashes.zkir: manifest test_preimage (K: ok, 0 non-holding verdicts).
+  (b) ledger9-92e8bdd3-tests/test_curve25519_proof.zkir (29 instructions, tied largest with test_secp256k1_proof
+      and test_secp256r1_proof): the manifest test_preimage is a placeholder (no inputs). Preimage built by the K
+      generation run replicating diff_test.py's loop (gen_preimage.py, seed '2026:<file>', small inputs), which
+      never satisfies the constrain_eq against the private inputs, then completed by fix_private.py: every
+      private_input register compared by constrain_eq/test_eq receives the K memory encoding of the computed
+      register. Result: K ok, 0 non-holding verdicts; Rust preprocess ok. Same for the two secp programs.
+  (c) moriarty-core-swap/output/zkir/expire.zkir (177 instructions, communications commitment): gen_preimage.py
+      reproduces the differential receipt (attempt 0 'Failed direct assertion', attempt 1 'Expected boolean',
+      attempt 2 ok, 394 public inputs); Rust preprocess ok (28 registers, 394 pis).
+  (d) midnight-zkir-2ffe2d1-tests/test_curve25519_proof.zkir (largest extension test program, 29 instructions;
+      byte-identical to the base copy): same construction with --ext. K-EXT ok, 0 non-holding verdicts.
+  Commands (from the worktree root /home/charl/Moriarty/.worktrees/zkir-k-iter3; SP = experiments/zkir-k/tools/circuit-oracle/spike-2026-09-06):
+    uv run --group zkir-k python $SP/gen_preimage.py experiments/moriarty-core-swap/output/zkir/expire.zkir $SP/expire.json
+    uv run --group zkir-k python $SP/gen_preimage.py experiments/zkir-k/corpus/ledger9-92e8bdd3-tests/test_curve25519_proof.zkir gen.json
+    uv run --group zkir-k python $SP/fix_private.py experiments/zkir-k/corpus/ledger9-92e8bdd3-tests/test_curve25519_proof.zkir gen.json $SP/test_curve25519_proof.json
+    (same two lines with --ext and the midnight-zkir-2ffe2d1-tests copy for $SP/ext_test_curve25519_proof.json)
+  The preimage files were produced in the session scratchpad and copied verbatim (md5 checked) into $SP.
+
+Measurements (each run alone on an idle machine; B = ledger-92e8bdd3/target/release/zkir-circuit-oracle,
+X = midnight-zkir-2ffe2d1/target/release/zkir-circuit-oracle, C = experiments/zkir-k/corpus)
+  (a) $B $C/handmade/std_hashes.zkir $SP/std_hashes.json
+      {"outcome":"accepted","k":15,"rows":32768,"usable_rows":32761,"elapsed_ms":7184,"preprocess_ms":0,"optimal_k_ms":2508,"mockprover_run_ms":4213,"verify_ms":457,"peak_rss_kb":139528,"message":"MockProver::verify ok","pis":["42"]}
+      (k=15 comes from the sha256 and keccak lookup tables, not from the six instructions)
+  (b) $B $C/ledger9-92e8bdd3-tests/test_curve25519_proof.zkir $SP/test_curve25519_proof.json
+      {"outcome":"accepted","k":12,"rows":4096,"usable_rows":4090,"elapsed_ms":396,"preprocess_ms":0,"optimal_k_ms":175,"mockprover_run_ms":80,"verify_ms":138,"peak_rss_kb":28960,"message":"MockProver::verify ok","pis":["12515648972655002301450229059050943575941855180205767815302007237215709828310"]}
+      $B $C/ledger9-92e8bdd3-tests/test_secp256k1_proof.zkir $SP/test_secp256k1_proof.json
+      {"outcome":"accepted","k":10,"rows":1024,"usable_rows":1018,"elapsed_ms":144,"preprocess_ms":0,"optimal_k_ms":60,"mockprover_run_ms":58,"verify_ms":25,"peak_rss_kb":17324,"message":"MockProver::verify ok","pis":["35306769654514138440051016953741877552793896136732231616862983606380441319767"]}
+      $B $C/ledger9-92e8bdd3-tests/test_secp256r1_proof.zkir $SP/test_secp256r1_proof.json
+      {"outcome":"accepted","k":10,"rows":1024,"usable_rows":1018,"elapsed_ms":196,"preprocess_ms":0,"optimal_k_ms":88,"mockprover_run_ms":83,"verify_ms":22,"peak_rss_kb":17920,"message":"MockProver::verify ok","pis":["16925285355166851779107801106490056882213040755630816712509154550679559191530"]}
+  (c) $B experiments/moriarty-core-swap/output/zkir/expire.zkir $SP/expire.json
+      {"outcome":"accepted","k":9,"rows":512,"usable_rows":505,"elapsed_ms":16,"preprocess_ms":0,"optimal_k_ms":3,"mockprover_run_ms":5,"verify_ms":6,"peak_rss_kb":12592,"message":"MockProver::verify ok"}   (pis: 394 values, omitted)
+  (d) $X $C/midnight-zkir-2ffe2d1-tests/test_curve25519_proof.zkir $SP/ext_test_curve25519_proof.json
+      {"outcome":"accepted","k":12,"rows":4096,"usable_rows":4090,"elapsed_ms":234,"preprocess_ms":0,"optimal_k_ms":101,"mockprover_run_ms":63,"verify_ms":68,"peak_rss_kb":28516,"message":"MockProver::verify ok","pis":["12515648972655002301450229059050943575941855180205767815302007237215709828310"]}
+
+Cost model only (unknown witness, no MockProver; `--model-only`, reports k and rows of midnight_zk_stdlib::cost_model)
+  ext precompiles ($X <file> $SP/std_hashes.json --model-only):
+    micro-dao__advance    k=13 rows=2176   56 ms   14 MB
+    micro-dao__buyIn      k=16 rows=38383 918 ms   54 MB   (largest extension circuit in the corpus, 150 instructions)
+    micro-dao__cashOut    k=15 rows=17734 357 ms   29 MB
+    micro-dao__setTopic   k=13 rows=2139   55 ms   14 MB
+    micro-dao__voteCommit k=14 rows=9999  182 ms   20 MB
+    micro-dao__voteReveal k=13 rows=6213  122 ms   17 MB
+  Moriarty core-swap artifacts ($B <file> $SP/std_hashes.json --model-only):
+    decide k=13 rows=2507; expire k=9 rows=452; fundAlice k=13 rows=2099; fundBob k=13 rows=2099
+  No accepting witness exists yet for the precompiles (K generation stops at 'Failed direct assertion'), so their
+  MockProver cost is extrapolated from the k=15 hash circuit above: about 7 s and 140 MB at k=15, so under a minute
+  and well under 1 GB at k=16.
+
+Spike verdict
+  MockProver is cheap on every circuit in the corpus: the largest corpus circuits need k=15..16 (2^16 rows), the
+  ledger test programs k=10..12, the Moriarty expire circuit k=9. Wall time is dominated by the sha256/keccak table
+  loads (k=15: 7 s, 140 MB); everything else runs in well under a second and under 30 MB. optimal_k costs about
+  as much as the MockProver run itself (it synthesises with an unknown witness for k=9.. until the circuit fits).
+  The plan's worry about 2^20 rows does not apply to the corpus. M1 can run the whole corpus, not a sample, with
+  the honest preimage and every perturbation per program: 44 + 61 + 6 + 9 programs times about six runs is an
+  estimated ten minutes end to end, dominated by the hash programs. Memory is not a constraint.
+
+Outcome classification checks (base binary, all six paths reached except panic)
+  accepted                   (a) above
+  preprocess-error           $B $C/handmade/std_hashes.zkir $SP/std_hashes_short.json
+                             -> "Not enough raw inputs: ran out at index 2 while decoding Identifier(\"%c\")"
+  witness-consistency-error  $B $C/handmade/std_hashes.zkir $SP/std_hashes.json --inject $SP/inject_a.json   (%a: 5 -> 6)
+                             -> Synthesis("Relation::circuit error: Synthesis(\"error_if_known_and\")"), trace event
+                                "Misalignment ... id=%s1 expected=Bytes32(..) actual=Bytes32(..)" (the injected input
+                                register is accepted as the in-circuit input; the recomputed hash %s1 no longer matches
+                                the witness memory)
+                             $B $C/handmade/std_hashes.zkir $SP/std_hashes.json --binding-input 43
+                             -> same class; trace event from pi_push (prepare=[0x2a] idx=0 v=0x2b)
+                             $B expire.zkir $SP/expire.json --pis $SP/expire_pis.json   (pis[5] + 1)
+                             -> same class (pi_push)
+                             $B expire.zkir $SP/expire.json --inject $SP/expire_inject2.json   (%t.2 cond_select output 1 -> 2)
+                             -> same class; trace event "id=%t.2 expected=Native(02) actual=Native(01)" (mem_insert)
+                             $B expire.zkir $SP/expire.json --inject $SP/expire_inject3.json   (%t.0 unguarded public_input 7 -> 8)
+                             -> same class (pi_push: the in-circuit value is taken from the injected witness, the
+                                public-input vector still holds 7)
+  constraint-failure         $B $C/handmade/std_hashes.zkir $SP/std_hashes.json --instance $SP/instance_43.json
+                             -> 2 failures: "Equality constraint not satisfied by cell (Column('Advice', 0 - ), in
+                                Region 3 ('Assign native value') at offset 0)" and "... (Column('Instance', 1 - ),
+                                outside any region, on row 0)"
+                             $B expire.zkir $SP/expire.json --instance $SP/expire_instance.json   (instance[5] + 1)
+                             -> 2 failures (advice cell in Region 12 'add and double mul'; Instance column 1 row 5)
+  synthesis-error            not reached on the corpus; it is the residual class (MockProver::run Err without the
+                             misalignment event, e.g. "value .. not in memory", NotEnoughRowsAvailable, type errors).
+  panic                      not reached; catch_unwind + panic hook are in place (message and location reported).
+
+Classification difficulties and findings for the M1 comparison table
+  1. A witness-consistency error and a synthesis error carry the same crate error value
+     (Error::Synthesis("error_if_known_and") wrapped by the stdlib as "Relation::circuit error: ..."), so the
+     distinction rests on the tracing ERROR event that only mem_insert / pi_push emit. The oracle installs a global
+     tracing subscriber to capture it. Without tracing the two classes are indistinguishable at the API.
+  2. Injected witness registers are only meaningful where the circuit reads the witness: the declared inputs and
+     the public_input / private_input registers (the circuit assigns those from Preprocessed.memory). Every other
+     register is recomputed in-circuit and the injection is detected by mem_insert (witness-consistency), never by a
+     constraint, because MockProver never sees the injected value.
+  3. A guarded public_input whose guard is off is unconstrained: injecting %amount.13 (guard %t.10 = 0) 0 -> 1 in
+     expire.zkir is ACCEPTED ($B expire.zkir $SP/expire.json --inject $SP/expire_inject.json). The register's cell
+     is assigned from the witness, skipped by the public-input push, and nothing else constrains it. This is
+     expected behaviour (the value is a free witness cell) but it must be a named cell in the comparison table:
+     K's verdict layer says nothing about skipped public inputs.
+  4. Four instruction paths insert into the circuit memory without mem_insert (ir_vm.rs in-circuit
+     FromBytes32, ReverseBytes, Bytes32IntoLowHigh, Bytes32FromLowHigh). An injected value on such an output
+     register is silently ignored (the in-circuit value is the recomputed one); with Native outputs only
+     FromBytes32 to a Native type can be reached by --inject. Another named cell for the table.
+  5. To reach a genuine constraint failure the instance column must be perturbed independently of the witness
+     (--instance). Perturbing pis or binding_input in Preprocessed is always caught earlier by pi_push.
+  6. MockProver (0.8.2) sizes its own row count, so `k` reported is optimal_k's value used for the pow2range table
+     width (max_bit_len = k - 1) and `rows` is what MockProver allocated; they agreed on every run here.
+  7. MockProver::verify reports failures per cell (Equality constraint not satisfied by cell ...), which identifies
+     the region name and column but not the ZKIR instruction; mapping failures back to instructions needs the
+     region naming convention of midnight-circuits or the instruction index in the layouter namespace.
+
+Files
+  crate sources: /home/charl/Moriarty/repos/_build/ledger-92e8bdd3/zkir-circuit-oracle/{Cargo.toml,src/main.rs}
+                 /home/charl/Moriarty/repos/_build/midnight-zkir-2ffe2d1/zkir-circuit-oracle/{Cargo.toml,src/main.rs}
+  versioned:     experiments/zkir-k/tools/circuit-oracle/ledger-92e8bdd3/{Cargo.toml,src/main.rs}
+                 experiments/zkir-k/tools/circuit-oracle/midnight-zkir-2ffe2d1/{Cargo.toml,src/main.rs}
+                 experiments/zkir-k/tools/circuit-oracle/spike-2026-09-06/  (preimages, injections, gen_preimage.py, fix_private.py)
