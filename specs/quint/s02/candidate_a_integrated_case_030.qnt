@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_030 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,16 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = INSTALLMENT_CASES_A4.nth(30)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "installment/two-fills/unused-successor/SignAfterResolve", lifecycle: "installment", profile: "SignAfterResolve", scenario: "two-fills", control: "unused-successor"}, scenario: InstallmentScenarioA4(TwoFillsI), profile: SignAfterResolve, steps: List({kind: "transition", instruction: LifecycleIA4(PrepareParentI)},
+{kind: "transition", instruction: LifecycleIA4(SignParentI)},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(CancelAttempt))},
+{kind: "adversarial-derivation", instruction: MutateA4(ProposedDerivationA4)},
+{kind: "denied-probe", instruction: VerifyEvidenceA4({id: FirstFillAttempt, mode: NormalEvidenceA4})},
+{kind: "transition", instruction: RejectEvidenceA4({id: FirstFillAttempt, mode: NormalEvidenceA4})},
+{kind: "adversarial-derivation", instruction: MutateA4(VerifiedDerivationA4)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FirstFillAttempt)},
+{kind: "transition", instruction: RejectConstructedA4(FirstFillAttempt)})}
 pure val CASE_INDEX_A4: int = 30
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

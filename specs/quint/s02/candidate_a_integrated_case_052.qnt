@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_052 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,26 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = SWAP_CASES_A4.nth(20)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "swap/funded2-refuse101-choice0/ordinary/SignAfterResolve", lifecycle: "swap", profile: "SignAfterResolve", scenario: "funded2-refuse101-choice0", control: "ordinary"}, scenario: SwapScenarioA4({funded: 2, mode: RefuseS({now: Time101, chosen: 0})}), profile: SignAfterResolve, steps: List({kind: "transition", instruction: LifecycleSA4(PrepareS({id: FundingOneAttempt, principal: Alice}))},
+{kind: "transition", instruction: LifecycleSA4(SignS({id: FundingOneAttempt, principal: Alice}))},
+{kind: "transition", instruction: LifecycleSA4(ProposeS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(VerifyS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(CommitS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(AdvanceS(Time2))},
+{kind: "transition", instruction: LifecycleSA4(PrepareS({id: FundingTwoAttempt, principal: Bob}))},
+{kind: "transition", instruction: LifecycleSA4(SignS({id: FundingTwoAttempt, principal: Bob}))},
+{kind: "transition", instruction: LifecycleSA4(ProposeS(FundingTwoAttempt))},
+{kind: "transition", instruction: LifecycleSA4(VerifyS(FundingTwoAttempt))},
+{kind: "transition", instruction: LifecycleSA4(CommitS(FundingTwoAttempt))},
+{kind: "transition", instruction: LifecycleSA4(AdvanceS(Time101))},
+{kind: "transition", instruction: LifecycleSA4(ProposeS(DispositionAttempt))},
+{kind: "transition", instruction: LifecycleSA4(RejectProposedS(DispositionAttempt))},
+{kind: "denied-probe", instruction: ReplayProposalA4(FundingOneAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FundingOneAttempt)},
+{kind: "denied-probe", instruction: ReplayProposalA4(FundingTwoAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FundingTwoAttempt)},
+{kind: "denied-probe", instruction: ReplayProposalA4(DispositionAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(DispositionAttempt)})}
 pure val CASE_INDEX_A4: int = 52
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

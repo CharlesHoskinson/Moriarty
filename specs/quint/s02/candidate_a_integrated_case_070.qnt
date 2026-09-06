@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_070 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,18 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = SWAP_CASES_A4.nth(38)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "swap/funded2-settle/wrong-Core-chooser/SignAfterResolve", lifecycle: "swap", profile: "SignAfterResolve", scenario: "funded2-settle", control: "wrong-Core-chooser"}, scenario: SwapScenarioA4({funded: 2, mode: SettleS}), profile: SignAfterResolve, steps: List({kind: "transition", instruction: LifecycleSA4(PrepareS({id: FundingOneAttempt, principal: Alice}))},
+{kind: "transition", instruction: LifecycleSA4(SignS({id: FundingOneAttempt, principal: Alice}))},
+{kind: "transition", instruction: LifecycleSA4(ProposeS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(VerifyS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(CommitS(FundingOneAttempt))},
+{kind: "transition", instruction: LifecycleSA4(AdvanceS(Time2))},
+{kind: "transition", instruction: LifecycleSA4(PrepareS({id: FundingTwoAttempt, principal: Bob}))},
+{kind: "transition", instruction: LifecycleSA4(SignS({id: FundingTwoAttempt, principal: Bob}))},
+{kind: "transition", instruction: LifecycleSA4(ProposeS(FundingTwoAttempt))},
+{kind: "transition", instruction: LifecycleSA4(VerifyS(FundingTwoAttempt))},
+{kind: "transition", instruction: LifecycleSA4(CommitS(FundingTwoAttempt))},
+{kind: "denied-probe", instruction: WrongCoreA4})}
 pure val CASE_INDEX_A4: int = 70
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_023 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,13 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = INSTALLMENT_CASES_A4.nth(23)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "installment/recover-r0-choice2/no-cancel/SignBeforeResolve", lifecycle: "installment", profile: "SignBeforeResolve", scenario: "recover-r0-choice2", control: "no-cancel"}, scenario: InstallmentScenarioA4(RecoverI({residual: false, mode: Choice2I})), profile: SignBeforeResolve, steps: List({kind: "transition", instruction: LifecycleIA4(PrepareParentI)},
+{kind: "transition", instruction: LifecycleIA4(SignParentI)},
+{kind: "denied-probe", instruction: LifecycleIA4(PrepareRecoveryI)},
+{kind: "denied-probe", instruction: RecoveryFinancialA4},
+{kind: "transition", instruction: DirectLifecycleIA4(ProposeI(RecoveryAttempt))},
+{kind: "denied-probe", instruction: VerifyEvidenceA4({id: RecoveryAttempt, mode: NormalEvidenceA4})},
+{kind: "transition", instruction: RejectEvidenceA4({id: RecoveryAttempt, mode: NormalEvidenceA4})})}
 pure val CASE_INDEX_A4: int = 23
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_069 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,12 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = SWAP_CASES_A4.nth(37)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "swap/funded2-settle/second-plan/SignBeforeResolve", lifecycle: "swap", profile: "SignBeforeResolve", scenario: "funded2-settle", control: "second-plan"}, scenario: SwapScenarioA4({funded: 2, mode: SettleS}), profile: SignBeforeResolve, steps: List({kind: "denied-probe", instruction: BadPlanA4},
+{kind: "transition", instruction: BadPrepareA4},
+{kind: "transition", instruction: DirectLifecycleSA4(SignS({id: FundingOneAttempt, principal: Alice}))},
+{kind: "transition", instruction: BadProposeA4},
+{kind: "denied-probe", instruction: VerifyEvidenceA4({id: FundingOneAttempt, mode: NormalEvidenceA4})},
+{kind: "transition", instruction: RejectEvidenceA4({id: FundingOneAttempt, mode: NormalEvidenceA4})})}
 pure val CASE_INDEX_A4: int = 69
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

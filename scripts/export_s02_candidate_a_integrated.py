@@ -290,6 +290,7 @@ from scripts.a4_json_stream import (
 )
 
 TRANSPORT = "case-sharded-itf-v1"
+PRODUCER_STAGE_PREFIX = "literal-v1-"
 DESCRIPTOR = ("case_id", "lifecycle", "profile", "scenario", "control")
 VARS = ("authorityState", "caseIndex", "cursor", "latestEvent")
 EVENT_FIELDS = (*DESCRIPTOR[:1], "profile", "sequence", "kind", "arguments",
@@ -364,10 +365,10 @@ def native_command(row):
             "--max-samples=1", "--n-traces=1", f"--max-steps={row['event_count'] - 1}",
             "--invariants", "noDiagnosticA4", "sourceInvariantA4",
             "--witnesses", "completeA4", "--out-itf",
-            f".superpowers/sdd/a4-producer-receipts/case-{i:03d}-export/case-{i:03d}.itf.json"]
+            f".superpowers/sdd/a4-producer-receipts/{PRODUCER_STAGE_PREFIX}case-{i:03d}-export/case-{i:03d}.itf.json"]
 
 def validate_receipt(root, row, input_hash, quint, source_pins, receipt_pins):
-    name = f"case-{row['global_index']:03d}-export/receipt.json"
+    name = f"{PRODUCER_STAGE_PREFIX}case-{row['global_index']:03d}-export/receipt.json"
     require(name in receipt_pins, "missing native receipt pin")
     receipt = bounded_load(safe(root, name), RECEIPT_LIMIT)
     require(type(receipt["exit_code"]) is int and receipt["exit_code"] == 0
@@ -465,7 +466,7 @@ def validate_meta(meta, entry):
 
 def raw_events(path, row, input_hash, types, initial_hashes):
     desc = {key: row[key] for key in DESCRIPTOR}
-    selectors = instructions()[row["global_index"]][1]
+    selectors = list(instructions())[row["global_index"]][1]
     metadata = {}
     previous = None
     count = 0

@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_016 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,32 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = INSTALLMENT_CASES_A4.nth(16)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "installment/recover-r1-timeout101/ordinary/SignAfterResolve", lifecycle: "installment", profile: "SignAfterResolve", scenario: "recover-r1-timeout101", control: "ordinary"}, scenario: InstallmentScenarioA4(RecoverI({residual: true, mode: Timeout101I})), profile: SignAfterResolve, steps: List({kind: "transition", instruction: LifecycleIA4(PrepareParentI)},
+{kind: "transition", instruction: LifecycleIA4(SignParentI)},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(CommitI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(RejectStaleI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(FreshCancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(FreshCancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(CommitI(FreshCancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(AdvanceI)},
+{kind: "transition", instruction: LifecycleIA4(PrepareRecoveryI)},
+{kind: "transition", instruction: LifecycleIA4(SignRecoveryI)},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(RecoveryAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(RecoveryAttempt))},
+{kind: "transition", instruction: LifecycleIA4(CommitI(RecoveryAttempt))},
+{kind: "denied-probe", instruction: ReplayProposalA4(FirstFillAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FirstFillAttempt)},
+{kind: "denied-probe", instruction: ReplayProposalA4(FreshCancelAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FreshCancelAttempt)},
+{kind: "denied-probe", instruction: ReplayProposalA4(RecoveryAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(RecoveryAttempt)},
+{kind: "denied-probe", instruction: ParentCancellationA4},
+{kind: "denied-probe", instruction: ParentSlotA4(1)},
+{kind: "denied-probe", instruction: ParentSlotA4(2)})}
 pure val CASE_INDEX_A4: int = 16
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

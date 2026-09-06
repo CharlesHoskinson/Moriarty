@@ -41,24 +41,96 @@ def test_every_selector_lowers_and_case_table_is_literal():
     assert "var " not in text
 
 
+def literal_table_records(text):
+    import hashlib, re
+    assert hashlib.sha256(text.encode()).hexdigest() == "f42eedc0b0a092704c6760943e4d37242453dedcf548696639f22c1897ef7518"
+    records = []
+    for match in re.finditer(r"\{descriptor: \{caseId:", text):
+        depth = 0; quoted = False; escaped = False
+        for end in range(match.start(), len(text)):
+            c = text[end]
+            if quoted:
+                if escaped: escaped = False
+                elif c == "\\": escaped = True
+                elif c == '"': quoted = False
+            elif c == '"': quoted = True
+            elif c == "{": depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    records.append(text[match.start():end + 1]); break
+        else: raise AssertionError("unterminated literal")
+    assert len(records) == 78
+    return records
+
+def assert_literal_wrapper(text, index, records, template):
+    header = f"module candidate_a_integrated_case_{index:03d} {{\n"
+    assert text.startswith(header) and text.endswith("}\n")
+    body = text[len(header):-2]
+    value = f"pure val CASE_A4: A4Case = {records[index]}\n"
+    ordinal = f"pure val CASE_INDEX_A4: int = {index}\n"
+    assert body.count(value) == body.count(ordinal) == 1
+    assert 'import candidate_a_integrated_cases' not in body
+    body = body.replace(value, "const CASE_A4: A4Case\n")
+    body = body.replace(ordinal, "const CASE_INDEX_A4: int\n")
+    assert body == template.split("\n", 1)[1][:-2]
+
 def test_all_literal_case_and_wrapper_bytes_match_renderer():
-    from pathlib import Path
     from scripts.s02_candidate_a_integrated_inventory import case_wrapper
     qnt = Path(__file__).resolve().parents[1] / "specs/quint/s02"
-    assert (qnt / "candidate_a_integrated_cases.qnt").read_text() == quint_cases()
-    actual = {p.name for p in qnt.glob("candidate_a_integrated_case_*.qnt")}
-    assert actual == {f"candidate_a_integrated_case_{i:03d}.qnt" for i in range(78)}
+    table = (qnt / "candidate_a_integrated_cases.qnt").read_text()
+    assert table == quint_cases()
+    records = literal_table_records(table)
+    assert {p.name for p in qnt.glob("candidate_a_integrated_case_*.qnt")} == {
+        f"candidate_a_integrated_case_{i:03d}.qnt" for i in range(78)}
     template = (qnt / "candidate_a_integrated_driver.qnt").read_text()
-    template_body = template.split("\n", 1)[1][:-2]
     for i in range(78):
         text = (qnt / f"candidate_a_integrated_case_{i:03d}.qnt").read_text()
         assert text == case_wrapper(i)
-        body = text.split("\n", 2)[2][:-2]
-        table = "INSTALLMENT_CASES_A4" if i < 32 else "SWAP_CASES_A4"
-        local = i if i < 32 else i - 32
-        body = body.replace(f"pure val CASE_A4: A4Case = {table}.nth({local})\n", "const CASE_A4: A4Case\n")
-        body = body.replace(f"pure val CASE_INDEX_A4: int = {i}\n", "const CASE_INDEX_A4: int\n")
-        assert body == template_body
+        assert_literal_wrapper(text, i, records, template)
+
+def test_literal_oracle_rejects_changed_case_ordinal_step_profile_import_and_driver():
+    from scripts.s02_candidate_a_integrated_inventory import case_wrapper
+    qnt = Path(__file__).resolve().parents[1] / "specs/quint/s02"
+    records = literal_table_records((qnt / "candidate_a_integrated_cases.qnt").read_text())
+    template = (qnt / "candidate_a_integrated_driver.qnt").read_text()
+    good = case_wrapper(14)
+    lines = good.splitlines(keepends=True)
+    steps = [i for i,s in enumerate(lines) if 'kind: "transition", instruction:' in s]
+    assert len(steps) >= 2
+    reordered = lines.copy();a,b=steps[:2];reordered[a],reordered[b]=reordered[b],reordered[a]
+    omitted = lines.copy();omitted.pop(b)
+    bads = [good.replace(records[14], records[15], 1),
+            good.replace("CASE_INDEX_A4: int = 14", "CASE_INDEX_A4: int = 0", 1),
+            "".join(reordered), "".join(omitted),
+            good.replace("SignAfterResolve", "SignBeforeResolve", 1),
+            good.replace("profile: SignAfterResolve", "profile: SignBeforeResolve", 1),
+            good.replace("LifecycleIA4(PrepareParentI)", "LifecycleIA4(SignParentI)", 1),
+            good.replace("\n", '\nimport candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"\n', 1),
+            good.replace("cursor + 1", "cursor + 2", 1)]
+    for bad in bads:
+        assert bad != good
+        with pytest.raises(AssertionError):assert_literal_wrapper(bad,14,records,template)
+    assert_literal_wrapper(good,14,records,template)
+
+def test_raw_events_advances_past_generator_selector_lookup(tmp_path):
+    from scripts.export_s02_candidate_a_integrated import raw_events, shards, file_digest
+    path = tmp_path / "empty.itf.json";path.write_text('{"states":[]}')
+    # next() enters the real generator body. TypeError is not accepted as rejection.
+    for row in shards():
+        with pytest.raises(ExportError, match="raw state/event inventory"):
+            next(raw_events(path,row,file_digest(path),None,{}))
+
+def test_literal_epoch_command_paths_and_fixed_selectors():
+    from scripts.export_s02_candidate_a_integrated import native_command, shards
+    rows=list(instructions())
+    for i,row in enumerate(shards()):
+        desc,steps=rows[i]
+        assert {**desc,"event_count":len(steps)} == inventory()["cases"][i]
+        argv=native_command(row)
+        assert argv[-1] == f".superpowers/sdd/a4-producer-receipts/literal-v1-case-{i:03d}-export/case-{i:03d}.itf.json"
+        assert argv[1:-2] == ["run",row["entry"],"--backend=rust","--seed=42","--max-samples=1","--n-traces=1",f"--max-steps={row['event_count']-1}","--invariants","noDiagnosticA4","sourceInvariantA4","--witnesses","completeA4"]
+
 
 
 @pytest.mark.parametrize("index", [-1, 78, True, "32", None])
@@ -207,7 +279,7 @@ def test_per_shard_command_uses_exact_local_event_bound():
         i = row["global_index"]
         assert command[:3] == ["quint", "run", row["entry"]]
         assert f"--max-steps={row['event_count'] - 1}" in command
-        assert command[-1] == f".superpowers/sdd/a4-producer-receipts/case-{i:03d}-export/case-{i:03d}.itf.json"
+        assert command[-1] == f".superpowers/sdd/a4-producer-receipts/literal-v1-case-{i:03d}-export/case-{i:03d}.itf.json"
 
 @pytest.mark.parametrize("suffix", [b" {}", b"x", b' {"events":[]}'])
 def test_stored_case_reader_checks_strict_eof(tmp_path, suffix):

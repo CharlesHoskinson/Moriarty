@@ -1,5 +1,4 @@
 module candidate_a_integrated_case_001 {
-import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"
 import effects.* from "./effects"
 import consumption.* from "./consumption"
 import observations.* from "./observations"
@@ -19,7 +18,21 @@ import candidate_a_authority_swap.* from "./candidate_a_authority_swap"
 import candidate_a_integrated_observer.* from "./candidate_a_integrated_observer"
 import candidate_a_integrated_lowering.* from "./candidate_a_integrated_lowering"
 
-pure val CASE_A4: A4Case = INSTALLMENT_CASES_A4.nth(1)
+pure val CASE_A4: A4Case = {descriptor: {caseId: "installment/two-fills/ordinary/SignBeforeResolve", lifecycle: "installment", profile: "SignBeforeResolve", scenario: "two-fills", control: "ordinary"}, scenario: InstallmentScenarioA4(TwoFillsI), profile: SignBeforeResolve, steps: List({kind: "transition", instruction: LifecycleIA4(PrepareParentI)},
+{kind: "transition", instruction: LifecycleIA4(SignParentI)},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(CommitI(FirstFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(RejectStaleI(CancelAttempt))},
+{kind: "transition", instruction: LifecycleIA4(ProposeI(SecondFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(VerifyI(SecondFillAttempt))},
+{kind: "transition", instruction: LifecycleIA4(CommitI(SecondFillAttempt))},
+{kind: "denied-probe", instruction: ReplayProposalA4(FirstFillAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(FirstFillAttempt)},
+{kind: "denied-probe", instruction: ReplayProposalA4(SecondFillAttempt)},
+{kind: "denied-probe", instruction: ReplayCommitA4(SecondFillAttempt)})}
 pure val CASE_INDEX_A4: int = 1
 var authorityState: AAuthorityExecution
 var latestEvent: A4Event

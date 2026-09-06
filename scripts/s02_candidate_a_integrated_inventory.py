@@ -229,9 +229,9 @@ def case_wrapper(global_index):
     rows = inventory()["cases"]
     if type(global_index) is not int or not 0 <= global_index < len(rows):
         raise ValueError("fixed case index")
-    installment = global_index < 32
-    table = "INSTALLMENT_CASES_A4" if installment else "SWAP_CASES_A4"
-    local_index = global_index if installment else global_index - 32
+    desc, steps = list(instructions())[global_index]
+    if {**desc, "event_count": len(steps)} != rows[global_index]:
+        raise ValueError("fixed case instruction correspondence")
     name = f"candidate_a_integrated_case_{global_index:03d}"
     template = (Path(__file__).resolve().parents[1] /
                 "specs/quint/s02/candidate_a_integrated_driver.qnt").read_text(encoding="utf-8")
@@ -240,13 +240,11 @@ def case_wrapper(global_index):
         raise ValueError("driver template framing")
     body = template[len(header):-2]
     replacements = {
-        "const CASE_A4: A4Case\n": f"pure val CASE_A4: A4Case = {table}.nth({local_index})\n",
+        "const CASE_A4: A4Case\n": f"pure val CASE_A4: A4Case = {quint_case(desc, steps)}\n",
         "const CASE_INDEX_A4: int\n": f"pure val CASE_INDEX_A4: int = {global_index}\n",
     }
     for original, literal in replacements.items():
         if body.count(original) != 1:
             raise ValueError("driver template parameter inventory")
         body = body.replace(original, literal)
-    return (f"module {name} {{\n"
-            'import candidate_a_integrated_cases.* from "./candidate_a_integrated_cases"\n'
-            + body + "}\n")
+    return f"module {name} {{\n" + body + "}\n"
