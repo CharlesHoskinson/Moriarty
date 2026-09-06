@@ -60,7 +60,7 @@ One recorded contradiction also limits correspondence by reading. `Assumptions.a
 
 ## Symbolic reasoning
 
-The [definition summary](../../../wiki/zkir/zkir-k-definition.md) records a Haskell backend experiment: an `add` claim with symbolic input succeeds when the surrounding configuration is pinned, whereas a symbolic `transient_hash` claim does not finish within seven minutes (CLM-0746). This is a single recorded experiment whose claim files are not in the repository; it is not a general proof result for the current definition.
+The [definition summary](../../../wiki/zkir/zkir-k-definition.md) records the Haskell backend experiment of the second iteration: an `add` claim with symbolic input succeeded when the surrounding configuration was pinned, whereas a symbolic `transient_hash` claim did not finish within seven minutes because the hash unfolded (CLM-0746). The third iteration's symbolic definition `zkir-symbolic.k` keeps the hashes uninterpreted, and the claim set under `claims/` (16-compilation-target-contract.md, `claims/README.md`), including the `transient_hash` claim and a claim under the communications commitment, proves under `tools/run_claims.py`. Those claims are reachability properties of one- to three-instruction programs; they are not a general proof result about the definition.
 
 The implementation explains the obstacle. `zkir-hash.k`, `poseidonHash`, unfolds through `absorbAll`, `permute` and `#rounds`, and `sbox` expands into field multiplication, which exposes `modInt`. These defining rules have no restriction to concrete arguments, so symbolic execution expands cryptographic arithmetic instead of retaining an opaque hash application.
 

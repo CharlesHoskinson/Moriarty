@@ -2,51 +2,89 @@
 // obligations a compiler must meet for its ZKIR output to be well formed and
 // provable, decided from the program alone. targetContract(P) is a total
 // function over Program that returns one obligation per line of the contract,
-// each met(), failed(msg), notApplicable() (no instruction of that kind
-// occurs) or info(fact) (a fact the later tiers quote rather than a check).
+// obligation(name, stage, status), the status met(), failed(msg),
+// notApplicable() (no instruction of that kind occurs) or info(fact) (a fact
+// the later tiers quote rather than a check).
 //
-//   wf                         the static check of ZKIR-WF
-//   version                    the version pin, 3.<minor>
-//   surface                    base (midnight-ledger 92e8bdd3), extension
-//                              (midnight-zkir 2ffe2d1) or common to both
-//   chips.enabled              the chip set `IrSource::used_chips` initialises
-//   chips.gating               no instruction needs a chip that set omits
-//                              (finding 13, K4: keygen would panic)
-//   width.less_than            padded bound at most MAX_BOUND_IN_BITS = 253
-//   width.constrain_bits       width at most F::NUM_BITS = 255
-//   width.div_mod_power_of_two bits at most FR_BYTES_STORED * 8 = 248
-//   width.reconstitute_field   bits at most 248
-//   alignment.persistent_hash  no option segment, no compress atom
-//   alignment.keccak256        the same
-//   alignment.sha512           the same (extension surface only)
-//   circuit.static.output      every `output` operand whose static type is
-//                              known has the declared output type, and the
-//                              arity matches the signature
-//   circuit.static.bool_gate   and / or / xor have at least one input, every
-//                              input of known type a Bool (extension surface)
-//   circuit.static.constant    every load_constant encoding decodes on the
-//                              strict decoder (extension surface)
-//   circuit.static.bytes_bounds nth and slice stay within the static length
-//                              of their byte string, slice length at least 1
+// The stage names the crate function that rejects a program failing the
+// obligation, witness-independently:
+//   keygen      `keygen_vk` on `MidnightCircuit` (unknown-witness synthesis)
+//               rejects it, by a panic or an Error::Synthesis; `preprocess`
+//               accepts it on some or every preimage
+//   preprocess  `IrSource::load` or `IrSource::preprocess` rejects it on every
+//               preimage; keygen keys it
+//   both        keygen and preprocess reject it
+//   static      the K static layer ZKIR-WF, which is strictly stricter than
+//               the crate: its single-assignment check is K-only (CLM-0711),
+//               the other checks are load or preprocess checks
+//   none        an info fact, nothing to reject
+//
+//   wf                         static     the static check of ZKIR-WF
+//   version                    none       the version pin, 3.<minor> (wf and
+//                              the preprocessor reject another major or minor)
+//   surface                    preprocess base (midnight-ledger 92e8bdd3),
+//                              extension (midnight-zkir 2ffe2d1) or common;
+//                              failed when reverse_bytes meets an extension
+//                              type or instruction (no crate loads it)
+//   chips.enabled              none       the chip set `IrSource::used_chips`
+//                              initialises
+//   chips.gating               keygen     no instruction needs a chip that set
+//                              omits (finding 13, K4, K7: the accessor panics)
+//   width.less_than            keygen     padded bound at most
+//                              MAX_BOUND_IN_BITS = 253 (`bounded_of_element`
+//                              asserts; `preprocess` accepts 253 and 254, K5)
+//   width.constrain_bits       keygen     width at most F::NUM_BITS = 255
+//                              (`assigned_to_le_bits` asserts); unreachable
+//                              behind wf, which rejects width 255 and above as
+//                              `preprocess` does
+//   width.div_mod_power_of_two preprocess bits at most FR_BYTES_STORED * 8 =
+//                              248 ("Excessive bit count", ir_vm.rs); keygen
+//                              keys 249
+//   width.reconstitute_field   preprocess bits at most 248 (the same)
+//   width.reconstitute_field.nonzero both  bits at least 1: bits 0 makes the
+//                              divisor bound 255, which `preprocess` rejects
+//                              as an excessive bit bound on every value and
+//                              `assign_less_than_pow2` rejects by
+//                              `assert!(bit_length < F::NUM_BITS)` (K8)
+//   alignment.persistent_hash  keygen     no option segment, no compress atom,
+//                              and at least #alignFields operands
+//                              (`fab_decode_to_bytes_atom`; the compress and
+//                              operand-count failures are preprocess failures
+//                              as well, the option failure is not)
+//   alignment.keccak256        keygen     the same
+//   alignment.sha512           keygen     the same (extension surface only)
+//   circuit.static.output      both       every `output` operand whose static
+//                              type is known has the declared output type,
+//                              and the arity matches the signature
+//   circuit.static.bool_gate   both       and / or / xor have at least one
+//                              input, every input of known type a Bool
 //                              (extension surface)
-//   circuit.static.dispatch    no instruction's in-circuit dispatch is
-//                              unsupported for the static types of its
+//   circuit.static.constant    both       every load_constant encoding decodes
+//                              on the strict decoder (extension surface)
+//   circuit.static.bytes_bounds both      nth and slice stay within the static
+//                              length of their byte string, slice length at
+//                              least 1 (extension surface)
+//   circuit.static.dispatch    keygen     no instruction's in-circuit dispatch
+//                              is unsupported for the static types of its
 //                              operands (the synthErr arms of
-//                              ZKIR-CONSTRAINTS that do not read a value)
-//   commitment                 the value of do_communications_commitment: the
-//                              preimage-side half of the rule is tier two
-//   inventory.instructions     instruction count by op
-//   inventory.types            the types the program declares
+//                              ZKIR-CONSTRAINTS that do not read a value);
+//                              `preprocess` accepts some of these pairs
+//   commitment                 none       the value of
+//                              do_communications_commitment: the preimage-side
+//                              half of the rule is tier two
+//   inventory.instructions     none       instruction count by op
+//   inventory.types            none       the types the program declares
 //
 // The chip, width, alignment and circuit.static obligations are the
 // program-only half of the synthErr outcomes of ZKIR-CONSTRAINTS: the gates
 // evaluate them on a witness, this module on the static type environment of
-// ZKIR-STATIC (bindOuts, stype). Unknown-witness key generation
-// (`keygen_vk` on `MidnightCircuit`) performs exactly these checks and no
-// other before it has a witness, so a program with every obligation met or
-// not applicable keys, and a failed obligation names the instruction whose
-// synthesis fails (tools/provability.py). A check that needs a value (an
-// unknown static type, a bound on a witness value) stays with the gates.
+// ZKIR-STATIC (bindOuts, stype). A program with every keygen-stage and
+// both-stage obligation met or not applicable keys; a program with a failed
+// preprocess-stage or both-stage obligation is rejected on every preimage; a
+// failed keygen-stage or both-stage obligation names the instruction whose
+// synthesis fails (tools/provability.py keys every parseable program and
+// checks the stage against the keygen outcome). A check that needs a value
+// (an unknown static type, a bound on a witness value) stays with the gates.
 // Tiers two (the off-circuit run succeeds and the memory is in the modelled
 // witness space) and three (the circuit accepts) need a preimage and run
 // through ZKIR-VM and the circuit oracle (tools/zkir_kast.py `contract
@@ -64,31 +102,37 @@ module ZKIR-CONTRACT
                             | failed(String)        [symbol(failed)]
                             | notApplicable()       [symbol(notApplicable)]
                             | info(String)          [symbol(info)]
-  syntax Obligation  ::= obligation(String, ObligationStatus) [symbol(obligation)]
+  syntax Stage ::= keygen()     [symbol(keygen)]
+                 | preprocess() [symbol(preprocess)]
+                 | both()       [symbol(both)]
+                 | static()     [symbol(static)]
+                 | none()       [symbol(none)]
+  syntax Obligation  ::= obligation(String, Stage, ObligationStatus) [symbol(obligation)]
   syntax Obligations ::= List{Obligation, ","} [symbol(obligations), terminator-symbol(.obligations)]
 
   syntax Obligations ::= targetContract(Program) [function, total]
   rule targetContract(program(Mi, Ins, Outs, DoComm, Is) #as P) =>
-      obligation("wf", #wfStatus(wf(P))),
-      obligation("version", info("3." +String Int2String(Mi))),
-      obligation("surface", #surface(P)),
-      obligation("chips.enabled", info(#chipsOrNone(usedChips(P)))),
-      obligation("chips.gating", #chipGating(Is, inputEnv(Ins), usedChips(P), 0)),
-      obligation("width.less_than", #walk(ltWidth(), Is, inputEnv(Ins), 0, false)),
-      obligation("width.constrain_bits", #walk(cbWidth(), Is, inputEnv(Ins), 0, false)),
-      obligation("width.div_mod_power_of_two", #walk(dmWidth(), Is, inputEnv(Ins), 0, false)),
-      obligation("width.reconstitute_field", #walk(rfWidth(), Is, inputEnv(Ins), 0, false)),
-      obligation("alignment.persistent_hash", #walk(align("persistent_hash"), Is, inputEnv(Ins), 0, false)),
-      obligation("alignment.keccak256", #walk(align("keccak256"), Is, inputEnv(Ins), 0, false)),
-      obligation("alignment.sha512", #walk(align("sha512"), Is, inputEnv(Ins), 0, false)),
-      obligation("circuit.static.output", #walk(outputSig(Outs), Is, inputEnv(Ins), 0, false)),
-      obligation("circuit.static.bool_gate", #walk(boolGate(), Is, inputEnv(Ins), 0, false)),
-      obligation("circuit.static.constant", #walk(constant(), Is, inputEnv(Ins), 0, false)),
-      obligation("circuit.static.bytes_bounds", #walk(bytesBounds(), Is, inputEnv(Ins), 0, false)),
-      obligation("circuit.static.dispatch", #walk(dispatch(), Is, inputEnv(Ins), 0, false)),
-      obligation("commitment", info(#commInfo(DoComm))),
-      obligation("inventory.instructions", info(#instrInventory(Is))),
-      obligation("inventory.types", info(#typeInventory(P))),
+      obligation("wf", static(), #wfStatus(wf(P))),
+      obligation("version", none(), info("3." +String Int2String(Mi))),
+      obligation("surface", preprocess(), #surface(P)),
+      obligation("chips.enabled", none(), info(#chipsOrNone(usedChips(P)))),
+      obligation("chips.gating", keygen(), #chipGating(Is, inputEnv(Ins), usedChips(P), 0)),
+      obligation("width.less_than", keygen(), #walk(ltWidth(), Is, inputEnv(Ins), 0, false)),
+      obligation("width.constrain_bits", keygen(), #walk(cbWidth(), Is, inputEnv(Ins), 0, false)),
+      obligation("width.div_mod_power_of_two", preprocess(), #walk(dmWidth(), Is, inputEnv(Ins), 0, false)),
+      obligation("width.reconstitute_field", preprocess(), #walk(rfWidth(), Is, inputEnv(Ins), 0, false)),
+      obligation("width.reconstitute_field.nonzero", both(), #walk(rfZero(), Is, inputEnv(Ins), 0, false)),
+      obligation("alignment.persistent_hash", keygen(), #walk(align("persistent_hash"), Is, inputEnv(Ins), 0, false)),
+      obligation("alignment.keccak256", keygen(), #walk(align("keccak256"), Is, inputEnv(Ins), 0, false)),
+      obligation("alignment.sha512", keygen(), #walk(align("sha512"), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.output", both(), #walk(outputSig(Outs), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.bool_gate", both(), #walk(boolGate(), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.constant", both(), #walk(constant(), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.bytes_bounds", both(), #walk(bytesBounds(), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.dispatch", keygen(), #walk(dispatch(), Is, inputEnv(Ins), 0, false)),
+      obligation("commitment", none(), info(#commInfo(DoComm))),
+      obligation("inventory.instructions", none(), info(#instrInventory(Is))),
+      obligation("inventory.types", none(), info(#typeInventory(P))),
       .Obligations
 
   // --- wf ---------------------------------------------------------------------------------
@@ -137,13 +181,14 @@ module ZKIR-CONTRACT
   // notApplicable); defect(C, I, E) is "" when I passes under the environment
   // E of the registers defined before it, and the failure text otherwise. The
   // walk extends E with bindOuts after each instruction.
-  syntax Check ::= ltWidth() | cbWidth() | dmWidth() | rfWidth() | align(String)
+  syntax Check ::= ltWidth() | cbWidth() | dmWidth() | rfWidth() | rfZero() | align(String)
                  | outputSig(IrTypes) | boolGate() | constant() | bytesBounds() | dispatch()
   syntax Bool ::= applies(Check, Instr) [function, total]
   rule applies(ltWidth(), lessThan(_, _, _, _))         => true
   rule applies(cbWidth(), constrainBits(_, _))          => true
   rule applies(dmWidth(), divModPowerOfTwo(_, _, _))    => true
   rule applies(rfWidth(), reconstituteField(_, _, _, _))=> true
+  rule applies(rfZero(), reconstituteField(_, _, _, _)) => true
   rule applies(align(Op), I)                            => #opName(I) ==String Op
   rule applies(outputSig(_), output(_))                 => true
   rule applies(dispatch(), _)                           => true
@@ -157,16 +202,26 @@ module ZKIR-CONTRACT
     requires N >Int #frBytesStored *Int 8
   rule defect(rfWidth(), reconstituteField(_, _, N, _), _) => "reconstitute_field: bits " +String Int2String(N) +String " exceeds FR_BYTES_STORED * 8 = 248"
     requires N >Int #frBytesStored *Int 8
-  rule defect(align(Op), I, _) => #alignDefect(Op, alignmentOf(I)) requires #opName(I) ==String Op
+  // bits 0: assign_lower_than_fixed(divisor, 1 << 255) reaches
+  // assign_less_than_pow2 (midnight-circuits field/decomposition/chip.rs),
+  // whose `assert!((bit_length as u32) < F::NUM_BITS)` fails at keygen;
+  // `preprocess` rejects the divisor bound of 255 bits on every value
+  rule defect(rfZero(), reconstituteField(_, _, 0, _), _) => "reconstitute_field: bits 0: assertion failed: (bit_length as u32) < F::NUM_BITS"
+  rule defect(align(Op), I, _) => #alignDefect(Op, alignmentOf(I), reads(I)) requires #opName(I) ==String Op
   rule defect(outputSig(Ts), output(Vs), E) => #outputDefect(Vs, Ts, E)
   rule defect(dispatch(), I, E) => dispatchDefect(I, E)
   rule defect(_, _, _) => "" [owise]
-  syntax String ::= #alignDefect(String, AlignOpt) [function, total]
-  rule #alignDefect(Op, someAlign(alignment(Segs))) => Op +String ": alignment has an option segment, which the in-circuit decoder does not implement"
+  // options and compress atoms first, as `fab_decode_to_bytes` rejects them;
+  // then the operand count against #alignFields (`fab_decode_to_bytes_atom`,
+  // ir_vm.rs: the first atom that runs out gives the Error::Synthesis text)
+  syntax String ::= #alignDefect(String, AlignOpt, Operands) [function, total]
+  rule #alignDefect(Op, someAlign(alignment(Segs)), _) => Op +String ": alignment has an option segment, which the in-circuit decoder does not implement"
     requires #onlyAtoms(Segs) =/=K Segs
-  rule #alignDefect(Op, someAlign(alignment(Segs))) => Op +String ": alignment has a compress atom, which cannot be decoded from field elements"
+  rule #alignDefect(Op, someAlign(alignment(Segs)), _) => Op +String ": alignment has a compress atom, which cannot be decoded from field elements"
     requires #onlyAtoms(Segs) ==K Segs andBool #hasCompress(Segs)
-  rule #alignDefect(_, _) => "" [owise]
+  rule #alignDefect(Op, someAlign(alignment(Segs)), Xs) => Op +String ": " +String #alignShort(Segs, lenOperands(Xs))
+    requires #onlyAtoms(Segs) ==K Segs andBool notBool #hasCompress(Segs) andBool lenOperands(Xs) <Int #alignFields(Segs)
+  rule #alignDefect(_, _, _) => "" [owise]
 
   syntax ObligationStatus ::= #walk(Check, Instrs, Map, Int, Bool) [function, total]
   rule #walk(_, .Instrs, _, _, false) => notApplicable()

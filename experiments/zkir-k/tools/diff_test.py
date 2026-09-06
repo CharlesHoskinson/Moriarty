@@ -18,10 +18,16 @@ Exit 0 iff every comparison agrees.
 `--circuit` (plan-iter3 M1) additionally runs `zkir-circuit-oracle` (preprocess,
 MockProver::run, verify) on every preimage of steps 3 and 4 and, for a
 successful honest run, on Native-register injections into the preprocessed
-memory and on an instance-column perturbation. Each outcome is compared with
-the cell of plan-iter3/circuit-comparison-table.md (circuit_compare.py); a
-comparison outside the table is a blocking finding listed at the end. The
-output of the other modes is unchanged.
+memory (a declared input, a computed register, a bypass-stored register, a
+transcript register, an `unconstrained` register; each, except the bypass one,
+at `v + 1` and at the boundary value of its first consumer, `<kind>:bound`)
+and on an instance-column perturbation. Each outcome is compared with the cell
+of plan-iter3/circuit-comparison-table.md (circuit_compare.py); a comparison
+outside the table is a blocking finding listed at the end, and a comparison
+the walk could not decide is listed as not compared with its reason. The
+witness-space summary classifies every `unconstrained` register by its
+consumers (`free` or `read by #i op`, D5). The output of the other modes is
+unchanged.
 
 The seven Moriarty transaction contexts (corpus/moriarty-contexts, plan-iter3
 M4) are rows of the base-surface run: for every Moriarty program that has a
@@ -228,7 +234,7 @@ def main() -> int:
     rows = []
     failures = 0
     oracle2_flags = []
-    ws_rows: list[tuple[str, bool, list[str]]] = []   # (program, witness_space, unconstrained registers) of successful K runs
+    ws_rows: list[tuple[str, bool, list[str], list[tuple[str, str, str]]]] = []   # (program, witness_space, unconstrained registers, their consumer classification) of successful K runs
     t0 = time.time()
 
     def circuit_columns(run_row: int, corpus: str, path: Path, doc: dict, k: dict, pre: dict) -> None:
@@ -285,7 +291,7 @@ def main() -> int:
                 if k['status'] == 'ok' and viol:
                     oracle2_flags.append((path.name, viol))
                 if k['status'] == 'ok':
-                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', [])))
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', []), cc.free_cells(doc, k)))
                 vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
                 if k.get('unconstrained'):
                     vnote += f" witness_space={str(k.get('witness_space', False)).lower()} unconstrained={','.join(k['unconstrained'][:6])}"
@@ -341,7 +347,7 @@ def main() -> int:
                 if k['status'] == 'ok' and viol:
                     oracle2_flags.append((path.name, viol))
                 if k['status'] == 'ok':
-                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', [])))
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', []), cc.free_cells(doc, k)))
                 note = f" msg K='{k.get('error', '')[:70]}'" if k['status'] != 'ok' else ''
                 vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
                 if k.get('unconstrained'):
@@ -357,15 +363,25 @@ def main() -> int:
         for d in diffs[:8]:
             print(f'        {d}')
         for clabel, ksum, res, exp, verdict, detail in circ.get(i, []):
-            print(f"        CIRC  {clabel:16} K={ksum:14} oracle={cc.describe(res):58} expected={exp.cell} [{exp.codes()}] {verdict}" + (f'  {detail}' if detail else ''))
+            print(f"        CIRC  {clabel:26} K={ksum:14} oracle={cc.describe(res):58} expected={exp.cell} [{exp.codes()}]" + (f' msg={cc.describe_class(exp.message)}' if exp.message else '') + f" {verdict}" + (f'  {detail}' if detail else ''))
     oks = sum(1 for r in rows if r[3].startswith('K=ok Rust=ok'))
     errs = sum(1 for r in rows if r[3].startswith('K=error Rust=error') or r[3].startswith('K=panic Rust=panic'))
     print(f'\n{len(rows)} comparisons: {oks} successful-run agreements, {errs} error-run agreements (status and error class), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
     print(f'oracle 2: {len(oracle2_flags)} successful K runs with a non-holding gate' + (': ' + '; '.join(f'{n} {v[0][0]}[{v[0][1][:40]}]' for n, v in oracle2_flags[:10]) if oracle2_flags else ''))
-    in_space = sum(1 for _, ws, _ in ws_rows if ws)
-    with_free = [(n, regs) for n, _, regs in ws_rows if regs]
+    in_space = sum(1 for _, ws, _, _ in ws_rows if ws)
+    with_free = [(n, regs, cells) for n, _, regs, cells in ws_rows if regs]
     print(f'witness space: {in_space} of {len(ws_rows)} successful K runs in the modelled witness space, {len(with_free)} with unconstrained registers'
-          + (': ' + '; '.join(f"{n} {','.join(regs[:4])}" for n, regs in with_free[:10]) if with_free else ''))
+          + (': ' + '; '.join(f"{n} {','.join(regs[:4])}" for n, regs, _ in with_free[:10]) if with_free else ''))
+    if with_free:
+        # D5: the assigning gate pins the cell to its type only; whether the cell is
+        # free in the circuit is decided by its consumers (2026-09-06 review, item 4)
+        seen = set()
+        print('unconstrained registers by consumer (free = no later relation reads the cell; the gate-level marker alone claims nothing more):')
+        for n, _, cells in with_free:
+            if n in seen:
+                continue
+            seen.add(n)
+            print(f'  {n}: ' + '; '.join(f'{r} {ty} {cls}' for r, ty, cls in cells))
     if args.circuit:
         from collections import Counter
         entries = [e for es in circ.values() for e in es]

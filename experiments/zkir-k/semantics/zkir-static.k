@@ -90,9 +90,12 @@ module ZKIR-STATIC
   syntax Map ::= #bindAll(Ids, IrType, Map) [function, total]
   rule #bindAll(.Ids, _, E) => E
   rule #bindAll((X, Xs), T, E) => #bindAll(Xs, T, E[X <- T])
-  syntax SType ::= #firstKnown(SType, SType) [function, total]
-  rule #firstKnown(known(T), _) => known(T)
-  rule #firstKnown(unknownT(), S) => S
+  // a binary arm binds its output only when both operand types are known and
+  // equal: a pair the circuit has no arm for gives an unknown output, so that
+  // no later obligation reports a guessed type
+  syntax SType ::= #sameKnown(SType, SType) [function, total]
+  rule #sameKnown(known(T), known(T)) => known(T)
+  rule #sameKnown(_, _) => unknownT() [owise]
 
   // curve maps between point, coordinate and scalar types (Jubjub coordinates are Native)
   syntax SType ::= #baseOf(SType) [function, total]
@@ -117,7 +120,7 @@ module ZKIR-STATIC
   // bindOuts(I, E): E extended with the outputs of I whose type is fixed
   syntax Map ::= bindOuts(Instr, Map) [function, total]
   rule bindOuts(encode(_, Os), E)                  => #bindAll(Os, native(), E)
-  rule bindOuts(condSelect(_, A, B, O), E)         => #bind(O, #firstKnown(stype(A, E), stype(B, E)), E)
+  rule bindOuts(condSelect(_, A, B, O), E)         => #bind(O, #sameKnown(stype(A, E), stype(B, E)), E)
   rule bindOuts(copy(V, O), E)                     => #bind(O, stype(V, E), E)
   rule bindOuts(ecMul(A, _, O), E)                 => #bind(O, stype(A, E), E)
   rule bindOuts(ecMulGenerator(S, O), E)           => #bind(O, #pointOfScalar(stype(S, E)), E)
@@ -135,8 +138,8 @@ module ZKIR-STATIC
   rule bindOuts(persistentHash(_, _, O), E)        => E[O <- bytes32()]
   rule bindOuts(keccak256(_, _, O), E)             => E[O <- bytes32()]
   rule bindOuts(testEq(_, _, O), E)                => E[O <- native()]
-  rule bindOuts(add(A, B, O), E)                   => #bind(O, #firstKnown(stype(A, E), stype(B, E)), E)
-  rule bindOuts(mul(A, B, O), E)                   => #bind(O, #firstKnown(stype(A, E), stype(B, E)), E)
+  rule bindOuts(add(A, B, O), E)                   => #bind(O, #sameKnown(stype(A, E), stype(B, E)), E)
+  rule bindOuts(mul(A, B, O), E)                   => #bind(O, #sameKnown(stype(A, E), stype(B, E)), E)
   rule bindOuts(neg(A, O), E)                      => #bind(O, stype(A, E), E)
   rule bindOuts(inv(A, O), E)                      => #bind(O, stype(A, E), E)
   rule bindOuts(not(_, O), E)                      => E[O <- native()]
@@ -221,6 +224,17 @@ module ZKIR-STATIC
   rule #hasCompress(.Segments) => false
   rule #hasCompress((atom(compressAtom()), _)) => true
   rule #hasCompress((_, Segs)) => #hasCompress(Segs) [owise]
+
+  // the operand count `fab_decode_to_bytes_atom` needs (#alignFields in
+  // ZKIR-SYNTAX) against the operands available, atom by atom: the first atom
+  // that runs out gives the crate's Error::Synthesis text
+  syntax String ::= #alignShort(Segments, Int) [function, total]
+  rule #alignShort(.Segments, _) => ""
+  rule #alignShort((atom(fieldAtom()), _), N) => "cannot decode field element from no data" requires N <=Int 0
+  rule #alignShort((atom(fieldAtom()), Segs), N) => #alignShort(Segs, N -Int 1) requires N >Int 0
+  rule #alignShort((atom(bytesAtom(L)), _), N) => "cannot decode bytes from to little data" requires N <Int (L +Int 30) /Int 31
+  rule #alignShort((atom(bytesAtom(L)), Segs), N) => #alignShort(Segs, N -Int (L +Int 30) /Int 31) requires N >=Int (L +Int 30) /Int 31
+  rule #alignShort(_, _) => "" [owise]
 
   // the alignment a byte-hash instruction decodes through that path
   syntax AlignOpt ::= someAlign(Alignment) [symbol(someAlign)] | noAlign() [symbol(noAlign)]

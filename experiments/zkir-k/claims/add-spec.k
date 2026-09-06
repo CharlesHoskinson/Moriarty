@@ -1,7 +1,9 @@
 // Claim (a), the baseline recovered from the second iteration: one `add` of
 // two symbolic native inputs. After job(P, Pre) the run has status ok, the
 // output register holds (A + B) mod r, the public-input vector is the binding
-// input alone, and both emitted gates (binding input, add) hold on the witness.
+// input alone, the observable result is obs(ok, no outputs, [42], no skips),
+// and all four emitted gates (the two input gates, the binding input, add)
+// hold on the witness, so the final memory is in the modelled witness space.
 // Every cell of the configuration is pinned: an unmentioned cell would be
 // abstracted to a variable and the decoder could not choose a rule.
 requires "../semantics/zkir-symbolic.k"
@@ -28,7 +30,7 @@ module ADD-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(add(var("%a"), var("%b"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>

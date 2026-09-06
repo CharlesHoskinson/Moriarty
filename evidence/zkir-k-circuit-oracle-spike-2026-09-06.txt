@@ -147,6 +147,13 @@ Classification difficulties and findings for the M1 comparison table
      FromBytes32 to a Native type can be reached by --inject. Another named cell for the table.
   5. To reach a genuine constraint failure the instance column must be perturbed independently of the witness
      (--instance). Perturbing pis or binding_input in Preprocessed is always caught earlier by pi_push.
+     [Erratum, 2026-09-06 review item 14: "always caught by pi_push" holds for a changed entry only. pi_push
+     compares while idx < preproc.pis.len(), so a longer --pis or --instance vector was `accepted` (the surplus
+     instance cells are constrained by nothing) and a shorter one was `constraint-failure` on the first missing
+     cell; neither says anything about the witness. The oracle now compares the instance length with the number
+     of pushes after MockProver::run and reports `instance-length-mismatch` for both (f03_guard_uncoupled with
+     --pis '["42","5"]', --instance '["42","5"]', --pis '[]', --instance '[]'). --pis and --binding-input remain
+     witness-side perturbations that surface as W.]
   6. MockProver (0.8.2) sizes its own row count, so `k` reported is optimal_k's value used for the pow2range table
      width (max_bit_len = k - 1) and `rows` is what MockProver allocated; they agreed on every run here.
   7. MockProver::verify reports failures per cell (Equality constraint not satisfied by cell ...), which identifies

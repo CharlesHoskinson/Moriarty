@@ -41,7 +41,7 @@ module TRANSIENT-HASH-SPEC
                             ListItem(verdict(gate(mul(var("%s"), var("%c"), "%m")), holds()))
                             ListItem(verdict(gate(transientHash((var("%m"), var("%a"), .Operands), "%h")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>

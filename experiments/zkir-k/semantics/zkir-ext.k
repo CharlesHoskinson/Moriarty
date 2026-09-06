@@ -66,6 +66,17 @@ module ZKIR-EXT-SYNTAX
   rule #opName(sha512(_, _, _))       => "sha512"
 endmodule
 
+// Static well-formedness arms of the extension surface (ZKIR-WF): the operand
+// count of sha512 against its alignment, as for persistent_hash and keccak256.
+// Imported by ZKIR-EXT, ZKIR-CHECK and ZKIR-EXT-CONTRACT.
+module ZKIR-EXT-WF
+  imports ZKIR-EXT-SYNTAX
+  imports ZKIR-WF
+
+  rule #checkArity(sha512(alignment(Segs), Xs, _), _) => wfError(#alignArity("sha512", Segs, Xs))
+    requires lenOperands(Xs) <Int #alignFields(Segs)
+endmodule
+
 // Program-only facts of the extension surface (ZKIR-STATIC arms): the SHA-512
 // chip, the static types and chip demands of the nine added instructions, and
 // surface membership. Imported by ZKIR-EXT and by ZKIR-CONTRACT-MAIN.
@@ -155,6 +166,12 @@ module ZKIR-EXT-VALUES
   rule defaultValue(boolT())   => boolV(false)
   rule defaultValue(byteT())   => byteV(0)
   rule defaultValue(bytesT(N)) => bytesV(padRightBytes(.Bytes, N, 0))
+  // the semantic typing invariant (ZKIR-VALUES wellTypedValue): a byte below
+  // 256, a byte string of a length the type system admits (1 to 2^24, and not
+  // 32, which is bytes32)
+  rule wellTypedValue(boolV(_))  => true
+  rule wellTypedValue(byteV(X))  => 0 <=Int X andBool X <Int 256
+  rule wellTypedValue(bytesV(B)) => lengthBytes(B) >=Int 1 andBool lengthBytes(B) <=Int 16777216 andBool lengthBytes(B) =/=Int 32
   // typeName arms for the three types are in ZKIR-EXT-SYNTAX
 
   // any byte string value, of either representation (asBytesAny, in ZKIR-EXT)
@@ -242,6 +259,7 @@ endmodule
 
 module ZKIR-EXT
   imports ZKIR-VM
+  imports ZKIR-EXT-WF
   imports ZKIR-EXT-STATIC
   imports ZKIR-EXT-VALUES
   imports ZKIR-SHA512
@@ -361,13 +379,21 @@ module ZKIR-EXT
   rule eval(gate(loadConstant(T, Es, O)), M, _, Chips) => #and(#chipFor(T, Chips), #matches(#toValue(decodeStrict(#immInts(Es), T, true)), rdId(O, M), "load_constant output"))
   // in circuit, sha512 shares the byte-hash path of persistent_hash and keccak256
   // (ir_vm.rs `fab_decode_to_bytes`), so the alignment is decoded as in ZKIR-CONSTRAINTS
-  rule eval(gate(sha512(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_512", Chips), #matches(#sha512C(resolveAll(Xs, M), Al), rdId(O, M), "sha512 output")))
+  rule eval(gate(sha512(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_512", Chips), #and(#alignRange(#sha512Bytes(resolveAll(Xs, M), Al), "sha512"),
+      #matches(#sha512C(resolveAll(Xs, M), Al), rdId(O, M), "sha512 output"))))
+  syntax CBytesResult ::= #sha512Bytes(ValuesResult, Alignment) [function, total]
+  rule #sha512Bytes(vsErr(S), _) => cbErr(S)
+  rule #sha512Bytes(vsOk(Vs), Al) => #std3c(asNatives(Vs), Al)
   syntax ValueResult ::= #sha512C(ValuesResult, Alignment) [function, total]
   rule #sha512C(vsErr(S), _) => vErr(S)
   rule #sha512C(vsOk(Vs), Al) => #sha512C2(asNatives(Vs), Al)
   syntax ValueResult ::= #sha512C2(IntsResult, Alignment) [function, total]
   rule #sha512C2(isErr(S), _) => vErr(S)
-  rule #sha512C2(isOk(L), Al) => #sha512V3(alignedBytesCircuit(Al, L))
+  rule #sha512C2(isOk(L), Al) => #sha512C3(alignedBytesCircuit(Al, L))
+  syntax ValueResult ::= #sha512C3(CBytesResult) [function, total]
+  rule #sha512C3(cbErr(S)) => vErr(S)
+  rule #sha512C3(cbRange(S)) => vErr(S)
+  rule #sha512C3(cbOk(B)) => vOk(bytesV(sha512Bytes(B)))
 endmodule
 
 // The target contract on the extension surface (ZKIR-CONTRACT arms, plan-iter3
@@ -393,6 +419,7 @@ endmodule
 //                     with n =/= m is a different type in ZKIR-STATIC
 module ZKIR-EXT-CONTRACT
   imports ZKIR-CONTRACT
+  imports ZKIR-EXT-WF
   imports ZKIR-EXT-STATIC
   imports ZKIR-EXT-VALUES
 

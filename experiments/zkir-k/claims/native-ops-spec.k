@@ -26,7 +26,7 @@ module MUL-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(mul(var("%a"), var("%b"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -53,7 +53,7 @@ module NEG-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(neg(var("%a"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -80,7 +80,7 @@ module COPY-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(copy(var("%a"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -110,7 +110,7 @@ module COND-SELECT-1-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(condSelect(imm(1), var("%a"), var("%b"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -138,16 +138,18 @@ module COND-SELECT-0-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(condSelect(imm(0), var("%a"), var("%b"), "%o")), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
     requires 0 <=Int A andBool A <Int #r andBool 0 <=Int B andBool B <Int #r
 endmodule
 
-// constrain_to_boolean: a symbolic input equal to 1 passes; a symbolic input
-// that is neither 0 nor 1 ends the run with the decoder's message, and the
-// gate is violated on that witness.
+// constrain_to_boolean: a symbolic input that is a boolean passes, stated as
+// two claims under one module, one per boolean value (asBool has one rule per
+// value, and a disjunctive `requires` would need a case split the prover
+// does not make); a symbolic input that is neither 0 nor 1 ends the run with
+// the decoder's message, and the gate is violated on that witness.
 module CONSTRAIN-TO-BOOLEAN-OK-SPEC
   imports ZKIR-SYMBOLIC
   claim <k> job(program(0, (typedId("%c", native()), .TypedIds), .IrTypes, false,
@@ -168,7 +170,31 @@ module CONSTRAIN-TO-BOOLEAN-OK-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(constrainToBoolean(var("%c"))), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
+        <piIdx> 0 => 1 </piIdx>
+        <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
+        <status> ok() </status>
+    requires C ==Int 0
+
+  claim <k> job(program(0, (typedId("%c", native()), .TypedIds), .IrTypes, false,
+                        (constrainToBoolean(var("%c")) ; .Instrs)),
+                preimage(ListItem(C:Int), 42, noComm(), .List, .List, .List)) => .K </k>
+        <mem> .Map => ("%c" |-> native(C)) </mem>
+        <pi> .List => ListItem(42) </pi>
+        <skips> .List </skips>
+        <pubInIdx> 0 </pubInIdx> <pubOutIdx> 0 </pubOutIdx> <privIdx> 0 </privIdx>
+        <outputs> .List </outputs>
+        <outTypes> .IrTypes </outTypes>
+        <doComm> false </doComm>
+        <pre> preimage(.List, 0, noComm(), .List, .List, .List)
+           => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(constrainToBoolean(var("%c")))) </constraints>
+        <chips> .Set </chips>
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
+                            ListItem(verdict(gate(constrainToBoolean(var("%c"))), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -196,7 +222,7 @@ module CONSTRAIN-TO-BOOLEAN-FAIL-SPEC
                             ListItem(verdict(gate(constrainToBoolean(var("%c"))),
                                              violated("constrain_to_boolean is not boolean: " +String Int2String(C)))) </verdicts>
         <witnessSpace> false </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(error("Expected boolean, found: " +String Int2String(C)), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() => error("Expected boolean, found: " +String Int2String(C)) </status>
@@ -204,7 +230,10 @@ module CONSTRAIN-TO-BOOLEAN-FAIL-SPEC
 endmodule
 
 // assert: a symbolic input equal to 1 passes; equal to 0 it fails the run
-// with "Failed direct assertion" and the gate reports the zero.
+// with "Failed direct assertion" and the gate reports the zero; an input in
+// [2, r) fails the run with the boolean decoder's message while the gate,
+// which only demands a non-zero value, holds (finding 2), so the memory is in
+// the modelled witness space although `preprocess` rejects the preimage.
 module ASSERT-OK-SPEC
   imports ZKIR-SYMBOLIC
   claim <k> job(program(0, (typedId("%c", native()), .TypedIds), .IrTypes, false,
@@ -225,7 +254,7 @@ module ASSERT-OK-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(assert(var("%c"))), holds())) </verdicts>
         <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(ok(), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() </status>
@@ -252,9 +281,36 @@ module ASSERT-FAIL-SPEC
                             ListItem(verdict(bindGate(0), holds()))
                             ListItem(verdict(gate(assert(var("%c"))), violated("assert of zero"))) </verdicts>
         <witnessSpace> false </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
-        <observable> noObs() => ?_ </observable>
+        <observable> noObs() => obs(error("Failed direct assertion"), .List, ListItem(42), .List) </observable>
         <piIdx> 0 => 1 </piIdx>
         <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
         <status> ok() => error("Failed direct assertion") </status>
     requires C ==Int 0
+endmodule
+
+module ASSERT-NON-BOOLEAN-SPEC
+  imports ZKIR-SYMBOLIC
+  claim <k> job(program(0, (typedId("%c", native()), .TypedIds), .IrTypes, false,
+                        (assert(var("%c")) ; .Instrs)),
+                preimage(ListItem(C:Int), 42, noComm(), .List, .List, .List)) => .K </k>
+        <mem> .Map => ("%c" |-> native(C)) </mem>
+        <pi> .List => ListItem(42) </pi>
+        <skips> .List </skips>
+        <pubInIdx> 0 </pubInIdx> <pubOutIdx> 0 </pubOutIdx> <privIdx> 0 </privIdx>
+        <outputs> .List </outputs>
+        <outTypes> .IrTypes </outTypes>
+        <doComm> false </doComm>
+        <pre> preimage(.List, 0, noComm(), .List, .List, .List)
+           => preimage(ListItem(C), 42, noComm(), .List, .List, .List) </pre>
+        <constraints> .List => ListItem(inputGate("%c", native())) ListItem(bindGate(0)) ListItem(gate(assert(var("%c")))) </constraints>
+        <chips> .Set </chips>
+        <verdicts> .List => ListItem(verdict(inputGate("%c", native()), holds()))
+                            ListItem(verdict(bindGate(0), holds()))
+                            ListItem(verdict(gate(assert(var("%c"))), holds())) </verdicts>
+        <witnessSpace> false => true </witnessSpace> <unconstrainedRegs> .List </unconstrainedRegs>
+        <observable> noObs() => obs(error("Expected boolean, found: " +String Int2String(C)), .List, ListItem(42), .List) </observable>
+        <piIdx> 0 => 1 </piIdx>
+        <genMode> false </genMode> <needs> .List </needs> <strictDecode> false </strictDecode>
+        <status> ok() => error("Expected boolean, found: " +String Int2String(C)) </status>
+    requires 2 <=Int C andBool C <Int #r
 endmodule

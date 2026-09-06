@@ -224,5 +224,26 @@ check('dec bytes32 bad high (Rust assert_eq! panics)', K('decodeValue', klist([I
 check('dec native out of field', K('decodeValue', klist([I(R)]), K('Native')), 'decErr ( "is not a canonical field element" )')
 check('dec bytes32 bad high, strict (2ffe2d1 decode_bytes returns None)', K('decodeStrict', klist([I(lo), I(256)]), K('Bytes32'), KToken('true', 'Bool')), 'decErr ( "Failed to decode as Bytes32" )')
 
+# the semantic witness space (2026-09-06 review, item 2): wellTyped is a
+# semantic predicate, not a sort check; witnessSpace(.List, M) is false on a
+# malformed register and true on a well-formed one
+from pyk.kast.prelude.string import stringToken
+
+
+def mem(v):
+    return KApply('_|->_', [stringToken('%x'), v])
+
+
+def kbytes(b: bytes):
+    return KToken('b"' + ''.join('\\x%02x' % c for c in b) + '"', KSort('Bytes'))
+
+
+check('witnessSpace false: native(r) out of the field', K('witnessSpace', KApply('.List'), mem(K('nativeV', I(R)))), 'false')
+check('witnessSpace false: jubjubPoint(pt(0, 0)) off the curve', K('witnessSpace', KApply('.List'), mem(K('jubjubPointV', pt(0, 0)))), 'false')
+check('witnessSpace false: a 3-byte bytes32', K('witnessSpace', KApply('.List'), mem(K('bytes32V', kbytes(b'abc')))), 'false')
+check('witnessSpace false: secp256k1Base(p) not below the modulus', K('witnessSpace', KApply('.List'), mem(K('secp256k1BaseV', I(K256P)))), 'false')
+check('witnessSpace true: native(5)', K('witnessSpace', KApply('.List'), mem(K('nativeV', I(5)))), 'true')
+check('witnessSpace true: jubjubPoint(8G) in the subgroup', K('witnessSpace', KApply('.List'), mem(K('jubjubPointV', pt(*G8)))), 'true')
+
 print(f'\n{sum(checks)}/{len(checks)} checks passed')
 sys.exit(0 if all(checks) else 1)

@@ -9,9 +9,10 @@ the ZKIR definition, and returns a dict shaped like the Rust oracle's output:
    witness_space: bool (the <witnessSpace> cell: every verdict holds or is
    unconstrained and every register is well typed, plan-iter3 M2),
    unconstrained: [id] (the registers whose assigning relation is unconstrained),
-   observable: {status, error?, outputs: [str], pis: [str]} (the <observable>
-   cell, obs(status, encoded outputs, public inputs): the observable semantics
-   [[P]](pre) of plan-iter3 M5b)}
+   observable: {status, error?, outputs: [str], pis: [str], skips: [None|int]}
+   (the <observable> cell, obs(status, encoded outputs, public inputs, skips):
+   the observable semantics [[P]](pre) of plan-iter3 M5b, four-place since the
+   2026-09-06 review)}
 Memory values are re-encoded on the Python side with the same encoding as
 `encode_offcircuit` (the encodings are unit-tested against K in unit_values.py).
 
@@ -291,19 +292,22 @@ def need(t: KInner) -> tuple[str, Any]:
 
 
 def observable(t: KInner) -> dict[str, Any] | None:
-    """The <observable> cell: obs(status, encoded outputs, public inputs), or
-    None while the run has not reached #observable (noObs())."""
+    """The <observable> cell: obs(status, encoded outputs, public inputs,
+    skips) (the four-place observable of the 2026-09-06 review, item 26: the
+    `pi_skips` list is part of the observable result, `Some(n)` per guarded-off
+    impact), or None while the run has not reached #observable (noObs())."""
     assert isinstance(t, KApply)
     if t.label.name == 'noObs':
         return None
     assert t.label.name == 'obs', t.label.name
-    status, outputs, pis = t.args
+    status, outputs, pis, *rest = t.args
     assert isinstance(status, KApply)
     rec: dict[str, Any] = {'status': status.label.name}
     if status.args:
         rec['error'] = tok_str(status.args[0])
     rec['outputs'] = [str(tok_int(x)) for x in list_items(outputs)]
     rec['pis'] = [str(tok_int(x)) for x in list_items(pis)]
+    rec['skips'] = [skip(x) for x in list_items(rest[0])] if rest else None
     return rec
 
 

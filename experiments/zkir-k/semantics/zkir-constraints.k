@@ -18,10 +18,18 @@
 //       instruction output and for public_input / private_input registers,
 //       through `memory.insert` for the declared inputs (assigned from the
 //       witness by `assign_incircuit`) and for the outputs of from_bytes32,
-//       reverse_bytes, bytes32_into_low_high and bytes32_from_low_high. The K
-//       register holds the typed value of that cell.
-//   (2) Auxiliary cells (bit decompositions, limbs, hash and curve gadget
-//       rows, lookup witnesses) are existentially quantified: a memory is in
+//       reverse_bytes, bytes32_into_low_high and bytes32_from_low_high (the
+//       extension `reverse` takes the same path at midnight-zkir 2ffe2d1,
+//       zkir/src/ir_vm.rs:1290-1294). For these `memory.insert` outputs the
+//       modelled register is the recomputed cell, not the Preprocessed.memory
+//       slot: the circuit never compares the two, so an injected value in the
+//       slot is not observed (comparison table D4). The K register holds the
+//       typed value of that cell. For the foreign field chip `assert_equal`
+//       is limb equality after conditional normalisation, which is value
+//       equality on canonical representatives.
+//   (2) Auxiliary cells are existentially quantified: bit decomposition
+//       witnesses, foreign limbs, lookup rows, the rows of the hash and curve
+//       gadgets and the hash padding cells (#shaPad, #kPad). A memory is in
 //       the modelled space when some assignment of the auxiliary cells
 //       satisfies the crate's constraints together with the projected
 //       registers. The model never names them.
@@ -31,42 +39,91 @@
 //
 // The modelled witness space, witnessSpace(verdicts, mem), is the set of
 // memories on which every emitted relation holds or is unconstrained and
-// every register carries a well-typed Value. Typing discharges the assignment
-// constraints of the types: a term of sort Value is by construction a
-// canonical native field element, a point on its curve and in its
-// prime-order subgroup, a byte string of its declared length, or a foreign
-// element below its modulus, because the crate's typed `IrValue`
-// (JubjubPoint(JubjubSubgroup), JubjubScalar(JubjubFr), Bytes32([u8; 32]),
-// foreign bases and scalars as field types) cannot be malformed and the K
-// decoders of ZKIR-VALUES build only such values. The per-type range,
-// on-curve and cofactor constraints that the circuit places at assignment
-// therefore hold on every register of a well-typed memory and are not
-// evaluated a second time.
+// every register carries a well-typed Value: wellTyped (below) demands the
+// semantic invariant wellTypedValue of ZKIR-VALUES, a native element below r,
+// a Jubjub scalar below rJ, a 32-byte string, a point on its curve and in its
+// prime-order subgroup, a foreign element below its modulus, and on the
+// extension surface a byte below 256 and a byte string of its length.
+// Typing discharges the assignment constraints of the types under one
+// assumption, stated per chip: the circuit constrains each assigned cell to
+// its type (native_gadget.rs:565-604 the byte range of AssignedByte,
+// edwards_chip.rs:842-856 the cofactor clearing of an assigned Jubjub point,
+// field_chip.rs:424-455 the limb ranges of a foreign element), so the
+// per-type range, on-curve and cofactor constraints hold on every register of
+// a well-typed memory and are not evaluated a second time. Decoder-produced
+// values satisfy the predicate; a symbolic claim discharges it from its
+// `requires`.
 //
-// Soundness claim. Any memory in the modelled witness space, with its
-// public-input vector, is accepted by the circuit up to the residual list
-// below; each item names a place where the circuit may accept a witness the
-// model does not describe, or reject one it does.
-//   auxiliary cells         their existence is assumed, never constructed
-//   copy wiring             modelled as value equality, not as the permutation
-//   hash gadget internals   hash gates compare against the concrete functions
-//                           of ZKIR-HASH, not against the gadget's rows
-//   prover-side panics      a chip hint that aborts the prover is reported as
-//                           violated or synthErr; other panics inside
-//                           midnight-circuits are not modelled
+// Let Acc(P, pi) be the cell assignments the circuit of P accepts with the
+// instance pi, proj their projection to the named registers (a K memory when
+// every projected cell is a typed value), and Mod(P, pi) = { M |
+// witnessSpace(verdicts(P, M, pi), M) }. Two claims relate them.
+//
+// (a) Soundness direction: every cell assignment the circuit of P accepts
+//     with the instance pi projects to a memory of the modelled witness
+//     space, proj(Acc(P, pi)) ⊆ Mod(P, pi), up to three residual items:
+//     JubjubScalar canonicity, foreign limb canonicity and the per-chip
+//     typing assumption. This is the claim a compiler proof uses: the
+//     soundness direction of compiler correctness quantifies over Mod, and
+//     (a) is what makes that quantification cover the circuit. Its residual
+//     names the places where the circuit accepts a cell assignment whose
+//     projection is not in Mod or is not a K memory at all:
 //   JubjubScalar canonicity a JubjubScalar assigned from the witness (declared
 //                           input, public_input, private_input) is 252 witness
 //                           bits that nothing constrains below the scalar
 //                           field order; visible as unconstrained on inputGate
 //                           and on the two input gates
-//   guarded-off inputs      the register of a public_input / private_input
-//                           whose guard is 0 is assigned from the witness and
-//                           pushed nowhere; the circuit leaves the cell free
-//                           where the witness holds the type's default value;
-//                           visible as unconstrained on that gate
-// The claim is tested, not proved: tools/diff_test.py --circuit runs the
-// crate's circuit under the MockProver on the corpus witnesses, on Native
-// injections into them and on the divergence cases against
+//   foreign limb canonicity a foreign field element assigned from the witness
+//                           (`FieldChip::assign`, field_chip.rs:424-455) is a
+//                           limb tuple range-checked against
+//                           `well_formed_log2_bounds` (:263-278), chosen so
+//                           that the integer lies below 2m, not below the
+//                           modulus m; `as_public_input`, `encode_incircuit`
+//                           and the commitment hash the raw limbs; a foreign
+//                           point inherits it through its coordinates;
+//                           visible as unconstrained on inputGate and on the
+//                           two input gates for the six foreign field types
+//                           and the three foreign point types
+//   per-chip typing         the typing clause above rests on the three cited
+//                           chip constraints, which are read, not modelled
+//     Evidence: tools/diff_test.py --circuit reports no `violated` and no
+//     `synthErr` verdict on any circuit-accepted witness (the honest rows and
+//     the accepted injections of the comparison table).
+//
+// (b) Tightness: every memory of the modelled witness space extends, by some
+//     assignment of the auxiliary cells, to a cell assignment the circuit
+//     accepts with the instance pi, Mod(P, pi) ⊆ proj(Acc(P, pi)), up to
+//     four residual items: auxiliary cells, prover-side panics, hash gadget
+//     internals and copy wiring. This is the claim the injection columns
+//     test: `inject-unconstrained` expects `accepted` (D5), and a `violated`
+//     verdict expects the C / W / X cell the table assigns. Its residual names
+//     the places where the circuit may reject a memory the model admits:
+//   auxiliary cells         their existence is assumed, never constructed
+//   prover-side panics      a chip hint that aborts the prover is reported as
+//                           violated or synthErr; other panics inside
+//                           midnight-circuits are not modelled
+//   hash gadget internals   hash gates compare against the concrete functions
+//                           of ZKIR-HASH, not against the gadget's rows
+//   copy wiring             modelled as value equality, not as the permutation
+//
+// Transcript inputs (a residual of the observation, not of either claim).
+// The public_input / private_input gate pins the cell to its type only, for
+// every guard: the `PublicInput | PrivateInput` arm of `Relation::circuit`
+// (ir_vm.rs:977-1003) matches `guard: _`, assigns the register from
+// `preproc.memory` and stores it with `mem_insert` against the entry it was
+// assigned from; no `pi_push` and no equality against the transcript exists
+// for either instruction. The gate reports unconstrained at guard 0, where
+// the witness holds the type's default and the transcript has no entry for
+// the register. Whether the cell is free in the circuit is decided by its
+// consumers: a later relation that reads the register pins it (comparison
+// table D5, `inject-transcript`). The public transcript is bound by the
+// ledger's re-execution of the transcript, the private transcript by nobody,
+// so a specification must not read "holds the ledger's value" from a `holds`
+// on these gates.
+//
+// Both claims are tested, not proved: tools/diff_test.py --circuit runs the
+// crate's circuit under the MockProver on the corpus witnesses, on injections
+// into them and on the divergence cases against
 // plan-iter3/circuit-comparison-table.md.
 //
 // Outcomes per constraint:
@@ -76,8 +133,10 @@
 //                      no arm for these types (Error::Synthesis) or a chip the
 //                      gate needs is not initialised (`used_chips`, finding 13)
 //   unknown(msg)       a register the gate reads is absent (witness stopped early)
-//   unconstrained(msg) the relation is satisfied and deliberately leaves the
-//                      register free beyond its type (the last two residual items)
+//   unconstrained(msg) the relation is satisfied and this relation pins the
+//                      register to its type only (a gate-level marker: the
+//                      canonicity residuals of claim (a), and the transcript
+//                      input gates at guard 0)
 //   unsupported(msg)   no in-circuit relation is modelled for this gate
 //
 // Chip gating follows `IrSource::used_chips` (usedChips and chipOfType in
@@ -168,8 +227,9 @@ module ZKIR-CONSTRAINTS
 
   // --- The modelled witness space (header comment) --------------------------------------
   // witnessSpace(verdicts, mem): every verdict is holds or unconstrained, and
-  // every register holds a term of sort Value, whose typing discharges the
-  // assignment constraints of its type.
+  // every register holds a Value satisfying wellTypedValue (ZKIR-VALUES), the
+  // semantic invariant of its type, which discharges the assignment
+  // constraints of that type under the per-chip assumption of the header.
   syntax Bool ::= witnessSpace(List, Map) [function, total]
   rule witnessSpace(Vs, M) => #admissible(Vs) andBool wellTyped(values(M))
   syntax Bool ::= #admissible(List) [function, total]
@@ -179,9 +239,11 @@ module ZKIR-CONSTRAINTS
   rule #admissible(_) => false [owise]
   syntax Bool ::= wellTyped(List) [function, total]
   rule wellTyped(.List) => true
-  rule wellTyped(ListItem(_:Value) L) => wellTyped(L)
+  rule wellTyped(ListItem(V:Value) L) => wellTypedValue(V) andBool wellTyped(L)
   rule wellTyped(_) => false [owise]
-  // the registers whose assigning relation is unconstrained
+  // the registers whose assigning relation does not pin the cell beyond its
+  // type: the declared input of an inputGate and the written registers of a
+  // gate(I) whose outcome is unconstrained
   syntax List ::= unconstrainedRegs(List) [function, total]
   rule unconstrainedRegs(.List) => .List
   rule unconstrainedRegs(ListItem(verdict(inputGate(N, _), unconstrained(_))) Vs) => ListItem(N) unconstrainedRegs(Vs)
@@ -203,11 +265,6 @@ module ZKIR-CONSTRAINTS
   rule #need(vErr(S)) => unknown(S)
   rule #need(vPanic(S)) => unknown(S)
   rule #need(vOk(_)) => holds()
-
-  // value-level unsatisfiability of a circuit that exists (inv of zero, byte
-  // bounds), as opposed to a missing dispatch arm
-  syntax Outcome ::= #unsat(Outcome, ValueResult) [function, total]
-  rule #unsat(O, _) => O
 
   syntax Outcome ::= #and(Outcome, Outcome) [function, total]   // first non-holds outcome wins
   rule #and(holds(), O) => O
@@ -377,15 +434,18 @@ module ZKIR-CONSTRAINTS
   rule #jjOf(_) => vErr("not native") [owise]
 
   // public_input / private_input: the register holds a value of the declared
-  // type (assign_incircuit from the witness memory); the guard is not read in
-  // circuit (`guard: _`, finding 3), so a guard of 0 leaves the register a
-  // free cell, where the witness holds defaultValue(T) (spike finding 3)
+  // type (assign_incircuit from the witness memory) and the gate pins it to
+  // that type only, for every guard; the guard is not read in circuit
+  // (`guard: _`, finding 3). At guard 0 the witness holds defaultValue(T) and
+  // the transcript has no entry, which #guardedOff marks as unconstrained
+  // (header, "Transcript inputs"); whether the cell is free in the circuit is
+  // decided by the register's consumers.
   rule eval(gate(publicInput(G, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #and(#typed(rdId(O, M), T),
       #and(#guardedOff(G, O, M, "public_input"), #canonicity(T, O)))))
   rule eval(gate(privateInput(G, T, O)), M, _, Chips) => #and(#need(rdId(O, M)), #and(#chipFor(T, Chips), #and(#typed(rdId(O, M), T),
       #and(#guardedOff(G, O, M, "private_input"), #canonicity(T, O)))))
   syntax Outcome ::= #guardedOff(Guard, String, Map, String) [function, total]
-  rule #guardedOff(guard(G), O, M, What) => unconstrained(What +String " guard is 0: register " +String O +String " is a free cell")
+  rule #guardedOff(guard(G), O, M, What) => unconstrained(What +String " guard is 0: the gate pins register " +String O +String " to its type only, the witness holds the default and the transcript has no entry")
     requires rd(G, M) ==K vOk(native(0))
   rule #guardedOff(_, _, _, _) => holds() [owise]
   // declared inputs: `assign_incircuit(std, layouter, &id.val_t, &[value])` on
@@ -396,17 +456,45 @@ module ZKIR-CONSTRAINTS
   // witness scalar with enforced_canonical = false and nothing constrains the
   // bit string below #rJ, so the cell admits the representatives in
   // [#rJ, 2^252) that the typed witness cannot express. The other two ways a
-  // JubjubScalar register is assigned are canonical: jubjub_scalar_from_native
-  // reduces through `BigUintGadget::div_rem`, whose `assert_lower_than` proves
-  // the remainder below the order (ir_instructions/encode.rs
-  // `jubjub_scalar_from_biguint`), and the extension load_constant uses
-  // `assign_fixed`, fixed cells with enforced_canonical = true.
+  // JubjubScalar register is assigned are canonical, and neither is canonical
+  // by the flag: jubjub_scalar_from_native reduces through
+  // `BigUintGadget::div_rem`, whose `assert_lower_than` constrains the
+  // remainder below the order (ir_instructions/encode.rs
+  // `jubjub_scalar_from_biguint`), and the `scalar_from_le_bytes` it then
+  // calls (edwards_chip.rs:1362-1380) still builds the scalar with
+  // enforced_canonical = false; the extension load_constant uses
+  // `assign_fixed`, a fixed cell whose value is the constant.
+  // Foreign limb canonicity. `FieldChip::assign` (field_chip.rs:424-455)
+  // range-checks the limbs of a foreign element against
+  // `well_formed_log2_bounds` (:263-278), bounds chosen so that the encoded
+  // integer lies below 2m, not below the modulus m, and `as_public_input`,
+  // `encode_incircuit` and the commitment hash the raw limbs; the six foreign
+  // field types carry the residual directly, the three foreign point types
+  // through their coordinates.
   syntax Outcome ::= #canonicity(IrType, String) [function, total]
   rule #canonicity(jubjubScalar(), N) => unconstrained("JubjubScalar canonicity: the assigned bits of " +String N +String " are not proven below the scalar field order")
+  rule #canonicity(secp256k1Base(), N)   => #limbs(N)
+  rule #canonicity(secp256k1Scalar(), N) => #limbs(N)
+  rule #canonicity(secp256r1Base(), N)   => #limbs(N)
+  rule #canonicity(secp256r1Scalar(), N) => #limbs(N)
+  rule #canonicity(curve25519Base(), N)  => #limbs(N)
+  rule #canonicity(curve25519Scalar(), N)=> #limbs(N)
+  rule #canonicity(secp256k1Point(), N)  => #coords(N)
+  rule #canonicity(secp256r1Point(), N)  => #coords(N)
+  rule #canonicity(curve25519Point(), N) => #coords(N)
   rule #canonicity(_, _) => holds() [owise]
+  syntax Outcome ::= #limbs(String) [function, total]
+  rule #limbs(N) => unconstrained("foreign limb canonicity: the assigned limbs of " +String N +String " are range-checked below twice the modulus, not below it")
+  syntax Outcome ::= #coords(String) [function, total]
+  rule #coords(N) => unconstrained("foreign limb canonicity: the assigned coordinate limbs of " +String N +String " are range-checked below twice the modulus, not below it")
+  // a register whose runtime type differs from the declared type of its
+  // input gate: `assign_incircuit` converts through `TryFrom<IrValue>`, whose
+  // failure is Error::Synthesis (ir_instructions/assign.rs `convert_values`,
+  // the message of ir_types.rs); reachable only under `job` for a program
+  // that overwrites an input register
   syntax Outcome ::= #typed(ValueResult, IrType) [function, total]
   rule #typed(vOk(V), T) => holds() requires typeOf(V) ==K T
-  rule #typed(vOk(V), T) => violated("register has type " +String tn(V) +String ", declared " +String typeName(T)) requires typeOf(V) =/=K T
+  rule #typed(vOk(V), T) => synthErr("cannot convert " +String tn(V) +String " to \"" +String typeName(T) +String "\"") requires typeOf(V) =/=K T
   rule #typed(vErr(S), _) => unknown(S)
 
   // div_mod_power_of_two: canonical decomposition of a native value
@@ -515,8 +603,22 @@ module ZKIR-CONSTRAINTS
   // hashes
   rule eval(gate(transientHash(Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("poseidon", Chips), #matches(#th3(#natives(Xs, M)), rdId(O, M), "transient_hash output")))
   rule eval(gate(hashToCurve(Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("poseidon", Chips), #and(#chipNamed("jubjub", Chips), #matches(#htc3(#natives(Xs, M)), rdId(O, M), "hash_to_curve output"))))
-  rule eval(gate(persistentHash(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_256", Chips), #matches(#std3(#natives(Xs, M), Al, "sha256"), rdId(O, M), "persistent_hash output")))
-  rule eval(gate(keccak256(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("keccak_256", Chips), #matches(#std3(#natives(Xs, M), Al, "keccak256"), rdId(O, M), "keccak256 output")))
+  // the byte hashes: a hash input that overflows the byte range of its
+  // alignment atom is a witness the circuit rejects, not a program it cannot
+  // build (`assigned_to_le_bytes` with a fixed width constrains the
+  // decomposition; the truncated hint recomputes another digest, which
+  // `mem_insert` of the output rejects), so #alignRange reports violated
+  // before the output comparison; an arity failure stays a synthesis error
+  rule eval(gate(persistentHash(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_256", Chips), #and(#alignRange(#std3c(#natives(Xs, M), Al), "persistent_hash"),
+      #matches(#std3(#natives(Xs, M), Al, "sha256"), rdId(O, M), "persistent_hash output"))))
+  rule eval(gate(keccak256(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("keccak_256", Chips), #and(#alignRange(#std3c(#natives(Xs, M), Al), "keccak256"),
+      #matches(#std3(#natives(Xs, M), Al, "keccak256"), rdId(O, M), "keccak256 output"))))
+  syntax Outcome ::= #alignRange(CBytesResult, String) [function, total]
+  rule #alignRange(cbRange(S), What) => violated(What +String ": " +String S)
+  rule #alignRange(_, _) => holds() [owise]
+  syntax CBytesResult ::= #std3c(IntsResult, Alignment) [function, total]
+  rule #std3c(isErr(S), _) => cbErr(S)
+  rule #std3c(isOk(L), Al) => alignedBytesCircuit(Al, L)
   syntax Outcome ::= #chipNamed(String, Set) [function, total]
   rule #chipNamed(N, Chips) => holds() requires N in Chips
   rule #chipNamed(N, Chips) => synthErr("chip not initialised: " +String N) requires notBool (N in Chips)
@@ -540,20 +642,26 @@ module ZKIR-CONSTRAINTS
   syntax ValueResult ::= #std3(IntsResult, Alignment, String) [function, total]
   rule #std3(isErr(S), _, _) => vErr(S)
   rule #std3(isOk(L), Al, H) => #std4(alignedBytesCircuit(Al, L), H)
-  // fab_decode_to_bytes: atoms as off-circuit (byte range constraints), no check
-  // of surplus fields, options "not yet implemented" and compress atoms rejected
-  // at synthesis (#onlyAtoms and #hasCompress in ZKIR-STATIC)
-  syntax BytesResult ::= alignedBytesCircuit(Alignment, List) [function, total]
+  // fab_decode_to_bytes: atoms as off-circuit, no check of surplus fields,
+  // options "not yet implemented" and compress atoms rejected at synthesis
+  // (#onlyAtoms and #hasCompress in ZKIR-STATIC); too few fields is the
+  // synthesis error of `fab_decode_to_bytes_atom` (cbErr); a field element
+  // outside the byte range of its atom is a rejected witness (cbRange, item
+  // #alignRange of the hash gates)
+  syntax CBytesResult ::= cbOk(Bytes) | cbErr(String) | cbRange(String)
+  syntax CBytesResult ::= alignedBytesCircuit(Alignment, List) [function, total]
   rule alignedBytesCircuit(alignment(Segs), Fs) => #abcOk(#alignedBytes(#onlyAtoms(Segs), Fs, .Bytes)) requires #onlyAtoms(Segs) ==K Segs andBool notBool #hasCompress(Segs)
-  rule alignedBytesCircuit(alignment(Segs), _) => bErr("synthesis: in-circuit decoding of alignment options is not yet implemented") requires #onlyAtoms(Segs) =/=K Segs
-  rule alignedBytesCircuit(alignment(Segs), _) => bErr("synthesis: Cannot decode compressed value from field elements") requires #onlyAtoms(Segs) ==K Segs andBool #hasCompress(Segs)
-  syntax BytesResult ::= #abcOk(ABResult) [function, total]
-  rule #abcOk(abOk(B, _)) => bOk(B)
-  rule #abcOk(abErr(S)) => bErr(S)
-  syntax ValueResult ::= #std4(BytesResult, String) [function, total]
-  rule #std4(bErr(S), _) => vErr(S)
-  rule #std4(bOk(B), "sha256") => vOk(bytes32(sha256Bytes(B)))
-  rule #std4(bOk(B), _) => vOk(bytes32(keccak256Bytes(B))) [owise]
+  rule alignedBytesCircuit(alignment(Segs), _) => cbErr("synthesis: in-circuit decoding of alignment options is not yet implemented") requires #onlyAtoms(Segs) =/=K Segs
+  rule alignedBytesCircuit(alignment(Segs), _) => cbErr("synthesis: Cannot decode compressed value from field elements") requires #onlyAtoms(Segs) ==K Segs andBool #hasCompress(Segs)
+  syntax CBytesResult ::= #abcOk(ABResult) [function, total]
+  rule #abcOk(abOk(B, _)) => cbOk(B)
+  rule #abcOk(abErr(S)) => cbErr(S)
+  rule #abcOk(abRange(S)) => cbRange(S)
+  syntax ValueResult ::= #std4(CBytesResult, String) [function, total]
+  rule #std4(cbErr(S), _) => vErr(S)
+  rule #std4(cbRange(S), _) => vErr(S)
+  rule #std4(cbOk(B), "sha256") => vOk(bytes32(sha256Bytes(B)))
+  rule #std4(cbOk(B), _) => vOk(bytes32(keccak256Bytes(B))) [owise]
 
   // output is emitted as outputGate(vals, signature); a bare gate(output) or
   // any gate without a relation here is reported, not assumed to hold

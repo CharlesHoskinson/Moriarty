@@ -179,6 +179,20 @@ Both sides decode limbs encoding `p + 5` as the reduced value 5. The preimage's 
 
 with `hex.json` `{"inputs": ["1"], "binding_input": "0"}`: `zkir_run.py hex.zkir hex.json` prints `format error: invalid hex immediate '0x0x01': odd length or non-hex character` and exits 2, and `repos/_build/ledger-92e8bdd3/target/release/zkir-oracle hex.zkir hex.json` returns `%y` encoded `["2"]`. No semantic effect: a program both loaders accept has the same immediates on both.
 
+## K7: `load_constant` of a Jubjub value with no Jubjub input
+
+On the extension surface `used_chips` (midnight-zkir 2ffe2d1) enables the Jubjub chip from the input types and the `public_input` / `private_input` types only, so a program whose only Jubjub value comes from `load_constant` passes `preprocess` on both sides while `assign_constant_incircuit` calls `std_lib.jubjub()`, which panics at synthesis with `ZkStdLibArch must enable jubjub`. The same class as K4. The K gate is `synthErr("chip not initialised for JubjubPoint")`, the target contract fails `chips.gating`, and the case is `k08_load_constant_jubjub_chip` on the extension definition and the 2ffe2d1 oracles. The draft issue is `plan-iter3/upstream-issues/K7.md`.
+
+## K8: `reconstitute_field` with 0 bits
+
+`reconstitute_field` with `bits: 0` loads on both crates. Off-circuit the divisor bound is `FR_BITS - 0 = 255` bits, which `resolve_operand_bits` rejects as "Excessive bit bound" on every value (`checkBits(native(_), N) => cErr("Excessive bit bound") requires N >=Int #frBits` in `zkir-ops.k`, reached through `#recon3` in `zkir-vm.k`). In circuit `assert_lower_than_fixed(divisor, 1 << 255)` reaches `assign_less_than_pow2` in midnight-circuits `field/decomposition/chip.rs`, whose `assert!((bit_length as u32) < F::NUM_BITS)` fails at key generation, a panic rather than an error. The static check rejects the program:
+
+```k
+rule #checkArity(reconstituteField(_, _, 0, _), _) => wfError("reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound")
+```
+
+and the target contract fails the both-stage obligation `width.reconstitute_field.nonzero` with the assertion text (16-compilation-target-contract.md). The program is `corpus/handmade-negative/reconstitute_bits_0.zkir`; `tools/provability.py` records the keygen panic. Availability, the same class as K5 (a width that only the chip checks, by an assertion); the draft issue is `plan-iter3/upstream-issues/K8.md`.
+
 ## Summary
 
 | Finding | Off-circuit | In-circuit | Case | Expected | Relevance | Status |
@@ -189,6 +203,8 @@ with `hex.json` `{"inputs": ["1"], "binding_input": "0"}`: `zkir_run.py hex.zkir
 | K4 | accepted | Jubjub chip absent | `k04`, `k01b` | ok / ok, synthErr | completeness | extension of finding 13 |
 | K5 | bits 253 accepted | padded bound above 253 | `k05` | ok / ok, synthErr | completeness | report upstream |
 | K6 | 92e8bdd3 panics, 2ffe2d1 errors | register absent | by hand, `test_bytes32_proof` | panic or error | availability (base only) | reported with K3 |
+| K7 | accepted | Jubjub chip absent (extension) | `k08` | ok / ok, synthErr | completeness | draft issue written |
+| K8 | bits 0 rejected on every value | keygen assertion | `handmade-negative/reconstitute_bits_0` | wfError / error | availability | candidate, draft issue written |
 | ext `test_eq` | false | synthesis error | by hand, `--ext` | ok / ok, synthErr | completeness | recorded |
 | Finding 2 | cond must be 1 | cond non-zero | `f02` | error / error, holds | producer obligation | retired |
 | Finding 6 | accepted | no arm | `f06` | ok / ok, synthErr | completeness | partially fixed, PR #656 |

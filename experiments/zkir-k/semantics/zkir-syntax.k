@@ -277,6 +277,22 @@ module ZKIR-SYNTAX
   syntax Int ::= lenInstrs(Instrs) [function, total]
   rule lenInstrs(.Instrs)      => 0
   rule lenInstrs(_ ; Is)       => 1 +Int lenInstrs(Is)
+
+  // --- Field elements an alignment consumes -----------------------------------
+  // `fab_decode_to_bytes_atom` (ir_vm.rs) takes one operand per field atom and
+  // ceil(n / 31) operands per bytes atom, on both crates, and returns
+  // Error::Synthesis ("cannot decode field element from no data", "cannot
+  // decode bytes from to little data") when the operand list is shorter;
+  // off-circuit `parse_field_repr` fails on the same programs for every
+  // preimage. A compress atom and an option segment are rejected before any
+  // count matters (ZKIR-STATIC #onlyAtoms, #hasCompress), so they count 0
+  // here; surplus operands are accepted on both sides.
+  syntax Int ::= #alignFields(Segments) [function, total]
+  rule #alignFields(.Segments) => 0
+  rule #alignFields((atom(fieldAtom()), Segs)) => 1 +Int #alignFields(Segs)
+  rule #alignFields((atom(bytesAtom(N)), Segs)) => (N +Int 30) /Int 31 +Int #alignFields(Segs)
+  rule #alignFields((atom(compressAtom()), Segs)) => #alignFields(Segs)
+  rule #alignFields((option(_), Segs)) => #alignFields(Segs)
 endmodule
 
 
@@ -295,7 +311,13 @@ endmodule
 //      outputs (checked at run time, since the type is dynamic; not here);
 //   6. bit widths: constrain_bits and less_than below FR_BITS = 255;
 //      div_mod_power_of_two and reconstitute_field at most
-//      FR_BYTES_STORED * 8 = 248 (the Rust bounds, `ir_vm.rs`).
+//      FR_BYTES_STORED * 8 = 248 (the Rust bounds, `ir_vm.rs`);
+//      reconstitute_field at least 1 (bits 0 makes the divisor bound 255,
+//      which `preprocess` rejects as an excessive bit bound on every value and
+//      keygen rejects by an assertion, plan-iter3 candidate K8);
+//   7. the byte-hash operand lists are at least as long as their alignment
+//      needs (#alignFields): `parse_field_repr` rejects a shorter list for
+//      every preimage and `fab_decode_to_bytes` at synthesis.
 // Everything else (types of operands, guard values, transcript lengths) is
 // dynamic and belongs to ZKIR-VM.
 module ZKIR-WF
@@ -358,9 +380,16 @@ module ZKIR-WF
     requires lenIds(Os) ==Int 2 andBool B >Int #frBytesStored *Int 8
   rule #checkArity(reconstituteField(_, _, B, _), _) => wfError("reconstitute_field: excessive bit count")
     requires B >Int #frBytesStored *Int 8
+  rule #checkArity(reconstituteField(_, _, 0, _), _) => wfError("reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound")
+  rule #checkArity(persistentHash(alignment(Segs), Xs, _), _) => wfError(#alignArity("persistent_hash", Segs, Xs))
+    requires lenOperands(Xs) <Int #alignFields(Segs)
+  rule #checkArity(keccak256(alignment(Segs), Xs, _), _) => wfError(#alignArity("keccak256", Segs, Xs))
+    requires lenOperands(Xs) <Int #alignFields(Segs)
   rule #checkArity(constrainBits(_, B), _) => wfError("constrain_bits: excessive bit bound")
     requires B >=Int #frBits
   rule #checkArity(lessThan(_, _, B, _), _) => wfError("less_than: excessive bit bound")
     requires B >=Int #frBits
   rule #checkArity(_, _) => wfOk() [owise]
+  syntax String ::= #alignArity(String, Segments, Operands) [function, total]
+  rule #alignArity(Op, Segs, Xs) => Op +String ": alignment needs " +String Int2String(#alignFields(Segs)) +String " field elements but instruction has " +String Int2String(lenOperands(Xs))
 endmodule

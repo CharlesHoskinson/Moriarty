@@ -21,8 +21,8 @@
 //                memory is a point of the modelled witness space
 //   <unconstrainedRegs>  the registers whose assigning relation is unconstrained
 //   <observable> the observable result of the run, obs(status, encoded outputs,
-//                public inputs): [[P]](pre) as the compiler-correctness statement
-//                quotes it (observable(...), after #witnessSpace)
+//                public inputs, skips): [[P]](pre) as the compiler-correctness
+//                statement quotes it (observable(...), after #witnessSpace)
 //
 // Entry points: job(P, Pre) runs P exactly as `IrSource::preprocess` would,
 // including its run-time checks, on any program `IrSource::load` accepts;
@@ -540,20 +540,27 @@ module ZKIR-VM
        <unconstrainedRegs> _ => unconstrainedRegs(Vs) </unconstrainedRegs>
 
   // --- The observable semantics --------------------------------------------------------
-  // [[P]](pre) = observable(status, outputs, pi) = obs(status, encoded outputs,
-  // public inputs), one function over the final configuration: the status of
-  // the run, the values returned by `output` in order, each encoded as
-  // `encode_offcircuit` encodes it (encodeValue, the encoding the
-  // communications commitment hashes) and concatenated, and the public-input
-  // vector. A compiler-correctness statement quotes this triple and nothing
-  // else of the configuration; the memory, the verdicts and the witness space
-  // are the model's evidence for the triple, not part of the observation.
-  syntax Observable ::= obs(Status, List, List) [symbol(obs)] | noObs() [symbol(noObs)]
-  syntax Observable ::= observable(Status, List, List) [function, total]
-  rule observable(St, Os, Pi) => obs(St, #encodeAll(Os), Pi)
+  // [[P]](pre) = observable(status, outputs, pi, skips) = obs(status, encoded
+  // outputs, public inputs, skips), one function over the final
+  // configuration: the status of the run, the values returned by `output` in
+  // order, each encoded as `encode_offcircuit` encodes it (encodeValue, the
+  // encoding the communications commitment hashes) and concatenated, the
+  // public-input vector (pi[0] the binding input, pi[1] the commitment when
+  // the flag is set, then the impact values), and the skip vector
+  // (`Preprocessed.pi_skips`: skipNone() per active impact, skipSome(n) per
+  // guarded-off one; `prove` returns it and the ledger turns each skipSome
+  // into an `Op::Noop { n }` of the transaction's transcript, so two preimages
+  // with equal status, outputs and public inputs and different skips are
+  // different transactions). A compiler-correctness statement quotes this
+  // four-tuple and nothing else of the configuration; the memory, the verdicts
+  // and the witness space are the model's evidence for it, not part of the
+  // observation.
+  syntax Observable ::= obs(Status, List, List, List) [symbol(obs)] | noObs() [symbol(noObs)]
+  syntax Observable ::= observable(Status, List, List, List) [function, total]
+  rule observable(St, Os, Pi, Sk) => obs(St, #encodeAll(Os), Pi, Sk)
   syntax KItem ::= "#observable"
-  rule <k> #observable => .K ... </k> <status> St </status> <outputs> Os </outputs> <pi> Pi </pi>
-       <observable> _ => observable(St, Os, Pi) </observable>
+  rule <k> #observable => .K ... </k> <status> St </status> <outputs> Os </outputs> <pi> Pi </pi> <skips> Sk </skips>
+       <observable> _ => observable(St, Os, Pi, Sk) </observable>
 
   // --- End of program: transcript exhaustion and communications commitment ------------------
   syntax KItem ::= "#finish"

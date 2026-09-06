@@ -5,27 +5,45 @@
 //! known instance and witness, runs the halo2 `MockProver` and verifies.
 //! Prints one JSON line whose `outcome` is one of
 //!   preprocess-error | witness-consistency-error | synthesis-error |
-//!   constraint-failure | panic | accepted
+//!   instance-length-mismatch | constraint-failure | panic | accepted
 //! classified by where the error arises:
 //!   preprocess returns Err                       -> preprocess-error
-//!   MockProver::run returns Err and the run logged the crate's
-//!     "Misalignment between `prepare` and `synthesize`" error event
-//!     (raised only by `mem_insert` / `pi_push` in ir_vm.rs)
-//!                                                 -> witness-consistency-error
+//!   MockProver::run returns Err, the relation stashed the
+//!     `error_if_known_and` error of `mem_insert` / `pi_push` (ir_vm.rs)
+//!     AND the run logged the crate's "Misalignment between `prepare` and
+//!     `synthesize`" error event; both are required, the event alone or the
+//!     error alone is not enough           -> witness-consistency-error
 //!   MockProver::run returns any other Err         -> synthesis-error
+//!   the instance column handed to MockProver has a different length from
+//!     the number of `pi_push` calls the circuit made (the length of the
+//!     preprocessed `pis`): the surplus instance cells are constrained by
+//!     nothing and a shortened column is a constraint failure on the first
+//!     missing cell, so neither is a verdict on the witness
+//!                                                 -> instance-length-mismatch
 //!   verify returns Err(failures)                  -> constraint-failure
 //!   a panic anywhere after loading                -> panic
+//! A malformed `--inject`, `--pis` or `--instance` file (unparseable JSON, a
+//! non-Native type, a non-canonical decimal) is `inject-error`, printed as a
+//! JSON line with exit status 2: it is a harness error, not an outcome of
+//! the circuit, and is never counted as a preprocess error.
 //!
 //! `--inject INJECT.json` replaces (or adds) entries of the preprocessed
 //! memory before the circuit is built, as `prove_unchecked` intends, for
 //! Native values only: `{"reg": {"type": "Native", "value": "<decimal>"}}`.
 //! `--pis PIS.json` likewise replaces the public-input vector (list of
-//! decimal strings) and `--binding-input DEC` the binding input; both keep
-//! the MockProver instance column equal to the (perturbed) `pis`, so a
-//! disagreement surfaces in `pi_push` as a witness-consistency error.
-//! `--instance PIS.json` sets only the instance column handed to MockProver,
-//! leaving the witness alone, which is the way to reach a genuine
-//! constraint failure (public-input cells disagree with the instance).
+//! decimal strings) and `--binding-input DEC` the binding input. Both are
+//! witness-side perturbations: the MockProver instance column is set equal
+//! to the (perturbed) `pis`, so a changed entry surfaces in `pi_push` as a
+//! witness-consistency error (`W`), never as a constraint failure; a `--pis`
+//! vector of a different length is `instance-length-mismatch`. They do not
+//! model a verifier that is handed a wrong statement: for that use
+//! `--instance`. `--instance PIS.json` sets only the instance column handed
+//! to MockProver, leaving the witness alone, which is the way to reach a
+//! genuine constraint failure (public-input cells disagree with the
+//! instance); a vector of the wrong length is `instance-length-mismatch`,
+//! because a longer vector would be `accepted` (the extra cells are
+//! unconstrained) and a shorter one `constraint-failure`, neither of which
+//! says anything about the witness.
 //! `--model-only` skips `preprocess` and MockProver and reports `k` and
 //! `rows` from the stdlib cost model (unknown witness); outcome `model-only`.
 //!
@@ -73,6 +91,9 @@ use transient_crypto::curve::Fr;
 use transient_crypto::proofs::{KeyLocation, PARAMS_VERIFIER, ParamsProver, ParamsProverProvider, ProofPreimage, Zkir};
 
 const MISALIGNMENT: &str = "Misalignment between `prepare` and `synthesize`";
+/// The Synthesis message `Value::error_if_known_and` produces, which is what
+/// `mem_insert` / `pi_push` stash in the relation on a mismatch.
+const ERROR_IF_KNOWN: &str = "error_if_known_and";
 const DEFAULT_PARAMS_DIR: &str = "/home/charl/Moriarty/repos/_build/params";
 /// The seed the crate's integration tests hand to `prove` (tests/common/mod.rs).
 const PROVE_SEED: [u8; 32] = [42; 32];
@@ -505,8 +526,9 @@ fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Ar
     };
     out.preprocess_ms = Some(t.elapsed().as_millis());
 
+    let n_pushes = pre.pis.len();
     if let Err(e) = inject(args, &mut pre, out) {
-        out.outcome = "preprocess-error";
+        out.outcome = "inject-error";
         out.message = format!("inject: {e:#}");
         return;
     }
@@ -525,7 +547,7 @@ fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Ar
         {
             Ok(v) => v,
             Err(e) => {
-                out.outcome = "preprocess-error";
+                out.outcome = "inject-error";
                 out.message = format!("instance: {e:#}");
                 return;
             }
@@ -533,13 +555,14 @@ fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Ar
         instance = match v.iter().map(|s| fr_from_dec(s).map(|f| f.0)).collect::<anyhow::Result<Vec<_>>>() {
             Ok(i) => i,
             Err(e) => {
-                out.outcome = "preprocess-error";
+                out.outcome = "inject-error";
                 out.message = format!("instance: {e:#}");
                 return;
             }
         };
         out.injected.get_or_insert_with(Vec::new).push(format!("instance: {} -> {}", pre.pis.len(), instance.len()));
     }
+    let instance_len = instance.len();
     let circuit = MidnightCircuit::new(ir, Value::known(instance.clone()), Value::known(pre), Some(k));
 
     // Instance columns as `midnight_zk_stdlib::prove` lays them out: the
@@ -551,12 +574,20 @@ fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Ar
             out.mockprover_run_ms = Some(t.elapsed().as_millis());
             let inner = circuit.take_error().map(|e| format!("{e:?}"));
             let logged = errors.lock().unwrap().clone();
-            let misaligned = logged.iter().any(|m| m.contains(MISALIGNMENT));
-            out.outcome = if misaligned { "witness-consistency-error" } else { "synthesis-error" };
+            // Both witnesses of a mem_insert / pi_push mismatch are required:
+            // the error the relation stashed comes from `error_if_known_and`
+            // (its Synthesis message is that name) and the ERROR event carries
+            // the crate's misalignment text. Anything else is a synthesis error.
+            let stashed = inner.as_deref().map_or(false, |i| i.contains(ERROR_IF_KNOWN));
+            let event = logged.iter().any(|m| m.contains(MISALIGNMENT));
+            out.outcome = if stashed && event { "witness-consistency-error" } else { "synthesis-error" };
             out.message = match inner {
                 Some(i) => format!("{e:?}; relation error: {i}"),
                 None => format!("{e:?}"),
             };
+            if stashed != event {
+                out.message = format!("{} (misalignment evidence incomplete: stashed error {stashed}, event {event})", out.message);
+            }
             if !logged.is_empty() {
                 out.trace_errors = Some(logged);
             }
@@ -566,6 +597,18 @@ fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Ar
     out.mockprover_run_ms = Some(t.elapsed().as_millis());
     out.rows = prover.advice().first().map(|c| c.len());
     out.usable_rows = Some(prover.usable_rows().end);
+
+    if instance_len != n_pushes {
+        out.outcome = "instance-length-mismatch";
+        out.message = format!(
+            "instance column has {instance_len} cell(s) but the circuit pushes {n_pushes} public input(s); a longer column leaves the surplus cells unconstrained, a shorter one fails on the first missing cell"
+        );
+        let logged = errors.lock().unwrap().clone();
+        if !logged.is_empty() {
+            out.trace_errors = Some(logged);
+        }
+        return;
+    }
 
     let t = Instant::now();
     match prover.verify() {
@@ -629,24 +672,22 @@ fn main() {
         }));
     }
 
-    let mut out = Output { outcome: "panic", ..Default::default() };
-    let res = catch_unwind(AssertUnwindSafe(|| {
-        let mut o = Output::default();
-        run(&args, &ir, preimage.as_ref(), &errors, &mut o);
-        o
-    }));
-    match res {
-        Ok(o) => out = o,
-        Err(_) => {
-            out.outcome = "panic";
-            out.message = panic_msg.lock().unwrap().clone().unwrap_or_else(|| "panic".into());
-            let logged = errors.lock().unwrap().clone();
-            if !logged.is_empty() {
-                out.trace_errors = Some(logged);
-            }
+    // `out` lives outside the unwinding closure, so the fields filled before a
+    // panic (k, preprocess_ms, optimal_k_ms, ...) survive into the panic line.
+    let mut out = Output::default();
+    let res = catch_unwind(AssertUnwindSafe(|| run(&args, &ir, preimage.as_ref(), &errors, &mut out)));
+    if res.is_err() {
+        out.outcome = "panic";
+        out.message = panic_msg.lock().unwrap().clone().unwrap_or_else(|| "panic".into());
+        let logged = errors.lock().unwrap().clone();
+        if !logged.is_empty() {
+            out.trace_errors = Some(logged);
         }
     }
     out.elapsed_ms = start.elapsed().as_millis();
     out.peak_rss_kb = peak_rss_kb();
     println!("{}", serde_json::to_string(&out).expect("serialize output"));
+    if out.outcome == "inject-error" {
+        std::process::exit(2);
+    }
 }

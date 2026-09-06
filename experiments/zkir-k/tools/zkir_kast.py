@@ -22,9 +22,13 @@ Usage:
                                           the same, plus tier two (the run of
                                           ZKIR-VM's job on the preimage: status,
                                           error, witness space, unconstrained
-                                          registers, the observable triple) and
-                                          tier three (the circuit oracle's
-                                          outcome, when its binary exists)
+                                          registers, the four-place observable)
+                                          and tier three (the circuit oracle's
+                                          outcome; `not run` with met null when
+                                          its binary does not exist). Every
+                                          obligation carries its stage (keygen,
+                                          preprocess, both) and the output
+                                          carries the `ledger.commitment` fact.
 `--ext` accepts the midnight-zkir 2ffe2d1 surface for any command.
 """
 from __future__ import annotations
@@ -434,8 +438,12 @@ def find_label(term: KInner, label: str) -> KInner | None:
 
 def obligations(term: KInner) -> list[dict[str, Any]]:
     """Walk the `obligations` list of a ZKIR-CONTRACT-MAIN result into dicts
-    {name, status, detail}: status is met, failed, notApplicable or info;
-    detail is the message of failed/info and None otherwise."""
+    {name, stage, status, detail}: stage is keygen, preprocess or both (the
+    crate function that rejects a program failing the obligation, 2026-09-06
+    review item 21; `obligation(name, stage, status)` in zkir-contract.k, the
+    two-place form of the earlier definition is read with stage None); status
+    is met, failed, notApplicable or info; detail is the message of failed/info
+    and None otherwise."""
     out: list[dict[str, Any]] = []
     node = find_label(term, 'obligations')
     if node is None:
@@ -446,12 +454,16 @@ def obligations(term: KInner) -> list[dict[str, Any]]:
         ob, node = node.args
         if not (isinstance(ob, KApply) and ob.label.name == 'obligation'):
             raise ValueError(f'unexpected list element {ob}')
-        name_tok, status = ob.args
+        if len(ob.args) == 3:
+            name_tok, stage_t, status = ob.args
+            stage = stage_t.label.name if isinstance(stage_t, KApply) else None
+        else:
+            (name_tok, status), stage = ob.args, None
         if not isinstance(status, KApply):
             raise ValueError(f'unexpected status {status}')
         kind = status.label.name
         detail = k_string(status.args[0]) if status.args else None
-        out.append({'name': k_string(name_tok), 'status': kind, 'detail': detail})
+        out.append({'name': k_string(name_tok), 'stage': stage, 'status': kind, 'detail': detail})
     return out
 
 
@@ -495,7 +507,9 @@ def tier_three(path: Path, preimage: dict[str, Any], ext: bool) -> dict[str, Any
     import circuit_compare as cc
     binary = cc.CIRCUIT_ORACLE_EXT if ext else cc.CIRCUIT_ORACLE
     if not binary.exists():
-        return {'outcome': 'not run', 'reason': f'oracle binary not found: {binary}', 'met': False}
+        # not a failed tier: nothing was checked (item 23); `met` is None, and
+        # contract_corpus.py counts the entry as "not run"
+        return {'outcome': 'not run', 'reason': f'oracle binary not found: {binary}', 'met': None}
     res = cc.run_circuit_oracle(binary, path, preimage)
     rec = {'outcome': res.get('outcome', 'load-error'), 'binary': str(binary)}
     for key in ('message', 'k', 'elapsed_ms', 'failures'):
@@ -516,12 +530,34 @@ def contract(path: Path, term: KInner, ext: bool, krun: 'KRun', preimage: dict[s
         'surface': 'extension' if ext else 'base',
         'obligations': obs,
     }
+    doc['ledger'] = ledger_facts(path)
     if preimage is not None:
         doc['tier_one'] = tier_one(obs)
         doc['preimage'] = str(preimage_path) if preimage_path else None
         doc['preimage_dependent'] = tier_two(term, preimage, ext, vm_definition)
         doc['circuit'] = tier_three(path, preimage, ext)
     return doc
+
+
+def ledger_facts(path: Path) -> dict[str, Any]:
+    """Facts about the program as a ledger contract entry point that are not
+    obligations of the ZKIR contract (the program keys and proves without
+    them) but that the ledger's statement requires (2026-09-06 review, item
+    13). `commitment`: the ledger verifies every contract call against the
+    statement `[binding_input, communications_commitment, field_repr(guaranteed),
+    field_repr(fallible)]` with the commitment pushed unconditionally
+    (ledger/src/verify.rs:1956-1970), so a program without
+    `do_communications_commitment` can never satisfy a ledger statement; `met`
+    is false for such a program when it is presented as a contract entry point."""
+    with open(path) as f:
+        doc = json.load(f)
+    present = bool(doc.get('do_communications_commitment'))
+    return {'commitment': {
+        'present': present, 'met': present,
+        'detail': ('the program pushes the communications commitment as pi[1]; the ledger statement expects it there'
+                   if present else
+                   'no do_communications_commitment: the ledger statement pushes the commitment unconditionally, so this program cannot be a contract entry point'),
+    }}
 
 
 def main(argv: list[str] | None = None) -> int:

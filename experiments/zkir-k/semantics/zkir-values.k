@@ -53,6 +53,30 @@ module ZKIR-VALUES
   rule typeOf(curve25519Base(_))  => curve25519Base()
   rule typeOf(curve25519Scalar(_))=> curve25519Scalar()
 
+  // wellTypedValue(V): the semantic typing invariant of a Value, the
+  // condition the circuit places on a cell it assigns from the witness with
+  // that type (ZKIR-CONSTRAINTS witnessSpace): a native element below r, a
+  // 32-byte string, a point on its curve and in its prime-order subgroup
+  // (Edwards values never carry inf()), a Jubjub scalar below rJ, a foreign
+  // element below its modulus. The constructors carry no invariant of their
+  // own; the decoders build only values satisfying this predicate, and a
+  // claim over a symbolic memory discharges it from its `requires`.
+  syntax Bool ::= wellTypedValue(Value) [function, total]
+  rule wellTypedValue(native(X))          => 0 <=Int X andBool X <Int #r
+  rule wellTypedValue(bytes32(B))         => lengthBytes(B) ==Int 32
+  rule wellTypedValue(jubjubPoint(P))     => P =/=K inf() andBool onCurve(#jubjub, P) andBool inSubgroup(#jubjub, P)
+  rule wellTypedValue(jubjubScalar(S))    => 0 <=Int S andBool S <Int #rJ
+  rule wellTypedValue(secp256k1Point(P))  => onCurve(#secp256k1, P) andBool inSubgroup(#secp256k1, P)
+  rule wellTypedValue(secp256k1Base(X))   => 0 <=Int X andBool X <Int #k256P
+  rule wellTypedValue(secp256k1Scalar(X)) => 0 <=Int X andBool X <Int #k256N
+  rule wellTypedValue(secp256r1Point(P))  => onCurve(#secp256r1, P) andBool inSubgroup(#secp256r1, P)
+  rule wellTypedValue(secp256r1Base(X))   => 0 <=Int X andBool X <Int #p256P
+  rule wellTypedValue(secp256r1Scalar(X)) => 0 <=Int X andBool X <Int #p256N
+  rule wellTypedValue(curve25519Point(P)) => P =/=K inf() andBool onCurve(#curve25519, P) andBool inSubgroup(#curve25519, P)
+  rule wellTypedValue(curve25519Base(X))  => 0 <=Int X andBool X <Int #c25519P
+  rule wellTypedValue(curve25519Scalar(X))=> 0 <=Int X andBool X <Int #c25519L
+  rule wellTypedValue(_) => false [owise]   // arms for the extension values are in ZKIR-EXT-VALUES
+
   // `IrValue::default(t)`: zero / identity of each type.
   syntax Value ::= defaultValue(IrType) [function, total]
   rule defaultValue(native())          => native(0)

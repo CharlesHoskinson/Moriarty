@@ -73,7 +73,7 @@ Each row prints `PASS` or `FAIL`, then the corpus, the filename, the run label a
 N comparisons: S successful-run agreements, E error-run agreements (status and error class), A agree, D disagree, Ts
 ```
 
-`S` and `E` count matching status pairs; `D` is the number to read, because those two counters alone do not guarantee matching memory or error classes. Exit zero means no recorded difference. The `oracle 2:` line that follows counts successful unperturbed K attempts with at least one non-holding gate; it is informational, excludes perturbations, and does not affect the exit code. Because the oracle never runs the crate's `circuit`, the K verdicts are compared with nothing on the Rust side. They are checked only by this count and by the divergence cases below. Gate outcomes are explained in [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md).
+`S` and `E` count matching status pairs; `D` is the number to read, because those two counters alone do not guarantee matching memory or error classes. Exit zero means no recorded difference. The `oracle 2:` line that follows counts successful unperturbed K attempts with at least one non-holding gate; it is informational, excludes perturbations, and does not affect the exit code. The verdicts themselves are compared with the crate's circuit in the `--circuit` mode described in the next section, which runs the same preimages through the halo2 MockProver; without that flag they are checked only by this count and by the divergence cases below. Gate outcomes are explained in [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md).
 
 ## Results and reproduction
 

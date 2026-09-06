@@ -2,7 +2,7 @@
  "produced": "2026-09-06",
  "method": "compact-runtime",
  "how": "tools/moriarty_preimages.mjs drives output/contract/index.js through @midnight-ntwrk/compact-runtime 0.19.100 (onchain-runtime-v4 4.0.0-rc.3, the same onchain-runtime version as midnight-ledger 92e8bdd3); the proof data of each call is serialised by proofDataIntoSerializedPreimage and decoded by the preimage-json binary (experiments/zkir-k/tools/preimage-json, built in the ledger-92e8bdd3 workspace).",
- "fixed_fields": "binding_input is 0 and the communications-commitment randomness is 0: the onchain runtime sets both to 0 and the ledger overwrites them at transaction assembly, which is not performed here. key_location (dummy) is dropped.",
+ "fixed_fields": "binding_input is 0 and the communications-commitment randomness is 0. The binding input is a placeholder that the ledger overwrites at transaction assembly (ledger/src/construct.rs: `binding_input = 0u8.into()`, populated during proving), which is not performed here. The randomness is not overwritten by the ledger: the DApp supplies it in the call prototype (`call.communication_commitment_rand`, ledger/src/construct.rs:565-568) and the runtime used here passes 0. key_location (dummy) is dropped.",
  "runtime": "/nix/store/1xfjd05m1718ycl7yasc42ca5ms666zh--midnight-ntwrk-compact-runtime_0.19.100/lib/node_modules/@midnight-ntwrk/compact-runtime",
  "decoder": "/home/charl/Moriarty/repos/_build/ledger-92e8bdd3/target/release/preimage-json",
  "contract_address": "0000000000000000000000000000000000000000000000000000000000000000",

@@ -10,11 +10,14 @@ are reported as `format`.
 The expectation table names the programs whose contract is expected to carry
 a failed obligation: the chip-gating divergence cases (finding 13, K4), the
 keygen width case (K5), the alignment option case (K7), the reconstitute
-256-bit case (f10), the programs whose keygen fails on a witness-independent
-in-circuit check (the circuit.static obligations: output typing, boolean gate
-arity, constant decoding, nth and slice bounds, unsupported dispatch arms) and
-the ill-formed programs. Every other program must have every obligation met or
-not applicable.
+256-bit case (f10) and the 249-bit width cases (e21a, e21b), the alignment
+field-count and reconstitute bits-0 negatives (2026-09-06 items 19, 20), the
+programs whose keygen fails on a witness-independent in-circuit check (the
+circuit.static obligations: output typing, boolean gate arity, constant
+decoding, nth and slice bounds, unsupported dispatch arms) and the ill-formed
+programs. Every other program must have every obligation met or not
+applicable. Each failed obligation is printed with its stage
+(`name[stage]`), which tools/provability.py reads.
 
 The seven Moriarty transaction contexts (corpus/moriarty-contexts, one real
 preimage per artifact) are contract entries with a preimage: tiers two and
@@ -75,6 +78,17 @@ EXPECTED: dict[str, dict[str, str] | str] = {
     'k05_less_than_253_bits_keygen.zkir': {'width.less_than': 'bits 253 pads to 254'},
     'k07_alignment_option_offcircuit.zkir': {'alignment.persistent_hash': 'option segment'},
     'f10_reconstitute_bits_256.zkir': {'wf': 'reconstitute_field: excessive bit count', 'width.reconstitute_field': 'bits 256 exceeds'},
+    'e21a_div_mod_249.zkir': {'wf': 'div_mod_power_of_two: excessive bit count', 'width.div_mod_power_of_two': 'bits 249 exceeds'},
+    'e21b_reconstitute_249.zkir': {'wf': 'reconstitute_field: excessive bit count', 'width.reconstitute_field': 'bits 249 exceeds'},
+    # a violated gate followed by a synthErr (2026-09-06 item 11): only the dispatch obligation is static
+    'e11_violated_then_synth.zkir': {'circuit.static.dispatch': 'instruction 1: Unsupported constrain_eq: JubjubScalar == JubjubScalar'},
+    # the alignment field count (item 19) and reconstitute_field bits = 0 (item 20)
+    'align_field_short.zkir': {'wf': 'alignment needs 2 field elements but instruction has 1',
+                               'alignment.persistent_hash': 'cannot decode field element from no data'},
+    'align_bytes_short.zkir': {'wf': 'alignment needs 2 field elements but instruction has 1',
+                               'alignment.keccak256': 'cannot decode bytes from to little data'},
+    'reconstitute_bits_0.zkir': {'wf': 'reconstitute_field: bits 0',
+                                 'width.reconstitute_field.nonzero': 'bits 0: assertion failed: (bit_length as u32) < F::NUM_BITS'},
     # witness-independent in-circuit checks of keygen (the ten contradictions of
     # evidence/zkir-k-provability-2026-09-06.txt): the crate tests below occur in
     # both test corpora with the same name
@@ -105,12 +119,15 @@ EXPECTED: dict[str, dict[str, str] | str] = {
 
 
 def summarise(obs: list[dict]) -> str:
+    """One line per program: `ok (n met, m n/a)` or `FAILED name[stage]: detail; ...`
+    (the stage of every failed obligation, keygen | preprocess | both, is what
+    tools/provability.py reads to decide whether keygen must reject the program)."""
     failed = [o for o in obs if o['status'] == 'failed']
     if not failed:
         met = sum(o['status'] == 'met' for o in obs)
         na = sum(o['status'] == 'notApplicable' for o in obs)
         return f'ok ({met} met, {na} n/a)'
-    return 'FAILED ' + '; '.join(f"{o['name']}: {o['detail']}" for o in failed)
+    return 'FAILED ' + '; '.join(f"{o['name']}[{o.get('stage') or '?'}]: {o['detail']}" for o in failed)
 
 
 def matches(expected: dict[str, str] | str | None, obs: list[dict] | None, fmt_error: bool) -> bool:
@@ -124,9 +141,15 @@ def matches(expected: dict[str, str] | str | None, obs: list[dict] | None, fmt_e
     return set(failed) == set(expected) and all(expected[k] in failed[k] for k in expected)
 
 
+NOT_RUN = 0
+
+
 def contexts(krun: KRun) -> tuple[list[str], int, int]:
     """The seven Moriarty contexts: contract with preimage. Returns the lines,
-    the number of entries and the number that miss their expectation."""
+    the number of entries and the number that miss their expectation; a tier
+    three that could not run (no oracle binary) is counted in NOT_RUN, not as
+    a miss."""
+    global NOT_RUN
     manifest = json.loads((CONTEXTS / 'manifest.json').read_text())
     lines, total, bad = [], 0, 0
     for art, info in manifest['artifacts'].items():
@@ -137,14 +160,21 @@ def contexts(krun: KRun) -> tuple[list[str], int, int]:
         term = zkir_kast.load_program(program, ext=False)
         doc = zkir_kast.contract(program, term, False, krun, pre, pre_path)
         t1, t2, t3 = doc['tier_one'], doc['preimage_dependent'], doc['circuit']
-        ok = t1['met'] and t2['met'] and t3['met']
+        # a tier three that was not run (no oracle binary) is neither met nor failed
+        ok = t1['met'] and t2['met'] and t3['met'] is not False
+        not_run = t3['met'] is None
+        NOT_RUN += not_run
         bad += not ok
         two = f"off-circuit {t2['status']}" + (f" '{t2.get('error', '')[:60]}'" if t2['status'] != 'ok' else '') +               f", witness_space {str(t2['witness_space']).lower()}" +               (f", unconstrained {','.join(t2['unconstrained'][:4])}" if t2['unconstrained'] else '') +               (f", violations {len(t2['violations'])}" if t2['violations'] else '')
         three = f"circuit {t3['outcome']}" + (f" k={t3['k']}" if 'k' in t3 else '') + (f" {t3['elapsed_ms']}ms" if 'elapsed_ms' in t3 else '') +                 (f" '{t3.get('message', t3.get('reason', ''))[:60]}'" if t3['outcome'] != 'accepted' else '')
         obs = t2.get('observable') or {}
+        skips = obs.get('skips')
+        skip_note = '' if skips is None else f", {len(skips)} impacts of which {sum(1 for x in skips if x is not None)} skipped"
+        ledger = doc.get('ledger', {}).get('commitment', {})
         lines.append(f"moriarty-contexts/{art} ({program.relative_to(REPO)} + {pre_path.name}): {summarise(doc['obligations'])}; {two}; {three}; "
-                     f"observable ({obs.get('status', '?')}, {len(obs.get('outputs', []))} output elements, {len(obs.get('pis', []))} public inputs)"
-                     + ('' if ok else '   <-- UNEXPECTED'))
+                     f"observable ({obs.get('status', '?')}, {len(obs.get('outputs', []))} output elements, {len(obs.get('pis', []))} public inputs{skip_note}); "
+                     f"ledger.commitment {'met' if ledger.get('met') else 'NOT MET'}"
+                     + (' (tier three not run)' if not_run else '') + ('' if ok else '   <-- UNEXPECTED'))
     return lines, total, bad
 
 
@@ -192,7 +222,8 @@ def main(argv: list[str] | None = None) -> int:
         unexpected += ctx_bad
     print(f'{total} programs, {clean} with every obligation met or not applicable, '
           f'{expected_failures} with an expected failed obligation, {formats} format errors; '
-          f'{ctx_total} Moriarty contexts with a preimage, {ctx_total - ctx_bad} with every tier met; '
+          f'{ctx_total} Moriarty contexts with a preimage, {ctx_total - ctx_bad} with every tier met'
+          + (f' ({NOT_RUN} with tier three not run: no oracle binary)' if NOT_RUN else '') + '; '
           f'{unexpected} unexpected, {time.time() - t0:.1f}s')
     return 0 if unexpected == 0 else 1
 

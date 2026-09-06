@@ -1,9 +1,14 @@
 """Upstream drift: the pinned ZKIR v3 crates against the current upstream heads.
 
 Two surfaces are compared, each by the serde `op` names of its `Instruction`
-enum (`ir.rs`), the variants of its `IrType` enum (`ir_types.rs`), and the
-`midnight-proofs`, `midnight-zk-stdlib` and `midnight-circuits` versions its
-`Cargo.lock` resolves for the crate:
+enum (`ir.rs`) with the names and types of their fields, the variants of its
+`IrType` enum (`ir_types.rs`), the `midnight-proofs`, `midnight-zk-stdlib` and
+`midnight-circuits` versions its `Cargo.lock` resolves for the crate, and the
+bodies of the semantics-bearing sources (`git diff --stat <pin> <head> --` on
+the crate's `ir_vm.rs`, its `ir_instructions/` directory and, where the crate
+has one, `transient-crypto/src/proofs.rs`): a non-empty diff-stat is drift,
+since a body change can alter `preprocess` or `Relation::circuit` without
+touching a serde name:
 
   midnight-ledger  zkir-v3   pinned at 92e8bdd3 (repos/_build/ledger-92e8bdd3)
   midnight-zkir    zkir      pinned at 2ffe2d1  (repos/_build/midnight-zkir-2ffe2d1)
@@ -17,8 +22,9 @@ and the output says so.
 The enums are parsed with regular expressions after comments are stripped:
 `#[serde(rename = "...")]` on a variant wins, else the enum's
 `#[serde(rename_all = "...")]` is applied to the variant name. Struct variants
-also contribute their field names, which is how renamed-looking pairs are
-detected (same field set, or a close name).
+also contribute their field names and field types (`name: Type`, whitespace
+normalised): a changed type is a "shape changed" entry, and the field-name set
+is how renamed-looking pairs are detected (same field set, or a close name).
 
 Exit status: 0 when no counted comparison drifts, 1 on drift, 2 on a tool
 failure. A comparison counts when the pinned commit is an ancestor of the
@@ -51,6 +57,7 @@ SURFACES = [
         'types': 'zkir-v3/src/ir_types.rs',
         'lock': 'Cargo.lock',
         'lock_package': 'midnight-zkir-v3',
+        'bodies': ['zkir-v3/src/ir_vm.rs', 'zkir-v3/src/ir_instructions/', 'transient-crypto/src/proofs.rs'],
     },
     {
         'name': 'midnight-zkir zkir',
@@ -62,6 +69,7 @@ SURFACES = [
         'types': 'zkir/src/ir_types.rs',
         'lock': 'Cargo.lock',
         'lock_package': 'midnight-zkir',
+        'bodies': ['zkir/src/ir_vm.rs', 'zkir/src/ir_instructions/'],
     },
 ]
 
@@ -122,6 +130,16 @@ def show(clone: Path, commit: str, path: str) -> str:
         return git(clone, 'show', f'{commit}:{path}')
     except ToolFailure as e:
         raise ToolFailure(f'{path} is absent at {commit[:8]}: {e}') from e
+
+
+def body_diff_stat(clone: Path, pin: str, head: str, paths: list[str]) -> tuple[str, list[str]]:
+    """`git diff --stat pin head -- paths`: the summary line and the per-file
+    lines; empty when the bodies are identical."""
+    out = git(clone, 'diff', '--stat=200', pin, head, '--', *paths)
+    lines = [line.rstrip() for line in out.splitlines() if line.strip()]
+    if not lines:
+        return '', []
+    return lines[-1].strip(), lines[:-1]
 
 
 def is_ancestor(clone: Path, a: str, b: str) -> bool:
@@ -224,8 +242,9 @@ def variants(body: str, rule: str | None) -> dict[str, dict]:
             inner = body[i + 1:j - 1]
             if open_ == '{':
                 inner_no_attrs = re.sub(r'#\[[^\]]*\]', '', inner)
-                fields = tuple(sorted(re.findall(r'(?:^|,)\s*(?:pub(?:\([^)]*\))?\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:', inner_no_attrs)))
-                payload = '{' + ', '.join(fields) + '}'
+                typed = struct_fields(inner_no_attrs)
+                fields = tuple(sorted(name for name, _ in typed))
+                payload = '{' + ', '.join(f'{name}: {ty}' for name, ty in sorted(typed)) + '}'
             else:
                 payload = '(' + ' '.join(inner.split()) + ')'
             i = j
@@ -240,6 +259,31 @@ def variants(body: str, rule: str | None) -> dict[str, dict]:
         serde = rename if rename is not None else apply_case(ident, rule)
         out[serde] = {'variant': ident, 'fields': fields, 'payload': payload, 'explicit': rename is not None}
         pending_attrs = []
+    return out
+
+
+def struct_fields(inner: str) -> list[tuple[str, str]]:
+    """(name, type) of every field of a struct variant body, the type with its
+    whitespace normalised; fields are split on the commas outside brackets."""
+    out: list[tuple[str, str]] = []
+    depth = 0
+    part = ''
+    parts = []
+    for c in inner:
+        if c in '<([{':
+            depth += 1
+        elif c in '>)]}':
+            depth -= 1
+        if c == ',' and depth == 0:
+            parts.append(part)
+            part = ''
+        else:
+            part += c
+    parts.append(part)
+    for item in parts:
+        m = re.match(r'\s*(?:pub(?:\([^)]*\))?\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$', item.strip(), re.S)
+        if m:
+            out.append((m.group(1), ' '.join(m.group(2).split())))
     return out
 
 
@@ -313,6 +357,10 @@ def fmt(items: dict[str, dict]) -> str:
     return ', '.join(f'{k}{v["payload"] if v["payload"] and not v["payload"].startswith("{") else ""}' for k, v in items.items()) or '(none)'
 
 
+def fmt_shape(items: dict[str, dict], keys: set[str]) -> str:
+    return ', '.join(f'{k}{items[k]["payload"]}' for k in sorted(keys)) or '(none)'
+
+
 def compare(label: str, pinned: dict, head: dict) -> tuple[bool, list[str]]:
     lines = []
     drift = False
@@ -329,7 +377,7 @@ def compare(label: str, pinned: dict, head: dict) -> tuple[bool, list[str]]:
             pairs = renamed_pairs(removed, added)
             lines.append('    renamed-looking: ' + ('; '.join(f'{r} -> {s} ({why})' for r, s, why in pairs) or '(none)'))
         if changed:
-            lines.append('    shape changed: ' + ', '.join(f'{k}: {a[k]["payload"]} -> {b[k]["payload"]}' for k in sorted(changed)))
+            lines.append('    shape changed (field names or types): ' + ', '.join(f'{k}: {a[k]["payload"]} -> {b[k]["payload"]}' for k in sorted(changed)))
     dep_drift = False
     for dep in DEPS:
         p, h = pinned['deps'].get(dep, '?'), head['deps'].get(dep, '?')
@@ -373,6 +421,17 @@ def run_surface(s: dict, fetch: bool) -> tuple[list[str], str, bool]:
             comparisons.append((b, commit, anc, None, [f'  compared commit: {commit} ({ref}, {role}; {note}): {e}']))
             continue
         drift, lines = compare(f'{b} head', pinned, head)
+        try:
+            stat, files = body_diff_stat(clone, pin, commit, s['bodies'])
+        except ToolFailure as e:
+            comparisons.append((b, commit, anc, None, [f'  compared commit: {commit} ({ref}, {role}; {note}): body diff failed: {e}']))
+            continue
+        lines.append(f"  bodies ({', '.join(s['bodies'])}): git diff --stat {pin[:8]}..{commit[:8]}: " + (stat if stat else 'identical'))
+        for f in files[:40]:
+            lines.append(f'    {f.strip()}')
+        if len(files) > 40:
+            lines.append(f'    ... {len(files) - 40} more files')
+        drift = drift or bool(stat)
         header = f'  compared commit: {commit} ({ref}, {role}; {note}); pin is {"an ancestor" if anc else "NOT an ancestor"}'
         comparisons.append((b, commit, anc, drift, [header, *lines]))
 

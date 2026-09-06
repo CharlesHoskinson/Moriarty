@@ -238,8 +238,12 @@ module ZKIR-OPS
   syntax BytesResult ::= #abOk(ABResult) [function, total]
   rule #abOk(abOk(B, _)) => bOk(B)
   rule #abOk(abErr(S)) => bErr(S)
-  // abOk(bytes, remaining fields)
-  syntax ABResult ::= abOk(Bytes, List) | abErr(String)
+  rule #abOk(abRange(_)) => bErr("Inputs did not match alignment")   // preprocess reports the range failure with the arity text
+  // abOk(bytes, remaining fields); abErr: an arity failure (too few elements,
+  // a compress atom, a bad option selector); abRange: an element exceeds the
+  // byte range of its atom, which the in-circuit decoder (ZKIR-CONSTRAINTS
+  // alignedBytesCircuit) reports apart from the arity failures
+  syntax ABResult ::= abOk(Bytes, List) | abErr(String) | abRange(String)
   syntax ABResult ::= #alignedBytes(Segments, List, Bytes) [function, total]
   rule #alignedBytes(.Segments, Fs, Acc) => abOk(Acc, Fs)
   rule #alignedBytes((atom(fieldAtom()), Segs), ListItem(F) Fs, Acc) => #alignedBytes(Segs, Fs, Acc +Bytes Int2Bytes(32, F, LE))
@@ -250,9 +254,10 @@ module ZKIR-OPS
     requires fitsBits(Sel, 16)
   rule #alignedBytes((option(_), _), ListItem(Sel) _, _) => abErr("Inputs did not match alignment") requires notBool fitsBits(Sel, 16)
   rule #alignedBytes((option(_), _), .List, _) => abErr("Inputs did not match alignment")
-  syntax ABResult ::= #alignedBytesAtom(Int, Segments, List, Bytes, BytesResult) [function, total]
-  rule #alignedBytesAtom(_, _, _, _, bErr(S)) => abErr(S)
-  rule #alignedBytesAtom(N, Segs, Fs, Acc, bOk(B)) => #alignedBytes(Segs, range(Fs, (N +Int 30) /Int 31, 0), Acc +Bytes B)
+  syntax ABResult ::= #alignedBytesAtom(Int, Segments, List, Bytes, FieldReprResult) [function, total]
+  rule #alignedBytesAtom(_, _, _, _, frErr(S)) => abErr(S)
+  rule #alignedBytesAtom(_, _, _, _, frRange(S)) => abRange(S)
+  rule #alignedBytesAtom(N, Segs, Fs, Acc, frOk(B)) => #alignedBytes(Segs, range(Fs, (N +Int 30) /Int 31, 0), Acc +Bytes B)
   // option (Value::repr_traverse): chosen = Alts[Sel]; parse it, check zero
   // padding of (maxFieldLen(Alts) - fieldLen(chosen)) elements; bytes = the
   // selector as a 2-byte little-endian atom ++ chosenBytes ++
@@ -264,6 +269,7 @@ module ZKIR-OPS
     requires Sel <Int lenAlignments(Alts)
   syntax ABResult ::= #alignedOption2(ABResult, Alignments, Int, Segments, Bytes) [function, total]
   rule #alignedOption2(abErr(S), _, _, _, _) => abErr(S)
+  rule #alignedOption2(abRange(S), _, _, _, _) => abRange(S)
   rule #alignedOption2(abOk(B, Rest), Alts, Sel, Segs, Acc)
     => #alignedOption3(#zeroPrefix(Rest, maxFieldLen(Alts) -Int fieldLenA(nthAlignment(Alts, Sel))),
                        Acc +Bytes Int2Bytes(2, Sel, LE) +Bytes padRightBytes(B, maxBinLen(Alts), 0), Segs)
@@ -311,25 +317,30 @@ module ZKIR-OPS
 
   // bytes_from_field_repr(repr, n): stray = n mod 31 bytes come first (from
   // repr[0]), then the 31-byte chunks in reverse order of the elements.
-  syntax BytesResult ::= bytesFromFieldRepr(List, Int) [function, total]
-  rule bytesFromFieldRepr(Fs, N) => bErr("Inputs did not match alignment") requires size(Fs) <Int (N +Int 30) /Int 31
+  // frErr: too few elements; frRange: an element does not fit the byte width
+  // of its chunk (the crate's error text is the same for both, the in-circuit
+  // decoder's outcome is not).
+  syntax FieldReprResult ::= frOk(Bytes) | frErr(String) | frRange(String)
+  syntax FieldReprResult ::= bytesFromFieldRepr(List, Int) [function, total]
+  rule bytesFromFieldRepr(Fs, N) => frErr("Inputs did not match alignment") requires size(Fs) <Int (N +Int 30) /Int 31
   rule bytesFromFieldRepr(Fs, N) => #bffr(Fs, N, N modInt 31, N /Int 31) requires size(Fs) >=Int (N +Int 30) /Int 31
-  syntax BytesResult ::= #bffr(List, Int, Int, Int) [function, total]   // (fields, n, stray, chunks)
+  syntax FieldReprResult ::= #bffr(List, Int, Int, Int) [function, total]   // (fields, n, stray, chunks)
   rule #bffr(Fs, N, 0, Chunks) => #bffrChunks(Fs, Chunks, 0, .Bytes)
   rule #bffr(ListItem(F) Fs, N, Stray, Chunks) => #bffrStray(#bffrChunks(Fs, Chunks, 0, .Bytes), F, Stray)
     requires Stray >Int 0 andBool fitsBits(F, 8 *Int Stray)
-  rule #bffr(ListItem(F) _, _, Stray, _) => bErr("Inputs did not match alignment")
+  rule #bffr(ListItem(F) _, _, Stray, _) => frRange("a field element exceeds the " +String Int2String(Stray) +String "-byte stray atom of its alignment")
     requires Stray >Int 0 andBool notBool fitsBits(F, 8 *Int Stray)
-  rule #bffr(.List, _, Stray, _) => bErr("Inputs did not match alignment") requires Stray >Int 0
-  syntax BytesResult ::= #bffrStray(BytesResult, Int, Int) [function, total]
-  rule #bffrStray(bErr(S), _, _) => bErr(S)
-  rule #bffrStray(bOk(B), F, Stray) => bOk(B +Bytes Int2Bytes(Stray, F, LE))
+  rule #bffr(.List, _, Stray, _) => frErr("Inputs did not match alignment") requires Stray >Int 0
+  syntax FieldReprResult ::= #bffrStray(FieldReprResult, Int, Int) [function, total]
+  rule #bffrStray(frErr(S), _, _) => frErr(S)
+  rule #bffrStray(frRange(S), _, _) => frRange(S)
+  rule #bffrStray(frOk(B), F, Stray) => frOk(B +Bytes Int2Bytes(Stray, F, LE))
   // chunk i takes fields[chunks - 1 - i]
-  syntax BytesResult ::= #bffrChunks(List, Int, Int, Bytes) [function, total]
-  rule #bffrChunks(_, Chunks, I, Acc) => bOk(Acc) requires I >=Int Chunks
+  syntax FieldReprResult ::= #bffrChunks(List, Int, Int, Bytes) [function, total]
+  rule #bffrChunks(_, Chunks, I, Acc) => frOk(Acc) requires I >=Int Chunks
   rule #bffrChunks(Fs, Chunks, I, Acc) => #bffrChunks(Fs, Chunks, I +Int 1, Acc +Bytes Int2Bytes(31, {Fs[Chunks -Int 1 -Int I]}:>Int, LE))
     requires I <Int Chunks andBool fitsBits({Fs[Chunks -Int 1 -Int I]}:>Int, 248)
-  rule #bffrChunks(Fs, Chunks, I, _) => bErr("Inputs did not match alignment")
+  rule #bffrChunks(Fs, Chunks, I, _) => frRange("a field element exceeds the 31-byte chunk of its alignment atom")
     requires I <Int Chunks andBool notBool fitsBits({Fs[Chunks -Int 1 -Int I]}:>Int, 248)
 
   // --- bits ---------------------------------------------------------------------------
