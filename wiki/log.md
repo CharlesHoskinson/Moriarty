@@ -733,3 +733,15 @@ archive. The next A4 run-phase and A5 no-flatten diagnostics remain
 specified-only. Updated roadmap, index and research journal keep native
 feasibility, final115, H1 and Council open. No model or native command changed
 in this documentation update.
+
+
+## [2026-09-06] experiment | No-flatten tiny gate corrected from retained data
+
+CLM-0179 records the one tiny compiler execution at experimental `2a33b45`,
+the preserved failed generic-type expectation, its pinned-source diagnosis and
+separate independently reviewed data-only correction. Root admits only the
+corrected tiny capability; the original failed intake remains unchanged and
+no native retry occurred. The full contrast remains unexecuted pending its
+separate supplement. Failed case014 preservation is committed at `8541405`;
+the A4 run-phase design at `85cc805` still needs executed controls. H1, full
+A4/A5, Council and integration remain open.

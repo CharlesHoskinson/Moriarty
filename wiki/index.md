@@ -100,8 +100,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
 - [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — A0–A3 locally accepted;
   A4 checker/producer units, the amended17+97 preliminary gate and final-source
   parser admitted; case014 export failed with heap exhaustion and no ITF.
-  The compiler diagnostic timed out after entering compile. Separate A4/A5
-  diagnostics are specified-only; H1, full A4–A7 and Council remain open.
+  The compiler diagnostic timed out after entering compile. The no-flatten
+  tiny control completed; its original failed type predicate is preserved and
+  a reviewed correction admits the retained tiny data. The full contrast and
+  A4 run-phase controls remain unexecuted; H1, full A4–A7 and Council stay open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

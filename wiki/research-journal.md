@@ -2119,3 +2119,58 @@ invocations, specified-only for the proposed next diagnostics; confidence high
 for terminal observations with the stated limits; lifecycle S3 experimental
 branch, S2 for next designs. Native feasibility, final115, H1, bounded solver
 verification, full A4/A5, Council and integration remain open.
+
+
+## CLM-0179 — No-flatten tiny observation and corrected retained-data gate
+
+Repository observation: experimental `8541405` preserves all 325 original
+members of the failed case014 package under
+`evidence/s02-candidate-a-completion/a4/pilot014-heap-failure/`, archive SHA256
+`31023b784fa91b797bd604269cd9e09f4def7d11f8cb8d9075999f2a8c8dcec1`.
+Independent and root package audits admit failed preservation only. The
+run-phase design is adopted at `85cc805`; the exact plan remains unexecuted
+while its parent environment is made explicit.
+
+Experiment observation: the no-flatten tiny control ran once at experimental
+`2a33b45f647c4ada426ff840bc9033cbbe913bfa`, under the reviewed original plan
+SHA256 `79325d985b5f58a62a5f490b0ac51f60c873afcb36775be3d95e372d144b2260`.
+Compiler, recorder and actual outer exited zero; cleanup was unforced and
+complete. Original stdout is 13,904 bytes, SHA256
+`4638a8d77df74903912b7e023375116b5fdcbf62ea45cfd42246a8b9b1955ff2`.
+The strict original intake failed its `Concrete=Box[int]` predicate and remains
+unchanged at SHA256
+`2c39b46364d588dbe78f1505a657f5df003051b8a59ad67c411193becd44a988`.
+Independent and root review first admitted only that failed gate's evidence.
+
+Source fact: the pinned analyzer resolves type applications before compilation
+reaches the flatten flag. Its retained `Concrete` is a record whose `key`
+field remains the type constant `Key`; the variable annotation remains
+`Concrete`. The original expectation of a surviving generic application was
+incorrect. The separate diagnosis and correction proposal has SHA256
+`6d8a52ea54b5a70d1e2d6f0bd7bc72aa298c3139fc96af34febe31ed7a5703d0`.
+
+Experiment observation: the independently reviewed data-only recipe ran once
+in actual tool result f108b4/0. It changed the concrete-type predicate, tightened
+the comparison with the existing flattened output and wrote a distinct intake;
+all other original predicates and evidence fields remained unchanged. Corrected
+intake SHA256 is
+`f2d73ee627dd4025b7038149f2a5b99f78abb29a6e55fba44f1f4d8d121ed4aa`.
+Independent review SHA256
+`82ec3e4aa6aa0ce84c18eb7d2c8df25255076e46f97b67ea6fde96b4bbeef5c4`
+validated the exact correction and 746 retained original pins. Root's separate
+admission SHA256
+`09eeff84e1f750b4ffae73dc44173aae058a5343f3bf64801be4480ab848e0ac`
+admits corrected tiny capability only. It binds 284 files, including all 254
+native originals. No compiler rerun occurred; the original tiny admission
+path remains absent. Originals remain in the experimental worktree under
+`.superpowers/sdd/a5-no-flatten-diagnostic-20260906/` and its hash-bound sibling
+review files. Durable packaging and a separate reviewed full dispatch
+supplement are pending; no full no-flatten invocation has run.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope failed-export preservation and corrected retained tiny capability;
+observed date 2026-09-06 UTC; reproduction reproduced for the original tiny
+invocation and data-only correction, specified-only for the full contrast and
+A4 run-phase controls; confidence high within those evidence limits; lifecycle
+S3 experimental branch, S2 for unexecuted plans. H1, paired compilation, solver
+verification, canonical A4 exports, final115, Council and integration remain open.

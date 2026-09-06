@@ -150,7 +150,10 @@ The next case014 native export failed with JavaScript heap exhaustion: Node
 exited -6, recorder and actual outer exited 134, and no ITF was produced.
 Cleanup completed without an outer timeout. Independent and root intake admit
 failed evidence preservation. Its canonical stage is consumed; case044 and
-all78 remain unexecuted. A separate run-phase diagnostic design is under review.
+all78 remain unexecuted. Experimental `8541405` preserves the reviewed
+325-member failed-export package under `a4/pilot014-heap-failure/`. The
+run-phase diagnostic design is adopted at `85cc805`; its exact implementation
+plan is undergoing a parent-environment correction before execution.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -212,9 +215,16 @@ paired compilation remain unresolved. The original diagnostic is retained at
 `.superpowers/sdd/a5-compiler-phase-diagnostic-20260906/` in the experimental
 worktree. Experimental `4006244885c7cf34562fe54cbb76856142b0d244`
 preserves the independently reviewed 282-member archive under
-`a5/compile-phase-diagnostic-preservation/`. A separate reviewed design proposes
-the existing `--flatten=false` route with a tiny control before one full
-invocation; its exact implementation plan remains under review and unexecuted.
+`a5/compile-phase-diagnostic-preservation/`. The reviewed no-flatten plan at
+`2a33b45` then executed its one tiny control. Compiler, recorder and outer
+exited zero, but the original intake failed an incorrect `Concrete=Box[int]`
+expectation. Pinned analyzer source shows type applications are resolved before
+the flatten flag is consulted. A separately reviewed data-only correction
+accepted the retained record with `Key` still a type constant and `box` still
+annotated `Concrete`. The original failed intake is unchanged; no native retry
+occurred. Root admitted only the corrected tiny capability in admission
+`09eeff84e1f750b4ffae73dc44173aae058a5343f3bf64801be4480ab848e0ac`.
+The separate full-run supplement is under review and the full call is unexecuted.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
