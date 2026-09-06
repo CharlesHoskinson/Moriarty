@@ -109,8 +109,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   pairs and their evidence are independently admitted. The one full diagnostic
   failed with heap exhaustion after entering `runSimulator`. The bounded
   retained-output inspection failed an import-order predicate and resource
-  report parsing; both failures are preserved. Narrow source corrections
-  are under review. H1, full A4–A7 and Council stay open.
+  report parsing; both failures are preserved. A separately reviewed correction
+  passed the retained-output structural inspection and has independent/root
+  admission. A4 literal wrappers are being implemented. H1, full A4–A7 and
+  Council stay open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

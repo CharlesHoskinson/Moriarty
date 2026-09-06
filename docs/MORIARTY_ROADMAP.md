@@ -247,8 +247,12 @@ extension, the one 256 MiB inspection decoded the output but failed the
 source-order import predicate. Its multiline command also prevented RH002
 from parsing the timing report; data exit2 and incomplete resource capture
 are preserved and independently/root admitted as failures. A separate
-validator-order and command-envelope correction is under source review.
-See CLM-0182 in the research journal for current evidence pins.
+validator-order and command-envelope correction then passed its one bounded
+inspection: all original structural predicates, complete resource capture,
+zero child/outer exits and unchanged before/after inputs. Independent and
+root admission accept retained output structure only. Both earlier failed
+intakes remain immutable. See CLM-0183 in the research journal for current
+evidence pins; paired flattened compilation and bounded verification remain open.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

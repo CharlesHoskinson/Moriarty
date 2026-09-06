@@ -781,3 +781,11 @@ and the A5 retained256 import-order failure with incomplete timing capture.
 Both original failed results have independent and root preservation admission.
 Literal A4 wrappers and a bounded A5 validator/command correction are under
 source review. Full A4/A5 acceptance remains open.
+
+## [2026-09-06] experiment | Corrected retained-output structure admitted
+
+CLM-0183 records the one successful bounded A5 inspection with complete
+resource capture and independent/root admission. Original failed intakes remain
+immutable. The A4 source freeze ended after the unchanged final snapshot;
+literal wrappers and the necessary exporter indexing fix are in implementation.
+Paired compilation, bounded verification and full A4 exports remain open.

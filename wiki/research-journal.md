@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T06:18:39Z
+updated_at: 2026-09-06T06:43:55Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2324,3 +2324,41 @@ date2026-09-06 UTC; reproduction reproduced for preservation audits,
 specified-only for remedies; confidence high within those limits; lifecycle
 S3 experimental evidence and S2 remedies. Full A4 exports, final115, A5
 bounded verification/H1 and Council remain open.
+
+## CLM-0183 — Corrected retained-output inspection admitted
+
+Experiment observation: the separate A5 retained-order256 inspection completed
+once with authentic terminal f7e609/0. The finite correction compares the37
+original declarations in numeric source-ID order and preserves the final3
+generated selections. All original structural predicates passed: exact13
+imports,40 declarations, full schema/ID checks, PilotState annotations and
+generated-selection bodies. No complete operator-body equivalence is claimed.
+The single-line bootstrap also allowed complete original RH002 resource capture.
+Child and outer exits were zero, with unforced complete cleanup. The before
+and after input maps are identical at SHA256
+`aa2ba14eff5e04f4b0e6c3507558108902b9aaddbd44960c06c5a4d5fa9afe55`.
+
+The unchanged compiler output is199,868,611 bytes, SHA256
+`ebd75615ca4f89ba5cb47c7a535206e990ef9162d53530b35f7c3a95b691cb8d`.
+The genuine corrected intake is SHA256
+`63ab5fe7eed460635854fa193e68d2a5abde6c6ae5ff9c59d16884b2111e8945`.
+Independent review `35c9e3182b5fe06376791264f71b9c095b2959c3a17e789f962bbfd1f0258361`
+and root admission `e2cf3fec6546e57aea5e0206c7757bfa3f5881f39bd7f7216916230a74a7a494`
+(actual0e4a78/0) admit retained altered-command structure only. Originals are
+under experimental `.superpowers/sdd/a5-no-flatten-retained-order-256-20260906/`.
+The original128/256 failures remain unchanged; the compiler was not rerun.
+
+Repository observation: root released the A4 source freeze only after the
+successful corrected-data after capture. The adopted literal-wrapper plan
+`c515e02bf80bcf3c620c9fbb570d9d9d834ba3256b786bb37bd538f436ae56b7`
+is in implementation. Root also reproduced a necessary exporter fix: consuming
+raw_events indexed a generator directly and raised TypeError before validating
+the trace (actual19cb3b/1). The reviewed one-line list conversion and its direct
+regression are part of that source change. No new canonical export is admitted.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope one bounded retained-output inspection; observed date2026-09-06 UTC;
+reproduction reproduced for original execution and independent preservation
+review, partially reproduced for A4 implementation; confidence high within
+those limits; lifecycle S3 experimental branch. Paired flattened compilation,
+solver/H1 evidence, full A4 exports/tests and A4/A5 completion remain open.
