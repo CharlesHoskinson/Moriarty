@@ -755,3 +755,13 @@ and root review admit failed preservation only; no oversized JSON parse or
 native retry is credited. Exact A4 observer plan/source evidence is committed
 at `219125c`; all seven isolated controls produced expected results and await
 independent mock admission. Full A4/A5, Council and integration remain open.
+
+## [2026-09-05] plan | Third iteration of the ZKIR K semantics
+
+Plan for making the definition the compilation target of a Moriarty
+specification: a circuit oracle under the halo2 MockProver, an explicit
+modelled witness space with a soundness statement, a three-tier target
+contract, real transaction contexts, and a symbolic track off the critical
+path. Two independent critiques recorded with the draft under
+`experiments/zkir-k/plan-iter3/`.
+
