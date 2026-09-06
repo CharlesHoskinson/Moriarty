@@ -2174,3 +2174,58 @@ invocation and data-only correction, specified-only for the full contrast and
 A4 run-phase controls; confidence high within those evidence limits; lifecycle
 S3 experimental branch, S2 for unexecuted plans. H1, paired compilation, solver
 verification, canonical A4 exports, final115, Council and integration remain open.
+
+
+## CLM-0180 — Full no-flatten compile produced oversized output
+
+Experiment observation: under the independently reviewed full supplement at
+experimental `a2a4b52a7dac09fd5f95e9531e0b3587faa50459`, the one full
+no-flatten compiler completed. Compiler, integrated recorder, RH002 and actual
+outer exits are zero. Cleanup was complete and unforced, with no timeout or
+signals. All 31 original native responses are preserved, ending at actual
+14ac9b/0. The unchanged command used Node old-space4096MiB and the existing
+setup-inclusive900-second RH002 bound; no native retry occurred.
+
+Original stdout is 199,868,611 bytes, SHA256
+`ebd75615ca4f89ba5cb47c7a535206e990ef9162d53530b35f7c3a95b691cb8d`.
+Original full NF005 intake exited2 solely at its128-MiB content limit, before
+JSON structural acceptance. It remains immutable at SHA256
+`66a4b45f3681592d755c4f85e20a055aa60c142a9f67c6958e86dd1301405f46`.
+Neither exit0 nor a complete output hash establishes schema or solver readiness.
+
+Independent review SHA256
+`c61259897e4aef3f17b16781c913f6d67de6de6eeaaf7c3aad72b99f6f75d0f3`
+checked 1,090 originals, both518-member source archives, four121-source
+snapshots, all8,102 runtime file records and bytes, exact command/environment,
+all native/data transports and cleanup. Oversized stdout was streamed for its
+hash and never JSON-parsed. Independent index SHA256 is
+`c5050c72c3b5f41267fb8102fcc2e66624d5adbbc007d24050948875801875c4`;
+actual audit8fd6bc/0 is preserved in tool receipt
+`bd7cb7fc77494853434b6761ad57a3a78b07ff3fd0cd1022f7d43f3ad2246c38`.
+Root executed unchanged NF006 at49554c/0 and separately admitted failed
+preservation only, SHA256
+`a1e566d6737e18ea6c47249fa7c3bb8ead2c5becd64c16455a47c33b91f2f6b8`.
+
+Whole recorder/descendant resources are4:59.84 elapsed and3,166,104KiB maximum
+RSS. The integrated recorder's native interval is295.565673seconds, a distinct
+scope. Node old-space is not a total RSS cap. Endpoint agreement is endpoint
+evidence, not continuous monitoring. Originals remain under experimental
+`.superpowers/sdd/a5-no-flatten-diagnostic-20260906/` and
+`.superpowers/sdd/a4-producer-receipts/a5-noflat-full-20260906/` with the named
+independent sibling records. Durable full packaging remains pending.
+
+Repository and experiment observation: experimental `219125c` commits the
+reviewed A4 run-phase exact plan, its explicit parent-environment correction
+and actual materialized-source review. The seven isolated controls ran once:
+identity0 and six diagnostic fault74 exits, each with a passing expected-result
+intake and settled cleanup. Independent mock admission remains pending; no
+paired native control or full observed case014 run has occurred.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope one altered-command execution and failed-size-gate preservation, plus
+finite observer controls; observed date2026-09-06 UTC; reproduction reproduced
+for those invocations, specified-only for a separate larger retained-data
+inspection; confidence high within the stated original evidence limits;
+lifecycle S3 experimental branch, S2 for the next inspection design. Original
+size-gate failure remains failed. H1, paired compilation, solver verification,
+canonical A4 exports, final115, Council and integration stay open.

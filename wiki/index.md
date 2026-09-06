@@ -102,8 +102,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   parser admitted; case014 export failed with heap exhaustion and no ITF.
   The compiler diagnostic timed out after entering compile. The no-flatten
   tiny control completed; its original failed type predicate is preserved and
-  a reviewed correction admits the retained tiny data. The full contrast and
-  A4 run-phase controls remain unexecuted; H1, full A4–A7 and Council stay open.
+  a reviewed correction admits the retained tiny data. The full contrast
+  compiled but exceeded its JSON intake limit. Seven A4 observer controls
+  produced expected results; paired native controls and full diagnostics remain
+  pending. H1, full A4–A7 and Council stay open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

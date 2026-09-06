@@ -745,3 +745,13 @@ no native retry occurred. The full contrast remains unexecuted pending its
 separate supplement. Failed case014 preservation is committed at `8541405`;
 the A4 run-phase design at `85cc805` still needs executed controls. H1, full
 A4/A5, Council and integration remain open.
+
+
+## [2026-09-06] experiment | Full compiler output preserved beyond intake limit
+
+CLM-0180 records the one full no-flatten compiler zero exit at experimental
+`a2a4b52`,199,868,611-byte output and original128-MiB intake failure. Independent
+and root review admit failed preservation only; no oversized JSON parse or
+native retry is credited. Exact A4 observer plan/source evidence is committed
+at `219125c`; all seven isolated controls produced expected results and await
+independent mock admission. Full A4/A5, Council and integration remain open.

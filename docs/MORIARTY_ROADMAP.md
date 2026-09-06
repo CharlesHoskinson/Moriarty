@@ -152,8 +152,11 @@ Cleanup completed without an outer timeout. Independent and root intake admit
 failed evidence preservation. Its canonical stage is consumed; case044 and
 all78 remain unexecuted. Experimental `8541405` preserves the reviewed
 325-member failed-export package under `a4/pilot014-heap-failure/`. The
-run-phase diagnostic design is adopted at `85cc805`; its exact implementation
-plan is undergoing a parent-environment correction before execution.
+run-phase design is adopted at `85cc805`; exact plan `219125c` includes the
+reviewed parent-environment correction and materialized-source review. All
+seven isolated observer controls have produced their expected outcomes, with
+identity exit0 and six fault exits74. Independent mock review is pending;
+the paired native controls and full diagnostic have not run.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -224,7 +227,12 @@ accepted the retained record with `Key` still a type constant and `box` still
 annotated `Concrete`. The original failed intake is unchanged; no native retry
 occurred. Root admitted only the corrected tiny capability in admission
 `09eeff84e1f750b4ffae73dc44173aae058a5343f3bf64801be4480ab848e0ac`.
-The separate full-run supplement is under review and the full call is unexecuted.
+The separate full supplement is committed at `a2a4b52`. Its one full compile
+completed with compiler, recorder and outer zero exits and unforced cleanup.
+The retained output is 199,868,611 bytes, exceeding the original 128 MiB intake
+limit; original intake exited2 before JSON structure checks. Independent and
+root review admit failed diagnostic preservation only. A separate bounded
+retained-data inspection is being designed; no larger-input parse has run.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
