@@ -163,8 +163,12 @@ diagnostic at `39ebe4254c16aa9318c0fa6fab47a6b6ff994a35` ended with
 heap exhaustion and no ITF: Node -6, recorder and outer 134. The observed
 public boundary is entry into `runSimulator`, after successful typecheck;
 the internal failing operation is unresolved. Independent and root review
-admit failed diagnostic preservation. A literal-case wrapper remedy is
-under source review; canonical export acceptance remains open.
+admit failed diagnostic preservation. The literal-case wrapper remedy is
+implemented under a frozen 121-file source map. Its fresh aggregate parse,
+all78 binding comparison, 58 exporter regressions and aggregate native
+typecheck have passed their scoped checks and independent review. The remaining
+native source suites and canonical export acceptance remain open; CLM-0184
+records the original evidence and limits.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -252,7 +256,10 @@ inspection: all original structural predicates, complete resource capture,
 zero child/outer exits and unchanged before/after inputs. Independent and
 root admission accept retained output structure only. Both earlier failed
 intakes remain immutable. See CLM-0183 in the research journal for current
-evidence pins; paired flattened compilation and bounded verification remain open.
+evidence pins. A fresh 24-file compiler view with symmetric removal of13 unused
+swap helpers has passed actual-source and materialized-view review. This is
+copied-source preservation only; its native stages, paired flattened compilation
+and bounded verification remain open. See CLM-0184.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

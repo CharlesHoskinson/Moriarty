@@ -41,6 +41,9 @@ will grow by merging evidence into durable topic pages.
   limitations, both offline Apalache heap failures, and the candidate-specific
   signing/verification/commit boundary under implementation, and the reviewed
   native Candidate B design with explicit stranded-escrow and clock boundaries.
+- [Candidate A continuation evidence](research-journal.md#clm-0184--literal-wrapper-source-checks-and-copied-compiler-view) —
+  admitted A4 parse, binding and aggregate typecheck results, plus the prepared
+  A5 compiler view; canonical exports and bounded verification remain open.
 
 ## K Framework and ZKIR semantics
 

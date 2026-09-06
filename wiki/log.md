@@ -789,3 +789,11 @@ resource capture and independent/root admission. Original failed intakes remain
 immutable. The A4 source freeze ended after the unchanged final snapshot;
 literal wrappers and the necessary exporter indexing fix are in implementation.
 Paired compilation, bounded verification and full A4 exports remain open.
+
+## [2026-09-06] experiment | Literal source checks and copied compiler view
+
+CLM-0184 records the successful A4 parse, all78 binding comparison and aggregate
+native typecheck, with scoped independent reviews. The A5 unused-helper copied
+view also passed actual-source and materialized-view review. These are source
+and preparation gates; remaining native suites, canonical exports, paired
+compilation and bounded verification remain open.

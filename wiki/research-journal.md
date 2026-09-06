@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T06:43:55Z
+updated_at: 2026-09-06T07:33:49Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2362,3 +2362,48 @@ reproduction reproduced for original execution and independent preservation
 review, partially reproduced for A4 implementation; confidence high within
 those limits; lifecycle S3 experimental branch. Paired flattened compilation,
 solver/H1 evidence, full A4 exports/tests and A4/A5 completion remain open.
+
+## CLM-0184 — Literal-wrapper source checks and copied compiler view
+
+Experiment observation: A4's frozen literal-wrapper map
+`968076cf4514b07ce153538c82b5d9339748655523797a79e33defdc8c0a45f8`
+contains121 files. The one new aggregate parse ended at34053d/0 and produced
+18,729,611 bytes of IR. The bounded comparison ended at8990d8/0 and checked
+all78 literals,98 modules,1,534 declarations and16,514 resolved references
+against the admitted original IR. Separate capture and binding/patch reviews
+passed. The fresh non-package exporter regressions passed58 tests; four package
+nodes remain deferred, and all174 original node identities remain in177.
+
+The aggregate native typecheck ended at e841a5/0 after620.306 seconds, within
+the unchanged900-second limit. Native and recorder exits were zero, streams
+empty, all source/runtime pins stable, and cleanup complete and unforced.
+Root intake d5d602/0 and independent review
+`3b23a9b4c7fde5b65314ec50311de2e463ed7aac552d307937447df7b8442926`
+admit that source check. The original12 transport responses are retained under
+experimental `.superpowers/sdd/a4-literal-v1-20260906/transport/literal-v1-typecheck/`.
+The first root intake's snapshot-path error339fff/1 remains preserved; no native
+retry occurred. Other required native source suites and joint Gate1 admission
+remain open. No canonical ITF or all78 export acceptance follows from these results.
+
+Repository observation: A5's unused-helper view was prepared once at844074/0.
+Its24-file manifest is
+`f8387d7848ab38c447c5862f774135305821666744e1a84694c394636b6f74f0`.
+The actual three scripts match the independently reviewed derivation. The view
+preserves the two prior AuthorityKey imports and removes the same13 unused
+declarations,3,835 bytes per swap copy. All other bytes,30 original source pins,
+121 A4 source pins and the complete copied import closure remain exact.
+Independent materialized-view review
+`312a4292e61f94ab083a96c323c8c48d3d15550856f983498b8e3252ff430b92`
+and root admission
+`c8dda24efb006253e23c9dc7e88942c703b89f6bc022eb2d817bc7b8d5a1a124`
+admit copied preparation only. Originals are under experimental
+`.superpowers/sdd/a5-factoring-receipts/pilot-unused-helper-view/`.
+Its native typecheck, prefix/witness checks, paired default compilation,
+size comparison and positive/negative offline checker stages remain unexecuted.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope the cited A4 source checks and A5 copied preparation; observed date
+2026-09-06 UTC; reproduction reproduced for the named original runs and scoped
+independent checks; confidence high within those limits; lifecycle S3
+experimental branch. Final full suites, package controls, A4/A5 acceptance and
+H1 remain open.
