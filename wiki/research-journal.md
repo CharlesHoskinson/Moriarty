@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-05T23:52:00Z
+updated_at: 2026-09-06T01:07:01Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -1959,3 +1959,62 @@ scope bounded compiler diagnosis; observed date 2026-09-05 UTC; reproduction
 reproduced for the four frontend commands and receipt intake; confidence high
 for those observations; lifecycle S3 experimental branch. Actual-model repair,
 paired compilation-size review, A4/A5, Council and integration remain open.
+
+## CLM-0176 — Full compilation-view timeout and individual A4 recovery
+
+Experiment observation: the reviewed full funding-pilot view uses source
+dispatch `43f33721da7a3bfb11dd1a91f1f548d5110ab93c`. Its 24 copied modules
+preserve every semantic body, with two direct `AuthorityKey` imports as the
+only changes. Recursive typecheck, the quantified test covering all 22 prefix
+pairs and both 100-sample runs passed. All eight witnesses were positive on
+each side. Root independently checked the original outputs, terminal exits
+and every member of the five source archives against their recorded pins.
+
+Original compilation timed out at the unchanged 900-second limit with the
+4,096-MiB heap settings. Its time-wrapped child exited -15; the helper returned
+124 and the actual outer wrapper exited 1. Generated JSON, stderr and the
+GNU-time resource file are empty. The helper's 901.218-second duration is not
+a completed GNU-time frontend measurement. No maximum RSS, successful alias
+resolution or reached compiler phase is inferred. Factored compilation and
+all solver commands remain unperformed; H1 and the paired-size gate remain
+unresolved. The original handoff SHA256 is
+`ac3c3174e191f3f51302b409e2cf15c85a418d0aa5fab921207644e50813e8c2`.
+Experimental commit `bcdd627afd89d695f261ce850b11cff0ef1491fe` preserves the
+timeout at `evidence/s02-candidate-a-completion/a5/compilation-view-timeout/`.
+Its 91 original files form a lossless archive in ten parts, SHA256
+`9cd6ff42940804ab9aa68d0e90bc9f5faec28993ad1e1ed186a48f19264dc133`.
+The first archival audit failed to find two historical pins in a nested source
+archive. Its original source/error remain preserved; corrected traversal and
+the final audit with optimization explicitly disabled passed. Root and an
+independent reviewer checked the complete package.
+
+Repository observation: A4 recovery preserves the interrupted parent's unknown
+exit and its partial eighteenth child. Root and a separate reviewer admitted
+exactly 17 original children, binding archived source, exact argv, reports and
+authentic zero exits. Root independently rehashed 318 retained files totaling
+9,795,796,111 bytes and all 46 source and 3,329 runtime pins. These are delayed
+endpoint observations, not historical parent after-pins. Inference: the pinned
+worker's mandatory assertion-contained raw-file creation, immediately followed
+by an unconditional digest in a new directory, establishes assertion execution
+for its successful children under the stated source/runtime and sole-writer
+assumptions. No historical optimization flags are supplied.
+
+The new recovery recorder passed four real process controls covering normal
+completion, failure after launch, a surviving descendant and interruption.
+Forced cleanup remains ineligible even when a leader exits zero. The retained
+17 admission is preserved at experimental
+`evidence/s02-candidate-a-completion/a4/pre-native-recovery-admission/`, archive
+SHA256 `26f922b2c53bafb8a4c7554698fffd6784a174270cabe13669f800563183c2ea`.
+The same `bcdd627` evidence commit preserves this package.
+Its standalone audit and independent package review passed. The exact remaining
+97 preliminary nodes have started in fresh paths after A5 native execution
+ended. Their terminal result, the amended 114-node aggregate, actual native
+package and final 115-node run remain pending.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope bounded frontend experiment and individual preliminary-test recovery;
+observed date 2026-09-06 UTC; reproduction reproduced for the four passing
+pilot gates, compilation timeout, lifecycle controls and retained admission;
+confidence high for those observations with the stated recovery limitations;
+lifecycle S3 experimental branch. Full A4/A5, Council and integration remain
+open. No timeout is represented as a model-checker result.

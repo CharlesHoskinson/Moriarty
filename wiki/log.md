@@ -612,3 +612,15 @@ successful control bytes are archived and independently reviewed. No actual
 pilot remedy or checker run occurred. The roadmap now names the compilation
 view and paired-input gate. A4 Task6 terminal ownership remains unresolved;
 its old session was not restarted. Full A4/A5 and the XML program remain open.
+
+### 2026-09-06 — Full pilot-view timeout and A4 retained-child admission
+
+CLM-0176 records the frozen full view's passing typecheck, 22-prefix test and
+two complete witness samples, followed by the original compilation's
+900-second timeout. Experimental `bcdd627` preserves both completed evidence
+packages. No generated input, paired size result or solver result
+exists. A4 recovery admits exactly 17 independently recorded original children
+after archived-source review and full retained-file rehash; the old parent
+exit remains unknown. Four process controls and the durable recovery archive
+audit passed. The 97 exact fresh preliminary nodes are running; full A4/A5,
+Council and the XML program remain open.

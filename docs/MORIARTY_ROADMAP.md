@@ -125,9 +125,19 @@ with exact literal-bound driver templates. Correction `5843ff6` changes the nati
 variable-order expectation based on a real toy trace; all 79 tests pass again.
 These are focused synthetic tests, not actual 78-shard package admission.
 The complete Task6 plan `cd06756` is adopted and its substitution RED is recorded.
-The broad pre-export synthetic run has no terminal receipt at resume; its old
-session cannot be reattached here, so completion and process liveness remain
-unknown. Preserve the original run and resolve ownership before native export. Producer
+The interrupted broad pre-export synthetic run retains no parent terminal;
+its original exit remains unknown. Recovery admits exactly 17 individually
+completed child controls after source/archive/argv review and an independent
+rehash of 318 retained files (9,795,796,111 bytes), 46 source pins and 3,329
+runtime pins. This accepts delayed endpoint observations and a source-bound
+inference that the original worker assertions executed; it does not supply
+missing historical flags or parent after-pins. Four real process controls
+validate the new recorder's cleanup and failure handling. The exact remaining
+97 preliminary tests are now running in fresh paths, with the 114-node
+aggregate, native package and final 115-node suite still pending. The retained
+17 admission is preserved at experimental `bcdd627` under
+`a4/pre-native-recovery-admission/`.
+Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
 aggregate recursive typecheck, all12native tests,13Python tests and independently
 audited15-stage original receipts. Its archive retains3230members, including
@@ -157,11 +167,22 @@ checker invocations remain unperformed. Resume intake revalidated the original
 source, five terminal receipts and lossless archive. A separately reviewed tiny
 generic-alias control then reproduced the compile-only failure; adding one
 explicit alias import made that toy compile. This is a frontend diagnosis,
-not a repaired actual pilot or H1 result. The next gate is a reviewed
-compilation view preserving original files and semantic bodies, followed by
-the prescribed validation and paired generated-input/resource inspection
-before either depth-five checker command. Evidence is under experimental
-`a5/pilot-compile-stop/` and `a5/alias-visibility-control/`.
+not a repaired actual pilot or H1 result. The reviewed compilation view at
+source dispatch `43f33721da7a3bfb11dd1a91f1f548d5110ab93c` then preserved
+all 24 copied module bodies with only two direct `AuthorityKey` imports.
+Recursive typecheck, all 22 prefix pairs and both 100-sample/eight-witness runs
+passed. Original compilation hit its unchanged 900-second limit with no JSON:
+the time-wrapped child exited -15, the helper returned timeout 124, and the
+outer wrapper exited 1. GNU-time resources and stderr are empty, so no native
+frontend duration, maximum RSS or reached compiler phase is established by
+those files. The paired-input gate failed; factored compilation and all solver
+commands remain unperformed. H1 is unresolved. The full handoff is preserved;
+any further native experiment needs a separately reviewed diagnostic or remedy.
+The view timeout package is preserved at experimental `bcdd627` under
+`a5/compilation-view-timeout/`; its ten archive parts retain every original
+receipt, including the failed archival-audit attempt and its correction.
+Earlier evidence remains under `a5/pilot-compile-stop/` and
+`a5/alias-visibility-control/`.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.
