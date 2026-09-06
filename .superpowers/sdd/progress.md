@@ -1,5 +1,33 @@
 # Current execution progress
 
+## 2026-09-06 01:42 UTC continuation override
+
+Canonical main session20260905T235952Z-19d524 remains active; facts through103.
+Main09e5cc43d9be4ee00cc4927f6773d278ed626d13 records completed A5 timeout and
+A4 retained17 admission. Experimental4c36aba2fd2fc668aacdd76aa39189fe059d70b5
+commits the independently reviewed next compiler-phase diagnostic design;
+bcdd627afd89d695f261ce850b11cff0ef1491fe commits both durable evidence packages.
+The old A5 compilation-view series is CLOSED: original compilation timed out,
+no generated input, factored compilation absent, H1 unresolved. Do not repeat it.
+New phase diagnostic plan b1df377b is independently reviewed after CP-R1
+sequencing correction. Root adopts CP001 exact source materialization and
+review only; preparation, mocks, tiny baselines and full diagnostic remain
+separate gates. Full diagnostic waits for A4 fresh97 actual terminal.
+
+A4 owner a4_recovery retains the single fresh97 invocation, session68260.
+Do not restart or edit checker/test/runtime/support. Probe current liveness;
+no overall pytest success exists in this dated checkpoint. Collection115 and
+retained17 admission are preserved in original receipts. Any experimental HEAD
+advance since dispatch43f3372 contains evidence/docs only; all explicit frozen
+source/runtime/support bindings must still match at final intake. Original
+interrupted parent remains exit unknown. Fresh97 transport log explicitly
+preserves an intermediate polling metadata gap; original file streams and
+actual terminal remain mandatory. Final115/native package remain open.
+
+This override supersedes earlier instructions below to dispatch the old A5
+view or treat old A4 session5645 as live. Preserve existing test diff,
+Candidate B plan draft and main OpenSpec tasks diff. No Council claim.
+
 ## Active continuation, 2026-09-06 UTC
 
 Main checkpoint session20260905T235952Z-19d524 continues Candidate A.
