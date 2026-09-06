@@ -281,3 +281,381 @@ def test_sharded_unknown_metadata_rejected_before_items(target):
     with pytest.raises(Invalid, match='unexpected stream metadata'):
         next(items)
     assert metadata == {}
+
+# Task6 additions: synthetic files are never native-package evidence.
+from copy import deepcopy
+from pathlib import Path
+import gc
+import json
+import os
+import subprocess
+import sys
+from scripts.a4_carrier import loads
+from scripts.check_s02_candidate_a_integrated import (
+    canonical, digest, array_items, validate_raw_state, validate_raw_metadata,
+    raw_same, check_package, load_manifest, safe_path, shape)
+
+SEMANTIC_MUTANTS = (
+    'optional-zero','nonce','signer','token','revision','parent-paid',
+    'rejection-reason','rejection-stage','raw-reductions','claimed-reductions',
+    'effects-order','request-chooser','plan-omission','unused-program',
+    'signing-snapshot','concealed-rejection','omitted-computation',
+    'fabricated-cancellation-core','denial-as-transition','observed-guard',
+    'event-order','payment-order','deposit-effect','rollback-time',
+    'retained-loser','proof-context','cancellation-identity')
+
+def task6_descriptor(loop, scenario, profile='SignBeforeResolve'):
+    return next(d for d in descriptors() if
+                (d['lifecycle'], d['scenario'], d['control'], d['profile']) ==
+                (loop, scenario, 'ordinary', profile))
+
+def rewrite(value, rule):
+    if type(value) is dict: value = {k: rewrite(v, rule) for k, v in value.items()}
+    elif type(value) is list: value = [rewrite(v, rule) for v in value]
+    return rule(value)
+
+def mutation_value(value, name):
+    def rule(x):
+        if type(x) is not dict: return x
+        if name=='optional-zero' and x=={'tag':'NoInt','value':{'#tup':[]}}: return {'tag':'IntValue','value':0}
+        if name=='nonce' and set(x)=={'policy','signer','token'} and x['policy']['body']['key']['nonce']==1:
+            p=x['policy']; b=p['body']; return x|{'policy':p|{'body':b|{'key':b['key']|{'nonce':0}}}}
+        if name=='signer' and set(x)=={'policy','signer','token'}: return x|{'signer':encode(V('Mallory'))}
+        if name=='token' and set(x)=={'policy','signer','token'}: return x|{'token':1}
+        if name=='revision' and 'revision' in x and type(x['revision']) is int: return x|{'revision':x['revision']+1}
+        if name=='parent-paid' and {'paid','remainingAllowance','usedSlots'}<=set(x): return x|{'paid':x['paid']+1,'remainingAllowance':x['remainingAllowance']-1}
+        if name=='rejection-reason' and {'reason','stage','observedContext'}<=set(x): return x|{'reason':encode(V('UnauthorizedEffect'))}
+        if name=='rejection-stage' and {'reason','stage','observedContext'}<=set(x): return x|{'stage':encode(V('VerificationBoundary'))}
+        if name=='raw-reductions' and x.get('tag')=='TransactionComputedA': return x|{'value':x['value']|{'reductions':x['value']['reductions']+1}}
+        if name=='payment-order' and 'payments' in x and type(x['payments']) is list and len(x['payments'])==2: return x|{'payments':list(reversed(x['payments']))}
+        if name=='deposit-effect' and set(x)=={'source','destination','asset','quantity'} and x['source'].get('tag')=='Wallet' and x['destination'].get('tag')=='Escrow': return x|{'quantity':x['quantity']+1}
+        if name=='rollback-time' and x.get('tag')=='TransactionComputedA' and x['value']['accepted'] is False:
+            raw=x['value']; return x|{'value':raw|{'state':raw['state']|{'minimumTime':encode(V('Time100'))}}}
+        if name=='retained-loser' and x.get('tag')=='RejectedOperation': return encode(V('NoAttempt'))
+        if name=='proof-context' and set(x)=={'attempt','disposition'}:
+            a=x['attempt']; c=a['context']; return x|{'attempt':a|{'context':c|{'environment':c['environment']|{'anchor':1}}}}
+        if name=='cancellation-identity' and 'artifactAndCall' in x and x['artifactAndCall'].get('tag')=='CancellationCallA' and 'proposedSuccessor' in x:
+            b=x['proposedSuccessor']; return x|{'proposedSuccessor':b|{'state':b['state']|{'minimumTime':encode(V('Time100'))}}}
+        if name=='claimed-reductions' and x.get('tag')=='CoreProjected': return x|{'value':x['value']|{'reductions':x['value']['reductions']+1}}
+        if name=='effects-order' and 'effects' in x and type(x['effects']) is list and len(x['effects'])==2: return x|{'effects':list(reversed(x['effects']))}
+        if name=='request-chooser' and x.get('tag')=='ChoiceInputA': return x|{'value':x['value']|{'chooser':encode(V('Mallory'))}}
+        if name=='plan-omission' and 'operations' in x and type(x['operations']) is list and len(x['operations'])==4: return x|{'operations':x['operations'][:-1]}
+        if name=='unused-program' and set(x)=={'root','nodes'}:
+            nodes=deepcopy(x['nodes'])
+            for pair in nodes['#map']:
+                if pair[0]==encode(V('N15')): pair[1]=encode(V('PayA',r(account=r(owner=V('Alice'),asset=V('TokenA')),payee=V('Bob'),amount=V('ConstantA',5),continuation=V('N0'))))
+            return x|{'nodes':nodes}
+        if name=='signing-snapshot' and set(x)=={'physicalTime','anchor','implementationVersion','enforcementMechanism'}: return x|{'anchor':1}
+        return x
+    return rewrite(value, rule)
+
+def task6_items(path, target):
+    metadata = {}
+    with Path(path).open('rb') as stream:
+        yield from array_items(stream, target, metadata)
+
+def task6_write(path, target, items, metadata):
+    with Path(path).open('xb') as stream:
+        return write_array_document(stream, target, items, after=metadata.items())
+
+def task6_honest(path, d):
+    def events():
+        # Only this one independent history is retained; no full inventory history.
+        for record in history(d):
+            e = {public: encode(record['latest'][internal])
+                 for public, internal in RENAME.items()}
+            yield e | {'before': encode(record['before']),
+                       'after': encode(record['after']), 'provenance': {}}
+    task6_write(path, 'events', events(), d)
+    gc.collect()
+
+def task6_mutate(source, output, d, name):
+    changed = 0
+    done = False
+    saved = None
+    sample = None
+    def events():
+        nonlocal changed, done, saved, sample
+        for index, e in enumerate(task6_items(source, 'events')):
+            before = canonical(e)
+            if sample is None and e['computations']:
+                sample = deepcopy(e['computations'])
+            if name == 'event-order':
+                if index == 1:
+                    saved = e
+                    continue
+                if index == 2:
+                    changed += 2
+                    yield e
+                    yield saved
+                    saved = None
+                    continue
+            elif name == 'concealed-rejection' and not done:
+                if e['kind'] == 'transition' and e['arguments']['command']['tag'].startswith('Reject'):
+                    changed += 1
+                    done = True
+                    continue
+            elif name == 'omitted-computation' and not done and e['computations']:
+                e['computations'] = []
+                done = True
+            elif name == 'fabricated-cancellation-core' and not done:
+                cmd = e['arguments']['command']
+                if cmd['tag'] == 'ProposeA4' and cmd['value']['operation']['tag'] == 'OpCancelParent':
+                    require(sample is not None, 'cancellation mutation needs earlier actual computation')
+                    e['computations'] = deepcopy(sample)
+                    done = True
+            elif name in ('denial-as-transition', 'observed-guard') and not done:
+                if e['kind'] == 'denied-probe':
+                    if name == 'denial-as-transition': e['kind'] = 'transition'
+                    else: e['observed_guard'] = True
+                    done = True
+            elif name not in ('concealed-rejection', 'omitted-computation',
+                              'fabricated-cancellation-core',
+                              'denial-as-transition', 'observed-guard', 'event-order'):
+                e = mutation_value(e, name)
+            if canonical(e) != before: changed += 1
+            yield e
+        require(saved is None, 'event-order fixture has second event')
+    task6_write(output, 'events', events(), d)
+    require(changed > 0, 'effective mutation '+name)
+    require(file_digest(source) != file_digest(output), 'changed artifact '+name)
+    return changed
+
+def task6_rebind(source, folder, d):
+    folder.mkdir()
+    ordinal = descriptors().index(d)
+    normalized = folder/'normalized.json'
+    raw = folder/'raw.itf.json'
+    case = folder/'case.json'
+    def normalized_events():
+        previous = None
+        for index, e in enumerate(task6_items(source, 'events')):
+            e['sequence'] = index
+            e['before'] = deepcopy(e['after'] if previous is None else previous)
+            previous = e['after']
+            e['provenance'] = {}
+            yield e
+    count = task6_write(normalized, 'events', normalized_events(), d)
+    meta = {'format': 'ITF',
+            'format-description': 'https://apalache-mc.org/docs/adr/015adr-trace.html',
+            'source': ENTRIES[d['case_id']], 'status': 'ok',
+            'description': 'synthetic rebound control; not generator evidence',
+            'timestamp': 0}
+    def states():
+        for index, e in enumerate(task6_items(normalized, 'events')):
+            latest = {internal: e[public] for public, internal in RENAME.items()}
+            latest['sequence'] = {'#bigint': str(index)}
+            yield {'#meta': {'index': index}, 'authorityState': e['after'],
+                   'latestEvent': latest, 'caseIndex': {'#bigint': str(ordinal)},
+                   'cursor': {'#bigint': str(index)}}
+    assert task6_write(raw, 'states', states(), {'#meta': meta, 'vars': list(VARS)}) == count
+    sha = file_digest(raw)
+    def rebound_events():
+        for index, e in enumerate(task6_items(normalized, 'events')):
+            e['provenance'] = {'input_path': f'raw/case-{ordinal:03d}.itf.json',
+                               'input_sha256': sha, 'before_index': max(0, index-1),
+                               'after_index': index}
+            yield e
+    assert task6_write(case, 'events', rebound_events(), d) == count
+    return case, raw, sha, ordinal, count
+
+def task6_bound(artifact, d):
+    case, raw, sha, ordinal, expected_count = artifact
+    assert file_digest(raw) == sha
+    case_meta, raw_meta = {}, {}
+    absent = object()
+    count = 0
+    with case.open('rb') as cs, raw.open('rb') as rs:
+        events = array_items(cs, 'events', case_meta)
+        states = array_items(rs, 'states', raw_meta)
+        previous = None
+        while True:
+            e, current = next(events, absent), next(states, absent)
+            if e is absent or current is absent:
+                assert e is absent and current is absent
+                break
+            validate_raw_state(current, count, ordinal)
+            bind_window(e, current if previous is None else previous, current,
+                        count, f'raw/case-{ordinal:03d}.itf.json', sha)
+            previous = current
+            count += 1
+    assert count == expected_count
+    assert raw_same(case_meta, d)
+    validate_raw_metadata(raw_meta, ENTRIES[d['case_id']])
+    return count
+
+def task6_accept(artifact, d):
+    task6_bound(artifact, d)
+    case, raw, sha, ordinal, count = artifact
+    assert check_shard(case, raw, d, ordinal, sha) == count
+
+def task6_other(folder, loop='swap'):
+    d = (task6_descriptor('swap', 'funded2-refund', 'SignAfterResolve')
+         if loop == 'swap' else task6_descriptor('installment', 'two-fills'))
+    source = folder/'other-source.json'
+    task6_honest(source, d)
+    artifact = task6_rebind(source, folder/'other', d)
+    task6_accept(artifact, d)
+    gc.collect()
+
+def task6_first_pair(artifact, index):
+    case, raw, sha, ordinal, count = artifact
+    # Read only the requested bounded window, closing both generators explicitly.
+    es = task6_items(case, 'events')
+    ss = task6_items(raw, 'states')
+    previous = None
+    try:
+        for i in range(index+1):
+            e, current = next(es), next(ss)
+            if i == index:
+                return e, current if previous is None else previous, current
+            previous = current
+    finally:
+        es.close()
+        ss.close()
+
+def task6_worker(mode, name, folder):
+    folder = Path(folder)
+    if mode == 'semantic':
+        d = (task6_descriptor('swap', 'funded2-settle')
+             if name in ('effects-order', 'payment-order', 'deposit-effect')
+             else task6_descriptor('installment',
+                  'recover-r1-refuse100' if name == 'rollback-time' else 'recover-r1-choice2'))
+        source = folder/'honest-source.json'
+        task6_honest(source, d)
+        mutated = folder/'mutated-source.json'
+        changed = task6_mutate(source, mutated, d, name)
+        bad = task6_rebind(mutated, folder/'bad', d)
+        task6_bound(bad, d)  # MUST succeed before semantic rejection is counted.
+        with pytest.raises(Invalid):
+            case, raw, sha, ordinal, _ = bad
+            check_shard(case, raw, d, ordinal, sha)
+        corrected = task6_rebind(source, folder/'corrected', d)
+        task6_accept(corrected, d)
+        task6_other(folder)
+        return {'mode': mode, 'name': name, 'changed_events': changed,
+                'raw_linkage': True, 'mutant_rejected': True,
+                'corrected': True, 'unrelated': True}
+    d = task6_descriptor('swap', 'funded2-settle')
+    source = folder/'honest-source.json'
+    task6_honest(source, d)
+    honest = task6_rebind(source, folder/'honest', d)
+    index = 0 if mode == 'substitution' else 1
+    event, previous, current = task6_first_pair(honest, index)
+    if mode == 'substitution':
+        assert event['profile'] == 'SignBeforeResolve'
+        event['profile'] = 'SignAfterResolve'
+        message = 'raw provenance field profile'
+    else:
+        field, value = (('before_index',99), ('after_index',99),
+                        ('after_index',True), ('input_path','../swap.itf.json'),
+                        ('input_sha256','0'*64))[int(name)]
+        event['provenance'][field] = value
+        message = None
+    bad_case = folder/'substituted-case.json'
+    def substituted_events():
+        for i, original_event in enumerate(task6_items(honest[0], 'events')):
+            yield event if i == index else original_event
+    task6_write(bad_case, 'events', substituted_events(), d)
+    bad_artifact = (bad_case, *honest[1:])
+    event, previous, current = task6_first_pair(bad_artifact, index)
+    with pytest.raises(Invalid, match=message):
+        bind_window(event, previous, current, index,
+                    f'raw/case-{honest[3]:03d}.itf.json', honest[2])
+    del event, previous, current
+    task6_accept(honest, d)
+    task6_other(folder, 'installment')
+    return {'mode': mode, 'name': name, 'mutant_rejected': True,
+            'corrected': True, 'unrelated': True}
+
+def task6_process(tmp_path, mode, name):
+    # No moving producer imports. Same test source is the pinned worker.
+    root = Path(__file__).resolve().parents[1]
+    script = "import runpy,sys,json; m=runpy.run_path(sys.argv[1]); print(json.dumps(m['task6_worker'](sys.argv[2],sys.argv[3],sys.argv[4]),sort_keys=True))"
+    argv = [sys.executable, '-B', '-X', 'pycache_prefix='+str(tmp_path/'fresh-cache'),
+            '-c', script, str(Path(__file__).resolve()), mode, str(name), str(tmp_path)]
+    env = os.environ.copy()
+    env.pop('PYTHONPATH', None)
+    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    env['PYTHONPYCACHEPREFIX'] = str(tmp_path/'fresh-cache')
+    (tmp_path/'argv.json').write_text(json.dumps(argv))
+    with (tmp_path/'stdout.txt').open('xb') as out, (tmp_path/'stderr.txt').open('xb') as err:
+        completed = subprocess.run(argv, cwd=root, env=env, stdout=out, stderr=err)
+    (tmp_path/'terminal.json').write_text(json.dumps({'exit': completed.returncode}))
+    assert completed.returncode == 0, (tmp_path/'stderr.txt').read_text()
+    report = json.loads((tmp_path/'stdout.txt').read_text())
+    assert report['mode'] == mode and report['name'] == str(name)
+    assert report['mutant_rejected'] and report['corrected'] and report['unrelated']
+    return report
+
+@pytest.mark.parametrize('name', SEMANTIC_MUTANTS)
+def test_semantic_rebound_triples(tmp_path, name):
+    report = task6_process(tmp_path, 'semantic', name)
+    assert report['changed_events'] > 0 and report['raw_linkage']
+
+def test_raw_latest_field_substitution_triple(tmp_path):
+    task6_process(tmp_path, 'substitution', 'profile')
+
+@pytest.mark.parametrize('locator', range(5))
+def test_provenance_locator_triples(tmp_path, locator):
+    task6_process(tmp_path, 'locator', str(locator))
+
+def test_duplicate_json_map_set_and_unit_controls():
+    with pytest.raises(Invalid): loads('{"schema_version":3,"schema_version":3}')
+    with pytest.raises(Invalid): decode({'#set':[1,1]})
+    with pytest.raises(Invalid): decode({'#map':[[1,0],[1,0]]})
+    with pytest.raises(Invalid): shape({'tag':'NoInt','value':[]},V('NoInt'))
+    shape({'tag':'NoInt','value':{'#tup':[]}},V('NoInt'))
+    shape({'tag':'IntValue','value':{'#bigint':'0'}},V('IntValue',0))
+
+def test_path_traversal_and_symlink_triples(tmp_path):
+    target = tmp_path/'honest.json'
+    target.write_text('{}')
+    alias = tmp_path/'alias.json'
+    alias.symlink_to(target)
+    with pytest.raises(Invalid): safe_path(tmp_path,'../honest.json')
+    with pytest.raises(Invalid): safe_path(tmp_path,'alias.json')
+    assert safe_path(tmp_path,'honest.json') == target
+    other = tmp_path/'other.json'
+    other.write_text('[]')
+    assert safe_path(tmp_path,'other.json') == other
+
+def test_actual_complete_package_and_inventory_triples(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    folder = root/'evidence/s02-candidate-a-completion/a4'
+    manifest, admission, inv = folder/'cases.json', folder/'admission.json', folder/'inventory.json'
+    require(manifest.is_file() and admission.is_file(), 'actual A4 package required; no skip')
+    doc, admitted = load_manifest(manifest), load_manifest(admission)
+    def honest():
+        result = check_package(manifest, admission, root, folder, inv)
+        assert result['ok'] is True and result['events'] == 1557
+        assert result['cases'] == result['shards'] == result['validated_inputs'] == result['validated_case_files'] == 78
+        gc.collect()
+    honest()
+    for name in ('missing-case','duplicate-case','extra-case','missing-transitive-pin',
+                 'changed-frozen-pin','missing-input','changed-receipt'):
+        bad, auth = deepcopy(doc), deepcopy(admitted)
+        if name == 'missing-case': bad['shards'].pop()
+        elif name == 'duplicate-case': bad['shards'][-1] = deepcopy(bad['shards'][0])
+        elif name == 'extra-case': bad['shards'].append(deepcopy(bad['shards'][0]))
+        elif name == 'missing-transitive-pin':
+            path = 'specs/quint/s02/consumption.qnt'
+            del bad['source_pins'][path]
+            del auth['source_pins'][path]
+        elif name == 'changed-frozen-pin':
+            path = 'specs/quint/s02/consumption.qnt'
+            bad['source_pins'][path] = auth['source_pins'][path] = '0'*64
+        elif name == 'missing-input':
+            path = 'raw/case-032.itf.json'
+            del bad['input_pins'][path]
+            del auth['input_pins'][path]
+        else:
+            path = sorted(bad['receipt_pins'])[0]
+            bad['receipt_pins'][path] = '0'*64
+        bad_path, auth_path = tmp_path/(name+'-manifest.json'), tmp_path/(name+'-admission.json')
+        bad_path.write_text(canonical(bad))
+        auth_path.write_text(canonical(auth))
+        with pytest.raises(Invalid): check_package(bad_path, auth_path, root, folder, inv)
+        honest()  # All 78 semantics revisited; no semantic-result cache.
+    task6_other(tmp_path, 'installment')
+
