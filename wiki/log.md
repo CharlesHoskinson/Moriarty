@@ -765,3 +765,11 @@ contract, real transaction contexts, and a symbolic track off the critical
 path. Two independent critiques recorded with the draft under
 `experiments/zkir-k/plan-iter3/`.
 
+## [2026-09-06] experiment | Native observer controls and tiny evidence package
+
+CLM-0181 records independent/root admission of all A4 observer controls and
+both native pairs, followed by the one full diagnostic dispatch with its
+terminal result pending. The independently audited A5 tiny evidence package
+is committed at experimental `e87018f`; source-only retained256 planning is
+adopted at `39ebe42`. Oversized-output parsing and full A4/A5 acceptance remain
+open. The continuation loop is scoped to completing A4 and A5.

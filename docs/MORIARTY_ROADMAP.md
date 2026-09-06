@@ -155,8 +155,12 @@ all78 remain unexecuted. Experimental `8541405` preserves the reviewed
 run-phase design is adopted at `85cc805`; exact plan `219125c` includes the
 reviewed parent-environment correction and materialized-source review. All
 seven isolated observer controls have produced their expected outcomes, with
-identity exit0 and six fault exits74. Independent mock review is pending;
-the paired native controls and full diagnostic have not run.
+identity exit0 and six fault exits74. Independent and root mock admission
+are complete. Both direct/observed native pairs have now passed their exact
+comparisons: successful execution and a deliberate invariant violation.
+Independent and root controls admission are complete. The one full observed
+diagnostic was dispatched at `39ebe4254c16aa9318c0fa6fab47a6b6ff994a35`;
+its result remains pending and must come from the original transport.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -231,8 +235,12 @@ The separate full supplement is committed at `a2a4b52`. Its one full compile
 completed with compiler, recorder and outer zero exits and unforced cleanup.
 The retained output is 199,868,611 bytes, exceeding the original 128 MiB intake
 limit; original intake exited2 before JSON structure checks. Independent and
-root review admit failed diagnostic preservation only. A separate bounded
-retained-data inspection is being designed; no larger-input parse has run.
+root review admit failed diagnostic preservation only. The independently
+reviewed tiny retained-data preservation package is committed at `e87018f`.
+The separate bounded retained-data design and exact plan are adopted at
+`39ebe4254c16aa9318c0fa6fab47a6b6ff994a35`; they require a reviewed extension
+for intervening A4 process predecessors before dispatch. No larger-input
+parse has run. See CLM-0181 in the research journal for current evidence pins.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

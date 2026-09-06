@@ -103,9 +103,11 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   The compiler diagnostic timed out after entering compile. The no-flatten
   tiny control completed; its original failed type predicate is preserved and
   a reviewed correction admits the retained tiny data. The full contrast
-  compiled but exceeded its JSON intake limit. Seven A4 observer controls
-  produced expected results; paired native controls and full diagnostics remain
-  pending. H1, full A4–A7 and Council stay open.
+  compiled but exceeded its JSON intake limit. The tiny-evidence package is
+  independently audited and committed, and a bounded retained-output plan is
+  adopted. Seven A4 observer controls are independently admitted; both native
+  pairs and their evidence are independently admitted. The one full diagnostic
+  is dispatched with its result pending. H1, full A4–A7 and Council stay open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

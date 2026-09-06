@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T03:42:09Z
+updated_at: 2026-09-06T05:47:30Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2229,3 +2229,57 @@ inspection; confidence high within the stated original evidence limits;
 lifecycle S3 experimental branch, S2 for the next inspection design. Original
 size-gate failure remains failed. H1, paired compilation, solver verification,
 canonical A4 exports, final115, Council and integration stay open.
+
+## CLM-0181 — A4 native controls admitted and A5 tiny package committed
+
+Experiment observation: all seven A4 mocks and four native controls have
+separate independent and root admission. Both direct/observed pairs preserve
+every compared ITF value and stdout/stderr byte except the exact permitted
+timing fields. Successful traces contain 28 states; deliberate invariant
+violations contain two. Their original native exits are 0/0 and 1/1, with
+complete unforced cleanup. Both observed traces contain the nine required
+public-phase records. These are finite observer controls, not canonical exports.
+
+Independent controls review is SHA256
+`bcaf5ce7f2de3d9703e93fe68427544da375477d51ef7fdf8cfd37df15075fdb`;
+its original-data audit is a4b738/0. Root admission is SHA256
+`fdfbe6bc4a968d0a06f4ad7cfbbc6ff8a298c1516a8cb1400c7f58992b76923f`,
+actual825b16/0. Originals remain under experimental
+`.superpowers/sdd/a4-run-phase-diagnostic-20260906/`. The success pair records
+HEAD219125c; the violation pair records HEADe87018f. Their integrated source
+and runtime identities match; these different historical HEADs are retained.
+
+Repository observation: experimental
+`e87018f3856e3a32b5eab0ab4a6e8c5ba405a914` commits the A5 tiny package at
+`evidence/s02-candidate-a-completion/a5/no-flatten-tiny-retained-data/`.
+Its 784-member archive is SHA256
+`754b21e17d28db9f6e393844a14e020e236cf85acb9f0678c4ad99249c78845f`.
+Independent standalone audit126edc/0 and original-byte comparisona985ae/0
+preceded root package admission
+`a35ae07cead424dd3802d45e44fb0fcfb82ce4be4f8ac330db48e86896902612`.
+The original failed tiny predicate and separately corrected retained-data result
+are preserved together; the package does not establish full compiler acceptance.
+
+Experimental `39ebe4254c16aa9318c0fa6fab47a6b6ff994a35` adopts the source-only
+retained256 design and plan. Independent source review is
+`e27c6a6b7ecf5007d0e5b4df83ea4d914a2022d01ed634976f5ae3fa017d894f`;
+root preparation adoption is
+`96947d989af4c28e39e2e92af5c0053d44197fb19c0176f6b73db22660b81692`.
+The proposed data process retains the original full structural predicates,
+with a separate 256 MiB input ceiling and explicit memory/CPU/wall limits.
+It has not parsed the oversized output. An independently reviewed predecessor
+extension must bind the intervening A4 invocations before its dispatch.
+
+At 2026-09-06T05:47:30Z, the one full A4 observed diagnostic had been
+dispatched under the unchanged 900-second plan, with original tool
+0fe6de/session59740 and root monitor cell556. Dispatch SHA256 is
+`7278a93792fe0e6b44ffded85f69165c40ae7729ab3ee65dcbfc54e069799065`.
+No terminal result is asserted here. The original transport owns subsequent
+responses; an observation timeout does not authorize another invocation.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope finite A4 diagnostic controls and A5 tiny evidence preservation;
+observed date2026-09-06 UTC; reproduction reproduced for the recorded controls
+and package audits, specified-only for retained256 parsing; confidence high
+within those limits; lifecycle S3 experimental branch and S2 inspection plan.
+Full A4 exports, final115, A5 bounded verification/H1 and Council remain open.
