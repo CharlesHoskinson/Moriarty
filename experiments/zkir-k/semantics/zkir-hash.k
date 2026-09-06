@@ -12,6 +12,12 @@
 //   sha256(Bytes)           FIPS 180-4.
 //   keccak256(Bytes)        Keccak-f[1600], rate 1088, pad 0x01 .. 0x80 (pre-NIST).
 //
+// The defining rules of poseidonHash, transientCommit, varLenSponge,
+// hashToCurve, sha256Bytes and keccak256Bytes carry [concrete]: they evaluate
+// only on fully concrete arguments, so under the Haskell backend a hash of a
+// symbolic input stays an uninterpreted application (see zkir-symbolic.k).
+// The LLVM backend is unaffected (every term is concrete there).
+//
 // The Rust Poseidon CPU code folds partial rounds three at a time ("round skips", NB_SKIPS_CPU = 2); that
 // is an algebraic rewrite of the plain round function implemented here, and the
 // differential tests against the crate confirm the outputs agree.
@@ -64,7 +70,7 @@ module ZKIR-HASH
 
   // Fixed-length Poseidon hash (transient_hash).
   syntax Int ::= poseidonHash(List) [function, total]
-  rule poseidonHash(Xs) => #ps0(absorbAll(ps(0, 0, size(Xs) modInt #r), Xs))
+  rule poseidonHash(Xs) => #ps0(absorbAll(ps(0, 0, size(Xs) modInt #r), Xs)) [concrete]
   syntax Int ::= #ps0(PState) [function, total]
   rule #ps0(ps(S0, _, _)) => S0
   syntax Int ::= #ps1(PState) [function, total]
@@ -72,17 +78,17 @@ module ZKIR-HASH
 
   // transient_commit(values, opening) = poseidonHash([opening] ++ values)
   syntax Int ::= transientCommit(List, Int) [function, total]
-  rule transientCommit(Vs, Rand) => poseidonHash(ListItem(Rand) Vs)
+  rule transientCommit(Vs, Rand) => poseidonHash(ListItem(Rand) Vs) [concrete]
 
   // Variable-length sponge used by hash_to_curve: capacity 2^64, the input
   // length appended as padding, then two squeezes (register 0 and 1).
   syntax PState ::= varLenSponge(List) [function, total]
-  rule varLenSponge(Xs) => absorbAll(ps(0, 0, 18446744073709551616), Xs ListItem(size(Xs)))
+  rule varLenSponge(Xs) => absorbAll(ps(0, 0, 18446744073709551616), Xs ListItem(size(Xs))) [concrete]
 
   // ---------------------------------------------------------------------------
   // Hash to curve (Jubjub subgroup).
   syntax Point ::= hashToCurve(List) [function, total]
-  rule hashToCurve(Xs) => #htc(varLenSponge(Xs))
+  rule hashToCurve(Xs) => #htc(varLenSponge(Xs)) [concrete]
   syntax Point ::= #htc(PState) [function, total]
   rule #htc(ps(X1, X2, _)) => ecAdd(#jubjub, mapToCurve(X1), mapToCurve(X2))
 
@@ -161,7 +167,7 @@ module ZKIR-HASH
   syntax Bytes ::= sha256Bytes(Bytes) [function, total]
   rule sha256Bytes(M) => #shaBlocks(#shaPad(M), 0,
       ListItem(1779033703) ListItem(3144134277) ListItem(1013904242) ListItem(2773480762)
-      ListItem(1359893119) ListItem(2600822924) ListItem(528734635) ListItem(1541459225))
+      ListItem(1359893119) ListItem(2600822924) ListItem(528734635) ListItem(1541459225)) [concrete]
   syntax Bytes ::= #shaPad(Bytes) [function, total]
   rule #shaPad(M) => padRightBytes(M +Bytes Int2Bytes(1, 128, BE), ((lengthBytes(M) +Int 9 +Int 63) /Int 64) *Int 64 -Int 8, 0) +Bytes Int2Bytes(8, lengthBytes(M) *Int 8, BE)
   syntax Bytes ::= #shaBlocks(Bytes, Int, List) [function, total]   // (padded, offset, H)
@@ -229,7 +235,7 @@ module ZKIR-HASH
   rule lane(S, X, Y) => {S[(X modInt 5) +Int 5 *Int (Y modInt 5)]}:>Int
 
   syntax Bytes ::= keccak256Bytes(Bytes) [function, total]
-  rule keccak256Bytes(M) => substrBytes(#kOut(#kAbsorb(#kPad(M), 0, #kZero(25)), 0, .Bytes), 0, 32)
+  rule keccak256Bytes(M) => substrBytes(#kOut(#kAbsorb(#kPad(M), 0, #kZero(25)), 0, .Bytes), 0, 32) [concrete]
   syntax Bytes ::= #kPad(Bytes) [function, total]
   rule #kPad(M) => #kPadEnd(padRightBytes(M +Bytes Int2Bytes(1, 1, BE), ((lengthBytes(M) +Int 1 +Int 135) /Int 136) *Int 136, 0))
   syntax Bytes ::= #kPadEnd(Bytes) [function, total]
