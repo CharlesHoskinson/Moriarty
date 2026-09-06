@@ -1,6 +1,6 @@
 # Getting started
 
-This chapter goes from a clean checkout to a first run of the executable K definition of ZKIR (Zero-Knowledge Intermediate Representation) v3. Every command is issued from the repository root. The program format is in `03-program-model.md`, the run lifecycle in `06-configuration-and-run-lifecycle.md`, the tools in `11-tooling-reference.md`.
+This chapter takes a clean checkout to a first run of the executable K definition of ZKIR (Zero-Knowledge Intermediate Representation) v3. Run every command from the repository root. The program format is described in `03-program-model.md`, the run lifecycle in `06-configuration-and-run-lifecycle.md` and the tools in `11-tooling-reference.md`.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ kup install k --version v7.1.337
 
 Confirm `kompile --version` reports `v7.1.337`.
 
-The Python tools talk to K through pyk, the Python bindings shipped as PyPI package `kframework`. It is not a default dependency: it lives in the `zkir-k` dependency group of `pyproject.toml`, pinned to `kframework==7.1.337`, with `requires-python = ">=3.13"`. Every tool is invoked through uv with that group. The runner's help text lists the flags used below:
+The Python tools talk to K through pyk, the Python bindings shipped as the PyPI package `kframework`. pyk is not a default dependency. It lives in the `zkir-k` dependency group of `pyproject.toml`, pinned to `kframework==7.1.337`, with `requires-python = ">=3.13"`, and every tool runs through uv with that group. The runner's help text lists the flags used below:
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/zkir_run.py --help
@@ -40,7 +40,7 @@ options:
 
 `tools/zkir_run.py` and `tools/check_corpus.py` need only K and pyk. `tools/unit_hash.py`, `tools/diff_test.py` and `tools/divergence_tests.py` also call the `zkir-oracle` binary at `~/Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-oracle` (and, with `--ext`, `~/Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-oracle`). A Rust toolchain is required only to rebuild that binary from the harness crates under `repos/_build/`.
 
-`experiments/zkir-k/toolchain-check/check_k_toolchain.sh` kompiles K tutorial lesson 1.2 with the LLVM (Low Level Virtual Machine) and Haskell backends, runs `banana.color` and `blueberry.color`, checks that pyk's version equals the expected K version (`7.1.337`, overridable through `EXPECTED_K_VERSION`), and round-trips a term through pyk (`pyk_roundtrip.py`). It changes into its own directory, deletes and rebuilds `lesson-02-a-kompiled` and `lesson-02-a-haskell-kompiled` there, and exits non-zero on any mismatch. Run it after a K or pyk upgrade.
+Run `experiments/zkir-k/toolchain-check/check_k_toolchain.sh` after a K or pyk upgrade. It kompiles K tutorial lesson 1.2 with the LLVM (Low Level Virtual Machine) and Haskell backends, runs `banana.color` and `blueberry.color`, checks that pyk's version equals the expected K version (`7.1.337`, overridable through `EXPECTED_K_VERSION`), and round-trips a term through pyk (`pyk_roundtrip.py`). The script changes into its own directory, deletes and rebuilds `lesson-02-a-kompiled` and `lesson-02-a-haskell-kompiled` there, and exits non-zero on any mismatch.
 
 ## Compiling the four definitions
 
@@ -62,7 +62,7 @@ kompile experiments/zkir-k/semantics/zkir.k --backend llvm --emit-json -O1 --out
 kompile experiments/zkir-k/semantics/zkir-ext.k --backend llvm --emit-json -O1 --output-definition experiments/zkir-k/semantics/zkir-ext-kompiled
 ```
 
-Each compile takes tens of seconds. The four directories already exist; rebuild them after editing any `*.k` file they close over. `--checked` does not use `zkir-check-kompiled`; it runs `checkedJob` inside the `ZKIR` or `ZKIR-EXT` interpreter, which imports `ZKIR-WF` from `zkir-syntax.k`.
+Each compile takes tens of seconds. The four directories already exist; rebuild them after editing any `*.k` file they close over. `--checked` does not use `zkir-check-kompiled`: it runs `checkedJob` inside the `ZKIR` or `ZKIR-EXT` interpreter, which imports `ZKIR-WF` from `zkir-syntax.k`.
 
 ## Running a first program
 
@@ -222,7 +222,11 @@ The runner builds `job(Program, Preimage)` (`zkir-vm.k`, symbol `job`), runs the
 }
 ```
 
-`status` is `ok`: the off-circuit witness succeeded. `memory` maps each register to the variant label of `encode_value`, the crate's `IrType` display name of `type_string` (both in `tools/zkir_run.py`), and the off-circuit encoding. On the base surface the two names agree (`bytes32V` has variant and type `Bytes32`); on the extension surface every byte string, including `bytes32V` at length 32, has variant `Bytes` and type `Bytes(n)`. Map order is the K `<mem>` walk, not instruction order. `pis` is the public-input vector, here only the binding input, which defaulted to `0`. `pi_skips` is empty because the program has no `impact`. `cursors` are `<pubInIdx>`, `<pubOutIdx>` and `<privIdx>`, all `0` because no transcript was consumed. `k_cell` is `.K`, so the configuration finished; a residual term gives status `stuck` without a depth limit and `depth-exhausted` with one, with the term in `error`; the second label records that a limit was given, not that it was reached. `constraints` and `verdicts` are both 8: `bindGate(0)` plus one gate per instruction. Every outcome is `holds`, so `violations` is empty. `needs` is filled only by `--gen` (below). Outcome names are in `08-constraints-and-verdicts.md`.
+`status` is `ok`: the off-circuit witness succeeded. `memory` maps each register to the variant label of `encode_value`, the crate's `IrType` display name of `type_string` (both in `tools/zkir_run.py`), and the off-circuit encoding. The two names agree on the base surface, where `bytes32V` has variant and type `Bytes32`. Every byte string on the extension surface, including `bytes32V` at length 32, has variant `Bytes` and type `Bytes(n)`. Map order is the K `<mem>` walk, not instruction order.
+
+`pis` is the public-input vector, here only the binding input, which defaulted to `0`. `pi_skips` is empty because the program has no `impact`, and the `cursors` (`<pubInIdx>`, `<pubOutIdx>` and `<privIdx>`) are all `0` because no transcript was consumed. `k_cell` is `.K`, so the configuration finished. A residual term gives status `stuck` without a depth limit and `depth-exhausted` with one, with the term in `error`; the second label records that a limit was given, not that it was reached.
+
+`constraints` and `verdicts` are both 8: `bindGate(0)` plus one gate per instruction. Every outcome is `holds`, so `violations` is empty. `needs` is filled only by `--gen`. Outcome names are in `08-constraints-and-verdicts.md`.
 
 ## Running with `--checked`
 
@@ -242,7 +246,7 @@ On a well-formed program `wf` returns `wfOk()` and execution continues as `job`.
 
 `--ext` selects the `ZKIR-EXT` interpreter (`zkir-ext-kompiled`) and tells `zkir_kast.py` to accept the midnight-zkir 2ffe2d1 surface: types `Bool`, `Byte` and `Bytes<n>`, plus the instructions in `09-extension-surface.md`. `corpus/midnight-zkir-2ffe2d1-tests/bool_via_neg.zkir` declares a `Bool` input `%b`, negates it, and outputs the result. It sets `do_communications_commitment` to true, so the preimage must carry `communications_commitment` as `[commitment, opening]`, with a commitment that matches the inputs and outputs.
 
-Generation mode produces that value. Give a provisional commitment `0` with the opening you intend to use (here `7`) and pass `--gen`, which runs `genJob` (`zkir-vm.k`, the rule for `genJob` sets `<genMode>` to true). Leaving the pair out fails with `Expected communications commitment` even in generation mode (`zkir-vm.k`, rule for `#seedPi`).
+Generation mode produces that value. Give a provisional commitment `0` with the opening you intend to use (here `7`) and pass `--gen`, which runs `genJob`. The rule for `genJob` in `zkir-vm.k` sets `<genMode>` to true. Leaving the pair out fails with `Expected communications commitment` even in generation mode (`zkir-vm.k`, rule for `#seedPi`).
 
 ```
 cat > /tmp/bool_via_neg.gen.json <<'EOF'
@@ -436,7 +440,7 @@ uv run --group zkir-k python experiments/zkir-k/tools/zkir_run.py \
 }
 ```
 
-`zkir_kast.py check` on the same file runs `ZKIR-CHECK` and prints `wfError ( "undefined variable %c" )`. `reassignment.zkir` is the dual: `job` returns `ok` with `%b` overwritten to `2` and the `copy` and `add` gates `violated` against the final memory; `--checked` reports `well-formedness: reassignment of %b` and emits nothing.
+`zkir_kast.py check` on the same file runs `ZKIR-CHECK` and prints `wfError ( "undefined variable %c" )`. `reassignment.zkir` is the opposite case: `job` returns `ok` with `%b` overwritten to `2` and the `copy` and `add` gates `violated` against the final memory; `--checked` reports `well-formedness: reassignment of %b` and emits nothing.
 
 ### An off-circuit / in-circuit split: `f02_assert_non_boolean`
 
@@ -495,7 +499,7 @@ uv run --group zkir-k python experiments/zkir-k/tools/zkir_run.py \
 }
 ```
 
-Off-circuit, the rule for `#exec(assert(C))` in `zkir-vm.k` demands that the condition pass `asBool` of `zkir-ops.k`, that is, equal `1`, so the run is `error`. In-circuit, the rule for `eval(gate(assert(C)), ...)` in `zkir-constraints.k` only requires `C` non-zero, so the verdict is `holds` and `violations` stays empty. That split is Finding 2 in `tools/divergence_tests.py`; the whole corpus is in `13-known-divergences.md`.
+Off-circuit, the rule for `#exec(assert(C))` in `zkir-vm.k` requires the condition to pass `asBool` of `zkir-ops.k`, that is, to equal `1`, so the run is `error`. In-circuit, the rule for `eval(gate(assert(C)), ...)` in `zkir-constraints.k` requires only that `C` be non-zero, so the verdict is `holds` and `violations` stays empty. That split is Finding 2 in `tools/divergence_tests.py`; the whole corpus is in `13-known-divergences.md`.
 
 ## Running the check suites
 
@@ -505,25 +509,25 @@ All four suites exit 0 on success. The quoted last lines are from live runs.
 uv run --group zkir-k python experiments/zkir-k/tools/unit_values.py
 ```
 
-Field, curve and encoding functions of `ZKIR-TEST` against an independent Python implementation. Ends with `43/43 checks passed`.
+`unit_values.py` checks the field, curve and encoding functions of `ZKIR-TEST` against an independent Python implementation. It ends with `43/43 checks passed`.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/unit_hash.py
 ```
 
-Known-answer checks for Poseidon, hash-to-curve, SHA-256 and Keccak-256 against the oracle (and hashlib for SHA-256). Ends with `18/18 checks passed`. Needs the 92e8bdd3 oracle.
+`unit_hash.py` runs known-answer checks for Poseidon, hash-to-curve, SHA-256 and Keccak-256 against the oracle (and hashlib for SHA-256), so it needs the 92e8bdd3 oracle. It ends with `18/18 checks passed`.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py
 ```
 
-Runs `ZKIR-CHECK` on every version-3 program in the ledger tests, the six micro-dao precompiles, the Moriarty escrow and swap artifacts, and `corpus/handmade-negative/`. Ends with `63 programs, 63 as expected, 0 unexpected` followed by the elapsed time, which varies.
+`check_corpus.py` runs `ZKIR-CHECK` on every version-3 program in the ledger tests, the six micro-dao precompiles, the Moriarty escrow and swap artifacts, and `corpus/handmade-negative/`. It ends with `63 programs, 63 as expected, 0 unexpected`, followed by the elapsed time, which varies.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 ```
 
-Rewrites the twenty programs under `corpus/divergence/`, runs each through `checkedJob` and the oracle, and checks one named gate. Ends with `20/20 divergence cases behave as expected`. Needs the 92e8bdd3 oracle.
+`divergence_tests.py` rewrites the twenty programs under `corpus/divergence/`, runs each through `checkedJob` and the oracle, and checks one named gate. It too needs the 92e8bdd3 oracle and ends with `20/20 divergence cases behave as expected`.
 
 Do not start with the full differential suite. `tools/diff_test.py` walks every version-3 program in its corpora, generates preimages, compares K with the oracle, then perturbs successes. `--only SUBSTR` keeps only files whose names contain that substring:
 
@@ -538,7 +542,7 @@ PASS  handmade                           transient_hash.zkir                    
 oracle 2: 0 successful K runs with a non-holding gate
 ```
 
-`--seed` defaults to `2026`. `--attempts` (default 8) bounds the generated preimages per program; the harness stops after the first run both K and the oracle accept. `--ext` switches interpreter, oracle and corpora to the 2ffe2d1 surface. `--no-perturb` skips the raw, typed, wrong-public-input and wrong-commitment variants that follow a success. Comparison rules are in `12-oracles-and-differential-testing.md`.
+`--seed` defaults to `2026`. `--attempts` (default 8) bounds the generated preimages per program, and the harness stops after the first run both K and the oracle accept. `--ext` switches interpreter, oracle and corpora to the 2ffe2d1 surface. `--no-perturb` skips the raw, typed, wrong-public-input and wrong-commitment variants that follow a success. Comparison rules are in `12-oracles-and-differential-testing.md`.
 
 ## Common problems
 

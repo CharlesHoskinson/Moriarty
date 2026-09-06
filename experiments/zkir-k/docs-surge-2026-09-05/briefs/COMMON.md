@@ -23,7 +23,7 @@ then your chapter brief, then the sources, then write the chapter.
   [--checked] [--gen] [--depth N]`; `--gen` runs `genJob` and reports the
   transcript needs and the commitment it recorded; a format error exits 2), `diff_test.py` (differential harness against the Rust oracle,
   `--ext`, `--only`, `--seed`, `--no-perturb`, `--attempts`),
-  `divergence_tests.py` (20 targeted cases), `unit_values.py` (42 checks),
+  `divergence_tests.py` (20 targeted cases), `unit_values.py` (43 checks),
   `unit_hash.py` (18 known-answer checks), `check_corpus.py` (well-formedness
   of the corpus), `gen_handmade.py`, `gen_constants.py`,
   `extract_test_inputs.py`, `zkir_values.py` (independent Python encoders).

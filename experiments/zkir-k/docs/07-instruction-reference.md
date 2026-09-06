@@ -2,7 +2,7 @@
 
 This chapter has one entry for each of the 34 instructions of the base surface, ZKIR v3 at midnight-ledger 92e8bdd3, as the definition implements them. The extension surface (midnight-zkir 2ffe2d1) adds nine instructions (`and`, `or`, `xor`, `concat`, `slice`, `nth`, `reverse`, `load_constant`, `sha512`) and the `Bool`, `Byte` and `Bytes<n>` types; they are described in [09-extension-surface.md](09-extension-surface.md) and do not appear here.
 
-Every instruction is a production of sort `Instr` in `zkir-syntax.k`, module `ZKIR-SYNTAX`. Its `symbol(...)` attribute is the JSON `op`; its arguments follow the field order of the crate's `enum Instruction` (`zkir-v3/src/ir.rs`), with the written identifiers last. `reads(Instr)` and `writes(Instr)` give the operands an instruction resolves, in the order of `IrSource::preprocess`, and the identifiers it defines.
+Every instruction is a production of sort `Instr` in `zkir-syntax.k`, module `ZKIR-SYNTAX`. Its `symbol(...)` attribute is the JSON `op`; its arguments follow the field order of the crate's `enum Instruction` (`zkir-v3/src/ir.rs`), with the written identifiers last. `reads(Instr)` gives the operands an instruction resolves, in the order of `IrSource::preprocess`; `writes(Instr)` gives the identifiers it defines.
 
 ## How to read an entry
 
@@ -15,7 +15,7 @@ The entries follow the order of the `Instr` productions in `zkir-syntax.k`; the 
 | Gate | the `eval` rule of the emitted constraint, as the sequence of checks it makes, and the chips it needs | `zkir-constraints.k`; the crate's `<op>_incircuit` or the arm of `Relation::circuit` |
 | Checks | arity and bit-count checks made before the operation, and the static counterpart in `ZKIR-WF` | `zkir-vm.k`, `zkir-syntax.k` module `ZKIR-WF` |
 
-An entry without a Checks part has no check beyond operand resolution and type dispatch. The corpus programs for each instruction are in the table at the end. Outcomes (holds, violated, synthErr, unknown, unsupported) are defined in [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md), values and `encodeValue` in [04-values-and-encoding.md](04-values-and-encoding.md), field, curve and hash functions in [05-fields-curves-and-hashes.md](05-fields-curves-and-hashes.md), transcripts and the public-input vector in [06-configuration-and-run-lifecycle.md](06-configuration-and-run-lifecycle.md).
+An entry without a Checks part has no check beyond operand resolution and type dispatch. The corpus programs for each instruction are in the table at the end. Outcomes (holds, violated, synthErr, unknown, unsupported) are defined in [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md). Values and `encodeValue` are in [04-values-and-encoding.md](04-values-and-encoding.md), field, curve and hash functions in [05-fields-curves-and-hashes.md](05-fields-curves-and-hashes.md), and transcripts and the public-input vector in [06-configuration-and-run-lifecycle.md](06-configuration-and-run-lifecycle.md).
 
 ## Machinery shared by every entry
 
@@ -44,7 +44,11 @@ rule <k> #exec(_) => .K ... </k> <status> panic(_) </status>
 | `resolveNatives` (`zkir-vm.k`) | the `try_into` chains of the hash and impact arms | natives, one at a time | `cannot convert T to Native` for the first offender |
 | `asBytes32` (`zkir-ops.k`) | `try_into` to `[u8; 32]` | `bytes32(B)` | `cannot convert T to Bytes32` |
 
-`T` in a message is the name from `typeName` in `zkir-values.k` (`Native`, `Bytes32`, `JubjubPoint`, `JubjubScalar`, `Secp256k1Point`, `Secp256k1Base`, `Secp256k1Scalar`, `Secp256r1Point`, `Secp256r1Base`, `Secp256r1Scalar`, `Curve25519Point`, `Curve25519Base`, `Curve25519Scalar`). Most witness rules are `#exec(I) => #put(O, f(resolve(A, M), ...))`, binary functions through `#bin`, unary ones through `#un`. `#put` and `#put2` store a `vOk`, turn a `vErr(S)` into `#fail(S)`, which sets `<status>` to `error(S)`, and a `vPanic(S)` into `panic(S)`; `#check` does the same for a `CheckResult`. Every `zkir-ops.k` function dispatches on the constructors of its arguments and ends in an `[owise]` rule with an `Unsupported ...` message, which the entries quote after the supported arms. The messages follow the crate's texts closely, not always to the character.
+`T` in a message is the name from `typeName` in `zkir-values.k` (`Native`, `Bytes32`, `JubjubPoint`, `JubjubScalar`, `Secp256k1Point`, `Secp256k1Base`, `Secp256k1Scalar`, `Secp256r1Point`, `Secp256r1Base`, `Secp256r1Scalar`, `Curve25519Point`, `Curve25519Base`, `Curve25519Scalar`).
+
+Most witness rules are `#exec(I) => #put(O, f(resolve(A, M), ...))`, binary functions through `#bin`, unary ones through `#un`. `#put` and `#put2` store a `vOk`; a `vErr(S)` becomes `#fail(S)`, which sets `<status>` to `error(S)`, and a `vPanic(S)` becomes `panic(S)`. `#check` does the same for a `CheckResult`.
+
+Every `zkir-ops.k` function dispatches on the constructors of its arguments and ends in an `[owise]` rule with an `Unsupported ...` message, which the entries quote after the supported arms. The messages follow the crate's texts closely, not always to the character.
 
 ### In-circuit evaluation
 
@@ -71,7 +75,7 @@ The building blocks, with the message each produces; `what` is the label quoted 
 
 Since `#and` keeps the first non-`holds` outcome, an absent register gives `unknown` only when its check is the first to fail; a width, chip or value check placed earlier in the rule gives `synthErr` or `violated` instead. Each entry lists the checks in the order of its rule.
 
-"Standard" as a gate description means: `#need` on every operand register, `#chipsForValues` on the operand values, then `#matches(f(operands), rdId(O, M), "op output")` with the same `zkir-ops.k` function `f` as off-circuit (through `#bin2` or `#un2`), so the gate is `violated("op output")` when the output differs and `synthErr("op output: Unsupported ...")` for a pair the function rejects, the dispatch of the crate's `<op>_incircuit`.
+"Standard" as a gate description means: `#need` on every operand register, `#chipsForValues` on the operand values, then `#matches(f(operands), rdId(O, M), "op output")` with the same `zkir-ops.k` function `f` as off-circuit (through `#bin2` or `#un2`). The gate is therefore `violated("op output")` when the output differs and `synthErr("op output: Unsupported ...")` for a pair the function rejects; this is the dispatch of the crate's `<op>_incircuit`.
 
 `<chips>` is filled by `usedChips` (`zkir-constraints.k`, the crate's `used_chips`) from the input types, the `public_input` and `private_input` types, the hash instructions (`hash_to_curve`: `jubjub` and `poseidon`; `transient_hash`: `poseidon`; `persistent_hash`: `sha2_256`; `keccak256`: `keccak_256`) and the commitment flag (`poseidon`). The chip names are `jubjub`, `poseidon`, `sha2_256`, `keccak_256`, `secp256k1`, `p256` and `curve25519`; `chipOfType` maps each type to its chip, `Native` and `Bytes32` to none.
 
@@ -159,7 +163,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### constrain_to_boolean
 
 - Syntax: `constrainToBoolean(Operand)`: val.
-- Off-circuit: `#check(#boolCheck(resolveBool(V, M)))`, only the resolver's errors, as the crate's `drop(resolve_operand_bool(..))`.
+- Off-circuit: `#check(#boolCheck(resolveBool(V, M)))`; the only errors are the resolver's, as in the crate's `drop(resolve_operand_bool(..))`.
 - Gate: `#boolean(val, "constrain_to_boolean")` (the crate converts to an `AssignedBit`).
 
 ## Control
@@ -167,7 +171,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### copy
 
 - Syntax: `copy(Operand, String)`: val, output.
-- Off-circuit: `#put(O, resolve(A, M))`; any type, the only error is `variable not found`.
+- Off-circuit: `#put(O, resolve(A, M))` for any type; the only error is `variable not found`.
 - Gate: `#eqValues(val, output, "copy output")`; no chip, the crate re-inserts the same cell.
 
 ## Transcript
@@ -175,8 +179,8 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### impact
 
 - Syntax: `impact(Operand, Operands)`: guard, inputs.
-- Emission: special. The rule appends `guardGate(G)` and one `piGate(N + i, G, X_i)` per input, `N` being `<piIdx>`, which it advances by the input count, so positions never depend on how far the witness got; an empty `impact` still emits its `guardGate`.
-- Off-circuit: `#impact` resolves the guard with `resolveBool`. A false guard appends one zero per input to `<pi>` and records `skipSome(n)` in `<skips>`. A true guard pushes each input in turn (`#impactPush`, `#impactOne`: native or `cannot convert T to Native`, appended to `<pi>`, `<pubInIdx>` advanced; a failure leaves earlier pushes in place), records `skipNone()`, and `#impactCheck` compares the pushed values with `public_transcript_inputs`, failing with `Public transcript input mismatch for input i` (the crate appends both values) when the transcript is shorter or differs.
+- Emission: special. The rule appends `guardGate(G)` and one `piGate(N + i, G, X_i)` per input, `N` being `<piIdx>`, which it advances by the input count. Positions therefore never depend on how far the witness got, and an empty `impact` still emits its `guardGate`.
+- Off-circuit: `#impact` resolves the guard with `resolveBool`. A false guard appends one zero per input to `<pi>` and records `skipSome(n)` in `<skips>`. A true guard pushes each input in turn and records `skipNone()`. `#impactPush` and `#impactOne` do the pushing: each input must be native, otherwise `cannot convert T to Native`; it is appended to `<pi>` and `<pubInIdx>` is advanced; a failure leaves earlier pushes in place. `#impactCheck` compares the pushed values with `public_transcript_inputs` and fails with `Public transcript input mismatch for input i` (the crate appends both values) when the transcript is shorter or differs.
 - Gate: `guardGate(G)` is `#boolean(guard, "impact guard")`. `piGate(i, G, X)` is the same, then `#native(input, "impact")`, then `#piEq`: `pi[i]` equals `X` when the guard is 1 and 0 otherwise (`violated("public input i differs from the guarded value")`; `unknown("public input vector incomplete: witness stopped before index i")` when `<pi>` is shorter), the crate's `select(guard, x, 0)` and `pi_push`. The guard is not coupled to those of `public_input` (`f03`); the empty impact is `k06`.
 
 ## Curve
@@ -212,7 +216,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### from_coordinates
 
 - Syntax: `fromCoordinates(Operand, Operand, String)`: x, y, output.
-- Off-circuit: `fromCoordinatesV`. Two natives build a `JubjubPoint` through `jubjubFromXY` (`zkir-curves.k`), the crate's decompression path, which uses only the parity of `x`; pairs of `Secp256k1Base`, `Secp256r1Base` or `Curve25519Base` go through `fromXY`. Off the curve or outside the prime-order subgroup (`inSubgroup`) fails with `Cannot build a Jubjub point`, `Cannot build a Secp256k1Point point`, `Cannot build a Secp256r1Point point` or `Cannot build a Curve25519Point point` (the crate appends the coordinates); any other pair with ``Unsupported `from_coordinates` on (T1, T2)``.
+- Off-circuit: `fromCoordinatesV`. Two natives build a `JubjubPoint` through `jubjubFromXY` (`zkir-curves.k`), the crate's decompression path, which uses only the parity of `x`; pairs of `Secp256k1Base`, `Secp256r1Base` or `Curve25519Base` go through `fromXY`. A point off the curve or outside the prime-order subgroup (`inSubgroup`) fails with `Cannot build a Jubjub point`, `Cannot build a Secp256k1Point point`, `Cannot build a Secp256r1Point point` or `Cannot build a Curve25519Point point` (the crate appends the coordinates); any other pair with ``Unsupported `from_coordinates` on (T1, T2)``.
 - Gate: `#need` and `#chipsForValues` on both; two natives also need the `jubjub` chip (`#fromCoordsChip`), which `used_chips` does not enable for this instruction (`k01b`). `#fromCoordsGate` then pins the exact `(x, y)` as `point_from_coordinates` does: `violated("from_coordinates: (x, y) is not on the curve")`, `violated("from_coordinates: point is not in the prime-order subgroup")` (`f11`), the unsupported-pair `synthErr`, or `#matches` of the point ("from_coordinates output"). The parity-only path is divergence K1 (`k01`).
 
 ## Bytes
@@ -244,7 +248,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### bytes32_from_low_high
 
 - Syntax: `bytes32FromLowHigh(Operand, Operand, String)`: low, high, output.
-- Off-circuit: `bytes32FromLowHighV`. Two natives with `fitsBits(L, 248)` and `fitsBits(H, 8)` give the bytes of `L` with byte 31 replaced by `H`; two natives outside the bounds fail with `Bytes32FromLowHigh: low operand must fit in 31 bytes (be less than 2^248) and high operand must fit in a single byte (be less than 256)`. Any other pair goes through `#lowHighErr`, the order of the crate's arm: `intoBytes32V` on each operand (`Unsupported into_bytes32 for T`), then byte 31 of the low encoding and bytes 1 to 31 of the high encoding must be zero, with the same bound message.
+- Off-circuit: `bytes32FromLowHighV`. Two natives with `fitsBits(L, 248)` and `fitsBits(H, 8)` give the bytes of `L` with byte 31 replaced by `H`; two natives outside the bounds fail with `Bytes32FromLowHigh: low operand must fit in 31 bytes (be less than 2^248) and high operand must fit in a single byte (be less than 256)`. Any other pair goes through `#lowHighErr`, which follows the order of the crate's arm: `intoBytes32V` on each operand (`Unsupported into_bytes32 for T`), then byte 31 of the low encoding and bytes 1 to 31 of the high encoding must be zero, with the same bound message.
 - Gate: `#need` and `#chipsForValues` on low, `#native(high, "bytes32_from_low_high high")`, `#lowHighBounds` (`violated("bytes32_from_low_high: low operand uses byte 31")`, the crate's `assert_equal_to_fixed(bytes_low[31], 0)`, or `violated("bytes32_from_low_high: high operand is not a byte")`), then `#matches` of the composition ("bytes32_from_low_high output"). A foreign-field high operand passes off-circuit and fails in circuit: divergence `f08`.
 - Checks: the two bounds, off-circuit.
 
@@ -260,7 +264,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### reconstitute_field
 
 - Syntax: `reconstituteField(Operand, Operand, Int, String)`: divisor, modulus, bits, output; `reads` gives the modulus first, the order of `preprocess`.
-- Off-circuit: `bits > 248` fails with `Excessive bit count` before any operand is read. `#recon` resolves the modulus and applies `checkBits(modulus, bits)`, `#recon3` resolves the divisor and applies `checkBits(divisor, 255 - bits)`, `#recon4` fails with `Reconstituted element overflows field` when `(divisor << bits) + modulus > r - 1` and otherwise stores the sum modulo `#r`.
+- Off-circuit: `bits > 248` fails with `Excessive bit count` before any operand is read. `#recon` resolves the modulus and applies `checkBits(modulus, bits)`; `#recon3` resolves the divisor and applies `checkBits(divisor, 255 - bits)`; `#recon4` fails with `Reconstituted element overflows field` when `(divisor << bits) + modulus > r - 1` and otherwise stores the sum modulo `#r`.
 - Gate: `#native` on both ("reconstitute_field"), `#bits(divisor, 255 - N)`, `#bits(modulus, N)` (the crate's two `assert_lower_than_fixed` calls), then `#matches` of `#recOf`, the sum modulo `r` ("reconstitute_field output"). The gate has no overflow check: after the witness rejects an overflow the output register is absent and the verdict is `unknown` (`f01`); a register holding the wrapped sum would satisfy it.
 - Checks: bit count and both bounds; `ZKIR-WF` rejects `bits > 248` with `reconstitute_field: excessive bit count` (`f10`, `bits = 256`).
 
@@ -330,7 +334,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 
 - Syntax: `lessThan(Operand, Operand, Int, String)`: a, b, bits, output.
 - Off-circuit: `#lt` resolves `a` and applies `checkBits(a, bits)`, `#lt3` does the same for `b`, `#lt4` stores `native(1)` when `a < b` as integers, else `native(0)`.
-- Gate: the chip pads the width to `#ltBits(N) = maxInt(N + N mod 2, 4)` (the crate's `std.lower_than`, `u32::max(bits + bits % 2, 4)`) and `bounded_of_element` asserts it is at most 253, so `#ltBits(N) > 253` is `synthErr("less_than: padded bound P exceeds MAX_BOUND_IN_BITS = 253")` before any register is read; otherwise `#native` on both ("less_than"), `#bits` on both with the padded width, `#matches` of the comparison ("less_than output"). An odd width admits one more bit in circuit (`f04`); widths 253 and 254 pass off-circuit but cannot be built (K5, `k05`).
+- Gate: the chip pads the width to `#ltBits(N) = maxInt(N + N mod 2, 4)` (the crate's `std.lower_than`, `u32::max(bits + bits % 2, 4)`) and `bounded_of_element` asserts it is at most 253. `#ltBits(N) > 253` is therefore `synthErr("less_than: padded bound P exceeds MAX_BOUND_IN_BITS = 253")` before any register is read; otherwise the rule applies `#native` on both ("less_than"), `#bits` on both with the padded width, and `#matches` of the comparison ("less_than output"). An odd width admits one more bit in circuit (`f04`); widths 253 and 254 pass off-circuit but cannot be built (K5, `k05`).
 - Checks: the bound on both operands; `ZKIR-WF` rejects `bits >= 255` with `less_than: excessive bit bound`.
 
 ## Curve
@@ -346,8 +350,8 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 ### public_input
 
 - Syntax: `publicInput(Guard, IrType, String)`: guard (`noGuard()` when the JSON member is absent, `guard(Operand)` otherwise), type, output.
-- Off-circuit: `#guardActive` treats no guard as active and resolves one with `resolveBool`. An inactive guard stores `defaultValue(T)` (`zkir-values.k`, the crate's `IrValue::default`) without touching the transcript. An active one takes `encodedLen(T)` elements of `public_transcript_outputs` at `<pubOutIdx>`, decodes them with `decodeStrict` (errors in [04-values-and-encoding.md](04-values-and-encoding.md)) and advances the cursor. A short transcript, a slice panic in the crate, sets `panic("range end index out of range: public transcript outputs too short")`, or in generation mode stores the default and records `needPubOut(T)`.
-- Gate: `#need` on the output, `#chipFor(T, Chips)`, `#typed`: the register's type must be `T` (`violated("register has type U, declared T")`), as `assign_incircuit`. The guard plays no part.
+- Off-circuit: `#guardActive` treats an absent guard as active and resolves a present one with `resolveBool`. An inactive guard stores `defaultValue(T)` (`zkir-values.k`, the crate's `IrValue::default`) without touching the transcript. An active one takes `encodedLen(T)` elements of `public_transcript_outputs` at `<pubOutIdx>`, decodes them with `decodeStrict` (errors in [04-values-and-encoding.md](04-values-and-encoding.md)) and advances the cursor. A short transcript sets `panic("range end index out of range: public transcript outputs too short")`, the slice panic of the crate; in generation mode it stores the default and records `needPubOut(T)` instead.
+- Gate: `#need` on the output, `#chipFor(T, Chips)`, `#typed`: the register's type must be `T` (`violated("register has type U, declared T")`), as `assign_incircuit` does. The guard plays no part.
 - Checks: the transcript length, a panic rather than an error.
 
 ### private_input
@@ -367,7 +371,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 
 ## Corpus programs by instruction
 
-The table lists the programs under `experiments/zkir-k/corpus/` whose `"op"` members include each instruction. `ledger` is `ledger9-92e8bdd3-tests/`, `handmade` and `negative` are `handmade/` and `handmade-negative/`, `divergence` is `divergence/`, `micro-dao` stands for the six `midnight-zkir-2ffe2d1-precompiles/micro-dao__*.zkir` programs (`advance`, `buyIn`, `cashOut`, `setTopic`, `voteCommit`, `voteReveal`), and `curve_*` for `curve_jubjub`, `curve_secp256k1`, `curve_secp256r1` and `curve_curve25519`. Programs of the same name under `midnight-zkir-2ffe2d1-tests/` use the same ops on the extension surface and are not repeated, except that `test_reverse_bytes_proof` there uses the extension's `reverse` in place of `reverse_bytes` (see [09-extension-surface.md](09-extension-surface.md)).
+The table lists the programs under `experiments/zkir-k/corpus/` whose `"op"` members include each instruction. `ledger` is `ledger9-92e8bdd3-tests/`, `handmade` and `negative` are `handmade/` and `handmade-negative/`, and `divergence` is `divergence/`. `micro-dao` stands for the six `midnight-zkir-2ffe2d1-precompiles/micro-dao__*.zkir` programs (`advance`, `buyIn`, `cashOut`, `setTopic`, `voteCommit`, `voteReveal`), and `curve_*` for `curve_jubjub`, `curve_secp256k1`, `curve_secp256r1` and `curve_curve25519`. Programs of the same name under `midnight-zkir-2ffe2d1-tests/` use the same ops on the extension surface and are not repeated, except that `test_reverse_bytes_proof` there uses the extension's `reverse` in place of `reverse_bytes` (see [09-extension-surface.md](09-extension-surface.md)).
 
 | op | ledger | handmade, negative | divergence | micro-dao |
 |---|---|---|---|---|

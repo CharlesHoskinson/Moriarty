@@ -2,9 +2,9 @@
 
 ## What the definition is
 
-The definition is an executable semantics, written in the K Framework, of ZKIR v3, the zero-knowledge intermediate representation that the `zkir-v3` crate of `midnight-ledger` turns into a witness and a circuit. It lives under `experiments/zkir-k/` and is compiled with K v7.1.337 on the LLVM backend, so a program can be run, not only read.
+The definition is an executable semantics of ZKIR v3, the zero-knowledge intermediate representation that the `zkir-v3` crate of `midnight-ledger` turns into a witness and a circuit. It lives under `experiments/zkir-k/`, is written in the K Framework and is compiled with K v7.1.337 on the LLVM backend, so a program can be run.
 
-Two surfaces of ZKIR are covered by one set of K modules:
+One set of K modules covers two surfaces of ZKIR:
 
 | Surface | Main module | Rust source followed | Instructions and types |
 |---|---|---|---|
@@ -17,10 +17,10 @@ Four main modules give four compiled definitions: `ZKIR` and `ZKIR-EXT` run prog
 
 A ZKIR program has two halves in the crate. The off-circuit half, `IrSource::preprocess` in `ir_vm.rs`, computes the witness: it decodes the raw inputs, runs each `*_offcircuit` function, consumes the transcripts and builds the public-input vector. The in-circuit half, `Relation::circuit`, builds the PLONKish circuit from the same instructions. The definition models both at the level of instructions:
 
-- Off-circuit, `ZKIR-VM` in `zkir-vm.k` models the witness computation of `preprocess`, including its run-time checks and its error and panic points, and records the result in cells (`<mem>`, `<pi>`, `<skips>`, `<outputs>`, `<status>` and the transcript cursors). How closely it follows the crate is measured by the differential harness (see the checking pipeline below).
+- Off-circuit, `ZKIR-VM` in `zkir-vm.k` models the witness computation of `preprocess`, including its run-time checks and its error and panic points, and records the result in cells (`<mem>`, `<pi>`, `<skips>`, `<outputs>`, `<status>` and the transcript cursors). The differential harness measures how closely it follows the crate (see the checking pipeline below).
 - In-circuit, `ZKIR-CONSTRAINTS` in `zkir-constraints.k` gives every instruction a relation over registers: `gate(add(a, b, o))` states that `o` is the sum of `a` and `b` under the type dispatch of `add_incircuit`. Each gate is evaluated on the final witness and gets one of five outcomes: `holds`, `violated`, `synthErr`, `unknown` or `unsupported`.
 
-The definition does not model the PLONKish gate rows and copy wiring the circuit is compiled to, the auxiliary witness cells and assignment constraints of each type (byte range checks, on-curve and cofactor constraints, foreign limb ranges), or the internals of the hash gadgets. Chapter 15-design-rationale-and-limits.md explains why; the last section of this chapter gives the consequences.
+The definition does not model the PLONKish gate rows and copy wiring the circuit is compiled to, the auxiliary witness cells and assignment constraints of each type (byte range checks, on-curve and cofactor constraints, foreign limb ranges), or the internals of the hash gadgets. Chapter 15-design-rationale-and-limits.md explains why, and the last section of this chapter gives the consequences.
 
 ## Map of `experiments/zkir-k/`
 
@@ -93,11 +93,13 @@ printf '%s\n' '{"inputs": ["5", "123456789", "987654321987654321"]}' > /tmp/tran
 uv run --group zkir-k python experiments/zkir-k/tools/zkir_run.py experiments/zkir-k/corpus/handmade/transient_hash.zkir /tmp/transient_hash.json
 ```
 
-The runner takes `PROGRAM.zkir PREIMAGE.json`, plus `--ext` for the extension definition, `--checked` for `checkedJob`, `--gen` for `genJob` and `--depth N` for a step bound. A program the preprocessor rejects prints `format error: ...` on standard error and exits with code 2. The first command prints `wfOk`. The second prints a JSON object with `status` (and `error` when not `ok`), `memory`, `pis`, `pi_skips`, `cursors`, the counts `constraints` and `verdicts`, `k_cell`, `needs`, the list `all_verdicts` of (outcome, message, gate) triples, its non-`holds` subset `violations`, and `outputs`. For `transient_hash.zkir` both counts are 8 (`bindGate(0)` plus seven instruction gates), `k_cell` is `.K` and `violations` is empty; chapter 02-getting-started.md shows the full object.
+The runner takes `PROGRAM.zkir PREIMAGE.json`, plus `--ext` for the extension definition, `--checked` for `checkedJob`, `--gen` for `genJob` and `--depth N` for a step bound. A program the preprocessor rejects prints `format error: ...` on standard error and exits with code 2.
+
+The first command prints `wfOk`. The second prints a JSON object with `status` (and `error` when not `ok`), `memory`, `pis`, `pi_skips`, `cursors`, the counts `constraints` and `verdicts`, `k_cell`, `needs`, the list `all_verdicts` of (outcome, message, gate) triples, its non-`holds` subset `violations`, and `outputs`. For `transient_hash.zkir` both counts are 8 (`bindGate(0)` plus seven instruction gates), `k_cell` is `.K` and `violations` is empty; chapter 02-getting-started.md shows the full object.
 
 ## The checking pipeline
 
-The definition is checked by the tools below, each with a receipt under `evidence/`:
+Each of the tools below checks the definition and has a receipt under `evidence/`:
 
 | Layer | Tool | Compared against | Result |
 |---|---|---|---|
@@ -108,7 +110,7 @@ The definition is checked by the tools below, each with a receipt under `evidenc
 | divergence cases | `divergence_tests.py` | the oracle, plus the expected outcome of one selected gate | 20 of 20 behave as expected |
 | corpus well-formedness | `check_corpus.py` | the expectation table in the tool | 63 programs as expected: the 43 crate tests, the 6 precompiles, the 7 handmade negatives and the 7 Moriarty artifacts under `experiments/moriarty-compact-escrow/output/zkir/` and `experiments/moriarty-core-swap/output/zkir/` |
 
-For each program the harness draws typed inputs, runs `genJob` for up to eight passes, then runs `job` and the oracle on the same preimage. When both fail it compares status and error class; when both succeed it compares every register's type and encoding, the public-input vector and the skip vector, then runs perturbed preimages so that error paths are compared too. It does not compare the partial memory of a failed run, because the crate does not expose it. See 12-oracles-and-differential-testing.md for the harness and 13-known-divergences.md for the cases.
+For each program the harness draws typed inputs, runs `genJob` for up to eight passes, then runs `job` and the oracle on the same preimage. When both fail it compares status and error class. When both succeed it compares every register's type and encoding, the public-input vector and the skip vector, then runs perturbed preimages so that error paths are compared too. It does not compare the partial memory of a failed run, because the crate does not expose it. See 12-oracles-and-differential-testing.md for the harness and 13-known-divergences.md for the cases.
 
 ## Reading guide
 
@@ -132,8 +134,8 @@ For each program the harness draws typed inputs, runs `genJob` for up to eight p
 
 ## What a green run establishes
 
-A finished run of `job` or `checkedJob` (not `genJob`) with `<status>` `ok()` and every verdict `holds()` establishes one thing: the concrete witness computed on that preimage satisfies every instruction-level relation the run emitted into `<constraints>`. The relations are evaluated on the final `<mem>`, and `job` lets a later write overwrite an earlier one (`zkir-vm.k`, rule for `#put`), so the verdicts are meaningful only for a program that passes `wf`; `checkedJob` guarantees this.
+A finished run of `job` or `checkedJob` (not `genJob`) with `<status>` `ok()` and every verdict `holds()` establishes one thing: the concrete witness computed on that preimage satisfies every instruction-level relation the run emitted into `<constraints>`. The relations are evaluated on the final `<mem>`, and `job` lets a later write overwrite an earlier one (`zkir-vm.k`, rule for `#put`). The verdicts are therefore meaningful only for a program that passes `wf`, which `checkedJob` guarantees.
 
-Those relations are not the circuit. A green run does not establish that no other witness satisfies the circuit, because the auxiliary witness cells, the copy wiring and the assignment constraints of each type (byte range checks, on-curve and cofactor constraints, foreign limb ranges) are not modelled; that a hash gadget is fully constrained, because gadget internals are computed concretely; that an assigned `JubjubScalar` is canonical, because assignment alone does not prove it in the circuit; or that keygen and proving succeed, because the prover-side panics of chip hints are outside the model. A `synthErr` verdict on a run with status `ok()` says that `preprocess` accepted a program the circuit cannot be built for; chapter 08-constraints-and-verdicts.md lists the cases.
+Those relations are not the circuit. A green run does not establish that no other witness satisfies the circuit, because the auxiliary witness cells, the copy wiring and the assignment constraints of each type (byte range checks, on-curve and cofactor constraints, foreign limb ranges) are not modelled. It does not establish that a hash gadget is fully constrained, because gadget internals are computed concretely, nor that an assigned `JubjubScalar` is canonical, because assignment alone does not prove it in the circuit. Nor does it establish that keygen and proving succeed, because the prover-side panics of chip hints are outside the model. A `synthErr` verdict on a run with status `ok()` says that `preprocess` accepted a program the circuit cannot be built for, and chapter 08-constraints-and-verdicts.md lists the cases.
 
-Agreement with the crate is a separate, empirical statement: `zkir_run.py` never calls the crate. That the witness is the one `preprocess` computes, and that a failing run fails with the same status and error class, is established only for the program and preimage pairs the differential harness compared, at the two pinned commits, and only on the observables it compares.
+Agreement with the crate is a separate, empirical statement: `zkir_run.py` never calls the crate. Two things are established only for the program and preimage pairs the differential harness compared, at the two pinned commits, and only on the observables it compares: that the witness is the one `preprocess` computes, and that a failing run fails with the same status and error class.

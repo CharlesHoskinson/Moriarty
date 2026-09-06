@@ -202,3 +202,4 @@ agreements. Three more upstream candidates K3 to K5 in `contradictions.md`.
 Also: full kframework.org crawl (SRC-0026) and `k-framework/k-best-practices.md`;
 semantics graph (237 nodes) in evidence.
 - [2026-09-05] docs | fifteen-chapter documentation of the ZKIR K definition under experiments/zkir-k/docs, drafted by three model families and audited cross-vendor as developer and formal methods expert; four semantics defects (K6 Bytes32 strict decoding, sha512 gate alignment, overlapping test_eq rules, check --ext) and three tool gaps fixed; all six check layers rerun green (receipts 2026-09-05c)
+- [2026-09-05] docs | editorial pass on all fifteen ZKIR K chapters (structural edit, cadence revision with displacement check, machine-tell audit), each verified fact-for-fact against its original; no habit rose across the set

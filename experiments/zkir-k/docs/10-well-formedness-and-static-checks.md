@@ -14,18 +14,18 @@ Whether a program is well formed holds or fails for every preimage; whether a ru
 | 4 | Structural arities and bit bounds hold (next table) | `#checkArity` | see next table |
 | 5 | No identifier is written twice: not an input name, not an earlier output, not twice by one instruction | `#wfWrites` | `reassignment of %x` |
 
-Checks 3 to 5 are applied instruction by instruction by `#wfInstrs`, which carries the set `Defined` of names seen so far. Within one instruction the order is reads, then arity, then writes:
+`#wfInstrs` applies checks 3 to 5 instruction by instruction, carrying the set `Defined` of names seen so far. Within one instruction the order is reads, then arity, then writes:
 
 ```k
 rule #wfInstrs((I ; Is), Defined, N) => #wfAfterReads(#checkReads(reads(I), Defined), I, Is, Defined, N)
 rule #wfAfterArity(wfOk(), I, Is, Defined, N) => #wfWrites(writes(I), Is, Defined, N)
 ```
 
-Check 3 is one walk over the operand list, so an out-of-range immediate that precedes an undefined variable is the one reported. `add %x, %x -> %x` with `%x` undefined fails as `undefined variable %x`, while `copy %a -> %a` with `%a` an input fails as `reassignment of %a`. `N` is `lenIrTypes(Outs)`, the number of declared return types, used only by the `output` arity check.
+Check 3 is one walk over the operand list, so an out-of-range immediate that precedes an undefined variable is the one reported. `add %x, %x -> %x` with `%x` undefined fails as `undefined variable %x`, while `copy %a -> %a` with `%a` an input fails as `reassignment of %a`. The `N` in these rules is `lenIrTypes(Outs)`, the number of declared return types, and only the `output` arity check uses it.
 
 ### `reads` and `writes`
 
-Two total functions in ZKIR-SYNTAX describe the data flow of every instruction without executing it. `reads(I)` returns the operands the instruction resolves off-circuit, in the order `IrSource::preprocess` resolves them; `writes(I)` returns the identifiers it defines.
+Two total functions in ZKIR-SYNTAX describe the data flow of every instruction without executing it. `reads(I)` returns the operands the instruction resolves off-circuit, in the order `IrSource::preprocess` resolves them, and `writes(I)` returns the identifiers it defines.
 
 ```k
 rule reads(condSelect(B, A, C, _))           => B, A, C, .Operands
@@ -51,7 +51,7 @@ Instructions that only constrain (`assert`, `constrain_bits`, `constrain_eq`, `c
 | `constrain_bits` | bits below 255 | `constrain_bits: excessive bit bound` |
 | `less_than` | bits below 255 | `less_than: excessive bit bound` |
 
-The arity of `encode` is not a static check because it depends on the run-time type of the encoded value. The VM reports `Unexpected output length of encode instruction: T` (`#encode` in `zkir-vm.k`, `T` the type name), and the gate evaluates to `synthErr("Unexpected output length of encode instruction")` (`#encMatch` in `zkir-constraints.k`).
+The arity of `encode` depends on the run-time type of the encoded value, so it is not a static check. The VM reports `Unexpected output length of encode instruction: T` (`#encode` in `zkir-vm.k`, `T` the type name), and the gate evaluates to `synthErr("Unexpected output length of encode instruction")` (`#encMatch` in `zkir-constraints.k`).
 
 ## Evaluating the check
 
@@ -73,21 +73,21 @@ wfOk
 
 Without `--ext` the same file stops in the preprocessor with `format error: unknown IR type 'Bool'`.
 
-Two `wf` failures cannot be produced from a file, because the preprocessor rejects the same programs first: a minor version other than 0 (`format error: unhandled version: 3.1`) and an immediate at or above r. The rules keep `wf` total on every `Program` term.
+A file cannot produce two of the `wf` failures, because the preprocessor rejects those programs first: a minor version other than 0 (`format error: unhandled version: 3.1`) and an immediate at or above r. The rules keep `wf` total on every `Program` term.
 
 ### The corpus check
 
-`tools/check_corpus.py` runs the same evaluation over five directories: `corpus/ledger9-92e8bdd3-tests`, `corpus/midnight-zkir-2ffe2d1-precompiles`, `corpus/handmade-negative`, and the compiled circuits in `experiments/moriarty-compact-escrow/output/zkir` and `experiments/moriarty-core-swap/output/zkir`. Programs whose `version.major` is not 3 are skipped. Every file is loaded on the base surface, so `corpus/midnight-zkir-2ffe2d1-tests` is not among its corpora. The expectations live in the script's `EXPECTED` table, keyed by file name: `wfOk` (the default for an unlisted file), `format` (any format error), or `wfError:<substring>`. The corpus manifests (`manifest.json`) record provenance and test preimages, not expectations.
+`tools/check_corpus.py` runs the same evaluation over five directories: `corpus/ledger9-92e8bdd3-tests`, `corpus/midnight-zkir-2ffe2d1-precompiles`, `corpus/handmade-negative`, and the compiled circuits in `experiments/moriarty-compact-escrow/output/zkir` and `experiments/moriarty-core-swap/output/zkir`. It skips programs whose `version.major` is not 3. It loads every file on the base surface, which is why `corpus/midnight-zkir-2ffe2d1-tests` is not among its corpora. Expectations live in the script's `EXPECTED` table, keyed by file name: `wfOk` (the default for an unlisted file), `format` (any format error), or `wfError:<substring>`. The corpus manifests (`manifest.json`) record provenance and test preimages, not expectations.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py
 ```
 
-The last line is the summary, `63 programs, 63 as expected, 0 unexpected, 8.0s` (the time varies); the exit status is 0 only when nothing is unexpected. The receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-05c.txt`. The 63 programs are 43 ledger tests, 6 precompiles, 7 escrow and swap circuits and the 7 negatives. The five ledger tests listed in `EXPECTED` are the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
+The last line is the summary, `63 programs, 63 as expected, 0 unexpected, 8.0s` (the time varies), and the exit status is 0 only when nothing is unexpected; the receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-05c.txt`. Of the 63 programs, 43 are ledger tests, 6 precompiles, 7 escrow and swap circuits and 7 negatives. Five ledger tests are listed in `EXPECTED`: the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
 
 ## The negative programs
 
-Every file in `corpus/handmade-negative/` fails exactly one predicate. The last column is the output of the `check` command on the file; the 74-digit immediate is shortened.
+Every file in `corpus/handmade-negative/` fails exactly one predicate. The last column is the output of the `check` command on the file, with the 74-digit immediate shortened.
 
 | File | Content | Predicate that fails | Output of `check` |
 |---|---|---|---|
@@ -101,7 +101,7 @@ Every file in `corpus/handmade-negative/` fails exactly one predicate. The last 
 
 ## The static check against the crate
 
-The crate has no static pass. `IrSource::load` (`ir.rs`) accepts version 3.0 and lets serde deserialise the fields, so operand format and immediate range are load-time errors; every other failure occurs inside `preprocess` (`ir_vm.rs`) while the instructions execute, or inside `circuit` at key generation. `job(P, Pre)` executes every program `IrSource::load` accepts and reproduces the run-time checks of `preprocess` with the crate's messages; `checkedJob(P, Pre)` evaluates `wf(P)` first and on failure sets `<status>` to `error("well-formedness: " +String S)` and skips the run, so it accepts strictly fewer programs:
+The crate has no static pass. `IrSource::load` (`ir.rs`) accepts version 3.0 and lets serde deserialise the fields, so operand format and immediate range are load-time errors; every other failure occurs inside `preprocess` (`ir_vm.rs`) while the instructions execute, or inside `circuit` at key generation. `job(P, Pre)` executes every program `IrSource::load` accepts and reproduces the run-time checks of `preprocess` with the crate's messages. `checkedJob(P, Pre)` evaluates `wf(P)` first; on failure it sets `<status>` to `error("well-formedness: " +String S)` and skips the run, so it accepts strictly fewer programs:
 
 ```k
 rule <k> checkedJob(P, Pre) => #wfGate(wf(P)) ~> job(P, Pre) ... </k>
@@ -121,7 +121,7 @@ rule <k> job(_, _) => .K ... </k> <status> error(_) </status>
 | bits at most 248 (`div_mod_power_of_two`, `reconstitute_field`) | `well-formedness: ...: excessive bit count` | run-time error `Excessive bit count` |
 | bits below 255 (`constrain_bits`, `less_than`) | `well-formedness: ...: excessive bit bound` | run-time error `Excessive bit bound` (`checkBits`, `zkir-ops.k`) |
 
-The columns differ in more than wording: a run-time error is raised only when execution reaches the instruction with status `ok()`. The negative programs ship without preimages; a one-input preimage in a file `one.json` shows the difference (keys in 06-configuration-and-run-lifecycle.md, printed fields in 11-tooling-reference.md):
+The columns differ in more than wording: execution raises a run-time error only when it reaches the instruction with status `ok()`. The negative programs ship without preimages. A one-input preimage in a file `one.json` shows the difference (keys in 06-configuration-and-run-lifecycle.md, printed fields in 11-tooling-reference.md):
 
 ```
 {"inputs":[1],"binding_input":0,"private_transcript":[],"public_transcript_inputs":[],"public_transcript_outputs":[]}
@@ -138,6 +138,6 @@ Checks that need values remain in the VM in both modes: operand types, boolean g
 
 ## Why single assignment matters
 
-After the last instruction the VM evaluates every emitted gate against the final contents of `<mem>` (`#verdicts` in `zkir-vm.k`, `verdicts` in `zkir-constraints.k`). A gate names registers, not values, so a verdict states whether the relation holds between the values those registers finally have. `job` accepts a program that reassigns a register: a later `#put` overwrites the earlier value. For such a program a verdict says nothing about the value the instruction produced when it ran: a `holds` on a gate whose output register was later overwritten only means the final value satisfies the relation. Single assignment is the condition under which evaluation over the final memory coincides with evaluation at each instruction; `#wfWrites` enforces that condition, no more and no less. It does not inspect values, so writing the same value twice is rejected as well.
+After the last instruction the VM evaluates every emitted gate against the final contents of `<mem>` (`#verdicts` in `zkir-vm.k`, `verdicts` in `zkir-constraints.k`). A gate names registers, not values, so a verdict states whether the relation holds between the values those registers finally have. `job` accepts a program that reassigns a register, and a later `#put` overwrites the earlier value. For such a program a verdict says nothing about the value the instruction produced when it ran. A `holds` on a gate whose output register was later overwritten only means the final value satisfies the relation. Single assignment is the condition under which evaluation over the final memory coincides with evaluation at each instruction, and `#wfWrites` enforces that condition, no more and no less. It does not inspect values, so writing the same value twice is rejected as well.
 
-`reassignment.zkir` shows the effect. Under `job` with input `%a = 1`, `copy` sets `%b` to 1, `add` overwrites it with 2, and the run ends with status `ok`. The verdicts are evaluated with `%b = 2`: the `copy` gate requires `%b = %a`, the `add` gate requires `%b = %a + %b`, and both report `violated`. The crate agrees: `circuit` checks every cell it inserts against the final witness memory (`mem_insert` in `ir_vm.rs`), so the in-circuit `copy` inserts 1 for `%b` against a witness value of 2 and synthesis fails with a misalignment error. A `job` run can thus end with status `ok` and violated verdicts at once; `checkedJob` rejects the program before any gate exists. For programs that pass `wf`, every verdict of 08-constraints-and-verdicts.md is a statement about the instruction that emitted the gate.
+`reassignment.zkir` shows the effect. Under `job` with input `%a = 1`, `copy` sets `%b` to 1, `add` overwrites it with 2, and the run ends with status `ok`. The VM evaluates the verdicts with `%b = 2`: the `copy` gate requires `%b = %a`, the `add` gate requires `%b = %a + %b`, and both report `violated`. The crate agrees: `circuit` checks every cell it inserts against the final witness memory (`mem_insert` in `ir_vm.rs`), so the in-circuit `copy` inserts 1 for `%b` against a witness value of 2 and synthesis fails with a misalignment error. A `job` run can thus end with status `ok` and violated verdicts at once; `checkedJob` rejects the program before any gate exists. For programs that pass `wf`, every verdict of 08-constraints-and-verdicts.md is a statement about the instruction that emitted the gate.

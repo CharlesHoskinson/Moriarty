@@ -19,3 +19,7 @@ Every chapter: drafted by one vendor, audited by two other vendors (developer an
 | 13 | claude | grok | codex | 1 | K6 section |
 | 14 | grok | claude | claude (codex stalled) | 1 | found #selBit / #eqSupported overlaps |
 | 15 | codex | grok | claude | 1 | wiki definition-page correction |
+
+## Prose pass
+
+Every chapter: Gottlieb edit (findings in prose/NN-gottlieb.md), Le Guin revision with the inkwell displacement check (no habit rising), humanizer file-mode loop, author self-diff, then an independent preservation check (prose/NN-verify.md). All fifteen verdicts PRESERVED; two minor precision losses in chapter 10 restored by the orchestrator. Whole-set displacement: semicolons -29%, expletive openers -77%, very short sentences -23%, nothing rose.

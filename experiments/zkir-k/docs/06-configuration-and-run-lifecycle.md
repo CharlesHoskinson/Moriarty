@@ -4,7 +4,7 @@
 
 The virtual machine (VM) keeps witness computation, gate emission and verdict evaluation in one configuration. The descriptions below follow [`zkir-vm.k`](../semantics/zkir-vm.k), module `ZKIR-VM`; VM symbols belong to that file unless another file is named.
 
-The table gives content sorts, except for the enclosing cell, whose generated sort is `ZkirCell`. Initial values precede entry-point execution. Element types in the role column describe intended contents, not additional K sorts.
+The table gives content sorts, except for the enclosing cell, whose generated sort is `ZkirCell`. The initial content is what each cell holds before the entry point runs. Element types in the role column describe intended contents, not additional K sorts.
 
 | Cell | Sort | Initial content | Role |
 |---|---|---|---|
@@ -43,11 +43,11 @@ The extension surface enables `<strictDecode>` through the `job` and `genJob` ru
                | genJob(Program, Preimage)      [symbol(genJob)]       // generation mode, see <genMode>
 ```
 
-`job` executes the raw program without a static check. `checkedJob` places `#wfGate(wf(P))` before `job(P, Pre)`: `wfOk()` disappears, while `wfError(S)` sets the status to `error("well-formedness: " +String S)` and the following job is discarded, so input loading, gate emission and `#verdicts` never begin; `<constraints>` and `<verdicts>` stay empty and every other cell keeps its initial value. The static predicate `wf` belongs to `zkir-syntax.k`; see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md).
+`job` executes the raw program without a static check. `checkedJob` places `#wfGate(wf(P))` before `job(P, Pre)`: `wfOk()` disappears, while `wfError(S)` sets the status to `error("well-formedness: " +String S)` and discards the following job. Input loading, gate emission and `#verdicts` then never begin; `<constraints>` and `<verdicts>` stay empty, and every other cell keeps its initial value. The static predicate `wf` belongs to `zkir-syntax.k`; see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md).
 
 `genJob` sets `<genMode>` to `true` and becomes `job`. `tools/zkir_run.py` exposes the three constructors as the default run, `--checked` and `--gen`; `Runner.run` selects generation before checked execution when both flags are supplied, since there is no combined checked-generation constructor.
 
-The `preimage` constructor orders its fields as `inputs`, `binding_input`, `communications_commitment`, `private_transcript`, `public_transcript_inputs` and `public_transcript_outputs`. Its `CommOpt` field is either `noComm()` or `comm(commitment, opening)`. `tools/zkir_run.py`, `preimage_term`, converts the optional two-element commitment array to that constructor and checks preimage integers through `fr`. See [04-values-and-encoding.md](04-values-and-encoding.md) for field encodings.
+The `preimage` constructor orders its fields as `inputs`, `binding_input`, `communications_commitment`, `private_transcript`, `public_transcript_inputs` and `public_transcript_outputs`. Its `CommOpt` field is either `noComm()` or `comm(commitment, opening)`. `preimage_term` in `tools/zkir_run.py` converts the optional two-element commitment array to that constructor and checks preimage integers through `fr`. See [04-values-and-encoding.md](04-values-and-encoding.md) for field encodings.
 
 The ordinary job rule stores the preimage, output types, commitment flag and `usedChips(P)`, then schedules:
 
@@ -55,9 +55,9 @@ The ordinary job rule stores the preimage, output types, commitment flag and `us
 #loadInputs(#preInputs(Pre), Ins, 0) ~> #seedPi(Ins) ~> Is ~> #verdicts
 ```
 
-`#loadInputs` processes declarations sequentially: it checks that enough raw elements remain, decodes exactly `encodedLen(T)` through `decodeStrict` in `zkir-values.k`, and schedules `#put` before the next declaration. `#put` stores a successful value by map update, overwriting any existing destination, so a later decoding failure preserves earlier writes. Finishing the declarations also checks for surplus raw inputs.
+`#loadInputs` processes declarations in order: it checks that enough raw elements remain, decodes exactly `encodedLen(T)` through `decodeStrict` in `zkir-values.k`, and schedules `#put` before the next declaration. `#put` stores a successful value by map update, overwriting any existing destination, so a later decoding failure preserves earlier writes. Finishing the declarations also checks for surplus raw inputs.
 
-`#seedPi` places the binding input at position zero and emits `bindGate(0)`. With commitments enabled it also places the supplied commitment at position one and emits `commGate(1, Ins, Rand)`. A missing commitment places only the binding input in `<pi>`, still emits `bindGate(0)` and `commGate(1, Ins, 0)` with opening randomness zero, sets `<piIdx>` to two, and raises `Expected communications commitment`; that gate later evaluates to `unknown("public input vector incomplete")` because `<pi>` has one element. After an input-loading failure, seeding still emits the gates and sets `<piIdx>` to one or two, without populating `<pi>`.
+`#seedPi` places the binding input at position zero and emits `bindGate(0)`. With commitments enabled it also places the supplied commitment at position one and emits `commGate(1, Ins, Rand)`. A missing commitment places only the binding input in `<pi>`, still emits `bindGate(0)` and `commGate(1, Ins, 0)` with opening randomness zero, sets `<piIdx>` to two, and raises `Expected communications commitment`. That gate later evaluates to `unknown("public input vector incomplete")` because `<pi>` has one element. After an input-loading failure, seeding still emits the gates and sets `<piIdx>` to one or two, without populating `<pi>`.
 
 ## Sequencing and failure
 
@@ -70,7 +70,7 @@ The instruction-list rule exposes the next instruction through `~>`:
 
 An ordinary instruction appends `gate(I)` and becomes `#exec(I)`. `isSpecialEmit` selects two exceptions: `impact` emits `guardGate` and its `piGate` entries, while `output` emits `outputGate` carrying `<outTypes>`. Impact advances `<piIdx>` during emission, independently of witness progress.
 
-Witness entry rules match `<status> ok() </status>`, a cell-pattern condition rather than a global restriction on every rule. `#fail` sets `error(S)`; `#panicNow` sets `panic(S)`. Subsequent `#exec` terms disappear under either failure status; memory, outputs, public inputs and transcript cursors keep their partial state, gate emission continues, and `#verdicts` still runs. A failed static check differs because it prevents job initialization altogether.
+Witness entry rules match `<status> ok() </status>`, a cell-pattern condition rather than a global restriction on every rule. `#fail` sets `error(S)`; `#panicNow` sets `panic(S)`. Subsequent `#exec` terms disappear under either failure status; memory, outputs, public inputs and transcript cursors keep their partial state, gate emission continues, and `#verdicts` still runs. A failed static check differs because it prevents job initialization.
 
 The ordering follows the explicit continuation and rule conditions, not the textual order of the rules. Helpers such as `#put` need no separate status test because only the live witness path schedules them.
 
@@ -82,23 +82,23 @@ Other continuations encode instruction-specific precedence: `#lt` through `#lt4`
 
 `publicInput` reads **public transcript outputs**, through `#prePubOut`; `privateInput` reads `#prePrivate`. Their `#exec` rules resolve the guard through `#guardActive` before `#input` selects a branch. A false guard stores `defaultValue(T)` without consuming transcript elements. An active read consumes `encodedLen(T)` elements; when the slice exists, the cursor advances before `#put` decodes, so a decoding failure can leave an advanced cursor. A short transcript in ordinary mode instead schedules `#panicNow` without advancing the cursor.
 
-`impact` uses public transcript inputs. An inactive impact appends zeros and `skipSome(n)` without resolving its value operands or consuming transcript inputs. An active impact uses `#impactPush` and `#impactOne` to append native values and advance `<pubInIdx>` one at a time, then appends `skipNone()` and uses `#impactCheck` to compare the pushed values with the expected transcript; missing expected values follow the mismatch error path.
+`impact` uses public transcript inputs. An inactive impact appends zeros and `skipSome(n)` without resolving its value operands or consuming transcript inputs. An active impact appends native values through `#impactPush` and `#impactOne`, which advance `<pubInIdx>` one at a time, then appends `skipNone()` and compares the pushed values with the expected transcript in `#impactCheck`; missing expected values follow the mismatch error path.
 
 ## Completion and generation
 
-In ordinary mode, live `#finish` requires each transcript cursor to equal its transcript length, otherwise raising `Transcripts not fully consumed`. Only then does `#commCheck` compare the supplied commitment with `transientCommit(#preInputs(Pre) #encodeAll(Os), Rand)`, where `#preInputs(Pre)` is the raw input list of the preimage, `#encodeAll(Os)` in `zkir-constraints.k` is the concatenated encoding of the output values, and juxtaposition is K list concatenation; `zkir-hash.k`, `transientCommit`, hashes the opening followed by that list.
+In ordinary mode, live `#finish` requires each transcript cursor to equal its transcript length, otherwise raising `Transcripts not fully consumed`. Only then does `#commCheck` compare the supplied commitment with `transientCommit(#preInputs(Pre) #encodeAll(Os), Rand)`, where `#preInputs(Pre)` is the raw input list of the preimage, `#encodeAll(Os)` in `zkir-constraints.k` is the concatenated encoding of the output values, and juxtaposition is K list concatenation. `transientCommit` in `zkir-hash.k` hashes the opening followed by that list.
 
-The later `#verdicts` invokes `zkir-constraints.k`, `verdicts`, using final memory, public inputs, chips, outputs and binding input. It does not change `<status>`. The commitment gate re-encodes input registers, whereas the witness commitment check uses raw inputs. See [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md) for outcomes and [13-known-divergences.md](13-known-divergences.md) for consequences of this distinction.
+`#verdicts` runs after `#finish` and invokes `verdicts` in `zkir-constraints.k` with the final memory, public inputs, chips, outputs and binding input. It does not change `<status>`. The commitment gate re-encodes input registers, whereas the witness commitment check uses raw inputs. See [08-constraints-and-verdicts.md](08-constraints-and-verdicts.md) for outcomes and [13-known-divergences.md](13-known-divergences.md) for consequences of this distinction.
 
-Under `error` or `panic`, `#finish` simply disappears, preserving the first failure instead of replacing it with an exhaustion or commitment error. Gates retain operands and register names, not snapshots of intermediate memory, so raw programs that overwrite registers can make earlier gates observe later values; the single-assignment check in `zkir-syntax.k`, `wf`, matters when interpreting these verdicts.
+Under `error` or `panic`, `#finish` disappears, preserving the first failure instead of replacing it with an exhaustion or commitment error. Gates retain operands and register names, not snapshots of intermediate memory, so raw programs that overwrite registers can make earlier gates observe later values; the single-assignment check of `wf` in `zkir-syntax.k` matters when interpreting these verdicts.
 
-Generation changes transcript handling through `<genMode>`. A short active read supplies `defaultValue(T)`, advances the cursor and records `needPubOut(T)` or `needPriv(T)`. Active impacts record `needPubIn(value)` instead of comparing expectations. Live `#finish` skips exhaustion checks and, when commitments are enabled, records `needComm(value)`. Generation still requires a commitment pair at seeding and can fail on other witness operations.
+Generation changes transcript handling through `<genMode>`. A short active read supplies `defaultValue(T)`, advances the cursor and records `needPubOut(T)` or `needPriv(T)`, and an active impact records `needPubIn(value)` instead of comparing expectations. Live `#finish` skips exhaustion checks and, when commitments are enabled, records `needComm(value)`. Generation still requires a commitment pair at seeding and can fail on other witness operations.
 
-`tools/diff_test.py`, `build_preimage`, supplies a provisional commitment pair when needed, runs generation, fills the requested transcript values, replaces expected public transcript inputs and the commitment from the recorded needs, and repeats within a bounded loop because generated values can change later guards. `tools/zkir_run.py`, `need`, exposes these records as `pubOut`, `priv`, `pubIn` and `comm`. Since live `#finish` skips the exhaustion and commitment checks, a `--gen` run can report `ok`, even `holds()` on every gate, for a preimage an ordinary run rejects; apply the `needs` list and rerun without `--gen` before reading the result as an ordinary verdict.
+`build_preimage` in `tools/diff_test.py` supplies a provisional commitment pair when needed, runs generation, fills the requested transcript values, and replaces expected public transcript inputs and the commitment from the recorded needs. It repeats within a bounded loop because generated values can change later guards. `need` in `tools/zkir_run.py` exposes these records as `pubOut`, `priv`, `pubIn` and `comm`. Since live `#finish` skips the exhaustion and commitment checks, a `--gen` run can report `ok`, even `holds()` on every gate, for a preimage an ordinary run rejects. Apply the `needs` list and rerun without `--gen` before reading the result as an ordinary verdict.
 
 ## Runner statuses
 
-`tools/zkir_run.py`, `Runner.run`, checks the returned `<k>` before interpreting `<status>`.
+`Runner.run` in `tools/zkir_run.py` checks the returned `<k>` before interpreting `<status>`.
 
 | Reported status | Condition |
 |---|---|
@@ -108,7 +108,7 @@ Generation changes transcript handling through `<genMode>`. A short active read 
 | `stuck` | Nonempty `<k>` and no `--depth` given. |
 | `depth-exhausted` | Nonempty `<k>` and `--depth N` given. |
 
-A stuck configuration retains a computation, such as a `#exec` or helper application, possibly alongside `<status> ok()`. No result follows from that alone, so the runner treats any residual computation as failure, reporting the full term in `k_cell` and its first 300 characters in `error`. `depth-exhausted` records that a bound was given, not that it was reached; the runner does not distinguish bound exhaustion from genuine stuckness. The traced program below with `--depth 3` yields the residual
+A stuck configuration retains a computation, such as a `#exec` or helper application, possibly alongside `<status> ok()`. No result follows from that alone, so the runner treats any residual computation as failure and reports the full term in `k_cell` and its first 300 characters in `error`. `depth-exhausted` records that a bound was given, not that it was reached: the runner does not distinguish bound exhaustion from a run that is stuck. The traced program below with `--depth 3` yields the residual
 
 ```
 #loadInputs ( ListItem ( 2 ) , .TypedIds , 1 ) ~> #seedPi ( typedId ( "%x" , native ( ) ) , .TypedIds ) ~> add ( var ( "%x" ) , imm ( 3 ) , "%y" ) ; impact ( imm ( 1 ) , var ( "%y" ) , .Operands ) ; output ( var ( "%y" ) , .Operands ) ; .Instrs ~> #verdicts ~> .K
@@ -116,7 +116,7 @@ A stuck configuration retains a computation, such as a `#exec` or helper applica
 
 with `%x` already in `memory` and `constraints` 0: the `<k>` cell after `#put` and before the loader finishes. A failing `krun` process separately produces `krun-failed`.
 
-These statuses appear in the returned JavaScript Object Notation (JSON) object. `main` prints it and returns zero for every reported status, so callers inspect `status` and the verdicts rather than the exit code. Two failures precede any run and exit with code 2 and no JSON: a program the loader rejects prints `format error: ...`; a preimage integer that is not a canonical field element, caught by `fr`, prints `preimage error: ...`. See [11-tooling-reference.md](11-tooling-reference.md).
+These statuses appear in the returned JavaScript Object Notation (JSON) object. `main` prints it and returns zero for every reported status, so callers inspect `status` and the verdicts rather than the exit code. Two failures precede any run and exit with code 2 and no JSON: a program the loader rejects prints `format error: ...`, and a preimage integer that is not a canonical field element, caught by `fr`, prints `preimage error: ...`. See [11-tooling-reference.md](11-tooling-reference.md).
 
 ## Three-instruction trace
 

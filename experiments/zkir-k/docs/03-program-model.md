@@ -2,7 +2,7 @@
 
 ## Artifact boundary
 
-A ZKIR v3 artifact is a JavaScript Object Notation (JSON) object. Its shape follows `IrSource::load`, `IrSource`, `TypedIdentifier` and the serde implementations in `repos/_build/ledger-92e8bdd3/zkir-v3/src/ir.rs`, the pinned copy of midnight-ledger `92e8bdd3` that all Rust references and line numbers below denote. The definition's counterpart is [`tools/zkir_kast.py`](../tools/zkir_kast.py), especially `program`, `instruction` and `operand`.
+A ZKIR v3 artifact is a JavaScript Object Notation (JSON) object. Its shape follows `IrSource::load`, `IrSource`, `TypedIdentifier` and the serde implementations in `repos/_build/ledger-92e8bdd3/zkir-v3/src/ir.rs`, the pinned copy of midnight-ledger `92e8bdd3` to which every Rust reference and line number below refers. The definition's counterpart is [`tools/zkir_kast.py`](../tools/zkir_kast.py), especially `program`, `instruction` and `operand`.
 
 | Required member | JSON shape | Destination in `program(...)` |
 |---|---|---|
@@ -14,9 +14,9 @@ A ZKIR v3 artifact is a JavaScript Object Notation (JSON) object. Its shape foll
 
 `SerdeVersion` uses unsigned eight-bit integers (`u8`) for both components. The preprocessor's `program` rejects booleans, fractional numbers and integers outside 0 to 255 inclusive, then accepts only version 3.0. The major version is checked and discarded, as in the crate's loader, which replaces the version object with its minor number before deserializing `IrSource`.
 
-Unknown object members are ignored, matching serde structs without `deny_unknown_fields`. Required members remain required; an empty array differs from an omitted member. Inputs declare names and types only; the separate preimage supplies witness values, see [06-configuration-and-run-lifecycle.md](06-configuration-and-run-lifecycle.md).
+Unknown object members are ignored, matching serde structs without `deny_unknown_fields`. The required members stay required, and an empty array is not the same as an omitted member. Inputs declare names and types only. Witness values come from the separate preimage, described in [06-configuration-and-run-lifecycle.md](06-configuration-and-run-lifecycle.md).
 
-`Identifier(pub String)` and Python `identifier` accept strings verbatim. Only operand references require `%`: `operand("%x")` constructs `var("%x")`, retaining the prefix. An input name or destination without `%` passes format validation, but its bare spelling cannot be used as a variable operand. Name uniqueness and definition before use belong to `zkir-syntax.k`, `wf`, not to loading; see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md).
+`Identifier(pub String)` and Python `identifier` accept strings verbatim. Only operand references require `%`: `operand("%x")` constructs `var("%x")`, retaining the prefix. An input name or destination without `%` passes format validation, but its bare spelling cannot be used as a variable operand. Name uniqueness and definition before use are checked by `wf` in `zkir-syntax.k` rather than by the loader; see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md).
 
 ## Abstract syntax and types
 
@@ -26,17 +26,17 @@ Unknown object members are ignored, matching serde structs without `deny_unknown
 syntax Program ::= program(Int, TypedIds, IrTypes, Bool, Instrs) [symbol(program)]
 ```
 
-`typedId(String, IrType)` represents one input declaration. `TypedIds`, `IrTypes`, `Ids`, `Instrs` and `Operands` are ordered recursive lists. Python `klist` constructs them from right to left, starting at the nullary terminator and consing the JSON elements in reverse, so the first JSON element remains the head: `typedIds(typedId("%x", ...), .typedIds)`, not the reverse. The declaration below assigns separate labels to the list constructor and its empty case:
+`typedId(String, IrType)` represents one input declaration. `TypedIds`, `IrTypes`, `Ids`, `Instrs` and `Operands` are ordered recursive lists, which Python `klist` builds from right to left: it starts at the nullary terminator and conses the JSON elements in reverse, so the first JSON element remains the head, as in `typedIds(typedId("%x", ...), .typedIds)`. The declaration below assigns separate labels to the list constructor and its empty case:
 
 ```k
 syntax TypedIds ::= List{TypedId, ","}   [symbol(typedIds), terminator-symbol(.typedIds)]
 ```
 
-The `symbol(...)` attribute supplies the label pyk's `KApply` uses, so `condSelect` in K rules is the `KApply` labeled `cond_select`, the JSON operation. `terminator-symbol(...)` names the empty lists, such as `.instrs` and `.operands`. Integer, string and boolean leaves use `KToken` values with their respective sorts.
+The `symbol(...)` attribute supplies the label that pyk's `KApply` uses, so `condSelect` in K rules is the `KApply` labeled `cond_select`, the JSON operation. `terminator-symbol(...)` names the empty lists, such as `.instrs` and `.operands`. Integer, string and boolean leaves are `KToken` values of the corresponding sorts.
 
-There is no concrete ZKIR source language parsed by K: JSON parsing and elaboration happen in Python, which keeps JSON object traversal outside the rewrite semantics (decision CLM-0712 in `wiki/zkir-k-semantics-plan.md`). The resulting abstract syntax tree (AST) carries only the data the definition needs, not JSON formatting or ignored metadata.
+K receives no concrete ZKIR source language to parse: JSON parsing and elaboration happen in Python, which keeps JSON object traversal outside the rewrite semantics (decision CLM-0712 in `wiki/zkir-k-semantics-plan.md`). The resulting abstract syntax tree (AST) carries only the data the definition needs, without JSON formatting or ignored metadata.
 
-The following 13 base types come from `zkir-syntax.k`, `IrType` and `encodedLen`, with the JSON mapping in Python `TYPE_SYMBOLS`. Lengths count raw native field elements, not bytes, and agree with pinned `ir_types.rs`, `IrType::encoded_len`.
+The 13 base types in the table below are declared in `zkir-syntax.k` (`IrType` and `encodedLen`), with the JSON mapping in Python `TYPE_SYMBOLS`. Lengths count raw native field elements, not bytes, and agree with `IrType::encoded_len` in pinned `ir_types.rs`.
 
 | JSON type | K constructor | pyk symbol | `encodedLen` |
 |---|---|---|---:|
@@ -54,29 +54,29 @@ The following 13 base types come from `zkir-syntax.k`, `IrType` and `encodedLen`
 | `Base<Curve25519>` | `curve25519Base()` | `Curve25519Base` | 2 |
 | `Scalar<Curve25519>` | `curve25519Scalar()` | `Curve25519Scalar` | 2 |
 
-With `--ext`, Python `ir_type` additionally accepts `Bool`, `Byte` and `Bytes<n>`, following midnight-zkir `2ffe2d1`, `repos/_build/midnight-zkir-2ffe2d1/zkir/src/ir_types.rs`, `from_type_string`. The length uses canonical ASCII decimal digits without leading zeros and satisfies `1 <= n <= 2^24`. `Bytes<32>` retains `Bytes32`; other lengths use `BytesN(n)`, whose K constructor is `bytesT(n)` in `zkir-ext.k`. See [09-extension-surface.md](09-extension-surface.md) for extension instructions and [04-values-and-encoding.md](04-values-and-encoding.md) for value representations.
+With `--ext`, Python `ir_type` also accepts `Bool`, `Byte` and `Bytes<n>`, following `from_type_string` in `repos/_build/midnight-zkir-2ffe2d1/zkir/src/ir_types.rs` of midnight-zkir `2ffe2d1`. The length uses canonical ASCII decimal digits without leading zeros and satisfies `1 <= n <= 2^24`. `Bytes<32>` retains `Bytes32`; other lengths use `BytesN(n)`, whose K constructor is `bytesT(n)` in `zkir-ext.k`. See [09-extension-surface.md](09-extension-surface.md) for extension instructions and [04-values-and-encoding.md](04-values-and-encoding.md) for value representations.
 
 ## Operands, guards and alignments
 
-`Operand` has `var(String)` and `imm(Int)` constructors in `zkir-syntax.k`. Python `immediate` accepts `0x` or `0X`, optionally preceded by `-`. Its `HEX` pattern requires hexadecimal digits of even length and rejects internal whitespace; decoding interprets the bytes little-endian, so `0x0100` denotes 1 and `0x0001` denotes 256. The decoded byte sequence must fit within 32 bytes and its unsigned value must be below the BLS12-381 scalar modulus `r`, named `#blsScalarModulus` in K. Oversized positive values are rejected, not reduced. Negation applies only after validation and produces `(-value) mod r`.
+`Operand` has `var(String)` and `imm(Int)` constructors in `zkir-syntax.k`. Python `immediate` accepts `0x` or `0X`, optionally preceded by `-`. Its `HEX` pattern requires hexadecimal digits of even length and rejects internal whitespace. Byte order is little-endian, so `0x0100` denotes 1 and `0x0001` denotes 256. The decoded byte sequence must fit within 32 bytes, and its unsigned value must be below the BLS12-381 scalar modulus `r`, named `#blsScalarModulus` in K. Oversized positive values are rejected, not reduced. Negation applies only after validation and produces `(-value) mod r`.
 
-One whitespace form escapes the `HEX` check: Python `$` matches before a final newline, so `immediate("0x0\n")` passes the pattern and `bytes.fromhex` then raises a `ValueError` that `main` does not catch. The command-line interface (CLI) exits 1 with a traceback rather than a `format error:` line; the value is still rejected.
+One whitespace form escapes the `HEX` check. Python's `$` anchor matches before a final newline, so `immediate("0x0\n")` passes the pattern and `bytes.fromhex` then raises a `ValueError` that `main` does not catch. The command-line interface (CLI) exits 1 with a traceback rather than a `format error:` line, and the value is still rejected.
 
-Pinned `ir.rs`, `Operand::deserialize`, uses `const_hex::decode` and `Fr::from_le_bytes` for the same byte interpretation and range boundary. The accepted spellings differ in one case: `const_hex::decode` (const-hex 1.19.0, `strip_prefix`) removes one further `0x` or `0X` prefix after the deserializer's own, so the crate loads `"0x0x01"` as the value 1, while the preprocessor rejects it with the odd-length or non-hex message. `Operand::serialize` emits little-endian hex after trimming high zero bytes, retaining at least one byte, so loading preserves the field value, not the spelling.
+`Operand::deserialize` in pinned `ir.rs` uses `const_hex::decode` and `Fr::from_le_bytes`, so the byte interpretation and the range boundary are the same. The accepted spellings differ in one case. `const_hex::decode` (const-hex 1.19.0, `strip_prefix`) removes one further `0x` or `0X` prefix after the deserializer's own, so the crate loads `"0x0x01"` as the value 1 while the preprocessor rejects it with the odd-length or non-hex message. `Operand::serialize` emits little-endian hex after trimming high zero bytes, retaining at least one byte, so loading preserves the field value, not the spelling.
 
-For `public_input` and `private_input`, Python `guard` maps omitted or null `guard` members to `noGuard()`, otherwise to `guard(Operand)`. `impact` instead requires a direct operand named `guard`. These forms are distinct in `zkir-syntax.k`, `Guard` and `Instr`; guard evaluation belongs to [07-instruction-reference.md](07-instruction-reference.md).
+For `public_input` and `private_input`, Python `guard` maps an omitted or null `guard` member to `noGuard()` and any other to `guard(Operand)`, whereas `impact` requires a direct operand named `guard`. The two forms are distinct in the `Guard` and `Instr` declarations of `zkir-syntax.k`. Guard evaluation is described in [07-instruction-reference.md](07-instruction-reference.md).
 
-Python `alignment` builds `alignment(Segments)`. Each `Segment` is `atom(Atom)` or `option(Alignments)`. Atoms are `fieldAtom()`, `bytesAtom(length)` and `compressAtom()`; byte length passes the unsigned 32-bit integer (`u32`) check. An option carries an array of alternative alignments, recursively. For example:
+Python `alignment` builds `alignment(Segments)`, where each `Segment` is `atom(Atom)` or `option(Alignments)`. Atoms are `fieldAtom()`, `bytesAtom(length)` and `compressAtom()`, and the byte length passes the unsigned 32-bit integer (`u32`) check. An option carries an array of alternative alignments, recursively. For example:
 
 ```json
 [{"tag":"atom","value":{"tag":"bytes","length":32}}]
 ```
 
-This becomes `alignment(segments(atom(bytesAtom(32)), .segments))` in symbol notation. Loading checks the tagged structure, not whether a chosen hash operation can consume it; see [05-fields-curves-and-hashes.md](05-fields-curves-and-hashes.md).
+This becomes `alignment(segments(atom(bytesAtom(32)), .segments))` in symbol notation. Loading checks the tagged structure only. Whether a chosen hash operation can consume it is covered in [05-fields-curves-and-hashes.md](05-fields-curves-and-hashes.md).
 
 ## Instruction constructors
 
-These 34 rows follow `zkir-syntax.k`, `Instr`, `reads` and `writes`, and Python `instruction`. Argument names are JSON keys; indexed names unpack JSON pairs; unindexed `inputs`, `outputs` and `vals` denote whole lists. Each operation string is also the pyk symbol. Reads list operands, including immediates; writes list register identifiers, not transcript or return-value effects. `none` means an empty list. Optional guards contribute a read only when present.
+The 34 rows below follow `Instr`, `reads` and `writes` in `zkir-syntax.k`, and Python `instruction`. Argument names are JSON keys. Indexed names unpack JSON pairs. The unindexed `inputs`, `outputs` and `vals` denote whole lists. Each operation string is also the pyk symbol. Reads list operands, including immediates; writes list register identifiers, not transcript or return-value effects. `none` means an empty list, and an optional guard contributes a read only when present.
 
 | K constructor | JSON `op` | K argument order from JSON | `reads` | `writes` |
 |---|---|---|---|---|
@@ -115,11 +115,11 @@ These 34 rows follow `zkir-syntax.k`, `Instr`, `reads` and `writes`, and Python 
 | `privateInput` | `private_input` | guard, type, output | optional guard | output |
 | `output` | `output` | vals | vals | none |
 
-`reads` is a structural inventory, not a guarantee that execution resolves every listed operand: a guarded-off `impact` skips its inputs in `zkir-vm.k`, `#impact`. `reconstituteField` reads modulus before divisor despite the constructor order. Python `pair` enforces exactly two entries for coordinates and low/high conversions; `div_mod_power_of_two.outputs` remains a list at loading time. Its arity is checked by `#checkArity` in module `ZKIR-WF` (`zkir-syntax.k`), so by the `check` command and by `checkedJob`; see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md).
+`reads` is a structural inventory, not a guarantee that execution resolves every listed operand: a guarded-off `impact` skips its inputs in `zkir-vm.k`, `#impact`. `reconstituteField` reads modulus before divisor despite the constructor order. Python `pair` enforces exactly two entries for coordinates and low/high conversions, while `div_mod_power_of_two.outputs` remains a list at loading time. The arity of that list is checked by `#checkArity` in module `ZKIR-WF` (`zkir-syntax.k`), and therefore by the `check` command and by `checkedJob` (see [10-well-formedness-and-static-checks.md](10-well-formedness-and-static-checks.md)).
 
 ## Rejections and loader fidelity
 
-Python `main` catches `ZkirFormatError`, prints `format error: ` followed by its message to standard error, and exits with code 2. The following message templates come directly from its builders; interpolated values use Python representations where shown.
+Python `main` catches `ZkirFormatError`, prints `format error: ` followed by the error's message to standard error, and exits with code 2. The templates in the table are quoted from the preprocessor's builders, and interpolated values use Python representations where shown.
 
 | Builder and rejected condition | Message or message template |
 |---|---|
@@ -145,11 +145,11 @@ Python `main` catches `ZkirFormatError`, prints `format error: ` followed by its
 | `instruction`: unknown operation | `unknown instruction op {op!r}` |
 | `alignment`: malformed list, tag or option | `alignment must be a list of segments, got {value!r}`; `unknown alignment atom {atom!r}`; `unknown alignment segment {seg!r}`; `alignment option must carry a list, got {alts!r}` |
 
-`--ext` rejects `reverse_bytes` with `unknown instruction op 'reverse_bytes' (removed at midnight-zkir 2ffe2d1; use reverse)`. Its `load_constant` branch rejects a non-array encoding with `load_constant encoding must be a list of hex immediates`.
+`--ext` rejects `reverse_bytes` with `unknown instruction op 'reverse_bytes' (removed at midnight-zkir 2ffe2d1; use reverse)`. The `load_constant` branch of the same mode rejects a non-array encoding with `load_constant encoding must be a list of hex immediates`.
 
-These checks follow the pinned crate's serde field types, tuple sizes, enum tags, operand decoder and version dispatch. Six rows have a direct counterpart in `ir.rs` with the same message content: `Expected a JSON object` (line 986), `Expected a version entry` (line 963), `Unhandled version: {major}.{minor}` (line 980), the empty hex body (line 223), `Out of range for field element` (line 232) and the bare-variable format message (line 239). The remaining rows stand in for serde-derived errors and for the odd-length and non-hex errors of `const_hex::decode`, whose text the crate does not control. Parser equivalence is not established: `json.load` errors, the `0x0\n` immediate above and a non-string element of an extension `load_constant` encoding (an `AttributeError` from `immediate`) escape the `ZkirFormatError` handler.
+These checks follow the pinned crate's serde field types, tuple sizes, enum tags, operand decoder and version dispatch. Six rows have a counterpart in `ir.rs` with the same message content: `Expected a JSON object` (line 986), `Expected a version entry` (line 963), `Unhandled version: {major}.{minor}` (line 980), the empty hex body (line 223), `Out of range for field element` (line 232) and the bare-variable format message (line 239). The remaining rows stand in for serde-derived errors and for the odd-length and non-hex errors of `const_hex::decode`, whose text the crate does not control. Parser equivalence is not established, because some failures escape the `ZkirFormatError` handler: `json.load` errors, the `0x0\n` immediate above, and a non-string element of an extension `load_constant` encoding (an `AttributeError` from `immediate`).
 
-In `tools/diff_test.py`, `main` sends each preprocessor rejection to the oracle with empty inputs and binding input zero, requiring `status == 'load-error'`, the status its `oracle` helper assigns to nonzero process exits other than panic exit 101. The harness filters to major-version-3 corpus programs and compares rejection status, not message text. Receipts `evidence/zkir-k-differential-92e8bdd3-2026-09-05c.txt` and `evidence/zkir-k-differential-ext-2ffe2d1-2026-09-05c.txt` record agreement for malformed identifiers and odd-length hex. This is finite corpus evidence; see [12-oracles-and-differential-testing.md](12-oracles-and-differential-testing.md).
+In `tools/diff_test.py`, `main` sends each preprocessor rejection to the oracle with empty inputs and binding input zero, requiring `status == 'load-error'`, the status its `oracle` helper assigns to nonzero process exits other than panic exit 101. The harness filters to major-version-3 corpus programs and compares rejection status, not message text. Receipts `evidence/zkir-k-differential-92e8bdd3-2026-09-05c.txt` and `evidence/zkir-k-differential-ext-2ffe2d1-2026-09-05c.txt` record agreement for malformed identifiers and odd-length hex. That agreement is finite corpus evidence (see [12-oracles-and-differential-testing.md](12-oracles-and-differential-testing.md)).
 
 ## Worked translation and commands
 
@@ -186,7 +186,7 @@ The rendering is not input syntax. In the emitted JSON, each application has `no
 {"node": "KApply", "label": {"node": "KLabel", "name": "imm", "params": []}, "args": [{"node": "KToken", "token": "1", "sort": {"node": "KSort", "name": "Int", "params": []}}], "arity": 1, "variable": false}
 ```
 
-`kore` converts the same `Program` to K's core representation (KORE); `check` executes `zkir-check.k`, whose rule replaces `P:Program` with `wf(P)`. Both default to `zkir-check-kompiled`; `kast` needs no compiled definition. These commands use existing corpus artifacts:
+`kore` converts the same `Program` to K's core representation (KORE), and `check` executes `zkir-check.k`, whose rule replaces `P:Program` with `wf(P)`. Both default to `zkir-check-kompiled`, while `kast` needs no compiled definition. These commands use existing corpus artifacts:
 
 ```bash
 uv run --group zkir-k python experiments/zkir-k/tools/zkir_kast.py kore experiments/zkir-k/corpus/handmade/native_bytes.zkir
@@ -200,4 +200,4 @@ The second prints `wfOk`. The third prints the pretty-printed form, with spaces 
 wfError ( "div_mod_power_of_two requires exactly 2 outputs" )
 ```
 
-`--definition` overrides the compiled directory; `--ext` changes the accepted JSON vocabulary without changing that directory. See [11-tooling-reference.md](11-tooling-reference.md) for integration details.
+`--definition` overrides the compiled directory, and `--ext` changes the accepted JSON vocabulary without changing that directory. See [11-tooling-reference.md](11-tooling-reference.md) for integration details.

@@ -1,7 +1,7 @@
 # Fields, curves and hashes
 
 The definition computes field, curve and hash primitives on K's
-arbitrary-precision `Int` with an explicit modulus (plan decision CLM-0709),
+arbitrary-precision `Int` with an explicit modulus (decision CLM-0709 of the plan),
 in `zkir-field.k` (`ZKIR-FIELD`), `zkir-curves.k` (`ZKIR-CURVES`) and
 `zkir-hash.k` (`ZKIR-HASH`), with generated tables in `zkir-constants.k`.
 The extension adds SHA-512 in `zkir-ext.k` (`ZKIR-SHA512`) and
@@ -60,17 +60,18 @@ rule fsqrt(A, P) => #ts(A modInt P, P, #twoAdicity(P -Int 1, 0), #oddPart(P -Int
   requires A modInt P =/=Int 0 andBool legendre(A, P) ==Int 1
 ```
 
-`#twoAdicity(N, S)` recurses on `N /Int 2` while `N > 0` is even and returns
-`S` once `N` is odd or `N <= 0`; `#oddPart(N)` strips the same factors.
+`#twoAdicity(N, S)` recurses on `N /Int 2` while `N` is a positive even
+number and returns `S` once `N` is odd or `N <= 0`; `#oddPart(N)` strips the
+same factors.
 `#nonResidue(P, Z)` is the smallest quadratic non-residue in `[Z, P)`, or
 `0` when `Z >= P`. For `#r`, `P - 1 = 2^32 * Q` and the search from `2`
 finds `5`.
 
 `#ts(A, P, S, Q, Z)` starts `#tsLoop(P, M, c, t, R)` with `M = S`,
 `c = Z^Q`, `t = A^Q`, `R = A^((Q+1)/2)`. `#tsLoop` returns `noSqrt()` if
-`t = 0` and `sqrtOk(R)` if `t = 1`; otherwise `#tsOrder` finds the least `i`
-with `t^(2^i) = 1` (stopping at `M`) and `#tsStep` returns `noSqrt()` if
-`i >= M`, else continues with `b = c^(2^(M-i-1))`, `M = i`, `c = b^2`,
+`t = 0` and `sqrtOk(R)` if `t = 1`. Otherwise `#tsOrder` finds the least `i`
+with `t^(2^i) = 1` (stopping at `M`), and `#tsStep` returns `noSqrt()` if
+`i >= M` or else continues with `b = c^(2^(M-i-1))`, `M = i`, `c = b^2`,
 `t = t b^2`, `R = R b`. `M` strictly decreases, so the loop terminates. Which
 root is returned is not specified; Jubjub decompression and the
 Shallue-van de Woestijne map fix the parity themselves.
@@ -81,7 +82,7 @@ Shallue-van de Woestijne map fix the parity themselves.
 `highBits(A, N)` is `A >>Int N`. All three require `A >= 0` and a
 non-negative index or width, and return `0` otherwise (`[owise]`).
 `fitsBits(A, N)` is `A >=Int 0 andBool A <Int (1 <<Int N)` and requires only
-`N >= 0` (`false` otherwise); a negative `A` is simply not in `[0, 2^N)`.
+`N >= 0` (`false` otherwise); a negative `A` is not in `[0, 2^N)`.
 `isOddInt(A)` is `A modInt 2 ==Int 1`.
 
 ## Curves
@@ -97,7 +98,8 @@ A point is `pt(X, Y)` or `inf()`. Descriptors are `edwards(p, d, order)` and
 
 Both Edwards curves have `a = -1`, which is not stored: `onCurve` tests
 `-x^2 + y^2 = 1 + d x^2 y^2`. Jubjub `d` equals midnight-curves `EDWARDS_D`
-(`jubjub/curve.rs`; `#jubjubD` is the same value standalone) and Curve25519
+(`jubjub/curve.rs`; the standalone symbol `#jubjubD` holds the same value)
+and Curve25519
 `d` equals `CURVE_D` (`curve25519/curve.rs`). Both are non-squares, so the
 unified Edwards addition is complete. The Weierstrass equation is
 `y^2 = x^3 + a x + b`. `onCurve` accepts `inf()` for every descriptor and
@@ -108,7 +110,7 @@ and Edwards values never use `inf()`; the Weierstrass identity is `inf()`.
 
 `ecNeg` sends Edwards `(x, y)` to `(-x, y)`, Weierstrass `(x, y)` to
 `(x, -y)`, and fixes `inf()`. Edwards `ecAdd` is the unified formula with
-denominators `1 ± d x1 x2 y1 y2`, which never vanish on curve points; its
+denominators `1 ± d x1 x2 y1 y2`, which never vanish on curve points. Its
 rules for `inf()` return `inf()` and are unreachable for valid values.
 Edwards `ecDouble(C, Q)` is `ecAdd(C, Q, Q)`.
 
@@ -126,8 +128,8 @@ right-to-left double-and-add over the bits of `K` (`#ecMulAcc`), returning
 is `JubjubAffine::generator()` of midnight-curves. `JubjubSubgroup::generator()`
 is `JubjubExtended::generator().clear_cofactor()`, three doublings, so the
 two agree; `G` itself is not in the prime-order subgroup.
-`#curve25519Generator` is `ED25519_BASEPOINT_POINT` of curve25519-dalek 4.1.3
-(the version midnight-curves pins), already in the prime-order subgroup. The
+`#curve25519Generator` is `ED25519_BASEPOINT_POINT` of curve25519-dalek 4.1.3,
+the version midnight-curves pins, and is already in the prime-order subgroup. The
 secp256k1 and secp256r1 generators are the SEC 2 and FIPS 186-4 base points.
 
 `inSubgroup` on an Edwards curve is `isIdentity(C, ecMul(C, Q, N))` with `N`
@@ -137,7 +139,7 @@ those groups have prime order; it does not re-test `onCurve`.
 ### Constructors
 
 `fromXY(C, X, Y)` returns `ptOk(pt(X, Y))` when `onCurve` holds and
-`ptErr("point is not on the curve")` otherwise: the exact test of
+`ptErr("point is not on the curve")` otherwise, the same test as
 `K256Affine::from_xy`, P-256 `affine_from_xy` (SEC 1 decoding) and
 `Curve25519Affine::from_xy`.
 
@@ -164,7 +166,7 @@ coordinates is K1 in `13-known-divergences.md`.
 `t = 3` over `#r`, rate 2, `R_F = 8` full and `R_P = 60` partial rounds. The
 round constants and the Maximum Distance Separable (MDS) matrix are the 204
 scalars `poseidonRC(0..67, 0..2)` and the 3-by-3 `poseidonMDS` of
-`zkir-constants.k`, generated by `tools/gen_constants.py` from
+`zkir-constants.k`. `tools/gen_constants.py` generates them from
 midnight-circuits `hash/poseidon/constants/blstrs.rs`, itself the output of
 `generate_parameters_grain.sage` for `(3, 8, 60)` over `#r`.
 
@@ -172,7 +174,7 @@ midnight-circuits `hash/poseidon/constants/blstrs.rs`, itself the output of
 68 layers (`#rounds`): four full, sixty partial, four full. A layer applies
 the S-box (to all three cells, or only the last cell in a partial round) and
 then `linear`, which multiplies by the MDS matrix and adds
-`#rc(R, *) = poseidonRC(R + 1, *)`; for the last layer `#rc` is `0`
+`#rc(R, *) = poseidonRC(R + 1, *)`. For the last layer `#rc` is `0`
 (`[owise]`), so the 68 stored triples are consumed exactly once. The crate's
 CPU code folds partial rounds three at a time (`NB_SKIPS_CPU = 2`), an
 algebraic rewrite of the same round function.
@@ -200,7 +202,7 @@ multiplication by the cofactor 8. `#svdwZ`, `#svdwA`, `#svdwB`, `#montJ` and
 derived constants are `c1 = g(Z)`, `c2 = -Z/2`, `c3` the even square root of
 `-g(Z)(3 Z^2 + 4 A)` (`#evenRoot`) and `c4 = -4 g(Z) / (3 Z^2 + 4 A)`.
 `#svdwPick` takes the first of `x1, x2, x3` whose `g`-image is not a
-non-residue; `#svdwSign` takes the root of `g(x)` with the parity of `U`;
+non-residue, and `#svdwSign` takes the root of `g(x)` with the parity of `U`.
 `#edFromMont2` uses `finv` as `inv0` and sets `y' = 1` when the inverse is
 zero, as `mtc_cpu.rs` does.
 
@@ -221,7 +223,7 @@ four lanes, truncated to 32 bytes.
 
 `sha512Bytes` (`ZKIR-SHA512`, extension only) is FIPS 180-4 SHA-512: 64-bit
 words, 80 rounds, 128-byte blocks, padding `0x80`, zeros, then a 16-byte
-big-endian bit length, with `#sha512Ks` and `#sha512H0` in
+big-endian bit length. `#sha512Ks` and `#sha512H0` are in
 `zkir-sha512-constants.k` (first `K` word `0x428a2f98d728ae22`, first `H`
 word `0x6a09e667f3bcc908`). The instruction `sha512` uses the same
 `alignedBytes` as the base hashes and stores `bytesV(sha512Bytes(B))`, a
@@ -274,7 +276,7 @@ The hash interfaces also restrict the shape of their collections.
 `poseidonHash`, `transientCommit`, `varLenSponge` and `hashToCurve` are
 defined on lists of `Int` only; any other element sort matches no rule.
 `keccakF` reads lanes with `lane(S, X, Y) => {S[...]}:>Int`, so it needs
-exactly 25 `Int` lanes (`keccakF(.List)` has no result), and `#shaRound` and
+exactly 25 `Int` lanes (`keccakF(.List)` has no result). `#shaRound` and
 `#sha512Round` need an eight-word working list. The byte-level entry points
 `sha256Bytes`, `keccak256Bytes` and `sha512Bytes` build these collections
 themselves and are total on `Bytes`.
@@ -282,14 +284,14 @@ themselves and are total on `Bytes`.
 ## How the primitives are checked
 
 `tools/unit_values.py` evaluates terms through `ZKIR-TEST` (`zkir-test.k`)
-against an independent Python implementation. Of its 43 checks, 23 are field
-and curve cases: `finv`, `fsqrt` of 4, non-residuosity of both Edwards `d`
+against an independent Python implementation. Of its 43 checks, 20 are
+encodings (`04-values-and-encoding.md`) and 23 are field and curve cases:
+`finv`, `fsqrt` of 4, non-residuosity of both Edwards `d`
 constants, `legendre(3, #r)`, `#jubjubD`, each of the four generators on its
 curve, `#jubjubGenerator = 8 G`, `8 G` in and `G` outside the Jubjub
 subgroup, the Curve25519 generator in its subgroup, a scalar multiple on
 each curve, `n G = inf()` on both Weierstrass groups, and the three
-`jubjubFromXY` parity cases; the other 20 are encodings
-(`04-values-and-encoding.md`). `evidence/zkir-k-unit-values-2026-09-05c.txt`
+`jubjubFromXY` parity cases. `evidence/zkir-k-unit-values-2026-09-05c.txt`
 records `43/43 checks passed`.
 
 `tools/unit_hash.py` compares K with the crate's `preprocess` through the
