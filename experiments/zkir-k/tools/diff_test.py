@@ -14,6 +14,26 @@ For every version-3 program in the corpus:
 
 Usage: uv run --group zkir-k python experiments/zkir-k/tools/diff_test.py [--only SUBSTR] [--seed N]
 Exit 0 iff every comparison agrees.
+
+`--circuit` (plan-iter3 M1) additionally runs `zkir-circuit-oracle` (preprocess,
+MockProver::run, verify) on every preimage of steps 3 and 4 and, for a
+successful honest run, on Native-register injections into the preprocessed
+memory (a declared input, a computed register, a bypass-stored register, a
+transcript register, an `unconstrained` register; each, except the bypass one,
+at `v + 1` and at the boundary value of its first consumer, `<kind>:bound`)
+and on an instance-column perturbation. Each outcome is compared with the cell
+of plan-iter3/circuit-comparison-table.md (circuit_compare.py); a comparison
+outside the table is a blocking finding listed at the end, and a comparison
+the walk could not decide is listed as not compared with its reason. The
+witness-space summary classifies every `unconstrained` register by its
+consumers (`free` or `read by #i op`, D5). The output of the other modes is
+unchanged.
+
+The seven Moriarty transaction contexts (corpus/moriarty-contexts, plan-iter3
+M4) are rows of the base-surface run: for every Moriarty program that has a
+context preimage, the row `context` compares K and the crate on that real
+preimage after the generated attempts, and `--circuit` runs the same circuit
+columns on it as on an honest generated run.
 """
 from __future__ import annotations
 
@@ -27,6 +47,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import circuit_compare as cc  # noqa: E402
 import zkir_kast  # noqa: E402
 import zkir_values as zv  # noqa: E402
 from zkir_run import Runner  # noqa: E402
@@ -47,6 +68,21 @@ CORPORA = {
 
 
 ORACLE_BIN = ORACLE
+CONTEXTS = ROOT / 'corpus' / 'moriarty-contexts'
+CONTEXT_FAMILY = {'moriarty-core-swap': 'swap', 'moriarty-compact-escrow': 'escrow'}
+
+
+def context_preimages(corpus: str, path: Path) -> list[tuple[str, dict]]:
+    """The (artifact, preimage) pairs of corpus/moriarty-contexts for this program."""
+    family = CONTEXT_FAMILY.get(corpus)
+    if family is None or not (CONTEXTS / 'manifest.json').exists():
+        return []
+    manifest = json.loads((CONTEXTS / 'manifest.json').read_text())
+    out = []
+    for art, info in manifest['artifacts'].items():
+        if art.split('-', 1)[0] == family and info['circuit'] == path.stem:
+            out.append((art, json.loads((CONTEXTS / f'{art}.pre.json').read_text())))
+    return out
 
 
 def oracle(program: Path, preimage: dict) -> dict:
@@ -169,6 +205,7 @@ def main() -> int:
     ap.add_argument('--no-perturb', action='store_true')
     ap.add_argument('--attempts', type=int, default=8)
     ap.add_argument('--ext', action='store_true', help='ZKIR-EXT definition, midnight-zkir 2ffe2d1 oracle and corpus')
+    ap.add_argument('--circuit', action='store_true', help='also run the circuit oracle (MockProver) and compare with the comparison table')
     args = ap.parse_args()
     global ORACLE_BIN, CORPORA
     if args.ext:
@@ -178,11 +215,37 @@ def main() -> int:
             'midnight-zkir-2ffe2d1-precompiles': ROOT / 'corpus' / 'midnight-zkir-2ffe2d1-precompiles',
             'handmade': ROOT / 'corpus' / 'handmade',
         }
+    circ_bin = cc.CIRCUIT_ORACLE_EXT if args.ext else cc.CIRCUIT_ORACLE
+    circ: dict[int, list] = {}          # row index -> circuit comparisons attached to that row
+    circ_findings: list = []            # comparisons outside the table
+    circ_ms = 0
+
+    def circuit(row: int, corpus: str, path: Path, label: str, k: dict, pre: dict, inject=None, instance=None, exp=None, detail=''):
+        nonlocal circ_ms
+        res = cc.run_circuit_oracle(circ_bin, path, pre, inject=inject, instance=instance)
+        circ_ms += res.get('elapsed_ms', 0)
+        exp = exp or cc.expected_preimage_cell(k)
+        verdict = cc.judge(exp, res)
+        circ.setdefault(row, []).append((label, cc.k_summary(k), res, exp, verdict, detail))
+        if verdict == 'DISAGREE':
+            circ_findings.append((corpus, path.name, label, cc.k_summary(k), cc.first_bad(k), res, exp, detail, pre, inject, instance))
+
     runner = Runner(ext=args.ext)
     rows = []
     failures = 0
     oracle2_flags = []
+    ws_rows: list[tuple[str, bool, list[str], list[tuple[str, str, str]]]] = []   # (program, witness_space, unconstrained registers, their consumer classification) of successful K runs
     t0 = time.time()
+
+    def circuit_columns(run_row: int, corpus: str, path: Path, doc: dict, k: dict, pre: dict) -> None:
+        """the injection and instance columns of the table, on an honest witness"""
+        crng = random.Random(f'{args.seed}:circuit:{path.name}')
+        for kind, reg, new, exp in cc.choose_injections(doc, k):
+            old = k['memory'][reg]['encoded'][0]
+            circuit(run_row, corpus, path, kind, k, pre, inject={reg: new}, exp=exp, detail=f'{reg} {old} -> {new}; {exp.reason[:110]}')
+        idx, inst, exp = cc.instance_perturbation(k, crng)
+        circuit(run_row, corpus, path, 'instance', k, pre, instance=inst, exp=exp, detail=exp.reason)
+
     for corpus, directory in CORPORA.items():
         for path in sorted(directory.glob('*.zkir')):
             if args.only and args.only not in path.name:
@@ -227,9 +290,18 @@ def main() -> int:
                 viol = k.get('violations', [])
                 if k['status'] == 'ok' and viol:
                     oracle2_flags.append((path.name, viol))
+                if k['status'] == 'ok':
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', []), cc.free_cells(doc, k)))
                 vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
+                if k.get('unconstrained'):
+                    vnote += f" witness_space={str(k.get('witness_space', False)).lower()} unconstrained={','.join(k['unconstrained'][:6])}"
                 rows.append((corpus, path.name, f'run{attempt}', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} passes={passes} {time.time() - t1:.1f}s{note}{vnote}", diffs))
+                if args.circuit:
+                    run_row = len(rows) - 1
+                    circuit(run_row, corpus, path, f'run{attempt}', k, pre)
                 if k['status'] == 'ok' and r['status'] == 'ok':
+                    if args.circuit and cc.k_summary(k) == 'ok':
+                        circuit_columns(run_row, corpus, path, doc, k, pre)
                     if not args.no_perturb:
                         variants = []
                         if pre['inputs']:
@@ -261,16 +333,77 @@ def main() -> int:
                             d2 = compare(k2, r2)
                             failures += bool(d2)
                             rows.append((corpus, path.name, label, f"K={k2['status']} Rust={r2['status']} regs={len(k2.get('memory', {}))}" + (f" msg K='{k2.get('error', '')[:50]}'" if k2['status'] != 'ok' else ''), d2))
+                            if args.circuit:
+                                circuit(len(rows) - 1, corpus, path, label, k2, p2)
                     break
-    for corpus, name, label, summary, diffs in rows:
+            # the real transaction contexts of the Moriarty artifacts (M4), as further rows
+            for art, pre in context_preimages(corpus, path):
+                t1 = time.time()
+                k = runner.run(program, pre)
+                r = oracle(path, pre)
+                diffs = compare(k, r)
+                failures += bool(diffs)
+                viol = k.get('violations', [])
+                if k['status'] == 'ok' and viol:
+                    oracle2_flags.append((path.name, viol))
+                if k['status'] == 'ok':
+                    ws_rows.append((path.name, k.get('witness_space', False), k.get('unconstrained', []), cc.free_cells(doc, k)))
+                note = f" msg K='{k.get('error', '')[:70]}'" if k['status'] != 'ok' else ''
+                vnote = f" verdicts={k.get('verdicts', 0)}" + (f" NON-HOLDING={len(viol)}: " + '; '.join(f'{o}[{m}] {g[:50]}' for o, m, g in viol[:3]) if viol else '')
+                if k.get('unconstrained'):
+                    vnote += f" witness_space={str(k.get('witness_space', False)).lower()} unconstrained={','.join(k['unconstrained'][:6])}"
+                rows.append((corpus, path.name, 'context', f"K={k['status']} Rust={r['status']} regs={len(k.get('memory', {}))} pis={len(k.get('pis', []))} {art} {time.time() - t1:.1f}s{note}{vnote}", diffs))
+                if args.circuit:
+                    run_row = len(rows) - 1
+                    circuit(run_row, corpus, path, 'context', k, pre)
+                    if k['status'] == 'ok' and r['status'] == 'ok' and cc.k_summary(k) == 'ok':
+                        circuit_columns(run_row, corpus, path, doc, k, pre)
+    for i, (corpus, name, label, summary, diffs) in enumerate(rows):
         print(f"{'PASS' if not diffs else 'FAIL'}  {corpus:34} {name:52} {label:9} {summary}")
         for d in diffs[:8]:
             print(f'        {d}')
+        for clabel, ksum, res, exp, verdict, detail in circ.get(i, []):
+            print(f"        CIRC  {clabel:26} K={ksum:14} oracle={cc.describe(res):58} expected={exp.cell} [{exp.codes()}]" + (f' msg={cc.describe_class(exp.message)}' if exp.message else '') + f" {verdict}" + (f'  {detail}' if detail else ''))
     oks = sum(1 for r in rows if r[3].startswith('K=ok Rust=ok'))
     errs = sum(1 for r in rows if r[3].startswith('K=error Rust=error') or r[3].startswith('K=panic Rust=panic'))
     print(f'\n{len(rows)} comparisons: {oks} successful-run agreements, {errs} error-run agreements (status and error class), {len(rows) - failures} agree, {failures} disagree, {time.time() - t0:.0f}s')
     print(f'oracle 2: {len(oracle2_flags)} successful K runs with a non-holding gate' + (': ' + '; '.join(f'{n} {v[0][0]}[{v[0][1][:40]}]' for n, v in oracle2_flags[:10]) if oracle2_flags else ''))
-    return 1 if failures else 0
+    in_space = sum(1 for _, ws, _, _ in ws_rows if ws)
+    with_free = [(n, regs, cells) for n, _, regs, cells in ws_rows if regs]
+    print(f'witness space: {in_space} of {len(ws_rows)} successful K runs in the modelled witness space, {len(with_free)} with unconstrained registers'
+          + (': ' + '; '.join(f"{n} {','.join(regs[:4])}" for n, regs, _ in with_free[:10]) if with_free else ''))
+    if with_free:
+        # D5: the assigning gate pins the cell to its type only; whether the cell is
+        # free in the circuit is decided by its consumers (2026-09-06 review, item 4)
+        seen = set()
+        print('unconstrained registers by consumer (free = no later relation reads the cell; the gate-level marker alone claims nothing more):')
+        for n, _, cells in with_free:
+            if n in seen:
+                continue
+            seen.add(n)
+            print(f'  {n}: ' + '; '.join(f'{r} {ty} {cls}' for r, ty, cls in cells))
+    if args.circuit:
+        from collections import Counter
+        entries = [e for es in circ.values() for e in es]
+        verdicts = Counter(e[4] for e in entries)
+        cells = Counter(e[3].cell for e in entries)
+        print(f"\ncircuit: {len(entries)} comparisons against the table: {verdicts['AGREE']} agree, {verdicts['DISAGREE']} outside the table, {verdicts['N/C']} not comparable, {circ_ms / 1000:.0f}s in the oracle")
+        print('cells hit: ' + '; '.join(f'{cell} x{n}' for cell, n in sorted(cells.items())))
+        undecided = [(rows[i][1], e[0], e[5]) for i, es in circ.items() for e in es if e[4] == 'N/C']
+        for name, clabel, detail in undecided:
+            print(f'  not compared: {name} {clabel}: {detail}')
+        if circ_findings:
+            print('\nBLOCKING: comparisons outside the table')
+            for corpus, name, label, ksum, fb, res, exp, detail, pre, inject, instance in circ_findings:
+                print(f'  {corpus}/{name} {label}: K={ksum}' + (f' first non-holding={fb}' if fb else '') + f" oracle={res.get('outcome')} '{res.get('message', '')[:200]}' expected={exp.cell} [{exp.codes()}]" + (f' {detail}' if detail else ''))
+                print(f'    preimage={json.dumps(pre, separators=(",", ":"))}')
+                if inject:
+                    print(f'    inject={json.dumps(inject)}')
+                if instance is not None:
+                    print(f'    instance={json.dumps(instance, separators=(",", ":"))}')
+                if res.get('failures'):
+                    print(f"    failures={res['failures'][:4]}")
+    return 1 if failures or circ_findings else 0
 
 
 if __name__ == '__main__':

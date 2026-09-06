@@ -11,6 +11,11 @@ Programs used by the ZKIR-in-K semantics (see `wiki/zkir-k-semantics-plan.md`).
 - Moriarty's own artifacts: `experiments/moriarty-compact-escrow/output/zkir/*.zkir`
   and `experiments/moriarty-core-swap/output/zkir/*.zkir` (version 3, emitted by
   compactc with `--feature-zkir-v3`).
+- `moriarty-contexts/`: one real ProofPreimage per Moriarty artifact, produced by
+  executing the compiled contracts through the Compact runtime
+  (`tools/moriarty_preimages.mjs`; `manifest.json` records the scenario, block time
+  and inputs of each). Checked by `tools/moriarty_contexts.py`; see
+  `plan-iter3/m4-contexts.md`.
 
 The ledger's own `zkir-precompiles/` at `92e8bdd3` are still version 2 and are not
 part of this corpus.

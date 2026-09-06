@@ -765,6 +765,19 @@ contract, real transaction contexts, and a symbolic track off the critical
 path. Two independent critiques recorded with the draft under
 `experiments/zkir-k/plan-iter3/`.
 
+## [2026-09-06] semantics | Third iteration of the ZKIR K semantics delivered
+
+Circuit oracle under the halo2 MockProver with a comparison table (506 and
+531 comparisons, all in expected cells); explicit witness space with the two
+inclusion claims and their residuals; three-tier target contract with
+stage-tagged obligations, keyed against the official SRS with 0
+contradictions after three mis-tags found by the sweep were closed; fourteen
+symbolic claims proved; seven real Moriarty transaction contexts accepted and
+proved; K7 and K8 recorded; eight-reviewer audit (Fable, Grok; Codex lane
+substituted) closed. Claims CLM-0771 to CLM-0778 on
+`wiki/zkir/zkir-k-definition.md`; receipts `evidence/zkir-k-*-2026-09-06d.txt`
+and `-2026-09-06e.txt`.
+
 ## [2026-09-06] experiment | Native observer controls and tiny evidence package
 
 CLM-0181 records independent/root admission of all A4 observer controls and

@@ -137,7 +137,7 @@ The panic paths are exercised by `tools/divergence_tests.py` (cases `k03_bytes32
 
 ## Cross-check table
 
-`tools/unit_values.py` evaluates K function terms through the ZKIR-TEST definition and compares them with `enc_foreign` and the curve arithmetic of the same file; 43 of 43 checks pass (`evidence/zkir-k-unit-values-2026-09-05c.txt`).
+`tools/unit_values.py` evaluates K function terms through the ZKIR-TEST definition and compares them with `enc_foreign` and the curve arithmetic of the same file; 49 of 49 checks pass, 43 of them on encodings, fields and curves and six on the `witnessSpace` predicate (`evidence/zkir-k-unit-values-2026-09-06d.txt`).
 
 | Type | `encodedLen` | K encoder rule (`zkir-values.k`) | Rust function (midnight-circuits 7.2.4 unless noted) | Unit checks in `unit_values.py` |
 |---|---|---|---|---|

@@ -15,6 +15,21 @@ Usage:
   zkir_kast.py kast  FILE.zkir            print the Program term as KAST JSON
   zkir_kast.py check FILE.zkir [--definition DIR]
                                           run ZKIR-CHECK, print wfOk/wfError
+  zkir_kast.py contract FILE.zkir [--definition DIR]
+                                          run ZKIR-CONTRACT-MAIN, print the
+                                          tier-one obligations as JSON
+  zkir_kast.py contract FILE.zkir --preimage PRE.json
+                                          the same, plus tier two (the run of
+                                          ZKIR-VM's job on the preimage: status,
+                                          error, witness space, unconstrained
+                                          registers, the four-place observable)
+                                          and tier three (the circuit oracle's
+                                          outcome; `not run` with met null when
+                                          its binary does not exist). Every
+                                          obligation carries its stage (keygen,
+                                          preprocess, both) and the output
+                                          carries the `ledger.commitment` fact.
+`--ext` accepts the midnight-zkir 2ffe2d1 surface for any command.
 """
 from __future__ import annotations
 
@@ -25,7 +40,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pyk.kast.inner import KApply, KInner, KSort, KToken
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from pyk.kast.inner import KApply, KInner, KSequence, KSort, KToken
 from pyk.kast.prelude.kbool import boolToken
 from pyk.kast.prelude.kint import intToken
 from pyk.kast.prelude.string import stringToken
@@ -374,8 +391,8 @@ def load_program(path: Path, ext: bool | None = None) -> KInner:
 
 # --- CLI ------------------------------------------------------------------------
 
-def default_definition() -> Path:
-    return Path(__file__).resolve().parent.parent / 'semantics' / 'zkir-check-kompiled'
+def default_definition(name: str = 'zkir-check') -> Path:
+    return Path(__file__).resolve().parent.parent / 'semantics' / f'{name}-kompiled'
 
 
 def wf_result(pretty: str) -> str:
@@ -388,12 +405,169 @@ def wf_result(pretty: str) -> str:
     return 'unexpected: ' + pretty.replace('\n', ' ')[:200]
 
 
+# --- the target contract (ZKIR-CONTRACT, semantics/zkir-contract.k) --------------
+
+def k_string(token: KInner) -> str:
+    """The Python value of a K String token (quoted, C-style escapes)."""
+    if not isinstance(token, KToken):
+        raise ValueError(f'expected a String token, got {token}')
+    text = token.token
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text[1:-1] if len(text) >= 2 and text[0] == text[-1] == '"' else text
+
+
+def find_label(term: KInner, label: str) -> KInner | None:
+    """First subterm (pre-order) whose label is `label`; descends through
+    cells, applications and the `~>` sequence of the <k> cell."""
+    if isinstance(term, KApply):
+        if term.label.name == label:
+            return term
+        children: tuple[KInner, ...] = term.args
+    elif isinstance(term, KSequence):
+        children = term.items
+    else:
+        return None
+    for child in children:
+        found = find_label(child, label)
+        if found is not None:
+            return found
+    return None
+
+
+def obligations(term: KInner) -> list[dict[str, Any]]:
+    """Walk the `obligations` list of a ZKIR-CONTRACT-MAIN result into dicts
+    {name, stage, status, detail}: stage is keygen, preprocess or both (the
+    crate function that rejects a program failing the obligation, 2026-09-06
+    review item 21; `obligation(name, stage, status)` in zkir-contract.k, the
+    two-place form of the earlier definition is read with stage None); status
+    is met, failed, notApplicable or info; detail is the message of failed/info
+    and None otherwise."""
+    out: list[dict[str, Any]] = []
+    node = find_label(term, 'obligations')
+    if node is None:
+        if find_label(term, '.obligations') is not None:
+            return out
+        raise ValueError('no obligations list in the result')
+    while isinstance(node, KApply) and node.label.name == 'obligations':
+        ob, node = node.args
+        if not (isinstance(ob, KApply) and ob.label.name == 'obligation'):
+            raise ValueError(f'unexpected list element {ob}')
+        if len(ob.args) == 3:
+            name_tok, stage_t, status = ob.args
+            stage = stage_t.label.name if isinstance(stage_t, KApply) else None
+        else:
+            (name_tok, status), stage = ob.args, None
+        if not isinstance(status, KApply):
+            raise ValueError(f'unexpected status {status}')
+        kind = status.label.name
+        detail = k_string(status.args[0]) if status.args else None
+        out.append({'name': k_string(name_tok), 'stage': stage, 'status': kind, 'detail': detail})
+    return out
+
+
+def run_contract(krun: 'KRun', term: KInner) -> list[dict[str, Any]]:
+    from pyk.kore.parser import KoreParser
+    kore = krun.kast_to_kore(term, KSort('Program'))
+    res = krun.run_process(kore)
+    if res.returncode != 0:
+        raise RuntimeError(res.stderr.strip())
+    return obligations(krun.kore_to_kast(KoreParser(res.stdout).pattern()))
+
+
+def tier_one(obs: list[dict[str, Any]]) -> dict[str, Any]:
+    """The summary of the tier-one obligations: met when none failed."""
+    failed = [o['name'] for o in obs if o['status'] == 'failed']
+    return {'met': not failed, 'failed': failed,
+            'counts': {k: sum(o['status'] == k for o in obs) for k in ('met', 'failed', 'notApplicable', 'info')}}
+
+
+def tier_two(term: KInner, preimage: dict[str, Any], ext: bool, definition: Path | None = None) -> dict[str, Any]:
+    """Tier two of the contract: `job(P, Pre)` on ZKIR-VM (tools/zkir_run.py
+    `Runner.run`, the raw entry point of `preprocess`). Met when the run ends
+    with status ok and the final memory is in the modelled witness space."""
+    from zkir_run import Runner
+    k = Runner(definition, ext=ext).run(term, preimage)
+    rec: dict[str, Any] = {'status': k['status']}
+    if k.get('error') is not None:
+        rec['error'] = k['error']
+    rec['witness_space'] = k.get('witness_space', False)
+    rec['unconstrained'] = k.get('unconstrained', [])
+    rec['violations'] = [f'{o}[{m}] {g[:80]}' for o, m, g in k.get('violations', [])]
+    rec['observable'] = k.get('observable')
+    rec['met'] = k['status'] == 'ok' and rec['witness_space']
+    return rec
+
+
+def tier_three(path: Path, preimage: dict[str, Any], ext: bool) -> dict[str, Any]:
+    """Tier three: the outcome of `zkir-circuit-oracle` (preprocess,
+    MockProver::run, verify) on the program and preimage, or `not run` when
+    the binary of the surface's workspace does not exist."""
+    import circuit_compare as cc
+    binary = cc.CIRCUIT_ORACLE_EXT if ext else cc.CIRCUIT_ORACLE
+    if not binary.exists():
+        # not a failed tier: nothing was checked (item 23); `met` is None, and
+        # contract_corpus.py counts the entry as "not run"
+        return {'outcome': 'not run', 'reason': f'oracle binary not found: {binary}', 'met': None}
+    res = cc.run_circuit_oracle(binary, path, preimage)
+    rec = {'outcome': res.get('outcome', 'load-error'), 'binary': str(binary)}
+    for key in ('message', 'k', 'elapsed_ms', 'failures'):
+        if key in res:
+            rec[key] = res[key] if key != 'failures' else res[key][:4]
+    rec['met'] = rec['outcome'] == 'accepted'
+    return rec
+
+
+def contract(path: Path, term: KInner, ext: bool, krun: 'KRun', preimage: dict[str, Any] | None = None,
+             preimage_path: Path | None = None, vm_definition: Path | None = None) -> dict[str, Any]:
+    """The contract of one program as a JSON-ready dict: the tier-one
+    obligations always (the program-only form); with a preimage, the summary
+    `tier_one`, `preimage_dependent` and `circuit` as well (plan-iter3 M5b)."""
+    obs = run_contract(krun, term)
+    doc: dict[str, Any] = {
+        'program': str(path),
+        'surface': 'extension' if ext else 'base',
+        'obligations': obs,
+    }
+    doc['ledger'] = ledger_facts(path)
+    if preimage is not None:
+        doc['tier_one'] = tier_one(obs)
+        doc['preimage'] = str(preimage_path) if preimage_path else None
+        doc['preimage_dependent'] = tier_two(term, preimage, ext, vm_definition)
+        doc['circuit'] = tier_three(path, preimage, ext)
+    return doc
+
+
+def ledger_facts(path: Path) -> dict[str, Any]:
+    """Facts about the program as a ledger contract entry point that are not
+    obligations of the ZKIR contract (the program keys and proves without
+    them) but that the ledger's statement requires (2026-09-06 review, item
+    13). `commitment`: the ledger verifies every contract call against the
+    statement `[binding_input, communications_commitment, field_repr(guaranteed),
+    field_repr(fallible)]` with the commitment pushed unconditionally
+    (ledger/src/verify.rs:1956-1970), so a program without
+    `do_communications_commitment` can never satisfy a ledger statement; `met`
+    is false for such a program when it is presented as a contract entry point."""
+    with open(path) as f:
+        doc = json.load(f)
+    present = bool(doc.get('do_communications_commitment'))
+    return {'commitment': {
+        'present': present, 'met': present,
+        'detail': ('the program pushes the communications commitment as pi[1]; the ledger statement expects it there'
+                   if present else
+                   'no do_communications_commitment: the ledger statement pushes the commitment unconditionally, so this program cannot be a contract entry point'),
+    }}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('command', choices=['kore', 'kast', 'check'])
+    ap.add_argument('command', choices=['kore', 'kast', 'check', 'contract'])
     ap.add_argument('file', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
     ap.add_argument('--ext', action='store_true', help='accept the midnight-zkir 2ffe2d1 surface (ZKIR-EXT)')
+    ap.add_argument('--preimage', type=Path, default=None, help='contract only: run tiers two and three on this preimage JSON')
+    ap.add_argument('--vm-definition', type=Path, default=None, help='contract --preimage: kompiled ZKIR / ZKIR-EXT directory for tier two')
     args = ap.parse_args(argv)
     try:
         term = load_program(args.file, ext=args.ext)
@@ -404,6 +578,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(term.to_dict()))
         return 0
     from pyk.ktool.krun import KRun
+    if args.command == 'contract':
+        krun = KRun(args.definition or default_definition('zkir-contract-main'))
+        preimage = None
+        if args.preimage is not None:
+            with open(args.preimage) as f:
+                preimage = json.load(f)
+        try:
+            doc = contract(args.file, term, args.ext, krun, preimage, args.preimage, args.vm_definition)
+        except RuntimeError as e:
+            print(f'krun failed: {e}', file=sys.stderr)
+            return 1
+        print(json.dumps(doc, indent=2))
+        return 0
     krun = KRun(args.definition or default_definition())
     kore = krun.kast_to_kore(term, KSort('Program'))
     if args.command == 'kore':

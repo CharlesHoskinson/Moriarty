@@ -291,8 +291,9 @@ constants, `legendre(3, #r)`, `#jubjubD`, each of the four generators on its
 curve, `#jubjubGenerator = 8 G`, `8 G` in and `G` outside the Jubjub
 subgroup, the Curve25519 generator in its subgroup, a scalar multiple on
 each curve, `n G = inf()` on both Weierstrass groups, and the three
-`jubjubFromXY` parity cases. `evidence/zkir-k-unit-values-2026-09-05c.txt`
-records `43/43 checks passed`.
+`jubjubFromXY` parity cases. `evidence/zkir-k-unit-values-2026-09-06d.txt`
+records `49/49 checks passed`: these 43 and the six `witnessSpace` checks
+of 08-constraints-and-verdicts.md.
 
 `tools/unit_hash.py` compares K with the crate's `preprocess` through the
 oracle on `corpus/handmade/{transient_hash,std_hashes}.zkir`. Its 18 checks
@@ -301,7 +302,7 @@ and Keccak-256 of 1-byte and 32-byte aligned preimages against the oracle
 (the 1-byte SHA-256 also against `hashlib`, and the oracle's own 32-byte
 SHA-256 register against `hashlib`); SHA-256 of a field-plus-`bytes(6)`
 preimage; Keccak-256 of a 232-byte (`bytes(200)` plus field) preimage; and
-three `alignedBytes` layout checks. `evidence/zkir-k-unit-hash-2026-09-05c.txt`
+three `alignedBytes` layout checks. `evidence/zkir-k-unit-hash-2026-09-06d.txt`
 records `18/18 checks passed`. SHA-512 is absent because `ZKIR-TEST` does not
 import `ZKIR-SHA512`; `corpus/midnight-zkir-2ffe2d1-tests/test_sha512_proof.zkir`
 exercises it in the extension differential harness

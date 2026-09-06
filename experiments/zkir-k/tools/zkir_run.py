@@ -4,7 +4,15 @@
 the ZKIR definition, and returns a dict shaped like the Rust oracle's output:
   {status: 'ok'|'error', error?: str, memory: {id: {variant, encoded}},
    pis: [str], pi_skips: [None|int], cursors: (pubIn, pubOut, priv),
-   constraints: int}
+   constraints: int, verdicts: int, all_verdicts: [(outcome, message, gate)],
+   violations: [...] (the verdicts that are neither holds nor unconstrained),
+   witness_space: bool (the <witnessSpace> cell: every verdict holds or is
+   unconstrained and every register is well typed, plan-iter3 M2),
+   unconstrained: [id] (the registers whose assigning relation is unconstrained),
+   observable: {status, error?, outputs: [str], pis: [str], skips: [None|int]}
+   (the <observable> cell, obs(status, encoded outputs, public inputs, skips):
+   the observable semantics [[P]](pre) of plan-iter3 M5b, four-place since the
+   2026-09-06 review)}
 Memory values are re-encoded on the Python side with the same encoding as
 `encode_offcircuit` (the encodings are unit-tested against K in unit_values.py).
 
@@ -283,6 +291,26 @@ def need(t: KInner) -> tuple[str, Any]:
     raise ValueError(t.label.name)
 
 
+def observable(t: KInner) -> dict[str, Any] | None:
+    """The <observable> cell: obs(status, encoded outputs, public inputs,
+    skips) (the four-place observable of the 2026-09-06 review, item 26: the
+    `pi_skips` list is part of the observable result, `Some(n)` per guarded-off
+    impact), or None while the run has not reached #observable (noObs())."""
+    assert isinstance(t, KApply)
+    if t.label.name == 'noObs':
+        return None
+    assert t.label.name == 'obs', t.label.name
+    status, outputs, pis, *rest = t.args
+    assert isinstance(status, KApply)
+    rec: dict[str, Any] = {'status': status.label.name}
+    if status.args:
+        rec['error'] = tok_str(status.args[0])
+    rec['outputs'] = [str(tok_int(x)) for x in list_items(outputs)]
+    rec['pis'] = [str(tok_int(x)) for x in list_items(pis)]
+    rec['skips'] = [skip(x) for x in list_items(rest[0])] if rest else None
+    return rec
+
+
 def skip(t: KInner):
     assert isinstance(t, KApply)
     if t.label.name == 'skipNone':
@@ -343,12 +371,16 @@ class Runner:
             gate = ' '.join(self.krun.pretty_print(v.args[0]).replace('\n', ' ').split())
             rec = (outcome.label.name, tok_str(outcome.args[0]) if outcome.args else '', gate)
             allv.append(rec)
-            if outcome.label.name != 'holds':
+            if outcome.label.name not in ('holds', 'unconstrained'):
                 bad.append((rec[0], rec[1], gate[:120]))
         out['verdicts'] = len(verdicts)
         out['all_verdicts'] = allv
         out['violations'] = bad
+        ws = find_cell(cfg, '<witnessSpace>')
+        out['witness_space'] = isinstance(ws, KToken) and ws.token == 'true'
+        out['unconstrained'] = [tok_str(x) for x in list_items(find_cell(cfg, '<unconstrainedRegs>'))]
         out['outputs'] = [type_string(v, self.ext) + ':' + ','.join(str(e) for e in encode_value(v, self.ext)[1]) for v in list_items(find_cell(cfg, '<outputs>'))]
+        out['observable'] = observable(find_cell(cfg, '<observable>'))
         return out
 
     def run_file(self, path: Path, preimage: dict[str, Any], gen: bool = False, checked: bool = False) -> dict[str, Any]:

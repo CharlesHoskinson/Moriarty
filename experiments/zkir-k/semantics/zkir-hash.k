@@ -12,6 +12,17 @@
 //   sha256(Bytes)           FIPS 180-4.
 //   keccak256(Bytes)        Keccak-f[1600], rate 1088, pad 0x01 .. 0x80 (pre-NIST).
 //
+// The defining rules of poseidonHash, varLenSponge, hashToCurve, sha256Bytes
+// and keccak256Bytes, and of their helpers (absorbAll, permute, #rounds, #htc,
+// mapToCurve, #shaPad, #shaBlocks, #kPad, #kAbsorb), carry [concrete]: they
+// evaluate only on fully concrete arguments, so under the Haskell backend a
+// hash of a symbolic input stays an uninterpreted application (see
+// zkir-symbolic.k). transientCommit carries no such attribute: it is a
+// definitional alias of poseidonHash and unfolds once on any argument, so the
+// witness-side commitment check (ZKIR-VM #commCheck) and the commitment gate
+// (ZKIR-CONSTRAINTS commGate) name the same term. The LLVM backend is
+// unaffected (every term is concrete there).
+//
 // The Rust Poseidon CPU code folds partial rounds three at a time ("round skips", NB_SKIPS_CPU = 2); that
 // is an algebraic rewrite of the plain round function implemented here, and the
 // differential tests against the crate confirm the outputs agree.
@@ -49,42 +60,43 @@ module ZKIR-HASH
   rule partialRound(ps(S0, S1, S2), R) => linear(ps(S0, S1, sbox(S2)), R)
 
   syntax PState ::= permute(PState) [function, total]
-  rule permute(ps(S0, S1, S2)) => #rounds(ps(fadd(S0, poseidonRC(0, 0), #r), fadd(S1, poseidonRC(0, 1), #r), fadd(S2, poseidonRC(0, 2), #r)), 0)
+  rule permute(ps(S0, S1, S2)) => #rounds(ps(fadd(S0, poseidonRC(0, 0), #r), fadd(S1, poseidonRC(0, 1), #r), fadd(S2, poseidonRC(0, 2), #r)), 0) [concrete]
   syntax PState ::= #rounds(PState, Int) [function, total]
-  rule #rounds(S, R) => #rounds(fullRound(S, R), R +Int 1) requires R <Int 4
-  rule #rounds(S, R) => #rounds(partialRound(S, R), R +Int 1) requires R >=Int 4 andBool R <Int 64
-  rule #rounds(S, R) => #rounds(fullRound(S, R), R +Int 1) requires R >=Int 64 andBool R <Int 68
-  rule #rounds(S, R) => S requires R >=Int 68
+  rule #rounds(S, R) => #rounds(fullRound(S, R), R +Int 1) requires R <Int 4 [concrete]
+  rule #rounds(S, R) => #rounds(partialRound(S, R), R +Int 1) requires R >=Int 4 andBool R <Int 64 [concrete]
+  rule #rounds(S, R) => #rounds(fullRound(S, R), R +Int 1) requires R >=Int 64 andBool R <Int 68 [concrete]
+  rule #rounds(S, R) => S requires R >=Int 68 [concrete]
 
   // Absorb a queue of elements in chunks of two, permuting after each chunk.
   syntax PState ::= absorbAll(PState, List) [function, total]
-  rule absorbAll(S, .List) => S
-  rule absorbAll(ps(S0, S1, S2), ListItem(A) ListItem(B) Rest) => absorbAll(permute(ps(fadd(S0, A, #r), fadd(S1, B, #r), S2)), Rest)
-  rule absorbAll(ps(S0, S1, S2), ListItem(A)) => permute(ps(fadd(S0, A, #r), S1, S2))
+  rule absorbAll(S, .List) => S [concrete]
+  rule absorbAll(ps(S0, S1, S2), ListItem(A) ListItem(B) Rest) => absorbAll(permute(ps(fadd(S0, A, #r), fadd(S1, B, #r), S2)), Rest) [concrete]
+  rule absorbAll(ps(S0, S1, S2), ListItem(A)) => permute(ps(fadd(S0, A, #r), S1, S2)) [concrete]
 
   // Fixed-length Poseidon hash (transient_hash).
   syntax Int ::= poseidonHash(List) [function, total]
-  rule poseidonHash(Xs) => #ps0(absorbAll(ps(0, 0, size(Xs) modInt #r), Xs))
+  rule poseidonHash(Xs) => #ps0(absorbAll(ps(0, 0, size(Xs) modInt #r), Xs)) [concrete]
   syntax Int ::= #ps0(PState) [function, total]
   rule #ps0(ps(S0, _, _)) => S0
   syntax Int ::= #ps1(PState) [function, total]
   rule #ps1(ps(_, S1, _)) => S1
 
-  // transient_commit(values, opening) = poseidonHash([opening] ++ values)
+  // transient_commit(values, opening) = poseidonHash([opening] ++ values); a
+  // definitional alias, deliberately without [concrete] (header)
   syntax Int ::= transientCommit(List, Int) [function, total]
   rule transientCommit(Vs, Rand) => poseidonHash(ListItem(Rand) Vs)
 
   // Variable-length sponge used by hash_to_curve: capacity 2^64, the input
   // length appended as padding, then two squeezes (register 0 and 1).
   syntax PState ::= varLenSponge(List) [function, total]
-  rule varLenSponge(Xs) => absorbAll(ps(0, 0, 18446744073709551616), Xs ListItem(size(Xs)))
+  rule varLenSponge(Xs) => absorbAll(ps(0, 0, 18446744073709551616), Xs ListItem(size(Xs))) [concrete]
 
   // ---------------------------------------------------------------------------
   // Hash to curve (Jubjub subgroup).
   syntax Point ::= hashToCurve(List) [function, total]
-  rule hashToCurve(Xs) => #htc(varLenSponge(Xs))
+  rule hashToCurve(Xs) => #htc(varLenSponge(Xs)) [concrete]
   syntax Point ::= #htc(PState) [function, total]
-  rule #htc(ps(X1, X2, _)) => ecAdd(#jubjub, mapToCurve(X1), mapToCurve(X2))
+  rule #htc(ps(X1, X2, _)) => ecAdd(#jubjub, mapToCurve(X1), mapToCurve(X2)) [concrete]
 
   // SVDW constants (mtc_params.rs), all mod r
   syntax Int ::= "#svdwC1" [function, total]   // g(Z)
@@ -103,7 +115,7 @@ module ZKIR-HASH
   rule #svdwC4 => fneg(fmul(fmul(4, #svdwC1, #r), finv(fadd(fmul(3, fsq(#svdwZ, #r), #r), fmul(4, #svdwA, #r), #r), #r), #r), #r)
 
   syntax Point ::= mapToCurve(Int) [function, total]
-  rule mapToCurve(U) => ecMul(#jubjub, #edFromMont(#wToMont(#svdw(U))), 8)
+  rule mapToCurve(U) => ecMul(#jubjub, #edFromMont(#wToMont(#svdw(U))), 8) [concrete]
 
   // svdw_map_to_curve: returns pt(x, y) on the Weierstrass form
   syntax Point ::= #svdw(Int) [function, total]
@@ -161,13 +173,13 @@ module ZKIR-HASH
   syntax Bytes ::= sha256Bytes(Bytes) [function, total]
   rule sha256Bytes(M) => #shaBlocks(#shaPad(M), 0,
       ListItem(1779033703) ListItem(3144134277) ListItem(1013904242) ListItem(2773480762)
-      ListItem(1359893119) ListItem(2600822924) ListItem(528734635) ListItem(1541459225))
+      ListItem(1359893119) ListItem(2600822924) ListItem(528734635) ListItem(1541459225)) [concrete]
   syntax Bytes ::= #shaPad(Bytes) [function, total]
-  rule #shaPad(M) => padRightBytes(M +Bytes Int2Bytes(1, 128, BE), ((lengthBytes(M) +Int 9 +Int 63) /Int 64) *Int 64 -Int 8, 0) +Bytes Int2Bytes(8, lengthBytes(M) *Int 8, BE)
+  rule #shaPad(M) => padRightBytes(M +Bytes Int2Bytes(1, 128, BE), ((lengthBytes(M) +Int 9 +Int 63) /Int 64) *Int 64 -Int 8, 0) +Bytes Int2Bytes(8, lengthBytes(M) *Int 8, BE) [concrete]
   syntax Bytes ::= #shaBlocks(Bytes, Int, List) [function, total]   // (padded, offset, H)
-  rule #shaBlocks(P, Off, H) => #shaOut(H) requires Off >=Int lengthBytes(P)
+  rule #shaBlocks(P, Off, H) => #shaOut(H) requires Off >=Int lengthBytes(P) [concrete]
   rule #shaBlocks(P, Off, H) => #shaBlocks(P, Off +Int 64, #shaCompress(#shaSchedule(substrBytes(P, Off, Off +Int 64), 0, .List), H))
-    requires Off <Int lengthBytes(P)
+    requires Off <Int lengthBytes(P) [concrete]
   syntax Bytes ::= #shaOut(List) [function, total]
   rule #shaOut(.List) => .Bytes
   rule #shaOut(ListItem(W) Ws) => Int2Bytes(4, W, BE) +Bytes #shaOut(Ws)
@@ -229,9 +241,9 @@ module ZKIR-HASH
   rule lane(S, X, Y) => {S[(X modInt 5) +Int 5 *Int (Y modInt 5)]}:>Int
 
   syntax Bytes ::= keccak256Bytes(Bytes) [function, total]
-  rule keccak256Bytes(M) => substrBytes(#kOut(#kAbsorb(#kPad(M), 0, #kZero(25)), 0, .Bytes), 0, 32)
+  rule keccak256Bytes(M) => substrBytes(#kOut(#kAbsorb(#kPad(M), 0, #kZero(25)), 0, .Bytes), 0, 32) [concrete]
   syntax Bytes ::= #kPad(Bytes) [function, total]
-  rule #kPad(M) => #kPadEnd(padRightBytes(M +Bytes Int2Bytes(1, 1, BE), ((lengthBytes(M) +Int 1 +Int 135) /Int 136) *Int 136, 0))
+  rule #kPad(M) => #kPadEnd(padRightBytes(M +Bytes Int2Bytes(1, 1, BE), ((lengthBytes(M) +Int 1 +Int 135) /Int 136) *Int 136, 0)) [concrete]
   syntax Bytes ::= #kPadEnd(Bytes) [function, total]
   rule #kPadEnd(P) => replaceAtBytes(P, lengthBytes(P) -Int 1, Int2Bytes(1, P[lengthBytes(P) -Int 1] |Int 128, BE))
   syntax List ::= #kZero(Int) [function, total]
@@ -240,9 +252,9 @@ module ZKIR-HASH
   rule #kZero(N) => .List requires N <Int 0
 
   syntax List ::= #kAbsorb(Bytes, Int, List) [function, total]
-  rule #kAbsorb(P, Off, S) => S requires Off >=Int lengthBytes(P)
+  rule #kAbsorb(P, Off, S) => S requires Off >=Int lengthBytes(P) [concrete]
   rule #kAbsorb(P, Off, S) => #kAbsorb(P, Off +Int 136, keccakF(#kXorBlock(S, substrBytes(P, Off, Off +Int 136), 0)))
-    requires Off <Int lengthBytes(P)
+    requires Off <Int lengthBytes(P) [concrete]
   syntax List ::= #kXorBlock(List, Bytes, Int) [function, total]
   rule #kXorBlock(S, B, I) => S requires I >=Int 17
   rule #kXorBlock(S, B, I) => #kXorBlock(S[I <- ({S[I]}:>Int xorInt Bytes2Int(substrBytes(B, 8 *Int I, 8 *Int I +Int 8), LE, Unsigned))], B, I +Int 1)

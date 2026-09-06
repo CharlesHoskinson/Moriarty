@@ -51,6 +51,10 @@ EXPECTED = {
     'excessive_bits.zkir': 'wfError:constrain_bits: excessive bit bound',
     'immediate_out_of_range.zkir': 'format',
     'divmod_outputs.zkir': 'wfError:div_mod_power_of_two requires exactly 2 outputs',
+    # 2026-09-06 review, items 19 and 20: the alignment field count and reconstitute_field bits = 0
+    'align_field_short.zkir': 'wfError:persistent_hash: alignment needs 2 field elements but instruction has 1',
+    'align_bytes_short.zkir': 'wfError:keccak256: alignment needs 2 field elements but instruction has 1',
+    'reconstitute_bits_0.zkir': 'wfError:reconstitute_field: bits 0',
     'wrong_version.zkir': 'format',
 }
 

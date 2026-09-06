@@ -205,6 +205,65 @@ module ZKIR-SYNTAX
   rule writes(privateInput(_, _, O))           => O, .Ids
   rule writes(output(_))                       => .Ids
 
+  // --- Names ------------------------------------------------------------------
+  // typeName(T): the Rust `IrType` variant name, used in run-time messages, in
+  // the static contract inventory and by `tn` in ZKIR-OPS (base types here,
+  // extension types in ZKIR-EXT-SYNTAX).
+  syntax String ::= typeName(IrType) [function, total]
+  rule typeName(native())          => "Native"
+  rule typeName(bytes32())         => "Bytes32"
+  rule typeName(jubjubPoint())     => "JubjubPoint"
+  rule typeName(jubjubScalar())    => "JubjubScalar"
+  rule typeName(secp256k1Point())  => "Secp256k1Point"
+  rule typeName(secp256k1Base())   => "Secp256k1Base"
+  rule typeName(secp256k1Scalar()) => "Secp256k1Scalar"
+  rule typeName(secp256r1Point())  => "Secp256r1Point"
+  rule typeName(secp256r1Base())   => "Secp256r1Base"
+  rule typeName(secp256r1Scalar()) => "Secp256r1Scalar"
+  rule typeName(curve25519Point()) => "Curve25519Point"
+  rule typeName(curve25519Base())  => "Curve25519Base"
+  rule typeName(curve25519Scalar())=> "Curve25519Scalar"
+
+  // #opName(I): the JSON `op` of the instruction (its symbol), for messages and
+  // the contract inventory; the [owise] arm keeps the function total on any
+  // surface whose arms are missing.
+  syntax String ::= #opName(Instr) [function, total]
+  rule #opName(encode(_, _))                    => "encode"
+  rule #opName(assert(_))                       => "assert"
+  rule #opName(condSelect(_, _, _, _))          => "cond_select"
+  rule #opName(constrainBits(_, _))             => "constrain_bits"
+  rule #opName(constrainEq(_, _))               => "constrain_eq"
+  rule #opName(constrainToBoolean(_))           => "constrain_to_boolean"
+  rule #opName(copy(_, _))                      => "copy"
+  rule #opName(impact(_, _))                    => "impact"
+  rule #opName(ecMul(_, _, _))                  => "ec_mul"
+  rule #opName(ecMulGenerator(_, _))            => "ec_mul_generator"
+  rule #opName(hashToCurve(_, _))               => "hash_to_curve"
+  rule #opName(intoCoordinates(_, _, _))        => "into_coordinates"
+  rule #opName(fromCoordinates(_, _, _))        => "from_coordinates"
+  rule #opName(intoBytes32(_, _))               => "into_bytes32"
+  rule #opName(fromBytes32(_, _, _))            => "from_bytes32"
+  rule #opName(reverseBytes(_, _))              => "reverse_bytes"
+  rule #opName(bytes32IntoLowHigh(_, _, _))     => "bytes32_into_low_high"
+  rule #opName(bytes32FromLowHigh(_, _, _))     => "bytes32_from_low_high"
+  rule #opName(divModPowerOfTwo(_, _, _))       => "div_mod_power_of_two"
+  rule #opName(reconstituteField(_, _, _, _))   => "reconstitute_field"
+  rule #opName(transientHash(_, _))             => "transient_hash"
+  rule #opName(persistentHash(_, _, _))         => "persistent_hash"
+  rule #opName(keccak256(_, _, _))              => "keccak256"
+  rule #opName(testEq(_, _, _))                 => "test_eq"
+  rule #opName(add(_, _, _))                    => "add"
+  rule #opName(mul(_, _, _))                    => "mul"
+  rule #opName(neg(_, _))                       => "neg"
+  rule #opName(inv(_, _))                       => "inv"
+  rule #opName(not(_, _))                       => "not"
+  rule #opName(lessThan(_, _, _, _))            => "less_than"
+  rule #opName(jubjubScalarFromNative(_, _))    => "jubjub_scalar_from_native"
+  rule #opName(publicInput(_, _, _))            => "public_input"
+  rule #opName(privateInput(_, _, _))           => "private_input"
+  rule #opName(output(_))                       => "output"
+  rule #opName(_)                               => "instruction" [owise]
+
   // --- List lengths -----------------------------------------------------------
   syntax Int ::= lenOperands(Operands) [function, total]
   rule lenOperands(.Operands)  => 0
@@ -218,6 +277,22 @@ module ZKIR-SYNTAX
   syntax Int ::= lenInstrs(Instrs) [function, total]
   rule lenInstrs(.Instrs)      => 0
   rule lenInstrs(_ ; Is)       => 1 +Int lenInstrs(Is)
+
+  // --- Field elements an alignment consumes -----------------------------------
+  // `fab_decode_to_bytes_atom` (ir_vm.rs) takes one operand per field atom and
+  // ceil(n / 31) operands per bytes atom, on both crates, and returns
+  // Error::Synthesis ("cannot decode field element from no data", "cannot
+  // decode bytes from to little data") when the operand list is shorter;
+  // off-circuit `parse_field_repr` fails on the same programs for every
+  // preimage. A compress atom and an option segment are rejected before any
+  // count matters (ZKIR-STATIC #onlyAtoms, #hasCompress), so they count 0
+  // here; surplus operands are accepted on both sides.
+  syntax Int ::= #alignFields(Segments) [function, total]
+  rule #alignFields(.Segments) => 0
+  rule #alignFields((atom(fieldAtom()), Segs)) => 1 +Int #alignFields(Segs)
+  rule #alignFields((atom(bytesAtom(N)), Segs)) => (N +Int 30) /Int 31 +Int #alignFields(Segs)
+  rule #alignFields((atom(compressAtom()), Segs)) => #alignFields(Segs)
+  rule #alignFields((option(_), Segs)) => #alignFields(Segs)
 endmodule
 
 
@@ -236,7 +311,13 @@ endmodule
 //      outputs (checked at run time, since the type is dynamic; not here);
 //   6. bit widths: constrain_bits and less_than below FR_BITS = 255;
 //      div_mod_power_of_two and reconstitute_field at most
-//      FR_BYTES_STORED * 8 = 248 (the Rust bounds, `ir_vm.rs`).
+//      FR_BYTES_STORED * 8 = 248 (the Rust bounds, `ir_vm.rs`);
+//      reconstitute_field at least 1 (bits 0 makes the divisor bound 255,
+//      which `preprocess` rejects as an excessive bit bound on every value and
+//      keygen rejects by an assertion, plan-iter3 candidate K8);
+//   7. the byte-hash operand lists are at least as long as their alignment
+//      needs (#alignFields): `parse_field_repr` rejects a shorter list for
+//      every preimage and `fab_decode_to_bytes` at synthesis.
 // Everything else (types of operands, guard values, transcript lengths) is
 // dynamic and belongs to ZKIR-VM.
 module ZKIR-WF
@@ -299,9 +380,16 @@ module ZKIR-WF
     requires lenIds(Os) ==Int 2 andBool B >Int #frBytesStored *Int 8
   rule #checkArity(reconstituteField(_, _, B, _), _) => wfError("reconstitute_field: excessive bit count")
     requires B >Int #frBytesStored *Int 8
+  rule #checkArity(reconstituteField(_, _, 0, _), _) => wfError("reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound")
+  rule #checkArity(persistentHash(alignment(Segs), Xs, _), _) => wfError(#alignArity("persistent_hash", Segs, Xs))
+    requires lenOperands(Xs) <Int #alignFields(Segs)
+  rule #checkArity(keccak256(alignment(Segs), Xs, _), _) => wfError(#alignArity("keccak256", Segs, Xs))
+    requires lenOperands(Xs) <Int #alignFields(Segs)
   rule #checkArity(constrainBits(_, B), _) => wfError("constrain_bits: excessive bit bound")
     requires B >=Int #frBits
   rule #checkArity(lessThan(_, _, B, _), _) => wfError("less_than: excessive bit bound")
     requires B >=Int #frBits
   rule #checkArity(_, _) => wfOk() [owise]
+  syntax String ::= #alignArity(String, Segments, Operands) [function, total]
+  rule #alignArity(Op, Segs, Xs) => Op +String ": alignment needs " +String Int2String(#alignFields(Segs)) +String " field elements but instruction has " +String Int2String(lenOperands(Xs))
 endmodule

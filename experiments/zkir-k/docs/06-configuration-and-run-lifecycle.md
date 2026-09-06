@@ -23,6 +23,9 @@ The table gives content sorts, except for the enclosing cell, whose generated so
 | `<constraints>` | `List` | `.List` | Emitted `Constraint` entries, called gates. |
 | `<chips>` | `Set` | `.Set` | Chip names selected by `zkir-constraints.k`, `usedChips`. |
 | `<verdicts>` | `List` | `.List` | `Verdict` entries produced after execution. |
+| `<witnessSpace>` | `Bool` | `false` | Whether the final memory is in the modelled witness space (`witnessSpace`, `zkir-constraints.k`). |
+| `<unconstrainedRegs>` | `List` | `.List` | Registers whose assigning relation is `unconstrained`. |
+| `<observable>` | `Observable` | `noObs()` | The observable result `obs(status, encoded outputs, public inputs, skips)`, written by `#observable` after `#witnessSpace` (16-compilation-target-contract.md). |
 | `<piIdx>` | `Int` | `0` | Next absolute public-input position for gate emission. |
 | `<genMode>` | `Bool` | `false` | Enables transcript generation behavior. |
 | `<needs>` | `List` | `.List` | Recorded `Need` entries for the harness. |

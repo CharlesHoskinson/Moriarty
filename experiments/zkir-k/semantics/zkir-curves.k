@@ -120,16 +120,19 @@ module ZKIR-CURVES
     requires Y =/=Int 0
 
   // Double-and-add over the bits of K (K >= 0; callers pass canonical scalars).
+  // [concrete] on ecMul and on its accumulator: scalar multiplication unfolds
+  // only on concrete arguments; on a symbolic point or scalar the Haskell
+  // backend keeps ecMul uninterpreted (zkir-symbolic.k).
   syntax Point ::= ecMul(Curve, Point, Int) [function, total]
-  rule ecMul(C, _, K) => identity(C) requires K <=Int 0
-  rule ecMul(C, Q, K) => #ecMulAcc(C, Q, K, identity(C)) requires K >Int 0
+  rule ecMul(C, _, K) => identity(C) requires K <=Int 0 [concrete]
+  rule ecMul(C, Q, K) => #ecMulAcc(C, Q, K, identity(C)) requires K >Int 0 [concrete]
   syntax Point ::= #ecMulAcc(Curve, Point, Int, Point) [function, total]
-  rule #ecMulAcc(_, _, 0, Acc) => Acc
+  rule #ecMulAcc(_, _, 0, Acc) => Acc [concrete]
   rule #ecMulAcc(C, Q, K, Acc) => #ecMulAcc(C, ecDouble(C, Q), K >>Int 1, ecAdd(C, Acc, Q))
-    requires K >Int 0 andBool K modInt 2 ==Int 1
+    requires K >Int 0 andBool K modInt 2 ==Int 1 [concrete]
   rule #ecMulAcc(C, Q, K, Acc) => #ecMulAcc(C, ecDouble(C, Q), K >>Int 1, Acc)
-    requires K >Int 0 andBool K modInt 2 ==Int 0
-  rule #ecMulAcc(_, _, K, Acc) => Acc requires K <Int 0
+    requires K >Int 0 andBool K modInt 2 ==Int 0 [concrete]
+  rule #ecMulAcc(_, _, K, Acc) => Acc requires K <Int 0 [concrete]
 
   // --- Constructors from coordinates -------------------------------------------------
   syntax PointResult ::= ptOk(Point) | ptErr(String)

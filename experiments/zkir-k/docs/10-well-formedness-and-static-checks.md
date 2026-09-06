@@ -40,7 +40,7 @@ Instructions that only constrain (`assert`, `constrain_bits`, `constrain_eq`, `c
 
 ### `#checkArity`
 
-`#checkArity(I, N)` has six error rules and an `owise` rule that returns `wfOk()`. The bounds come from the constants `#frBits` (255) and `#frBytesStored` (31) in `zkir-syntax.k`, which are `FR_BITS` and `FR_BYTES_STORED` of the crate.
+`#checkArity(I, N)` has nine error rules on the base surface, one more on the extension surface (`sha512`, module `ZKIR-EXT-WF` in `zkir-ext.k`), and an `owise` rule that returns `wfOk()`. The bounds come from the constants `#frBits` (255) and `#frBytesStored` (31) in `zkir-syntax.k`, which are `FR_BITS` and `FR_BYTES_STORED` of the crate.
 
 | Instruction | Predicate | Message on failure |
 |---|---|---|
@@ -48,8 +48,10 @@ Instructions that only constrain (`assert`, `constrain_bits`, `constrain_eq`, `c
 | `div_mod_power_of_two` | exactly two output identifiers | `div_mod_power_of_two requires exactly 2 outputs` |
 | `div_mod_power_of_two` | bits at most 248 (tested only when the arity holds) | `div_mod_power_of_two: excessive bit count` |
 | `reconstitute_field` | bits at most 248 | `reconstitute_field: excessive bit count` |
+| `reconstitute_field` | bits at least 1 (bits 0 makes the divisor bound 255, K8 in 13-known-divergences.md) | `reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound` |
 | `constrain_bits` | bits below 255 | `constrain_bits: excessive bit bound` |
 | `less_than` | bits below 255 | `less_than: excessive bit bound` |
+| `persistent_hash`, `keccak256`, `sha512` | at least `#alignFields` operands: one per `field` atom, `ceil(n / 31)` per `bytes n` atom (`zkir-syntax.k`) | `<op>: alignment needs N field elements but instruction has M` |
 
 The arity of `encode` depends on the run-time type of the encoded value, so it is not a static check. The VM reports `Unexpected output length of encode instruction: T` (`#encode` in `zkir-vm.k`, `T` the type name), and the gate evaluates to `synthErr("Unexpected output length of encode instruction")` (`#encMatch` in `zkir-constraints.k`).
 
@@ -83,7 +85,7 @@ A file cannot produce two of the `wf` failures, because the preprocessor rejects
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py
 ```
 
-The last line is the summary, `63 programs, 63 as expected, 0 unexpected, 8.0s` (the time varies), and the exit status is 0 only when nothing is unexpected; the receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-05c.txt`. Of the 63 programs, 43 are ledger tests, 6 precompiles, 7 escrow and swap circuits and 7 negatives. Five ledger tests are listed in `EXPECTED`: the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
+The last line is the summary, `66 programs, 66 as expected, 0 unexpected, 8.2s` (the time varies), and the exit status is 0 only when nothing is unexpected; the receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-06e.txt`. Of the 66 programs, 43 are ledger tests, 6 precompiles, 7 escrow and swap circuits and 10 negatives. Five ledger tests are listed in `EXPECTED`: the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
 
 ## The negative programs
 
@@ -119,7 +121,9 @@ rule <k> job(_, _) => .K ... </k> <status> error(_) </status>
 | `output` arity | `well-formedness: output: signature declares ...` | run-time error `Output: signature declares 1 return values but instruction has 2` |
 | `div_mod_power_of_two` outputs | `well-formedness: div_mod_power_of_two requires exactly 2 outputs` | run-time error `DivModPowerOfTwo requires exactly 2 outputs` |
 | bits at most 248 (`div_mod_power_of_two`, `reconstitute_field`) | `well-formedness: ...: excessive bit count` | run-time error `Excessive bit count` |
+| bits at least 1 (`reconstitute_field`) | `well-formedness: reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound` | run-time error `Excessive bit bound` on every value (the divisor bound is 255) |
 | bits below 255 (`constrain_bits`, `less_than`) | `well-formedness: ...: excessive bit bound` | run-time error `Excessive bit bound` (`checkBits`, `zkir-ops.k`) |
+| byte-hash operand count (`persistent_hash`, `keccak256`, `sha512`) | `well-formedness: <op>: alignment needs N field elements but instruction has M` | run-time error `Inputs did not match alignment` on every preimage |
 
 The columns differ in more than wording: execution raises a run-time error only when it reaches the instruction with status `ok()`. The negative programs ship without preimages. A one-input preimage in a file `one.json` shows the difference (keys in 06-configuration-and-run-lifecycle.md, printed fields in 11-tooling-reference.md):
 

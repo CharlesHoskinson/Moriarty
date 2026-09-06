@@ -266,7 +266,7 @@ Since `#and` keeps the first non-`holds` outcome, an absent register gives `unkn
 - Syntax: `reconstituteField(Operand, Operand, Int, String)`: divisor, modulus, bits, output; `reads` gives the modulus first, the order of `preprocess`.
 - Off-circuit: `bits > 248` fails with `Excessive bit count` before any operand is read. `#recon` resolves the modulus and applies `checkBits(modulus, bits)`; `#recon3` resolves the divisor and applies `checkBits(divisor, 255 - bits)`; `#recon4` fails with `Reconstituted element overflows field` when `(divisor << bits) + modulus > r - 1` and otherwise stores the sum modulo `#r`.
 - Gate: `#native` on both ("reconstitute_field"), `#bits(divisor, 255 - N)`, `#bits(modulus, N)` (the crate's two `assert_lower_than_fixed` calls), then `#matches` of `#recOf`, the sum modulo `r` ("reconstitute_field output"). The gate has no overflow check: after the witness rejects an overflow the output register is absent and the verdict is `unknown` (`f01`); a register holding the wrapped sum would satisfy it.
-- Checks: bit count and both bounds; `ZKIR-WF` rejects `bits > 248` with `reconstitute_field: excessive bit count` (`f10`, `bits = 256`).
+- Checks: bit count and both bounds; `ZKIR-WF` rejects `bits > 248` with `reconstitute_field: excessive bit count` (`f10`, `bits = 256`) and `bits = 0` with `reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound` (`handmade-negative/reconstitute_bits_0.zkir`; off-circuit the bound of 255 bits on the divisor fails on every value, in circuit keygen fails an assertion, K8 in 13-known-divergences.md).
 
 ## Hashing
 
