@@ -3,7 +3,7 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-06T20:31:05Z
+updated_at: 2026-09-06T21:29:23.534731+00:00
 sources:
   - SRC-0043
   - SRC-0044
@@ -13,9 +13,24 @@ sources:
   - SRC-0009
   - SRC-0040
   - SRC-0042
+  - SRC-0047
+  - SRC-0048
+  - SRC-0049
 ---
 
 # Formal assurance matrix
+
+## Intents and R2 boundary — 2026-09-06
+
+CLM-0195–0197 add signed authority, plan refinement, complete/pending receipt
+judgments and residual obligations to the proposed acceptance relation.
+R2's independent effect checker enforces a restricted exact-plan profile;
+gross edge caps and net credits have adversarial tests. Local Ed25519 checks
+authenticate key possession and bindings. These are S3 checks, not a proved
+compiler/refinement theorem or contract/history certificate. All required real
+claims remain unavailable. See [evidence](../evidence/moriarty-r2-language-2026-09-06/README.md)
+and the [intents amendment](../docs/research/2026-09-06-intents-report-integration.md).
+R2b authority composition and R3 native/ledger proof gates remain open.
 
 The theorem inventory was reproduced from pinned Isabelle sources at
 `marlowe-lang/marlowe` commit

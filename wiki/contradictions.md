@@ -1,9 +1,10 @@
 ---
+
 id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-06T20:31:05Z
+updated_at: 2026-09-06T21:29:23.534731+00:00
 sources:
   - SRC-0043
   - SRC-0044
@@ -29,11 +30,30 @@ sources:
   - SRC-0040
   - SRC-0041
   - SRC-0042
+  - SRC-0047
+  - SRC-0048
+  - SRC-0049
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
 
 # Contradictions and documentation drift
+
+## Intents report versus Moriarty requirements — 2026-09-06
+
+SRC-0047 recommends an IKL name, optional early proofs and other-backend-first
+milestones. SRC-0041/0046/0049 require Moriarty, finite bounds, ACTUS/DeFi targets
+and mandatory PCD with Midnight priority. Disposition: adopt authority/plan/
+receipt separation and refinement, retain the user's stronger constraints.
+Exact-plan R2 is a legitimate restricted profile, not outcome authorization with
+route freedom after signing. The report's embedded prototype is not present and
+its test/proof claims remain unverified. This resolves the execution-order
+conflict without asserting that the report's external claims were reproduced.
+
+SRC-0048 checks the report's four-primitive withdrawal against DeFiFormal's
+prior design pin. The live checkout had advanced, so immutable `git show`
+snapshots were used. Taxonomy remains a coverage guide; withdrawal does not
+establish a replacement primitive theorem. See CLM-0195.
 
 | Conflict | Evidence | Disposition |
 |---|---|---|

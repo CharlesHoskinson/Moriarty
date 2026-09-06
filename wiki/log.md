@@ -851,3 +851,17 @@ implementation, mock application and real backend verification did not run.
 The package awaits user review before implementation planning.
 
 - 2026-09-06T20:31:05Z — Ingested SRC-0043 PCD report, graphed the full document, resolved primary abstract references under SRC-0044, and inspected native Midnight recursion under SRC-0045. User steering SRC-0046 updates R0–R6, semantic/interface plans, footguns and current roadmap. Journal CLM-0192–0193; proof and conformance gates remain open.
+
+
+## [2026-09-06] implementation and intake | Exact-plan R2 and intents amendment
+
+SRC-0047 preserves the complete intents report and its graph. SRC-0048 checks
+its DeFi primitive-withdrawal/keyword-certificate claims at the prior source pin;
+SRC-0049 records the user's R2 start and report steering. CLM-0195 adds outcome
+IntentIR, authority/PlanIR/receipt distinctions, gross caps, net goals, pending
+obligations and refinement to R2b while retaining mandatory PCD and Midnight.
+CLM-0196 records the bounded JSON loan/swap evaluator, independent policies,
+canonical local signing and browser integration, with corrected review findings
+and source-scoped checks. CLM-0197 specifies the native loan IVC test; no native
+proof campaign or ledger run occurred. General DSL, conformance and real proofs
+remain open. Historical A4/A5 evidence is preserved.

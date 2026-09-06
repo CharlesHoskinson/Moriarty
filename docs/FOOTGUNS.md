@@ -88,3 +88,12 @@ These rules apply to research, planning, implementation and recovery.
 The current [design-cycle plan](superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md)
 applies these rules. Changing the plan requires preserving the reason and its
 effect on target coverage, not adding another layer of approval machinery.
+
+13. **Separate authority from outcomes and concrete plans.** Exact-plan signing
+    is a restricted profile, not solver-independent intent. A refund cannot
+    conceal gross over-spending, and a gross receipt before fees is not the net
+    promised delivery. Check permitted intermediate recipients and calls.
+    Pending progress carries residual authority and obligations; it does not
+    establish a terminal goal. A valid signature, keyword certificate or
+    taxonomy classification proves none of these semantics. See the
+    [intents amendment](research/2026-09-06-intents-report-integration.md).

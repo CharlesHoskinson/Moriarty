@@ -1,22 +1,29 @@
 # Moriarty roadmap — target semantics and proof-carrying developer workflow
 
-**Current direction, 2026-09-06:** the user approved starting the developer mock,
-then supplied the PCD report and confirmed Midnight Halo2/recursion as available
-capabilities. The [report integration package](../deliverables/pcd-report-integration-2026-09-06/README.md)
-contains the graph, source correction and revised plan. The
-[local developer mock](../experiments/moriarty-developer-mock/README.md) illustrates
-loan/swap behavior and typed required claims; its evidence is simulated.
+**Current direction, 2026-09-06:** the R2
+[executable workspace](../experiments/moriarty-developer-mock/README.md)
+adds bounded JSON loan/swap packages, one generic evaluator, independent effect
+checks and genuine local exact-plan signing. It is a restricted S3 prototype.
+Required contract, transition and PCD proofs remain unavailable; no ledger
+acceptance or full ACTUS conformance is claimed.
 
-Follow [R0–R6](research/2026-09-06-pcd-report-integration.md#revised-sprint-sequence-and-exit-evidence):
-typed claims and a shared ACTUS/DeFi semantic slice, Midnight-native IVC, separate
-ledger compatibility, private multi-party PCD, then certificate/package expansion.
-Optional acceleration comes later and never bypasses mandatory proofs. Finite
-language/lifecycle bounds remain required despite cryptographic recursion.
+The user then supplied an intents report. Its
+[graph and reconciliation](../deliverables/intents-report-integration-2026-09-06/README.md)
+add **R2b: outcome intents and authority**, separating IntentIR, authority,
+PlanIR, execution and receipts. Next: define the bounded outcome profile and
+semantic signing panel, aggregate gross debit limits, net goals, validity/replay
+and residual obligations. Preserve exact-plan mode as an explicit specialization.
 
-The source-inspected native recursion machinery is real; Moriarty proof
-integration, checked contract properties, compiler correspondence and complete
-ACTUS conformance remain open. Read [footguns](FOOTGUNS.md) before continuing.
-A4/A5 are unfinished historical experiments; their queue does not resume.
+Follow the amended [R0–R6 sequence](research/2026-09-06-pcd-report-integration.md#revised-sprint-sequence-and-exit-evidence).
+The [R3 native financial IVC experiment](../experiments/moriarty-native-ivc-r3/README.md)
+is specified-only with a proposed ceiling and stopping rule. Midnight recursion
+remains first; native success and ledger compatibility require separate evidence.
+Private witness handoff, contract certificates and target expansion follow.
+
+Keep all 18 ACTUS types, 277 fixtures and 72 DeFi rows visible. Financial
+packages/corpus remain implementation targets, not primitive completeness
+proofs. Read [footguns](FOOTGUNS.md). Old A4/A5 are unfinished historical work;
+their queue does not resume.
 
 ## Historical Candidate A handoff (preserved below)
 

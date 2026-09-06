@@ -3,16 +3,31 @@ id: defiformal.taxonomy.audit
 type: comparison
 title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
-updated_at: 2026-09-03T01:56:00Z
+updated_at: 2026-09-06T21:29:23.534731+00:00
 sources:
   - SRC-0015
   - SRC-0016
   - SRC-0017
+  - SRC-0047
+  - SRC-0048
+  - SRC-0049
 ---
 
 <!-- markdownlint-disable MD025 -->
 
 # DeFiFormal taxonomy audit and Moriarty mapping
+
+## Intents report reconciliation — 2026-09-06
+
+SRC-0048 inspected the report's quoted `QSIGMA-VERDICT.md` and keyword-checker
+sources at `8ae0bbfaa3193078d1cabf6999db1382985b7f95`, the existing design-study
+pin. The verdict explicitly withdraws its four-primitive invariant; the checker
+classifies declaration names and labels the output a keyword seed. This source
+observation does not rerun the mathematics or certify a new basis. Preserve the
+72-row target corpus and semantic counterexamples while selecting Core from
+required behaviors. [CLM-0195](research-journal.md#clm-0195-intents-report-separates-authority-plans-and-receipts)
+and the [reconciliation](../docs/research/2026-09-06-intents-report-integration.md)
+state the resulting R2b authority/refinement obligations.
 
 ## Decision
 

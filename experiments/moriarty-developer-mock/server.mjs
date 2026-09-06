@@ -3,8 +3,14 @@ import { readFile } from 'node:fs/promises';
 
 const routes = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
+  ['/language', ['language.html', 'text/html; charset=utf-8']],
   ['/styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['/app.js', ['dist/app.js', 'text/javascript; charset=utf-8']],
+  ['/language-app.js', ['dist/language-app.js', 'text/javascript; charset=utf-8']],
+  ['/language/core.js', ['dist/language/core.js', 'text/javascript; charset=utf-8']],
+  ['/language/packages.js', ['dist/language/packages.js', 'text/javascript; charset=utf-8']],
+  ['/language/policy.js', ['dist/language/policy.js', 'text/javascript; charset=utf-8']],
+  ['/language/claims.js', ['dist/language/claims.js', 'text/javascript; charset=utf-8']],
   ['/model.js', ['dist/model.js', 'text/javascript; charset=utf-8']],
   ['/fixtures.json', ['fixtures.json', 'application/json; charset=utf-8']],
 ]);

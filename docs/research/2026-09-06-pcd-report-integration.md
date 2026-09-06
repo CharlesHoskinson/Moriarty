@@ -96,6 +96,15 @@ different obligations, and finite does not mean cheap to verify exhaustively.
 
 ## Revised sprint sequence and exit evidence
 
+The later [intents report amendment](2026-09-06-intents-report-integration.md)
+adds R2b between the exact-plan prototype and general authority acceptance.
+R2b separates outcome IntentIR from PlanIR and receipts, binds aggregate gross
+authority, net goals, validity/replay and residual obligations, and requires
+compiler/adapter refinement. Read-only R3 interface work can proceed alongside
+it; a narrower native financial proof cannot stand in for these predicates.
+The [R3 specification](../../experiments/moriarty-native-ivc-r3/README.md) fixes
+the first financial episode and proposed stopping/resource contract; it has not run.
+
 These are dependency gates, with no automatic retry loop or arbitrary calendar
 deadlines. The mock is executable illustration; the remaining proof work is
 specified-only until its command, pins and resource ceiling are recorded.

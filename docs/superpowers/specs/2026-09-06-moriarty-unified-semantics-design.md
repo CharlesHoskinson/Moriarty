@@ -10,6 +10,16 @@ All definitions below are proposals unless explicitly called source observations
 
 ## Recommended architecture
 
+The [intents amendment](../../research/2026-09-06-intents-report-integration.md)
+adds a required distinction between the agreement, outcome IntentIR, authority,
+concrete PlanIR, execution trace and receipt. R2 implements an exact-plan
+specialization; R2b adds solver-independent outcome authorization. Authority
+checks bound gross spend and permitted intermediate recipients, while receipt
+goals use net delivery. Separate complete and pending judgments preserve
+residual authority and obligations. These are design obligations until tested
+and proved at their named scope, not guarantees from the financial taxonomy.
+Compiler/adapter refinement needs trace inclusion and feasible positive cases.
+
 Use a **typed agreement language that elaborates into a small, bounded
 transition language**. Financial packages define ACTUS and DeFi behavior using
 shared arithmetic, time, state and effect facilities. An intent selects and

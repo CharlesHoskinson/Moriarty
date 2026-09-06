@@ -395,7 +395,11 @@ function render(): void {
   const brandText = el("div");
   brandText.append(el("strong", "", "Moriarty"), el("small", "", "developer workspace"));
   brand.append(el("span", "mark", "M"), brandText);
-  topbar.append(brand, el("span", "demo-badge", "Local mock · no live systems"));
+  const languageLink = el("a", "demo-badge", "Open executable R2");
+  languageLink.setAttribute("href", "/language");
+  const topActions = el("div", "top-actions");
+  topActions.append(el("span", "demo-badge", "Local mock · no live systems"), languageLink);
+  topbar.append(brand, topActions);
 
   const hero = el("section", "hero");
   const intro = el("div");

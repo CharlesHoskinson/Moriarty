@@ -9,6 +9,15 @@ replacement claiming that every SDK operation has been specified.
 
 ## What the developer does
 
+The [intents amendment](../../research/2026-09-06-intents-report-integration.md)
+separates exact-plan signing from outcome-intent signing. The working R2
+workspace implements the former. R2b adds separate IntentIR, solver query,
+PlanIR and receipt views, and a signing summary rendered from decoded canonical
+authority: asset domains, gross budgets, allowed recipients, net goals, fees,
+validity/nonces, assumptions and liabilities. A pending receipt retains
+obligations; it cannot show a terminal goal as settled. Real contract and PCD
+checks remain required regardless of which signing profile is chosen.
+
 Open a real fixture or write an agreement using a typed financial package.
 Inspect its terms, events, effects and assumptions. Run a scenario or request
 analysis of a named property. Prepare an intent, check its effects, collect

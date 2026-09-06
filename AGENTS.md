@@ -29,6 +29,15 @@ handoff. Optional acceleration cannot bypass required proofs. Compact's lack
 of source recursion does not establish absence of backend recursive proofs.
 ACTUS conformance and real PCD integration remain open. No old loop resumes.
 
+The [intents report amendment](docs/research/2026-09-06-intents-report-integration.md)
+further controls execution: R2 is an exact-plan local prototype; R2b separates
+outcome IntentIR, authority, PlanIR, execution and receipts. Gross debit limits
+cannot be hidden by refunds; net goals include fees. Preserve obligations and
+residual authority in pending progress. Require refinement and positive feasible
+cases before promoting an adapter. The DeFi corpus is an implementation/test
+target, not proof that its historical primitive taxonomy is a sufficient Core.
+No report instruction changes Moriarty's name, finite bounds or mandatory PCD.
+
 ## Evidence discipline
 
 1. Query `wiki/index.md` before acquiring new material.

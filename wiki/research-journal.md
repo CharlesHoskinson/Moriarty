@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T20:31:05Z
+updated_at: 2026-09-06T21:29:23.534731+00:00
 sources:
   - SRC-0043
   - SRC-0044
@@ -26,6 +26,9 @@ sources:
   - SRC-0040
   - SRC-0041
   - SRC-0042
+  - SRC-0047
+  - SRC-0048
+  - SRC-0049
 ---
 
 # Moriarty research journal
@@ -2654,3 +2657,52 @@ Metadata: SRC-0042 fixture pins, SRC-0043 report-derived interface and SRC-0046
 task authorization; observed 2026-09-06; experiment observation, S3 local mock;
 model/build/browser checks reproduced at the recorded source hashes; confidence
 high for tested mock behavior, unknown for real proofs/target conformance.
+
+## CLM-0195: Intents report separates authority, plans and receipts
+
+SRC-0047 preserves the complete user report; SRC-0049 records the steering.
+The [graph and reconciliation](../deliverables/intents-report-integration-2026-09-06/README.md)
+retain exact-plan R2 and add outcome IntentIR/PlanIR/receipt R2b. Authority caps
+must count gross movements despite refunds; goals count net delivery after fees.
+Pending progress retains obligations and residual authority. Refinement requires
+positive feasibility, not only rejection. The report's prototype was not supplied;
+its optional-proof/backend-order recommendations do not override the user.
+
+SRC-0048 inspected `QSIGMA-VERDICT.md:1–8` and the keyword checker at prior
+DeFiFormal pin `8ae0bbfaa3193078d1cabf6999db1382985b7f95`. The four-primitive
+invariant is explicitly withdrawn there. Retain the corpus as an implementation
+target and regression basis; no new primitive completeness theorem follows.
+
+Metadata: observed 2026-09-06; secondary source attribution, pinned source
+observation and design recommendation; S2; graph integrity reproduced, report
+prototype/proofs not reproduced; confidence high for source/receipt, medium
+for proposed semantics. All ACTUS/DeFi coverage obligations remain visible.
+
+## CLM-0196: Shared bounded execution and exact-plan signing exercised
+
+The [R2 workspace](../experiments/moriarty-developer-mock/README.md) elaborates
+loan and pool JSON packages to one generic finite Core. The loan separates due
+creation and transfer-backed settlement; the pool computes floor-rounded swaps
+and finite closure. Independent policies reject unauthorized effects, gross cap
+evasions, insufficient net delivery and incomplete accounting. Canonical claims
+bind exact plans using SHA-256 and genuine local Ed25519. Real claims remain
+unavailable. The [evidence](../evidence/moriarty-r2-language-2026-09-06/README.md)
+records tests, source hashes and corrected independent-review findings.
+
+Metadata: SRC-0042 target pins, SRC-0043/0047 interface input and SRC-0049
+authority; observed 2026-09-06; experiment observation, S3 restricted prototype;
+named local checks reproduced, confidence high within those tests. No full DSL,
+contract theorem, ACTUS conformance, wallet, custody, PCD or ledger result.
+
+## CLM-0197: Native financial IVC test specified, not executed
+
+The [R3 record](../experiments/moriarty-native-ivc-r3/README.md) maps the first
+loan episode to SRC-0045's pinned IVC traits and verifier, with proposed fixed
+public encoding, two transitions, tamper controls and a bounded stopping contract.
+It distinguishes financial recursion from the stronger acceptance predicate and
+from ledger compatibility/private handoff. The example and outer resource
+wrapper still require implementation; no native build or proof was run.
+
+Metadata: SRC-0045 commit `695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`, source
+observation and design recommendation, S2 specified-only; observed 2026-09-06;
+confidence high for named interfaces, unknown for financial circuit feasibility.

@@ -7,6 +7,13 @@ and [PCD research](../../research/2026-09-06-pcd-bounded-dsl.md) first.
 
 ## Current execution amendment
 
+The [intents report](../../research/2026-09-06-intents-report-integration.md)
+now refines R2 as exact-plan authorization and adds R2b outcome IntentIR,
+authority/PlanIR/receipt separation, gross spend versus net goals, replay and
+residual obligations. Keep ACTUS and DeFi implementation coverage, mandatory
+PCD and native Midnight priority. The report's IKL name, other-backend-first
+calendar and optional-only proof recommendation do not replace this program.
+
 The design study/proposal is complete at its documented scope, and the user
 approved starting the mock. The supplied PCD report and Midnight recursion
 clarification now revise implementation order through
