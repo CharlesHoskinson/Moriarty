@@ -4,13 +4,13 @@ A divergence is a program and preimage on which `preprocess` (off-circuit) and `
 
 ## Reproducing the cases
 
-`tools/divergence_tests.py` holds twenty cases. Each case is a program written to `corpus/divergence/<name>.zkir`, a preimage built in memory (`inputs`, `binding_input` `42`, a commitment when the program asks for one), the expected off-circuit status on both sides, and the outcome one named gate must have. The script runs `checkedJob`, so a static failure appears as `wfError`, and it reports a crate exit code of 101 as `panic`.
+`tools/divergence_tests.py` holds thirty-one cases. Each case is a program written to `corpus/divergence/<name>.zkir`, a preimage built in memory (`inputs`, `binding_input` `42`, a commitment when the program asks for one), the expected off-circuit status on both sides, and the outcome one named gate must have. The script runs `checkedJob`, so a static failure appears as `wfError`, and it reports a crate exit code of 101 as `panic`. Every case also runs through the circuit oracle (12-oracles-and-differential-testing.md) and the line records its outcome; the injected cases carry an `--inject` perturbation of one register and the cell the comparison table predicts for it.
 
 ```sh
 uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 ```
 
-Each line reads `PASS  <case> <finding> K=<status> Rust=<status> gate=<name>:<outcome>`, and the run ends with `20/20 divergence cases behave as expected` (`evidence/zkir-k-divergence-tests-2026-09-05c.txt`). Outcomes are defined in 08-constraints-and-verdicts.md.
+Each line reads `PASS  <case> <finding> K=<status> Rust=<status> gate=<name>:<outcome> circuit=<outcome>`, followed for an injected case by `inject=<register>-><value> walk=<cell> AGREE`, and the run ends with `31/31 divergence cases behave as expected` (`evidence/zkir-k-divergence-tests-2026-09-06e.txt`). Outcomes are defined in 08-constraints-and-verdicts.md.
 
 The script does not write the preimages to disk. To rerun `k02` by hand, write `k02.json` as `{"inputs": ["1"], "binding_input": "42"}`:
 
@@ -161,10 +161,28 @@ Both sides decode limbs encoding `p + 5` as the reduced value 5. The preimage's 
 |---|---|---|---|
 | `f01_reconstitute_overflow` | `divisor * 2^bits + modulus >= r` errors off-circuit (`#recon4` in `zkir-vm.k`); the gate would wrap modulo `r` | error / error, gate unknown | Retired, undefined behaviour |
 | `f03_guard_uncoupled` | an inactive guard yields the default value; the `publicInput` gate never reads the guard | ok / ok, gate holds | By design |
-| `f10_reconstitute_bits_256` | `bits > 248` rejected statically (`#checkArity` in `zkir-syntax.k`); the crate errors with `Excessive bit count` | wfError / error | Fixed in PR #656 |
+| `f10_reconstitute_bits_256` | `bits > 248` rejected statically (`#checkArity` in `zkir-syntax.k`); the crate errors with `Excessive bit count`, and keygen fails the K8 assertion | wfError / error, circuit preprocess-error | Fixed in PR #656 |
 | `f12_ec_mul_generator_p256` | no generator for secp256r1 scalars on either side | error / error, gate synthErr | Design omission, not a divergence |
 | `k06_empty_impact_guard` | an empty `impact` still emits `guardGate`; guard 2 is unsatisfiable | error / error, `guardGate` violated | Modelled |
 | `k07_alignment_option_offcircuit` | `preprocess` parses option alignments; `alignedBytesCircuit` rejects them as not implemented | ok / ok, gate synthErr | Modelled |
+
+## Injected and stage cases
+
+Eleven cases were added with the circuit oracle. Nine of them perturb one register of the preprocessed memory through the oracle's `--inject` and check the cell the comparison table's walk predicts (`plan-iter3/circuit-comparison-table.md`, D3 to D5); the K run is the honest one, so the gate outcome is that of the honest witness. Two record the widths that `preprocess` rejects while keygen keys.
+
+| Case | Program | Injection | K / Rust, gate | Circuit |
+|---|---|---|---|---|
+| `e01a_pub_guard1_free` | `public_input` with guard 1, no consumer | `%v` set to 3 | ok / ok, `public_input` holds | accepted (`A`) |
+| `e01b_pub_guard1_impact` | the same register read by an `impact` | `%v` set to 3 | ok / ok, `public_input` holds | witness-consistency-error (`W`, `pi_push`) |
+| `e02_inv_zero_inject` | `inv` | operand set to 0 | ok / ok, `inv` holds | witness-consistency-error (`W`: the hint stores 0) |
+| `e03_b32_high_inject` | `bytes32_from_low_high` | high operand set to 256 | ok / ok, gate holds | panic (`X`, `AssignedByte`) |
+| `e03b_b32_low_inject` | `bytes32_from_low_high` | low operand with byte 31 set | ok / ok, gate holds | constraint-failure (`C`) |
+| `e04_lt_bound_inject` | `less_than` with `bits` 4 | operand set to 16 | ok / ok, `less_than` holds | panic (`X`, `AssignedBounded`) |
+| `e10_align_overflow` | `persistent_hash` over a one-byte atom | operand set to 300 | error / error, `persistent_hash` violated | witness-consistency-error (`W`) |
+| `e11_violated_then_synth` | a violated `from_coordinates` followed by a `constrain_eq` on JubjubScalar | none | ok / ok, `from_coordinates` violated | panic (`X`: the synthesis error fires first) |
+| `e21a_div_mod_249` | `div_mod_power_of_two` with 249 bits | none | wfError / error, n/a | preprocess-error; keygen keys the program |
+| `e21b_reconstitute_249` | `reconstitute_field` with 249 bits | none | wfError / error, n/a | preprocess-error; keygen keys the program |
+| `k08_load_constant_jubjub_chip` | K7 above | none | ok / ok, `load_constant` synthErr | panic (`X`, chip) |
 
 ## Loader difference: a repeated `0x` prefix
 
@@ -181,7 +199,7 @@ with `hex.json` `{"inputs": ["1"], "binding_input": "0"}`: `zkir_run.py hex.zkir
 
 ## K7: `load_constant` of a Jubjub value with no Jubjub input
 
-On the extension surface `used_chips` (midnight-zkir 2ffe2d1) enables the Jubjub chip from the input types and the `public_input` / `private_input` types only, so a program whose only Jubjub value comes from `load_constant` passes `preprocess` on both sides while `assign_constant_incircuit` calls `std_lib.jubjub()`, which panics at synthesis with `ZkStdLibArch must enable jubjub`. The same class as K4. The K gate is `synthErr("chip not initialised for JubjubPoint")`, the target contract fails `chips.gating`, and the case is `k08_load_constant_jubjub_chip` on the extension definition and the 2ffe2d1 oracles. The draft issue is `plan-iter3/upstream-issues/K7.md`.
+On the extension surface `used_chips` (midnight-zkir 2ffe2d1) enables the Jubjub chip from the input types and the `public_input` / `private_input` types only, so a program whose only Jubjub value comes from `load_constant` passes `preprocess` on both sides while `assign_constant_incircuit` calls `std_lib.jubjub()`, which panics at synthesis with `ZkStdLibArch must enable jubjub`. The same class as K4. The K gate is `synthErr("chip not initialised for JubjubPoint")`, the target contract fails `chips.gating`, and the case is `k08_load_constant_jubjub_chip` on the extension definition and the 2ffe2d1 oracles: ok on both sides, gate synthErr, circuit outcome `panic` with `ZkStdLibArch must enable jubjub`. The issue text is `plan-iter3/upstream-issues/K7.md`.
 
 ## K8: `reconstitute_field` with 0 bits
 
@@ -191,7 +209,7 @@ On the extension surface `used_chips` (midnight-zkir 2ffe2d1) enables the Jubjub
 rule #checkArity(reconstituteField(_, _, 0, _), _) => wfError("reconstitute_field: bits 0 makes the divisor bound 255, an excessive bit bound")
 ```
 
-and the target contract fails the both-stage obligation `width.reconstitute_field.nonzero` with the assertion text (16-compilation-target-contract.md). The program is `corpus/handmade-negative/reconstitute_bits_0.zkir`; `tools/provability.py` records the keygen panic. Availability, the same class as K5 (a width that only the chip checks, by an assertion); the draft issue is `plan-iter3/upstream-issues/K8.md`.
+and the target contract fails the both-stage obligation `width.reconstitute_field.assertion` with the assertion text (16-compilation-target-contract.md). The same assertion fails at 255 bits, where the modulus bound reaches 255, and above 255, where `FR_BITS - bits` wraps; case `f10_reconstitute_bits_256` reaches it, so the obligation covers bits 0 and every width of 255 or more, while 249 to 254 bits key and are rejected by `preprocess` alone (cases `e21a`, `e21b`). The program is `corpus/handmade-negative/reconstitute_bits_0.zkir`; `evidence/zkir-k-provability-2026-09-06e.txt` records the keygen panic on the assertion for it and for `f10`. Availability, the same class as K5 (a width that only the chip checks, by an assertion); the issue text is `plan-iter3/upstream-issues/K8.md`.
 
 ## Summary
 
@@ -203,8 +221,8 @@ and the target contract fails the both-stage obligation `width.reconstitute_fiel
 | K4 | accepted | Jubjub chip absent | `k04`, `k01b` | ok / ok, synthErr | completeness | extension of finding 13 |
 | K5 | bits 253 accepted | padded bound above 253 | `k05` | ok / ok, synthErr | completeness | report upstream |
 | K6 | 92e8bdd3 panics, 2ffe2d1 errors | register absent | by hand, `test_bytes32_proof` | panic or error | availability (base only) | reported with K3 |
-| K7 | accepted | Jubjub chip absent (extension) | `k08` | ok / ok, synthErr | completeness | draft issue written |
-| K8 | bits 0 rejected on every value | keygen assertion | `handmade-negative/reconstitute_bits_0` | wfError / error | availability | candidate, draft issue written |
+| K7 | accepted | Jubjub chip absent (extension) | `k08` | ok / ok, synthErr | completeness | issue text written |
+| K8 | bits 0 rejected on every value | keygen assertion (also at 255 bits and above) | `handmade-negative/reconstitute_bits_0`, `f10` | wfError / error | availability | candidate, issue text written |
 | ext `test_eq` | false | synthesis error | by hand, `--ext` | ok / ok, synthErr | completeness | recorded |
 | Finding 2 | cond must be 1 | cond non-zero | `f02` | error / error, holds | producer obligation | retired |
 | Finding 6 | accepted | no arm | `f06` | ok / ok, synthErr | completeness | partially fixed, PR #656 |

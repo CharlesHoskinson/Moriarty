@@ -521,13 +521,13 @@ uv run --group zkir-k python experiments/zkir-k/tools/unit_hash.py
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py
 ```
 
-`check_corpus.py` runs `ZKIR-CHECK` on every version-3 program in the ledger tests, the six micro-dao precompiles, the Moriarty escrow and swap artifacts, and `corpus/handmade-negative/`. It ends with `63 programs, 63 as expected, 0 unexpected`, followed by the elapsed time, which varies.
+`check_corpus.py` runs `ZKIR-CHECK` on every version-3 program in the ledger tests, the six micro-dao precompiles, the Moriarty escrow and swap artifacts, and `corpus/handmade-negative/`. It ends with `66 programs, 66 as expected, 0 unexpected`, followed by the elapsed time, which varies.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 ```
 
-`divergence_tests.py` rewrites the twenty programs under `corpus/divergence/`, runs each through `checkedJob` and the oracle, and checks one named gate. It too needs the 92e8bdd3 oracle and ends with `20/20 divergence cases behave as expected`.
+`divergence_tests.py` rewrites the thirty-one programs under `corpus/divergence/`, runs each through `checkedJob`, the oracle and the circuit oracle, and checks one named gate. It needs the 92e8bdd3 `zkir-oracle` and `zkir-circuit-oracle` binaries and the 2ffe2d1 pair for its one extension case, and ends with `31/31 divergence cases behave as expected`.
 
 Do not start with the full differential suite. `tools/diff_test.py` walks every version-3 program in its corpora, generates preimages, compares K with the oracle, then perturbs successes. `--only SUBSTR` keeps only files whose names contain that substring:
 

@@ -47,7 +47,7 @@ The receipts of the checks are in `evidence/` at the repository root, named `zki
 | `zkir-vm.k` | `ZKIR-VM-SYNTAX`, `ZKIR-VM` | the configuration, the `Preimage`, `Job` and `Need` sorts, and the witness computation of `preprocess`; each instruction appends `gate(I)` to `<constraints>`, except `impact` (a `guardGate` plus one `piGate` per operand) and `output` (an `outputGate`); the start of the run seeds `bindGate` and, under the commitment flag, `commGate` |
 | `zkir-constraints.k` | `ZKIR-CONSTRAINTS` | the `Constraint` sort (`gate`, `piGate`, `guardGate`, `bindGate`, `commGate`, `outputGate`), the `Outcome` sort, `verdict(Constraint, Outcome)` and `eval` |
 | `zkir-static.k` | `ZKIR-STATIC` | program-only facts shared by the checker and the contract: `usedChips`, `chipNeeds`, the static type environment (`inputEnv`, `bindOuts`, `stype`), the alignment shapes and the padded width of `less_than` |
-| `zkir-contract.k`, `zkir-contract-main.k` | `ZKIR-CONTRACT`, `ZKIR-CONTRACT-MAIN` | the compilation target contract `targetContract(P)`, twenty tier-one obligations over the program (16-compilation-target-contract.md), and its main module |
+| `zkir-contract.k`, `zkir-contract-main.k` | `ZKIR-CONTRACT`, `ZKIR-CONTRACT-MAIN` | the compilation target contract `targetContract(P)`, twenty-three tier-one obligations over the program (16-compilation-target-contract.md), and its main module |
 | `zkir-ext.k` | `ZKIR-EXT-SYNTAX`, `ZKIR-EXT-VALUES`, `ZKIR-SHA512`, `ZKIR-EXT` | the extension surface of `midnight-zkir` 2ffe2d1 on top of the base modules, including `sha512Bytes` |
 | `zkir-sha512-constants.k` | `ZKIR-SHA512-CONSTANTS` | the FIPS 180-4 SHA-512 round constants and initial state |
 | `zkir.k` | `ZKIR` | main module for running `job(program, preimage)` |
@@ -106,12 +106,12 @@ Each of the tools below checks the definition and has a receipt under `evidence/
 
 | Layer | Tool | Compared against | Result |
 |---|---|---|---|
-| unit checks of fields, curves and encodings | `unit_values.py` | an independent Python implementation (`zkir_values.py`) | 43 of 43 pass |
+| unit checks of fields, curves and encodings | `unit_values.py` | an independent Python implementation (`zkir_values.py`) | 49 of 49 pass, six of them the `witnessSpace` predicate on malformed and well-typed values |
 | known-answer checks of the hashes | `unit_hash.py` | the oracle's register values, and `hashlib` for SHA-256 | 18 of 18 pass |
-| differential runs, base surface | `diff_test.py` | the oracle built from `midnight-ledger` 92e8bdd3 | 365 comparisons agree, 0 disagree: 53 successful runs (46 on generated preimages, 7 on the transaction contexts of `corpus/moriarty-contexts/`), 309 error runs (status and error class), 3 programs rejected before the run by both the preprocessor and `IrSource::load`; no successful primary run has a non-holding gate |
-| differential runs, extension surface | `diff_test.py --ext` | the oracle built from `midnight-zkir` 2ffe2d1 | 418 comparisons agree, 0 disagree: 50 successful runs, 364 error runs, 4 rejected before the run; no successful primary run has a non-holding gate |
-| divergence cases | `divergence_tests.py` | the oracle, plus the expected outcome of one selected gate | 20 of 20 behave as expected |
-| corpus well-formedness | `check_corpus.py` | the expectation table in the tool | 63 programs as expected: the 43 crate tests, the 6 precompiles, the 7 handmade negatives and the 7 Moriarty artifacts under `experiments/moriarty-compact-escrow/output/zkir/` and `experiments/moriarty-core-swap/output/zkir/` |
+| differential runs, base surface | `diff_test.py` | the oracle built from `midnight-ledger` 92e8bdd3 | 375 comparisons agree, 0 disagree: 56 successful runs (49 on generated preimages, 7 on the transaction contexts of `corpus/moriarty-contexts/`), 316 error runs (status and error class), 3 programs rejected before the run by both the preprocessor and `IrSource::load`; no successful primary run has a non-holding gate |
+| differential runs, extension surface | `diff_test.py --ext` | the oracle built from `midnight-zkir` 2ffe2d1 | 428 comparisons agree, 0 disagree: 53 successful runs, 371 error runs, 4 rejected before the run; no successful primary run has a non-holding gate |
+| divergence cases | `divergence_tests.py` | the oracle and the circuit oracle, plus the expected outcome of one selected gate | 31 of 31 behave as expected |
+| corpus well-formedness | `check_corpus.py` | the expectation table in the tool | 66 programs as expected: the 43 crate tests, the 6 precompiles, the 10 handmade negatives and the 7 Moriarty artifacts under `experiments/moriarty-compact-escrow/output/zkir/` and `experiments/moriarty-core-swap/output/zkir/` |
 
 For each program the harness draws typed inputs, runs `genJob` for up to eight passes, then runs `job` and the oracle on the same preimage. When both fail it compares status and error class. When both succeed it compares every register's type and encoding, the public-input vector and the skip vector, then runs perturbed preimages so that error paths are compared too. It does not compare the partial memory of a failed run, because the crate does not expose it. See 12-oracles-and-differential-testing.md for the harness and 13-known-divergences.md for the cases.
 

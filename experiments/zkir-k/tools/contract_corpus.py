@@ -10,12 +10,13 @@ are reported as `format`.
 The expectation table names the programs whose contract is expected to carry
 a failed obligation: the chip-gating divergence cases (finding 13, K4), the
 keygen width case (K5), the alignment option case (K7), the reconstitute
-256-bit case (f10) and the 249-bit width cases (e21a, e21b), the alignment
-field-count and reconstitute bits-0 negatives (2026-09-06 items 19, 20), the
-programs whose keygen fails on a witness-independent in-circuit check (the
-circuit.static obligations: output typing, boolean gate arity, constant
-decoding, nth and slice bounds, unsupported dispatch arms) and the ill-formed
-programs. Every other program must have every obligation met or not
+256-bit case (f10, which also fails the keygen assertion) and the 249-bit
+width cases (e21a, e21b), the alignment field-count and reconstitute bits-0
+negatives (2026-09-06 items 19, 20), the programs whose keygen fails on a
+witness-independent in-circuit check (the circuit.static obligations: operand
+definition, output typing, div_mod_power_of_two arity, boolean gate arity,
+constant decoding, nth and slice bounds, unsupported dispatch arms) and the
+ill-formed programs. Every other program must have every obligation met or not
 applicable. Each failed obligation is printed with its stage
 (`name[stage]`), which tools/provability.py reads.
 
@@ -77,7 +78,8 @@ EXPECTED: dict[str, dict[str, str] | str] = {
     # keygen width and synthesis alignment cases
     'k05_less_than_253_bits_keygen.zkir': {'width.less_than': 'bits 253 pads to 254'},
     'k07_alignment_option_offcircuit.zkir': {'alignment.persistent_hash': 'option segment'},
-    'f10_reconstitute_bits_256.zkir': {'wf': 'reconstitute_field: excessive bit count', 'width.reconstitute_field': 'bits 256 exceeds'},
+    'f10_reconstitute_bits_256.zkir': {'wf': 'reconstitute_field: excessive bit count', 'width.reconstitute_field': 'bits 256 exceeds',
+                                       'width.reconstitute_field.assertion': 'bits 256: assertion failed: (bit_length as u32) < F::NUM_BITS'},
     'e21a_div_mod_249.zkir': {'wf': 'div_mod_power_of_two: excessive bit count', 'width.div_mod_power_of_two': 'bits 249 exceeds'},
     'e21b_reconstitute_249.zkir': {'wf': 'reconstitute_field: excessive bit count', 'width.reconstitute_field': 'bits 249 exceeds'},
     # a violated gate followed by a synthErr (2026-09-06 item 11): only the dispatch obligation is static
@@ -88,7 +90,7 @@ EXPECTED: dict[str, dict[str, str] | str] = {
     'align_bytes_short.zkir': {'wf': 'alignment needs 2 field elements but instruction has 1',
                                'alignment.keccak256': 'cannot decode bytes from to little data'},
     'reconstitute_bits_0.zkir': {'wf': 'reconstitute_field: bits 0',
-                                 'width.reconstitute_field.nonzero': 'bits 0: assertion failed: (bit_length as u32) < F::NUM_BITS'},
+                                 'width.reconstitute_field.assertion': 'bits 0: assertion failed: (bit_length as u32) < F::NUM_BITS'},
     # witness-independent in-circuit checks of keygen (the ten contradictions of
     # evidence/zkir-k-provability-2026-09-06.txt): the crate tests below occur in
     # both test corpora with the same name
@@ -109,10 +111,14 @@ EXPECTED: dict[str, dict[str, str] | str] = {
     'test_invalid_operand_malformed_identifier.zkir': 'format',
     'test_invalid_operand_odd_length_hex.zkir': 'format',
     'reassignment.zkir': {'wf': 'reassignment of %b'},
-    'undefined_variable.zkir': {'wf': 'undefined variable %c'},
+    # an undefined operand and a div_mod_power_of_two arity defect are rejected by
+    # keygen as well (the three contradictions of evidence/zkir-k-provability-2026-09-06d.txt)
+    'undefined_variable.zkir': {'wf': 'undefined variable %c',
+                                'circuit.static.defined': 'instruction 0: value Identifier("%c") not in memory'},
     'duplicate_input.zkir': {'wf': 'duplicate input %a'},
     'excessive_bits.zkir': {'wf': 'constrain_bits: excessive bit bound'},
-    'divmod_outputs.zkir': {'wf': 'div_mod_power_of_two requires exactly 2 outputs'},
+    'divmod_outputs.zkir': {'wf': 'div_mod_power_of_two requires exactly 2 outputs',
+                            'circuit.static.div_mod_outputs': 'instruction 0: div_mod_power_of_two: Unexpected output length of DivModPowerOfTwo instruction'},
     'immediate_out_of_range.zkir': 'format',
     'wrong_version.zkir': 'format',
 }

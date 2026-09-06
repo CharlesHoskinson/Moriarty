@@ -85,7 +85,7 @@ A file cannot produce two of the `wf` failures, because the preprocessor rejects
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py
 ```
 
-The last line is the summary, `63 programs, 63 as expected, 0 unexpected, 8.0s` (the time varies), and the exit status is 0 only when nothing is unexpected; the receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-05c.txt`. Of the 63 programs, 43 are ledger tests, 6 precompiles, 7 escrow and swap circuits and 7 negatives. Five ledger tests are listed in `EXPECTED`: the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
+The last line is the summary, `66 programs, 66 as expected, 0 unexpected, 8.2s` (the time varies), and the exit status is 0 only when nothing is unexpected; the receipt is `evidence/zkir-k-milestone2-corpus-check-2026-09-06e.txt`. Of the 66 programs, 43 are ledger tests, 6 precompiles, 7 escrow and swap circuits and 10 negatives. Five ledger tests are listed in `EXPECTED`: the three `test_invalid_operand_*` format errors, `output_arity_mismatch.zkir` (`wfError`) and `output_operand_type_mismatch.zkir` (`wfOk`: the run-time type of an output operand is dynamic).
 
 ## The negative programs
 

@@ -110,6 +110,12 @@ NEGATIVE_CONTROLS = [
     'handmade-negative/align_field_short.zkir',
     'handmade-negative/align_bytes_short.zkir',
     'handmade-negative/reconstitute_bits_0.zkir',
+    # the three stage mis-tags of the 2026-09-06d sweep, closed by the both-stage
+    # obligations circuit.static.defined, circuit.static.div_mod_outputs and
+    # width.reconstitute_field.assertion
+    'handmade-negative/undefined_variable.zkir',
+    'handmade-negative/divmod_outputs.zkir',
+    'divergence/f10_reconstitute_bits_256.zkir',
 ]
 # programs the review names as keyed with a preprocess-stage (or K-only) failure (item 21)
 KEYED_DESPITE = [
@@ -458,7 +464,7 @@ def main(argv: list[str] | None = None) -> int:
     r()
 
     # ---- the review's named programs as a cross-check of the classification ----
-    r('== negative controls named by the review: class must-reject, keygen fails on the named check ==')
+    r('== negative controls named by the review and by the 2026-09-06d sweep: class must-reject, keygen fails on the named check ==')
     neg_pass = 0
     for name in NEGATIVE_CONTROLS:
         cls = classes.get(name)

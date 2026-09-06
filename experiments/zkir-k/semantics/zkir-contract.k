@@ -39,13 +39,20 @@
 //                              `preprocess` does
 //   width.div_mod_power_of_two preprocess bits at most FR_BYTES_STORED * 8 =
 //                              248 ("Excessive bit count", ir_vm.rs); keygen
-//                              keys 249
-//   width.reconstitute_field   preprocess bits at most 248 (the same)
-//   width.reconstitute_field.nonzero both  bits at least 1: bits 0 makes the
-//                              divisor bound 255, which `preprocess` rejects
-//                              as an excessive bit bound on every value and
-//                              `assign_less_than_pow2` rejects by
-//                              `assert!(bit_length < F::NUM_BITS)` (K8)
+//                              keys 249 (case e21a)
+//   width.reconstitute_field   preprocess bits at most 248 (the same); keygen
+//                              keys 249 to 254 (case e21b)
+//   width.reconstitute_field.assertion both  bits in [1, 254]: bits 0 makes
+//                              the divisor bound FR_BITS - bits = 255, bits
+//                              255 makes the modulus bound 255 and bits above
+//                              255 wrap the divisor bound; `preprocess`
+//                              rejects every such program on every preimage
+//                              (an excessive bit bound at 0, "Excessive bit
+//                              count" above 248) and `assign_less_than_pow2`
+//                              (midnight-circuits field/decomposition/chip.rs)
+//                              rejects it at keygen by
+//                              `assert!(bit_length < F::NUM_BITS)` (K8 at 0,
+//                              case f10 at 256)
 //   alignment.persistent_hash  keygen     no option segment, no compress atom,
 //                              and at least #alignFields operands
 //                              (`fab_decode_to_bytes_atom`; the compress and
@@ -53,9 +60,21 @@
 //                              as well, the option failure is not)
 //   alignment.keccak256        keygen     the same
 //   alignment.sha512           keygen     the same (extension surface only)
+//   circuit.static.defined     both       every operand the circuit resolves
+//                              names a declared input or an earlier output
+//                              (`resolve_operand` in `Relation::circuit`:
+//                              "value Identifier(..) not in memory";
+//                              `preprocess`: "variable not found"); the guard
+//                              of public_input / private_input is not read in
+//                              circuit and is left to wf
 //   circuit.static.output      both       every `output` operand whose static
 //                              type is known has the declared output type,
 //                              and the arity matches the signature
+//   circuit.static.div_mod_outputs both   div_mod_power_of_two names exactly
+//                              two outputs ("Unexpected output length of
+//                              DivModPowerOfTwo instruction" in circuit,
+//                              "DivModPowerOfTwo requires exactly 2 outputs"
+//                              in `preprocess`)
 //   circuit.static.bool_gate   both       and / or / xor have at least one
 //                              input, every input of known type a Bool
 //                              (extension surface)
@@ -121,11 +140,13 @@ module ZKIR-CONTRACT
       obligation("width.constrain_bits", keygen(), #walk(cbWidth(), Is, inputEnv(Ins), 0, false)),
       obligation("width.div_mod_power_of_two", preprocess(), #walk(dmWidth(), Is, inputEnv(Ins), 0, false)),
       obligation("width.reconstitute_field", preprocess(), #walk(rfWidth(), Is, inputEnv(Ins), 0, false)),
-      obligation("width.reconstitute_field.nonzero", both(), #walk(rfZero(), Is, inputEnv(Ins), 0, false)),
+      obligation("width.reconstitute_field.assertion", both(), #walk(rfAssert(), Is, inputEnv(Ins), 0, false)),
       obligation("alignment.persistent_hash", keygen(), #walk(align("persistent_hash"), Is, inputEnv(Ins), 0, false)),
       obligation("alignment.keccak256", keygen(), #walk(align("keccak256"), Is, inputEnv(Ins), 0, false)),
       obligation("alignment.sha512", keygen(), #walk(align("sha512"), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.defined", both(), #defined(Is, #inputSet(Ins), 0)),
       obligation("circuit.static.output", both(), #walk(outputSig(Outs), Is, inputEnv(Ins), 0, false)),
+      obligation("circuit.static.div_mod_outputs", both(), #walk(dmOutputs(), Is, inputEnv(Ins), 0, false)),
       obligation("circuit.static.bool_gate", both(), #walk(boolGate(), Is, inputEnv(Ins), 0, false)),
       obligation("circuit.static.constant", both(), #walk(constant(), Is, inputEnv(Ins), 0, false)),
       obligation("circuit.static.bytes_bounds", both(), #walk(bytesBounds(), Is, inputEnv(Ins), 0, false)),
@@ -181,14 +202,15 @@ module ZKIR-CONTRACT
   // notApplicable); defect(C, I, E) is "" when I passes under the environment
   // E of the registers defined before it, and the failure text otherwise. The
   // walk extends E with bindOuts after each instruction.
-  syntax Check ::= ltWidth() | cbWidth() | dmWidth() | rfWidth() | rfZero() | align(String)
+  syntax Check ::= ltWidth() | cbWidth() | dmWidth() | rfWidth() | rfAssert() | dmOutputs() | align(String)
                  | outputSig(IrTypes) | boolGate() | constant() | bytesBounds() | dispatch()
   syntax Bool ::= applies(Check, Instr) [function, total]
   rule applies(ltWidth(), lessThan(_, _, _, _))         => true
   rule applies(cbWidth(), constrainBits(_, _))          => true
   rule applies(dmWidth(), divModPowerOfTwo(_, _, _))    => true
   rule applies(rfWidth(), reconstituteField(_, _, _, _))=> true
-  rule applies(rfZero(), reconstituteField(_, _, _, _)) => true
+  rule applies(rfAssert(), reconstituteField(_, _, _, _)) => true
+  rule applies(dmOutputs(), divModPowerOfTwo(_, _, _))  => true
   rule applies(align(Op), I)                            => #opName(I) ==String Op
   rule applies(outputSig(_), output(_))                 => true
   rule applies(dispatch(), _)                           => true
@@ -202,11 +224,19 @@ module ZKIR-CONTRACT
     requires N >Int #frBytesStored *Int 8
   rule defect(rfWidth(), reconstituteField(_, _, N, _), _) => "reconstitute_field: bits " +String Int2String(N) +String " exceeds FR_BYTES_STORED * 8 = 248"
     requires N >Int #frBytesStored *Int 8
-  // bits 0: assign_lower_than_fixed(divisor, 1 << 255) reaches
+  // `assert_lower_than_fixed(divisor, 1 << (FR_BITS - bits))` and
+  // `assert_lower_than_fixed(modulus, 1 << bits)` (ir_vm.rs) reach
   // assign_less_than_pow2 (midnight-circuits field/decomposition/chip.rs),
-  // whose `assert!((bit_length as u32) < F::NUM_BITS)` fails at keygen;
-  // `preprocess` rejects the divisor bound of 255 bits on every value
-  rule defect(rfZero(), reconstituteField(_, _, 0, _), _) => "reconstitute_field: bits 0: assertion failed: (bit_length as u32) < F::NUM_BITS"
+  // whose `assert!((bit_length as u32) < F::NUM_BITS)` fails at keygen when a
+  // bound is 255 bits or more: bits 0 (the divisor bound), bits 255 (the
+  // modulus bound) and bits above 255 (FR_BITS - bits wraps). `preprocess`
+  // rejects the same programs on every preimage; 249 to 254 key (case e21b)
+  rule defect(rfAssert(), reconstituteField(_, _, N, _), _) => "reconstitute_field: bits " +String Int2String(N) +String ": assertion failed: (bit_length as u32) < F::NUM_BITS"
+    requires N ==Int 0 orBool N >=Int #frBits
+  // the `I::DivModPowerOfTwo` arm of `Relation::circuit` checks the output
+  // count before resolving the operand; `preprocess` checks it as well
+  rule defect(dmOutputs(), divModPowerOfTwo(_, _, Os), _) => "div_mod_power_of_two: Unexpected output length of DivModPowerOfTwo instruction"
+    requires lenIds(Os) =/=Int 2
   rule defect(align(Op), I, _) => #alignDefect(Op, alignmentOf(I), reads(I)) requires #opName(I) ==String Op
   rule defect(outputSig(Ts), output(Vs), E) => #outputDefect(Vs, Ts, E)
   rule defect(dispatch(), I, E) => dispatchDefect(I, E)
@@ -238,6 +268,41 @@ module ZKIR-CONTRACT
   // the type as the messages print it (Bytes<n> on the extension surface)
   syntax String ::= tyStr(IrType) [function, total]
   rule tyStr(T) => typeName(T) [owise]
+
+  // --- circuit.static.defined (`resolve_operand` in ir_vm.rs `circuit`) ------------------------------
+  // The circuit resolves every operand of an instruction from its memory
+  // before doing anything else with it, and an identifier that no declared
+  // input or earlier output bound is `Error::Synthesis("value {id:?} not in
+  // memory")`, witness-independently. The guard of public_input and
+  // private_input is the exception: the `PublicInput | PrivateInput` arm
+  // matches `guard: _` (finding 3), so an undefined guard keys and is left to
+  // wf and to `preprocess` ("variable not found"). The walk carries the set
+  // of bound identifiers as wf does; the first undefined operand in program
+  // order names the instruction.
+  syntax Set ::= #inputSet(TypedIds) [function, total]
+  rule #inputSet(.TypedIds) => .Set
+  rule #inputSet((typedId(X, _), Rest)) => SetItem(X) |Set #inputSet(Rest)
+  syntax Set ::= #idSet(Ids) [function, total]
+  rule #idSet(.Ids) => .Set
+  rule #idSet((X, Xs)) => SetItem(X) |Set #idSet(Xs)
+  syntax Operands ::= circuitReads(Instr) [function, total]
+  rule circuitReads(publicInput(_, _, _))  => .Operands
+  rule circuitReads(privateInput(_, _, _)) => .Operands
+  rule circuitReads(I) => reads(I) [owise]
+  // the first variable operand outside the bound set, or ""
+  syntax String ::= #undefinedRead(Operands, Set) [function, total]
+  rule #undefinedRead(.Operands, _) => ""
+  rule #undefinedRead((imm(_), Os), D) => #undefinedRead(Os, D)
+  rule #undefinedRead((var(X), Os), D) => #undefinedRead(Os, D) requires X in D
+  rule #undefinedRead((var(X), _), D)  => X requires notBool (X in D)
+  syntax ObligationStatus ::= #defined(Instrs, Set, Int) [function, total]
+  rule #defined(.Instrs, _, 0)   => notApplicable()
+  rule #defined(.Instrs, _, Idx) => met() requires Idx >Int 0
+  rule #defined((I ; Is), D, Idx) => #definedStep(#undefinedRead(circuitReads(I), D), I, Is, D, Idx)
+  syntax ObligationStatus ::= #definedStep(String, Instr, Instrs, Set, Int) [function, total]
+  rule #definedStep("", I, Is, D, Idx) => #defined(Is, D |Set #idSet(writes(I)), Idx +Int 1)
+  rule #definedStep(X, _, _, _, Idx) => failed("instruction " +String Int2String(Idx) +String ": value Identifier(\"" +String X +String "\") not in memory")
+    requires X =/=String ""
 
   // --- circuit.static.output (`I::Output`, ir_vm.rs `circuit`) ---------------------------------------
   // the arity is checked first, then each operand's runtime type against the

@@ -6,11 +6,39 @@ The Python tools for the executable K definition of ZKIR (Zero-Knowledge Interme
 uv run --group zkir-k python experiments/zkir-k/tools/<tool>.py ...
 ```
 
-They load a precompiled LLVM (Low Level Virtual Machine) definition under `experiments/zkir-k/semantics/*-kompiled/` and never recompile, so rebuild as in `02-getting-started.md` after a `.k` edit. The run lifecycle is in `06-configuration-and-run-lifecycle.md` and oracle comparison in `12-oracles-and-differential-testing.md`.
+They load a precompiled LLVM (Low Level Virtual Machine) definition under `experiments/zkir-k/semantics/*-kompiled/` and never recompile, so rebuild as in `02-getting-started.md` or with the Makefile targets below after a `.k` edit. The run lifecycle is in `06-configuration-and-run-lifecycle.md` and oracle comparison in `12-oracles-and-differential-testing.md`.
+
+## The Makefile
+
+`experiments/zkir-k/Makefile` names every build and every check layer as a target, and writes each layer's output to a dated receipt under `evidence/`. Run it from the repository root as `make -C experiments/zkir-k <target>`; the recipes run the Python tools through `uv run --group zkir-k python` from the repository root, and every recipe runs under `bash -eu -o pipefail`, so a tool that exits non-zero fails its target although its output passes through `tee`.
+
+| Target | What it does |
+|---|---|
+| `kompile` | the five LLVM definitions, `zkir`, `zkir-ext`, `zkir-check`, `zkir-test` (each also a target of its own) and `zkir-contract` |
+| `zkir-contract` | `kompile zkir-contract-main.k --backend llvm --emit-json -O1` in `semantics/` |
+| `zkir-symbolic` | `kompile zkir-symbolic.k --backend haskell`, the definition the claims run against |
+| `fast` | after `kompile`: `unit_values.py`, `unit_hash.py`, `check_corpus.py`, `divergence_tests.py` |
+| `differential` | after `kompile`: `diff_test.py` and `diff_test.py --ext` |
+| `check` | `fast` then `differential`; prints a closing line only when every layer returned 0 |
+| `contract` | after `zkir-contract`: `contract_corpus.py`, tier one over the corpus and the three tiers over the Moriarty contexts |
+| `contexts` | `moriarty_contexts.py --ext`, the seven transaction contexts on K, `preprocess` and the circuit oracle on both surfaces |
+| `circuit` | `diff_test.py --circuit` and `diff_test.py --ext --circuit`, the two differential runs against the MockProver |
+| `provability` | `provability.py` against the contract receipt of the same stamp: keygen over every parseable program, prove-and-verify on the contexts and the spike preimages |
+| `claims` | `run_claims.py` on the Haskell definition, with the kprove logs in a directory beside the receipt |
+| `drift` | `upstream_drift.py`, the pinned crates against the upstream heads |
+
+Receipts are named `evidence/zkir-k-<layer>-$(STAMP).txt` with `STAMP = $(DATE)$(SUFFIX)`, `DATE` defaulting to today's date in `YYYY-MM-DD` form. Pass `SUFFIX=b` (`c`, `d`, `e`, ...) to keep an earlier receipt of the same day instead of overwriting it; the receipts cited in these chapters carry the suffixes of the run that produced them, `2026-09-06d` for the differential, circuit, context and claim layers and `2026-09-06e` for the contract, provability, corpus-check and divergence layers. `provability` reads the contract receipt of its own stamp, so run `contract` first with the same `SUFFIX`:
+
+```
+make -C experiments/zkir-k contract SUFFIX=e
+make -C experiments/zkir-k provability SUFFIX=e
+```
+
+The receipt names per layer are `unit-values`, `unit-hash`, `milestone2-corpus-check`, `divergence-tests`, `differential-92e8bdd3`, `differential-ext-2ffe2d1`, `contract-corpus`, `moriarty-contexts`, `circuit-differential-92e8bdd3`, `circuit-differential-ext-2ffe2d1`, `provability`, `claims` and `upstream-drift`.
 
 ## Talking to K through pyk
 
-The tools build a pyk `KInner` and hand it to `pyk.ktool.krun.KRun`. `KRun(definition)` reads `compiled.json`, so every `kompile` must pass `--emit-json`. The four directories were built with `--backend llvm --emit-json -O1`, and each `backend.txt` is `llvm`.
+The tools build a pyk `KInner` and hand it to `pyk.ktool.krun.KRun`. `KRun(definition)` reads `compiled.json`, so every `kompile` must pass `--emit-json`. The five LLVM directories were built with `--backend llvm --emit-json -O1`, and each `backend.txt` is `llvm`; the sixth, `semantics/zkir-symbolic-kompiled/`, is the Haskell backend definition of `run_claims.py`.
 
 | Directory | `mainModule.txt` | `$PGM` sort | Callers |
 |---|---|---|---|
@@ -18,6 +46,7 @@ The tools build a pyk `KInner` and hand it to `pyk.ktool.krun.KRun`. `KRun(defin
 | `semantics/zkir-ext-kompiled/` | `ZKIR-EXT` | `Job` | `zkir_run.py --ext`, `diff_test.py --ext` |
 | `semantics/zkir-check-kompiled/` | `ZKIR-CHECK` | `Program` | `zkir_kast.py check` and `kore`, `check_corpus.py` |
 | `semantics/zkir-test-kompiled/` | `ZKIR-TEST` | `KItem` | `unit_values.py`, `unit_hash.py` |
+| `semantics/zkir-contract-main-kompiled/` | `ZKIR-CONTRACT-MAIN` | `Program` | `zkir_kast.py contract`, `contract_corpus.py`, `provability.py` |
 
 `--definition DIR` on `zkir_kast.py`, `zkir_run.py` and `check_corpus.py` replaces the default directory. `--ext` selects the midnight-zkir 2ffe2d1 surface in the preprocessor and in `encode_value` / `type_string`; on `zkir_run.py` and `diff_test.py` it also selects `zkir-ext-kompiled` unless `--definition` is given. `zkir_kast.py check --ext` stays on `zkir-check-kompiled`: `ZKIR-CHECK` (`zkir-check.k`) imports `ZKIR-EXT-SYNTAX`, so `corpus/midnight-zkir-2ffe2d1-tests/bool_via_neg.zkir` prints `wfOk` there.
 
@@ -75,7 +104,7 @@ Programs live under `experiments/zkir-k/corpus/` except the two Moriarty Compact
 | `corpus/midnight-zkir-2ffe2d1-precompiles/` | 6 | `commit`, `repo`, `branch` `zkir-v3`, `programs[]` | `check_corpus.py`, `diff_test.py`, `diff_test.py --ext` |
 | `corpus/handmade/` | 9 | `note`, `programs[]` | `diff_test.py` (both surfaces); `unit_hash.py` uses `transient_hash.zkir` and `std_hashes.zkir` |
 | `corpus/handmade-negative/` | 10 | none | `check_corpus.py`, `contract_corpus.py`, `provability.py` (negative controls) |
-| `corpus/divergence/` | one per case | none | written and read by `divergence_tests.py`; the cases with a preimage file beside them are read, not written |
+| `corpus/divergence/` | 31, one per case | none | written and read by `divergence_tests.py`; the cases with a preimage file beside them are read, not written |
 | `experiments/moriarty-compact-escrow/output/zkir/` | 3 | none | `check_corpus.py`, `diff_test.py` |
 | `experiments/moriarty-core-swap/output/zkir/` | 4 | none | `check_corpus.py`, `diff_test.py` |
 
@@ -204,7 +233,7 @@ A `--gen` run on `native_identity.zkir` with provisional commitment `0` and open
 `diff_test.py` is the differential harness against the oracle. Only its protocol is described below; the comparison rules and receipts are in `12-oracles-and-differential-testing.md`.
 
 ```
-uv run --group zkir-k python experiments/zkir-k/tools/diff_test.py [--only SUBSTR] [--seed N] [--no-perturb] [--attempts N] [--ext]
+uv run --group zkir-k python experiments/zkir-k/tools/diff_test.py [--only SUBSTR] [--seed N] [--no-perturb] [--attempts N] [--ext] [--circuit]
 ```
 
 | Flag | Default | Effect |
@@ -214,8 +243,9 @@ uv run --group zkir-k python experiments/zkir-k/tools/diff_test.py [--only SUBST
 | `--no-perturb` | off | skip the perturbation variants after a joint success |
 | `--attempts N` | `8` | generated preimages per program; stop after the first joint `ok` |
 | `--ext` | off | `zkir-ext-kompiled`, the 2ffe2d1 oracle, and the extension corpora |
+| `--circuit` | off | after each row, run `zkir-circuit-oracle` on the same preimage, the injection and instance perturbations of a joint `ok`, and compare with the comparison table (`12-oracles-and-differential-testing.md`) |
 
-Without `--ext` the corpora are `ledger9-92e8bdd3-tests`, `midnight-zkir-2ffe2d1-precompiles`, `handmade`, plus the escrow and swap artifacts; with `--ext` they are `midnight-zkir-2ffe2d1-tests`, `midnight-zkir-2ffe2d1-precompiles` and `handmade`. Oracle binaries are `~/Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-oracle` and `~/Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-oracle`, and a missing binary is `FileNotFoundError`. Oracle exit 101 is `panic`; any other non-zero exit is `load-error`.
+Without `--ext` the corpora are `ledger9-92e8bdd3-tests`, `midnight-zkir-2ffe2d1-precompiles`, `handmade`, plus the escrow and swap artifacts, each of which also gets a `context` row on its real preimage from `corpus/moriarty-contexts/`; with `--ext` they are `midnight-zkir-2ffe2d1-tests`, `midnight-zkir-2ffe2d1-precompiles` and `handmade`. Oracle binaries are `~/Moriarty/repos/_build/ledger-92e8bdd3/target/release/zkir-oracle` and `~/Moriarty/repos/_build/midnight-zkir-2ffe2d1/target/release/zkir-oracle`, and a missing binary is `FileNotFoundError`. Oracle exit 101 is `panic`; any other non-zero exit is `load-error`.
 
 | Step | Action |
 |---|---|
@@ -229,13 +259,13 @@ Without `--ext` the corpora are `ledger9-92e8bdd3-tests`, `midnight-zkir-2ffe2d1
 
 ## `divergence_tests.py`
 
-`divergence_tests.py` runs twenty executable cases for the splits in `13-known-divergences.md`. It parses no arguments: every argument, including `--help`, is ignored, and the tool runs immediately and writes its files.
+`divergence_tests.py` runs thirty-one executable cases for the splits in `13-known-divergences.md`. It parses no arguments: every argument, including `--help`, is ignored, and the tool runs immediately and writes its files.
 
 ```
 uv run --group zkir-k python experiments/zkir-k/tools/divergence_tests.py
 ```
 
-Each `CASES` tuple is `(name, finding, program, raw_inputs, expected_K, expected_Rust, gate_sub, expected_outcome, note)`. The script writes `corpus/divergence/<name>.zkir` and builds the preimage `{inputs: raw as strings, binding_input: "42"}` in memory; the oracle receives it through a temporary file that is deleted on close. When a case needs a `communications_commitment`, the script fills it from a `genJob` `comm` need with opening `7`. It then runs `Runner.run(..., checked=True)` and the 92e8bdd3 oracle.
+Each `CASES` tuple is `(name, finding, program, raw_inputs, expected_K, expected_Rust, gate_sub, expected_outcome, note)`. The script writes `corpus/divergence/<name>.zkir` and builds the preimage `{inputs: raw as strings, binding_input: "42"}` in memory; the oracle receives it through a temporary file that is deleted on close. When a case needs a `communications_commitment`, the script fills it from a `genJob` `comm` need with opening `7`. It then runs `Runner.run(..., checked=True)`, the 92e8bdd3 oracle and the 92e8bdd3 circuit oracle (the extension definition and the 2ffe2d1 binaries for `k08`), with the case's `--inject` perturbation where it has one.
 
 If K's error starts with `well-formedness`, the reported K status is `wfError` and the outcome is `n/a`. Otherwise the target gate is selected from `all_verdicts` as follows:
 
@@ -248,7 +278,7 @@ targets = [v for v in k['all_verdicts']
 
 `gate_sub` is the ZKIR op name as written in the JSON (`less_than`, `public_input`, `from_coordinates`, ...) or `commGate` / `guardGate`. `norm` drops underscores, spaces and case so that the op name matches the K production name in the pretty gate text; `less_than` matches `gate ( lessThan ( ... ) )`. The first match's outcome constructor is the observed outcome, and no match is `no-such-gate`. `assert` matches `gate ( assert ( ... ) )`, whereas `commGate` and `guardGate` match constructors not wrapped in `gate(...)`. A case passes when K status, Rust status and outcome equal the tuple and K is not `stuck`. When both sides are `ok`, `{type, encoded}` of every register must match, and a difference prints `MEMORY DIFFERS` and fails.
 
-Each case prints `PASS` or `FAIL`, name, finding, `K=`, `Rust=`, `gate=<sub>:<outcome>`, the note, and a detail line. The footer is `N/20 divergence cases behave as expected`, where `N` is 20 minus the failure count; a memory difference on a joint `ok` counts as a second failure of the same case. Exit status is 0 iff every case matches, else 1. The script depends on `zkir_kast.py`, `zkir_run.Runner`, `zkir_values.py`, the 92e8bdd3 oracle, and write access to `corpus/divergence/`.
+Each case prints `PASS` or `FAIL`, name, finding, `K=`, `Rust=`, `gate=<sub>:<outcome>`, the note, and a detail line. The footer is `N/31 divergence cases behave as expected`, where `N` is 31 minus the failure count; a memory difference on a joint `ok` counts as a second failure of the same case. Exit status is 0 iff every case matches, else 1. The script depends on `zkir_kast.py`, `zkir_run.Runner`, `zkir_values.py`, the 92e8bdd3 oracle, and write access to `corpus/divergence/`.
 
 ## `unit_values.py`
 
@@ -278,7 +308,7 @@ Output has the same `PASS`/`FAIL` lines and an `18/18 checks passed` footer, and
 uv run --group zkir-k python experiments/zkir-k/tools/check_corpus.py [--definition DIR]
 ```
 
-`--definition` defaults to `zkir_kast.default_definition()` (`zkir-check-kompiled`). The corpora are `ledger9-92e8bdd3-tests`, `midnight-zkir-2ffe2d1-precompiles`, `handmade-negative`, and the escrow and swap artifacts (63 files). It does not walk `handmade/`, `midnight-zkir-2ffe2d1-tests/` or `divergence/`, and it does not pass `--ext`.
+`--definition` defaults to `zkir_kast.default_definition()` (`zkir-check-kompiled`). The corpora are `ledger9-92e8bdd3-tests`, `midnight-zkir-2ffe2d1-precompiles`, `handmade-negative`, and the escrow and swap artifacts (66 files). It does not walk `handmade/`, `midnight-zkir-2ffe2d1-tests/` or `divergence/`, and it does not pass `--ext`.
 
 For each file it calls `zkir_kast.load_program` (base surface) and `ZKIR-CHECK`. A `ZkirFormatError` is recorded as `format: <message>` (not the CLI's `format error:` prefix). The default expectation is `wfOk`; overrides in `EXPECTED`:
 
@@ -406,7 +436,7 @@ target/release/preimage-json FILE.bin
 
 ## Running the suite after a semantics change
 
-After editing a `.k` file, rebuild every compiled definition that imports the changed module, with `--backend llvm --emit-json -O1` and `--output-definition` pointing at the existing directory (commands in `02-getting-started.md`). Then run, in this order:
+After editing a `.k` file, rebuild every compiled definition that imports the changed module, with `--backend llvm --emit-json -O1` and `--output-definition` pointing at the existing directory (commands in `02-getting-started.md`, or `make -C experiments/zkir-k kompile`). Then run, in this order (`make -C experiments/zkir-k check` covers steps 2 to 7 with receipts; `contract`, `provability`, `circuit`, `contexts` and `claims` cover the rest):
 
 | Step | Command | What it exercises |
 |---|---|---|
@@ -414,10 +444,11 @@ After editing a `.k` file, rebuild every compiled definition that imports the ch
 | 2 | `unit_values.py` | `ZKIR-TEST`; no oracle |
 | 3 | `unit_hash.py` | hashes and alignments; needs the 92e8bdd3 oracle |
 | 4 | `zkir_kast.py check` on one well-formed file and one `handmade-negative/` file, then `zkir_run.py` on `native_identity.zkir` or `transient_hash.zkir` | preprocessor and `ZKIR-VM` still load |
-| 5 | `check_corpus.py` | `ZKIR-CHECK` on the 63-file set, including the seven negatives |
+| 5 | `check_corpus.py` | `ZKIR-CHECK` on the 66-file set, including the ten negatives |
 | 6 | `divergence_tests.py` | rewrites `corpus/divergence/` and checks one named gate per case; needs the 92e8bdd3 oracle |
 | 7 | `diff_test.py --only <touched-file> --no-perturb --attempts 1`, then the full base-surface run, then `diff_test.py --ext` | start the full runs only after steps 2 to 5 pass |
-| 8 | `make zkir-contract`, then `contract_corpus.py` | the target contract over the corpus and the three tiers on the Moriarty contexts |
-| 9 | `kompile zkir-symbolic.k --backend haskell`, then `run_claims.py` | the kprove claims and their vacuity probes |
+| 8 | `make zkir-contract`, then `contract_corpus.py`, then `provability.py --contract-receipt <that receipt>` | the target contract over the corpus, the three tiers on the Moriarty contexts, and keygen against the stage tags |
+| 9 | `diff_test.py --circuit`, then `diff_test.py --ext --circuit` | every verdict row and injection against the comparison table |
+| 10 | `kompile zkir-symbolic.k --backend haskell`, then `run_claims.py` | the kprove claims and their vacuity probes |
 
 `--checked` does not use `zkir-check-kompiled`. It evaluates `wf` inside `ZKIR` / `ZKIR-EXT`, so a well-formedness-only edit still needs those two interpreters rebuilt. An extension-only edit needs `zkir-ext-kompiled` plus `diff_test.py --ext`, and `check_corpus.py` never sees `Bool` / `Byte` / `Bytes<n>` programs.
