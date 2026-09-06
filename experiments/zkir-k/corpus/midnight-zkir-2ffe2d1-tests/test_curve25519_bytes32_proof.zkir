@@ -1,0 +1,90 @@
+{
+  "version": {
+    "major": 3,
+    "minor": 0
+  },
+  "inputs": [
+    {
+      "name": "%c25519_base",
+      "type": "Base<Curve25519>"
+    },
+    {
+      "name": "%c25519_scalar",
+      "type": "Scalar<Curve25519>"
+    },
+    {
+      "name": "%raw",
+      "type": "Bytes<32>"
+    }
+  ],
+  "outputs": [],
+  "do_communications_commitment": false,
+  "instructions": [
+    {
+      "op": "into_bytes32",
+      "input": "%c25519_base",
+      "output": "%base_bytes"
+    },
+    {
+      "op": "into_bytes32",
+      "input": "%c25519_scalar",
+      "output": "%scalar_bytes"
+    },
+    {
+      "op": "from_bytes32",
+      "bytes": "%base_bytes",
+      "type": "Base<Curve25519>",
+      "output": "%base_back"
+    },
+    {
+      "op": "from_bytes32",
+      "bytes": "%scalar_bytes",
+      "type": "Scalar<Curve25519>",
+      "output": "%scalar_back"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%base_back",
+      "b": "%c25519_base"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%scalar_back",
+      "b": "%c25519_scalar"
+    },
+    {
+      "op": "from_bytes32",
+      "bytes": "%raw",
+      "type": "Base<Curve25519>",
+      "output": "%raw_base"
+    },
+    {
+      "op": "from_bytes32",
+      "bytes": "%raw",
+      "type": "Scalar<Curve25519>",
+      "output": "%raw_scalar"
+    },
+    {
+      "op": "private_input",
+      "type": "Base<Curve25519>",
+      "guard": null,
+      "output": "%raw_base_exp"
+    },
+    {
+      "op": "private_input",
+      "type": "Scalar<Curve25519>",
+      "guard": null,
+      "output": "%raw_scalar_exp"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%raw_base",
+      "b": "%raw_base_exp"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%raw_scalar",
+      "b": "%raw_scalar_exp"
+    }
+  ]
+}

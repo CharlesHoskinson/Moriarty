@@ -1,0 +1,1021 @@
+# pyk.kast.manip module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.kast.manip.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.kast package
+pyk.kast.manip module
+View page source
+pyk.kast.manip module
+
+abstract_term_safely
+(
+kast
+:
+KInner
+,
+base_name
+:
+str
+=
+'V'
+,
+sort
+:
+KSort
+|
+None
+=
+None
+,
+existing_var_names
+:
+set
+[
+str
+]
+|
+None
+=
+None
+)
+→
+KVariable
+[source]
+
+apply_existential_substitutions
+(
+state
+:
+KInner
+,
+constraints
+:
+Iterable
+[
+KInner
+]
+)
+→
+tuple
+[
+KInner
+,
+Iterable
+[
+KInner
+]
+]
+[source]
+
+bool_to_ml_pred
+(
+kast
+:
+KInner
+,
+sort
+:
+str
+|
+KSort
+=
+KSort(name='GeneratedTopCell',
+params=())
+)
+→
+KInner
+[source]
+
+build_claim
+(
+claim_id
+:
+str
+,
+init_config
+:
+KInner
+,
+final_config
+:
+KInner
+,
+init_constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+,
+final_constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+,
+keep_unsafe
+:
+bool
+=
+False
+,
+filter_useless_constraints
+:
+bool
+=
+False
+)
+→
+tuple
+[
+KClaim
+,
+Subst
+]
+[source]
+
+Return a
+KClaim
+between the supplied initial and final states.
+Parameters
+:
+claim_id
+– Label to give the claim.
+init_config
+– State to put on LHS of the rule.
+final_config
+– State to put on RHS of the rule.
+init_constraints
+– Constraints to use as
+requires
+clause.
+final_constraints
+– Constraints to use as
+ensures
+clause.
+keep_vars
+– Variables to leave in the side-conditions even if not bound in the configuration.
+Returns
+:
+A tuple
+(claim,
+var_map)
+where
+claim
+: A
+KClaim
+with variable naming conventions applied
+so that it should be parseable by the K Frontend.
+var_map
+: The variable renamings applied to make the claim parseable by the K Frontend
+(which can be undone to recover the original variables).
+build_rule
+(
+rule_id
+:
+str
+,
+init_config
+:
+KInner
+,
+final_config
+:
+KInner
+,
+init_constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+,
+final_constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+,
+priority
+:
+int
+|
+None
+=
+None
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+,
+defunc_with
+:
+KDefinition
+|
+None
+=
+None
+,
+keep_unsafe
+:
+bool
+=
+False
+,
+filter_useless_constraints
+:
+bool
+=
+False
+)
+→
+tuple
+[
+KRule
+,
+Subst
+]
+[source]
+
+Return a
+KRule
+between the supplied initial and final states.
+Parameters
+:
+rule_id
+– Label to give the rule.
+init_config
+– State to put on LHS of the rule.
+final_config
+– State to put on RHS of the rule.
+init_constraints
+– Constraints to use as
+requires
+clause.
+final_constraints
+– Constraints to use as
+ensures
+clause.
+priority
+– Priority index to assign to generated rules.
+keep_vars
+– Variables to leave in the side-conditions even if not bound in the configuration.
+defunc_with
+– KDefinition for filtering out function symbols on LHS of rules.
+filter_useless_constraints
+– If True, drop constraints whose free variables are not
+transitively reachable from the rule body or
+keep_vars
+after push_down_rewrites.
+Returns
+:
+A tuple
+(rule,
+var_map)
+where
+rule
+: A
+KRule
+with variable naming conventions applied
+so that it should be parseable by the K Frontend.
+var_map
+: The variable renamings applied to make the rule parseable by the K Frontend
+(which can be undone to recover the original variables).
+cell_label_to_var_name
+(
+label
+:
+str
+)
+→
+str
+[source]
+
+Return a variable name based on a cell label.
+collapse_dots
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+Given a configuration with structural frames
+…
+, minimize the structural frames needed.
+Parameters
+:
+kast
+– A configuration, potentially with structural frames.
+Returns
+:
+The same configuration, with the amount of structural framing minimized.
+count_vars
+(
+term
+:
+KInner
+)
+→
+Counter
+[
+str
+]
+[source]
+
+defunctionalize
+(
+defn
+:
+KDefinition
+,
+kinner
+:
+KInner
+)
+→
+tuple
+[
+KInner
+,
+list
+[
+KInner
+]
+]
+[source]
+
+Turn non-constructor arguments into side-conditions so that a term is only constructor-like.
+Parameters
+:
+defn
+– The definition to pull function label information from.
+kinner
+– The term to defunctionalize.
+Returns
+:
+A tuple of the defunctionalized term and the list of constraints generated.
+extract_cells
+(
+kast
+:
+KInner
+,
+keep_cells
+:
+Collection
+[
+str
+]
+)
+→
+KInner
+[source]
+
+extract_lhs
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+extract_rhs
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+extract_subst
+(
+term
+:
+KInner
+)
+→
+tuple
+[
+Subst
+,
+KInner
+]
+[source]
+
+free_vars
+(
+kast
+:
+KInner
+)
+→
+frozenset
+[
+str
+]
+[source]
+
+if_ktype
+(
+ktype
+:
+type
+[
+KI
+]
+,
+then
+:
+Callable
+[
+[
+KI
+]
+,
+KInner
+]
+)
+→
+Callable
+[
+[
+KInner
+]
+,
+KInner
+]
+[source]
+
+inline_cell_maps
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+Ensure that cell map collections are printed nicely, not as Maps.
+Parameters
+:
+kast
+– A KAST term.
+Returns
+:
+The KAST term with cell maps inlined.
+is_anon_var
+(
+kast
+:
+KInner
+)
+→
+bool
+[source]
+
+is_spurious_constraint
+(
+term
+:
+KInner
+)
+→
+bool
+[source]
+
+is_term_like
+(
+kast
+:
+KInner
+)
+→
+bool
+[source]
+
+labels_to_dots
+(
+kast
+:
+KInner
+,
+labels
+:
+Collection
+[
+str
+]
+)
+→
+KInner
+[source]
+
+Abstract specific labels for printing.
+Parameters
+:
+kast
+– A term.
+labels
+– List of labels to abstract.
+Returns
+The term with
+labels
+abstracted.
+minimize_rule_like
+(
+rule
+:
+RL
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+)
+→
+RL
+[source]
+
+Minimize a K rule or claim for pretty-printing.
+Variables only used once will be removed.
+Unused cells will be abstracted.
+Useless side-conditions will be attempted to be removed.
+Parameters
+:
+rule
+– A K rule or claim.
+Returns
+:
+The rule or claim, minimized.
+minimize_term
+(
+term
+:
+KInner
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+)
+→
+KInner
+[source]
+
+Minimize a K term for pretty-printing.
+Variables only used once will be removed.
+Unused cells will be abstracted.
+Useless conditions will be attempted to be removed.
+Parameters
+:
+kast
+– A term.
+Returns
+:
+The term, minimized.
+ml_pred_to_bool
+(
+kast
+:
+KInner
+,
+abstract_unsafe
+:
+bool
+=
+False
+,
+keep_unsafe
+:
+bool
+=
+False
+)
+→
+KInner
+[source]
+
+no_cell_rewrite_to_dots
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+Transform a given term by replacing the contents of each cell with dots if the LHS and RHS are the same.
+This function recursively traverses the cells in a term.
+When it finds a cell whose left-hand side (LHS) is identical to its right-hand side (RHS),
+it replaces the cell’s contents with a predefined DOTS.
+Parameters
+:
+term
+– The term to be transformed.
+Returns
+:
+The transformed term, where specific cell contents have been replaced with dots.
+normalize_constraints
+(
+constraints
+:
+Iterable
+[
+KInner
+]
+)
+→
+tuple
+[
+KInner
+,
+...
+]
+[source]
+
+normalize_ml_pred
+(
+pred
+:
+KInner
+,
+keep_unsafe
+:
+bool
+=
+False
+)
+→
+KInner
+[source]
+
+on_attributes
+(
+kast
+:
+W
+,
+f
+:
+Callable
+[
+[
+KAtt
+]
+,
+KAtt
+]
+)
+→
+W
+[source]
+
+propagate_up_constraints
+(
+k
+:
+KInner
+)
+→
+KInner
+[source]
+
+push_down_rewrites
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+remove_attrs
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+remove_generated_cells
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+Remove <generatedTop> and <generatedCounter> from a configuration.
+Parameters
+:
+term
+– A term.
+Returns
+:
+The term with those cells removed.
+remove_semantic_casts
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+Remove injected
+#SemanticCast*
+nodes in AST.
+Parameters
+:
+kast
+– A term (possibly) containing automatically injected
+#SemanticCast*
+KApply nodes.
+Returns
+:
+The term without the
+#SemanticCast*
+nodes.
+remove_source_map
+(
+definition
+:
+KDefinition
+)
+→
+KDefinition
+[source]
+
+remove_useless_constraints
+(
+constraints
+:
+Iterable
+[
+KInner
+]
+,
+initial_vars
+:
+Iterable
+[
+str
+]
+)
+→
+list
+[
+KInner
+]
+[source]
+
+Remove constraints that do not depend on a given iterable of variables (directly or indirectly).
+Parameters
+:
+constraints
+– Iterable of constraints to filter.
+initial_vars
+– Initial iterable of variables to keep constraints for.
+Returns
+:
+A list of constraints with only those constraints that contain the initial variables,
+or variables that depend on those through other constraints in the list.
+rename_generated_vars
+(
+term
+:
+KInner
+)
+→
+KInner
+[source]
+
+replace_rewrites_with_implies
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+set_cell
+(
+constrained_term
+:
+KInner
+,
+cell_variable
+:
+str
+,
+cell_value
+:
+KInner
+)
+→
+KInner
+[source]
+
+simplify_bool
+(
+k
+:
+KInner
+)
+→
+KInner
+[source]
+
+sort_ac_collections
+(
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+sort_assoc_label
+(
+label
+:
+str
+,
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+split_config_and_constraints
+(
+kast
+:
+KInner
+)
+→
+tuple
+[
+KInner
+,
+KInner
+]
+[source]
+
+split_config_from
+(
+configuration
+:
+KInner
+)
+→
+tuple
+[
+KInner
+,
+dict
+[
+str
+,
+KInner
+]
+]
+[source]
+
+Split the substitution from a given configuration.
+Given an input configuration
+config
+, will return a tuple
+(symbolic_config, subst)
+, where:
+config == substitute(symbolic_config, subst)
+symbolic_config
+is the same configuration structure, but where the contents of leaf cells is replaced with a fresh KVariable.
+subst
+is the substitution for the generated KVariables back to the original configuration contents.
+undo_aliases
+(
+definition
+:
+KDefinition
+,
+kast
+:
+KInner
+)
+→
+KInner
+[source]
+
+useless_vars_to_dots
+(
+kast
+:
+KInner
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+)
+→
+KInner
+[source]
+
+Structurally abstract away useless variables.
+Parameters
+:
+kast
+– A term.
+keep_vars
+– Iterable of variables to keep.
+Returns
+:
+The term with the useless varables structurally abstracted.
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

@@ -1,0 +1,810 @@
+# pyk.proof.proof module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.proof.proof.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.proof package
+pyk.proof.proof module
+View page source
+pyk.proof.proof module
+
+class
+CompositeSummary
+(
+_summaries
+:
+'Iterable[ProofSummary]'
+)
+[source]
+
+Bases:
+ProofSummary
+property
+lines
+:
+list
+[
+str
+]
+
+summaries
+:
+tuple
+[
+ProofSummary
+,
+...
+]
+
+class
+FailureInfo
+[source]
+
+Bases:
+object
+class
+Proof
+(
+id
+:
+str
+,
+proof_dir
+:
+Path
+|
+None
+=
+None
+,
+subproof_ids
+:
+Iterable
+[
+str
+]
+=
+()
+,
+admitted
+:
+bool
+=
+False
+)
+[source]
+
+Bases:
+Generic
+[
+PS
+,
+SR
+]
+Abstract representation of a proof that can be executed in one or more discrete steps.
+Generic type variables:
+PS: Proof step: data required to perform a step of the proof.
+SR: Step result: data produced by executing a PS with
+Prover.step_proof
+used to update the
+Proof
+.
+add_subproof
+(
+proof
+:
+Proof
+)
+→
+None
+[source]
+
+admit
+(
+)
+→
+None
+[source]
+
+admitted
+:
+bool
+
+abstract
+property
+can_progress
+:
+bool
+
+abstract
+commit
+(
+result
+:
+SR
+)
+→
+None
+[source]
+
+Apply the step result of type
+SR
+to
+self
+, modifying
+self
+.
+property
+dict
+:
+dict
+[
+str
+,
+Any
+]
+
+property
+digest
+:
+str
+
+property
+failed
+:
+bool
+
+failure_info
+:
+FailureInfo
+|
+None
+
+fetch_subproof
+(
+proof_id
+:
+str
+,
+force_reread
+:
+bool
+=
+False
+,
+uptodate_check_method
+:
+str
+=
+'timestamp'
+)
+→
+Proof
+[source]
+
+Get a subproof, re-reading from disk if it’s not up-to-date.
+fetch_subproof_data
+(
+proof_id
+:
+str
+,
+force_reread
+:
+bool
+=
+False
+,
+uptodate_check_method
+:
+str
+=
+'timestamp'
+)
+→
+Proof
+[source]
+
+Get a subproof, re-reading from disk if it’s not up-to-date.
+abstract
+classmethod
+from_dict
+(
+dct
+:
+Mapping
+[
+str
+,
+Any
+]
+,
+proof_dir
+:
+Path
+|
+None
+=
+None
+)
+→
+Proof
+[source]
+
+abstract
+get_steps
+(
+)
+→
+Iterable
+[
+PS
+]
+[source]
+
+Return all currently available steps associated with this Proof. Should not modify
+self
+.
+id
+:
+str
+
+property
+json
+:
+str
+
+property
+one_line_summary
+:
+str
+
+abstract
+property
+own_status
+:
+ProofStatus
+
+property
+passed
+:
+bool
+
+static
+proof_data_exists
+(
+id
+:
+str
+,
+proof_dir
+:
+Path
+)
+→
+bool
+[source]
+
+proof_dir
+:
+Path
+|
+None
+
+static
+proof_exists
+(
+id
+:
+str
+,
+proof_dir
+:
+Path
+)
+→
+bool
+[source]
+
+property
+proof_subdir
+:
+Path
+|
+None
+
+classmethod
+read_proof
+(
+id
+:
+str
+,
+proof_dir
+:
+Path
+)
+→
+Proof
+[source]
+
+static
+read_proof_data
+(
+proof_dir
+:
+Path
+,
+id
+:
+str
+)
+→
+Proof
+[source]
+
+read_subproof
+(
+proof_id
+:
+str
+)
+→
+None
+[source]
+
+read_subproof_data
+(
+proof_id
+:
+str
+)
+→
+None
+[source]
+
+remove_subproof
+(
+proof_id
+:
+str
+)
+→
+None
+[source]
+
+property
+status
+:
+ProofStatus
+
+property
+subproof_ids
+:
+list
+[
+str
+]
+
+property
+subproofs
+:
+Iterable
+[
+Proof
+]
+
+Return the subproofs, re-reading from disk the ones that changed.
+property
+subproofs_status
+:
+ProofStatus
+
+property
+summary
+:
+ProofSummary
+
+property
+up_to_date
+:
+bool
+
+Check that the proof’s representation on disk is up-to-date.
+write_proof
+(
+subproofs
+:
+bool
+=
+False
+)
+→
+None
+[source]
+
+abstract
+write_proof_data
+(
+)
+→
+None
+[source]
+
+class
+ProofStatus
+(
+value
+)
+[source]
+
+Bases:
+Enum
+An enumeration.
+FAILED
+=
+'failed'
+
+PASSED
+=
+'passed'
+
+PENDING
+=
+'pending'
+
+class
+ProofSummary
+[source]
+
+Bases:
+ABC
+id
+:
+str
+
+abstract
+property
+lines
+:
+list
+[
+str
+]
+
+status
+:
+ProofStatus
+
+class
+Prover
+[source]
+
+Bases:
+ContextManager
+[
+Prover
+],
+Generic
+[
+P
+,
+PS
+,
+SR
+]
+Abstract class which advances
+Proof`s with `init_proof()
+and
+step_proof()
+.
+Generic type variables:
+P: Type of proof this
+Prover
+operates on.
+PS: Proof step: data required to perform a step of the proof.
+SR: Step result: data produced by executing a PS with
+Prover.step_proof
+used to update the
+Proof
+.
+advance_proof
+(
+proof:
+P,
+max_iterations:
+int
+|
+None
+=
+None,
+fail_fast:
+bool
+=
+False,
+callback:
+Callable[[P],
+None]
+=
+<function
+Prover.<lambda>>,
+maintenance_rate:
+int
+=
+1
+)
+→
+None
+[source]
+
+Advance a proof.
+Performs loop
+Proof.get_steps()
+->
+Prover.step_proof()
+(within
+step_timeout
+, else
+interrupt
++
+shrink_step
+and retry, or stop if it cannot shrink) ->
+Proof.commit()
+.
+Parameters
+:
+proof
+– proof to advance.
+max_iterations
+(
+optional
+) – Maximum number of steps to take.
+fail_fast
+– If the proof is failing after finishing a step,
+halt execution even if there are still available steps.
+callback
+– Callable to run in between each completed step, useful for getting real-time information about the proof.
+maintenance_rate
+– Number of iterations between proof maintenance (writing to disk and executing callback).
+abstract
+close
+(
+)
+→
+None
+[source]
+
+abstract
+failure_info
+(
+proof
+:
+P
+)
+→
+FailureInfo
+[source]
+
+abstract
+init_proof
+(
+proof
+:
+P
+)
+→
+None
+[source]
+
+Perform any initialization steps needed at the beginning of proof execution.
+For example, for
+APRProver
+, upload circularity and depends module of the proof
+to the
+KoreServer
+via
+add_module
+.
+interrupt
+(
+)
+→
+None
+[source]
+
+Abort a
+step_proof
+call currently running on another thread, as quickly as possible.
+Used by the timeout-and-shrink policy in
+advance_proof
+to abandon a step that has
+exhausted its
+step_timeout
+budget. After this returns, a thread blocked in
+step_proof
+must raise promptly and the prover must remain usable for subsequent steps. The default
+implementation does nothing; provers backed by an interruptible resource (e.g. a Kore RPC
+connection) should override it.
+shrink_step
+(
+)
+→
+bool
+[source]
+
+Reduce the amount of work a single
+step_proof
+does, after a step timed out.
+Return
+True
+if the step was made smaller (so it is worth retrying), or
+False
+if the
+step is already at its minimum size (so
+advance_proof
+should stop). The default is a
+no-op that returns
+False
+; see
+step_timeout
+.
+abstract
+step_proof
+(
+step
+:
+PS
+)
+→
+Iterable
+[
+SR
+]
+[source]
+
+Do the work associated with a
+PS
+, a proof step.
+Should not modify a
+Proof
+or
+self
+, but may read from
+self
+as long as
+those fields are not being modified during
+step_proof()
+,
+get_steps()
+, and
+commit()
+.
+step_timeout
+:
+int
+|
+None
+=
+None
+
+Per-step wall-clock budget in whole seconds (minimum 1). When set,
+advance_proof
+runs each
+step under this budget and, on timeout, interrupts it, calls
+shrink_step
+, and retries.
+None
+(the default) disables the policy, so steps run synchronously with no time limit. A
+prover that can do less work per step (e.g.
+APRProver
+, by lowering its execution depth)
+should pair this with
+shrink_step
+.
+parallel_advance_proof
+(
+proof:
+P,
+create_prover:
+Callable[[],
+Prover[P,
+PS,
+SR]],
+max_iterations:
+int
+|
+None
+=
+None,
+fail_fast:
+bool
+=
+False,
+max_workers:
+int
+=
+1,
+callback:
+Callable[[P],
+None]
+=
+<function
+<lambda>>,
+maintenance_rate:
+int
+=
+1
+)
+→
+None
+[source]
+
+Advance proof with multithreaded strategy.
+Prover.step_proof()
+to a worker thread pool for each step as available,
+and
+Proof.commit()
+results as they become available,
+and get new steps with
+Proof.get_steps()
+and submit to thread pool.
+Generic type variables:
+P: Type of proof to be advanced in parallel.
+PS: Proof step: data required to perform a step of the proof.
+SR: Step result: data produced by executing a PS with
+Prover.step_proof
+used to update the
+Proof
+.
+Parameters
+:
+proof
+– The proof to advance.
+create_prover
+– Function which creates a new
+Prover
+. These provers must not reference any shared
+data to be written during
+parallel_advance_proof
+, to avoid race conditions.
+max_iterations
+– Maximum number of steps to take.
+fail_fast
+– If the proof is failing after finishing a step,
+halt execution even if there are still available steps.
+max_workers
+– Maximum number of worker threads the pool can spawn.
+callback
+– Callable to run during proof maintenance, useful for getting real-time information about the proof.
+maintenance_rate
+– Number of iterations between proof maintenance (writing to disk and executing callback).
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

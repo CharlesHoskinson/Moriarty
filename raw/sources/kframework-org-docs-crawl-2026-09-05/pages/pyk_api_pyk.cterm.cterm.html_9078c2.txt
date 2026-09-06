@@ -1,0 +1,1012 @@
+# pyk.cterm.cterm module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.cterm.cterm.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.cterm package
+pyk.cterm.cterm module
+View page source
+pyk.cterm.cterm module
+
+class
+CSubst
+(
+subst
+:
+Subst
+|
+None
+=
+None
+,
+constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+)
+[source]
+
+Bases:
+object
+Store information about instantiation of a symbolic state (
+CTerm
+) to a more specific one.
+Contains the data:
+-
+subst
+: assignment to apply to free variables in the state to achieve more specific one
+-
+constraints
+: additional constraints over the free variables of the original state and the
+subst
+to add to the new state
+__call__
+(
+cterm
+:
+CTerm
+)
+→
+CTerm
+[source]
+
+Overload for
+CSubst.apply
+.
+__init__
+(
+subst
+:
+Subst
+|
+None
+=
+None
+,
+constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+)
+→
+None
+[source]
+
+Construct a new
+CSubst
+given a
+Subst
+and set of constraints as
+KInner
+, performing basic sanity checks.
+__iter__
+(
+)
+→
+Iterator
+[
+Subst
+|
+KInner
+]
+[source]
+
+Return an iterator with the head being the
+subst
+and the tail being the
+constraints
+.
+add_constraint
+(
+constraint
+:
+KInner
+)
+→
+CSubst
+[source]
+
+Return this
+CSubst
+with an additional constraint added.
+apply
+(
+cterm
+:
+CTerm
+)
+→
+CTerm
+[source]
+
+Apply this
+CSubst
+to the given
+CTerm
+(instantiating the free variables, and adding the constraints).
+property
+constraint
+:
+KInner
+
+Return the set of constraints as a single flattened constraint using
+mlAnd
+.
+constraints
+:
+tuple
+[
+KInner
+,
+...
+]
+
+static
+from_dict
+(
+dct
+:
+dict
+[
+str
+,
+Any
+]
+)
+→
+CSubst
+[source]
+
+Deserialize
+CSubst
+from a dictionary representation.
+static
+from_pred
+(
+pred
+:
+KInner
+)
+→
+CSubst
+[source]
+
+Extract from a boolean predicate a CSubst.
+pred
+(
+sort_with
+:
+KDefinition
+|
+None
+=
+None
+,
+subst
+:
+bool
+=
+True
+,
+constraints
+:
+bool
+=
+True
+)
+→
+KInner
+[source]
+
+Return an ML predicate representing this substitution.
+subst
+:
+Subst
+
+to_dict
+(
+)
+→
+dict
+[
+str
+,
+Any
+]
+[source]
+
+Serialize
+CSubst
+to dictionary representation.
+class
+CTerm
+(
+config
+:
+KInner
+,
+constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+)
+[source]
+
+Bases:
+object
+Represent a symbolic program state, obtained and manipulated using symbolic execution.
+Contains the data:
+-
+config
+: the _configuration_ (structural component of the state, potentially containing free variabls)
+-
+constraints
+: conditions which limit/constraint the free variables from the
+config
+__init__
+(
+config
+:
+KInner
+,
+constraints
+:
+Iterable
+[
+KInner
+]
+=
+()
+)
+→
+None
+[source]
+
+Instantiate a given
+CTerm
+, performing basic sanity checks on the
+config
+and
+constraints
+.
+__iter__
+(
+)
+→
+Iterator
+[
+KInner
+]
+[source]
+
+Return an iterator with the head being the
+config
+and the tail being the
+constraints
+.
+add_constraint
+(
+new_constraint
+:
+KInner
+)
+→
+CTerm
+[source]
+
+Return a new
+CTerm
+with the additional constraints.
+anti_unify
+(
+other
+:
+CTerm
+,
+keep_values
+:
+bool
+=
+False
+,
+kdef
+:
+KDefinition
+|
+None
+=
+None
+)
+→
+tuple
+[
+CTerm
+,
+CSubst
+,
+CSubst
+]
+[source]
+
+Given two
+CTerm
+instances, find a more general
+CTerm
+which can instantiate to both.
+Parameters
+:
+other
+– other
+CTerm
+to consider for finding a more general
+CTerm
+with this one.
+keep_values
+– do not discard information about abstracted variables in returned result.
+kdef
+(
+optional
+) –
+KDefinition
+to make analysis more precise.
+Returns
+:
+A tuple
+(cterm,
+csubst1,
+csubst2)
+where
+cterm
+: More general
+CTerm
+than either
+self
+or
+other
+.
+csubst1
+: Constrained substitution to apply to
+cterm
+to obtain
+self
+.
+csubst2
+: Constrained substitution to apply to
+cterm
+to obtain
+other
+.
+static
+bottom
+(
+)
+→
+CTerm
+[source]
+
+Construct a
+CTerm
+representing no possible states.
+cell
+(
+cell
+:
+str
+)
+→
+KInner
+[source]
+
+Access the contents of a named cell in the
+config
+, die on failure.
+property
+cells
+:
+Subst
+
+Return key-value store of the contents of each cell in the
+config
+.
+config
+:
+KInner
+
+property
+constraint
+:
+KInner
+
+Return the unstructured bare
+KInner
+representation of the constraints.
+constraints
+:
+tuple
+[
+KInner
+,
+...
+]
+
+property
+free_vars
+:
+frozenset
+[
+str
+]
+
+Return the set of free variable names contained in this
+CTerm
+.
+static
+from_dict
+(
+dct
+:
+dict
+[
+str
+,
+Any
+]
+)
+→
+CTerm
+[source]
+
+Deserialize a
+CTerm
+from its dictionary representation.
+static
+from_kast
+(
+kast
+:
+KInner
+)
+→
+CTerm
+[source]
+
+Interpret a given
+KInner
+as a
+CTerm
+by splitting the
+config
+and
+constraints
+(see
+CTerm.kast
+).
+property
+hash
+:
+str
+
+Unique hash representing the contents of this
+CTerm
+.
+property
+is_bottom
+:
+bool
+
+Check if a given
+CTerm
+is trivially empty.
+property
+kast
+:
+KInner
+
+Return the unstructured bare
+KInner
+representation of a
+CTerm
+(see
+CTerm.from_kast
+).
+match
+(
+cterm
+:
+CTerm
+)
+→
+Subst
+|
+None
+[source]
+
+Find
+Subst
+instantiating this
+CTerm
+to the other, return
+None
+if no such
+Subst
+exists.
+match_with_constraint
+(
+cterm
+:
+CTerm
+)
+→
+CSubst
+|
+None
+[source]
+
+Find
+CSubst
+instantiating this
+CTerm
+to the other, return
+None
+if no such
+CSubst
+exists.
+remove_useless_constraints
+(
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+)
+→
+CTerm
+[source]
+
+Return a new
+CTerm
+with constraints over unbound variables removed.
+Parameters
+:
+keep_vars
+– List of variables to keep constraints for even if unbound in the
+CTerm
+.
+Returns
+:
+A
+CTerm
+with the constraints over unbound variables removed.
+to_dict
+(
+)
+→
+dict
+[
+str
+,
+Any
+]
+[source]
+
+Serialize a
+CTerm
+to dictionary representation.
+static
+top
+(
+)
+→
+CTerm
+[source]
+
+Construct a
+CTerm
+representing all possible states.
+try_cell
+(
+cell
+:
+str
+)
+→
+KInner
+|
+None
+[source]
+
+Access the contents of a named cell in the
+config
+, return
+None
+on failure.
+anti_unify
+(
+state1
+:
+KInner
+,
+state2
+:
+KInner
+,
+kdef
+:
+KDefinition
+|
+None
+=
+None
+)
+→
+tuple
+[
+KInner
+,
+Subst
+,
+Subst
+]
+[source]
+
+Return a generalized state over the two input states.
+Parameters
+:
+state1
+– State to generalize over, represented as bare
+KInner
+.
+state2
+– State to generalize over, represented as bare
+KInner
+.
+kdef
+(
+optional
+) –
+KDefinition
+to make the analysis more precise.
+Note
+Both
+state1
+and
+state2
+are expected to be bare configurations with no constraints attached.
+Returns
+:
+A tuple
+(state,
+subst1,
+subst2)
+such that
+state
+: A symbolic state represented as
+KInner
+which is more general than
+state1
+or
+state2
+.
+subst1
+: A
+Subst
+which, when applied to
+state
+, recovers
+state1
+.
+subst2
+: A
+Subst
+which, when applied to
+state
+, recovers
+state2
+.
+cterm_build_claim
+(
+claim_id
+:
+str
+,
+init_cterm
+:
+CTerm
+,
+final_cterm
+:
+CTerm
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+,
+keep_unsafe
+:
+bool
+=
+False
+,
+filter_useless_constraints
+:
+bool
+=
+False
+)
+→
+tuple
+[
+KClaim
+,
+Subst
+]
+[source]
+
+Return a
+KClaim
+between the supplied initial and final states.
+Parameters
+:
+claim_id
+– Label to give the claim.
+init_cterm
+– State to put on LHS of the rule (constraints interpreted as
+requires
+clause).
+final_cterm
+– State to put on RHS of the rule (constraints interpreted as
+ensures
+clause).
+keep_vars
+– Variables to leave in the side-conditions even if not bound in the configuration.
+keep_unsafe
+– Forwarded to
+build_claim
+— retain ML constraints that cannot be compiled to Bool.
+filter_useless_constraints
+– Forwarded to
+build_claim
+— drop constraints not reachable from the rule body.
+Returns
+:
+A tuple
+(claim,
+var_map)
+where
+claim
+: A
+KClaim
+with variable naming conventions applied
+so that it should be parseable by the K Frontend.
+var_map
+: The variable renamings applied to make the claim parseable by the K Frontend
+(which can be undone to recover original variables).
+cterm_build_rule
+(
+rule_id
+:
+str
+,
+init_cterm
+:
+CTerm
+,
+final_cterm
+:
+CTerm
+,
+priority
+:
+int
+|
+None
+=
+None
+,
+keep_vars
+:
+Iterable
+[
+str
+]
+=
+()
+,
+defunc_with
+:
+KDefinition
+|
+None
+=
+None
+,
+keep_unsafe
+:
+bool
+=
+False
+,
+filter_useless_constraints
+:
+bool
+=
+False
+)
+→
+tuple
+[
+KRule
+,
+Subst
+]
+[source]
+
+Return a
+KRule
+between the supplied initial and final states.
+Parameters
+:
+rule_id
+– Label to give the rule.
+init_cterm
+– State to put on LHS of the rule (constraints interpreted as
+requires
+clause).
+final_cterm
+– State to put on RHS of the rule (constraints interpreted as
+ensures
+clause).
+keep_vars
+– Variables to leave in the side-conditions even if not bound in the configuration.
+priority
+– Priority index to use for generated rules.
+defunc_with
+(
+optional
+) – KDefinition to be able to defunctionalize LHS appropriately.
+keep_unsafe
+– Forwarded to
+build_rule
+— retain ML constraints that cannot be compiled to Bool.
+filter_useless_constraints
+– Forwarded to
+build_rule
+— drop constraints not reachable from the rule body.
+Returns
+:
+A tuple
+(rule,
+var_map)
+where
+rule
+: A
+KRule
+with variable naming conventions applied
+so that it should be parseable by the K Frontend.
+var_map
+: The variable renamings applied to make the rule parseable by the K Frontend
+(which can be undone to recover original variables).
+cterms_anti_unify
+(
+cterms
+:
+Iterable
+[
+CTerm
+]
+,
+keep_values
+:
+bool
+=
+False
+,
+kdef
+:
+KDefinition
+|
+None
+=
+None
+)
+→
+tuple
+[
+CTerm
+,
+list
+[
+CSubst
+]
+]
+[source]
+
+Given many
+CTerm
+instances, find a more general
+CTerm
+which can instantiate to all.
+Parameters
+:
+cterms
+–
+CTerm`s to consider for finding a more general `CTerm
+with this one.
+keep_values
+– do not discard information about abstracted variables in returned result.
+kdef
+(
+optional
+) –
+KDefinition
+to make analysis more precise.
+Returns
+:
+A tuple
+(cterm,
+csubsts)
+where
+cterm
+: More general
+CTerm
+than any of the input
+`
+CTerm`s.
+csubsts
+: List of
+CSubst
+which, when applied to
+cterm
+, yield the input
+`
+CTerm`s.
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

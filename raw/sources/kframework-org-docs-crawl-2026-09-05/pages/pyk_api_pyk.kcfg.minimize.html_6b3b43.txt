@@ -1,0 +1,273 @@
+# pyk.kcfg.minimize module — pyk 7.1.337 documentation
+# https://kframework.org/pyk/api/pyk.kcfg.minimize.html
+
+pyk
+Contents:
+pyk
+pyk package
+Subpackages
+pyk.cterm package
+pyk.kast package
+pyk.kbuild package
+pyk.kcfg package
+pyk.kdist package
+pyk.klean package
+pyk.kllvm package
+pyk.konvert package
+pyk.kore package
+pyk.kore_exec_covr package
+pyk.ktool package
+pyk.proof package
+pyk.testing package
+Submodules
+pyk
+pyk
+pyk package
+pyk.kcfg package
+pyk.kcfg.minimize module
+View page source
+pyk.kcfg.minimize module
+
+class
+KCFGMinimizer
+(
+kcfg
+:
+KCFG
+,
+heuristics
+:
+KCFGSemantics
+|
+None
+=
+None
+,
+kdef
+:
+KDefinition
+|
+None
+=
+None
+)
+[source]
+
+Bases:
+object
+kcfg
+:
+KCFG
+
+kdef
+:
+KDefinition
+|
+None
+
+lift_edge
+(
+b_id
+:
+NodeIdLike
+)
+→
+None
+[source]
+
+Lift an edge up another edge directly preceding it.
+A –M steps–> B –N steps–> C
+becomes
+A –(M + N) steps–> C
+. Node
+B
+is removed.
+Parameters
+:
+b_id
+– the identifier of the central node
+B
+of a sequence of edges
+A –> B –> C
+.
+Raises
+:
+AssertionError
+– If the edges in question are not in place.
+lift_edges
+(
+)
+→
+bool
+[source]
+
+Perform all possible edge lifts across the KCFG.
+The KCFG is transformed to an equivalent in which no further edge lifts are possible.
+Given the KCFG design, it is not possible for one edge lift to either disallow another or
+allow another that was not previously possible. Therefore, this function is guaranteed to
+lift all possible edges without having to loop.
+Returns
+:
+An indicator of whether or not at least one edge lift was performed.
+lift_split_edge
+(
+b_id
+:
+NodeIdLike
+)
+→
+None
+[source]
+
+Lift a split up an edge directly preceding it.
+A –M steps–> B –[cond_1, …, cond_N]–> [C_1, …, C_N]
+becomes
+A –[cond_1, …, cond_N]–> [A #And cond_1 –M steps–> C_1, …, A #And cond_N –M steps–> C_N]
+.
+Node
+B
+is removed.
+Parameters
+:
+b_id
+– The identifier of the central node
+B
+of the structure
+A –> B –> [C_1, …, C_N]
+.
+Raises
+:
+AssertionError
+– If the structure in question is not in place.
+AssertionError
+– If any of the
+cond_i
+contain variables not present in
+A
+.
+lift_split_split
+(
+b_id
+:
+NodeIdLike
+)
+→
+None
+[source]
+
+Lift a split up a split directly preceding it, joining them into a single split.
+A –[…, cond_B, …]–> […, B, …]
+with
+B –[cond_1, …, cond_N]–> [C_1, …, C_N]
+becomes
+A –[…, cond_B #And cond_1, …, cond_B #And cond_N, …]–> […, C_1, …, C_N, …]
+.
+Node
+B
+is removed.
+Parameters
+:
+b_id
+– the identifier of the node
+B
+of the structure
+A –[…, cond_B, …]–> […, B, …]
+with
+B –[cond_1, …, cond_N]–> [C_1, …, C_N]
+.
+Raises
+:
+AssertionError
+– If the structure in question is not in place.
+lift_splits
+(
+)
+→
+bool
+[source]
+
+Perform all possible split liftings.
+The KCFG is transformed to an equivalent in which no further split lifts are possible.
+Returns
+:
+An indicator of whether or not at least one split lift was performed.
+merge_nodes
+(
+)
+→
+bool
+[source]
+
+Merge targets of Split for cutting down the number of branches, using heuristics KCFGSemantics.is_mergeable.
+Side Effect: The KCFG is rewritten by the following rewrite pattern,
+Match: A -
+|Split|
+-> A_i -
+|Edge|
+-> B_i
+Rewrite:
+if
+B_x, B_y, …, B_z are not mergeable
+then unchanged
+if
+B_x, B_y, …, B_z are mergeable
+, then
+A -
+|Split|
+-> A_x or A_y or … or A_z
+A_x or A_y or … or A_z -
+|Edge|
+-> B_x or B_y or … or B_z
+B_x or B_y or … or B_z -
+|Split|
+-> B_x, B_y, …, B_z
+Specifically, when
+B_merge = B_x or B_y or … or B_z
+-
+or
+: fresh variables in places where the configurations differ
+-
+Edge
+in A_merged -
+|Edge|
+-> B_merge: list of merged edges is from A_i -
+|Edge|
+-> B_i
+-
+Split
+in B_merge -
+|Split|
+-> B_x, B_y, …, B_z: subst for it is from A -
+|Split|
+-> A_1, A_2, …, A_n
+:param semantics: provides the is_mergeable heuristic
+:return: whether any merge was performed
+minimize
+(
+merge
+:
+bool
+=
+False
+)
+→
+None
+[source]
+
+Minimize KCFG by repeatedly performing the lifting transformations.
+The KCFG is transformed to an equivalent in which no further lifting transformations are possible.
+The loop is designed so that each transformation is performed once in each iteration.
+semantics
+:
+KCFGSemantics
+
+Previous
+Next
+© Copyright 2024, Runtime Verification, Inc.
+Built with
+Sphinx
+using a
+theme
+provided by
+Read the Docs
+.

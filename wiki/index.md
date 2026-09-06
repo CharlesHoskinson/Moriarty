@@ -42,6 +42,59 @@ will grow by merging evidence into durable topic pages.
   signing/verification/commit boundary under implementation, and the reviewed
   native Candidate B design with explicit stranded-escrow and clock boundaries.
 
+## K Framework and ZKIR semantics
+
+Started 2026-09-03 on branch `zkir-k-semantics`. Goal: an executable K
+Framework semantics of ZKIR v3. Pins: K v7.1.337 (`4a46d123`), arc-zkir
+(`fd1c24e1`), `midnight-ledger` `ledger-9` `92e8bdd3` for the specified
+surface, standalone `midnight-zkir` `2ffe2d17`.
+
+- [ZKIR semantics in K: plan](zkir-k-semantics-plan.md) — the synthesis:
+  configuration, sorts, rule shape, pin, field representation, parsing route,
+  test oracle, and the milestones with their results.
+- [The ZKIR semantics in K, as built](zkir/zkir-k-definition.md) — module
+- [ZKIR K definition documentation](../experiments/zkir-k/docs/01-overview.md) — fifteen chapters, from getting started to the instruction reference, the verdict model, the tooling, the oracles, the known divergences and the design limits; each chapter checked cross-vendor as developer and formal methods reader
+  layout, what a run produces, the three layers of checking against the Rust
+  crate, the divergences found, and the Agda and k-rust oracles.
+- [K Framework overview](k-framework/k-framework-overview.md) — what K is,
+  repository layout, install paths, toolchain commands, backends.
+- [K tutorial section 1](k-framework/k-tutorial-basic.md) — lessons 1.1 to
+  1.22: syntax, attributes, configurations, rules, strictness, builtins,
+  casts, debugging, backends, symbolic execution, proofs.
+- [K tutorial section 2](k-framework/k-tutorial-intermediate.md) — lessons
+  2.1 to 2.17 (most are stubs that defer to the user manual): macros, fresh
+  constants, KLabels, overloading, #Or, function context, MInt, KORE, REPL.
+- [K best practices for the ZKIR definition](k-framework/k-best-practices.md) —
+  functions and totality, rule discipline, collections, builtins, backends,
+  naming, testing, distilled from the full kframework.org crawl (SRC-0039) and
+  applied to the ZKIR modules.
+- [K user manual digest](k-framework/k-user-manual.md) — production, cell and
+  rule attributes, rewriting semantics, module system, kompile/krun/kprove
+  options, claims.
+- [K builtin domains](k-framework/k-builtins.md) — Int, Bool, String, Map,
+  List, Set, Bytes, MInt, Float, and what fits a prime-field circuit IR.
+- [K backends, tools, and pyk](k-framework/k-backends-and-tools.md) — LLVM
+  and Haskell backends, KORE, kore-rpc, pyk pipeline and KCFG proofs.
+- [K documentation graph](k-framework/k-documentation-graph.md) — 315-node
+  graphify graph of the K docs built through agy; hubs, communities, health.
+- [ZKIR instruction set](zkir/zkir-instruction-set.md) — program structure,
+  all 34 spec instructions with witness and constraint semantics, JSON
+  format, worked precompile example, the 2ffe2d1 extensions.
+- [ZKIR types and values](zkir/zkir-type-system.md) — BLS12-381 scalar
+  field, the thirteen-type surface, conversions, typed outputs, invariants.
+- [ZKIR VM operational semantics](zkir/zkir-vm-semantics.md) — state,
+  transition rules per instruction, preprocessing, proving modes, errors,
+  spec versus crate.
+- [Compact to ZKIR pipeline](zkir/compact-to-zkir-pipeline.md) — how
+  compactc lowers circuits, v2 default and v3 flag, artifacts, ledger
+  consumption.
+- [ZKIR formal specification and Agda mechanization](zkir/zkir-formal-spec-agda.md)
+  — arc-zkir pins, formal model, trust base, theorems, module map, timeline.
+- [ZKIR v3 in-circuit versus off-circuit divergences](zkir/zkir-v3-divergence-review.md)
+  — the 13 review findings and their consequences for a K definition.
+- [Midnight's K tooling](zkir/midnight-k-tooling.md) — k-rust and
+  k-framework-ts: scope, supported K subset, pins, Lean export, maturity.
+
 ## Active specification artifacts
 
 - [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — A0–A3 locally accepted;

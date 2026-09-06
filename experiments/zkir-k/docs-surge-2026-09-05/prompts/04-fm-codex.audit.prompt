@@ -1,0 +1,242 @@
+You are auditing one chapter of technical documentation inside the repository at /home/charl/Moriarty/.worktrees/zkir-k-semantics (your working directory). Relative paths are relative to that root. Chapter: experiments/zkir-k/docs/04-values-and-encoding.md. Chapter brief: experiments/zkir-k/docs-surge-2026-09-05/briefs/04.md. Write your report to experiments/zkir-k/docs-surge-2026-09-05/audits/04-fm-codex.md and nothing else. Proceed without asking questions.
+
+=================== AUDIT BRIEF ===================
+# Common brief for chapter auditors
+
+You audit one drafted chapter of the end-to-end documentation of the K
+semantics of ZKIR v3 in this repository. You do not rewrite the chapter. You
+produce a findings report that the editor uses to fix it.
+
+Read first: `experiments/zkir-k/docs-surge-2026-09-05/briefs/COMMON.md` (the
+rules the chapter had to follow; its "Where things are" section tells you the
+sources) and the chapter brief named in your task. Then read the chapter under
+`experiments/zkir-k/docs/`. Then check it.
+
+## What counts as a finding
+
+- A statement about the semantics, the tools, the corpus, the crate or the
+  results that is not true of the files as they are now (cite the source that
+  contradicts it, with file and line).
+- A number that does not match its source.
+- A command that does not run from the repository root, or whose shown output
+  differs from the real output in a way that matters.
+- A name that does not exist in the K files, the tools or the Rust sources.
+- Missing coverage of an item listed under "Must cover" in the chapter brief.
+- A violation of the hard rules of the common brief (placeholders, mention of
+  drafting or reviewing, invented names, several `#` titles, em-dashes).
+- Text a reader of the stated audience could not use: ambiguous, circular,
+  or requiring knowledge the documentation set does not give.
+
+Do not report style preferences with no effect on correctness or usability.
+Do not report the absence of things the chapter brief assigns to another
+chapter.
+
+## Severity
+
+- blocking: false statement about behaviour, wrong number, command that fails,
+  missing must-cover item.
+- major: misleading or imprecise statement that a careful reader would take the
+  wrong way; wrong file or symbol name; unverifiable claim.
+- minor: everything else worth fixing.
+
+## Report format
+
+Write exactly one file, the report path given in your task, in this form:
+
+```
+# Audit of <chapter file> (<role>)
+
+Verdict: ACCEPT | REVISE | REJECT
+(ACCEPT: no blocking or major findings. REVISE: fixable findings. REJECT:
+the chapter must be redrafted.)
+
+Checks performed: <one line per thing you actually verified, e.g. "ran the
+five commands in section X", "compared the instruction table with
+zkir-syntax.k lines 86-121">
+
+## Findings
+### F1 <severity> <chapter section or quoted phrase>
+Claim: <what the chapter says>
+Evidence: <file:line or command output that contradicts or confirms>
+Fix: <the concrete replacement text or action>
+### F2 ...
+
+## Coverage
+<for each "Must cover" bullet of the chapter brief: covered / partly / missing, one line each>
+```
+
+Rules: you may run read-only commands and the Python tools (from the
+repository root, `uv run --group zkir-k python experiments/zkir-k/tools/...`);
+you must not modify any file except your report; no git write commands; no
+kompile. Do not stop to ask questions; if something is uncertain, say so in
+the finding and continue. Findings must be verifiable by someone who has only
+your report and the repository.
+
+## Role: formal methods expert
+
+You are a formal methods expert in rewriting logic and K, with ZK circuit
+background, who will rely on this chapter to reason about the definition. You
+check truth-by-reading against the K rules and the Rust sources:
+
+- For every described rule, function, cell, sort, constructor or outcome, open
+  the K file and confirm the description (name, arity, guards, priority,
+  owise, what it returns in every case the chapter mentions).
+- For every statement about the crate's behaviour, confirm it in the Rust
+  source under repos/ or in the recorded findings.
+- For every statement about what a result establishes (soundness,
+  completeness, what a verdict proves), check it is neither stronger nor weaker
+  than what the rules support; overclaims are blocking.
+- Check terminology follows the common brief and is used consistently.
+- Check that examples (terms, traces, encodings) are actually what the rules
+  produce; recompute them.
+
+=================== COMMON DRAFTING BRIEF (the rules the chapter had to follow) ==================
+# Common brief for every chapter author
+
+You are writing one chapter of the end-to-end documentation of the executable
+K semantics of ZKIR v3 that lives in this repository. Read this brief in full,
+then your chapter brief, then the sources, then write the chapter.
+
+## Where things are (all paths relative to the repository root, which is your working directory)
+
+- `experiments/zkir-k/semantics/*.k` — the K definition. Main modules:
+  `zkir.k` (ZKIR = ZKIR-VM, base surface, midnight-ledger 92e8bdd3),
+  `zkir-ext.k` (ZKIR-EXT, midnight-zkir 2ffe2d1 surface), `zkir-check.k`
+  (ZKIR-CHECK = static well-formedness only), `zkir-test.k` (ZKIR-TEST, pure
+  functions for unit tests). Module files: `zkir-syntax.k` (ZKIR-SYNTAX,
+  ZKIR-WF), `zkir-field.k`, `zkir-curves.k`, `zkir-values.k`,
+  `zkir-constants.k` (generated), `zkir-hash.k`, `zkir-ops.k`, `zkir-vm.k`,
+  `zkir-constraints.k`, `zkir-sha512-constants.k`.
+- `experiments/zkir-k/semantics/*-kompiled/` — the four compiled definitions
+  (LLVM backend, `kompile <main>.k --backend llvm --emit-json -O1`, K v7.1.337).
+- `experiments/zkir-k/tools/*.py` — pyk preprocessor and harnesses:
+  `zkir_kast.py` (JSON artifact to K term; `kore|kast|check` commands, `--ext`),
+  `zkir_run.py` (run a program on a preimage: `uv run --group zkir-k python
+  experiments/zkir-k/tools/zkir_run.py PROGRAM.zkir PREIMAGE.json [--ext]
+  [--checked]`), `diff_test.py` (differential harness against the Rust oracle,
+  `--ext`, `--only`, `--seed`, `--no-perturb`, `--attempts`),
+  `divergence_tests.py` (20 targeted cases), `unit_values.py` (42 checks),
+  `unit_hash.py` (18 known-answer checks), `check_corpus.py` (well-formedness
+  of the corpus), `gen_handmade.py`, `gen_constants.py`,
+  `extract_test_inputs.py`, `zkir_values.py` (independent Python encoders).
+  Python is run through uv: `uv run --group zkir-k python ...` from the
+  repository root (the group is in `pyproject.toml`).
+- `experiments/zkir-k/corpus/` — programs: `ledger9-92e8bdd3-tests/` (43 +
+  manifest.json), `midnight-zkir-2ffe2d1-tests/` (61),
+  `midnight-zkir-2ffe2d1-precompiles/` (6), `handmade/` (9 + manifest.json),
+  `handmade-negative/` (7), `divergence/` (20).
+- `experiments/zkir-k/review-2026-09-05/CONSOLIDATED.md` — the accepted
+  findings of the earlier eight-reviewer audit and how each was fixed (read it
+  for the reasons behind many rules; do not cite reviewers by name in the
+  chapter).
+- `wiki/zkir/zkir-k-definition.md` — the current summary page of the
+  definition. `wiki/zkir-k-semantics-plan.md` — the plan and its decisions.
+  `wiki/zkir/zkir-instruction-set.md`, `wiki/zkir/zkir-type-system.md`,
+  `wiki/zkir/zkir-vm-semantics.md` — pages on the ZKIR surface itself.
+  `wiki/contradictions.md` — the recorded divergences (rows K1 to K5 and the
+  extension test_eq row). `wiki/k-framework/k-best-practices.md` — K usage notes.
+- The Rust sources the definition follows, at the pinned commits:
+  `repos/_build/ledger-92e8bdd3/zkir-v3/src/` (`ir.rs`, `ir_types.rs`,
+  `ir_vm.rs`, `ir_instructions/*.rs`; midnight-ledger at 92e8bdd3) and
+  `repos/_build/midnight-zkir-2ffe2d1/zkir/src/` (midnight-zkir at 2ffe2d1).
+  Use these copies, not the working trees under `repos/midnightntwrk/`, whose
+  checkouts may be at other commits (`git show 92e8bdd3:path` also works
+  there). The same `_build` directories hold the `zkir-oracle` harness crates
+  (binary at `target/release/zkir-oracle`). midnight-circuits 7.2.4 and
+  midnight-curves 0.3.1 are in the cargo registry (`find ~/.cargo/registry/src
+  -maxdepth 2 -name 'midnight-*'`).
+- `evidence/zkir-k-*-2026-09-05b.txt` — receipts of the current results.
+
+## What the documentation is for
+
+A reader who knows ZK circuits and some K, but has never seen this
+repository, must be able to understand, run, extend and trust the definition
+from the documentation alone. The set has fifteen chapters under
+`experiments/zkir-k/docs/`; yours is one of them. Chapter list:
+
+01-overview.md, 02-getting-started.md, 03-program-model.md,
+04-values-and-encoding.md, 05-fields-curves-and-hashes.md,
+06-configuration-and-run-lifecycle.md, 07-instruction-reference.md,
+08-constraints-and-verdicts.md, 09-extension-surface.md,
+10-well-formedness-and-static-checks.md, 11-tooling-reference.md,
+12-oracles-and-differential-testing.md, 13-known-divergences.md,
+14-extending-the-semantics.md, 15-design-rationale-and-limits.md.
+
+Cross-reference other chapters by file name when a topic belongs there
+(e.g. "see 08-constraints-and-verdicts.md"); do not duplicate their content.
+
+## Hard rules
+
+1. Every statement about the semantics must be true of the files as they are
+   now. Read the rules before describing them. When you describe a rule,
+   function, cell or constructor, name the file and the K symbol so the reader
+   can find it (for example `zkir-vm.k`, rule for `impact`). Quote short K
+   fragments verbatim where they help; keep quotations under ten lines.
+2. Numbers (counts of instructions, types, checks, comparisons) must be taken
+   from the sources or the receipts, not remembered. If you cannot verify a
+   number, leave it out.
+3. Do not invent names for things. Use the names in the K files, the tools and
+   the Rust sources.
+4. The chapter must stand alone as documentation: no mention of how it was
+   written, of authors, reviewers, personas, waves, agents, drafts, audits or
+   "this document". No placeholders, no TODO, no "TBD", no "coming soon", no
+   empty sections. No status tags. Do not mention the date of writing.
+5. Style: GitHub markdown; one `#` title (the chapter title), `##` and `###`
+   sections; short paragraphs; tables for parallel facts; fenced code blocks
+   for commands, JSON and K fragments (use the `k` language tag for K). Plain
+   prose, present tense, no marketing. No em-dashes. Expand an abbreviation the
+   first time it appears. Aim for the length your chapter brief gives.
+6. Write exactly one file: `experiments/zkir-k/docs/<your chapter file>`.
+   Do not modify any other file in the repository. Do not create other files.
+   Do not run any git command that writes (add, commit, stash, checkout,
+   reset, branch). Do not run kompile. You may run the Python tools
+   read-only to check facts (they write nothing outside the scratch
+   directories of the OS), and you may run `git log`/`git show` to read.
+7. Do not edit the K semantics or the tools, even if you believe you found a
+   defect. Instead, describe the behaviour as it is, and put any suspected
+   defect in a final section titled `## Notes for maintainers` at the very end
+   of your chapter (this section will be removed before publication, so keep
+   it factual: file, line, what you expected, what you saw). If you have no
+   notes, omit the section.
+
+## Terminology to use consistently
+
+- "the definition" for the K definition as a whole; "the base surface" for
+  ZKIR v3 at midnight-ledger 92e8bdd3; "the extension surface" for
+  midnight-zkir 2ffe2d1; "the crate" for the Rust implementation being
+  modelled; "the oracle" for the `zkir-oracle` harness.
+- "off-circuit" (witness computation, `preprocess`) and "in-circuit"
+  (constraint relation, `circuit`); "gate" for an entry of `<constraints>`;
+  "verdict" for an entry of `<verdicts>`; "outcome" for holds / violated /
+  synthErr / unknown / unsupported.
+- Run entry points: `job` (raw), `checkedJob` (static check first), `genJob`
+  (generation mode). Run statuses: ok, error, panic, and the runner-level
+  stuck and depth-exhausted.
+- Preimage: the JSON object with `inputs`, `binding_input`,
+  `communications_commitment` (optional; a two-element array
+  [commitment, opening]), `private_transcript`, `public_transcript_inputs`,
+  `public_transcript_outputs` (see `preimage_term` in `tools/zkir_run.py`).
+
+=================== CHAPTER BRIEF ==================
+# Chapter brief: 04-values-and-encoding.md
+
+## Objective
+Write `experiments/zkir-k/docs/04-values-and-encoding.md`, a complete chapter of about 1300 words (tables and code blocks not counted).
+
+## Persona
+Write as: Cryptographic engineer who thinks in bytes, limbs and canonical forms. The persona shapes emphasis and examples only; the hard rules of the common brief still apply, and the text must never mention the persona.
+
+## Must cover
+- The Value sort in `zkir-values.k`: the 13 constructors, what each carries (Int, Bytes, points), typeOf, typeName.
+- Encoding to raw field elements (`encodeValue`): per type, exact layouts (native, bytes32 as two field elements, points, foreign field limbs: LOG2_BASE and limb counts, the value-minus-one shift for scalars where it applies; verify every claim in the K file and the Rust `encode.rs`).
+- Decoding from raw (`decodeValue`, `decodeStrict`): range checks, `decErr` versus `decPanic` (Bytes32 canonical form), native range check, foreign decoding guards, and the strict re-encode check of the extension.
+- Public inputs and `from_public_input`: how a typed input becomes memory and `<pi>` entries; how outputs are encoded at the end (`#encodeAll`).
+- Error messages: the exact strings and how the differential harness classes them.
+- Cross-check table: for each type, encodedLen, K encoder rule, Rust function, and the unit check in `unit_values.py` that covers it.
+
+## Verification before you finish
+- Re-read every claim that names a file, a symbol, a number or a message and confirm it against the source.
+- Confirm every command you show runs from the repository root (run it if it is read-only and quick).
+- Confirm the file has no placeholder, no TODO, no mention of drafting or reviewing, and exactly one `#` title.
+
+When the report is written, reply with one line: DONE experiments/zkir-k/docs-surge-2026-09-05/audits/04-fm-codex.md <verdict>.

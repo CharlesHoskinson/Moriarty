@@ -1,0 +1,57 @@
+{
+  "version": {
+    "major": 3,
+    "minor": 0
+  },
+  "inputs": [
+    {
+      "name": "%a",
+      "type": "Byte"
+    },
+    {
+      "name": "%b",
+      "type": "Byte"
+    },
+    {
+      "name": "%bit",
+      "type": "Scalar<BLS12-381>"
+    }
+  ],
+  "outputs": [],
+  "do_communications_commitment": false,
+  "instructions": [
+    {
+      "op": "cond_select",
+      "bit": "%bit",
+      "a": "%a",
+      "b": "%b",
+      "output": "%sel"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%sel",
+      "b": "%a"
+    },
+    {
+      "op": "private_input",
+      "type": "Byte",
+      "guard": null,
+      "output": "%a_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%a",
+      "b": "%a_priv"
+    },
+    {
+      "op": "test_eq",
+      "a": "%a",
+      "b": "%sel",
+      "output": "%a_eq_sel"
+    },
+    {
+      "op": "assert",
+      "cond": "%a_eq_sel"
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+{
+  "version": {
+    "major": 3,
+    "minor": 0
+  },
+  "inputs": [
+    {
+      "name": "%id",
+      "type": "Point<Curve25519>"
+    },
+    {
+      "name": "%p0",
+      "type": "Point<Curve25519>"
+    },
+    {
+      "name": "%p1",
+      "type": "Point<Curve25519>"
+    },
+    {
+      "name": "%b0",
+      "type": "Base<Curve25519>"
+    },
+    {
+      "name": "%b1",
+      "type": "Base<Curve25519>"
+    },
+    {
+      "name": "%s0",
+      "type": "Scalar<Curve25519>"
+    },
+    {
+      "name": "%s1",
+      "type": "Scalar<Curve25519>"
+    }
+  ],
+  "outputs": [],
+  "do_communications_commitment": false,
+  "instructions": [
+    {
+      "op": "add",
+      "a": "%p0",
+      "b": "%p1",
+      "output": "%p2"
+    },
+    {
+      "op": "add",
+      "a": "%b0",
+      "b": "%b1",
+      "output": "%b2"
+    },
+    {
+      "op": "add",
+      "a": "%s0",
+      "b": "%s1",
+      "output": "%s2"
+    },
+    {
+      "op": "mul",
+      "a": "%b0",
+      "b": "%b1",
+      "output": "%b_prod"
+    },
+    {
+      "op": "mul",
+      "a": "%s0",
+      "b": "%s1",
+      "output": "%s_prod"
+    },
+    {
+      "op": "neg",
+      "a": "%p0",
+      "output": "%p0_neg"
+    },
+    {
+      "op": "neg",
+      "a": "%b0",
+      "output": "%b0_neg"
+    },
+    {
+      "op": "neg",
+      "a": "%s0",
+      "output": "%s0_neg"
+    },
+    {
+      "op": "inv",
+      "a": "%b0",
+      "output": "%b0_inv"
+    },
+    {
+      "op": "inv",
+      "a": "%s0",
+      "output": "%s0_inv"
+    },
+    {
+      "op": "private_input",
+      "type": "Point<Curve25519>",
+      "guard": null,
+      "output": "%p2_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Base<Curve25519>",
+      "guard": null,
+      "output": "%b_prod_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Scalar<Curve25519>",
+      "guard": null,
+      "output": "%s_prod_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Point<Curve25519>",
+      "guard": null,
+      "output": "%p0_neg_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Base<Curve25519>",
+      "guard": null,
+      "output": "%b0_neg_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Scalar<Curve25519>",
+      "guard": null,
+      "output": "%s0_neg_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Base<Curve25519>",
+      "guard": null,
+      "output": "%b0_inv_priv"
+    },
+    {
+      "op": "private_input",
+      "type": "Scalar<Curve25519>",
+      "guard": null,
+      "output": "%s0_inv_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%p2",
+      "b": "%p2_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%b_prod",
+      "b": "%b_prod_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%p0_neg",
+      "b": "%p0_neg_priv"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%b0_neg",
+      "b": "%b0_neg_priv"
+    },
+    {
+      "op": "test_eq",
+      "a": "%s_prod",
+      "b": "%s_prod_priv",
+      "output": "%sp_eq"
+    },
+    {
+      "op": "assert",
+      "cond": "%sp_eq"
+    },
+    {
+      "op": "test_eq",
+      "a": "%s0_neg",
+      "b": "%s0_neg_priv",
+      "output": "%sn_eq"
+    },
+    {
+      "op": "assert",
+      "cond": "%sn_eq"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%b0_inv",
+      "b": "%b0_inv_priv"
+    },
+    {
+      "op": "test_eq",
+      "a": "%s0_inv",
+      "b": "%s0_inv_priv",
+      "output": "%si_eq"
+    },
+    {
+      "op": "assert",
+      "cond": "%si_eq"
+    }
+  ]
+}

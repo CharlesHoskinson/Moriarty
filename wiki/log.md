@@ -636,3 +636,88 @@ locate only this invocation's observed interval. Full original preservation
 intake passed; empty outputs, forced cleanup and H1 unresolved remain explicit.
 The final-source A4 parser capture has an authentic terminal under independent
 intake. No Council, model-checking or main implementation acceptance is claimed.
+## [2026-09-03] ingest | K Framework, ZKIR specification, and Midnight K tooling
+
+Crawled kframework.org with Scrapling (SRC-0037) and confirmed
+`runtimeverification/k` as the sole canonical repository; cloned it at
+v7.1.337 (SRC-0036) and recorded the lock. Acquired `input-output-hk/arc-zkir`
+(SRC-0038), the Agda mechanization and textual specification of ZKIR v2 and v3,
+and fetched its pinned `midnight-ledger` `ledger-9` commit `92e8bdd3`. Built a
+315-node graphify graph of the K documentation with agy `gemini-3.8-flash-high`
+as extractor. Wrote seven K pages, seven ZKIR pages, and the ZKIR-in-K plan (advisory consult routed to agy after Claude overload, preserved in raw/notes/);
+recorded the ledger-8 versus ledger-9 pin conflict and the 34 versus 42
+instruction drift as contradictions. Claude subagents were abandoned for this
+ingest after repeated API overload failures; all reading was done by agy.
+
+## [2026-09-05] toolchain | K v7.1.337 installed and checked (milestone 1)
+
+Installed `kup` 0.2.6 into the Nix profile and K v7.1.337 at the pinned commit
+4a46d123 from the K binary cache (2m 29s, no source build). Lesson 1.2 of the K
+tutorial compiles and runs on the LLVM and Haskell backends; pyk 7.1.337 from
+PyPI (`kframework`, uv group `zkir-k`) round-trips KAST through KORE and runs a
+program. Check script and receipt: `experiments/zkir-k/toolchain-check/`,
+`evidence/k-toolchain-install-2026-09-05.md` (CLM-0723). Plan page milestone 1
+marked done; next is milestone 2, module `ZKIR-SYNTAX` and the pyk
+JSON-to-KAST preprocessor.
+Also repaired the five ZKIR pages from the 2026-09-03 ingest that linked
+sibling pages and arc-zkir Agda modules by absolute `file:///home/charl/...`
+URIs; they now use relative paths (`../../repos/...` for pinned sources).
+
+## [2026-09-05] semantics | ZKIR-SYNTAX, ZKIR-WF and the pyk preprocessor (milestone 2)
+
+Wrote `experiments/zkir-k/semantics/zkir-syntax.k` (abstract syntax of the
+34-instruction, 13-type surface at 92e8bdd3, `reads`/`writes`, static
+well-formedness) and `tools/zkir_kast.py` (JSON to K term, serde-faithful).
+Assembled a 56-program version-3 corpus under `experiments/zkir-k/corpus/`
+(the crate's inline test programs, midnight-zkir micro-dao precompiles, Moriarty
+artifacts) plus 7 handmade negatives; `tools/check_corpus.py` passes 63/63
+(CLM-0724, evidence/zkir-k-milestone2-corpus-check-2026-09-05.txt). Finding: the
+ledger's precompiles at 92e8bdd3 are still ZKIR v2 (CLM-0725).
+
+## [2026-09-05] semantics | ZKIR VM, constraint checker, oracles (milestones 3 to 6)
+
+Built the executable K definition under `experiments/zkir-k/semantics/`
+(fields, curves, values and encodings, Poseidon, hash-to-curve, SHA-256,
+Keccak-256, SHA-512, the VM with constraint emission, the constraint checker,
+the `ZKIR-EXT` surface of midnight-zkir 2ffe2d1) and the pyk tooling under
+`tools/`. Two Rust oracles (`zkir-oracle` harnesses in worktrees of
+midnight-ledger 92e8bdd3 and midnight-zkir 2ffe2d1) give the crate's own
+`preprocess`. Results: 41/41 value unit checks, 18/18 hash known answers,
+314/314 differential agreements at 92e8bdd3 and 366/366 at 2ffe2d1, all gates
+holding on every successful run, 14/14 divergence cases (the review's findings
+plus two new ones: K1, Jubjub `from_coordinates` uses only the parity of `x`
+off-circuit; K2, a short transcript panics the crate). The arc-zkir v3 Agda
+development type-checks but cannot execute programs. New page
+`wiki/zkir/zkir-k-definition.md`; plan milestones marked done; K1 recorded in
+`contradictions.md`. Receipts: `evidence/zkir-k-*-2026-09-05.txt`,
+`evidence/arc-zkir-agda-typecheck-2026-09-05.txt`.
+
+## [2026-09-05] review | eight-reviewer audit and the second iteration
+
+Eight formal-methods reviews (four Claude Fable 5.1, four GPT-6 Astra via
+Codex read-only) of the K definition, briefs and reports under
+`experiments/zkir-k/review-2026-09-05/`, 34 findings consolidated; verdicts one
+APPROVED, four WARNING, three BLOCKED, with cross-vendor agreement on every
+major defect. All fixed on branch `zkir-k-iter2`: stuck runs, missing run-time
+checks, `test_eq` dispatch, alignment options, error-class comparison, the
+commitment gate, unsatisfiable versus unbuildable, public-input indices,
+native range checks, panic status, sequential resolution, chip and width
+checks, serde fidelity, totality. New receipts (`evidence/*-2026-09-05b.txt`):
+42/42, 18/18, 63/63, 20/20 divergence cases, 358/358 and 418/418 differential
+agreements. Three more upstream candidates K3 to K5 in `contradictions.md`.
+Also: full kframework.org crawl (SRC-0039) and `k-framework/k-best-practices.md`;
+semantics graph (237 nodes) in evidence.
+## [2026-09-05] docs | Fifteen-chapter documentation of the ZKIR K definition
+
+Fifteen chapters under `experiments/zkir-k/docs`, drafted by three model
+families and audited cross-vendor as developer and formal methods reader.
+Four semantics defects (K6 Bytes32 strict decoding, the sha512 gate
+alignment, overlapping test_eq rules, `check --ext`) and three tool gaps
+were found and fixed; all six check layers were rerun green (receipts
+`2026-09-05c`).
+
+## [2026-09-05] docs | Editorial pass on the fifteen ZKIR K chapters
+
+Structural edit, cadence revision gated by a displacement check, and a
+machine-tell audit on every chapter, each verified fact for fact against
+its original; no habit rose across the set.

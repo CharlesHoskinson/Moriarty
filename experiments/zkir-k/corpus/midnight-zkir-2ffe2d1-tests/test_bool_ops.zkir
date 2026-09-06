@@ -1,0 +1,78 @@
+{
+  "version": {
+    "major": 3,
+    "minor": 0
+  },
+  "inputs": [
+    {
+      "name": "%b0",
+      "type": "Bool"
+    },
+    {
+      "name": "%b1",
+      "type": "Bool"
+    },
+    {
+      "name": "%bit",
+      "type": "Scalar<BLS12-381>"
+    }
+  ],
+  "outputs": [],
+  "do_communications_commitment": false,
+  "instructions": [
+    {
+      "op": "neg",
+      "a": "%b0",
+      "output": "%nb0"
+    },
+    {
+      "op": "neg",
+      "a": "%nb0",
+      "output": "%b0_again"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%b0_again",
+      "b": "%b0"
+    },
+    {
+      "op": "cond_select",
+      "bit": "%bit",
+      "a": "%b0",
+      "b": "%b1",
+      "output": "%sel"
+    },
+    {
+      "op": "private_input",
+      "type": "Bool",
+      "guard": null,
+      "output": "%sel_exp"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%sel",
+      "b": "%sel_exp"
+    },
+    {
+      "op": "private_input",
+      "type": "Bool",
+      "guard": null,
+      "output": "%nb0_exp"
+    },
+    {
+      "op": "constrain_eq",
+      "a": "%nb0",
+      "b": "%nb0_exp"
+    },
+    {
+      "op": "test_eq",
+      "a": "%b0",
+      "b": "%sel",
+      "output": "%b0_eq_sel"
+    },
+    {
+      "op": "assert",
+      "cond": "%b0_eq_sel"
+    }
+  ]
+}
