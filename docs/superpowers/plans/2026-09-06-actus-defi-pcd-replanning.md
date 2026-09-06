@@ -144,13 +144,18 @@ selected DeFi example requires them.
 
 - [x] Postmortem and standing footguns written; current roadmap reset.
 - [x] Primary PCD research and initial ACTUS/DeFi source sampling completed.
-- [ ] Complete target requirements and source-contradiction dispositions.
-- [ ] Compare semantic alternatives on the same financial examples.
-- [ ] Propose exact finite bounds and named correctness properties.
-- [ ] Specify PCD relation, topology, genesis and ledger acceptance boundary.
+- [x] Account for all target rows and record source-discrepancy dispositions;
+  package algorithms and conformance gaps remain explicit.
+- [x] Compare semantic alternatives on the same financial examples.
+- [x] Propose a closed finite-bound profile and named correctness properties;
+  numeric profile values still require target/backend evidence.
+- [x] Propose PCD relation, topology, genesis and ledger acceptance boundary.
 - [ ] Review the semantic proposal and developer interaction contract.
 - [ ] Build and exercise the developer mock, with simulated evidence clearly typed.
 - [ ] Review a bounded real-backend feasibility experiment and implementation slice.
 
-Completion of this planning document checks only the first two items. It does
-not claim that the DSL, mock, proof system or full target study is complete.
+The approved design sprint produced the
+[review package](../../../deliverables/moriarty-design-sprint-2026-09-06/README.md).
+Checked items denote study/design outputs, not adopted semantics or an
+implemented DSL. The runnable mock, real proof backend, completed ACTUS
+algorithms and conformance remain future work subject to the recorded review.

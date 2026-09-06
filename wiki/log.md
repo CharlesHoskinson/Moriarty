@@ -838,3 +838,14 @@ CLM-0188 records ACTUS business-day wording and HyperNova version limits.
 Initial target sampling is not complete implementation coverage. No native
 A4/A5 run, production DSL, mock application or proof backend was implemented by
 this documentation/research reset. Old experimental evidence is retained.
+
+
+## [2026-09-06] design | Target-driven semantics and developer interface proposal
+
+CLM-0189 records the approved design sprint's review package: 18 ACTUS executable
+types, 32 taxonomy dispositions and 72 DeFi row mappings; three semantic
+alternatives; bounded correctness/PCD proposal; developer wire/screen workflow.
+CLM-0190 records source discrepancies/model omissions, and CLM-0191 the new
+unproved assurance obligations. Source and arithmetic checks are scoped;
+implementation, mock application and real backend verification did not run.
+The package awaits user review before implementation planning.

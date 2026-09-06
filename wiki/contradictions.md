@@ -3,7 +3,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-06T19:25:00Z
+updated_at: 2026-09-06T19:59:08Z
 sources:
   - SRC-0002
   - SRC-0005
@@ -24,6 +24,7 @@ sources:
   - SRC-0039
   - SRC-0040
   - SRC-0041
+  - SRC-0042
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -108,3 +109,26 @@ lifecycle S2 research input.
 historically accurate about unfinished work but conflicts with the latest task
 order. The 2026-09-06 user reset controls. New footguns and roadmap notices
 supersede automatic continuation without rewriting the old failed-run evidence.
+
+
+## CLM-0190: ACTUS design-study source gaps and DeFi model scope
+
+SRC-0042's [target study](../docs/research/2026-09-06-actus-defi-design-study.md#source-discrepancies-and-dispositions)
+records DS-01 through DS-07. Business-day interpretation now has pinned Haskell
+and pam08/pam09 support, but the missing CSMP vector prevents a conformance
+claim. ANN initial Prnxt contains an incomplete formula; COM has quantity/sign
+and TD/PRD reference discrepancies; CLM redemption references and FXOUT event
+naming need explicit rules. Each has a proposed disposition and an independent
+comparison obligation. No source bytes were rewritten.
+
+The DeFi study also prevents filename/family overclaims: the Hyperliquid model
+covers Bridge2 rather than the exchange, Derive's inspected model takes an
+empty-option path, and Hegic accepts a bounded supplied payoff. The 72-row matrix
+keeps these omissions and protocol-specific requirements visible. These are
+pinned-source boundaries, not allegations about current deployed systems.
+
+Metadata: SRC-0042; authority primary and comparative pinned source observation;
+date 2026-09-06; scope proposed package semantics, S2; reproduced by source reads,
+not executed conformance; confidence high for the named discrepancies and
+medium for proposed corrections. Remaining formula/numeric questions stay open
+for implementation acceptance.

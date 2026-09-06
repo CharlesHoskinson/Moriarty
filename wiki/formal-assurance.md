@@ -3,10 +3,12 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-02T18:20:00Z
+updated_at: 2026-09-06T19:59:08Z
 sources:
   - SRC-0002
   - SRC-0009
+  - SRC-0040
+  - SRC-0042
 ---
 
 # Formal assurance matrix
@@ -52,3 +54,26 @@ semantic validity
 ```
 
 A proof at one arrow never silently discharges the next arrow.
+
+
+## CLM-0191: Proposed Moriarty contract certificates and transaction PCD
+
+The [semantic proposal](../docs/superpowers/specs/2026-09-06-moriarty-unified-semantics-design.md)
+defines separate obligations for language termination, package/contract
+invariants, authorized transaction execution, predecessor-history compliance
+and compiler/ledger correspondence. Its first property set covers asset and due
+accounting, event identity/order, LAM accrual, exact-input AMM arithmetic,
+authority/effects and finite lifecycle/closure. None is proved by this proposal.
+
+Contract certification must bind a checked proof to program, package, bounds,
+assumptions and property identities. Transaction PCD binds the authorized state
+change and predecessors to that certified relation. Cross-program composition
+also requires a joint rule and each instance's program/certificate mapping.
+Live consumption and oracle trust remain separate. A hash of an unchecked
+certificate or a simulated proof is insufficient.
+
+Metadata: SRC-0040, SRC-0042; authority primary research interpreted as a design
+recommendation; date 2026-09-06; scope proposed Moriarty language, S2;
+reproduction specified-only for these proof obligations; confidence medium for
+the design and unknown for implementation/proof feasibility. Pinned Marlowe
+results above are prior evidence with their original scopes, not these new proofs.

@@ -5,6 +5,11 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
+**Latest output:** [design sprint review package](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
+— target matrices, shared-semantics proposal, correctness/PCD contract and
+developer interface. This is proposed design, awaiting review; no new language,
+mock application or proof backend is claimed implemented.
+
 The [user reset](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
 supersedes the old A4/A5 execution loop. Its results and unfinished obligations
 remain historical evidence. The current work is ACTUS/DeFi-led language design:

@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T19:25:00Z
+updated_at: 2026-09-06T19:59:08Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -21,6 +21,7 @@ sources:
   - SRC-0035
   - SRC-0040
   - SRC-0041
+  - SRC-0042
 ---
 
 # Moriarty research journal
@@ -2559,3 +2560,35 @@ not reproduced for a PCD implementation; confidence high for the scope change
 and source inventory, medium for proposed architecture, unknown for backend
 compatibility. Current-next: target study and semantic/interface proposal, not
 A4/A5 execution.
+
+
+## CLM-0189: ACTUS/DeFi semantic design and developer review package
+
+The user approved the next design sprint after the planning reset. The
+[review package](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
+contains a source study, all 32 ACTUS taxonomy dispositions, all 72 DeFi row
+requirements, three semantic alternatives, a proposed contract/transaction proof
+contract and developer interface. Direct source inventory includes 18 executable
+ACTUS types and 277 fixtures; no fixture was executed in this sprint. DeFi rows
+retain exact corpus pointers and inherited coverage flags without promoting
+those flags to language coverage. Source pins and hashes are SRC-0042.
+
+The recommended design is typed agreements over bounded transitions and shared
+financial packages. It distinguishes dues from settlement, denomination from
+ledger asset, finite contract epochs from renewal, and contract property proofs
+from transaction PCD. An independent consistency review identified partial-fill
+successor authorization and cross-program composition bindings; the proposal
+now requires fresh signatures per fill in its initial profile and a certified
+composition program with per-instance program/policy/certificate bindings.
+
+This is a recommendation for review, not architecture adoption. The runnable
+mock, numeric profiles, incomplete ACTUS formulas, all-field conformance and
+actual target verifier remain future work. No old A4/A5 command, compiler,
+model checker or prover was run. Core/E00 and Candidate A evidence is retained.
+
+Metadata: SRC-0031, SRC-0040, SRC-0041, SRC-0042; authority task input, primary
+pinned source and design inference; observed 2026-09-06; scope new design sprint,
+S2; reproduction read-only inventories and arithmetic illustration only;
+confidence high for row identity/source observations, medium for design
+recommendations, unknown for backend feasibility. Next: user review of the
+concrete semantics/interface package, followed by a bounded implementation plan.

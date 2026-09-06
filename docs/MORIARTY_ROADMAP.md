@@ -1,6 +1,10 @@
 # Moriarty roadmap — ACTUS/DeFi/PCD planning reset
 
 **Current direction, 2026-09-06:** the user superseded the A4/A5 completion loop.
+The subsequent approved design sprint produced a
+[review package](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
+with complete target row accounting, a shared-semantics proposal and developer
+interface design. Its architecture and behavioral choices await user review.
 Read the [postmortem](postmortems/2026-09-06-moriarty-verification-detour.md),
 [mandatory footguns](FOOTGUNS.md), [PCD research](research/2026-09-06-pcd-bounded-dsl.md)
 and [new design-cycle plan](superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md).

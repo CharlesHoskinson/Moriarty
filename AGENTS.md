@@ -16,6 +16,11 @@ work; they do not authorize automatic continuation. Preserve their evidence.
 Original assignments remain product requirements, subject to the latest user
 direction; their former execution order is superseded.
 
+The [design sprint review package](deliverables/moriarty-design-sprint-2026-09-06/README.md)
+now contains the target matrices, semantic alternatives, proposed PCD contract
+and developer interface. It is a proposal awaiting review, not authority to
+implement the mock/compiler/prover or a claim that ACTUS conformance is complete.
+
 ## Evidence discipline
 
 1. Query `wiki/index.md` before acquiring new material.
