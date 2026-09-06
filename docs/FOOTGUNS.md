@@ -40,7 +40,9 @@ These rules apply to research, planning, implementation and recovery.
    resulting state and effects. Specify constrained genesis, multi-input
    composition and the final verification decision. Hash-linked receipts and
    simulated certificates are not PCD. Missing or invalid required proofs must
-   fail closed in the real acceptance path.
+   fail closed in the real acceptance path. A signed mandatory-claim root cannot
+   be stripped or downgraded by a relay. An optional acceleration fallback must
+   preserve the same required claim/history predicate.
 
 7. **History compliance is not global uniqueness or oracle truth.** Define
    ledger consumption/nullifiers, ordering, finality and external-input trust
@@ -49,8 +51,10 @@ These rules apply to research, planning, implementation and recovery.
 
 8. **Check backend compatibility early and narrowly.** Recursive verification,
    folding, accumulation, compression and zero knowledge are different
-   properties. Name the construction and final verifier. Do not infer Nova–
-   Compact compatibility from either project's existence. After specifying the
+   properties. Compact's ban on recursive source functions does not rule out
+   Midnight-native recursive proofs. Inspect the actual native implementation
+   and its application/ledger interface separately. Name the construction and
+   final verifier. Do not infer Nova–Compact compatibility from either project's existence. After specifying the
    required relation, use one small positive proof and meaningful rejection
    controls to test the actual pinned deployment interface.
 

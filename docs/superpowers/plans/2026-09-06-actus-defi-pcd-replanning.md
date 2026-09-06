@@ -1,9 +1,21 @@
 # ACTUS, DeFi Kernel and proof-carrying DSL — new design cycle
 
-Date: 2026-09-06. Status: S2 research/design plan, not an implementation order.
+Date: 2026-09-06. Status: S2 design with the first developer mock authorized by the user’s “begin”.
 Authority: [user reset](../../../raw/assignments/moriarty-target-first-reset-2026-09-06.md).
 Read [footguns](../../FOOTGUNS.md), [postmortem](../../postmortems/2026-09-06-moriarty-verification-detour.md)
 and [PCD research](../../research/2026-09-06-pcd-bounded-dsl.md) first.
+
+## Current execution amendment
+
+The design study/proposal is complete at its documented scope, and the user
+approved starting the mock. The supplied PCD report and Midnight recursion
+clarification now revise implementation order through
+[R0–R6](../../research/2026-09-06-pcd-report-integration.md#revised-sprint-sequence-and-exit-evidence).
+This amendment controls over the original stage table below: finish the honest
+mock, define typed mandatory claims and the shared loan/swap semantic slice,
+prioritize Midnight-native IVC then its ledger adapter, and test private witness
+handoff plus bounded split/join histories. Required PCD remains fail closed;
+optional acceleration never exempts required evidence. No A4/A5 loop resumes.
 
 ## Intended product and current boundary
 
@@ -150,12 +162,12 @@ selected DeFi example requires them.
 - [x] Propose a closed finite-bound profile and named correctness properties;
   numeric profile values still require target/backend evidence.
 - [x] Propose PCD relation, topology, genesis and ledger acceptance boundary.
-- [ ] Review the semantic proposal and developer interaction contract.
-- [ ] Build and exercise the developer mock, with simulated evidence clearly typed.
+- [x] User approved beginning the developer mock from the semantic/interface proposal; unresolved numeric and proof choices remain open.
+- [x] Build and exercise the first local developer mock, with simulated evidence clearly typed; complete semantic scenario checking remains R2+.
 - [ ] Review a bounded real-backend feasibility experiment and implementation slice.
 
 The approved design sprint produced the
 [review package](../../../deliverables/moriarty-design-sprint-2026-09-06/README.md).
-Checked items denote study/design outputs, not adopted semantics or an
-implemented DSL. The runnable mock, real proof backend, completed ACTUS
-algorithms and conformance remain future work subject to the recorded review.
+Checked items denote study/design outputs, not a completed
+DSL or cryptographic backend. The mock is authorized and tracked in its implementation plan. Real proof
+backend, completed ACTUS algorithms and conformance remain open under R2–R5.

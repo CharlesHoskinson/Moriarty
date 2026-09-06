@@ -1,17 +1,22 @@
-# Moriarty roadmap — ACTUS/DeFi/PCD planning reset
+# Moriarty roadmap — target semantics and proof-carrying developer workflow
 
-**Current direction, 2026-09-06:** the user superseded the A4/A5 completion loop.
-The subsequent approved design sprint produced a
-[review package](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
-with complete target row accounting, a shared-semantics proposal and developer
-interface design. Its architecture and behavioral choices await user review.
-Read the [postmortem](postmortems/2026-09-06-moriarty-verification-detour.md),
-[mandatory footguns](FOOTGUNS.md), [PCD research](research/2026-09-06-pcd-bounded-dsl.md)
-and [new design-cycle plan](superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md).
-Start with ACTUS and DeFi requirements, then propose unified semantics and a
-developer mock with proof-carrying transactions. Those designs are not complete.
-A4/A5 remain unfinished historical experiments; do not automatically resume
-their commands, source freezes or continuation queue.
+**Current direction, 2026-09-06:** the user approved starting the developer mock,
+then supplied the PCD report and confirmed Midnight Halo2/recursion as available
+capabilities. The [report integration package](../deliverables/pcd-report-integration-2026-09-06/README.md)
+contains the graph, source correction and revised plan. The
+[local developer mock](../experiments/moriarty-developer-mock/README.md) illustrates
+loan/swap behavior and typed required claims; its evidence is simulated.
+
+Follow [R0–R6](research/2026-09-06-pcd-report-integration.md#revised-sprint-sequence-and-exit-evidence):
+typed claims and a shared ACTUS/DeFi semantic slice, Midnight-native IVC, separate
+ledger compatibility, private multi-party PCD, then certificate/package expansion.
+Optional acceleration comes later and never bypasses mandatory proofs. Finite
+language/lifecycle bounds remain required despite cryptographic recursion.
+
+The source-inspected native recursion machinery is real; Moriarty proof
+integration, checked contract properties, compiler correspondence and complete
+ACTUS conformance remain open. Read [footguns](FOOTGUNS.md) before continuing.
+A4/A5 are unfinished historical experiments; their queue does not resume.
 
 ## Historical Candidate A handoff (preserved below)
 

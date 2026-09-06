@@ -18,8 +18,16 @@ direction; their former execution order is superseded.
 
 The [design sprint review package](deliverables/moriarty-design-sprint-2026-09-06/README.md)
 now contains the target matrices, semantic alternatives, proposed PCD contract
-and developer interface. It is a proposal awaiting review, not authority to
-implement the mock/compiler/prover or a claim that ACTUS conformance is complete.
+and developer interface. The user approved starting the local developer mock
+with “begin”, then supplied a PCD report and identified Midnight Halo2/recursion.
+The [report reconciliation](docs/research/2026-09-06-pcd-report-integration.md)
+and its R0–R6 sequence now control execution. The first local mock is
+implemented with simulated evidence. Next: implement typed
+mandatory claims and a shared ACTUS/DeFi slice; prioritize the inspected native
+Midnight IVC route and separately test ledger acceptance and private witness
+handoff. Optional acceleration cannot bypass required proofs. Compact's lack
+of source recursion does not establish absence of backend recursive proofs.
+ACTUS conformance and real PCD integration remain open. No old loop resumes.
 
 ## Evidence discipline
 

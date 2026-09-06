@@ -3,8 +3,12 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-06T19:59:08Z
+updated_at: 2026-09-06T20:31:05Z
 sources:
+  - SRC-0043
+  - SRC-0044
+  - SRC-0045
+  - SRC-0046
   - SRC-0002
   - SRC-0009
   - SRC-0040
@@ -77,3 +81,19 @@ recommendation; date 2026-09-06; scope proposed Moriarty language, S2;
 reproduction specified-only for these proof obligations; confidence medium for
 the design and unknown for implementation/proof feasibility. Pinned Marlowe
 results above are prior evidence with their original scopes, not these new proofs.
+
+
+## CLM-0192–0193: Typed evidence and Midnight recursion correction
+
+The [PCD report revision](../docs/research/2026-09-06-pcd-report-integration.md)
+separates execution validity, one execution's effects, all-domain contract
+properties, current-state applicability and external truth. The signed required
+claim root and deployment-authorized verifier policy prevent stripping and
+predicate substitution. These are S2 design obligations, not theorems.
+
+The native Midnight backend has recursive verification/IVC source at the
+[SRC-0045 pins](../raw/pcd-midnight-recursion-2026-09-06/repository-inspection.receipt.json).
+Compact's source recursion restriction is a different boundary. Native IVC
+success, accepted ledger proof format, multi-parent PCD semantics and private
+witness handoff each need separate evidence. No Moriarty cryptographic result
+was reproduced. Metadata and qualification are in journal CLM-0192–0193.

@@ -3,8 +3,12 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T19:59:08Z
+updated_at: 2026-09-06T20:31:05Z
 sources:
+  - SRC-0043
+  - SRC-0044
+  - SRC-0045
+  - SRC-0046
   - SRC-0016
   - SRC-0017
   - SRC-0018
@@ -2592,3 +2596,61 @@ S2; reproduction read-only inventories and arithmetic illustration only;
 confidence high for row identity/source observations, medium for design
 recommendations, unknown for backend feasibility. Next: user review of the
 concrete semantics/interface package, followed by a bounded implementation plan.
+
+
+## CLM-0192: Incoming PCD report changes the implementation order
+
+The user approved starting the mock, then supplied an 80,195-byte PCD report and
+requested graphing and plan changes (SRC-0043, SRC-0046). The
+[reconciliation](../docs/research/2026-09-06-pcd-report-integration.md) adds a signed
+mandatory-claim manifest, separate intent/effect checking, explicit evidence
+scope and cross-party witness handoff. It retains mandatory history compliance,
+finite language/lifecycle bounds and the ACTUS/DeFi coverage obligations.
+Optional acceleration cannot bypass mandatory claims. Report benchmarks and
+advisories remain secondary claims, not reproduced findings; SRC-0044 verifies
+only narrow primary abstract content with acquisition limits.
+
+The [graph package](../deliverables/pcd-report-integration-2026-09-06/README.md)
+preserves extracted relationships with source locators and confidence labels.
+Its scope is the report; source corrections and adopted decisions are linked
+separately. Metadata: observed 2026-09-06; authority secondary synthesis,
+normative task input and design inference; lifecycle S2; confidence high for
+receipt/task interpretation, medium for design; proof work specified-only.
+
+## CLM-0193: Midnight native recursion is the first proof candidate
+
+[Source inspection](../docs/research/2026-09-06-midnight-native-recursion.md)
+at the SRC-0045 pins found a native Rust in-circuit verifier, accumulation,
+IVC prover/verifier and final decider in midnight-zk. This corrects any inference
+that Compact's prohibited source recursion means Midnight lacks recursion.
+The named integration APIs were not found in the inspected application stack;
+that bounded lexical result is not universal absence. The inspected version
+gap and Unreleased additions require separate native and ledger compatibility
+experiments. Multi-parent PCD and private witness handoff remain obligations.
+
+Metadata: primary pinned repository observation; midnight-zk commit
+695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7 dated 2026-08-21; observed 2026-09-06;
+S3 upstream source, S2 Moriarty integration design; source inspection only, no
+build/proof/deployment reproduced; confidence high for named source presence,
+unknown for Moriarty compatibility. Receipt lists other full pins and limits.
+
+
+## CLM-0194: First local developer mock exercised
+
+The [mock](../experiments/moriarty-developer-mock/README.md) implements the
+approved local interaction skeleton: pinned imported LAM/calendar/option fields,
+exact rational loan and integer swap illustrations, scripted mandate/join/partial
+examples, fault stages, simulated evidence, typed required claim descriptions
+and mock export. Evidence is in the
+[browser/model record](../evidence/moriarty-developer-mock-2026-09-06/README.md).
+Independent review found and prompted fixes for consumption reset on edits,
+ineffective controls and stale evidence after invalid edits. No real verifier
+or wallet is connected. Recovery restores configuration only, not durable
+submission state. Changing event order and complete asset/recipient effects
+need the independent semantic checker planned in R2; scripted faults are not
+coverage of that checker.
+
+Metadata: SRC-0042 fixture pins, SRC-0043 report-derived interface and SRC-0046
+task authorization; observed 2026-09-06; experiment observation, S3 local mock;
+model/build/browser checks reproduced at the recorded source hashes; confidence
+high for tested mock behavior, unknown for real proofs/target conformance.

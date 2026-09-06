@@ -5,10 +5,14 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
-**Latest output:** [design sprint review package](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
-— target matrices, shared-semantics proposal, correctness/PCD contract and
-developer interface. This is proposed design, awaiting review; no new language,
-mock application or proof backend is claimed implemented.
+**Latest output:** [PCD report integration](../deliverables/pcd-report-integration-2026-09-06/README.md)
+— report graph, typed claim semantics, Midnight-native recursion findings and
+revised R0–R6 execution order. The user approved the
+[local developer mock](../experiments/moriarty-developer-mock/README.md); all its
+proof evidence is simulated. The earlier
+[design sprint](../deliverables/moriarty-design-sprint-2026-09-06/README.md) remains
+the ACTUS/DeFi target basis. No full DSL, contract theorem or real PCD integration
+is claimed complete. See journal CLM-0192–0194 for this transition.
 
 The [user reset](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
 supersedes the old A4/A5 execution loop. Its results and unfinished obligations

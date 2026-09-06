@@ -3,8 +3,12 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-06T19:59:08Z
+updated_at: 2026-09-06T20:31:05Z
 sources:
+  - SRC-0043
+  - SRC-0044
+  - SRC-0045
+  - SRC-0046
   - SRC-0002
   - SRC-0005
   - SRC-0006
@@ -132,3 +136,23 @@ date 2026-09-06; scope proposed package semantics, S2; reproduced by source read
 not executed conformance; confidence high for the named discrepancies and
 medium for proposed corrections. Remaining formula/numeric questions stay open
 for implementation acceptance.
+
+
+## CLM-0192–0193: PCD report scope versus Moriarty and Midnight
+
+**Optional recursion versus mandatory history.** SRC-0043's generic transaction
+roadmap recommends delaying mandatory recursion. SRC-0041/SRC-0046 require PCD
+in Moriarty acceptance. Disposition: simple subclaims may use ordinary checks,
+but every accepted Moriarty state transition retains required history evidence
+and constrained genesis. Optional accelerator fallback cannot remove it.
+
+**Compact recursion versus native proof recursion.** SRC-0043 lines 370, 857 and
+its maturity table cite prohibited source recursion. SRC-0045 demonstrates
+native recursive verification/IVC code in pinned midnight-zk. These are different
+layers. Disposition: correct the inference, prioritize native Midnight, and
+retain explicit application/ledger compatibility gates. Negative lexical
+searches do not prove universal API absence. Do not silently alter the raw report.
+
+Metadata: observed 2026-09-06; authority secondary report, normative user input,
+primary pinned source and design inference; S2 disposition; no proof deployment
+reproduced; confidence high for scope distinction, unknown for adapter feasibility.

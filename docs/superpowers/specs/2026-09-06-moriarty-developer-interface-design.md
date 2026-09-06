@@ -139,6 +139,43 @@ exact rendered representation bound by a versioned display digest. Exact codec
 conformance vectors are required before signing implementation; this proposal
 does not claim interoperability with an existing intent standard.
 
+## PCTE claim interface — report revision
+
+The [report reconciliation](../../research/2026-09-06-pcd-report-integration.md)
+adds proposed `ClaimSpec`, `BoundClaim` and `ClaimEnvelope` objects. A spec contains
+claim type/version, mandatory mode, predicate/specification, authorized verifier
+and key version, domain/transaction-core/program commitments, exact state references,
+effect/public-input commitments, validity interval, dependency IDs and resource
+budget. The evidence descriptor separately binds format, digest and sidecar
+reference. Compute proof-independent claim IDs and the manifest root before
+computing `intentDigest = H(domain, IntentCore, H(TxCore), manifestRoot)`.
+`BoundClaim` then attaches that intent digest to a claim ID and its evidence
+statement; it is never fed back into ClaimSpec or the manifest root. TxCore and
+IntentCore exclude enclosing roots/signatures/evidence; ClaimSpec excludes its
+own ID, intent/manifest roots, signatures and evidence. The envelope binds the
+signed intent and ordered evidence. This is an acyclic commitment construction.
+
+Do not include evidence hashes or signatures in their own signed preimages.
+Semantic claim IDs are proof-independent; dependencies must be acyclic and bounded.
+`TransactionBundle` carries this envelope in addition to its composition map.
+The verifier's deployment policy determines trusted predicates/keys; the sender
+cannot select an arbitrary permissive checker. Missing or unknown mandatory
+claims reject, and stripped evidence cannot downgrade a signed required claim.
+
+Proposed operations `describeClaims`, `checkIntentEffects` and
+`verifyRequiredClaims` expose predicates and evidence status around the existing
+workflow. These are interface requirements, not implemented SDK functions.
+Show IntentEffects, ContractInvariant, TransitionValidity and HistoryCompliance
+separately, plus any package-required authorization/dependency claims. Each has
+scope, assumptions, method, verifier profile, freshness and status. The mock
+uses static descriptions with unavailable real checks and SimulatedEvidence.
+
+Midnight-native Halo2/recursion is the first planned backend. A native Rust proof,
+a target-ledger accepted proof, and a multi-party PCD history need separate
+results. The developer sees which boundary passed. Missing witness/sidecar data
+reports unavailable and blocks acceptance; it never requests predecessor secrets
+silently. Optional acceleration cannot disable a mandatory history or intent check.
+
 ## Operation contract for the first workflow
 
 The interface is TypeScript-first with the same wire objects usable from CLI,
@@ -207,10 +244,10 @@ cancellation stops local work, not a previously submitted transaction.
 | Multi-parent join | Each input's identity/proof, resulting output vector and consumption accounting. |
 | Cancellation, partial fill and crash recovery | Residual allowance, competing state revision and durable submission identity. |
 
-Build a small local mock only after this semantic/interface proposal is reviewed.
+The user approved starting the small local mock with “begin”.
 It uses a distinct `SimulatedEvidence` type and a simulated transport; it never
 produces a real `VerificationCertificate` or connects to wallet signing, a chain
 or a paid prover. A displayed mock result must retain that label when exported.
 Imported expected results and hand-worked examples remain distinguishable from
 generated execution. This document supplies the screen and interaction design;
-the runnable mock is still a subsequent deliverable.
+the runnable mock is tracked in the [implementation plan](../plans/2026-09-06-developer-mock-implementation.md).

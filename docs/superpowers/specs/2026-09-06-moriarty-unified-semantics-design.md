@@ -1,7 +1,8 @@
 # Moriarty unified semantics — design proposal
 
-Date: 2026-09-06. Status: S2, proposed for user review; not a selected architecture,
-implemented language or proved theorem. This is the concrete design output of
+Date: 2026-09-06. Status: S2 design, approved as the basis for the developer mock;
+not an implemented language or proved theorem. The PCD report revision below
+updates the proof/interface plan. This is the concrete design output of
 the approved [design sprint](../plans/2026-09-06-actus-defi-pcd-replanning.md).
 Sources and coverage: [target study](../../research/2026-09-06-actus-defi-design-study.md)
 and [PCD research](../../research/2026-09-06-pcd-bounded-dsl.md).
@@ -306,18 +307,66 @@ exclusive spending comes from the anchored consumption rule, not from claiming
 that recursive proofs make forks impossible. Oracle signatures similarly
 establish the declared attestation, not the economic truth of its contents.
 
+## Typed claims and native recursion — report revision
+
+The user approved starting the mock, then supplied the PCD report and identified
+Midnight Halo2/recursion. The [report reconciliation](../../research/2026-09-06-pcd-report-integration.md)
+controls this revision. The prior finite semantics, ACTUS/DeFi coverage and
+mandatory history-compliance requirement remain in force.
+
+The public statement also binds a canonical semantic claim manifest/root:
+claim type/version and mandatory mode; predicate/specification identity;
+permitted verifier/key profile; current-state and effect commitments; validity
+interval; bounded dependency IDs and budgets. The deployment policy fixes which
+specifications/verifiers are authoritative. Unknown mandatory types, unsupported
+verifiers, missing evidence and unresolved recursive assumptions reject.
+
+The signed semantic manifest is built from ClaimSpec records excluding their
+own IDs, enclosing intent/manifest roots, proof bytes, evidence hashes,
+signatures and the final envelope ID. First derive dependency IDs and the
+manifest root, then the intent digest over IntentCore, TxCore and that root.
+TxCore and IntentCore exclude enclosing roots, signatures and evidence.
+Only the later BoundClaim/evidence statement carries the derived intent digest;
+it is not fed back into the manifest. Evidence binds the signed statement;
+the final envelope commits to its evidence descriptors/sidecars. Dependency IDs
+refer to proof-independent claim descriptors in an acyclic bounded graph.
+A relay cannot remove or downgrade a required claim by stripping its sidecar.
+Canonical encoding and commitment vectors remain an implementation obligation.
+
+Initial mandatory claims are IntentEffects, ContractInvariant (checked certificate
+and applicable guard), TransitionValidity and HistoryCompliance. Package-required
+private authorization/dependency claims are mandatory too. Cheap local checks
+may be predicates within the transition proof; that does not remove required
+transaction/history evidence. A path theorem has only its checked guard/path
+scope and cannot replace the all-domain contract property certificate.
+
+Optional acceleration may change how the same acceptance predicate is evaluated.
+It cannot bypass missing mandatory proofs. Test a valid execution with a wrong
+recipient, excess fee, wrong asset or undeclared approval/write against an
+independently signed intent. Complete effect coverage must be established; merely
+checking that declared effects are allowed is insufficient.
+
+Add claim count, dependency depth, evidence/sidecar bytes and verifier work to B.
+Keep source-language recursion prohibited while allowing bounded recursive proof
+verification in the backend. Contract lifecycle depth and cryptographic proof
+composition are distinct. The language's finite guarantees require the explicit
+bounds already defined above, even if the backend supports longer IVC histories.
+
 ## Proof topology and backend decision
 
 | Route | Fit | Unresolved gate |
 | --- | --- | --- |
 | Sequential IVC over a serialized state commitment | One advancing state machine; simpler initial topology | Multiple independently created predecessors need an explicit authenticated import/join relation and consumption accounting. |
 | Bounded multi-input PCD | Naturally represents transactions joining and splitting state/asset claims | Concrete construction, extraction/soundness assumptions, fan-in/depth and final verifier cost. |
-| Midnight-native proof composition | Closest to the actual deployment stack | Which verifier and public-input interfaces are accessible from the pinned Compact/ZKIR/ledger path. |
+| Midnight-native Halo2/PLONK recursion and IVC | First implementation candidate: pinned Rust in-circuit verifier, accumulators, IVC prover/verifier and decider exist | Native proof generation, state binding and final-decider checks; then a separate ledger proof/VK compatibility test across the observed version gap. |
 
-Recommendation: specify bounded multi-input transaction semantics now, and test
+Recommendation: prioritize the [pinned Midnight-native route](../../research/2026-09-06-midnight-native-recursion.md). Specify bounded multi-input transaction semantics now, and test
 the smallest target-consumable realization before choosing an implementation
 route. A serialized realization is acceptable only if it preserves those
 semantics. A hash chain or mocked certificate is not an alternative PCD backend.
+Test cross-party private witness handoff before committing to a stateful folding
+route; generic sequential IVC does not itself establish multi-parent PCD. Record
+the successor artifacts, their confidentiality and availability requirements.
 
 ## Two concrete walkthroughs
 
