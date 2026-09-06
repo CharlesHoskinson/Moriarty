@@ -1,5 +1,28 @@
 # Current execution progress
 
+## Active continuation, 2026-09-06 UTC
+
+Main checkpoint session20260905T235952Z-19d524 continues Candidate A.
+Host process recovery found no surviving A4 pytest/recorder. The original
+parent still has no terminal result; do not invent one. Recovery artifacts
+are .superpowers/sdd/a4-task6-recovery-20260906.{md,json}. The independently
+reviewed resumption amendment preserves17 original terminal-backed semantic
+controls and specifies97 fresh instances, with exact114 aggregate coverage.
+Final115 native-suite obligations remain unchanged. A4 worker owns only
+.superpowers/sdd/a4-task6-resumption-20260906/; recorder source review and
+retained-data authentication must precede execution. No A4 test/source edits.
+
+A5 next plan is docs/superpowers/plans/2026-09-06-candidate-a-pilot-compilation-view.md.
+It copies exactly24 existing modules and adds a direct AuthorityKey import
+only to the two copied adapters. Original source and30 Task2 freeze files
+remain unchanged. Six sequential native stages repeat the existing
+typecheck/prefix/sample/sample/compile/compile gate with original bounds.
+Parent owns the frozen dispatch and paired-input gate; no checker is
+authorized by the view plan. The actual command sessions and terminal
+receipts will live under .superpowers/sdd/a5-factoring-receipts/pilot-compilation-view/.
+Do not commit on the experimental branch while its HEAD-bound stages run.
+The unrelated Candidate B draft and existing A4 test diff remain preserved.
+
 ## Resume checkpoint, 2026-09-05 23:51 UTC
 
 Resumed from experimental HEAD9ccbf0e. Root revalidated the original Task3
