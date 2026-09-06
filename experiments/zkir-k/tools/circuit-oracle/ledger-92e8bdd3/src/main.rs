@@ -28,11 +28,32 @@
 //! constraint failure (public-input cells disagree with the instance).
 //! `--model-only` skips `preprocess` and MockProver and reports `k` and
 //! `rows` from the stdlib cost model (unknown witness); outcome `model-only`.
+//!
+//! Provability modes (plan-iter3 M5b). Both read the KZG parameters
+//! `bls_midnight_2p{k}` from `--params DIR`, else `$MIDNIGHT_PP`, else
+//! `/home/charl/Moriarty/repos/_build/params`, exactly as the crate's test
+//! provider `TestParams` does; a missing file for the circuit's `k` is the
+//! outcome `params-unavailable`, never a silent skip.
+//! `--keygen` (the preimage argument is optional and unused): `Zkir::k`
+//! (`optimal_k`), then `Zkir::keygen_vk` and `Zkir::keygen`, both of which
+//! synthesise the circuit with an unknown witness (`setup_vk` panics on a
+//! synthesis error, so a circuit that cannot be keyed reports `panic`);
+//! reports `keygen_vk_ms`, `keygen_ms`, `pk_k` (the k recorded in the
+//! proving key) and `vk_match` (the two verifier keys serialise equal).
+//! `--prove`: `Zkir::keygen`, `IrSource::preprocess` (for the classification
+//! of preimage errors), `Zkir::prove` with a fixed ChaCha20 seed, then
+//! `VerifierKey::verify` against the crate's embedded `PARAMS_VERIFIER` and
+//! the public inputs `prove` returned; reports `proof_bytes`, `prove_ms`,
+//! `verify_ms`; outcome `verify-failure` when the verifier rejects.
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::future::Future;
 use std::io::BufReader;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::path::Path;
+use std::pin::pin;
+use std::task::{Context as TaskContext, Poll, Waker};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -42,14 +63,19 @@ use midnight_zk_stdlib::MidnightCircuit;
 use midnight_zkir_v3::ir_types::IrValue;
 use midnight_zkir_v3::{Identifier, IrSource, Preprocessed};
 use num_bigint::BigUint;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use tracing::Subscriber;
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::{Context, SubscriberExt};
 use transient_crypto::curve::Fr;
-use transient_crypto::proofs::{KeyLocation, ProofPreimage};
+use transient_crypto::proofs::{KeyLocation, PARAMS_VERIFIER, ParamsProver, ParamsProverProvider, ProofPreimage, Zkir};
 
 const MISALIGNMENT: &str = "Misalignment between `prepare` and `synthesize`";
+const DEFAULT_PARAMS_DIR: &str = "/home/charl/Moriarty/repos/_build/params";
+/// The seed the crate's integration tests hand to `prove` (tests/common/mod.rs).
+const PROVE_SEED: [u8; 32] = [42; 32];
 
 #[derive(Deserialize)]
 struct PreimageJson {
@@ -92,6 +118,25 @@ struct Output {
     mockprover_run_ms: Option<u128>,
     #[serde(skip_serializing_if = "Option::is_none")]
     verify_ms: Option<u128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keygen_vk_ms: Option<u128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    keygen_ms: Option<u128>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prove_ms: Option<u128>,
+    /// Length of the serialised proof.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    proof_bytes: Option<usize>,
+    /// The k recorded in the proving key produced by `keygen` (should equal `k`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pk_k: Option<u32>,
+    /// `--keygen` only: the verifier key of `keygen_vk` equals the one of `keygen`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vk_match: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    params_file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    n_pis: Option<usize>,
     peak_rss_kb: Option<u64>,
     message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -156,14 +201,54 @@ impl<S: Subscriber> Layer<S> for ErrorCapture {
     }
 }
 
+/// Drives a future to completion on the current thread. The crate's async
+/// `Zkir` methods never suspend (the parameter provider below is synchronous),
+/// so a no-op waker suffices and no runtime dependency is needed.
+fn block_on<F: Future>(fut: F) -> F::Output {
+    let waker = Waker::noop();
+    let mut cx = TaskContext::from_waker(waker);
+    let mut fut = pin!(fut);
+    loop {
+        if let Poll::Ready(v) = fut.as_mut().poll(&mut cx) {
+            return v;
+        }
+        std::thread::yield_now();
+    }
+}
+
+/// The provider the crate's integration tests use (`TestParams` in
+/// tests/common/mod.rs): `DIR/bls_midnight_2p{k}` read with `ParamsProver::read`.
+struct FileParams(String);
+
+impl FileParams {
+    fn file(&self, k: u8) -> String {
+        format!("{}/bls_midnight_2p{k}", self.0)
+    }
+}
+
+impl ParamsProverProvider for FileParams {
+    async fn get_params(&self, k: u8) -> std::io::Result<ParamsProver> {
+        ParamsProver::read(BufReader::new(File::open(self.file(k))?))
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    Mock,
+    ModelOnly,
+    Keygen,
+    Prove,
+}
+
 struct Args {
     program: String,
-    preimage: String,
+    preimage: Option<String>,
     inject: Option<String>,
     pis: Option<String>,
     binding_input: Option<String>,
     instance: Option<String>,
-    model_only: bool,
+    mode: Mode,
+    params_dir: String,
 }
 
 fn parse_args() -> Args {
@@ -173,7 +258,8 @@ fn parse_args() -> Args {
     let mut pis = None;
     let mut binding_input = None;
     let mut instance = None;
-    let mut model_only = false;
+    let mut mode = Mode::Mock;
+    let mut params_dir = None;
     let mut i = 1;
     while i < argv.len() {
         match argv[i].as_str() {
@@ -193,18 +279,32 @@ fn parse_args() -> Args {
                 i += 1;
                 instance = argv.get(i).cloned();
             }
-            "--model-only" => model_only = true,
+            "--model-only" => mode = Mode::ModelOnly,
+            "--keygen" => mode = Mode::Keygen,
+            "--prove" => mode = Mode::Prove,
+            "--params" => {
+                i += 1;
+                params_dir = argv.get(i).cloned();
+            }
             other => pos.push(other.to_string()),
         }
         i += 1;
     }
-    if pos.len() != 2 {
+    let usage = || {
         eprintln!(
-            "usage: zkir-circuit-oracle PROGRAM.zkir PREIMAGE.json [--inject INJECT.json] [--pis PIS.json] [--binding-input DEC] [--instance PIS.json] [--model-only]"
+            "usage: zkir-circuit-oracle PROGRAM.zkir PREIMAGE.json [--inject INJECT.json] [--pis PIS.json] [--binding-input DEC] [--instance PIS.json] [--model-only]\n       zkir-circuit-oracle PROGRAM.zkir [PREIMAGE.json] --keygen [--params DIR]\n       zkir-circuit-oracle PROGRAM.zkir PREIMAGE.json --prove [--params DIR]"
         );
         std::process::exit(2);
+    };
+    let program = if pos.is_empty() { usage() } else { pos.remove(0) };
+    let preimage = if pos.is_empty() { None } else { Some(pos.remove(0)) };
+    if !pos.is_empty() || (preimage.is_none() && mode != Mode::Keygen) {
+        usage();
     }
-    Args { program: pos.remove(0), preimage: pos.remove(0), inject, pis, binding_input, instance, model_only }
+    let params_dir = params_dir
+        .or_else(|| std::env::var("MIDNIGHT_PP").ok())
+        .unwrap_or_else(|| DEFAULT_PARAMS_DIR.to_string());
+    Args { program, preimage, inject, pis, binding_input, instance, mode, params_dir }
 }
 
 fn load_preimage(path: &str) -> anyhow::Result<ProofPreimage> {
@@ -260,8 +360,128 @@ fn inject(args: &Args, pre: &mut Preprocessed, out: &mut Output) -> anyhow::Resu
     Ok(())
 }
 
-fn run(args: &Args, ir: &IrSource, preimage: &ProofPreimage, errors: &Arc<Mutex<Vec<String>>>, out: &mut Output) {
-    if args.model_only {
+/// `--keygen` and `--prove`: unknown-witness key generation with the file
+/// parameter provider, then (for `--prove`) a real proof and its verification.
+fn run_provability(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Arc<Mutex<Vec<String>>>, out: &mut Output) {
+    let provider = FileParams(args.params_dir.clone());
+    let t = Instant::now();
+    let k = ir.k();
+    out.optimal_k_ms = Some(t.elapsed().as_millis());
+    out.k = Some(k as u32);
+
+    let file = provider.file(k);
+    if !Path::new(&file).is_file() {
+        out.outcome = "params-unavailable";
+        out.message = format!("no KZG parameter file {file} for k={k}");
+        return;
+    }
+    out.params_file = Some(file);
+
+    if args.mode == Mode::Keygen {
+        let t = Instant::now();
+        let vk_only = match block_on(ir.keygen_vk(&provider)) {
+            Ok(vk) => vk,
+            Err(e) => {
+                out.keygen_vk_ms = Some(t.elapsed().as_millis());
+                out.outcome = "synthesis-error";
+                out.message = format!("keygen_vk: {e:#}");
+                return;
+            }
+        };
+        out.keygen_vk_ms = Some(t.elapsed().as_millis());
+        let t = Instant::now();
+        let (pk, vk) = match block_on(ir.keygen(&provider)) {
+            Ok(kp) => kp,
+            Err(e) => {
+                out.keygen_ms = Some(t.elapsed().as_millis());
+                out.outcome = "synthesis-error";
+                out.message = format!("keygen: {e:#}");
+                return;
+            }
+        };
+        out.keygen_ms = Some(t.elapsed().as_millis());
+        out.pk_k = pk.init().ok().map(|p| p.k() as u32);
+        out.vk_match = Some(vk_only == vk);
+        out.outcome = "accepted";
+        out.message = format!("keygen_vk and keygen ok at k={k}");
+        return;
+    }
+
+    // --prove
+    let preimage = preimage.expect("--prove requires a preimage");
+    let t = Instant::now();
+    let (pk, vk) = match block_on(ir.keygen(&provider)) {
+        Ok(kp) => kp,
+        Err(e) => {
+            out.keygen_ms = Some(t.elapsed().as_millis());
+            out.outcome = "synthesis-error";
+            out.message = format!("keygen: {e:#}");
+            return;
+        }
+    };
+    out.keygen_ms = Some(t.elapsed().as_millis());
+    out.pk_k = pk.init().ok().map(|p| p.k() as u32);
+
+    // `prove` runs preprocess itself; running it first classifies preimage
+    // errors the same way the MockProver mode does.
+    let t = Instant::now();
+    match ir.preprocess(preimage) {
+        Ok(pre) => {
+            out.preprocess_ms = Some(t.elapsed().as_millis());
+            out.n_pis = Some(pre.pis.len());
+        }
+        Err(e) => {
+            out.preprocess_ms = Some(t.elapsed().as_millis());
+            out.outcome = "preprocess-error";
+            out.message = format!("{e:#}");
+            return;
+        }
+    }
+
+    let t = Instant::now();
+    let (proof, pis, _pi_skips) = match block_on(ir.prove(ChaCha20Rng::from_seed(PROVE_SEED), &provider, pk, preimage)) {
+        Ok(r) => r,
+        Err(e) => {
+            out.prove_ms = Some(t.elapsed().as_millis());
+            let logged = errors.lock().unwrap().clone();
+            let misaligned = logged.iter().any(|m| m.contains(MISALIGNMENT));
+            out.outcome = if misaligned { "witness-consistency-error" } else { "synthesis-error" };
+            out.message = format!("prove: {e:#}");
+            if !logged.is_empty() {
+                out.trace_errors = Some(logged);
+            }
+            return;
+        }
+    };
+    out.prove_ms = Some(t.elapsed().as_millis());
+    out.proof_bytes = Some(proof.0.len());
+
+    let t = Instant::now();
+    match vk.verify(&PARAMS_VERIFIER, &proof, pis.iter().copied()) {
+        Ok(()) => {
+            out.verify_ms = Some(t.elapsed().as_millis());
+            out.outcome = "accepted";
+            out.message = format!("proof verified against PARAMS_VERIFIER with {} public inputs", pis.len());
+        }
+        Err(e) => {
+            out.verify_ms = Some(t.elapsed().as_millis());
+            out.outcome = "verify-failure";
+            out.message = format!("verify: {e:#}");
+        }
+    }
+    let logged = errors.lock().unwrap().clone();
+    if !logged.is_empty() {
+        out.trace_errors = Some(logged);
+    }
+}
+
+fn run(args: &Args, ir: &IrSource, preimage: Option<&ProofPreimage>, errors: &Arc<Mutex<Vec<String>>>, out: &mut Output) {
+    if matches!(args.mode, Mode::Keygen | Mode::Prove) {
+        run_provability(args, ir, preimage, errors, out);
+        return;
+    }
+    let preimage = preimage.expect("the MockProver modes require a preimage");
+    if args.mode == Mode::ModelOnly {
         // The cost model synthesises with an unknown witness; the preimage is not used.
         let t = Instant::now();
         let model = ir.model();
@@ -382,12 +602,15 @@ fn main() {
             std::process::exit(2);
         }
     };
-    let preimage = match load_preimage(&args.preimage) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("preimage error: {e:#}");
-            std::process::exit(2);
-        }
+    let preimage = match &args.preimage {
+        Some(path) => match load_preimage(path) {
+            Ok(p) => Some(p),
+            Err(e) => {
+                eprintln!("preimage error: {e:#}");
+                std::process::exit(2);
+            }
+        },
+        None => None,
     };
 
     // Capture the panic message instead of letting the default hook print it.
@@ -409,7 +632,7 @@ fn main() {
     let mut out = Output { outcome: "panic", ..Default::default() };
     let res = catch_unwind(AssertUnwindSafe(|| {
         let mut o = Output::default();
-        run(&args, &ir, &preimage, &errors, &mut o);
+        run(&args, &ir, preimage.as_ref(), &errors, &mut o);
         o
     }));
     match res {
