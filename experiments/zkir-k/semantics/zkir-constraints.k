@@ -18,16 +18,20 @@
 //                      gate needs is not initialised (`used_chips`, finding 13)
 //   unknown(msg)       a register the gate reads is absent (witness stopped early)
 //
-// Chip gating follows `IrSource::used_chips`: a foreign chip is initialised only
-// when its types occur among the program inputs or public/private inputs, the
-// Jubjub chip additionally by hash_to_curve, Poseidon by transient_hash,
-// hash_to_curve or the communications commitment, SHA-256 by persistent_hash,
-// Keccak by keccak256. from_bytes32 does not initialise anything (finding 13).
+// Chip gating follows `IrSource::used_chips` (usedChips and chipOfType in
+// ZKIR-STATIC, zkir-static.k, shared with the target contract): a foreign chip
+// is initialised only when its types occur among the program inputs or
+// public/private inputs, the Jubjub chip additionally by hash_to_curve,
+// Poseidon by transient_hash, hash_to_curve or the communications commitment,
+// SHA-256 by persistent_hash, Keccak by keccak256. from_bytes32 does not
+// initialise anything (finding 13).
 requires "zkir-ops.k"
+requires "zkir-static.k"
 
 module ZKIR-CONSTRAINTS
   imports ZKIR-OPS
   imports ZKIR-WF
+  imports ZKIR-STATIC
   imports MAP
   imports SET
 
@@ -41,48 +45,6 @@ module ZKIR-CONSTRAINTS
                    | synthErr(String) [symbol(synthErr)] | unknown(String) [symbol(unknown)]
                    | unsupported(String) [symbol(unsupported)]   // no in-circuit relation modelled for this gate
   syntax Verdict ::= verdict(Constraint, Outcome) [symbol(verdict)]
-
-  // --- Chips -----------------------------------------------------------------------
-  syntax Set ::= usedChips(Program) [function, total]
-  rule usedChips(program(_, Ins, _, DoComm, Is))
-    => #chipsOfTypes(#inputTypes(Ins) #ioTypes(Is)) |Set #chipsOfInstrs(Is) |Set #commChip(DoComm)
-  syntax Set ::= #commChip(Bool) [function, total]
-  rule #commChip(true) => SetItem("poseidon")
-  rule #commChip(false) => .Set
-  syntax List ::= #inputTypes(TypedIds) [function, total]
-  rule #inputTypes(.TypedIds) => .List
-  rule #inputTypes((typedId(_, T), Rest)) => ListItem(T) #inputTypes(Rest)
-  syntax List ::= #ioTypes(Instrs) [function, total]
-  rule #ioTypes(.Instrs) => .List
-  rule #ioTypes((publicInput(_, T, _) ; Is)) => ListItem(T) #ioTypes(Is)
-  rule #ioTypes((privateInput(_, T, _) ; Is)) => ListItem(T) #ioTypes(Is)
-  rule #ioTypes((_ ; Is)) => #ioTypes(Is) [owise]
-  syntax Set ::= #chipsOfTypes(List) [function, total]
-  rule #chipsOfTypes(.List) => .Set
-  rule #chipsOfTypes(ListItem(T:IrType) L) => chipOfType(T) |Set #chipsOfTypes(L)
-  rule #chipsOfTypes(ListItem(_) L) => #chipsOfTypes(L) [owise]
-  syntax Set ::= #chipsOfInstrs(Instrs) [function, total]
-  rule #chipsOfInstrs(.Instrs) => .Set
-  rule #chipsOfInstrs((hashToCurve(_, _) ; Is)) => (SetItem("jubjub") SetItem("poseidon")) |Set #chipsOfInstrs(Is)
-  rule #chipsOfInstrs((transientHash(_, _) ; Is)) => SetItem("poseidon") |Set #chipsOfInstrs(Is)
-  rule #chipsOfInstrs((persistentHash(_, _, _) ; Is)) => SetItem("sha2_256") |Set #chipsOfInstrs(Is)
-  rule #chipsOfInstrs((keccak256(_, _, _) ; Is)) => SetItem("keccak_256") |Set #chipsOfInstrs(Is)
-  rule #chipsOfInstrs((_ ; Is)) => #chipsOfInstrs(Is) [owise]
-
-  // chip needed to hold a value of a type ("" = none)
-  syntax Set ::= chipOfType(IrType) [function, total]
-  rule chipOfType(jubjubPoint())     => SetItem("jubjub")
-  rule chipOfType(jubjubScalar())    => SetItem("jubjub")
-  rule chipOfType(secp256k1Point())  => SetItem("secp256k1")
-  rule chipOfType(secp256k1Base())   => SetItem("secp256k1")
-  rule chipOfType(secp256k1Scalar()) => SetItem("secp256k1")
-  rule chipOfType(secp256r1Point())  => SetItem("p256")
-  rule chipOfType(secp256r1Base())   => SetItem("p256")
-  rule chipOfType(secp256r1Scalar()) => SetItem("p256")
-  rule chipOfType(curve25519Point()) => SetItem("curve25519")
-  rule chipOfType(curve25519Base())  => SetItem("curve25519")
-  rule chipOfType(curve25519Scalar())=> SetItem("curve25519")
-  rule chipOfType(_) => .Set [owise]
 
   // --- Evaluation of all constraints --------------------------------------------------
   // verdicts(constraints, mem, pi, chips, outputs, binding input)
@@ -314,8 +276,6 @@ module ZKIR-CONSTRAINTS
   rule eval(gate(lessThan(A, B, N, O)), M, _, _) => #and(#native(rd(A, M), "less_than"), #and(#native(rd(B, M), "less_than"),
       #and(#bits(rd(A, M), #ltBits(N)), #and(#bits(rd(B, M), #ltBits(N)), #matches(#ltOf(rd(A, M), rd(B, M)), rdId(O, M), "less_than output")))))
     requires #ltBits(N) <=Int 253
-  syntax Int ::= #ltBits(Int) [function, total]
-  rule #ltBits(N) => maxInt(N +Int (N modInt 2), 4)
   syntax ValueResult ::= #ltOf(ValueResult, ValueResult) [function, total]
   rule #ltOf(vOk(native(A)), vOk(native(B))) => vOk(native(bool2Word(A <Int B)))
   rule #ltOf(_, _) => vErr("not native") [owise]
@@ -468,7 +428,7 @@ module ZKIR-CONSTRAINTS
   rule #std3(isOk(L), Al, H) => #std4(alignedBytesCircuit(Al, L), H)
   // fab_decode_to_bytes: atoms as off-circuit (byte range constraints), no check
   // of surplus fields, options "not yet implemented" and compress atoms rejected
-  // at synthesis
+  // at synthesis (#onlyAtoms and #hasCompress in ZKIR-STATIC)
   syntax BytesResult ::= alignedBytesCircuit(Alignment, List) [function, total]
   rule alignedBytesCircuit(alignment(Segs), Fs) => #abcOk(#alignedBytes(#onlyAtoms(Segs), Fs, .Bytes)) requires #onlyAtoms(Segs) ==K Segs andBool notBool #hasCompress(Segs)
   rule alignedBytesCircuit(alignment(Segs), _) => bErr("synthesis: in-circuit decoding of alignment options is not yet implemented") requires #onlyAtoms(Segs) =/=K Segs
@@ -476,14 +436,6 @@ module ZKIR-CONSTRAINTS
   syntax BytesResult ::= #abcOk(ABResult) [function, total]
   rule #abcOk(abOk(B, _)) => bOk(B)
   rule #abcOk(abErr(S)) => bErr(S)
-  syntax Segments ::= #onlyAtoms(Segments) [function, total]
-  rule #onlyAtoms(.Segments) => .Segments
-  rule #onlyAtoms((atom(A), Segs)) => atom(A), #onlyAtoms(Segs)
-  rule #onlyAtoms((option(_), Segs)) => #onlyAtoms(Segs)
-  syntax Bool ::= #hasCompress(Segments) [function, total]
-  rule #hasCompress(.Segments) => false
-  rule #hasCompress((atom(compressAtom()), _)) => true
-  rule #hasCompress((_, Segs)) => #hasCompress(Segs) [owise]
   syntax ValueResult ::= #std4(BytesResult, String) [function, total]
   rule #std4(bErr(S), _) => vErr(S)
   rule #std4(bOk(B), "sha256") => vOk(bytes32(sha256Bytes(B)))
@@ -492,6 +444,4 @@ module ZKIR-CONSTRAINTS
   // output is emitted as outputGate(vals, signature); a bare gate(output) or
   // any gate without a relation here is reported, not assumed to hold
   rule eval(gate(I), _, _, _) => unsupported("no in-circuit relation modelled for this instruction: " +String #opName(I)) [owise]
-  syntax String ::= #opName(Instr) [function, total]
-  rule #opName(_) => "instruction" [owise]
 endmodule

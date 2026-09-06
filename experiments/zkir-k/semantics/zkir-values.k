@@ -69,21 +69,7 @@ module ZKIR-VALUES
   rule defaultValue(curve25519Base())  => curve25519Base(0)
   rule defaultValue(curve25519Scalar())=> curve25519Scalar(0)
 
-  // Debug-style names matching the Rust variant names (used by the oracle).
-  syntax String ::= typeName(IrType) [function, total]
-  rule typeName(native())          => "Native"
-  rule typeName(bytes32())         => "Bytes32"
-  rule typeName(jubjubPoint())     => "JubjubPoint"
-  rule typeName(jubjubScalar())    => "JubjubScalar"
-  rule typeName(secp256k1Point())  => "Secp256k1Point"
-  rule typeName(secp256k1Base())   => "Secp256k1Base"
-  rule typeName(secp256k1Scalar()) => "Secp256k1Scalar"
-  rule typeName(secp256r1Point())  => "Secp256r1Point"
-  rule typeName(secp256r1Base())   => "Secp256r1Base"
-  rule typeName(secp256r1Scalar()) => "Secp256r1Scalar"
-  rule typeName(curve25519Point()) => "Curve25519Point"
-  rule typeName(curve25519Base())  => "Curve25519Base"
-  rule typeName(curve25519Scalar())=> "Curve25519Scalar"
+  // typeName(T), the Rust variant name, is in ZKIR-SYNTAX beside encodedLen.
 
   // --- Foreign-field limb encoding -------------------------------------------------
   // encForeign(x, p, log2Base, nbLimbs): list of native elements.

@@ -1,7 +1,9 @@
 # ZKIR K semantics: build and check.
-#   make check        kompile the four definitions, run the six check layers, write dated receipts
-#   make kompile      the four definitions only
-#   make fast         the four quick layers (no differential runs)
+#   make check         kompile the five definitions, run the six check layers, write dated receipts
+#   make kompile       the five definitions only
+#   make fast          the four quick layers (no differential runs)
+#   make zkir-contract kompile the target-contract definition (zkir-contract-main.k) only
+#   make contract      run the contract over the corpus, write a dated receipt
 # Run from experiments/zkir-k; Python goes through uv from the repository root.
 ROOT    := $(abspath ../..)
 UV      := cd $(ROOT) && uv run --group zkir-k python
@@ -10,11 +12,16 @@ DATE    ?= $(shell date +%F)
 RECEIPT := $(ROOT)/evidence
 DEFS    := zkir zkir-ext zkir-check zkir-test
 
-.PHONY: check kompile fast differential $(DEFS)
+.PHONY: check kompile fast differential contract zkir-contract $(DEFS)
 
-kompile: $(DEFS)
+kompile: $(DEFS) zkir-contract
 $(DEFS):
 	cd semantics && kompile $@.k --backend llvm --emit-json -O1
+zkir-contract:
+	cd semantics && kompile zkir-contract-main.k --backend llvm --emit-json -O1
+
+contract: zkir-contract
+	$(UV) $(TOOLS)/contract_corpus.py  | tee $(RECEIPT)/zkir-k-contract-corpus-$(DATE).txt
 
 fast: kompile
 	$(UV) $(TOOLS)/unit_values.py      | tee $(RECEIPT)/zkir-k-unit-values-$(DATE).txt

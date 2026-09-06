@@ -2,6 +2,8 @@
 // krun over a Program term leaves wfOk() or wfError(msg) in the <k> cell.
 // The extension syntax is imported so that `zkir_kast.py check --ext` uses
 // the same definition; the preprocessor decides which surface a file may use.
+// The target contract (ZKIR-CONTRACT-MAIN, zkir-contract-main.k) is a separate
+// main module over the same syntax and evaluates targetContract instead of wf.
 requires "zkir-syntax.k"
 requires "zkir-ext.k"
 

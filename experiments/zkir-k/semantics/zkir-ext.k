@@ -50,6 +50,62 @@ module ZKIR-EXT-SYNTAX
   rule writes(reverse(_, O))         => O, .Ids
   rule writes(loadConstant(_, _, O)) => O, .Ids
   rule writes(sha512(_, _, O))       => O, .Ids
+
+  rule typeName(boolT())   => "Bool"
+  rule typeName(byteT())   => "Byte"
+  rule typeName(bytesT(_)) => "Bytes"
+  rule #opName(andI(_, _))            => "and"
+  rule #opName(orI(_, _))             => "or"
+  rule #opName(xorI(_, _))            => "xor"
+  rule #opName(concat(_, _))          => "concat"
+  rule #opName(slice(_, _, _, _))     => "slice"
+  rule #opName(nth(_, _, _))          => "nth"
+  rule #opName(reverse(_, _))         => "reverse"
+  rule #opName(loadConstant(_, _, _)) => "load_constant"
+  rule #opName(sha512(_, _, _))       => "sha512"
+endmodule
+
+// Program-only facts of the extension surface (ZKIR-STATIC arms): the SHA-512
+// chip, the static types and chip demands of the nine added instructions, and
+// surface membership. Imported by ZKIR-EXT and by ZKIR-CONTRACT-MAIN.
+module ZKIR-EXT-STATIC
+  imports ZKIR-EXT-SYNTAX
+  imports ZKIR-STATIC
+
+  // `used_chips` at 2ffe2d1 enables sha2_512 for Sha512; load_constant enables nothing
+  rule #chipsOfInstrs((sha512(_, _, _) ; Is)) => SetItem("sha2_512") |Set #chipsOfInstrs(Is)
+
+  rule bindOuts(andI(_, O), E)             => E[O <- boolT()]
+  rule bindOuts(orI(_, O), E)              => E[O <- boolT()]
+  rule bindOuts(xorI(_, O), E)             => E[O <- boolT()]
+  // concat: the length is the sum of the operand lengths, which the environment does not track
+  rule bindOuts(slice(_, _, L, O), E)      => E[O <- bytes32()] requires L ==Int 32
+  rule bindOuts(slice(_, _, L, O), E)      => E[O <- bytesT(L)] requires L =/=Int 32
+  rule bindOuts(nth(_, _, O), E)           => E[O <- byteT()]
+  rule bindOuts(reverse(B, O), E)          => #bind(O, stype(B, E), E)
+  rule bindOuts(loadConstant(T, _, O), E)  => E[O <- T]
+  rule bindOuts(sha512(_, _, O), E)        => E[O <- bytesT(64)]
+
+  // the load_constant gate checks #chipFor of its type; sha512 needs the SHA-512 chip
+  rule #chipNeedsOf(loadConstant(T, _, _), _) => chipOfType(T)
+  rule #chipNeedsOf(sha512(_, _, _), _)       => SetItem("sha2_512")
+
+  rule #instrTypes(loadConstant(T, _, _)) => ListItem(T)
+
+  rule isExtInstr(andI(_, _))            => true
+  rule isExtInstr(orI(_, _))             => true
+  rule isExtInstr(xorI(_, _))            => true
+  rule isExtInstr(concat(_, _))          => true
+  rule isExtInstr(slice(_, _, _, _))     => true
+  rule isExtInstr(nth(_, _, _))          => true
+  rule isExtInstr(reverse(_, _))         => true
+  rule isExtInstr(loadConstant(_, _, _)) => true
+  rule isExtInstr(sha512(_, _, _))       => true
+  rule isExtType(boolT())   => true
+  rule isExtType(byteT())   => true
+  rule isExtType(bytesT(_)) => true
+
+  rule alignmentOf(sha512(Al, _, _)) => someAlign(Al)
 endmodule
 
 module ZKIR-EXT-VALUES
@@ -66,9 +122,7 @@ module ZKIR-EXT-VALUES
   rule defaultValue(boolT())   => boolV(false)
   rule defaultValue(byteT())   => byteV(0)
   rule defaultValue(bytesT(N)) => bytesV(padRightBytes(.Bytes, N, 0))
-  rule typeName(boolT())   => "Bool"
-  rule typeName(byteT())   => "Byte"
-  rule typeName(bytesT(_)) => "Bytes"
+  // typeName arms for the three types are in ZKIR-EXT-SYNTAX
 
   // any byte string value, of either representation
   syntax BytesResult ::= asBytesAny(Value) [function, total]
@@ -159,6 +213,7 @@ endmodule
 
 module ZKIR-EXT
   imports ZKIR-VM
+  imports ZKIR-EXT-STATIC
   imports ZKIR-EXT-VALUES
   imports ZKIR-SHA512
 
@@ -279,5 +334,4 @@ module ZKIR-EXT
   syntax ValueResult ::= #sha512C2(IntsResult, Alignment) [function, total]
   rule #sha512C2(isErr(S), _) => vErr(S)
   rule #sha512C2(isOk(L), Al) => #sha512V3(alignedBytesCircuit(Al, L))
-  rule #chipsOfInstrs((sha512(_, _, _) ; Is)) => SetItem("sha2_512") |Set #chipsOfInstrs(Is)
 endmodule

@@ -15,6 +15,10 @@ Usage:
   zkir_kast.py kast  FILE.zkir            print the Program term as KAST JSON
   zkir_kast.py check FILE.zkir [--definition DIR]
                                           run ZKIR-CHECK, print wfOk/wfError
+  zkir_kast.py contract FILE.zkir [--definition DIR]
+                                          run ZKIR-CONTRACT-MAIN, print the
+                                          tier-one obligations as JSON
+`--ext` accepts the midnight-zkir 2ffe2d1 surface for any command.
 """
 from __future__ import annotations
 
@@ -25,7 +29,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pyk.kast.inner import KApply, KInner, KSort, KToken
+from pyk.kast.inner import KApply, KInner, KSequence, KSort, KToken
 from pyk.kast.prelude.kbool import boolToken
 from pyk.kast.prelude.kint import intToken
 from pyk.kast.prelude.string import stringToken
@@ -374,8 +378,8 @@ def load_program(path: Path, ext: bool | None = None) -> KInner:
 
 # --- CLI ------------------------------------------------------------------------
 
-def default_definition() -> Path:
-    return Path(__file__).resolve().parent.parent / 'semantics' / 'zkir-check-kompiled'
+def default_definition(name: str = 'zkir-check') -> Path:
+    return Path(__file__).resolve().parent.parent / 'semantics' / f'{name}-kompiled'
 
 
 def wf_result(pretty: str) -> str:
@@ -388,9 +392,72 @@ def wf_result(pretty: str) -> str:
     return 'unexpected: ' + pretty.replace('\n', ' ')[:200]
 
 
+# --- the target contract (ZKIR-CONTRACT, semantics/zkir-contract.k) --------------
+
+def k_string(token: KInner) -> str:
+    """The Python value of a K String token (quoted, C-style escapes)."""
+    if not isinstance(token, KToken):
+        raise ValueError(f'expected a String token, got {token}')
+    text = token.token
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text[1:-1] if len(text) >= 2 and text[0] == text[-1] == '"' else text
+
+
+def find_label(term: KInner, label: str) -> KInner | None:
+    """First subterm (pre-order) whose label is `label`; descends through
+    cells, applications and the `~>` sequence of the <k> cell."""
+    if isinstance(term, KApply):
+        if term.label.name == label:
+            return term
+        children: tuple[KInner, ...] = term.args
+    elif isinstance(term, KSequence):
+        children = term.items
+    else:
+        return None
+    for child in children:
+        found = find_label(child, label)
+        if found is not None:
+            return found
+    return None
+
+
+def obligations(term: KInner) -> list[dict[str, Any]]:
+    """Walk the `obligations` list of a ZKIR-CONTRACT-MAIN result into dicts
+    {name, status, detail}: status is met, failed, notApplicable or info;
+    detail is the message of failed/info and None otherwise."""
+    out: list[dict[str, Any]] = []
+    node = find_label(term, 'obligations')
+    if node is None:
+        if find_label(term, '.obligations') is not None:
+            return out
+        raise ValueError('no obligations list in the result')
+    while isinstance(node, KApply) and node.label.name == 'obligations':
+        ob, node = node.args
+        if not (isinstance(ob, KApply) and ob.label.name == 'obligation'):
+            raise ValueError(f'unexpected list element {ob}')
+        name_tok, status = ob.args
+        if not isinstance(status, KApply):
+            raise ValueError(f'unexpected status {status}')
+        kind = status.label.name
+        detail = k_string(status.args[0]) if status.args else None
+        out.append({'name': k_string(name_tok), 'status': kind, 'detail': detail})
+    return out
+
+
+def run_contract(krun: 'KRun', term: KInner) -> list[dict[str, Any]]:
+    from pyk.kore.parser import KoreParser
+    kore = krun.kast_to_kore(term, KSort('Program'))
+    res = krun.run_process(kore)
+    if res.returncode != 0:
+        raise RuntimeError(res.stderr.strip())
+    return obligations(krun.kore_to_kast(KoreParser(res.stdout).pattern()))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('command', choices=['kore', 'kast', 'check'])
+    ap.add_argument('command', choices=['kore', 'kast', 'check', 'contract'])
     ap.add_argument('file', type=Path)
     ap.add_argument('--definition', type=Path, default=None)
     ap.add_argument('--ext', action='store_true', help='accept the midnight-zkir 2ffe2d1 surface (ZKIR-EXT)')
@@ -404,6 +471,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(term.to_dict()))
         return 0
     from pyk.ktool.krun import KRun
+    if args.command == 'contract':
+        krun = KRun(args.definition or default_definition('zkir-contract-main'))
+        try:
+            obs = run_contract(krun, term)
+        except RuntimeError as e:
+            print(f'krun failed: {e}', file=sys.stderr)
+            return 1
+        print(json.dumps({
+            'program': str(args.file),
+            'surface': 'extension' if args.ext else 'base',
+            'obligations': obs,
+        }, indent=2))
+        return 0
     krun = KRun(args.definition or default_definition())
     kore = krun.kast_to_kore(term, KSort('Program'))
     if args.command == 'kore':
