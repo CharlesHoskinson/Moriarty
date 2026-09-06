@@ -178,11 +178,10 @@ module ZKIR-EXT
   rule eqDispatch(bytesV(_), bytesV(_)) => eqValue()
   rule eqDispatch(bytesV(_), bytes32(_)) => eqFalse()
   rule eqDispatch(bytes32(_), bytesV(_)) => eqFalse()
-  // in circuit, select has no arm for any byte-string length (select.rs),
-  // and test_eq requires equal lengths
-  rule #eqSupported(vOk(bytesV(_)), vOk(bytesV(_)), "cond_select") => synthErr("Unsupported cond_select: Bytes ? Bytes")
-  rule #eqSupported(vOk(bytesV(_)), vOk(bytes32(_)), "test_eq") => synthErr("Unsupported test_eq: byte strings of different length")
-  rule #eqSupported(vOk(bytes32(_)), vOk(bytesV(_)), "test_eq") => synthErr("Unsupported test_eq: byte strings of different length")
+  // in circuit, select has no arm for any byte-string length (select.rs);
+  // test_eq between Bytes<32> and another length is covered by the generic
+  // different-types rule of ZKIR-CONSTRAINTS (Bytes32 == Bytes)
+  rule #eqSupported(vOk(bytesV(X)), vOk(bytesV(Y)), "cond_select") => synthErr("Unsupported cond_select: Bytes ? Bytes") requires lengthBytes(X) ==Int lengthBytes(Y)
 
   // --- boolean gates ---------------------------------------------------------------------
   rule <k> #exec(andI(Is, O)) => #put(O, #boolGate(resolveAll(Is, M), "and")) ... </k> <mem> M </mem> <status> ok() </status>
@@ -271,6 +270,14 @@ module ZKIR-EXT
   rule eval(gate(nth(B, I, O)), M, _, _)  => #matches(#nth(rd(B, M), I), rdId(O, M), "nth output")
   rule eval(gate(reverse(B, O)), M, _, _) => #matches(#rev(rd(B, M)), rdId(O, M), "reverse output")
   rule eval(gate(loadConstant(T, Es, O)), M, _, Chips) => #and(#chipFor(T, Chips), #matches(#toValue(decodeStrict(#immInts(Es), T, true)), rdId(O, M), "load_constant output"))
-  rule eval(gate(sha512(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_512", Chips), #matches(#sha512V(resolveAll(Xs, M), Al), rdId(O, M), "sha512 output")))
+  // in circuit, sha512 shares the byte-hash path of persistent_hash and keccak256
+  // (ir_vm.rs `fab_decode_to_bytes`), so the alignment is decoded as in ZKIR-CONSTRAINTS
+  rule eval(gate(sha512(Al, Xs, O)), M, _, Chips) => #and(#needAll(Xs, M), #and(#chipNamed("sha2_512", Chips), #matches(#sha512C(resolveAll(Xs, M), Al), rdId(O, M), "sha512 output")))
+  syntax ValueResult ::= #sha512C(ValuesResult, Alignment) [function, total]
+  rule #sha512C(vsErr(S), _) => vErr(S)
+  rule #sha512C(vsOk(Vs), Al) => #sha512C2(asNatives(Vs), Al)
+  syntax ValueResult ::= #sha512C2(IntsResult, Alignment) [function, total]
+  rule #sha512C2(isErr(S), _) => vErr(S)
+  rule #sha512C2(isOk(L), Al) => #sha512V3(alignedBytesCircuit(Al, L))
   rule #chipsOfInstrs((sha512(_, _, _) ; Is)) => SetItem("sha2_512") |Set #chipsOfInstrs(Is)
 endmodule

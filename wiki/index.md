@@ -44,6 +44,7 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   configuration, sorts, rule shape, pin, field representation, parsing route,
   test oracle, and the milestones with their results.
 - [The ZKIR semantics in K, as built](zkir/zkir-k-definition.md) — module
+- [ZKIR K definition documentation](../experiments/zkir-k/docs/01-overview.md) — fifteen chapters, from getting started to the instruction reference, the verdict model, the tooling, the oracles, the known divergences and the design limits; each chapter checked cross-vendor as developer and formal methods reader
   layout, what a run produces, the three layers of checking against the Rust
   crate, the divergences found, and the Agda and k-rust oracles.
 - [K Framework overview](k-framework/k-framework-overview.md) — what K is,

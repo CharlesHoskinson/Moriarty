@@ -362,11 +362,23 @@ def main() -> int:
     ap.add_argument('--definition', type=Path, default=None)
     ap.add_argument('--ext', action='store_true')
     ap.add_argument('--checked', action='store_true', help='run the static check first (checkedJob)')
+    ap.add_argument('--gen', action='store_true', help='generation mode (genJob): record transcript needs and the commitment instead of checking them')
+    ap.add_argument('--depth', type=int, default=None, help='stop after this many rewrite steps (status depth-exhausted if the run is unfinished)')
     args = ap.parse_args()
     runner = Runner(args.definition, ext=args.ext)
     with open(args.preimage) as f:
         pre = json.load(f)
-    print(json.dumps(runner.run_file(args.file, pre, checked=args.checked), indent=1))
+    try:
+        program = zkir_kast.load_program(args.file, ext=args.ext)
+    except zkir_kast.ZkirFormatError as e:
+        print(f'format error: {e}', file=sys.stderr)
+        return 2
+    try:
+        result = runner.run(program, pre, depth=args.depth, gen=args.gen, checked=args.checked)
+    except PreimageError as e:
+        print(f'preimage error: {e}', file=sys.stderr)
+        return 2
+    print(json.dumps(result, indent=1))
     return 0
 
 

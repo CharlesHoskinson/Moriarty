@@ -233,7 +233,10 @@ module ZKIR-VALUES
   rule decodeStrict(L, T, true) => #canonical(decodeValue(L, T), L, T)
   syntax DecodeResult ::= #canonical(DecodeResult, List, IrType) [function, total]
   rule #canonical(decErr(S), _, _) => decErr(S)
-  rule #canonical(decPanic(S), _, _) => decPanic(S)
+  // Strict decoding is the 2ffe2d1 decoder, whose `decode_bytes` returns None
+  // (an error, not the 92e8bdd3 assert) on a non-canonical Bytes<32> element.
+  rule #canonical(decPanic(_), _, bytes32()) => decErr("Failed to decode as Bytes32")
+  rule #canonical(decPanic(S), _, T) => decPanic(S) requires T =/=K bytes32()
   rule #canonical(decOk(V), L, _) => decOk(V) requires encodeValue(V) ==K L
   rule #canonical(decOk(V), L, T) => decErr("The encoded value of type " +String typeName(T) +String " is not in canonical form") requires encodeValue(V) =/=K L
 

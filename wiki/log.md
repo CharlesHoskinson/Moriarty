@@ -201,3 +201,4 @@ checks, serde fidelity, totality. New receipts (`evidence/*-2026-09-05b.txt`):
 agreements. Three more upstream candidates K3 to K5 in `contradictions.md`.
 Also: full kframework.org crawl (SRC-0026) and `k-framework/k-best-practices.md`;
 semantics graph (237 nodes) in evidence.
+- [2026-09-05] docs | fifteen-chapter documentation of the ZKIR K definition under experiments/zkir-k/docs, drafted by three model families and audited cross-vendor as developer and formal methods expert; four semantics defects (K6 Bytes32 strict decoding, sha512 gate alignment, overlapping test_eq rules, check --ext) and three tool gaps fixed; all six check layers rerun green (receipts 2026-09-05c)

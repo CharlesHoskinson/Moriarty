@@ -133,13 +133,13 @@ Its prime group order $q_{\text{secp256k1}}$ is:
 
 $$q_{\text{secp256k1}} = \text{0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$$
 
-- `Secp256k1Base`: Represents an element of $\mathbb{F}_p$. Encodes to 2 native elements (`encoded_len() == 2`) by splitting the 256-bit integer into a 248-bit lower limb and an 8-bit upper limb (CLM-0432; SRC-0006 zkir/src/ir_instructions/encode.rs:L35-50; repository observation; inspection; high; S5).
-- `Secp256k1Scalar`: Represents an element of $\mathbb{F}_q$. Encodes to 2 native elements (`encoded_len() == 2`) using the same 248-bit / 8-bit split.
+- `Secp256k1Base`: Represents an element of $\mathbb{F}_p$. Encodes to 2 native elements (`encoded_len() == 2`): at `92e8bdd3` the value minus one is written in base $2^{64}$ as four limbs, the three low limbs are packed into the first element (192 bits) and the fourth limb is the second element (64 bits), following the foreign-field chip of midnight-circuits 7.2.4 (CLM-0751; experiments/zkir-k/semantics/zkir-values.k and midnight-circuits 7.2.4 field/foreign/field_chip.rs; repository observation; reproduced; high; S1). An earlier version of this page described a 248-bit and 8-bit split; the register encodings compared with the crate in the K differential runs confirm the limb layout, and the correction is recorded in [../contradictions.md](../contradictions.md).
+- `Secp256k1Scalar`: Represents an element of $\mathbb{F}_q$. Encodes to 2 native elements (`encoded_len() == 2`) with the same limb layout (CLM-0751).
 - `Secp256k1Point`: Represents an affine point $(x, y) \in \mathbb{F}_p^2$ or the point at infinity $\mathcal{O}$ (CLM-0433; SRC-0025 docs/zkir-v3-spec.md:L290-305; source fact; unperformed; high; S5). Encodes to 5 native elements (`encoded_len() == 5`):
-  1. $x$ lower limb (248 bits)
-  2. $x$ upper limb (8 bits)
-  3. $y$ lower limb (248 bits)
-  4. $y$ upper limb (8 bits)
+  1. $x$, the three low limbs (192 bits)
+  2. $x$, the fourth limb (64 bits)
+  3. $y$, the three low limbs (192 bits)
+  4. $y$, the fourth limb (64 bits)
   5. $\text{is\_identity}$ boolean flag ($1$ if the point is $\mathcal{O}$, and $0$ otherwise)
 
 #### (b) Secp256r1 (NIST P-256 / prime256v1)

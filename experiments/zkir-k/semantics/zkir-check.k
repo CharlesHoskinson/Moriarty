@@ -1,9 +1,13 @@
 // Main module for milestone 2: parse (via pyk) and statically check a program.
 // krun over a Program term leaves wfOk() or wfError(msg) in the <k> cell.
+// The extension syntax is imported so that `zkir_kast.py check --ext` uses
+// the same definition; the preprocessor decides which surface a file may use.
 requires "zkir-syntax.k"
+requires "zkir-ext.k"
 
 module ZKIR-CHECK
   imports ZKIR-WF
+  imports ZKIR-EXT-SYNTAX
 
   configuration
     <zkir-check>

@@ -447,9 +447,9 @@ module ZKIR-VM
        <pre> Pre </pre> <privIdx> Idx => Idx +Int encodedLen(T) </privIdx> <genMode> true </genMode>
        <needs> N => N ListItem(needPriv(T)) </needs>
     requires Idx +Int encodedLen(T) >Int size(#prePrivate(Pre))
-  // The Rust code indexes the slice directly and panics past the end; we report it.
-  // (The Rust code indexes the transcript slice directly and panics with an
-  // index-out-of-range when it is too short; here that is an error.)
+  // The Rust code indexes the transcript slice directly and panics with an
+  // index-out-of-range when it is too short; the #input rules above report
+  // the same event as panic(...) before this function is reached.
   syntax ValueResult ::= #decodeSlice(List, Int, IrType, Bool) [function, total]
   rule #decodeSlice(L, Idx, T, _) => vPanic("range end index out of range") requires Idx +Int encodedLen(T) >Int size(L)
   rule #decodeSlice(L, Idx, T, Strict) => #toValue(decodeStrict(range(L, Idx, size(L) -Int Idx -Int encodedLen(T)), T, Strict))

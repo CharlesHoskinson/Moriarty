@@ -5,7 +5,7 @@
 // `Relation::circuit` in ir_vm.rs (midnight-ledger 92e8bdd3) and the
 // `*_incircuit` functions of ir_instructions/*.rs enforce for instruction I,
 // read off the chip calls they make; piGate(i, g, x) is pi[i] = g ? x : 0 with
-// g boolean; piFixed(i, _) pins the binding input and the commitment. The
+// g boolean; bindGate(0) pins the binding input and commGate(1, inputs, rand) the commitment. The
 // relation is evaluated with concrete values, so this establishes only that the
 // honest witness satisfies the constraints (completeness), never that no other
 // witness does (CLM-0721).
@@ -255,7 +255,7 @@ module ZKIR-CONSTRAINTS
   syntax ValueResult ::= #selBit(Int, ValueResult, ValueResult) [function, total]
   rule #selBit(1, vOk(A), vOk(B)) => selectV(true, A, B)
   rule #selBit(0, vOk(A), vOk(B)) => selectV(false, A, B)
-  rule #selBit(_, vOk(A), vOk(B)) => selectV(false, A, B) [owise]
+  rule #selBit(X, vOk(A), vOk(B)) => selectV(false, A, B) requires X =/=Int 0 andBool X =/=Int 1
   rule #selBit(_, _, _) => vErr("missing") [owise]
 
   syntax ValueResult ::= #bin2(ValueResult, ValueResult, String) [function, total]

@@ -94,3 +94,8 @@ Two further risks come from the advisory consult (CLM-0721; raw/notes/zkir-k-pla
 ## Provenance of the decisions
 
 The five decisions above were reviewed on 2026-09-03 by an advisory consult that agreed with the surface pin, the field representation and the compatibility stance, and disagreed with coupled constraint emission and in-K JSON parsing; both disagreements were accepted and are reflected in the text. The consult ran on `agy` with `gemini-3.8-flash-high` because the configured Claude advisor failed with API overload errors; the verbatim verdict is preserved in `raw/notes/zkir-k-plan-advisory-2026-09-03.md` (CLM-0722; raw/notes/zkir-k-plan-advisory-2026-09-03.md; repository observation; reproduced; high; S2).
+
+## Documentation surge
+
+On 2026-09-05 the definition was documented end to end in fifteen chapters under `experiments/zkir-k/docs/`, each drafted by one of three model families (Claude Fable 5.1, Grok 4.6, GPT-6 Astra through Codex) under a chapter brief and a persona, then audited by two readers of other families, one as a developer and one as a formal methods expert, and revised until the audits left no blocking or major finding; the briefs, audit reports and collected maintainer notes are under `experiments/zkir-k/docs-surge-2026-09-05/` (CLM-0755; experiments/zkir-k/docs-surge-2026-09-05; repository observation; reproduced; high; S1). The surge changed the definition in four places and the tools in three, all listed on [zkir/zkir-k-definition.md](zkir/zkir-k-definition.md), and every receipt was regenerated with the suffix `2026-09-05c` (CLM-0756; evidence; executed test; reproduced; high; S1).
+

@@ -172,7 +172,7 @@ CASES.append(('k02_transcript_too_short_panics', 'K2 (new)',
         {'op': 'private_input', 'guard': None, 'type': NATIVE, 'output': '%x'},
         {'op': 'add', 'a': '%a', 'b': '%x', 'output': '%y'}]), [1],
     'panic', 'panic', 'private_input', 'unknown',
-    'an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports an error'))
+    'an unguarded private_input with an empty private transcript: the crate indexes the slice and panics (index out of range) instead of returning an error; K reports the same panic'))
 
 CASES.append(('f01_reconstitute_overflow', 'Finding 1 (retired)',
     program([('%d', NATIVE), ('%m', NATIVE)], [

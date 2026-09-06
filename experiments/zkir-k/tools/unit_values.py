@@ -222,6 +222,7 @@ check('enc bytes32', K('encodeValue', K('bytes32V', KToken(f'b"{"".join(chr(c) f
 check('dec bytes32', K('decodeValue', klist([I(lo), I(32)]), K('Bytes32')), f'decOk ( bytes32 ( {run(KToken("b" + chr(34) + "".join(chr(92) + "x%02x" % c for c in b) + chr(34), KSort("Bytes")))} ) )')
 check('dec bytes32 bad high (Rust assert_eq! panics)', K('decodeValue', klist([I(lo), I(256)]), K('Bytes32')), 'decPanic ( "assertion failed: Bytes32 low element uses byte 31 or high element exceeds a byte" )')
 check('dec native out of field', K('decodeValue', klist([I(R)]), K('Native')), 'decErr ( "is not a canonical field element" )')
+check('dec bytes32 bad high, strict (2ffe2d1 decode_bytes returns None)', K('decodeStrict', klist([I(lo), I(256)]), K('Bytes32'), KToken('true', 'Bool')), 'decErr ( "Failed to decode as Bytes32" )')
 
 print(f'\n{sum(checks)}/{len(checks)} checks passed')
 sys.exit(0 if all(checks) else 1)
