@@ -159,8 +159,12 @@ identity exit0 and six fault exits74. Independent and root mock admission
 are complete. Both direct/observed native pairs have now passed their exact
 comparisons: successful execution and a deliberate invariant violation.
 Independent and root controls admission are complete. The one full observed
-diagnostic was dispatched at `39ebe4254c16aa9318c0fa6fab47a6b6ff994a35`;
-its result remains pending and must come from the original transport.
+diagnostic at `39ebe4254c16aa9318c0fa6fab47a6b6ff994a35` ended with
+heap exhaustion and no ITF: Node -6, recorder and outer 134. The observed
+public boundary is entry into `runSimulator`, after successful typecheck;
+the internal failing operation is unresolved. Independent and root review
+admit failed diagnostic preservation. A literal-case wrapper remedy is
+under source review; canonical export acceptance remains open.
 Largest-case native feasibility still needs evidence before all78.
 Producer
 case lowering and all78native wrappers are now admitted at `8be3cef`: complete
@@ -238,9 +242,13 @@ limit; original intake exited2 before JSON structure checks. Independent and
 root review admit failed diagnostic preservation only. The independently
 reviewed tiny retained-data preservation package is committed at `e87018f`.
 The separate bounded retained-data design and exact plan are adopted at
-`39ebe4254c16aa9318c0fa6fab47a6b6ff994a35`; they require a reviewed extension
-for intervening A4 process predecessors before dispatch. No larger-input
-parse has run. See CLM-0181 in the research journal for current evidence pins.
+`39ebe4254c16aa9318c0fa6fab47a6b6ff994a35`. After its reviewed predecessor
+extension, the one 256 MiB inspection decoded the output but failed the
+source-order import predicate. Its multiline command also prevented RH002
+from parsing the timing report; data exit2 and incomplete resource capture
+are preserved and independently/root admitted as failures. A separate
+validator-order and command-envelope correction is under source review.
+See CLM-0182 in the research journal for current evidence pins.
 No funding-pilot model-checking pass is claimed.
 No integrated-history acceptance, Candidate A model-checking pass,
 Council result, main implementation merge or GitHub publication is claimed.

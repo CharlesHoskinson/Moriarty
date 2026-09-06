@@ -107,7 +107,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   independently audited and committed, and a bounded retained-output plan is
   adopted. Seven A4 observer controls are independently admitted; both native
   pairs and their evidence are independently admitted. The one full diagnostic
-  is dispatched with its result pending. H1, full A4–A7 and Council stay open.
+  failed with heap exhaustion after entering `runSimulator`. The bounded
+  retained-output inspection failed an import-order predicate and resource
+  report parsing; both failures are preserved. Narrow source corrections
+  are under review. H1, full A4–A7 and Council stay open.
 
 - [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
   Candidate A completion dependencies, and the still-open S01–S15 program.

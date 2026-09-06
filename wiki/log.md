@@ -773,3 +773,11 @@ terminal result pending. The independently audited A5 tiny evidence package
 is committed at experimental `e87018f`; source-only retained256 planning is
 adopted at `39ebe42`. Oversized-output parsing and full A4/A5 acceptance remain
 open. The continuation loop is scoped to completing A4 and A5.
+
+## [2026-09-06] experiment | Full diagnostic and retained inspection failures
+
+CLM-0182 records the A4 heap failure after observed entry into `runSimulator`
+and the A5 retained256 import-order failure with incomplete timing capture.
+Both original failed results have independent and root preservation admission.
+Literal A4 wrappers and a bounded A5 validator/command correction are under
+source review. Full A4/A5 acceptance remains open.

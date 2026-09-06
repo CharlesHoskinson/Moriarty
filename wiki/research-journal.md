@@ -3,7 +3,7 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T05:47:30Z
+updated_at: 2026-09-06T06:18:39Z
 sources:
   - SRC-0016
   - SRC-0017
@@ -2283,3 +2283,44 @@ observed date2026-09-06 UTC; reproduction reproduced for the recorded controls
 and package audits, specified-only for retained256 parsing; confidence high
 within those limits; lifecycle S3 experimental branch and S2 inspection plan.
 Full A4 exports, final115, A5 bounded verification/H1 and Council remain open.
+
+## CLM-0182 — Full A4 diagnostic and retained A5 inspection failed
+
+Experiment observation: the full A4 observer invocation at experimental
+`39ebe4254c16aa9318c0fa6fab47a6b6ff994a35` terminated with authentic
+8a48a7/134 after 40 original transport responses. Node exited -6; recorder
+and outer exited134. No ITF was produced. Cleanup completed without timeout
+or forced signals. The seven phase records show completed load, parse and
+typecheck, followed by entry into `runSimulator`; they do not identify its
+internal failing operation. Independent review is SHA256
+`6af66272c392da2fcbffd0956bf40007b1ef194eb90859d0c9146a4be6dc8925`.
+Root admission `577bc22c4c71b3f488bc75fed23c995d6559d1fbb0d9dbbae1c1387af38bda9d`
+(actualb73d8c/0) accepts failed preservation only. Originals remain under
+experimental `.superpowers/sdd/a4-run-phase-diagnostic-20260906/`.
+
+The separately reviewed A5 retained256 inspection ran once against the
+unchanged 199,868,611-byte compiler output. Its authentic terminal is
+c51390/2. Strict decoding reached the import predicate, which failed because
+the retained compiler declarations are topologically ordered rather than
+in source order. Subsequent structural predicates were not admitted. The
+multiline Python command also made the RH002 timing report unparsable:
+the original resource object remains null and resource completeness false.
+The before/after input manifests match; owned cleanup completed without
+timeout or forced signals. Independent review is SHA256
+`fd877f57823dcc8e77261898568056aa278f4b6358c4ec11d995e2dfafcd62ba`.
+Root admission `6419842633fffbe66294c0c2069116df4e456460dfd0bf7baba56722cb807816`
+(actual537f3c/0) accepts failed preservation only. Originals remain under
+experimental `.superpowers/sdd/a5-no-flatten-retained-256-20260906/`.
+
+Source investigation supports two separate next steps: literal A4 case
+wrappers that retain the canonical corpus, and an A5 comparison-order plus
+single-line command-envelope correction under unchanged resource limits.
+These are source proposals, not successful exports or inspections. The
+original failures remain immutable; no native compiler retry occurred.
+
+Claim metadata: sources SRC-0031, SRC-0033, SRC-0035; authority experimental;
+scope one full A4 observer and one retained256 data inspection; observed
+date2026-09-06 UTC; reproduction reproduced for preservation audits,
+specified-only for remedies; confidence high within those limits; lifecycle
+S3 experimental evidence and S2 remedies. Full A4 exports, final115, A5
+bounded verification/H1 and Council remain open.
