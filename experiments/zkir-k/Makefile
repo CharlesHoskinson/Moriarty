@@ -4,6 +4,7 @@
 #   make fast          the four quick layers (no differential runs)
 #   make zkir-contract kompile the target-contract definition (zkir-contract-main.k) only
 #   make contract      run the contract over the corpus, write a dated receipt
+#   make contexts      the seven Moriarty transaction contexts on K, preprocess and the circuit oracle (M4)
 # Run from experiments/zkir-k; Python goes through uv from the repository root.
 ROOT    := $(abspath ../..)
 UV      := cd $(ROOT) && uv run --group zkir-k python
@@ -12,7 +13,7 @@ DATE    ?= $(shell date +%F)
 RECEIPT := $(ROOT)/evidence
 DEFS    := zkir zkir-ext zkir-check zkir-test
 
-.PHONY: check kompile fast differential contract zkir-contract $(DEFS)
+.PHONY: check kompile fast differential contract contexts zkir-contract $(DEFS)
 
 kompile: $(DEFS) zkir-contract
 $(DEFS):
@@ -22,6 +23,9 @@ zkir-contract:
 
 contract: zkir-contract
 	$(UV) $(TOOLS)/contract_corpus.py  | tee $(RECEIPT)/zkir-k-contract-corpus-$(DATE).txt
+
+contexts: zkir zkir-ext
+	$(UV) $(TOOLS)/moriarty_contexts.py --ext | tee $(RECEIPT)/zkir-k-moriarty-contexts-$(DATE).txt
 
 fast: kompile
 	$(UV) $(TOOLS)/unit_values.py      | tee $(RECEIPT)/zkir-k-unit-values-$(DATE).txt
