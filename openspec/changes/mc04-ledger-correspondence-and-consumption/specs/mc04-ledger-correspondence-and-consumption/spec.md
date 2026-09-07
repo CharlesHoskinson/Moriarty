@@ -41,7 +41,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion
@@ -61,3 +61,10 @@ The package SHALL implement, review, prove, and independently verify its allocat
 #### Scenario: Fixed proof substituted for extension
 - **WHEN** the package supplies only an earlier fixed-loan proof, exceeds its campaign allocation, or lacks a required extension proof
 - **THEN** package acceptance remains blocked and no earlier proof or counter can substitute.
+
+### Requirement: Early complete verifier feasibility
+RP02 source and component preparation SHALL run before dependent native investment. Acceptance SHALL check the complete native final decision, canonical exported artifacts and exact ledger effects under pinned deployment versions; an unconstrained host verdict SHALL reject.
+
+#### Scenario: Report requirement omitted
+- **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
+- **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).

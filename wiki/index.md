@@ -5,6 +5,10 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
+**Complete product roadmap:** [ROADMAP.md](../ROADMAP.md) consolidates current capabilities, all remaining work and acceptance criteria. The linked wiki pages preserve the research notes and source dispositions.
+
+**Current report reconciliation:** [combined graph and review](../deliverables/moriarty-report-plan-review-2026-09-07/README.md) and [remaining-plan amendment](../openspec/REPORT-RECONCILIATION-2026-09-07.md). Moriarty is Midnight-centric. Early financial/intent and complete native/ledger checks constrain successor designs; MC01-MC08 acceptance remains open. See CLM-0918 through CLM-0921.
+
 **Latest execution plan:** [MC01–MC08 completion program](../openspec/MORIARTY-COMPLETION-PROGRAM.md)
 covers the seven requested language, financial, proof, acceptance, composition,
 conformance, and correspondence gaps. The plans are S2, specified-only.

@@ -3,8 +3,11 @@ id: defiformal.taxonomy.audit
 type: comparison
 title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
-updated_at: 2026-09-06T21:29:23.534731+00:00
+updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0070
+  - SRC-0071
+  - SRC-0072
   - SRC-0015
   - SRC-0016
   - SRC-0017
@@ -170,3 +173,12 @@ tokenized external claim, bounded mandate, and conditional-token market—become
 the primary language demonstrations. Both sets remain non-executable syntax
 sketches until the surface grammar, type checker, elaborator, and conformance
 tests exist.
+
+
+## CLM-0919: DeFi report requirements and bounded Midnight interpretation
+
+SRC-0072 proposes typed open transitions, resources, authority, liabilities, effect footprints, assumptions and verified financial libraries (report lines 442-654). It permits unbounded numeric domains at line 664; Moriarty's bounded mandate supersedes that choice. Its twelve holdouts are candidate financial challenges, not additional chain-adapter requirements. Preserve all 72 historical rows and normalize modeled product/version scope without replacing the coverage denominator. Full ACTUS coverage remains 277 fixtures and all 32 taxonomy dispositions.
+
+The [DeFi review](../deliverables/moriarty-report-plan-review-2026-09-07/defi.review.md) distinguishes report claims from retained source findings and missing attachments. Early adversarial semantics constrain a successor Core; complete conformance remains MC07. Model-to-contract fidelity and independent expected observations cannot be replaced by theorem-name certificates or primitive counts.
+
+Metadata: SRC-0070/SRC-0072; observed 2026-09-07; secondary descriptive synthesis and planning recommendation; S2, not executed conformance; confidence high for report statements, unverified for its external citations.

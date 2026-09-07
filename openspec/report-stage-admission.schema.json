@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moriarty planning stage admission",
+  "type": "object",
+  "required": [
+    "schema",
+    "dispatchEnabled",
+    "campaignRecordStore",
+    "rule",
+    "stages"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string"
+    },
+    "dispatchEnabled": {
+      "const": false
+    },
+    "campaignRecordStore": {
+      "type": "string"
+    },
+    "rule": {
+      "type": "string"
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "owners",
+          "requires",
+          "status",
+          "acceptedProfile",
+          "candidateHash",
+          "campaignRecordId",
+          "purpose"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "MC01",
+                "MC02",
+                "MC03",
+                "MC04",
+                "MC05",
+                "MC06",
+                "MC07",
+                "MC08"
+              ]
+            }
+          },
+          "requires": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "enum": [
+              "specified-only",
+              "pending-review",
+              "blocked",
+              "complete"
+            ]
+          },
+          "acceptedProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "candidateHash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "campaignRecordId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "purpose": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -122,3 +122,8 @@ effect on target coverage, not adding another layer of approval machinery.
     identity and unchanged bytes before admitting its verdict. The implementation07
     GPT-6 launcher accidentally supplied the implementation06 manifest; that review
     cannot approve implementation07. Preserve the report and recheck useful findings.
+
+
+## Three-report planning guard
+
+The [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) applies to successor profiles and campaigns. Keep Moriarty Midnight-centric: other-chain examples supply financial requirements, not new backend deliverables. Review nominal liabilities, pending workflows and private successor artifacts before committing an expanded proof relation. A fixed linear proof, an atlas row count or an optional-proof report roadmap cannot close mandatory general-history or financial-coverage obligations.

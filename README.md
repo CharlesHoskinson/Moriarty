@@ -183,6 +183,8 @@ For the remaining frontend APIs and tests, continue with the [language package g
 
 ## What remains to build
 
+The complete [roadmap](ROADMAP.md) lists the implementation sequence, acceptance criteria and remaining checks, with links to the maintained [research wiki](wiki/index.md).
+
 | Area | Available now | Required next |
 | --- | --- | --- |
 | Language | Bounded grammar, types, canonical encoding, evaluator and executable reference examples | Complete implementation review and extend the semantics for all required financial cases |

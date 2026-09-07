@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Evidence-gated completion
-Completion SHALL require every dependency gate, resolved blocking findings, and admissible Opus and GPT-6 audits.
+Completion SHALL require every dependency gate, resolved blocking findings, and admissible Fable 5.1 at medium effort and GPT-6 audits.
 
 #### Scenario: Complete supported language
 - **WHEN** a fresh checkout runs the complete program verification and both audits accept the exact candidate
@@ -41,7 +41,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion
@@ -50,3 +50,18 @@ The package SHALL remain incomplete if any required positive or rejection predic
 #### Scenario: Negative control incorrectly accepts
 - **WHEN** a required invalid input is accepted or its rejection lacks evidence
 - **THEN** verification fails and dependent acceptance remains blocked.
+
+### Requirement: Developer-visible semantics and assumptions
+The developer flow SHALL distinguish signed intent, selected plan, simulation, proof verification, finalized effects and outstanding obligations. It SHALL disclose assumed oracle/custody/finality facts and unresolved availability, without implying finite evaluation proves liveness.
+
+#### Scenario: Report requirement omitted
+- **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
+- **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+
+#### Scenario: Revoked verifier or inactive specification
+- **WHEN** evidence verifies cryptographically but its key/specification is revoked or outside the policy activation window
+- **THEN** acceptance rejects it and migration cannot restore a consumed predecessor or reset lifecycle authority.
+
+#### Scenario: Oversized verification input
+- **WHEN** claim count, dependency bounds, encoded evidence/sidecar bytes or declared total verification work exceed the registered budget
+- **THEN** bounded admission rejects before expensive verification or unbounded allocation, without applying effects.

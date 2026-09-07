@@ -41,7 +41,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion
@@ -50,3 +50,10 @@ The package SHALL remain incomplete if any required positive or rejection predic
 #### Scenario: Negative control incorrectly accepts
 - **WHEN** a required invalid input is accepted or its rejection lacks evidence
 - **THEN** verification fails and dependent acceptance remains blocked.
+
+### Requirement: Complete backend decision before native dispatch
+A native campaign SHALL satisfy RP01, RP02 stages F0/F1 and campaign-specific RP03, distinguish fixed-instance IVC from general private multi-input PCD, and retain independent proof-byte verification. An undefined final verifier or handoff interface SHALL prevent dispatch.
+
+#### Scenario: Report requirement omitted
+- **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
+- **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).

@@ -3,8 +3,11 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-07T02:33:43.401543+00:00
+updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0070
+  - SRC-0071
+  - SRC-0072
   - SRC-0054
   - SRC-0053
   - SRC-0051
@@ -147,3 +150,12 @@ The four required real claims remain unavailable. CLM-0199 preserves held-out
 financial extensions before further Core design. Metadata: SRC-0042/0047/0050;
 2026-09-06; experiment observation, S3; tested predicates reproduced, confidence
 high within their scope. General proof obligations remain specified-only.
+
+
+## CLM-0920: Complete native history boundary before expanded proof campaigns
+
+SRC-0071 distinguishes linear IVC, recursive aggregation and compatible branching PCD (lines 53-77, 859-957). The [pinned MC04 source review](../evidence/moriarty-completion-program-2026-09-07/MC04/wrapper-interface-source-02/README.md) has not established a complete native-to-Preview verifier: final accumulator/pairing verification, strict encoding, exact statement binding and deployed-version provenance remain obligations. A fixed native loan relation cannot establish general source semantics, private handoff or split/join.
+
+RP02 moves the artifact/export and complete-verifier decision before expanded native work, preserving MC06's later real private composition evidence. No report or graph proves feasibility. Finite evaluation, financial safety, source fidelity, ledger uniqueness, oracle truth and witness availability remain distinct claims.
+
+Metadata: SRC-0071; observed 2026-09-07; report synthesis and pinned repository observation at `3eb0e0acf5b07a224ad876886e54837c82c84b86`; S2 planning disposition, no native or ledger proof reproduced; confidence high for identified missing evidence, unknown for implementation feasibility.

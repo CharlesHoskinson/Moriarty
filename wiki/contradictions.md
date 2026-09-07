@@ -4,8 +4,11 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-07T03:04:05.743582+00:00
+updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0070
+  - SRC-0071
+  - SRC-0072
   - SRC-0055
   - SRC-0056
   - SRC-0043
@@ -197,3 +200,12 @@ network reference. Metadata: SRC-0055/SRC-0056, observed2026-09-07; primary sour
 and experiment observation; S3 investigation, acquisition/live reads reproduced,
 public settlement not reproduced. Details and disposition are in the
 [review](../evidence/midnight-network-review-2026-09-07/README.md).
+
+
+## CLM-0921: Report roadmaps versus Midnight product requirements
+
+SRC-0070 recommends optional ZK and deferred Compact dependency (intents lines 2012-2016), public initial intent semantics (1922-1954), and other-chain backends. SRC-0071 recommends selective recursion for a generic first transaction standard (PCD lines 1113-1117). SRC-0072 permits unbounded numeric domains (DeFi line 664) and later optional proof integration (1138-1140).
+
+Disposition: the user's Midnight-centric language, mandatory PCD, bounded semantics and private successor handoff control. Preserve useful semantic requirements and comparative financial cases. Do not import NEAR/EVM/Cardano adapter work, optional-history acceptance or unrestricted numeric domains into Moriarty. The [amendment](../openspec/REPORT-RECONCILIATION-2026-09-07.md) records owners and early decisions. This extends CLM-0192/0193 without rewriting the source reports.
+
+Metadata: observed 2026-09-07; secondary report statements versus normative user input; S2 explicit design disposition; report review reproduced, external report citations and product implementation not reproduced; confidence high for the conflict and chosen scope.

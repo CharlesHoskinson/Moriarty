@@ -3,8 +3,11 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T05:16:25.972290+00:00
+updated_at: 2026-09-07T17:03:42.563902+00:00
 sources:
+  - SRC-0070
+  - SRC-0071
+  - SRC-0072
   - SRC-0068
   - SRC-0069
   - SRC-0066
@@ -2973,3 +2976,12 @@ Metadata: SRC-0068 local tool observation, S3; SRC-0069 root planning-review
 reconciliation, S2. Observed 2026-09-07 UTC; reproduced for exact identity,
 returned verdicts, candidate hashes, and plan validation. High confidence for
 those retained results; native fit, acceptance, conformance, and execution remain open.
+
+
+## CLM-0922: Complete Midnight roadmap and report reconciliation
+
+The [root roadmap](../ROADMAP.md) consolidates MC01-MC08, their complete remaining acceptance obligations and early financial/native decisions. The [three-report graph and notes](../deliverables/moriarty-report-plan-review-2026-09-07/README.md) preserve report-specific coverage, contradictions and requirement owners. The maintained wiki holds architecture, financial and assurance synthesis; raw report bytes remain immutable.
+
+The latest user instructions select Fable 5.1 at medium effort plus fresh GPT-6 for future reviews and prohibit GitHub publication while the remote is rebuilt. Local commits remain authorized. Prior Opus reviews retain their original scope. Review verdicts and runtime acceptance are separate; no implementation, native proof or ledger transaction is established by this planning task.
+
+Metadata: SRC-0070-SRC-0072 and linked user assignments; observed 2026-09-07; secondary report review, normative user direction and planning synthesis; S2; document/graph checks reproduced, product acceptance not reproduced; confidence high for scope and evidence distinctions.

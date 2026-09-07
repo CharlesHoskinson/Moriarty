@@ -5,9 +5,15 @@ before changing research artifacts.
 
 ## Current direction and mandatory footguns
 
-The [GitHub consolidation instruction](raw/assignments/moriarty-github-consolidation-2026-09-07.md) authorizes merging experimental and historical work to main. A merge is not package acceptance or permission to resume superseded experiments. Root README describes the current product and its limitations for new developers.
+The latest [local-only instruction](raw/assignments/moriarty-local-only-2026-09-07.md) prohibits GitHub pushes/publication while the remote is rebuilt. Commit locally only; this supersedes prior publication authority.
 
-The [2026-09-07 reviewer replacement](raw/assignments/moriarty-opus-review-2026-09-07.md) selects exact `claude-opus-5` and fresh `gpt-6-astra` for future independent reviews. This overrides older Fable-only instructions, including inherited worktree rules. Preserve historical Fable outputs; do not relabel them or fabricate legacy acceptance flags.
+The latest [reviewer return instruction](raw/assignments/moriarty-fable-return-2026-09-07.md) selects exact `claude-fable-5-1` at medium effort, alongside fresh `gpt-6-astra`, for future reviews. It supersedes the earlier Opus route; preserve every historical receipt under its actual identity and scope.
+
+The [three-report review instruction](raw/assignments/moriarty-report-reconciliation-2026-09-07.md) explicitly confirms a Midnight-centric language. Compact, Midnight native proofs, private state and ledger acceptance constrain design. Other-chain examples are comparative financial inputs, not additional backend deliverables. Read the [report reconciliation](openspec/REPORT-RECONCILIATION-2026-09-07.md) and its registered review status before successor semantic freezes or proof dispatch.
+
+The historical [GitHub consolidation instruction](raw/assignments/moriarty-github-consolidation-2026-09-07.md) authorizes merging experimental and historical work to main. A merge is not package acceptance or permission to resume superseded experiments. Root README describes the current product and its limitations for new developers.
+
+The earlier, now superseded [2026-09-07 reviewer replacement](raw/assignments/moriarty-opus-review-2026-09-07.md) selects exact `claude-opus-5` and fresh `gpt-6-astra` for future independent reviews. This overrides older Fable-only instructions, including inherited worktree rules. Preserve historical Fable outputs; do not relabel them or fabricate legacy acceptance flags.
 
 The latest [delegated execution instruction](raw/assignments/moriarty-autonomous-execution-2026-09-07.md)
 authorizes the assistant to make execution and bounded resource decisions for the full goal without repeated permission requests.

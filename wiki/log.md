@@ -952,3 +952,8 @@ GPT-6's same-candidate approval. Corrected protected budgets, shared ownership,
 acceptance lineage, and execution decision gates. Recorded planning-audit debits
 and nonblocking execution findings. The automatic loop remains unarmed because
 of the superseded unfinished goal; no product/proof/ledger completion is claimed.
+
+
+## 2026-09-07: Reconcile all three reports with Midnight language plans
+
+Captured exact intents, PCD and DeFi report bytes as SRC-0070-SRC-0072; intents and PCD match the earlier source hashes. Reviewed every section and produced a combined provenance graph and MC01-MC08 requirements crosswalk. CLM-0918 through CLM-0921 record Midnight-centric scope, bounded-domain and mandatory-PCD dispositions, early financial challenges and complete native/ledger feasibility. The amendment preserves all financial coverage and actual proof/acceptance obligations. Its audit disposition records plan review only; no implementation, proof or public transaction was performed by this review.

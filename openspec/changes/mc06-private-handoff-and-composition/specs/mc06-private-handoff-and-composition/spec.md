@@ -41,7 +41,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion
@@ -72,3 +72,10 @@ The package SHALL extend owned upstream predicates and requalify them against th
 #### Scenario: Unrelated validator or stale theorem
 - **WHEN** evidence uses an independent bypass contract or an older theorem outside its supported domain
 - **THEN** acceptance fails and affected packages remain pending requalification.
+
+### Requirement: Composition operators and witness ownership
+Composition SHALL state whether it is sequential, disjoint, shared-state atomic or asynchronous. Private handoff SHALL enumerate required backend artifacts and preserve liabilities, residual authority and a conserved global work budget under genuine predecessor proof verification.
+
+#### Scenario: Report requirement omitted
+- **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
+- **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).

@@ -3,8 +3,11 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-04T23:45:58Z
+updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0070
+  - SRC-0071
+  - SRC-0072
   - SRC-0004
   - SRC-0005
   - SRC-0006
@@ -131,3 +134,10 @@ state transitions. It cannot establish an off-chain custodian's solvency, an
 oracle publisher's honesty, a relayer network's liveness, legal enforceability,
 or discretionary investment quality. Those dependencies remain named and
 auditable without entering the trusted semantic kernel.
+
+
+## CLM-0918: Midnight-centric language and target-first semantic challenges
+
+The [user clarification](../raw/assignments/moriarty-report-reconciliation-2026-09-07.md) makes Midnight the implementation target. Compact, native proofs, private state and ledger acceptance constrain source and semantic design. Other-chain report examples are comparative financial behaviors. The [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) requires early financial/intent and backend decisions within MC01-MC08. The atomic agreement profile is an initial subset; outcome-intent authoring, nominal-liability authority and temporal workflows require versioned extensions.
+
+Metadata: SRC-0070, SRC-0071, SRC-0072; observed 2026-09-07; secondary reports plus normative user input and repository observation at `3eb0e0acf5b07a224ad876886e54837c82c84b86`; proposed language/plan scope S2; source review reproduced, implementation/proof acceptance not reproduced; confidence high for the recorded scope, unresolved for backend feasibility.

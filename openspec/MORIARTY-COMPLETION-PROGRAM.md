@@ -1,11 +1,15 @@
 # Moriarty target-first completion program
 
-Current review authority: [Opus replacement instruction](../raw/assignments/moriarty-opus-review-2026-09-07.md). Future audits use exact Opus and fresh GPT-6; historical Fable receipts retain their original scope.
+Current review authority: [latest Fable instruction](../raw/assignments/moriarty-fable-return-2026-09-07.md). Future audits use exact Fable 5.1 at medium effort and fresh GPT-6; historical Fable receipts retain their original scope.
 
 Status: S2, specified-only. The plan files do not establish an active execution loop.
 Authority: [user request](../raw/assignments/moriarty-completion-loop-2026-09-07.md).
 Machine register: [moriarty-completion-program.json](moriarty-completion-program.json).
 Execution and review receipts: [program evidence](../evidence/moriarty-completion-program-2026-09-07/).
+
+## Report reconciliation
+
+The [three-report reconciliation](REPORT-RECONCILIATION-2026-09-07.md) defines RP01 financial/intent challenges, RP02 complete native/ledger feasibility, and RP03 current campaign admission. Its review status is recorded in the machine register. These are early conditions inside MC01-MC08, not new completion packages or evidence of runtime enforcement. Preserve all original acceptance obligations.
 
 ## Intended result and current foundation
 
@@ -154,7 +158,7 @@ Record the actual goal creation result and runtime state before reporting arming
 8. Dispatch through the contract-bound queue with durable process ownership.
 9. Add failing behavioral tests before implementation changes.
 10. Run the package checks and retain failures with actual resource receipts.
-11. Request independent Opus and GPT-6 result audits of the frozen candidate.
+11. Request independent Fable 5.1 at medium effort and GPT-6 result audits of the frozen candidate.
 12. Correct blocking findings within the existing contract limits.
 13. Recheck affected predicates and obtain updated candidate-bound verdicts.
 14. Admit only the owned, tested, audited candidate through the repository gate.
@@ -163,7 +167,7 @@ Record the actual goal creation result and runtime state before reporting arming
 The latest user request authorizes this sequence without another generic design-confirmation round.
 It does not override a failed acceptance gate or authorize unlimited retries.
 Prefer the configured cross-vendor worker after readiness succeeds.
-The user-required Opus and GPT-6 audits replace the default auditor pairing for these packages.
+The user-required Fable 5.1 at medium effort and GPT-6 audits replace the default auditor pairing for these packages.
 No author may approve their own result.
 If the worker route fails, retain that failure and disclose any proposed route substitution.
 Do not repair Foreman as a side task.
@@ -213,7 +217,7 @@ Numbered task groups are not one-dispatch requirements; each bundled task still 
 Do not combine dependent pre-launch review and native execution in one ungated bundle.
 Interrupted or corrected worker dispatches still consume the package's dispatch allowance.
 A new profile cannot reset counters or borrow another package's allocation.
-Reallocation or a larger exhausted envelope requires a reviewed decision and explicit user authorization.
+The original envelope is historical. The later delegated execution instruction authorizes revised bounded allocations without repeated permission; retain a reviewed resource decision and every prior charge before reallocation.
 
 The initial expected planning frontier is the MC01 profile decision and early verifier/encoding feasibility evidence.
 No measured estimate yet establishes full MC01 implementation, MC04 compatibility, or MC07 completion within these reservations.
@@ -250,7 +254,7 @@ Both auditors must approve the changed encoding, complete relation, SRS, exact c
 Plan review alone cannot approve an encoding that has not been implemented and checked.
 The k17 ceiling allows a smaller checked encoding; it does not establish that one will fit.
 If k17 remains infeasible, record the decision evidence and stop.
-A larger k, unallocated campaign, or exhausted terminal contract requires a new reviewed proposal and explicit user authorization.
+A changed k or campaign envelope requires a new bounded proposal, current reviews and a recorded decision under the delegated execution instruction. Preserve prior charges and stop predicates; do not treat the old envelope as proof of feasibility.
 Do not hide state in unchecked commitments or spend the original unused budget.
 
 ### Allocated native extension campaigns
@@ -294,7 +298,7 @@ Preserve completed work when a ceiling prevents full completion.
 
 ## Independent audit protocol
 
-Required reviewers are exact `claude-opus-5` and a fresh `gpt-6-astra` agent.
+Required reviewers are exact `claude-fable-5-1` at medium effort and a fresh `gpt-6-astra` agent at high effort under the latest reviewer instruction.
 The current request controls these eight packages; it does not close older three-provider Council obligations.
 Keep prior Grok, Opus, and GPT review requirements visible in the MC08 crosswalk.
 
@@ -305,11 +309,11 @@ Retain a structured verdict, severity, exact locators, missing evidence, and res
 The author cannot act as the independent GPT-6 reviewer.
 Record tool-selected GPT-6 identity and the agent identifier; model self-identification is insufficient.
 
-For Opus, use the installed bounded tool-free readiness canary from a temporary directory.
-Require `modelUsage["claude-opus-5"].canonicalModel` to equal `claude-opus-5`.
+For exact Fable 5.1, use medium effort and the installed bounded tool-free readiness canary from a temporary directory.
+Require `modelUsage["claude-fable-5-1"].canonicalModel` to equal `claude-fable-5-1`.
 Require the same verified identity in the substantive result receipt.
 A canary, alias, authentication status, or empty model usage cannot substitute for a substantive audit.
-No alternate Claude model may silently replace Opus.
+No alternate model or effort may silently replace the current Fable 5.1 medium route.
 
 Audit grammar, numeric semantics, target traceability, complete effects, proof binding, ledger enforcement, and durable consumption.
 Audit private witness boundaries, composition, held-outs, provenance, and resource claims where relevant.
