@@ -44,22 +44,19 @@ export function validateSource(ast:ParsedSource,bounds:Bounds,through:4|5|6=6):D
   const unit=(name:string,span:Span)=>{if(!units.has(name))add('NAME_RESOLUTION',span);};
   const typeUse=(t:SourceType)=>{if(t.tag==='Amount')unit(t.unit,t.span);};
   const literalUse=(l:SourceLiteral)=>{if(l.tag==='AmountLiteral')unit(l.unit,l.span);};
-  const policyNames=new Set<string>();
-  const actionOrder=new Map<string,number>();
   for(const d of ast.declarations){
     if(d.tag==='UnitDecl')units.add(d.name);
     else if(d.tag==='ConstDecl'||d.tag==='StateDecl'){typeUse(d.type);literalUse(d.value);(d.tag==='ConstDecl'?constants:states).set(d.name,localType(d.type)!);}
     else if(d.tag==='ObservationDecl'){typeUse(d.type);observations.set(d.name,localType(d.type)!);}
     else if(d.tag==='SettlementDecl')literalUse(d.quantum);
-    else if(d.tag==='FieldPolicyDecl'){unit(d.unit,d.span);policyNames.add(d.name);}
+    else if(d.tag==='FieldPolicyDecl')unit(d.unit,d.span);
     else if(d.tag==='EffectDecl'){d.fields.forEach(f=>typeUse(f.type));effects.add(d.kind);}
     else if(d.tag==='EpisodeStatusDecl')literalUse(d.literal);
     else if(d.tag==='ActionDecl'){
-      actionOrder.set(d.name,Number(d.span.startByte));const args=new Set<string>(),locals=new Set<string>();for(const p of d.parameters){typeUse(p.type);args.add(p.name);}
+      const args=new Set<string>(),locals=new Set<string>();for(const p of d.parameters){typeUse(p.type);args.add(p.name);}
       for(const s of d.statements){const roots=s.tag==='Emit'?s.fields.map(f=>f.expression):s.tag==='Guard'?[s.condition]:[s.expression];for(const root of roots)walk(root,e=>{if(e.tag==='Literal')literalUse(e.literal);else if('name'in e){const table=e.tag==='StateRef'?states:e.tag==='ConstRef'?constants:e.tag==='ObservationRef'?observations:e.tag==='ArgRef'?args:locals;if(!table.has(e.name))add('NAME_RESOLUTION',e.span);}});if(s.tag==='Let')locals.add(s.name);if(s.tag==='Set'&&!states.has(s.field))add('NAME_RESOLUTION',s.span);if(s.tag==='Emit'&&!effects.has(s.kind))add('NAME_RESOLUTION',s.span);}
     }
   }
-  for(const d of ast.declarations)if(d.tag==='FieldPolicyDecl'&&d.targets.some(t=>actionOrder.has(t.action)&&actionOrder.get(t.action)!<Number(d.span.startByte)))add('NAME_RESOLUTION',d.span);
   if(errors.length||through===5)return finish();
   // Stage 6: infer independent expressions, skipping dependent checks after an invalid operand.
   const uint=(token:string,span:Span)=>{if(token.length>39||BigInt(token)>UINT_MAX){add('UINT_RANGE',span);return false;}return true;};
@@ -91,6 +88,8 @@ export function validateSource(ast:ParsedSource,bounds:Bounds,through:4|5|6=6):D
     d.statements.forEach((s,index)=>{if(s.tag==='Guard'){const t=infer(s.condition);if(t&&t.tag!=='Bool')add('TYPE_MISMATCH',s.span);}else if(s.tag==='Let')locals.set(s.name,{type:infer(s.expression),expression:s.expression,statement:index});else if(s.tag==='Set'){const t=infer(s.expression),want=states.get(s.field)!;if(t&&!same(t,want))add('TYPE_MISMATCH',s.span);targets.set(`W:${d.name}:${s.field}`,{type:t,span:s.span,action:d.name,statement:index});}else{for(const f of s.fields){const t=infer(f.expression);if(t&&(f.label==='amount'?t.tag!=='Amount':t.tag!=='Text'))add('TYPE_MISMATCH',f.span);targets.set(`E:${d.name}:${ordinal}:${f.label}`,{type:t,span:s.span,action:d.name,statement:index});}ordinal++;}});
   }
   if(!episode||!agreement)add('STATUS_RULE');if(observations.get('now')?.tag!=='UInt128')add('OBSERVATION_SCHEMA');
+  // Policy metadata resolves only after all actions and their locals/targets exist.
+  // Policy declaration order does not constrain the action it covers.
   const covered=new Set<string>();
   for(const d of ast.declarations)if(d.tag==='FieldPolicyDecl'){
     let floor:{type:LocalType|undefined;expression:SourceExpression;statement:number}|undefined;

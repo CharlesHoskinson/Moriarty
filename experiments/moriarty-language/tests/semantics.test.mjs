@@ -141,7 +141,7 @@ test('policy provenance cannot discard floor nodes, and committed action provena
  // require provenance reset; their rounding-none policies read prior floor writes.
 });
 test('rehashed malicious Core and source-map changes cannot substitute for source lowering',()=>{
- const f=setup('loan'),i=input(f,'accrue',[]),bound=structuredClone(f.sim.bound);bound.manifest.core.actions[0].instructions[0].message='tamper';bound.programHash=hash('PROGRAM',bound.manifest);reject(derive(bound,i,{source:source('loan'),bounds}),'PROGRAM_ENCODING');
+ const f=setup('loan'),i=input(f,'accrue',[]),bound=structuredClone(f.sim.bound);bound.manifest.name='tamper';bound.programHash=hash('PROGRAM',bound.manifest);reject(derive(bound,i,{source:source('loan'),bounds}),'PROGRAM_ENCODING');
 });
 test('all binding equalities reject independently even after recomputing affected digest wrappers',()=>{
  const f=setup('loan');
@@ -192,4 +192,70 @@ test('empty action has zero expression maxima and consumes one finite allowance'
  for(const key of ['effects','executedInstructions','expressionNodes','maximumExpressionDepth','unitComponents'])assert.equal(c.body.resourceCounts[key],'0');
  for(const key of ['canonicalUtf8Bytes','canonicalNodes','canonicalDepth'])assert.ok(BigInt(c.body.resourceCounts[key])>0n);
  assert.equal(c.body.after.body.revision,'1');assert.equal(c.body.after.body.remaining,'1');
+});
+
+for(const shape of ['hidden','symbol','prototype','getter','nested-getter','array-getter','array-prototype','proxy'])test(`original runtime ${shape} is rejected without normalization or executing user code`,async()=>{
+ const f=setup('loan'),i=input(f,'accrue',[]);let touched=0,authentication=0,commits=0;
+ if(shape==='hidden')Object.defineProperty(i,'extra',{value:true});
+ if(shape==='symbol')i[Symbol('extra')]=true;
+ if(shape==='prototype')Object.setPrototypeOf(i,{extra:true});
+ if(shape==='getter'){const action=i.action;Object.defineProperty(i,'action',{get(){touched++;return action;},enumerable:true});}
+ if(shape==='nested-getter'){const name=i.action.name;Object.defineProperty(i.action,'name',{get(){touched++;return name;},enumerable:true});}
+ if(shape==='array-getter'){const arg=i.action.arguments[0];Object.defineProperty(i.action.arguments,'0',{get(){touched++;return arg;},enumerable:true});}
+ if(shape==='array-prototype')Object.setPrototypeOf(i.action.arguments,Object.create(Array.prototype));
+ const bad=shape==='proxy'?new Proxy(i,{ownKeys(target){touched++;return Reflect.ownKeys(target);},getOwnPropertyDescriptor(target,key){touched++;return Reflect.getOwnPropertyDescriptor(target,key);},get(target,key,receiver){touched++;return Reflect.get(target,key,receiver);},getPrototypeOf(target){touched++;return Reflect.getPrototypeOf(target);}}):i;
+ reject(f.sim.simulate(bad),'INPUT_SCHEMA');assert.equal(touched,0);
+ const backend={source:source('loan'),bounds,authenticate:async()=>{authentication++;return checks('borrower');},verifyAndCommit:async()=>{commits++;throw Error('not implemented');}};
+ reject(await evaluate(f.sim.bound,bad,backend),'INPUT_SCHEMA');assert.equal(touched,0);assert.equal(authentication,0);assert.equal(commits,0);
+});
+
+test('loan settlement before accrual rejects at its exact source guard, adjacent ordered settlement succeeds',()=>{
+ const f=setup('loan'),bad=input(f,'settle',settlementArgs),before=structuredClone(bad),rejected=f.sim.simulate(bad);
+ reject(rejected,'GUARD_FAILED');assert.equal(rejected.diagnostics[0].message,'dues are not ready');assert.equal(rejected.diagnostics[0].stage,'11');assert.deepEqual(bad,before);
+ const accrued=candidate(f.sim.simulate(input(f,'accrue',[])));candidate(f.sim.simulate(input(f,'settle',settlementArgs,'borrower',accrued.body.after)));
+});
+test('ExactPlan rejects extra and reordered effects next to its exact accepting plan',()=>{
+ const f=setup('loan'),i=input(f,'accrue',[]),a=i.authority.statement;
+ for(const key of ['allowedActions','grossDebitCaps','minimumNetCredits','permittedCalls','permittedRecipients'])delete a[key];
+ Object.assign(a,{mode:'ExactPlan',schemaVersion:'moriarty-exact-plan/1',action:structuredClone(i.action),exactEffects:[],exactWrites:[]});i.authority.tag='ExactPlan';i.authority.domain='MORIARTY-SIGN-bounded-atomic/1';
+ const proposal=candidate(f.sim.simulate(i,{unsignedExactPlan:true}));a.exactWrites=proposal.body.writes.map(({field,value})=>({field,value}));a.exactEffects=proposal.body.effects.map(effect=>({effect}));candidate(f.sim.simulate(i));
+ const extra=structuredClone(i);extra.authority.statement.exactEffects.push(structuredClone(a.exactEffects[0]));reject(f.sim.simulate(extra),'EXACT_PLAN_MISMATCH');
+ const reordered=structuredClone(i);reordered.authority.statement.exactEffects.reverse();reject(f.sim.simulate(reordered),'EXACT_PLAN_MISMATCH');
+});
+function obligationProgram(count=1,partyLength=1){return `agreement Capacity profile "moriarty-bounded-atomic/1" { lifetime 2; horizon 2000000000; unit C; const party: Text = text("${'p'.repeat(partyLength)}"); state done: UInt128 = uint(0); observation now: UInt128; status episode closed_when done == uint(1); status agreement no_remaining_notional; policy p targets ${Array.from({length:count},(_,j)=>`effect(create,${j},amount)`).join(',')} { unit C; derivation "fixed"; rounding none; remainder "none"; comparison "exact"; proof "capacity_claim"; } effect DueCreated { due_id: Text; debtor: Text; creditor: Text; denomination: Text; amount: Amount; } action create(actor: Text) { ${Array.from({length:count},(_,j)=>`emit DueCreated { due_id: text("new${j}"), debtor: const.party, creditor: const.party, denomination: text("C"), amount: amount(1,C) };`).join(' ')} } }`;}
+function withObligations(f,count,padding=1,extra=0){return remapState(input(f,'create',[]),s=>{
+ s.revision='1';s.remaining='1';s.agreementStatus=count?'Outstanding':'NoOutstanding';
+ s.obligations=Array.from({length:count},(_,j)=>({amount:amount(1,'C'),creditor:'c'.repeat(padding+(j===0?extra:0)),debtor:'d'.repeat(padding),denomination:'C',dueId:'old'+j,status:'Outstanding'}));
+});}
+test('retained obligation capacity accepts 127 plus one and rejects 128 plus one, including settled identities',()=>{
+ const f=setup('loan',obligationProgram());
+ const accepted=candidate(f.sim.simulate(withObligations(f,127)));assert.equal(accepted.body.after.body.obligations.length,128);assert.equal(accepted.body.obligationDelta.created.length,1);
+ const i=withObligations(f,128),before=structuredClone(i);reject(f.sim.simulate(i),'OBLIGATION_CAPACITY');assert.deepEqual(i,before);
+ const tombstones=withObligations(f,128);tombstones.state=sealState({...tombstones.state.body,agreementStatus:'NoOutstanding',obligations:tombstones.state.body.obligations.map(o=>({...o,status:'Settled'}))});tombstones.authority.statement.beforeStateHash=tombstones.state.stateHash;tombstones.authority.statement.predecessors=[tombstones.state.stateHash];reject(f.sim.simulate(tombstones),'OBLIGATION_CAPACITY');
+});
+test('runtime counts attain the admitted instruction/local/node bounds; the next source size rejects before execution',()=>{
+ const expressions=Array.from({length:64},(_,j)=>`let x${j} = ${j<32?'uint(1)+uint(1)':'uint(1)+uint(1)+uint(1)'};`).join(' ');
+ const f=setup('loan',minimal(expressions)),c=candidate(f.sim.simulate(input(f,'run',[])));
+ assert.equal(c.body.resourceCounts.executedInstructions,'64');assert.equal(c.body.resourceCounts.expressionNodes,'256');assert.equal(f.sim.bound.manifest.core.actions[0].resourceCounts.locals,'64');
+ assert.throws(()=>setup('loan',minimal(expressions+' let x64=uint(1);')),e=>e.code==='PROGRAM_BOUNDS');
+ assert.throws(()=>setup('loan',minimal(expressions.replace('let x0 = uint(1)+uint(1);','let x0 = uint(1)+uint(1)+uint(1);'))),e=>e.code==='PROGRAM_BOUNDS');
+ const depth=setup('loan',minimal('let x = '+Array(16).fill('uint(1)').join('+')+';'));assert.equal(candidate(depth.sim.simulate(input(depth,'run',[]))).body.resourceCounts.maximumExpressionDepth,'16');
+ assert.throws(()=>setup('loan',minimal('let x = '+Array(17).fill('uint(1)').join('+')+';')),e=>e.code==='PROGRAM_BOUNDS');
+ const effects=setup('loan',obligationProgram(16));assert.equal(candidate(effects.sim.simulate(input(effects,'create',[]))).body.resourceCounts.effects,'16');assert.throws(()=>setup('loan',obligationProgram(17)),e=>e.code==='PROGRAM_BOUNDS');
+});
+test('registered RESULT_BOUNDS has an adjacent valid-input accepting boundary without custom registry limits',async()=>{
+ const {canonicalEncode,checkEncoding}=await import('../src/codec.ts');const limits=JSON.parse(bounds),f=setup('loan',obligationProgram(16,256));
+ let low=1,high=200;
+ while(low+1<high){const mid=Math.floor((low+high)/2),r=f.sim.simulate(withObligations(f,112,mid));if(r.kind==='Simulation')low=mid;else {assert.ok(['RESULT_BOUNDS','INPUT_BOUNDS'].includes(r.diagnostics[0].code));high=mid;}}
+ // Tune a single creditor field to hit the exact complete-wrapper byte boundary.
+ let best=0;const base=candidate(f.sim.simulate(withObligations(f,112,low)));const missing=65536-Buffer.byteLength(canonicalEncode(base));assert.ok(missing>=0&&low+missing+1<=256);
+ const acceptedInput=withObligations(f,112,low,missing),rejectedInput=withObligations(f,112,low,missing+1);
+ checkEncoding(acceptedInput,limits.evaluationEncoding,'input');checkEncoding(rejectedInput,limits.evaluationEncoding,'input');
+ const accepted=candidate(f.sim.simulate(acceptedInput));assert.equal(Buffer.byteLength(canonicalEncode(accepted)),65536);assert.equal(accepted.body.effects.length,16);assert.equal(accepted.body.after.body.obligations.length,128);
+ const before=structuredClone(rejectedInput);reject(f.sim.simulate(rejectedInput),'RESULT_BOUNDS');assert.deepEqual(rejectedInput,before);
+});
+test('valid false client checks are replaced, while the admitted backend tuple is deeply immutable',async()=>{
+ const f=setup('loan'),i=input(f,'accrue',[]);for(const key of Object.keys(i.checks))if(typeof i.checks[key]==='boolean')i.checks[key]=false;
+ let authentication=0,commit=0;const backend={source:source('loan'),bounds,authenticate:async(bound,tuple)=>{authentication++;assert.equal(Object.hasOwn(tuple,'checks'),false);assert.ok(Object.isFrozen(bound)&&Object.isFrozen(bound.manifest.core.actions[0]));assert.ok(Object.isFrozen(tuple)&&Object.isFrozen(tuple.action.arguments[0].value));assert.throws(()=>{tuple.action.name='settle';},TypeError);return checks('borrower');},verifyAndCommit:async()=>{commit++;throw Error('no proof implementation');}};
+ reject(await evaluate(f.sim.bound,i,backend),'PROOF_INVALID');assert.equal(authentication,1);assert.equal(commit,1);assert.equal(i.checks.signatureValid,false);
 });

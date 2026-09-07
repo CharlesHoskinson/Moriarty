@@ -267,3 +267,73 @@ test('Const State Episode and guard literals preserve schema-versus-typing disti
   const wrongEffect=minimal('').replace('action run','unit U; effect Transfer { asset: Text; from: Text; to: Text; amount: Amount<U>; } action run');
   assert.equal(check(wrongEffect,bounds).code,'DECLARATION_SCHEMA');
 });
+
+// Relocate whole policy declarations using parser byte spans, preserving all other source.
+function policiesAfterActions(source,reverse=false){
+  const bytes=Buffer.from(source),policies=parseSource(source).declarations.filter(d=>d.tag==='FieldPolicyDecl');
+  const parts=[];let cursor=0;
+  for(const policy of policies){parts.push(bytes.subarray(cursor,Number(policy.span.startByte)));cursor=Number(policy.span.endByte);}
+  parts.push(bytes.subarray(cursor));const stripped=Buffer.concat(parts).toString();
+  const declarations=policies.map(p=>bytes.subarray(Number(p.span.startByte),Number(p.span.endByte)).toString());if(reverse)declarations.reverse();
+  const end=stripped.lastIndexOf('}');return stripped.slice(0,end)+'\n'+declarations.join('\n')+'\n'+stripped.slice(end);
+}
+// Moving text necessarily changes sourceHash and sourceRef spans; every other semantic
+// manifest member must agree, including policy names, exact targets, rounding IDs and Core.
+function withoutSourceLocations(value){
+  if(Array.isArray(value))return value.map(withoutSourceLocations);
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='sourceHash'&&key!=='sourceRef').map(([key,v])=>[key,withoutSourceLocations(v)]));
+  return value;
+}
+
+test('loan and swap policies may follow all actions with complete-table metadata resolution',async()=>{
+  const {check,elaborate}=await import('../src/frontend.ts');
+  for(const name of ['loan','swap']){
+    const original=readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url),'utf8');
+    const before=compile(original,bounds);
+    for(const reverse of [false,true]){
+      const moved=policiesAfterActions(original,reverse),result=compile(moved,bounds);
+      assert.equal(check(moved,bounds).schemaVersion,'moriarty-typed-program/1');
+      assert.equal(elaborate(moved,bounds).schemaVersion,'moriarty-program/1');
+      assert.equal(result.source.declarations.at(-1).tag,'FieldPolicyDecl');
+      const expected=withoutSourceLocations(before.bound.manifest);
+      if(reverse)expected.policies.reverse();
+      assert.deepEqual(withoutSourceLocations(result.bound.manifest),expected);
+      assert.notEqual(result.source.sourceHash,before.source.sourceHash);
+      assert.notEqual(result.bound.programHash,before.bound.programHash);
+      assert.equal(result.bound.manifest.sourceHash,result.source.sourceHash);
+      assert.ok(result.typed.annotations.every(a=>a.sourceRef.sourceHash===result.source.sourceHash));
+    }
+  }
+});
+
+test('policies after actions retain stage6 invalid-target and invalid-rounding controls',async()=>{
+  const {check}=await import('../src/frontend.ts');
+  const loan=policiesAfterActions(readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8'));
+  for(const [from,to,code] of [
+    ['write(accrue, interest_due)','write(missing_action, interest_due)','POLICY_TARGET'],
+    ['write(accrue, interest_due)','write(accrue, missing_field)','POLICY_TARGET'],
+    ['effect(accrue, 1, amount)','effect(accrue, 99, amount)','POLICY_TARGET'],
+    ['floor(accrue, interest_calculated)','floor(missing_action, interest_calculated)','POLICY_ROUNDING'],
+    ['floor(accrue, interest_calculated)','floor(accrue, missing_local)','POLICY_ROUNDING'],
+    ['floor(accrue, interest_calculated)','floor(accrue, interest_numerator)','POLICY_ROUNDING'],
+  ]){
+    const result=check(loan.replace(from,to),bounds);assert.equal(result.code,code);assert.equal(result.stage,'6');
+  }
+  const swap=policiesAfterActions(readFileSync(new URL('../spec/examples/swap.moriarty',import.meta.url),'utf8'));
+  for(const [from,to,code] of [
+    ['effect(swap, 1, amount)','effect(missing_action, 1, amount)','POLICY_TARGET'],
+    ['floor(swap, output_calculated)','floor(close, output_calculated)','POLICY_ROUNDING'],
+  ]){const result=check(swap.replace(from,to),bounds);assert.equal(result.code,code);assert.equal(result.stage,'6');}
+  assert.equal(check(loan.replace('    unit USD_micro;','    unit Missing;'),bounds).code,'NAME_RESOLUTION');
+});
+
+test('unexpected astral source characters have exact complete-scalar UTF8 lexical spans',async()=>{
+  const {parse}=await import('../src/frontend.ts');
+  for(const scalar of ['😀','𐀀','\u{10ffff}','é','/']){
+    const source=minimal(`guard text("é😀") == text("é😀"), "ok"; ${scalar}`);
+    const result=parse(source,bounds),start=Buffer.byteLength(source.slice(0,source.lastIndexOf(scalar)));
+    assert.equal(result.code,'LEXICAL_TOKEN');assert.equal(result.stage,'2');
+    assert.deepEqual(result.primarySpan,{startByte:String(start),endByte:String(start+Buffer.byteLength(scalar))});
+  }
+  assert.equal(parse(minimal('\ud800'),bounds).code,'SOURCE_ENCODING');
+});

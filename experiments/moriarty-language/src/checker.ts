@@ -134,8 +134,7 @@ export function checkAndLower(source:SourceAST,boundsBytes:Uint8Array,validateMa
     const policyTargets:FieldPolicy['targets']=[];
     for(const target of p.targets) {
       const key=target.tag==='Write'?`W:${target.action}:${target.field}`:`E:${target.action}:${target.ordinal}:${target.field}`;
-      const actual=resolve(targets,key,target.span);const actionSource=resolve(actionSources,target.action,target.span);
-      if(BigInt(p.span.startByte)>BigInt(actionSource.span.startByte))fail('POLICY_DECLARATION_ORDER','policy must precede target action',p.span);
+      const actual=resolve(targets,key,target.span);
       if(usedTargets.has(key))fail('POLICY_DUPLICATE_TARGET',key,target.span);usedTargets.add(key);
       if(actual.expression.type.tag!=='Amount'||actual.expression.type.unit!==p.unit)fail('POLICY_UNIT','policy target must be Amount of exact policy unit',target.span);
       if(roundingNode.tag==='Floor'&&(roundingNode.action!==target.action||roundingLocal!.statementIndex>=actual.statementIndex))fail('POLICY_ROUNDING','rounding local must precede target in same action',target.span);

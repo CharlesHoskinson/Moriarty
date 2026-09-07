@@ -114,3 +114,19 @@ test('missing local binding and invalid simulator byte containers reject at prog
   const disguised=new Proxy(new Uint8Array(bounds),{});
   for(const bad of [disguised,{length:2**40}])assert.throws(()=>createSimulator(source,bad),e=>e instanceof FrontendError&&e.code==='PROGRAM_ENCODING');
 });
+
+test('closed runtime schema admission precedes authentication even with registered source and bounds',async()=>{
+ const bound=compile(source,bounds).bound;let authentication=0,commits=0;
+ const backend={source,bounds,authenticate:async()=>{authentication++;return {};},verifyAndCommit:async()=>{commits++;return {};}};
+ for(const malformed of [{},{schemaVersion:'moriarty-evaluation/1',extra:true}]){
+  const result=await evaluate(bound,malformed,backend);assert.equal(result.diagnostics[0].code,'INPUT_SCHEMA');assert.equal(authentication,0);assert.equal(commits,0);
+ }
+});
+test('Core source-map edits have SOURCE_MAP while non-Core manifest edits have PROGRAM_ENCODING',async()=>{
+ const original=compile(source,bounds).bound;
+ for(const [edit,expected] of [[b=>b.manifest.core.actions[0].instructions[0].sourceRef.spans[0].endByte='1','SOURCE_MAP'],[b=>b.manifest.name='Changed','PROGRAM_ENCODING']]){
+  const bound=structuredClone(original);edit(bound);bound.programHash=createHash('sha256').update('MORIARTY-PROGRAM-bounded-atomic/1').update(Uint8Array.of(0)).update((await import('../src/codec.ts')).canonicalEncode(bound.manifest)).digest('hex');
+  const result=derive(bound,{}, {source,bounds});assert.equal(result.diagnostics[0].code,expected);assert.equal(result.diagnostics[0].stage,'8');
+  let auth=0;const backend={source,bounds,authenticate:async()=>{auth++;return {};},verifyAndCommit:async()=>({})};const accepted=await evaluate(bound,{},backend);assert.equal(accepted.diagnostics[0].code,expected);assert.equal(auth,0);
+ }
+});

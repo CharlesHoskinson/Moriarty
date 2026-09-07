@@ -35,7 +35,8 @@ function lex(source:string):Token[] {
     }
     const operator=/^(==|<=|>=|[{}();,:.<>+*=-])/.exec(suffix);
     if(operator){push('punct',operator[0]);continue;}
-    fail('LEXICAL_ERROR',`unexpected character ${JSON.stringify(c)}`,span(offset,offset+utf8(c).length));
+    const unexpected=String.fromCodePoint(source.codePointAt(index)!);
+    fail('LEXICAL_ERROR',`unexpected character ${JSON.stringify(unexpected)}`,span(offset,offset+utf8(unexpected).length));
   }
   tokens.push({kind:'eof',text:'',start:offset,end:offset});return tokens;
 }

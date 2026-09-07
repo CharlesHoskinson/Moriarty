@@ -16,3 +16,5 @@ declare module 'node:path' {
 }
 declare module 'node:url' { export function fileURLToPath(url:string|URL):string; }
 declare const process:{argv:string[];cwd():string;version:string;exitCode:number};
+
+declare module 'node:util' { export const types:{isProxy(value:unknown):boolean}; }

@@ -1,4 +1,5 @@
 import {compile} from './frontend.ts';
+import {types as nodeTypes} from 'node:util';
 import {registeredBounds} from './registered-bounds.ts';
 import {canonicalEncode, canonicalDecode, checkEncoding, measureEncoding, hashDomain, FrontendError, scalarText} from './codec.ts';
 import type {BoundProgram, CoreExpression, EncodingLimits, LocalValue, NamedStoredValue, NamedType, SemanticManifest, Span, StoredValue} from './types.ts';
@@ -17,6 +18,42 @@ function uint(v:unknown):bigint {need(typeof v==='string'&&/^(0|[1-9][0-9]*)$/.t
 export function checkedUInt128(n:bigint,code='ARITHMETIC_OVERFLOW',stage=11,span=UNKNOWN):bigint{need(n>=0n&&n<=MAX,code,stage,span);return n;}
 function rejected(e:unknown,p=ZERO):R.Rejected {let error=e instanceof RuntimeError?e:new RuntimeError('INPUT_SCHEMA',9);if(e instanceof FrontendError)error=new RuntimeError(e.code==='SOURCE_MAP'?'SOURCE_MAP':'PROGRAM_ENCODING',8,e.primarySpan);return {diagnostics:[{code:error.code,message:error.message,primarySpan:error.span,relatedSpans:[],stage:String(error.stage)}],outcome:'Rejected',profile:PROFILE,programHash:p,schemaVersion:'moriarty-result/1'};}
 function enc(v:unknown,limits:EncodingLimits,code:string,stage:number){try{checkEncoding(v,limits,code);}catch{throw new RuntimeError(code,stage);}}
+/** Admit the original JS graph before any clone, property read, callback or
+ * canonical encoder. Descriptor values are copied exactly once; accessors and
+ * proxies never run. Limits bound traversal, allocation and string encoding.
+ * Shared references expand as JSON does; only ancestor cycles are forbidden.
+ */
+function inertSnapshot<T>(input:T,limits:EncodingLimits,schemaCode='INPUT_SCHEMA',boundsCode='INPUT_BOUNDS',stage=9):T {
+ const active=new Set<object>();let nodes=0,bytes=0;
+ const bad=(ok:unknown,code=schemaCode)=>need(ok,code,stage);
+ const add=(n:number)=>{bytes+=n;bad(bytes<=limits.utf8Bytes,boundsCode);};
+ function string(s:string):void{bad(s.length<=limits.textJavascriptCodeUnits,boundsCode);bad(scalarText(s));bad(new TextEncoder().encode(s).length<=limits.textUtf8Bytes,boundsCode);add(new TextEncoder().encode(JSON.stringify(s)).length);}
+ function visit(v:unknown,depth:number):unknown {
+  bad(++nodes<=limits.decodedNodes&&depth<=limits.decodedDepthRootZero,boundsCode);
+  if(typeof v==='string'){string(v);return v;}
+  if(typeof v==='boolean'){add(v?4:5);return v;}
+  bad(v!==null&&typeof v==='object');const obj=v as object;
+  bad(!nodeTypes.isProxy(obj));bad(!active.has(obj));active.add(obj);
+  const isArray=Array.isArray(obj),proto=Object.getPrototypeOf(obj);
+  bad(isArray?proto===Array.prototype:proto===Object.prototype||proto===null);
+  const keys=Reflect.ownKeys(obj);bad(keys.every(k=>typeof k==='string'));
+  let output:unknown;
+  if(isArray){
+   const lengthDescriptor=Object.getOwnPropertyDescriptor(obj,'length');bad(lengthDescriptor&&Object.hasOwn(lengthDescriptor,'value'));const length=lengthDescriptor!.value;
+   bad(Number.isSafeInteger(length)&&length>=0);bad(length<=limits.arrayLength,boundsCode);bad(keys.length===length+1);
+   const values:unknown[]=[];add(2+Math.max(0,length-1));
+   for(let j=0;j<length;j++){const d=Object.getOwnPropertyDescriptor(obj,String(j));bad(d&&d.enumerable&&Object.hasOwn(d,'value'));values.push(visit(d!.value,depth+1));}
+   output=Object.freeze(values);
+  }else{
+   bad(keys.length<=limits.keysPerRecord,boundsCode);const value:Record<string,unknown>={};add(2+Math.max(0,keys.length-1));
+   for(const key of keys as string[]){bad(/^[\x20-\x7e]+$/.test(key));const d=Object.getOwnPropertyDescriptor(obj,key);bad(d&&d.enumerable&&Object.hasOwn(d,'value'));string(key);add(1);Object.defineProperty(value,key,{value:visit(d!.value,depth+1),enumerable:true});}
+   output=Object.freeze(value);
+  }
+  active.delete(obj);return output;
+ }
+ return visit(input,0) as T;
+}
+
 // Closed schemas apply before any semantic access. JSON numbers/null and unknown
 // members cannot become trusted merely through a TypeScript type assertion.
 type Validator=(v:any)=>void;
@@ -49,6 +86,41 @@ const authoritySchema:Validator=v=>{
  const exact=v.tag==='ExactPlan';
  record({domain:literal(exact?'MORIARTY-SIGN-bounded-atomic/1':'MORIARTY-OUTCOME-bounded-atomic/1'),schemaVersion:literal('moriarty-authority/1'),signature:record({algorithm:textValue,bytes:(b:unknown)=>need(typeof b==='string'&&/^(?:[0-9a-f]{2})*$/.test(b)),keyId:textValue}),tag:literal(v.tag),statement:record({...common,...(exact?{action:actionSchema,exactEffects:array(record({effect:effectSchema})),exactWrites:array(record({field:identifier,value})),mode:literal('ExactPlan'),schemaVersion:literal('moriarty-exact-plan/1')}:{allowedActions:array(identifier),grossDebitCaps:array(record({actor:textValue,asset:textValue,maximumLedgerAmount:uint})),minimumNetCredits:array(record({actor:textValue,asset:textValue,minimumLedgerAmount:uint})),mode:literal('IntentRefinement'),permittedCalls:array(record({callee:textValue,selector:textValue})),permittedRecipients:array(textValue),schemaVersion:literal('moriarty-outcome-intent/1')})})})(v);
 };
+const localTypeSchema:Validator=v=>{need(v&&typeof v==='object');if(v.tag==='Quantity')record({tag:literal('Quantity'),unitVector:unitVectorSchema})(v);else if(v.tag==='Amount')record({tag:literal('Amount'),unit:identifier})(v);else record({tag:oneOf('UInt128','Text','Bool')})(v);};
+const unitVectorSchema=array(record({unit:identifier,exponent:(v:unknown)=>need(typeof v==='string'&&/^(0|-?[1-9][0-9]*)$/.test(v)&&BigInt(v)>=-16n&&BigInt(v)<=16n)}));
+const sourceRefSchema=record({generatedTag:textValue,sourceHash:digest,spans:array(record({startByte:uint,endByte:uint}))});
+const localValueSchema:Validator=v=>{if(v?.tag==='Bool')record({tag:literal('Bool'),value:boolean})(v);else if(v?.tag==='Quantity')record({tag:literal('Quantity'),unitVector:unitVectorSchema,value:uint})(v);else value(v);};
+const coreExpressionSchema:Validator=v=>{
+ need(v&&typeof v==='object');const meta={nodeId:textValue,sourceRef:sourceRefSchema,type:localTypeSchema,unitVector:unitVectorSchema};
+ if(v.tag==='Literal')record({...meta,tag:literal('Literal'),value:localValueSchema})(v);
+ else if(v.tag==='Remaining')record({...meta,tag:literal('Remaining')})(v);
+ else if(['StateRef','ArgRef','ObservationRef','ConstRef'].includes(v.tag))record({...meta,tag:literal(v.tag),declaration:identifier})(v);
+ else if(v.tag==='LocalRef')record({...meta,tag:literal('LocalRef'),action:identifier,local:identifier})(v);
+ else if(v.tag==='Not')record({...meta,tag:literal('Not'),operand:coreExpressionSchema})(v);
+ else if(v.tag==='FloorDiv')record({...meta,tag:literal('FloorDiv'),numerator:coreExpressionSchema,denominator:coreExpressionSchema})(v);
+ else record({...meta,tag:oneOf('Add','Sub','Mul','Eq','Lt','Lte','Gt','Gte','And','Or'),left:coreExpressionSchema,right:coreExpressionSchema})(v);
+};
+const policyUseSchema:Validator=v=>v?.tag==='Financial'?record({tag:literal('Financial'),name:identifier})(v):record({tag:literal('NonFinancial')})(v);
+const coreInstructionSchema:Validator=v=>{
+ need(v&&typeof v==='object');const meta={sourceRef:sourceRefSchema,statementId:textValue};
+ if(v.tag==='Guard')record({...meta,tag:literal('Guard'),condition:coreExpressionSchema,message:textValue})(v);
+ else if(v.tag==='Let')record({...meta,tag:literal('Let'),expression:coreExpressionSchema,name:identifier,type:localTypeSchema,unitVector:unitVectorSchema})(v);
+ else if(v.tag==='Set')record({...meta,tag:literal('Set'),expression:coreExpressionSchema,field:identifier,policy:policyUseSchema})(v);
+ else record({...meta,tag:literal('Emit'),kind:oneOf('Transfer','Fee','DueCreated','DueSettled'),ordinal:uint,fields:array(record({label:textValue,expression:coreExpressionSchema})),policies:array(record({field:textValue,policy:identifier}))})(v);
+};
+const coreSchema=record({actions:array(record({actorParameter:literal('actor'),arguments:array(record({name:identifier,type:(v:unknown)=>{localTypeSchema(v);need((v as LocalValue).tag!=='Bool'&&(v as LocalValue).tag!=='Quantity');}})),instructions:array(coreInstructionSchema),name:identifier,resourceCounts:record({effects:uint,expressionDepth:uint,expressionNodes:uint,instructions:uint,locals:uint}),sourceRef:sourceRefSchema})),coreVersion:literal('moriarty-core/1'),schemaVersion:literal('moriarty-core-program/1')});
+function admitBoundProgram(compiled:BoundProgram,bound:BoundProgram,limits:EncodingLimits):BoundProgram {
+ const copied=inertSnapshot(bound,limits,'PROGRAM_ENCODING','PROGRAM_ENCODING',8);
+ try{need(copied&&same(Object.keys(copied).sort(),Object.keys(compiled).sort()));need(copied.manifest&&same(Object.keys(copied.manifest).sort(),Object.keys(compiled.manifest).sort()));coreSchema(copied.manifest.core);}catch{throw new RuntimeError('PROGRAM_ENCODING',8);}
+ // Malformed/unrelated manifest differences remain PROGRAM_ENCODING; a valid
+ // Core tree, node, type or source-reference mismatch is specifically SOURCE_MAP.
+ need(same({...copied,programHash:compiled.programHash,manifest:{...copied.manifest,core:compiled.manifest.core}},compiled),'PROGRAM_ENCODING',8);
+ need(same(copied.manifest.core,compiled.manifest.core),'SOURCE_MAP',8);
+ need(copied.programHash===compiled.programHash,'PROGRAM_ENCODING',8);return copied;
+}
+function admitEvaluation(input:R.EvaluationInput,limits:any):R.EvaluationInput {
+ const copied=inertSnapshot(input,limits.evaluationEncoding);inputSchema(copied);enc(copied.authority.statement,limits.signingEnvelope,'INPUT_BOUNDS',9);return copied;
+}
 const inputSchema=record({action:actionSchema,authority:authoritySchema,checks:record({authenticatedPrincipal:textValue,genesisValid:boolean,nonceFresh:boolean,observationsAuthentic:boolean,predecessorSetValid:boolean,signatureValid:boolean,stateCurrentAndUnconsumed:boolean}),genesis:genesisSchema,observations:record({observations:array(record({evidenceDigest:digest,name:identifier,provider:textValue,value})),schemaVersion:literal('moriarty-observations/1')}),program:programRefSchema,schemaVersion:literal('moriarty-evaluation/1'),state:stateSchema});
 export function decodeEvaluation(bytes:string|Uint8Array):R.EvaluationInput{
  need((typeof bytes==='string'?new TextEncoder().encode(bytes).length:bytes.length)<=65536,'INPUT_BOUNDS',9);
@@ -65,7 +137,7 @@ function statuses(m:SemanticManifest,values:NamedStoredValue[],obligations:R.Obl
 function namedMatch(actual:NamedStoredValue[],schema:NamedType[]){need(actual.length===schema.length);for(let j=0;j<schema.length;j++){const a=actual[j],s=schema[j];need(a.name===s.name&&a.value.tag===s.type.tag);if(s.type.tag==='Amount')need(a.value.tag==='Amount'&&a.value.unit===s.type.unit);}}
 const byteOrder=(a:string,b:string)=>{const x=new TextEncoder().encode(a),y=new TextEncoder().encode(b);for(let i=0;i<Math.min(x.length,y.length);i++)if(x[i]!==y[i])return x[i]-y[i];return x.length-y.length;};
 function unique<T>(xs:T[],key:(x:T)=>string,sorted=false){const keys=xs.map(key);need(new Set(keys).size===keys.length);if(sorted)need(same(keys,[...keys].sort(byteOrder)));}
-function validate(bound:BoundProgram,i:R.EvaluationInput,limits:any){
+function validate(bound:BoundProgram,i:R.EvaluationInput,limits:any,admissionOnly=false){
  try{canonicalEncode(i);}catch{throw new RuntimeError('INPUT_SCHEMA',9);}
  inputSchema(i);enc(i,limits.evaluationEncoding,'INPUT_BOUNDS',9);
  enc(i.authority.statement,limits.signingEnvelope,'INPUT_BOUNDS',9);
@@ -82,6 +154,7 @@ function validate(bound:BoundProgram,i:R.EvaluationInput,limits:any){
  else {unique(a.allowedActions,x=>x);need(a.allowedActions.includes(action.name)&&a.allowedActions.every(n=>m.core.actions.some(x=>x.name===n)),'INTENT_ACTION_FORBIDDEN');need(same(a.allowedActions,m.core.actions.map(x=>x.name).filter(n=>a.allowedActions.includes(n))));unique(a.permittedRecipients,x=>x,true);for(const xs of [a.grossDebitCaps,a.minimumNetCredits]){unique<{actor:string;asset:string}>(xs,x=>canonicalEncode([x.actor,x.asset]));const sorted=[...xs].sort((x,y)=>byteOrder(x.actor,y.actor)||byteOrder(x.asset,y.asset));need(same(xs,sorted));}}
  const derived=statuses(m,s.values,s.obligations);
  if(s.revision==='0')need(same(s.values,m.initialState)&&s.remaining===g.lifetime&&s.obligations.length===0&&same(derived,{episodeStatus:s.episodeStatus,agreementStatus:s.agreementStatus,remainingNotional:s.remainingNotional}),'GENESIS_STATE_BINDING');
+ if(admissionOnly)return {action,actor:''};
  const c=i.checks;
  for(const [key,code] of [['genesisValid','GENESIS_UNAUTHENTICATED'],['signatureValid','SIGNATURE_INVALID'],['nonceFresh','NONCE_STALE'],['stateCurrentAndUnconsumed','STATE_NOT_CURRENT'],['observationsAuthentic','OBSERVATION_UNAUTHENTICATED'],['predecessorSetValid','PREDECESSOR_UNAUTHENTICATED']] as const)need(c[key]===true,code,10);
  for(let j=0;j<i.observations.observations.length;j++)need(i.observations.observations[j].provider===g.observationBindings[j].provider,'OBSERVATION_UNAUTHENTICATED',10);
@@ -196,9 +269,9 @@ export function derive(bound:BoundProgram,input:R.EvaluationInput,binding:R.Sour
  let verifiedHash=ZERO;
  try {
   need(binding&&(typeof binding.source==='string'||binding.source instanceof Uint8Array),'PROGRAM_ENCODING',8);
-  const compiled=compile(binding.source,binding.bounds).bound;need(same(compiled,bound),'PROGRAM_ENCODING',8);verifiedHash=compiled.programHash;
-  const limits=registeredBounds().bounds;
-  return execute(compiled,clone(input),limits,options.unsignedExactPlan===true);
+  const compiled=compile(binding.source,binding.bounds).bound,limits=registeredBounds().bounds;
+  const admitted=admitBoundProgram(compiled,bound,limits.programManifestEncoding);verifiedHash=compiled.programHash;
+  return execute(admitted,admitEvaluation(input,limits),limits,options.unsignedExactPlan===true);
  }catch(e){return rejected(e,verifiedHash);}
 }
 export function createSimulator(source:string|Uint8Array,bounds:string|Uint8Array){
@@ -219,17 +292,22 @@ export function createSimulator(source:string|Uint8Array,bounds:string|Uint8Arra
  * This function therefore fails closed in this repository's actual deployment. */
 export async function evaluate(bound:BoundProgram,input:R.EvaluationInput,backend?:R.TrustedAcceptanceBackend):Promise<R.Rejected|R.Complete>{
  if(!backend||typeof backend.authenticate!=='function'||typeof backend.verifyAndCommit!=='function')return rejected(new RuntimeError('PROOF_INVALID',13));
+ let admitted:BoundProgram,copied:R.EvaluationInput,limits:any;
  try {
   need(backend.source&&(typeof backend.source==='string'||backend.source instanceof Uint8Array),'PROGRAM_ENCODING',8);
-  const admitted=compile(backend.source,backend.bounds).bound;
-  need(same(admitted,bound),'PROGRAM_ENCODING',8);
- }catch(e){if(e instanceof FrontendError||e instanceof RuntimeError)return rejected(e);throw e;}
+  const compiled=compile(backend.source,backend.bounds).bound;limits=registeredBounds().bounds;
+  admitted=admitBoundProgram(compiled,bound,limits.programManifestEncoding);
+  copied=admitEvaluation(input,limits);validate(admitted,copied,limits,true);
+ }catch(e){return rejected(e);}
  try {
-  const copied=clone(input);const {checks:ignored,...tuple}=copied;
-  copied.checks=await backend.authenticate(clone(bound),clone(tuple));
-  const result=derive(bound,copied,backend);if('outcome' in result)return result;
-  const committed=await backend.verifyAndCommit(clone(bound),clone(copied),clone(result));
+  const {checks:ignored,...tuple}=copied;
+  // Only inert admitted data reaches authentication. Client precheck booleans
+  // remain shape-checked but never constitute authentication authority.
+  const freshChecks=await backend.authenticate(admitted,Object.freeze(tuple));
+  const authenticated=admitEvaluation({...copied,checks:inertSnapshot(freshChecks,limits.evaluationEncoding)},limits);
+  const result=execute(admitted,authenticated,limits,false);
+  const committed=await backend.verifyAndCommit(admitted,authenticated,Object.freeze({kind:'Simulation' as const,candidate:inertSnapshot(result.candidate,limits.resultEncoding),context:inertSnapshot(result.context,limits.proofAcceptanceEncoding)}));
   need(committed?.tag==='Committed'&&committed.traceHash===result.candidate.traceHash&&committed.proofContextHash===hash('PROOF-CONTEXT',result.context)&&committed.afterStateHash===result.candidate.body.after.stateHash,'COMMIT_CONFLICT',13);
   return result.candidate;
- }catch(e){return rejected(e instanceof RuntimeError?e:new RuntimeError('PROOF_INVALID',13));}
+ }catch(e){return rejected(e instanceof RuntimeError?e:new RuntimeError('PROOF_INVALID',13),admitted.programHash);}
 }
