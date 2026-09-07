@@ -3,8 +3,21 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-07T16:50:22.642457+00:00
+updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0098
+  - SRC-0099
+  - SRC-0094
+  - SRC-0088
+  - SRC-0093
+  - SRC-0090
+  - SRC-0081
+  - SRC-0092
+  - SRC-0091
+  - SRC-0086
+  - SRC-0079
+  - SRC-0082
+  - SRC-0097
   - SRC-0070
   - SRC-0071
   - SRC-0072
@@ -26,6 +39,14 @@ tags:
 ---
 
 # Moriarty architecture decision
+
+## Source syntax and K direction
+
+**CLM-0922.** The selected source extension is `.mori`; the successor specification uses EBNF, separate lexical rules, static judgments and K operational semantics. The [design dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks with immutable locals and explicit pre/post state. Source: SRC-0097, current user direction; 2026-09-07; normative instruction plus design recommendation; S2; not reproduced; confidence high for direction and medium for surface usability. This is not an implemented successor profile.
+
+**CLM-0923.** Resource identity preservation does not establish correct financial amounts or residual-debt preservation. The [semantic proposal](../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md) separates these claims and separates acquisition/authorization expiry, due dates and execution bounds. Sources: SRC-0091, sections 3.2 and 6.2; SRC-0081, sections 3-4; SRC-0092, section 6. Source facts with scoped design inference; consulted 2026-09-07; S2; not reproduced; confidence high for distinctions.
+
+The [surface comparison](../deliverables/defi-language-design-2026-09-07/SYNTAX-COMPARISON.md) is specified-only. Syntax studies inform choices but do not establish that braces, Lisp or layout is universally superior. The `.mori` migration preserves current source bytes; new comments, Boolean precedence, `pre`/`next`/`post` and type extensions require a new profile. K is selected, not implemented; the archived K definition covers ZKIR.
 
 Moriarty is a new bounded financial-agreement language, not a renamed copy of
 Marlowe and not a general-purpose Compact dialect.
@@ -146,3 +167,5 @@ auditable without entering the trusted semantic kernel.
 The [user clarification](../raw/assignments/moriarty-report-reconciliation-2026-09-07.md) makes Midnight the implementation target. Compact, native proofs, private state and ledger acceptance constrain source and semantic design. Other-chain report examples are comparative financial behaviors. The [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) requires early financial/intent and backend decisions within MC01-MC08. The atomic agreement profile is an initial subset; outcome-intent authoring, nominal-liability authority and temporal workflows require versioned extensions.
 
 Metadata: SRC-0070, SRC-0071, SRC-0072; observed 2026-09-07; secondary reports plus normative user input and repository observation at `3eb0e0acf5b07a224ad876886e54837c82c84b86`; proposed language/plan scope S2; source review reproduced, implementation/proof acceptance not reproduced; confidence high for the recorded scope, unresolved for backend feasibility.
+
+The ISO catalogue metadata is retained in SRC-0098. The Marlowe paper is reused through SRC-0099 and the original SRC-0040 collection; the original PDF and receipt remain unchanged.

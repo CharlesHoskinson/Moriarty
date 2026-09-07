@@ -96,7 +96,7 @@ conformance, or durable acceptance result follows from frontend tests.
 
 From this package directory, run `npm run demo`. Use
 `node examples/simulate.mjs --json` for the complete inputs and candidate traces.
-The example reads the original `spec/examples/loan.moriarty` and `swap.moriarty`
+The example reads the original `spec/examples/loan.mori` and `swap.mori`
 source files through the parser, checker, elaborator and evaluator.
 
 The loan uses an unsigned exact-plan construction followed by exact comparison;

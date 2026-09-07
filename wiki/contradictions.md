@@ -6,6 +6,8 @@ title: Contradictions and documentation drift
 status: active
 updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0085
+  - SRC-0087
   - SRC-0070
   - SRC-0071
   - SRC-0072
@@ -214,3 +216,7 @@ SRC-0070 recommends optional ZK and deferred Compact dependency (intents lines 2
 Disposition: the user's Midnight-centric language, mandatory PCD, bounded semantics and private successor handoff control. Preserve useful semantic requirements and comparative financial cases. Do not import NEAR/EVM/Cardano adapter work, optional-history acceptance or unrestricted numeric domains into Moriarty. The [amendment](../openspec/REPORT-RECONCILIATION-2026-09-07.md) records owners and early decisions. This extends CLM-0192/0193 without rewriting the source reports.
 
 Metadata: observed 2026-09-07; secondary report statements versus normative user input; S2 explicit design disposition; report review reproduced, external report citations and product implementation not reproduced; confidence high for the conflict and chosen scope.
+
+## DeFi SoK coverage and transaction boundary
+
+SRC-0085: the abstract's greater-than-90-percent coverage differs from section I-A's 85.71 percent dated sample. Preserve both; neither supports exhaustive present-day coverage. SRC-0087, III-B, alternates block and transaction for flash repayment. Treat exact atomic transaction repayment as a target requiring a normative fixture; do not equate a whole block with an atomic action. Source discrepancies observed 2026-09-07, S2 research disposition, not reproduced. See the [dossier](../deliverables/defi-language-design-2026-09-07/README.md).

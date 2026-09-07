@@ -9,6 +9,7 @@ tags:
   - moriarty
   - research
 sources:
+  - SRC-0097
   - SRC-0077
   - SRC-0078
 updated_at: 2026-09-07T18:01:49Z
@@ -23,3 +24,5 @@ Preview is the public integration target. Existing hello-world deployment and ca
 [[wiki/index|Research index]] · [[wiki/moriarty-architecture|Architecture]] · [[wiki/open-questions|Open questions]] · [[wiki/workflow|Workflow]]
 
 Update this note only in an explicitly scoped knowledge operation. Queries are read-only; no transcript capture or automatic session-end update is configured.
+
+The current [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks, EBNF/static judgments and K. `.mori` is the source extension. Prioritize pinned action fixtures and a small K/evaluator comparison with a surviving obligation; no native proof loop is armed by this research.

@@ -9,7 +9,7 @@ const outputRoot=process.argv[2]??resolve(repoRoot,'evidence/moriarty-completion
 const bounds=readFileSync(resolve(languageRoot,'spec/bounds.json'));
 const summaries=[];
 for(const name of ['loan','swap']) {
-  const sourcePath=resolve(languageRoot,`spec/examples/${name}.moriarty`);
+  const sourcePath=resolve(languageRoot,`spec/examples/${name}.mori`);
   const sourceBytes=readFileSync(sourcePath);
   const result=compile(sourceBytes,bounds);
   const directory=resolve(outputRoot,name);mkdirSync(directory,{recursive:true});
@@ -34,7 +34,7 @@ const vectorSource=`  agreement SpanVector profile "moriarty-bounded-atomic/1" {
   }
 }  \n`;
 const vectorResult=compile(vectorSource,bounds);
-writeFileSync(resolve(vectorDirectory,'nested-parentheses.moriarty'),vectorSource);
+writeFileSync(resolve(vectorDirectory,'nested-parentheses.mori'),vectorSource);
 writeFileSync(resolve(vectorDirectory,'source-ast.json'),canonicalEncode(vectorResult.source));
 writeFileSync(resolve(vectorDirectory,'typed-program.json'),canonicalEncode(vectorResult.typed));
 writeFileSync(resolve(vectorDirectory,'bound-program.json'),canonicalEncode(vectorResult.bound));

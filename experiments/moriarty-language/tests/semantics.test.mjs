@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createSimulator, evaluate, derive, hash, sealState} from '../src/evaluate.ts';
 const bounds=readFileSync(new URL('../spec/bounds.json',import.meta.url));
-const source=name=>readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url));
+const source=name=>readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url));
 const text=value=>({tag:'Text',value});
 const uint=value=>({tag:'UInt128',value:String(value)});
 const amount=(value,unit)=>({tag:'Amount',value:String(value),unit});

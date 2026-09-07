@@ -8,7 +8,7 @@ import {spawnSync} from 'node:child_process';
 import {lowerCompact,prepareCompactCall,decodeCompactResult,compactSnapshotHarness} from '../src/lower-compact.ts';
 import {createSimulator} from '../src/evaluate.ts';
 const bounds=readFileSync(new URL('../spec/bounds.json',import.meta.url));
-const sources=Object.fromEntries(['loan','swap'].map(name=>[name,readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url))]));
+const sources=Object.fromEntries(['loan','swap'].map(name=>[name,readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url))]));
 const runtime=process.env.MORIARTY_RUNTIME_NODE_MODULES??'/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
 const root=mkdtempSync(join(tmpdir(),'moriarty-mapping-'));
 process.on('exit',()=>rmSync(root,{recursive:true,force:true}));

@@ -8,7 +8,7 @@ updated: 2026-09-07
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-07T18:01:49Z
+updated_at: 2026-09-07T18:43:23Z
 ---
 
 # Wiki log
@@ -978,3 +978,9 @@ SRC-0076 authorizes publication and cleanup. The [historical archive](../docs/AR
 ## 2026-09-07: Adopt the research workflow as an Obsidian vault
 
 The user requested AgriciDaniel/claude-obsidian. Adopted the WSL repository as one vault, preserving note paths, source captures, identifiers and claim scopes. Added Obsidian metadata, navigation, a language Canvas and portable source-identity mapping. The legacy claim index is navigational; no claim was automatically accepted. See [[wiki/meta/provenance|provenance mapping]] and [[wiki/workflow|workflow]].
+
+## 2026-09-07: DeFi actions and language specification
+
+Integrated the [SoK and language-design dossier](../deliverables/defi-language-design-2026-09-07/README.md), action targets, matched syntax specimens and K specification direction. SRC-0079 through SRC-0097 preserve source capsules and current user authority. Capsules contain provenance and scoped paraphrase; complete downloaded texts remain local in the ignored inbox. CLM-0922 through CLM-0925 are provisional structured findings/design records, not proof acceptance. The source extension is `.mori`; semantic changes remain a successor proposal.
+
+Research provenance supplement: SRC-0098 records the ISO catalogue check; SRC-0099 points to the retained Marlowe paper. Refreshed exact claim-ID navigation. These metadata corrections do not promote claims or change semantic acceptance.

@@ -241,7 +241,7 @@ For Emit, concatenate the preorder walks of each field expression in source fiel
 order into one sequence; do not number field wrappers or literal children.
 Parentheses add no node or index. Resolution must name the unique declaration.
 
-Worked example from loan.moriarty: `accrue` is action 0 and its
+Worked example from loan.mori: `accrue` is action 0 and its
 `let interest_calculated = floor_div(interest_numerator, interest_denominator);`
 is statement 5. The instruction ID is `a_0_s_5`. Its exact expression IDs are:
 

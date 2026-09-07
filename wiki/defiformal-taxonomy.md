@@ -3,8 +3,16 @@ id: defiformal.taxonomy.audit
 type: comparison
 title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
-updated_at: 2026-09-07T16:50:22.642457+00:00
+updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0095
+  - SRC-0085
+  - SRC-0080
+  - SRC-0089
+  - SRC-0096
+  - SRC-0087
+  - SRC-0083
+  - SRC-0084
   - SRC-0070
   - SRC-0071
   - SRC-0072
@@ -24,6 +32,14 @@ tags:
 <!-- markdownlint-disable MD025 -->
 
 # DeFiFormal taxonomy audit and Moriarty mapping
+
+## DeFi action reference targets
+
+**CLM-0924.** Retain F1-F6/P and mandatory facets; use the [action matrix](../deliverables/defi-language-design-2026-09-07/action-targets.csv) to identify transitions, workflows, financial predicates and source gaps. The [SoK synthesis](../deliverables/defi-language-design-2026-09-07/README.md) supports exchange, credit, derivative, staking, external-claim and management requirements without equating product labels to Core constructors. Sources: SRC-0095, SRC-0085, SRC-0080, SRC-0089, SRC-0096, SRC-0087; source facts and design recommendation; consulted 2026-09-07; S2; not reproduced; confidence medium for coverage. Existing ACTUS fixtures and DeFi rows remain required.
+
+**CLM-0925.** Share conversions need method-specific rounding, and asynchronous requests distinguish Pending, Claimable and Claimed. Sources: SRC-0083, Methods and Security Considerations; SRC-0084, Request Lifecycle and requestRedeem; normative behavior references; consulted 2026-09-07; S2 target specification; not reproduced; confidence high. No Ethereum backend or Moriarty conformance is implied.
+
+Refinance, prediction resolution, staking exits and external claims retain explicit primary-lifecycle-source gaps. [[wiki/moriarty-architecture|Language semantics]] connects those targets to types, duties, authority, K and mandatory PCD.
 
 ## Intents report reconciliation — 2026-09-06
 

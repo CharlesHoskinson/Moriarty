@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='moriarty-compact-mapping-') as temp:
  env=dict(os.environ,MORIARTY_RUNTIME_NODE_MODULES=str(modules))
  run(['node','--test',str(here/'../tests/lowering.test.mjs')],env)
  run(['tsc','--noEmit','--project',str(here/'../tsconfig.json')])
-files=[here/'../src/lower-compact.ts',here/'../tests/lowering.test.mjs',here/'materialize-mapping.mjs',here/'verify-mapping.py',here/'arithmetic.compact',here/'../spec/bounds.json',here/'../spec/examples/loan.moriarty',here/'../spec/examples/swap.moriarty']
+files=[here/'../src/lower-compact.ts',here/'../tests/lowering.test.mjs',here/'materialize-mapping.mjs',here/'verify-mapping.py',here/'arithmetic.compact',here/'../spec/bounds.json',here/'../spec/examples/loan.mori',here/'../spec/examples/swap.mori']
 receipt={'schemaVersion':'moriarty-compact-mapping-evidence/1','status':'experimental-tests-pass','scope':'Compiled restricted Core kernels, full numeric state/effect operand runtime comparisons and test-only ZKIR snapshot wrappers; no keys, proofs, asset settlement, PCD or full compiler/ledger correspondence','compiler':'0.31.1','language':'0.23.0','runtime':'0.16.0','tests':6,'keysGenerated':False,'proofsGenerated':False,'sources':[{'path':str(f.relative_to(here.parent)) if f.is_relative_to(here.parent) else str(f),'sha256':hashlib.sha256(f.read_bytes()).hexdigest()} for f in files],'compiled':compiled,'commands':'commands.json'}
 (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
 print(json.dumps({'status':'experimental-tests-pass','tests':6,'compiledArtifacts':len(compiled),'keysGenerated':False,'proofsGenerated':False}))

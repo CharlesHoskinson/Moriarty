@@ -54,7 +54,7 @@ test('typing rejects forward values, duplicate state writes, wrong actors and no
 
 test('both complete supplied programs produce deterministic full AST, typed annotations, Core and hashes', () => {
   for (const name of ['loan','swap']) {
-    const source = readFileSync(new URL(`../spec/examples/${name}.moriarty`, import.meta.url));
+    const source = readFileSync(new URL(`../spec/examples/${name}.mori`, import.meta.url));
     const result = compile(source, bounds);
     assert.ok(result.source.declarations.length > 20);
     assert.ok(result.typed.annotations.length > 90);
@@ -87,7 +87,7 @@ test('unit algebra produces ordered Quantity vectors and cancels exactly without
 });
 
 test('policies reject missing, duplicate, wrong-unit, future and nonfinancial bindings',()=>{
-  const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
+  const loan=readFileSync(new URL('../spec/examples/loan.mori',import.meta.url),'utf8');
   for(const mutated of [
     loan.replace('write(accrue, interest_due), ',''),
     loan.replace('write(accrue, interest_due)', 'write(accrue, interest_due), write(accrue, interest_due)'),
@@ -99,7 +99,7 @@ test('policies reject missing, duplicate, wrong-unit, future and nonfinancial bi
 });
 
 test('explicit reserve rules are generic, hash-bound, and require the exact structural guard',()=>{
-  const swap=readFileSync(new URL('../spec/examples/swap.moriarty',import.meta.url),'utf8');
+  const swap=readFileSync(new URL('../spec/examples/swap.mori',import.meta.url),'utf8');
   const good=compile(swap,bounds);
   assert.deepEqual(good.bound.manifest.reserveRules,[{action:'swap',closure:'close'}]);
   for(const mutated of [swap.replace('remaining > uint(1)','remaining >= uint(2)'),swap.replace('reserve swap for close;','reserve swap for swap;'),swap.replace('reserve swap for close;','reserve swap for missing;'),swap.replace('reserve swap for close;','reserve swap for close; reserve close for swap;')])assert.throws(()=>compile(mutated,bounds));
@@ -109,12 +109,12 @@ test('explicit reserve rules are generic, hash-bound, and require the exact stru
 });
 
 test('settlements, statuses and exact effect schemas reject malformed records',()=>{
-  const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
+  const loan=readFileSync(new URL('../spec/examples/loan.mori',import.meta.url),'utf8');
   for(const mutated of [loan.replace('quantum amount(1, USD_micro)','quantum amount(0, USD_micro)'),loan.replace('status agreement remaining_notional notional;','status agreement remaining_notional cursor;'),loan.replace('    from: Text;\n    to: Text;','    to: Text;\n    from: Text;'),loan.replace('observation now: UInt128;','observation now: Text;'),loan.replace('state cursor: UInt128 = uint(0);','state cursor: UInt128 = true;')])assert.throws(()=>compile(mutated,bounds));
 });
 
 test('every aggregate encoding and action shape limit is enforced jointly',()=>{
-  const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
+  const loan=readFileSync(new URL('../spec/examples/loan.mori',import.meta.url),'utf8');
   for(const [group,key] of [['astEncoding','utf8Bytes'],['astEncoding','decodedNodes'],['typedProgramEncoding','utf8Bytes'],['programManifestEncoding','utf8Bytes'],['programManifestEncoding','decodedDepthRootZero'],['programShape','expressionNodesPerEntrypoint'],['programShape','instructionsPerEntrypoint']]) {
     const reduced=JSON.parse(bounds);reduced[group][key]=1;assert.throws(()=>lowerNonAdmittedTestConfiguration(loan,JSON.stringify(reduced)),e=>{assert.equal(e.code,group==='astEncoding'?'AST_BOUNDS':group==='programManifestEncoding'?'PROGRAM_ENCODING':'PROGRAM_BOUNDS');return true;},`${group}.${key}`);
   }
@@ -161,7 +161,7 @@ test('public frontend returns one closed diagnostic at earliest stage with exact
 test('independent stage6 errors select smallest source span, including earlier policies',async()=>{
   const {check}=await import('../src/frontend.ts');
   assert.equal(typeof check,'function');
-  const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
+  const loan=readFileSync(new URL('../spec/examples/loan.mori',import.meta.url),'utf8');
   const bad=loan.replace('effect(accrue, 1, amount)','effect(accrue, 99, amount)').replace('action settle(actor: Text,','action settle(actor: UInt128,');
   const result=check(bad,bounds);assert.equal(result.code,'POLICY_TARGET');
   const missingStatus=minimal('guard uint(1), "x";').replace('status agreement no_remaining_notional;','');
@@ -188,7 +188,7 @@ test('semantic depth boundary16 accepts and17 rejects with PROGRAM_BOUNDS',async
 
 test('both example hashes and canonical full records retain audited materialization bytes',()=>{
   for(const name of ['loan','swap']){
-    const source=readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url));
+    const source=readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url));
     const result=compile(source,bounds);
     const root=new URL(`../../../evidence/moriarty-completion-program-2026-09-07/MC01/profile-04/materialized/${name}/`,import.meta.url);
     for(const [file,value] of [['source-ast',result.source],['typed-program',result.typed],['bound-program',result.bound]])assert.equal(canonicalEncode(value),readFileSync(new URL(`${file}.json`,root),'utf8'));
@@ -288,7 +288,7 @@ function withoutSourceLocations(value){
 test('loan and swap policies may follow all actions with complete-table metadata resolution',async()=>{
   const {check,elaborate}=await import('../src/frontend.ts');
   for(const name of ['loan','swap']){
-    const original=readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url),'utf8');
+    const original=readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url),'utf8');
     const before=compile(original,bounds);
     for(const reverse of [false,true]){
       const moved=policiesAfterActions(original,reverse),result=compile(moved,bounds);
@@ -308,7 +308,7 @@ test('loan and swap policies may follow all actions with complete-table metadata
 
 test('policies after actions retain stage6 invalid-target and invalid-rounding controls',async()=>{
   const {check}=await import('../src/frontend.ts');
-  const loan=policiesAfterActions(readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8'));
+  const loan=policiesAfterActions(readFileSync(new URL('../spec/examples/loan.mori',import.meta.url),'utf8'));
   for(const [from,to,code] of [
     ['write(accrue, interest_due)','write(missing_action, interest_due)','POLICY_TARGET'],
     ['write(accrue, interest_due)','write(accrue, missing_field)','POLICY_TARGET'],
@@ -319,7 +319,7 @@ test('policies after actions retain stage6 invalid-target and invalid-rounding c
   ]){
     const result=check(loan.replace(from,to),bounds);assert.equal(result.code,code);assert.equal(result.stage,'6');
   }
-  const swap=policiesAfterActions(readFileSync(new URL('../spec/examples/swap.moriarty',import.meta.url),'utf8'));
+  const swap=policiesAfterActions(readFileSync(new URL('../spec/examples/swap.mori',import.meta.url),'utf8'));
   for(const [from,to,code] of [
     ['effect(swap, 1, amount)','effect(missing_action, 1, amount)','POLICY_TARGET'],
     ['floor(swap, output_calculated)','floor(close, output_calculated)','POLICY_ROUNDING'],

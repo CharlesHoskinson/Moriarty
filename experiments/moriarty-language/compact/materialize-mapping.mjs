@@ -9,7 +9,7 @@ const output=resolve(process.argv[2]??join(here,'generated'));
 const bounds=readFileSync(join(here,'../spec/bounds.json'));
 const programs=[];
 for(const name of ['loan','swap']){
- const source=readFileSync(join(here,`../spec/examples/${name}.moriarty`)),mapping=lowerCompact(source,bounds),directory=join(output,name);mkdirSync(directory,{recursive:true});
+ const source=readFileSync(join(here,`../spec/examples/${name}.mori`)),mapping=lowerCompact(source,bounds),directory=join(output,name);mkdirSync(directory,{recursive:true});
  const files={'kernel.compact':mapping.source,'harness.compact':compactSnapshotHarness(mapping),'metadata.json':canonicalEncode(mapping.metadata),'bound-program.json':canonicalEncode(mapping.bound)};
  const artifacts=[];for(const [file,bytes] of Object.entries(files)){writeFileSync(join(directory,file),bytes);artifacts.push({file,sha256:sha256(bytes),utf8Bytes:Buffer.byteLength(bytes)});}
  programs.push({name,sourceHash:mapping.metadata.sourceHash,programHash:mapping.metadata.programHash,compactSourceHash:mapping.metadata.compactSourceHash,textTable:mapping.metadata.textTable,actions:mapping.metadata.actions.map(a=>({name:a.name,circuit:a.circuit,hints:a.hints.length,effects:a.effects.length})),artifacts});

@@ -6,7 +6,7 @@ import {compile,parse,check,elaborate,parseSource,FrontendError} from '../src/fr
 import {checkAndLower} from '../src/checker.ts';
 import {derive,evaluate,createSimulator} from '../src/evaluate.ts';
 const bounds=readFileSync(new URL('../spec/bounds.json',import.meta.url));
-const source=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url));
+const source=readFileSync(new URL('../spec/examples/loan.mori',import.meta.url));
 const registeredHash='ad0e1d45c9cfb5b1843d73f4d497d7d07f0450caddfcd49f3ef81f07f63d567c';
 const malformed=()=>[
   undefined,null,{},[],false,1,'','null','{',

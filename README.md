@@ -22,6 +22,24 @@ The financial design draws on the following work:
 
 The common language must accommodate both scheduled financial obligations and transactions authorized by desired outcomes. The [financial target study](deliverables/moriarty-design-sprint-2026-09-06/README.md) explains the source behaviors and their relationship to the proposed semantics. Full conformance remains unfinished.
 
+## Language specification and formal semantics
+
+Moriarty source files use the **`.mori`** extension. The specification separates what a program looks like from what it means:
+
+| Layer | Specification method | What it defines |
+| --- | --- | --- |
+| Lexical structure | Separate token rules and regular expressions | Identifiers, literals, whitespace, comments and source locations |
+| Syntax | Planned: EBNF using the ISO/IEC 14977 notation | Valid combinations of declarations, actions and expressions |
+| Static semantics | Typing and scoping judgments, illustrated by `Γ ⊢ e : τ` | Name resolution, asset units, resource use and admissible bounds |
+| Dynamic semantics | Executable operational semantics in the K Framework | State transitions, financial effects, obligations and rejection |
+| Correctness claims | Explicit properties over those semantics | What must be established about an agreement, execution and history |
+
+[EBNF](https://www.iso.org/standard/26153.html) extends BNF with notation for repetition and optionality. It describes the grammar; it does not decide whether the source resembles Lisp or a language with braces. [ABNF, RFC 5234](https://datatracker.ietf.org/doc/html/rfc5234), is another BNF-family notation used for protocol specifications. Moriarty selects EBNF for its source grammar.
+
+[K](https://kframework.org/docs/user_manual/) describes execution through configurations and rewrite rules. It is the selected framework for Moriarty's formal operational semantics. Typing judgments define admissible programs; contract properties and Hoare-style assertions state claims to prove. Denotational models can support particular financial analyses, but do not replace the execution definition.
+
+The current [experimental grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator are available. Separating the lexical specification, checking exact EBNF conformance and implementing the Moriarty K definition remain planned work. Archived K work describes ZKIR and is not a formal semantics of Moriarty. A K model also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance.
+
 ## What a developer writes
 
 An agreement is a source program; a contract instance gives that program its own state and participant bindings. An agreement declares typed state, observations, actions and effects. Actions contain guards, local calculations, state updates and explicit financial effects. Policies associate financial calculations with their rounding rules and required correctness claims.
@@ -32,7 +50,7 @@ An **obligation** is a duty that survives a transaction, such as an unpaid amoun
 
 Amounts have named units. An amount of one asset cannot be added to another asset accidentally. Intermediate arithmetic is checked, including multiplication before division; overflow rejects rather than wrapping. Settlement bindings specify how nominal amounts convert into ledger asset quantities.
 
-For example, this excerpt from the [swap agreement](experiments/moriarty-language/spec/examples/swap.moriarty) calculates output from pool reserves, applies a fee factor and checks the trader's minimum output:
+For example, this excerpt from the [swap agreement](experiments/moriarty-language/spec/examples/swap.mori) calculates output from pool reserves, applies a fee factor and checks the trader's minimum output:
 
 ```text
 let effective_input = arg.amount_in * const.fee_numerator;
@@ -119,7 +137,7 @@ cd Moriarty
 npm --prefix experiments/moriarty-language run demo
 ```
 
-The command needs no dependency installation or TypeScript compiler. The demo reads the actual [loan](experiments/moriarty-language/spec/examples/loan.moriarty) and [swap](experiments/moriarty-language/spec/examples/swap.moriarty) source files. It shows candidate transitions and rejected actions. To inspect complete structured inputs and results:
+The command needs no dependency installation or TypeScript compiler. The demo reads the actual [loan](experiments/moriarty-language/spec/examples/loan.mori) and [swap](experiments/moriarty-language/spec/examples/swap.mori) source files. It shows candidate transitions and rejected actions. To inspect complete structured inputs and results:
 
 ```sh
 node experiments/moriarty-language/examples/simulate.mjs --json
@@ -156,7 +174,7 @@ if ('code' in result) process.exitCode = 1;
 ```
 
 ```sh
-node check-agreement.mjs experiments/moriarty-language/spec/examples/loan.moriarty
+node check-agreement.mjs experiments/moriarty-language/spec/examples/loan.mori
 ```
 
 Pass your own source file in place of the example. `check` returns a typed program or a diagnostic with a code and source span. `parse` returns the source tree, and `elaborate` returns the bound Core program. Simulating a new agreement also requires constructing its instance configuration, action inputs and authority; the demo script shows those API calls.
@@ -182,6 +200,8 @@ Replace `/path/to/node_modules` with the directory containing `@midnight-ntwrk/c
 For the remaining frontend APIs and tests, continue with the [language package guide](experiments/moriarty-language/README.md). The [browser developer mock](experiments/moriarty-developer-mock/README.md) explores the proposed user flows with simulated authority and certificates; it is a separate prototype, not a browser frontend for the source compiler.
 
 ## What remains to build
+
+The [DeFi action study and language proposal](deliverables/defi-language-design-2026-09-07/README.md) connect financial reference behaviors to the proposed syntax and K semantics.
 
 The complete [roadmap](ROADMAP.md) lists the implementation sequence, acceptance criteria and remaining checks, with links to the maintained [research wiki](wiki/index.md).
 

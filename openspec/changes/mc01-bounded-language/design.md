@@ -27,8 +27,8 @@ parse(source) -> Result<AgreementAST, Diagnostic[]>; check(ast, profile) -> Resu
 - `experiments/moriarty-language/src/codec.ts`
 - `experiments/moriarty-language/src/lower-compact.ts`
 - `experiments/moriarty-language/src/errors.ts`
-- `experiments/moriarty-language/examples/loan.moriarty`
-- `experiments/moriarty-language/examples/swap.moriarty`
+- `experiments/moriarty-language/examples/loan.mori`
+- `experiments/moriarty-language/examples/swap.mori`
 - `experiments/moriarty-language/tests/frontend.test.mjs`
 - `experiments/moriarty-language/tests/semantics.test.mjs`
 - `experiments/moriarty-language/package.json`

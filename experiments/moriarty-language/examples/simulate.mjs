@@ -12,7 +12,7 @@ const actors=['borrower','lender','pool','provider','trader'];
 const records=[];
 
 for(const name of ['loan','swap']) {
-  const source=readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url));
+  const source=readFileSync(new URL(`../spec/examples/${name}.mori`,import.meta.url));
   const sim=createSimulator(source,bounds);
   const genesis=sim.makeGenesis({
     domain:{network:'simulation',deployment:'developer-example'},
