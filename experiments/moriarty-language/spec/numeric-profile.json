@@ -14,7 +14,7 @@
     "underflow": "reject-entire-action",
     "divisionByZero": "reject-entire-action",
     "divisionRounding": "floor-at-each-explicit-FloorDiv-node",
-    "floorNode": "binary-slash-elaborates-to-FloorDiv; floor(e) is the recorded rounding node and is identity on UInt128 and on Amount<U>",
+    "floorNode": "floor_div(n,d) is the sole division form and elaborates to one FloorDiv node; floor(action,local) occurs only in a policy and must name the unique local whose value expression root is that FloorDiv node",
     "reassociation": "forbidden-if-observable-behavior-changes",
     "hostBigInt": "calculation-device-only-not-a-wider-accepted-intermediate",
     "widthBoundary": {
@@ -35,7 +35,7 @@
       "Bool",
       "Quantity<UnitExponentVector>"
     ],
-    "amountCoreRepresentation": "UInt128-with-manifest-bound-nominal-unit-map",
+    "amountCoreRepresentation": "closed {value:UInt128Text,unit:Identifier} on every AST, manifest, input, state, effect, obligation, and result wire object",
     "boolState": "rejected-until-reviewed-core-extension",
     "literalForms": [
       "uint(n)",
@@ -68,9 +68,12 @@
     "quantityClassification": {
       "emptyVector": "UInt128",
       "singleDeclaredUnitExponentOne": "Amount<Unit>",
-      "anyOtherVector": "expression-only Quantity; cannot store or emit until FloorDiv/settlement yields Amount or UInt128"
+      "anyOtherVector": "expression-only Quantity; may be let-bound, but cannot be persistent state, action/observation/constant data, a set result, or an emit operand"
     },
-    "unitErasure": "forbidden-except-checked-Transfer-or-Fee-emit-after-settlement-asset-binding"
+    "unitVectorWire": "ordered array of closed {unit:Identifier,exponent:SignedExponentText}; omit zero exponents; order by unit ASCII; empty array is UInt128",
+    "signedExponentText": "canonical decimal text: 0 or -?[1-9][0-9]*, range -16..16; plus sign and -0 forbidden",
+    "settlementOrientation": "quantum.value nominal subunits per one ledger base unit; require value mod quantum.value = 0 and ledgerAmount=value/quantum.value with UInt128 checks",
+    "unitErasure": "only Transfer, Fee, and DueSettled after exact unique asset/unit binding and quantum conversion"
   },
   "fieldPolicyRequired": [
     "unit",
@@ -81,6 +84,7 @@
     "proofStatement"
   ],
   "fieldPolicyBinding": "elaboration-and-proof-statements; not optional source annotations",
+  "fieldPolicyCoverage": "every Amount-valued set target and every Amount-valued effect field occurrence has exactly one explicit policy target; targets are disjoint and exhaustive",
   "genesisVersusDynamic": {
     "declaredDynamicValues": "state field values change by set during evaluation",
     "checkedGenesisMetadata": "profile, lifetime, horizon, units, consts, schemas, field policies, settlement bindings, action bodies, and initial literals are authenticated at genesis and are not rewritten by evaluate"
@@ -108,7 +112,8 @@
         "1010000",
         "1980257"
       ],
-      "protocolConformance": false
+      "protocolConformance": false,
+      "scope": "fixed-vector one-transition fixture; expected_output prevents reuse for a second input"
     }
   },
   "extensionsRequiringNewVersion": [

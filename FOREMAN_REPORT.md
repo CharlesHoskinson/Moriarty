@@ -1,9 +1,22 @@
-# MC01 recovered specification candidate
+# Host recovery of interrupted MC01 correction
 
-Status: pending independent profile audits. No freeze or implementation acceptance.
+Status: incomplete draft, not approved for profile freeze.
+This report is written by the host. Worker 05 timed out without a terminal report.
 
-The timed-out Codex Sol worker wrote grammar, semantics, schema tables, numeric rules, bounds, two source examples, and the complete source-preserving target crosswalk. Its terminal exit was 124 and it did not finish its report. This is the host recovery report. Original worker bytes remain in external evidence.
+The worker changed grammar, bounds, numeric rules, proposal prose, and both financial examples.
+It corrected the loan argument spelling and proposed explicit policy targets and status declarations.
+It did not finish the canonical schema or reconcile the semantic rules.
+The host preserved the exact interrupted diff, then restored the deleted schema from d5580f2.
+That restored schema remains the previously rejected version.
 
-Host checks confirmed JSON syntax, exact coverage of 32 ACTUS and 72 DeFi source rows, and independent sample arithmetic. Host corrected effect keyword labels and noncircular hash preimages before freezing this candidate.
+Host checks: nine artifacts present, three JSON documents parse, exact 32 ACTUS and 72 DeFi rows preserved.
+Independent rational arithmetic retains the original loan and swap values. Git diff whitespace check passed.
+The initial artifact check failed because the worker had deleted typed-schemas.md.
+A second host check failed because its source-family filter used DeFi instead of the actual DEFI tag.
+The host corrected that verification filter and reran the full structural check successfully.
+These checks do not establish grammar acceptance, canonical schemas, obligation/status semantics, conformance, implementation or proofs.
 
-No parser, typechecker, compiler, native proof, or Preview transaction ran. Both independent result audits remain required. The user approved direct MC01 supervision with unchanged resource limits. Failed launches and timeouts retain their full charges. All other packages retain their existing execution gates.
+No corrected finding-disposition report, canonical examples, obligation traces or non-unit quantum checks were produced.
+No new substantive Fable or GPT-6 review was launched on this known incomplete draft.
+All prior audit findings remain open pending correction and independent re-review.
+The approved replacement worker allowance is exhausted. No automatic successor is authorized.

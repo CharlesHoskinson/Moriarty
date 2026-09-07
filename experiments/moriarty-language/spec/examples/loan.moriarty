@@ -23,21 +23,31 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
   state episode_closed: UInt128 = uint(0);
   observation now: UInt128;
   settlement USD_micro_asset asset text("USD_TEST_ASSET") quantum amount(1, USD_micro);
-  field interest_due {
+  status episode closed_when episode_closed == uint(1);
+  status agreement remaining_notional notional;
+  policy accrued_interest targets write(accrue, interest_due), effect(accrue, 1, amount) {
     unit USD_micro;
     derivation "notional*8*31/(100*365)";
-    rounding floor(interest_calculated);
+    rounding floor(accrue, interest_calculated);
     remainder "discard 54/73 micro-USD for this sample only";
     comparison "exact integer sample value; no ACTUS tolerance claim";
     proof "loan_first_period_interest_floor_v1";
   }
-  field principal_due {
+  policy accrued_principal targets write(accrue, principal_due), write(accrue, notional), effect(accrue, 0, amount) {
     unit USD_micro;
     derivation "fixed first-period principal installment";
     rounding none;
     remainder "none";
     comparison "exact micro-unit value";
     proof "loan_first_period_principal_v1";
+  }
+  policy settled_cash targets write(settle, borrower_cash), write(settle, lender_cash), write(settle, principal_paid), write(settle, interest_paid), write(settle, principal_due), write(settle, interest_due), effect(settle, 0, amount), effect(settle, 1, amount), effect(settle, 2, amount) {
+    unit USD_micro;
+    derivation "exact additions, subtractions, copies, and zeroing during settlement";
+    rounding none;
+    remainder "none";
+    comparison "exact micro-unit values";
+    proof "loan_first_period_settlement_exact_v1";
   }
   effect Transfer {
     asset: Text;
@@ -76,11 +86,11 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
     emit DueCreated { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due };
     emit DueCreated { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due };
   }
-  action settle(actor: Text, asset: Text, amount_due: Amount<USD_micro>) {
+  action settle(actor: Text, settlement_asset: Text, amount_due: Amount<USD_micro>) {
     guard obs.now < uint(2000000000), "horizon expired";
     guard arg.actor == const.borrower, "borrower authority required";
     guard state.cursor == uint(1), "dues are not ready";
-    guard arg.asset == text("USD_TEST_ASSET"), "settlement asset mismatch";
+    guard arg.settlement_asset == text("USD_TEST_ASSET"), "settlement asset mismatch";
     guard arg.amount_due == state.principal_due + state.interest_due, "settlement amount mismatch";
     guard arg.amount_due == const.expected_total_due, "independent total value mismatch";
     guard state.borrower_cash >= arg.amount_due, "insufficient synthetic balance";
@@ -88,9 +98,9 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
     set lender_cash = state.lender_cash + arg.amount_due;
     set principal_paid = state.principal_paid + state.principal_due;
     set interest_paid = state.interest_paid + state.interest_due;
-    emit Transfer { asset: arg.asset, from: const.borrower, to: const.lender, amount: arg.amount_due };
-    emit DueSettled { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due, asset: arg.asset };
-    emit DueSettled { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due, asset: arg.asset };
+    emit Transfer { asset: arg.settlement_asset, from: const.borrower, to: const.lender, amount: arg.amount_due };
+    emit DueSettled { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due, asset: arg.settlement_asset };
+    emit DueSettled { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due, asset: arg.settlement_asset };
     set principal_due = amount(0, USD_micro);
     set interest_due = amount(0, USD_micro);
     set cursor = uint(2);

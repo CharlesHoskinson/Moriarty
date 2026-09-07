@@ -2,6 +2,7 @@
 (* Source is UTF-8. Spans are 0-based UTF-8 byte offsets [start, end). *)
 (* Whitespace: ASCII space, tab, CR, LF between tokens. No source comments. *)
 (* Lexer uses longest operator match for ==, <=, >=. No !=. *)
+(* A word that exactly equals a keyword is a keyword, otherwise it may be an identifier. *)
 (* Keywords cannot be identifiers. Identifiers are 1..64 ASCII [A-Za-z][A-Za-z0-9_]*. *)
 (* Binary operators associate left. Comparisons cannot chain. There is no plain division. *)
 (* Numeric, schema, units, lifecycle, horizon, and capacity checks are semantic. *)
@@ -20,6 +21,7 @@ declaration = unit_decl
             | observation_decl
             | settlement_decl
             | field_policy
+            | status_decl
             | effect_decl
             | action_decl ;
 
@@ -33,7 +35,8 @@ observation_decl = "observation", identifier, ":", stored_type, ";" ;
 
 settlement_decl = "settlement", identifier, "asset", literal, "quantum", literal, ";" ;
 
-field_policy = "field", identifier, "{",
+field_policy = "policy", identifier, "targets", policy_target,
+               { ",", policy_target }, "{",
                "unit", identifier, ";",
                "derivation", json_string, ";",
                "rounding", rounding_form, ";",
@@ -42,7 +45,14 @@ field_policy = "field", identifier, "{",
                "proof", json_string, ";",
                "}" ;
 
-rounding_form = "none" | "floor", "(", identifier, ")" ;
+policy_target = "write", "(", identifier, ",", identifier, ")"
+              | "effect", "(", identifier, ",", uint_token, ",", field_label, ")" ;
+
+rounding_form = "none" | "floor", "(", identifier, ",", identifier, ")" ;
+
+status_decl = "status", "episode", "closed_when", identifier, "==", literal, ";"
+            | "status", "agreement", "remaining_notional", identifier, ";"
+            | "status", "agreement", "no_remaining_notional", ";" ;
 
 effect_decl = "effect", effect_kind, "{", field_decl, { field_decl }, "}" ;
 
@@ -70,8 +80,8 @@ statement = "guard", expression, ",", json_string, ";"
 
 effect_field = field_label, ":", expression ;
 
-field_label = identifier | keyword ;
-(* Keywords such as asset and amount are permitted only as effect record labels. *)
+field_label = identifier | "asset" | "amount" ;
+(* Only asset and amount are contextual keyword spellings, and only as effect labels. *)
 (* Reserved prototype names remain forbidden in all names and labels. *)
 
 expression = disjunction ;
@@ -119,12 +129,13 @@ json_string = ? JSON string token with valid Unicode scalar values after decodin
 
 keyword = "agreement" | "profile" | "lifetime" | "horizon" | "unit" | "const"
         | "state" | "observation" | "settlement" | "asset" | "quantum" | "field"
-        | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
+        | "policy" | "targets" | "write" | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
+        | "status" | "episode" | "closed_when" | "agreement" | "remaining_notional" | "no_remaining_notional"
         | "effect" | "action" | "guard" | "let" | "set" | "emit"
         | "UInt128" | "Text" | "Amount"
         | "Transfer" | "Fee" | "DueCreated" | "DueSettled"
         | "uint" | "text" | "amount" | "true" | "false" | "remaining" | "floor_div"
-        | "state" | "arg" | "obs" | "const" | "not" | "and" | "or" ;
+        | "arg" | "obs" | "not" | "and" | "or" ;
 
 reserved_identifier = "constructor" | "prototype" | "__proto__" ;
 
@@ -139,3 +150,6 @@ reserved_identifier = "constructor" | "prototype" | "__proto__" ;
 (* 7. Amount without a parameter is emit-only and records the operand unit. *)
 (* 8. Bool literals type as Bool. Bool is expression-only in this profile. *)
 (* 9. Source comments are forbidden so numeric-looking text cannot hide. *)
+(* 10. not binds tighter than comparison: `not a == b` parses `(not a) == b`. *)
+(* 11. Each action may write a state field at most once. Effect ordinals are *)
+(*     zero-based in source emit order within that action. Policy targets must exist. *)

@@ -25,7 +25,7 @@ Illustrative transition fragment, not an executable or complete agreement:
 action accrue_period() {
   guard state.cursor == uint(0), "period already accrued";
   let numerator = state.notional * uint(8) * uint(31);
-  let interest = numerator / (uint(100) * uint(365));
+  let interest = floor_div(numerator, uint(100) * uint(365));
   set principal_due = amount(500000000, USD_micro);
   set interest_due = interest;
   set notional = state.notional - state.principal_due;
@@ -41,8 +41,8 @@ The fragment only illustrates syntax and sequential state reads. It is not a val
 In particular, this proposal does not use a package-selection form as a substitute for an authoring language.
 
 Proposed statement forms are `guard`, single-definition `let`, `set`, and `emit`.
-Proposed expression forms are typed literals, state/argument/local reads, remaining lifetime, comparisons, Boolean operators, and checked arithmetic.
-Parentheses determine grouping. Multiplication/division bind before addition/subtraction, then comparisons, then `and`, then `or`.
+Proposed expression forms are typed literals, state, argument, observation, constant and local reads, remaining lifetime, comparisons, Boolean operators, multiplication, addition, subtraction, and `floor_div(n,d)`.
+There is no slash operator or `floor(e)` expression. Parentheses determine grouping. `not` binds first, then multiplication, then addition/subtraction, comparisons, `and`, and `or`; `floor_div` is a primary call.
 Reject chained comparisons. Boolean `and` and `or` short-circuit left to right.
 The accompanying grammar.ebnf proposes the EBNF and UTF-8 byte source spans. It requires review before parser implementation.
 
@@ -99,15 +99,19 @@ Reject duplicate keys before object construction, noncanonical wire bytes, lone 
 Do not normalize text silently. Integers on the wire are canonical decimal strings.
 Booleans are JSON booleans only where the schema permits them.
 
-Proposed common intake limits:
+The normative limits are in `bounds.json`. Source, decoded AST, full program manifest,
+compact signing envelope, and result are distinct encodings and all applicable limits
+hold simultaneously:
 
 | Resource | Bound |
 |---|---:|
-| Each source or public canonical envelope | 65,536 UTF-8 bytes |
-| Whole decoded envelope depth, root at zero | 40 |
-| Whole decoded envelope nodes | 8,192 |
+| Source, AST, manifest, signing envelope, or result | 65,536 UTF-8 bytes each |
+| AST and full manifest decoded depth, root at zero | 40 |
+| Compact signing and result decoded depth, root at zero | 16 |
+| Nodes in each decoded object | 8,192 |
 | Keys per record | 64 |
-| Each text value | 256 UTF-8 bytes |
+| Language Text | 256 UTF-8 bytes |
+| Canonical-object text | 4,096 UTF-8 bytes and 4,096 JavaScript code units |
 | Each identifier | 64 ASCII characters |
 | Entrypoints, state fields, or action fields | 64 each |
 | Instructions or locals per entrypoint | 64 each |
@@ -116,9 +120,11 @@ Proposed common intake limits:
 | Effects per entrypoint | 16 |
 
 These are simultaneous limits. A value satisfying one bound may still fail another.
-The existing signing codec's whole-object depth limit of 16 cannot implement this proposal unchanged.
-The new canonical codec must use the common envelope limits and an explicit new schema domain.
-Roundtrip tests must include maximum-depth expressions inside their actual signing envelopes.
+The full program-hash preimage contains Core instructions and uses the manifest depth-40
+limit. The depth-16 signing object contains only a compact program reference plus input
+and authority data; it never embeds expressions. Both use the exact
+`moriarty-canonical-json/1` rules in `typed-schemas.md`. A program is rejected if its
+actual aggregate bytes or nodes fail even when every per-action count fits.
 Test UTF-8 byte counts independently from JavaScript string lengths.
 
 Bind the profile's total lifecycle allowance, horizon, and initial state at authenticated genesis.

@@ -3,120 +3,39 @@
   "semanticProfile": "moriarty-bounded-atomic/1",
   "schemaVersion": "moriarty-bounds/1",
   "kind": "simultaneous-limits",
-  "note": "A value that satisfies one bound may still fail another. Finite bounds do not imply practical enumerability, native-proof fit, or financial correctness.",
-  "sourceIntake": {
-    "role": "UTF-8 .moriarty source and decoded AST JSON before signing",
-    "sourceUtf8Bytes": 65536,
-    "decodedDepthRootZero": 40,
-    "decodedNodes": 8192,
-    "keysPerRecord": 64,
-    "textUtf8Bytes": 256,
-    "identifierAsciiCharacters": 64,
-    "basis": "experiments/moriarty-developer-mock/src/language/core.ts LIMITS and safeJsonValue; language Text uses UTF-8 bytes, not JavaScript string length"
+  "note": "Every applicable bound is checked jointly. Per-category maxima do not imply that their Cartesian product is encodable.",
+  "sourceEncoding": {"sourceUtf8Bytes":65536,"identifierAsciiCharacters":64,"languageTextUtf8Bytes":256},
+  "astEncoding": {"codec":"moriarty-canonical-json/1","utf8Bytes":65536,"decodedDepthRootZero":40,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,"textUtf8Bytes":4096,"textJavascriptCodeUnits":4096},
+  "programManifestEncoding": {
+    "codec":"moriarty-canonical-json/1","domain":"MORIARTY-PROGRAM-bounded-atomic/1","utf8Bytes":65536,
+    "decodedDepthRootZero":40,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,
+    "textUtf8Bytes":4096,"textJavascriptCodeUnits":4096,
+    "contains":"complete typed Core program, declarations, policies, status rules, and bounds reference",
+    "boundsRepresentation":"closed {registryId,boundsHash} reference only"
   },
   "signingEnvelope": {
-    "role": "actual public canonical signing envelope; do not raise these limits in this profile",
-    "codec": "experiments/moriarty-developer-mock/src/language/claims.ts canonical()",
-    "schemaDomainNew": "MORIARTY-SIGN-bounded-atomic/1",
-    "schemaDomainHistoricalExactPlan": "MORIARTY-SIGN-v1",
-    "schemaDomainHistoricalOutcome": "MORIARTY-OUTCOME-SIGN-v1",
-    "publicEnvelopeUtf8Bytes": 65536,
-    "decodedDepthRootZero": 16,
-    "decodedNodes": 8192,
-    "keysPerRecord": 64,
-    "arrayLength": 128,
-    "textUtf8Bytes": 4096,
-    "textJavascriptLengthAlso": 4096,
-    "canonicalKeyAlphabet": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
-    "numericJsonTokens": "forbidden",
-    "keyOrder": "lexicographic-ASCII",
-    "whitespace": "forbidden-in-canonical-bytes",
-    "signedObject": "bound-semantic-manifest-with-programHash-not-nested-AST",
-    "representabilityRule": "If a candidate signed object exceeds these actual envelope bounds, reject as unrepresentable. Do not embed FloorDiv trees in the envelope.",
-    "roundtripObligation": "Maximum-depth expressions are tested inside the elaborated program object. The signing envelope binds programHash, state, action, effects, authority summary, and versions. A nested AST that cannot fit depth 16 is not a signing object."
+    "codec":"moriarty-canonical-json/1","schemaDomainNew":"MORIARTY-SIGN-bounded-atomic/1",
+    "schemaDomainHistoricalExactPlan":"MORIARTY-SIGN-v1","schemaDomainHistoricalOutcome":"MORIARTY-OUTCOME-SIGN-v1",
+    "utf8Bytes":65536,"decodedDepthRootZero":16,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,
+    "textUtf8Bytes":4096,"textJavascriptCodeUnits":4096,
+    "contains":"compact program reference and evaluation/authority data; never source AST, typed AST, Core instructions, or full manifest"
   },
+  "resultEncoding": {"codec":"moriarty-canonical-json/1","utf8Bytes":65536,"decodedDepthRootZero":16,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,"textUtf8Bytes":4096,"textJavascriptCodeUnits":4096},
   "programShape": {
-    "declaredUnits": 64,
-    "entrypoints": 64,
-    "stateFields": 64,
-    "constFields": 64,
-    "observationFields": 64,
-    "argumentFields": 64,
-    "effectKinds": 4,
-    "effectFields": 64,
-    "fieldPolicies": 64,
-    "settlementBindings": 64,
-    "instructionsPerEntrypoint": 64,
-    "localsPerEntrypoint": 64,
-    "expressionDepthRootOne": 16,
-    "expressionNodesPerEntrypoint": 256,
-    "effectsPerEntrypoint": 16,
-    "expressionUnitComponents": 8,
-    "absoluteUnitExponent": 16
+    "declaredUnits":64,"entrypoints":64,"stateFields":64,"constFields":64,"observationFields":64,
+    "argumentFieldsPerEntrypoint":64,"effectKinds":4,"effectFields":64,"fieldPolicies":64,"policyTargets":128,
+    "settlementBindings":64,"instructionsPerEntrypoint":64,"localsPerEntrypoint":64,
+    "expressionDepthRootOne":16,"expressionNodesPerEntrypoint":256,"effectsPerEntrypoint":16,
+    "obligationsOutstanding":128,"expressionUnitComponents":8,"absoluteUnitExponent":16
   },
+  "jointValidation": ["source bytes and lexical bounds","AST bytes/depth/nodes/records/arrays/text","all program-shape counts","full manifest bytes/depth/nodes/records/arrays/text","compact signing bytes/depth/nodes/records/arrays/text","result bytes/depth/nodes/records/arrays/text"],
+  "representabilityRule":"Reject if any applicable limit fails. In particular, 64 entrypoints each with 256 expression nodes is not promised to fit an 8192-node manifest; actual aggregate nodes and bytes decide.",
   "lifecycle": {
-    "initialAllowance": "positive-UInt128-frozen-at-authenticated-genesis",
-    "consumption": "one-per-successful-action",
-    "horizon": "UInt128-UTC-epoch-second-exclusive-upper-bound-frozen-at-genesis",
-    "timeSource": "explicit-authenticated-observation-now-no-host-clock-read",
-    "closureReserve": "package-specific-guard-required-in-source",
-    "revision": "increment-one-on-Complete-never-wraps-in-this-profile",
-    "resets": "forbidden",
-    "pending": "unsupported-profile-evaluate-rejects-UNSUPPORTED_PENDING",
-    "splitJoin": "unsupported-profile",
-    "genesisVersusDynamic": {
-      "genesisFrozen": [
-        "semanticProfile",
-        "lifetime",
-        "horizon",
-        "unitDeclarations",
-        "constFields",
-        "stateSchema",
-        "observationSchema",
-        "effectSchemas",
-        "fieldPolicies",
-        "settlementBindings",
-        "actionDeclarations",
-        "initialStateLiterals"
-      ],
-      "dynamicChecked": [
-        "stateFieldValues",
-        "revision",
-        "remaining",
-        "effects",
-        "obligations"
-      ],
-      "evaluatorManagedNotSourceState": [
-        "instance",
-        "revision",
-        "remaining"
-      ]
-    }
+    "initialAllowance":"positive-UInt128-frozen-at-authenticated-genesis","consumption":"one-per-successful-action",
+    "horizon":"UInt128-UTC-epoch-second-exclusive-upper-bound-frozen-at-genesis",
+    "timeSource":"explicit-authenticated-observation-now-no-host-clock-read",
+    "closureReserve":"source guard remaining > uint(1) is required only when a distinct closure action exists",
+    "revision":"increment-one-on-Complete-with-overflow-rejection","resets":"forbidden","pending":"UNSUPPORTED_PENDING","splitJoin":"unsupported-profile"
   },
-  "jointValidation": "all-limits-must-hold-in-the-actual-canonical-signing-envelope-and-in-source-intake",
-  "finiteDoesNotImply": [
-    "practical-enumerability",
-    "native-proof-fit",
-    "financial-correctness",
-    "ledger-acceptance",
-    "ACTUS-conformance",
-    "DeFi-conformance"
-  ],
-  "contradictionDisposition": [
-    {
-      "topic": "signing-depth",
-      "rejectedDraft": "raise signing envelope depth from 16 to 40",
-      "decision": "keep actual claims.ts depth 16, bytes 65536, nodes 8192; hash the program; source/AST intake may use depth 40"
-    },
-    {
-      "topic": "identifier-alphabet",
-      "rejectedDraft": "allow . : - in source identifiers because core.ts and packages.ts do",
-      "decision": "source and canonical keys use [A-Za-z][A-Za-z0-9_]{0,63}; external labels including loan:demo are Text values"
-    },
-    {
-      "topic": "text-length",
-      "rejectedDraft": "JavaScript string length 256 for all strings",
-      "decision": "language Text is 256 UTF-8 bytes; signing envelope strings keep the actual 4096 UTF-8 and 4096 JS-length dual bound"
-    }
-  ]
+  "finiteDoesNotImply":["practical-enumerability","native-proof-fit","financial-correctness","ledger-acceptance","ACTUS-conformance","DeFi-conformance"]
 }

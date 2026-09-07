@@ -21,13 +21,39 @@ agreement ConstantProductEpoch profile "moriarty-bounded-atomic/1" {
   observation now: UInt128;
   settlement asset_a_binding asset text("ASSET_A") quantum amount(1, AssetA_quantum);
   settlement asset_b_binding asset text("ASSET_B") quantum amount(1, AssetB_quantum);
-  field swap_output {
+  status episode closed_when epoch_closed == uint(1);
+  status agreement no_remaining_notional;
+  policy swap_output targets write(swap, reserve_b), write(swap, trader_b), effect(swap, 1, amount) {
     unit AssetB_quantum;
     derivation "floor((amount_in*997)*reserve_b/(reserve_a*1000+amount_in*997))";
-    rounding floor(output_calculated);
+    rounding floor(swap, output_calculated);
     remainder "unpaid output remains in reserve_b";
     comparison "exact integer output and reserves";
     proof "constant_product_exact_input_floor_v1";
+  }
+  policy swap_input targets write(swap, trader_a), write(swap, reserve_a), effect(swap, 0, amount) {
+    unit AssetA_quantum;
+    derivation "exact input debit, reserve credit, and transfer";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_input_exact_v1";
+  }
+  policy close_asset_a targets write(close, provider_a), write(close, reserve_a), effect(close, 0, amount) {
+    unit AssetA_quantum;
+    derivation "exact reserve transfer and zeroing";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_close_a_exact_v1";
+  }
+  policy close_asset_b targets write(close, provider_b), write(close, reserve_b), effect(close, 1, amount) {
+    unit AssetB_quantum;
+    derivation "exact reserve transfer and zeroing";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_close_b_exact_v1";
   }
   effect Transfer {
     asset: Text;
