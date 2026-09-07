@@ -1,0 +1,627 @@
+[
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "aggregation/Cargo.toml",
+      "git_blob": "7b642c8a8df4d53e1972dd90e2270dd1038cb055",
+      "sha256": "4e8382b6fad723cc538dbad5bee90e69fa7440577fc69373a31260366ed6fece",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1,
+          100
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1,
+        "last_line": 100,
+        "text": "[package]\nname = \"midnight-aggregation\"\nversion = \"0.1.2\"\nedition.workspace = true\nrust-version.workspace = true\ndescription = \"Toolkit for proof aggregation of midnight-proofs\"\nlicense = \"MIT OR Apache-2.0\"\ncategories = [\"cryptography\"]\nkeywords = [\"halo\", \"proofs\", \"zkp\", \"zkSNARKs\", \"aggregation\"]\n\n[package.metadata.docs.rs]\nall-features = true\nrustdoc-args = [\"--cfg\", \"docsrs\", \"--html-in-header\", \"katex-header.html\"]\n\n[dependencies]\ngroup = { workspace = true }\nff = { workspace = true }\nmidnight-curves = \"0.3.0\"\nmidnight-proofs = { version = \"0.8.0\", default-features = false, features = [\n    \"circuit-params\",\n    \"committed-instances\",\n] }\nmidnight-circuits = { version = \"7.0.0\", default-features = false, features = [\n    \"testing\",\n] }\nmidnight-zk-stdlib = { path = \"../zk_stdlib\", version = \"2.1.0\" }\n\nrand = { workspace = true }\nblake2b_simd = { workspace = true }\nsha2 = { workspace = true }\n\n[dev-dependencies]\nrand_chacha = { workspace = true }\n\n[[example]]\nname = \"ivc\"\nrequired-features = [\"truncated-challenges\"]\n\n[[example]]\nname = \"single_circuit_aggregation\"\nrequired-features = [\"truncated-challenges\"]\n\n[[example]]\nname = \"multi_circuit_aggregation\"\nrequired-features = [\"truncated-challenges\"]\n\n[features]\ntruncated-challenges = [\n    \"midnight-proofs/truncated-challenges\",\n    \"midnight-circuits/truncated-challenges\",\n]\nsingle-h-commitment = [\n    \"midnight-proofs/single-h-commitment\",\n    \"midnight-circuits/single-h-commitment\",\n    \"midnight-zk-stdlib/single-h-commitment\",\n]\nfewer-point-sets = [\n    \"midnight-proofs/fewer-point-sets\",\n    \"midnight-circuits/fewer-point-sets\",\n]"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/Cargo.toml",
+      "git_blob": "f9132738014959eb5362098acfb6b81c27189e4a",
+      "sha256": "9bc2ec291559f01293b5862277fed08ef551e4eca31f7fc9cfc08546b142147f",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1,
+          85
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1,
+        "last_line": 85,
+        "text": "[package]\nname = \"midnight-circuits\"\nversion = \"7.1.0\"\nedition.workspace = true\nrust-version.workspace = true\nlicense-file.workspace = true\ndescription = \"Circuit and gadget implementations for Midnight zero-knowledge proofs\"\n\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n[dependencies]\ngroup = { workspace = true }\nff = { workspace = true }\nrustc-hash = \"2\"\nmidnight-curves = \"0.3.0\"\nmidnight-proofs = { version = \"0.8.0\", default-features = false, features = [\n    \"circuit-params\",\n    \"committed-instances\",\n] }\n\nserde = { workspace = true, optional = true }\nserde_json = { workspace = true, optional = true }\nsha2 = { workspace = true }\nripemd = { workspace = true }\nrand = { workspace = true }\n\nnum-bigint = { version = \"0.4\" }\nnum-traits = \"0.2\"\nnum-integer = \"0.1\"\nsubtle = \"2.6\"\nbase64 = \"0.13.1\"\nlazy_static = \"1.5.0\"\ngoldenfile = { version = \"=1.8.0\", optional = true }\nrand_chacha = { workspace = true, optional = true }\n\n[dev-dependencies]\ncriterion = \"0.8\"\nrand_chacha = \"0.3.1\"\ngoldenfile = \"=1.8.0\"\nnum-bigint = { workspace = true, features = [\"rand\"] }\nserde_json = { workspace = true }\nitertools = \"0.15\"\ndhat = \"0.3\"\n\n[target.'cfg(ci_build)'.dependencies]\nmidnight-curves = { version = \"0.3.0\", features = [\"portable\"] }\n\n[features]\ndefault = []\n# Feature that exposes some testing functionality, such as load from scratch or instantiable\ntesting = [\"num-bigint/rand\", \"goldenfile\", \"serde_json\", \"rand_chacha\"]\nheap_profiling = []\n# Enable truncated challenges. This makes recursive proofs more efficient\ntruncated-challenges = [\"midnight-proofs/truncated-challenges\"]\n# Commit to the quotient polynomial H as a single commitment (see midnight-proofs)\nsingle-h-commitment = [\"midnight-proofs/single-h-commitment\"]\n# Enables a heuristic to reduce the number of distinct multi-open point sets,\n# lowering the verifier MSM length (see midnight-proofs for details).\nfewer-point-sets = [\"midnight-proofs/fewer-point-sets\"]\n# Enable development curves (BN256, Pasta)\ndev-curves = [\"midnight-curves/dev-curves\", \"midnight-proofs/dev-curves\"]\n\n\n[lib]\nbench = false\n\n[[bench]]\nname = \"poseidon_cpu\"\nharness = false"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "proofs/Cargo.toml",
+      "git_blob": "73faaa629ebfdc820953a7170aa1287bc444990a",
+      "sha256": "3ac04788e8bda2e1a6cf9f9964886139f8ea446c61920e77dfcc00624a1f6743",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1,
+          90
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1,
+        "last_line": 90,
+        "text": "[package]\nname = \"midnight-proofs\"\nversion = \"0.8.0\"\nedition.workspace = true\nrust-version.workspace = true\ndescription = \"\"\"\nFast PLONK-based zero-knowledge proving system\n\"\"\"\nlicense = \"MIT OR Apache-2.0\"\nreadme = \"README.md\"\ncategories = [\"cryptography\"]\nkeywords = [\"halo\", \"proofs\", \"zkp\", \"zkSNARKs\"]\n\n[package.metadata.docs.rs]\nall-features = true\nrustdoc-args = [\"--cfg\", \"docsrs\", \"--html-in-header\", \"katex-header.html\"]\n\n[[bench]]\nname = \"commit_zk\"\nharness = false\n\n[[bench]]\nname = \"plonk\"\nharness = false\n\n[[bench]]\nname = \"zswap_output\"\nrequired-features = [\"bench-internal\"]\nharness = false\n\n[dependencies]\nff = { workspace = true }\ngroup = { workspace = true }\nmidnight-curves = \"0.3.0\"\nrand_core = { workspace = true, features = [\"getrandom\"] }\ntracing = { workspace = true }\nblake2b_simd = { workspace = true }\nrand_chacha = { workspace = true }\nitertools = \"0.15\"\nserde = { workspace = true }\nserde_derive = { workspace = true }\nrayon = { workspace = true }\ncriterion = { version = \"0.8\", optional = true }\nrustc-hash = \"2\"\n\n# Developer tooling dependencies\ntabbycat = { version = \"0.1\", features = [\"attributes\"], optional = true }\nnum-bigint = { workspace = true }\n\n[dev-dependencies]\nassert_matches = \"1.5\"\nproptest = \"1\"\nserde_json = { workspace = true }\nmidnight-circuits = { path = \"../circuits\" }\nmidnight-zk-stdlib = { path = \"../zk_stdlib\" }\nsha2 = { workspace = true }\nrand = { workspace = true }\ncriterion = \"0.8\"\n\n[target.'cfg(all(target_arch = \"wasm32\", target_os = \"unknown\"))'.dependencies]\ngetrandom = { version = \"0.2\", features = [\"js\"] }\n\n[target.'cfg(ci_build)'.dependencies]\nmidnight-curves = { version = \"0.3.0\", features = [\n  \"portable\",\n] }\n\n[features]\ndefault = [\"committed-instances\"]\ncircuit-params = []\ndev-curves = [\"midnight-curves/dev-curves\"]\n\n# This feature truncates challenges to half the size of the scalar field.\ntruncated-challenges = []\n\n# This feature adds a new argument to prover and verifier functions, which\n# represents instances in committed form (e.g. in the form of a polynomial\n# commitment instead of a vector of scalars).\n# The verifier may not know what the content of the commitment is, but can\n# be sure that the content is constrained according to the circuit rules.\n#\n# This feature is very powerful for proving statements on committed data.\ncommitted-instances = []\n\n# Feature to expose internal prover types and benchmarking utilities.\nbench-internal = [\"criterion\"]\n\n# Feature to commit to the quotient polynomial H as a single polynomial\n# commitment instead of splitting it into degree-(n-1) limbs. Requires the\n# KZG parameters to support polynomials of degree up to (d-1)*(n-1), where d"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "zk_stdlib/Cargo.toml",
+      "git_blob": "c4dd97b0be172e21a6865a1e74bcb7bf9e65354f",
+      "sha256": "c5b408102a9814ebab04c6b81d21b494f33edaf4f8f8a7644c3f6ea87b802c5f",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1,
+          80
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1,
+        "last_line": 80,
+        "text": "[package]\nname = \"midnight-zk-stdlib\"\nversion = \"2.2.0\"\nedition.workspace = true\nrust-version.workspace = true\nlicense-file.workspace = true\ndescription = \"Standard library of circuits and utilities for Midnight zero-knowledge proofs\"\n\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n[dependencies]\ngroup = { workspace = true }\nff = { workspace = true }\nblake2b_simd = { workspace = true }\nmidnight-circuits = { version = \"7.0.0\", features = [\"testing\"] }\nmidnight-curves = { version = \"0.3.0\" }\nmidnight-proofs = { version = \"0.8.0\", default-features = false, features = [\n    \"circuit-params\",\n    \"committed-instances\",\n] }\n\nkeccak_sha3 = { package = \"sha3-circuit\", git = \"https://github.com/alexandroszacharakis8/sha3-circuit\", rev = \"1a3ef7d\" }\nblake2b = { package = \"blake2b_halo2\", git = \"https://github.com/eryxcoop/blake2b_halo2\", rev = \"257ae18\" }\n\nserde = { workspace = true, optional = true }\nsha2 = { workspace = true }\nrand = { workspace = true }\nrayon = { workspace = true }\n\nnum-bigint = { version = \"0.4\" }\nnum-traits = \"0.2\"\nbase64 = \"0.13.1\"\nbincode = \"2.0\"\nhex-literal = \"1.1\"\n\n[dev-dependencies]\ncriterion = \"0.8\"\nrand_chacha = { workspace = true }\ngoldenfile = \"=1.8.0\"\nnum-bigint = { workspace = true, features = [\"rand\"] }\nserde_json = { workspace = true }\nitertools = \"0.15\"\ndhat = \"0.3\"\nbellman = \"0.14.0\"\nserial_test = \"3.2.0\"\nsha3 = \"0.12.0\"\nblake2 = \"0.10.6\"\n\n[target.'cfg(ci_build)'.dependencies]\nmidnight-curves = { version = \"0.3.0\", features = [\"portable\"] }\n\n[features]\ndefault = []\n# Feature that exposes some testing functionality, such as load from scratch or instantiable\ntesting = [\"num-bigint/rand\"]\nheap_profiling = []\n# Enable truncated challenges. This makes recursive proofs more efficient\ntruncated-challenges = [\n    \"midnight-proofs/truncated-challenges\",\n    \"midnight-circuits/truncated-challenges\",\n]\n# Commit to the quotient polynomial H as a single commitment (see midnight-proofs)\nsingle-h-commitment = [\n    \"midnight-proofs/single-h-commitment\",\n    \"midnight-circuits/single-h-commitment\",\n]\n\n[lib]\nbench = false\n\n[[bench]]\nname = \"verify\"\nharness = false\n\n[[example]]\nname = \"cred_full\"\npath = \"examples/identity/jwt/full_credential.rs\"\n\n[[example]]\nname = \"cred_enrollment\""
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "aggregation/src/ivc/verifier.rs",
+      "git_blob": "8ac3a8a1eb9b0069f45ef9c6b2de93c1f91d934b",
+      "sha256": "8a8034299533228612cca9054427cc086d51deb7c2d6bdeb17748b1ec9284bd5",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          20,
+          91
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 20,
+        "last_line": 91,
+        "text": "\n/// Lightweight IVC verifier carrying:\n/// - the application context (for the decider check),\n/// - the self-verifying key,\n/// - the SRS verifier parameters (for the pairing check).\n///\n/// Returned by [`super::setup()`].\n#[derive(Clone, Debug)]\npub struct IvcVerifier<T: Ivc> {\n    pub(crate) ctx: T::Context,\n    pub(crate) vk: MidnightVK,\n    pub(crate) params_verifier: ParamsVerifierKZG<E>,\n}\n\nimpl<T: Ivc> IvcVerifier<T> {\n    /// Verifies an IVC proof against the given instance.\n    ///\n    /// Checks that the proof is valid with respect to the given instance by:\n    /// 1. Preparing the proof to obtain a proof accumulator.\n    /// 2. Accumulating it with the instance's accumulator.\n    /// 3. Checking the pairing invariant on the result.\n    /// 4. Running the application-level [`decider`](super::IvcState::decider)\n    ///    on the instance state.\n    ///\n    /// This method checks that `instance.vk_repr` matches the canonical\n    /// verifying key held by this verifier (derived from\n    /// [`setup`](super::setup())). Without this check, a proof generated\n    /// under a different (potentially malicious) circuit could pass\n    /// verification.\n    pub fn verify(&self, instance: &IvcInstance<T>, proof: &[u8]) -> Result<(), IvcError> {\n        // Reject proofs whose instance claims a different verifying key.\n        if instance.vk_repr != self.vk.vk().transcript_repr() {\n            return Err(IvcError::VkMismatch);\n        }\n\n        if !T::decider(&self.ctx, &instance.state) {\n            return Err(IvcError::DeciderFailed);\n        }\n\n        let fixed_bases = midnight_circuits::verifier::fixed_bases::<S>(self.vk.vk());\n\n        let pi =\n            IvcCircuit::<T>::format_instance(instance).map_err(|_| IvcError::InvalidInstance)?;\n\n        let mut transcript = CircuitTranscript::<PoseidonState<F>>::init_from_bytes(proof);\n        let dual_msm =\n            plonk::prepare::<F, KZGCommitmentScheme<E>, CircuitTranscript<PoseidonState<F>>>(\n                self.vk.vk(),\n                &[KZGMultiCommitment::commitment_to_zero(\n                    PolynomialLabel::CommittedInstance(0),\n                )],\n                &[&pi],\n                &mut transcript,\n            )\n            .map_err(|_| IvcError::InvalidProof)?;\n\n        transcript.assert_empty().map_err(|_| IvcError::TranscriptNotEmpty)?;\n\n        let proof_acc = Accumulator::from_dual_msm(dual_msm, &fixed_bases);\n\n        // Verify that both `proof_acc` and `instance.acc` satisfy the pairing\n        // invariant, with a single pairing, by accumulating them first.\n        let final_acc = Accumulator::<S>::accumulate(&[proof_acc, instance.acc.clone()]);\n        if !final_acc.check(&self.params_verifier, &fixed_bases) {\n            return Err(IvcError::InvalidProof);\n        };\n\n        Ok(())\n    }\n}"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "aggregation/src/ivc/circuit.rs",
+      "git_blob": "2e1bfa0c22c03e03604532c4ef64f3e8c78b1d61",
+      "sha256": "0d3231519552a051f04de9d810a1bda3d0b731323adb84f3aef9afa8ac4c3f3f",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          30,
+          67
+        ],
+        [
+          123,
+          136
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 30,
+        "last_line": 67,
+        "text": "/// Contains:\n/// - a commitment to the verifying key (of the IVC circuit itself),\n/// - the current state (after the latest transition),\n/// - the accumulator (that summarises all prior steps).\n///\n/// **Important:** the `vk_repr` field must **not** be trusted as-is. The\n/// verifier must compare it against the canonical `vk_repr` obtained by\n/// running [`setup`](super::setup()).\n/// See [`IvcVerifier::verify`](super::IvcVerifier::verify) for details.\n#[derive(Clone, Debug)]\npub struct IvcInstance<T: Ivc> {\n    pub(crate) vk_repr: F,\n    pub(crate) state: T::State,\n    pub(crate) acc: Accumulator<S>,\n}\n\nimpl<T: Ivc> IvcInstance<T> {\n    /// Returns the current state.\n    pub fn state(&self) -> &T::State {\n        &self.state\n    }\n}\n\n/// The private witness for a single IVC step.\n///\n/// Contains:\n/// - a previous state (input to the transition),\n/// - a previous accumulator (summarises all steps up to the previous state),\n/// - a proof asserting the validity of the previous step (if not genesis),\n/// - a transition witness (input that drives the state change).\n#[derive(Clone, Debug)]\npub struct IvcWitness<T: Ivc> {\n    pub(crate) prev_state: T::State,\n    pub(crate) prev_acc: Accumulator<S>,\n    pub(crate) prev_proof: Vec<u8>,\n    pub(crate) transition_witness: T::Witness,\n}\n"
+      },
+      {
+        "first_line": 123,
+        "last_line": 136,
+        "text": "\n    fn used_chips(&self) -> ZkStdLibArch {\n        Self::arch()\n    }\n\n    fn format_instance(instance: &Self::Instance) -> Result<Vec<F>, IvcError> {\n        Ok([\n            vec![instance.vk_repr],\n            T::format_public_input(&instance.state),\n            AssignedAccumulator::<S>::as_public_input(&instance.acc),\n        ]\n        .concat())\n    }\n"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "aggregation/src/ivc/mod.rs",
+      "git_blob": "c56897662c50d475fbf1232f38d3c06363992c64",
+      "sha256": "ee417bc43b5d4febdb93fb347acb2ddc888d0b4546b82f3caa1867f3bd0c4017",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          112,
+          139
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 112,
+        "last_line": 139,
+        "text": "    fn genesis(ctx: &Self::Context) -> Self::State;\n\n    /// Off-circuit check that the state meets the required invariants.\n    ///\n    /// Automatically called by [`IvcVerifier::verify`] to check any\n    /// properties that are deferred to off-circuit verification, such as\n    /// accumulator validity or hash-chain integrity.\n    ///\n    /// In particular, when [`State`](Self::State) contains data that\n    /// does not appear directly in [`AssignedState`](Self::AssignedState)\n    /// but only through a hash or commitment, this function must verify\n    /// that the summary stored in [`State`](Self::State) (e.g. a hash\n    /// field) is consistent with the full data it summarises.\n    ///\n    /// Returns `true` if the state passes all checks.\n    fn decider(ctx: &Self::Context, state: &Self::State) -> bool;\n}\n\n/// Input/output interface for IVC state values.\n///\n/// Bridges [`State`](IvcState::State) and\n/// [`AssignedState`](IvcState::AssignedState): assigning native values into the\n/// circuit, constraining them as public inputs, and formatting them as\n/// raw native field elements for the public-input vector.\npub trait IvcIO: IvcState {\n    /// Assigns a [`State`](IvcState::State) value as a private input,\n    /// producing the corresponding [`AssignedState`](IvcState::AssignedState).\n    ///"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/verifier_gadget.rs",
+      "git_blob": "c9361153a8a72a3155c28302c18694cc49a958da",
+      "sha256": "d8f5539b7dcbff66074878a83dfeecd1303b1f5e9df84e1f5eaa3b87334e7952",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          185,
+          302
+        ],
+        [
+          850,
+          884
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 185,
+        "last_line": 302,
+        "text": "    /// accumulation after `collapse()` has been called off-circuit.\n    ///\n    /// # Errors\n    ///\n    /// If the expected shape is not satisfied.\n    pub fn assign_collapsed_accumulator(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        fixed_base_labels: &[PolynomialLabel],\n        value: Value<Accumulator<S>>,\n    ) -> Result<AssignedAccumulator<S>, Error> {\n        let acc = AssignedAccumulator::assign(\n            layouter,\n            &self.curve_chip,\n            &self.scalar_chip,\n            &[PolynomialLabel::NoLabel],\n            &[fixed_base_labels, &[PolynomialLabel::NoLabel]].concat(),\n            &HashSet::new(),\n            &fixed_base_labels.iter().cloned().collect(),\n            value,\n        )?;\n\n        Ok(acc)\n    }\n\n    /// Accumulates several accumulators together. The resulting acc will\n    /// satisfy the invariant iff all the accumulators individually do.\n    pub fn accumulate(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        accs: &[AssignedAccumulator<S>],\n    ) -> Result<AssignedAccumulator<S>, Error> {\n        AssignedAccumulator::<S>::accumulate(\n            layouter,\n            self,\n            &self.scalar_chip,\n            &self.sponge_chip,\n            accs,\n        )\n    }\n}\n\nimpl<S: SelfEmulation> VerifierGadget<S> {\n    /// Assigns a verifying key as a public input. All the necessary information\n    /// is required off-circuit, except for the `transcript_repr` value.\n    pub fn assign_vk_as_public_input<PCS: InCircuitPCS<S>>(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        domain: &EvaluationDomain<S::F>,\n        cs: &ConstraintSystem<S::F>,\n        transcript_repr_value: Value<S::F>,\n    ) -> Result<AssignedVk<S, PCS>, Error> {\n        let transcript_repr: AssignedNative<S::F> =\n            self.scalar_chip.assign_as_public_input(layouter, transcript_repr_value)?;\n\n        // We expect a finalized cs with no selectors, i.e. whose selectors have been\n        // converted into fixed columns. In the context of IVC, the constraint system\n        // might still contain selectors.\n        let cs = if cs.num_selectors() > 0 {\n            let selectors = vec![vec![false]; cs.num_selectors()];\n            cs.clone().directly_convert_selectors_to_fixed(selectors).0\n        } else {\n            cs.clone()\n        };\n\n        let fixed_commitments = (0..cs.num_fixed_columns() + cs.num_selectors())\n            .map(|i| PCS::fixed_commitment(PolynomialLabel::Fixed(i)))\n            .collect();\n\n        let perm_commitments = (0..cs.permutation().columns.len())\n            .map(|i| PCS::fixed_commitment(PolynomialLabel::PermutationFixed(i)))\n            .collect();\n\n        let assigned_vk = AssignedVk {\n            domain: domain.clone(),\n            fixed_commitments,\n            perm_commitments,\n            cs: cs.clone(),\n            cs_degree: cs.degree(),\n            transcript_repr,\n        };\n\n        Ok(assigned_vk)\n    }\n\n    /// Assigns a verifying key as a constant. All the necessary information is\n    /// available off-circuit, except for the `transcript_repr` which is\n    /// \"assigned fixed\".\n    pub fn assign_fixed_vk<PCS: InCircuitPCS<S>>(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        domain: &EvaluationDomain<S::F>,\n        cs: &ConstraintSystem<S::F>,\n        transcript_repr_constant: S::F,\n    ) -> Result<AssignedVk<S, PCS>, Error> {\n        let transcript_repr = self.scalar_chip.assign_fixed(layouter, transcript_repr_constant)?;\n\n        let fixed_commitments = (0..cs.num_fixed_columns() + cs.num_selectors())\n            .map(|i| PCS::fixed_commitment(PolynomialLabel::Fixed(i)))\n            .collect();\n\n        let perm_commitments = (0..cs.permutation().columns.len())\n            .map(|i| PCS::fixed_commitment(PolynomialLabel::PermutationFixed(i)))\n            .collect();\n\n        let assigned_vk = AssignedVk {\n            domain: domain.clone(),\n            fixed_commitments,\n            perm_commitments,\n            cs: cs.clone(),\n            cs_degree: cs.degree(),\n            transcript_repr,\n        };\n\n        Ok(assigned_vk)\n    }\n}\n"
+      },
+      {
+        "first_line": 850,
+        "last_line": 884,
+        "text": "    /// Prepares a plonk proof into a PCS instance that can be finalized or\n    /// batched. It is responsibility of the verifier to check the validity of\n    /// the instance columns. It is the in-circuit analog of \"prepare\" from\n    /// midnight-proofs at src/plonk/verifier.rs.\n    ///\n    /// The proof is considered to be valid if the resulting accumulator\n    /// satisfies the [invariant](crate::verifier::Accumulator::check)\n    /// with respect to the relevant `tau_in_g2`.\n    pub fn prepare<PCS: InCircuitPCS<S>>(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        assigned_vk: &AssignedVk<S, PCS>,\n        assigned_committed_instances: &[PCS::AssignedCommitment],\n        assigned_instances: &[&[AssignedNative<S::F>]],\n        proof: Value<Vec<u8>>,\n    ) -> Result<AssignedAccumulator<S>, Error> {\n        let (trace, transcript) = self.parse_trace(\n            layouter,\n            assigned_vk,\n            assigned_committed_instances,\n            assigned_instances,\n            proof,\n        )?;\n\n        self.verify_algebraic_constraints(\n            layouter,\n            assigned_vk,\n            trace,\n            assigned_committed_instances,\n            assigned_instances,\n            transcript,\n        )\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/transcript_gadget.rs",
+      "git_blob": "75e2af6e44fb7325568b9a1f34246a4e459bcca3",
+      "sha256": "d95e66cd4675da68d38050a0500ef8834e1db5d3b2fbc3ec8f5e868a950bd626",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          75,
+          99
+        ],
+        [
+          145,
+          198
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 75,
+        "last_line": 99,
+        "text": "        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        proof: Value<Vec<u8>>,\n    ) -> Result<(), Error> {\n        self.sponge_state = Some(self.sponge_chip.init(layouter, None)?);\n\n        // Unwrapping the witness. The amount of points read from the proof is\n        // fixed for a given `Architecture`, and does not depend on the size of\n        // the proof.\n        // The caveat with this approach is that our in-circuit verifier will not\n        // be able to verify that the proof did not include extra bytes after\n        // all the relevant bytes have been read. This is not an issue anyway.\n        let mut proof_bytes = Vec::new();\n        proof.clone().map(|pi| proof_bytes.extend_from_slice(&pi));\n        self.transcript_reader = Some(CircuitTranscript::init_from_bytes(&proof_bytes));\n\n        Ok(())\n    }\n\n    /// Absorbs a scalar into the transcript.\n    pub fn common_scalar(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        scalar: &AssignedNative<S::F>,\n    ) -> Result<(), Error> {"
+      },
+      {
+        "first_line": 145,
+        "last_line": 198,
+        "text": "    ///\n    /// # Warning\n    ///\n    /// The received points are not enforced to be in the prime-order subgroup.\n    pub fn read_commitment(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        labels: &[PolynomialLabel],\n    ) -> Result<AssignedKZGMultiCommitment<S>, Error> {\n        let mut inners = Vec::with_capacity(labels.len());\n        for label in labels {\n            let reader =\n                self.transcript_reader.as_mut().expect(\"You must init the transcript gadget\");\n            // If an error, do not fail, assign a default commitment instead.\n            // (This allows us to parse dummy proofs.)\n            let point: Value<S::C> = match reader.read::<S::C>() {\n                Ok(point) => Value::known(point),\n                Err(_) => Value::known(S::C::default()),\n            };\n            let assigned_point =\n                S::assign_without_subgroup_check(layouter, &self.curve_chip, point)?;\n            inners.push(AssignedKZGCommitment::simple(assigned_point, label.clone()));\n        }\n\n        let assigned_com = AssignedKZGMultiCommitment(inners);\n        self.common_commitment(layouter, &assigned_com)?;\n\n        Ok(assigned_com)\n    }\n\n    /// Reads a scalar from the reader buffer, and adds it to the transcript.\n    /// Think of the read scalar as a witness freely chosen by the prover.\n    pub fn read_scalar(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n    ) -> Result<AssignedNative<S::F>, Error> {\n        let reader = self.transcript_reader.as_mut().expect(\"You must init the transcript gadget\");\n        // If an error, do not fail, assign a default scalar instead.\n        // (This allows us to parse dummy proofs.)\n        let scalar: Value<S::F> = match reader.read::<S::F>() {\n            Ok(scalar) => Value::known(scalar),\n            Err(_) => Value::known(S::F::ZERO),\n        };\n\n        let assigned_scalar = self.scalar_chip.assign(layouter, scalar)?;\n        self.common_scalar(layouter, &assigned_scalar)?;\n\n        Ok(assigned_scalar)\n    }\n}\n\n#[cfg(any(test, feature = \"testing\"))]\nuse midnight_proofs::plonk::{Advice, Column, ConstraintSystem, Fixed, Instance};\n"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/accumulator.rs",
+      "git_blob": "287f76867a0142af8f742b57ee881359a7d66b91",
+      "sha256": "23e511ddbd2b01e227b7abe51e0e3d562b3acafa2a971d93e9aab44919bdcb87",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          98,
+          111
+        ],
+        [
+          345,
+          391
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 98,
+        "last_line": 111,
+        "text": "    }\n\n    /// Checks whether the accumulator, when evaluated with the provided\n    /// fixed-bases, satisfies the pairing invariant w.r.t. the SRS verifier\n    /// parameters.\n    pub fn check(\n        &self,\n        params: &ParamsVerifierKZG<S::Engine>,\n        fixed_bases: &BTreeMap<PolynomialLabel, S::C>,\n    ) -> bool {\n        let lhs = MSMKZG::<S::Engine>::from_base(&self.lhs.eval(fixed_bases));\n        let rhs = MSMKZG::<S::Engine>::from_base(&self.rhs.eval(fixed_bases));\n        DualMSM::new(lhs, rhs).check(params)\n    }"
+      },
+      {
+        "first_line": 345,
+        "last_line": 391,
+        "text": "    pub fn resolve_fixed_bases(\n        &mut self,\n        fixed_bases: &BTreeMap<PolynomialLabel, S::AssignedPoint>,\n    ) {\n        self.lhs.resolve_fixed_bases(fixed_bases);\n        self.rhs.resolve_fixed_bases(fixed_bases);\n    }\n\n    /// Accumulates several accumulators together. The resulting acc will\n    /// satisfy the invariant iff all the accumulators individually do.\n    pub fn accumulate(\n        layouter: &mut impl Layouter<S::F>,\n        acc_pi_chip: &impl PublicInputInstructions<S::F, AssignedAccumulator<S>>,\n        scalar_chip: &S::ScalarChip,\n        sponge_chip: &S::SpongeChip,\n        accs: &[Self],\n    ) -> Result<Self, Error> {\n        let hash_input = accs\n            .iter()\n            .map(|acc| acc_pi_chip.as_public_input(layouter, acc))\n            .collect::<Result<Vec<_>, Error>>()?\n            .into_iter()\n            .flatten()\n            .collect::<Vec<_>>();\n\n        let r = sponge_chip.hash(layouter, &hash_input)?;\n        #[cfg(feature = \"truncated-challenges\")]\n        let rs = truncated_powers::<S::F>(layouter, scalar_chip, &r, accs.len())?;\n        #[cfg(not(feature = \"truncated-challenges\"))]\n        let rs = powers::<S::F>(layouter, scalar_chip, &r, accs.len())?\n            .iter()\n            .map(|ri| AssignedBoundedScalar::new(ri, None))\n            .collect::<Vec<_>>();\n\n        let mut acc = accs[0].clone();\n        for (other, ri) in accs.iter().zip(rs).skip(1) {\n            acc.lhs = acc.lhs.accumulate_with_r(layouter, scalar_chip, &other.lhs, &ri)?;\n            acc.rhs = acc.rhs.accumulate_with_r(layouter, scalar_chip, &other.rhs, &ri)?;\n        }\n\n        Ok(acc)\n    }\n}"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/types.rs",
+      "git_blob": "78244d208d026e4ea84cdea75edcdbaef3d32cc8",
+      "sha256": "1bb05e4906aa1bac6aad94d34d941958dd405a8471444793eaa42fa844e22b6b",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          128,
+          162
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 128,
+        "last_line": 162,
+        "text": "        layouter: &mut impl Layouter<Self::F>,\n        curve_chip: &Self::CurveChip,\n        base: Value<Self::C>,\n    ) -> Result<Self::AssignedPoint, Error>;\n}\n\n// Implementations\n\n/// Implementation of the SelfEmulation trait for blstrs.\n#[derive(Clone, Debug)]\npub struct BlstrsEmulation {}\n\nimpl SelfEmulation for BlstrsEmulation {\n    type F = midnight_curves::Fq;\n    type C = midnight_curves::G1Projective;\n    type AssignedPoint = AssignedForeignPoint<Self::F, Self::C, Self::C>;\n    type Hash = PoseidonState<Self::F>;\n\n    type ScalarChip = NativeGadget<Self::F, P2RDecompositionChip<Self::F>, NativeChip<Self::F>>;\n    type CurveChip =\n        ForeignWeierstrassEccChip<Self::F, Self::C, Self::C, Self::ScalarChip, Self::ScalarChip>;\n    type SpongeChip = PoseidonChip<Self::F>;\n\n    type G1Affine = midnight_curves::G1Affine;\n    type G2Affine = midnight_curves::G2Affine;\n    type Engine = midnight_curves::Bls12;\n\n    fn msm(\n        layouter: &mut impl Layouter<Self::F>,\n        curve_chip: &Self::CurveChip,\n        scalars: &[(AssignedNative<Self::F>, usize)],\n        bases: &[Self::AssignedPoint],\n    ) -> Result<Self::AssignedPoint, Error> {\n        curve_chip.msm_by_bounded_scalars(layouter, scalars, bases)\n    }"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "proofs/src/poly/kzg/msm.rs",
+      "git_blob": "f013de16e127be70018095c26917c61faa010395",
+      "sha256": "96fde9b0ced8e98a65350682d7ff1dc507eda090f0b37005304cb76c567bde21",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          292,
+          311
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 292,
+        "last_line": 311,
+        "text": "    /// Performs final pairing check with given verifier params and two channel\n    /// linear combination\n    pub fn check(self, params: &ParamsVerifierKZG<E>) -> bool {\n        let left = if self.left.scalars.len() == 1 && self.left.scalars[0] == E::Fr::ONE {\n            self.left.bases[0]\n        } else {\n            self.left.eval()\n        };\n\n        let right = self.right.eval();\n\n        let (term_1, term_2) = (\n            (&left.into(), &params.s_g2_prepared),\n            (&right.into(), &params.n_g2_prepared),\n        );\n        let terms = &[term_1, term_2];\n\n        bool::from(E::multi_miller_loop(&terms[..]).final_exponentiation().is_identity())\n    }\n}"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "aggregation/src/multi_circuit_aggregator/aggregator.rs",
+      "git_blob": "c85de3857a79734f4e8550b1f1ca4204376850ce",
+      "sha256": "197b9dd5198e557a59a95316d9371d0a02e39d0cf96c5eaa4e7e958810df4e1b",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          99,
+          121
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 99,
+        "last_line": 121,
+        "text": "\nimpl Verifier {\n    /// Verifies an aggregation proof against the given instance.\n    pub fn verify_aggregation(\n        &self,\n        instance: &IvcInstance<ProofAggregation>,\n        proof: &[u8],\n    ) -> Result<(), IvcError> {\n        self.verify(instance, proof)\n    }\n}"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "transient-crypto/Cargo.toml",
+      "git_blob": "a1065ac1b4fe993fd63997e55fae00b83d6eb43b",
+      "sha256": "43bf1bec220a8d24115b4a3c185c15c4b6a9db943f91d8675c75a7644e620b8f",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          24,
+          38
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 24,
+        "last_line": 38,
+        "text": "derive = { version = \"1.0.0\", path = \"../base-crypto-derive\", package = \"midnight-base-crypto-derive\" }\nserialize = { version = \"1.0.0\", path = \"../serialize\", package = \"midnight-serialize\" }\nstorage-core = { version = \"1.0.0\", path = \"../storage-core\", package = \"midnight-storage-core\" }\n\nff = \"^0.13.1\"\ngroup = \"^0.13.0\"\nmidnight-curves = { version = \"^0.2.0\" }\nmidnight-proofs = { version = \"^0.7.0\" }\nmidnight-circuits = { version = \"^6.2.0\" }\nmidnight-zk-stdlib = { version = \"^1.2.0\" }\nanyhow = { version = \"^1.0.102\" }\nlru = \"0.18.0\"\n\n# rand 0.9.0 is not yet supported by some of our dependencies, we will\n# stick with 0.8.0 for now."
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "Cargo.lock",
+      "git_blob": "bc90d72fa9b9419d2478a763a236457af6b64978",
+      "sha256": "0f7a48a0d13773726d9020e54c81b6a1cfb48019bc51e39d0e6b31864a0601b9",
+      "working_tree_matches_blob": true,
+      "line_ranges": []
+    },
+    "excerpts": []
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "transient-crypto/src/proofs.rs",
+      "git_blob": "7b60458755b34124bebb8f11a1654e96c1edfede",
+      "sha256": "06a6d770b72cfedac6e2cad81fccbf905eec9f370e1e915422b2aa3f423e6462",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          60,
+          65
+        ],
+        [
+          501,
+          568
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 60,
+        "last_line": 65,
+        "text": "    async fn get_params(&self, k: u8) -> io::Result<ParamsProver>;\n}\n\n/// The hash used during proof transcript processing\npub type TranscriptHash = blake2b_simd::State;\n"
+      },
+      {
+        "first_line": 501,
+        "last_line": 568,
+        "text": "impl Serializable for VerifierKey {\n    fn serialize(&self, writer: &mut impl Write) -> Result<(), std::io::Error> {\n        let mut count = Count(0);\n        self.inner_serialize(&mut count).ok();\n        Serializable::serialize(&(count.0 as u64), writer)?;\n        self.inner_serialize(writer)\n    }\n\n    fn serialized_size(&self) -> usize {\n        let mut writer = Count(0);\n        self.inner_serialize(&mut writer).ok();\n        (writer.0 as u64).serialized_size() + writer.0\n    }\n}\n\nimpl VerifierKey {\n    /// Initializes the lazy verifier key\n    pub fn init(&self) -> Result<(), VerifyingError> {\n        self.force_init()?;\n        Ok(())\n    }\n\n    // warning! This grabs the lock! Make sure to drop the result before re-running!\n    #[allow(dead_code)] // Some features don't try to initialize\n    pub(crate) fn force_init(&self) -> Result<MidnightVK, VerifyingError> {\n        let mut mutex = self.0.lock().expect(\"mutex is not poisoned\");\n        let data = match &*mutex {\n            InnerVerifierKey::Initialized(key) => {\n                return Ok(key.clone());\n            }\n            InnerVerifierKey::Invalid(_) => {\n                return Err(anyhow::anyhow!(\"known invalid verifier key\"));\n            }\n            InnerVerifierKey::Uninitialized(data) => data.clone(),\n        };\n        let reader = &mut &data[..];\n        let vk = MidnightVK::read(reader, SerdeFormat::Processed)\n            .map_err(|_| anyhow::anyhow!(\"problem reading the verifier key\"))?;\n        *mutex = InnerVerifierKey::Initialized(vk.clone());\n        Ok(vk)\n    }\n\n    fn inner_serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {\n        match &*self.0.lock().expect(\"mutex is not poisoned\") {\n            InnerVerifierKey::Uninitialized(data) | InnerVerifierKey::Invalid(data) => {\n                writer.write_all(data)\n            }\n            InnerVerifierKey::Initialized(key) => key.write(&mut writer, SerdeFormat::Processed),\n        }\n    }\n\n    /// Checks a proof against a statement.\n    pub fn verify<F: Iterator<Item = Fr>>(\n        &self,\n        params: &ParamsVerifier,\n        proof: &Proof,\n        statement: F,\n    ) -> Result<(), VerifyingError> {\n        let vk = self.force_init()?;\n        let pi = statement.map(|f| f.0).collect::<Vec<_>>();\n        trace!(statement = ?pi, \"verifying proof against statement\");\n        midnight_zk_stdlib::verify::<DummyRelation, TranscriptHash>(\n            &params.0, &vk, &pi, None, &proof.0,\n        )\n        .map_err(|_| anyhow::anyhow!(\"Invalid proof\"))\n    }\n\n    /// Mocks the checking of a proof against a statement"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "ledger/src/structure.rs",
+      "git_blob": "acbb9f2f216c3041f54afc4480707c7a35c3ffc6",
+      "sha256": "eaa0e25fad3b1f1db0af0980be46a6754571ff2812b3d6380ac2aac647291c49",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          285,
+          301
+        ],
+        [
+          425,
+          478
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 285,
+        "last_line": 301,
+        "text": "#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Storable, Introspection)]\n#[storable(base)]\n#[tag = \"proof-versioned\"]\n#[non_exhaustive]\npub enum ProofVersioned {\n    V2(Proof),\n}\n\nimpl Serializable for ProofVersioned {\n    fn serialize(&self, writer: &mut impl Write) -> std::io::Result<()> {\n        match self {\n            ProofVersioned::V2(proof) => {\n                Serializable::serialize(&1u8, writer)?;\n                proof.serialize(writer)\n            }\n        }\n    }"
+      },
+      {
+        "first_line": 425,
+        "last_line": 478,
+        "text": "    fn proof_verify(\n        _op: &ContractOperation,\n        _proof: &Self::Proof,\n        _pis: Vec<Fr>,\n        _call: &ContractCall<Self, D>,\n        _mode: ProofVerificationMode,\n    ) -> Result<(), MalformedTransaction<D>> {\n        Ok(())\n    }\n    #[cfg(feature = \"proof-verifying\")]\n    fn proof_verify(\n        op: &ContractOperation,\n        proof: &Self::Proof,\n        pis: Vec<Fr>,\n        call: &ContractCall<Self, D>,\n        mode: ProofVerificationMode,\n    ) -> Result<(), MalformedTransaction<D>> {\n        use transient_crypto::proofs::PARAMS_VERIFIER;\n\n        let vk = match &op.v2 {\n            Some(vk) => vk,\n            None => {\n                warn!(\"missing verifier key\");\n                return Err(MalformedTransaction::<D>::VerifierKeyNotPresent {\n                    address: call.address,\n                    operation: call.entry_point.clone(),\n                });\n            }\n        };\n\n        if op.v2.is_some() && !matches!(proof, ProofVersioned::V2(_)) {\n            return Err(MalformedTransaction::<D>::UnsupportedProofVersion {\n                op_version: \"V2\".to_string(),\n            });\n        }\n\n        match proof {\n            ProofVersioned::V2(proof) => match mode {\n                #[cfg(feature = \"mock-verify\")]\n                ProofVerificationMode::CalibratedMock => vk\n                    .mock_verify(pis.into_iter())\n                    .map_err(MalformedTransaction::<D>::InvalidProof),\n                _ => vk\n                    .verify(&PARAMS_VERIFIER, proof, pis.into_iter())\n                    .map_err(MalformedTransaction::<D>::InvalidProof),\n            },\n        }\n    }\n    #[allow(clippy::result_large_err)]\n    fn latest_proof_verify(\n        vk: &VerifierKey,\n        proof: &Self::LatestProof,\n        pis: Vec<Fr>,\n        mode: ProofVerificationMode,"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "ledger/src/verify.rs",
+      "git_blob": "568e2843bcd90017a454ef1dd1fe546ac0e2be06",
+      "sha256": "fe77c458885c09200f8f491b74583840a875bf78a8c2488b70fab01138ece5d1",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1868,
+          1940
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1868,
+        "last_line": 1940,
+        "text": "    // NOTE: The proof should receive the following inputs for binding purposes:\n    //  - The contract address\n    //  - The contract entry point\n    //  - Both transcript parts's declared gas costs, and effects\n    //  - The count of instructions in the guaranteed transcript\n    //  - The parent ContractCalls's `binding_commitment.commitment`.\n    // These need to be *truely* binding (see note at the bottom of this file!)\n    // In addition, it should receive\n    //  - The communication commitment\n    //  - The transcript\n    pub fn public_inputs(&self, binding_com: Pedersen) -> Vec<Fr> {\n        let mut res = vec![self.binding_input(binding_com)];\n        res.push(self.communication_commitment);\n        if let Some(guaranteed) = self.guaranteed_transcript.as_ref() {\n            for op in guaranteed.program.iter() {\n                op.field_repr(&mut res);\n            }\n        }\n        if let Some(fallible) = self.fallible_transcript.as_ref() {\n            for op in fallible.program.iter() {\n                op.field_repr(&mut res);\n            }\n        }\n        res\n    }\n\n    pub(crate) fn binding_input(&self, binding_com: Pedersen) -> Fr {\n        let mut binding_input = Vec::new();\n\n        binding_input.extend(b\"midnight:binding-input[v1]\");\n        let _ = Serializable::serialize(&self.address, &mut binding_input);\n        let _ = Serializable::serialize(&self.entry_point, &mut binding_input);\n        let _ = Serializable::serialize(\n            &self\n                .guaranteed_transcript\n                .as_ref()\n                .map(|t| t.gas)\n                .unwrap_or_default(),\n            &mut binding_input,\n        );\n\n        if let Some(t) = self.guaranteed_transcript.as_ref() {\n            let _ = Serializable::serialize(&t.effects, &mut binding_input);\n        } else {\n            // Backwards-compatible with `Effects::default` serialization, as this may be unstable.\n            binding_input.extend(vec![0u8; 20]);\n        }\n        if let Some(t) = self.fallible_transcript.as_ref() {\n            let _ = Serializable::serialize(&Some(t.gas), &mut binding_input);\n            // Discriminant for `Some`.\n            binding_input.push(1);\n\n            let _ = Serializable::serialize(&t.effects, &mut binding_input);\n        } else {\n            // (None, None)\n            binding_input.extend(&[0, 0]);\n        }\n        let len = self\n            .guaranteed_transcript\n            .as_ref()\n            .map(|t| t.program.len() as u64)\n            .unwrap_or_default();\n        let _ = Serializable::serialize(&len, &mut binding_input);\n        let _ = Serializable::serialize(&Into::<Pedersen>::into(binding_com), &mut binding_input);\n        let mut hasher = Sha256::new();\n        hasher.update(&binding_input[..]);\n        Fr::from_le_bytes(&hasher.finalize()[..31])\n            .expect(\"Trimmed persistent hash should fall in Fr\")\n    }\n}\n\n#[cfg(test)]\nmod sparse_unshielded_signature_tests {"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "onchain-state/src/state.rs",
+      "git_blob": "585f6150625309168938d8818728240e8eaf893b",
+      "sha256": "bf7fd79099e6e47d70b62a0f58953a33f408923577460c8379de6998b16ebbac",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          861,
+          883
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 861,
+        "last_line": 883,
+        "text": "}\n\n#[derive(\n    Serializable, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Storable,\n)]\n#[storable(base)]\n#[tag = \"contract-operation[v4]\"]\n#[non_exhaustive]\npub struct ContractOperation {\n    pub v2: Option<VerifierKey>,\n}\ntag_enforcement_test!(ContractOperation);\n\nimpl ContractOperation {\n    pub fn new(vk: Option<VerifierKey>) -> Self {\n        ContractOperation { v2: vk }\n    }\n\n    pub fn latest(&self) -> Option<&VerifierKey> {\n        self.v2.as_ref()\n    }\n\n    pub fn latest_mut(&mut self) -> &mut Option<VerifierKey> {"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "zkir/src/ir.rs",
+      "git_blob": "7bdc82debf7ef1fd7b3807e00ced2f01193111d7",
+      "sha256": "a35eff35c200c307f757f7e9e09b8c2c0955b11a05e977d0ded8c9091f0a8122",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          204,
+          295
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 204,
+        "last_line": 295,
+        "text": "pub enum Instruction {\n    /// Assert that `index` has value `1`. UB if `index` is not `0` or `1`.\n    ///\n    /// No outputs\n    Assert {\n        /// The boolean condition being asserted\n        cond: Index,\n    },\n    /// Conditionally select a value. UB if `bit` is not `0` or `1`.\n    ///\n    /// Outputs one element, identical to `a` or `b`\n    CondSelect {\n        /// A boolean selector, if `1`, select `a`, else `b`\n        bit: Index,\n        /// The value to select for `1`\n        a: Index,\n        /// The value to select for `0`\n        b: Index,\n    },\n    /// Constrains a value to a set number of bits.\n    ///\n    /// No outputs\n    ConstrainBits {\n        /// The value to constrain\n        var: Index,\n        /// The number of bits to constrain it to\n        bits: u32,\n    },\n    /// Constrains two values `a` and `b` to be equal.\n    ///\n    /// No outputs\n    ConstrainEq {\n        /// The first value to constrain\n        a: Index,\n        /// The second value to constrain\n        b: Index,\n    },\n    /// Constrains a value `var` to be a boolean (`0` or `1`).\n    ///\n    /// No outputs\n    ConstrainToBoolean {\n        /// The value to constrain\n        var: Index,\n    },\n    /// Creates a copy of a value `var`. Superfluous, but potentially useful\n    /// in some settings, and does not extend the actual circuit.\n    ///\n    /// Outputs one element, identical to `var`\n    Copy {\n        /// The variable to copy\n        var: Index,\n    },\n    /// Declares a variable as the next public input.\n    ///\n    /// No outputs\n    DeclarePubInput {\n        /// The variable to use for the public input\n        var: Index,\n    },\n    /// A marker informing the proof assembler that a set of preceding public\n    /// inputs belong together (typically as an instruction), and whether they\n    /// are active or not.\n    ///\n    /// Every `DeclarePubInput` should be *followed* by a `PiSkip` covering it.\n    ///\n    /// No outputs, but adds activity information to [`IrSource::prove`] and\n    /// [`IrSource::check`].\n    PiSkip {\n        /// The boolean condition under which the public input is *not* skipped\n        ///\n        /// This is only used to inform transcript processing, serving as a marker\n        /// for which public inputs comprise an instruction.\n        guard: Option<Index>,\n        /// The number of public inputs to skip in this group\n        count: u32,\n    },\n    /// Adds two elliptic curve points. UB if either is not a valid curve point.\n    ///\n    /// Outputs 2 elements, `c_x`, `c_y`\n    EcAdd {\n        /// The affine x coordinate of `a`\n        a_x: Index,\n        /// The affine y coordinate of `a`\n        a_y: Index,\n        /// The affine x coordinate of `b`\n        b_x: Index,\n        /// The affine y coordinate of `b`\n        b_y: Index,\n    },\n    /// Multiplies an elliptic curve point by a scalar. UB if it is not a valid\n    /// curve point.\n    ///"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "ledger/Cargo.toml",
+      "git_blob": "27da655d8ec1c84122d1e4232028fb9e3d370002",
+      "sha256": "b7441412ef52dc7148387ab784051d01f65d12d14ef1fddcebd274ae7be1906a",
+      "working_tree_matches_blob": true,
+      "line_ranges": [
+        [
+          1,
+          30
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 1,
+        "last_line": 30,
+        "text": "[package]\nname = \"midnight-ledger\"\nedition = \"2024\"\nlicense.workspace = true\nversion.workspace = true\nrepository.workspace = true\ndescription = \"Provides the transaction format and semantics for Midnight.\"\n\n[features]\ndefault = [\"proof-verifying\"]\nproving = []\n# marker: if this enabled, your ledger *isn't* a stable build!\nunstable = []\nproof-verifying = [\"zswap/proof-verifying\"]\n# Warning: This *disables* a small amount of well-formedness checking for test setups!\ntest-utilities = [\"dep:reqwest\", \"dep:zkir_v2\"]\nproptest = [\"dep:proptest\", \"dep:proptest-derive\", \"coin-structure/proptest\"]\nmock-verify = [\"transient-crypto/mock-verify\"]\nfixed-point-custom-serde = [ \"base-crypto/fixed-point-custom-serde\" ]\n\n[dependencies]\ncoin-structure = { version = \"2.0.0\", path = \"../coin-structure\", package = \"midnight-coin-structure\" }\nonchain-runtime = { version = \"3.1.0\", path = \"../onchain-runtime\", package = \"midnight-onchain-runtime\" }\nzswap = { version = \"8.2.0-rc.1\", path = \"../zswap\", package = \"midnight-zswap\" }\nbase-crypto = { version = \"1.0.0\", path = \"../base-crypto\", package = \"midnight-base-crypto\" }\ntransient-crypto = { version = \"2.0.0\", path = \"../transient-crypto\", package = \"midnight-transient-crypto\" }\nstorage = { version = \"2.0.2\", path = \"../storage\", package = \"midnight-storage\" }\nserialize = { version = \"1.0.0\", path = \"../serialize\", package = \"midnight-serialize\" }\nmidnight-ledger-static = { version = \"9.0.0\", path = \"../static\", package = \"midnight-ledger-static\" }\n"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "transient-crypto/Cargo.toml",
+      "git_blob": "fec835f4472d7cc6cbd8d8e62415a61dac197911",
+      "sha256": "6ac4bfa268441803ebb0ff64c5e4abd279c986e8044a5a579d2f7a2748eec89a",
+      "working_tree_matches_blob": null,
+      "line_ranges": [
+        [
+          24,
+          38
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 24,
+        "last_line": 38,
+        "text": "derive = { version = \"1.0.0\", path = \"../base-crypto-derive\", package = \"midnight-base-crypto-derive\" }\nserialize = { version = \"1.0.0\", path = \"../serialize\", package = \"midnight-serialize\" }\nstorage-core = { version = \"1.0.0\", path = \"../storage-core\", package = \"midnight-storage-core\" }\n\nff = \"^0.13.1\"\ngroup = \"^0.13.0\"\nmidnight-curves = { version = \"^0.3.1\" }\nmidnight-proofs = { version = \"^0.8.1\" }\nmidnight-circuits = { version = \"^7.2.2\" }\nmidnight-zk-stdlib = { version = \"^2.3.3\" }\nanyhow = { version = \"^1.0.102\" }\nlru = \"0.18.0\"\n\n# rand 0.9.0 is not yet supported by some of our dependencies, we will\n# stick with 0.8.0 for now."
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "Cargo.lock",
+      "git_blob": "d61fdc23e56925606d5af7f20e407229df28f095",
+      "sha256": "57d94273a7df683e2ebd8d6210cd0e76ca530db968fbf9396b8fad9ede6fe951",
+      "working_tree_matches_blob": null,
+      "line_ranges": []
+    },
+    "excerpts": []
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "transient-crypto/src/proofs.rs",
+      "git_blob": "9430fec1612f83d23a27b19783f65bcea95ff40a",
+      "sha256": "4b5552c53f69ba230ddc0ee775220d4b88e2672814e68b3e3686ca35b6d50fe0",
+      "working_tree_matches_blob": null,
+      "line_ranges": [
+        [
+          63,
+          66
+        ],
+        [
+          561,
+          577
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 63,
+        "last_line": 66,
+        "text": "\n/// The hash used during proof transcript processing\npub type TranscriptHash = blake2b_simd::State;\n"
+      },
+      {
+        "first_line": 561,
+        "last_line": 577,
+        "text": "\n    /// Checks a proof against a statement.\n    pub fn verify<F: Iterator<Item = Fr>>(\n        &self,\n        params: &ParamsVerifier,\n        proof: &Proof,\n        statement: F,\n    ) -> Result<(), VerifyingError> {\n        let vk = self.force_init()?;\n        let pi = statement.map(|f| f.0).collect::<Vec<_>>();\n        trace!(statement = ?pi, \"verifying proof against statement\");\n        midnight_zk_stdlib::verify::<DummyRelation, TranscriptHash>(\n            &params.0, &vk, &pi, None, &proof.0,\n        )\n        .map_err(|_| anyhow::anyhow!(\"Invalid proof\"))\n    }\n"
+      }
+    ]
+  },
+  {
+    "source": {
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "ledger/src/structure.rs",
+      "git_blob": "c679f8a6fa5870f9849042e59d620d6599fad8bf",
+      "sha256": "dff65eb07f2f512aae00c43c449ee87721cc73662fa5e009787cf8a0ace69595",
+      "working_tree_matches_blob": null,
+      "line_ranges": [
+        [
+          289,
+          300
+        ],
+        [
+          445,
+          512
+        ]
+      ]
+    },
+    "excerpts": [
+      {
+        "first_line": 289,
+        "last_line": 300,
+        "text": "\n#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Storable, Introspection)]\n#[storable(base)]\n#[tag = \"proof-versioned\"]\n#[non_exhaustive]\npub enum ProofVersioned {\n    /// A proof generated against the v1 (zk-stdlib v1) Zkir trait.\n    V2(Proof),\n    /// A proof generated against the v2 (zk-stdlib v2) Zkir trait.\n    V3(Proof),\n}\n"
+      },
+      {
+        "first_line": 445,
+        "last_line": 512,
+        "text": "    #[cfg(feature = \"proof-verifying\")]\n    fn proof_verify(\n        op: &ContractOperation,\n        proof: &Self::Proof,\n        pis: Vec<Fr>,\n        call: &ContractCall<Self, D>,\n        mode: ProofVerificationMode,\n    ) -> Result<(), MalformedTransaction<D>> {\n        use transient_crypto::proofs::PARAMS_VERIFIER;\n\n        let inner_proof = match proof {\n            ProofVersioned::V2(proof) | ProofVersioned::V3(proof) => proof,\n        };\n\n        match proof {\n            ProofVersioned::V2(_) => {\n                let vk = op.v2_vk().ok_or_else(|| {\n                    warn!(\"missing v1 verifier key\");\n                    MalformedTransaction::<D>::VerifierKeyNotPresent {\n                        address: call.address,\n                        operation: call.entry_point.clone(),\n                    }\n                })?;\n                let old_proof = transient_crypto_old::proofs::Proof(inner_proof.0.clone());\n                let old_pis = pis.into_iter().map(|f| {\n                    transient_crypto_old::curve::Fr::from_le_bytes(&f.as_le_bytes())\n                        .expect(\"Fr round-trip\")\n                });\n                match mode {\n                    #[cfg(feature = \"mock-verify\")]\n                    ProofVerificationMode::CalibratedMock => vk\n                        .mock_verify(old_pis)\n                        .map_err(|e| anyhow::anyhow!(\"v1 mock verification: {e}\"))\n                        .map_err(MalformedTransaction::<D>::InvalidProof),\n                    _ => vk\n                        .verify(\n                            &transient_crypto_old::proofs::PARAMS_VERIFIER,\n                            &old_proof,\n                            old_pis,\n                        )\n                        .map_err(|e| anyhow::anyhow!(\"v1 verification: {e}\"))\n                        .map_err(MalformedTransaction::<D>::InvalidProof),\n                }\n            }\n            ProofVersioned::V3(_) => {\n                let vk = op.v3_vk().ok_or_else(|| {\n                    warn!(\"missing v2 verifier key\");\n                    MalformedTransaction::<D>::VerifierKeyNotPresent {\n                        address: call.address,\n                        operation: call.entry_point.clone(),\n                    }\n                })?;\n                match mode {\n                    #[cfg(feature = \"mock-verify\")]\n                    ProofVerificationMode::CalibratedMock => vk\n                        .mock_verify(pis.into_iter())\n                        .map_err(MalformedTransaction::<D>::InvalidProof),\n                    _ => vk\n                        .verify(&PARAMS_VERIFIER, inner_proof, pis.into_iter())\n                        .map_err(MalformedTransaction::<D>::InvalidProof),\n                }\n            }\n        }\n    }\n    fn estimated_tx_size<\n        S: SignatureKind<D>,\n        B: Storable<D> + PedersenDowngradeable<D> + Serializable,\n    >("
+      }
+    ]
+  }
+]

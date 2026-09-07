@@ -25,6 +25,9 @@ tool string-size incompatibility. The following remain implementation gates:
 
 - [x] Implement and independently review strict bounded JSON transport (42 tests; `62b7b30` and `fdb81c7`).
 - [x] Implement all78 literal native wrappers and exact global ordinal controls (`8be3cef`, complete aggregate typecheck, 12 native tests and root original evidence intake).
+- [x] Admit bounded recorder artifact hashing (`b08a2da`, original guarded-read failure and 15 passing controls).
+- [x] Admit structural sharded-exporter source (`9a263d7`, original omission/reorder failures and 55 non-package controls; four actual-package tests remain pending).
+- [x] Admit measured native-invocation source (`1df388a`, 41 short-process controls and independent original-byte intake; no Candidate A resource-feasibility claim).
 - [ ] Retain largest-case native pilot bytes, full terminal witness and peak RSS.
 - [ ] Export all78 native cases with original source/runtime/terminal receipts.
 - [ ] Stage case bytes, obtain independent root case-pin admission, then seal.
