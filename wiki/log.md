@@ -903,3 +903,13 @@ and recorded faucet URL/API drift plus the distinction between wallet sync and
 node availability. Recommended local development, early Preview integration,
 and Preprod final validation. No public settlement or network-switch success
 is claimed; no additional wallet was generated.
+
+
+## 2026-09-07 — Public Preview deployment verified
+
+Added SRC-0058–0060 and CLM-0204. Dedicated Preview wallet received test NIGHT;
+contract deployment was indexed SUCCESS and verified in a finalized canonical
+block. Retained both failed call attempts and the failing combined gate. Updated
+execution instructions and the controlling roadmap to preserve the wallet and
+contract for DUST diagnosis; Preprod snapshot instructions remain reference only.
+No native R3 proof rerun or Moriarty PCD completion is claimed.

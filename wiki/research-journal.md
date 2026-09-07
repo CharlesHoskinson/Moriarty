@@ -3,8 +3,11 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T03:04:05.743582+00:00
+updated_at: 2026-09-07T03:29:21.695102+00:00
 sources:
+  - SRC-0058
+  - SRC-0059
+  - SRC-0060
   - SRC-0057
   - SRC-0055
   - SRC-0056
@@ -2848,3 +2851,27 @@ whether a network switch would improve the user's particular funding path.
 
 SRC-0057 subsequently selects Preview for the actual public test. This changes
 the operational target; it does not establish that Preprod is abandoned.
+
+
+## CLM-0204: Preview deployment finalized; contract call remains blocked
+
+The [Preview receipt package](../evidence/midnight-preview-2026-09-07/README.md)
+records dedicated wallet funding, persisted sync, DUST setup and a public Compact
+hello-world deployment. The indexer returned SUCCESS; separate node RPC reads
+confirmed its block hash at755639 and later finality at755701. Thus public
+transaction submission is reproduced for this deployment. Both calls failed:
+first node error170 (InvalidDustSpendProof), then local DUST balancing failure on
+one fresh attempt. The combined deploy/call verifier failed because the latest
+action remained ContractDeploy. No successful message update or Moriarty PCD is
+claimed. Preserve the existing wallet/contract; diagnose proof inputs and wallet
+reservations before further calls. The public run ended within its bounded test.
+
+Metadata: SRC-0058 user execution/verification steering; SRC-0060 primary live
+receipt; SRC-0054 pinned scaffold/local proof-server provenance; observed
+2026-09-07 UTC. Experimental authority, S3, experiment observation; reproduced for
+funding observation and finalized deployment, failed for full deploy/call;
+confidence high for preserved outcomes, unknown for the invalid-proof root cause.
+Native R3 remains stopped. SRC-0059 preserves the Preprod snapshot instructions;
+the [bounded assessment](../evidence/midnight-indexer-snapshot-assessment-2026-09-07/README.md)
+received403 and did not download or restore the archive. Preview supersedes that
+execution target; the supplied database claims remain unverified.

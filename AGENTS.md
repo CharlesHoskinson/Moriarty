@@ -40,6 +40,13 @@ Do not generate another wallet merely because an SDK-valid address was rejected.
 The user then [selected Preview](raw/assignments/midnight-preview-steering-2026-09-07.md)
 for the public settlement attempt. Use a dedicated Preview wallet and preserve
 Preprod keys; no further Preprod retry is required by the old checkpoint.
+The subsequent [Preview execution](evidence/midnight-preview-2026-09-07/README.md)
+received test NIGHT and finalized a public contract deployment. The call failed
+with invalid DUST proof170; one fresh attempt could not balance DUST. Preserve
+the wallet and existing contract; diagnose proof inputs and failed-transaction
+reservations before further calls. Public deployment works; full deploy/call
+acceptance and Moriarty PCD remain open. Preview is the sole public execution
+target for this sprint; the supplied Preprod snapshot is reference material.
 Neither local settlement nor application MockProver checks establish Moriarty PCD.
 The [published documentation capture](evidence/midnight-docs-2026-09-07/README.md)
 covers all indexed Markdown routes with explicit HTML/asset limitations. Keep

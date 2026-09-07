@@ -9,14 +9,15 @@ will grow by merging evidence into durable topic pages.
 Local Docker is the daily development default; Preview is preferred for early
 public integration and Preprod remains valid for final validation. Faucet URL
 drift and wallet sync are separate from network availability; public settlement
-is still unperformed. The user selected Preview for the next public attempt.
-See CLM-0203 and SRC-0057.
+now has [a finalized Preview deployment](../evidence/midnight-preview-2026-09-07/README.md).
+The contract call failed with DUST proof170 and then a balancing error. Preview
+is the sole public execution target this sprint. See CLM-0203–0204 and SRC-0057–0058.
 
 **Latest implementation output:** [Midnight Docker settlement evidence](../evidence/moriarty-midnight-network-2026-09-07/README.md),
 [published documentation capture](../evidence/midnight-docs-2026-09-07/README.md), and
 [R3 native result](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md).
-Local NIGHT/DUST/deploy/call transactions settled; public Preprod still awaits
-faucet CAPTCHA and wallet sync. Native recursive setup exhausted rows at k17;
+Local NIGHT/DUST/deploy/call transactions settled; Preprod attempts are historical
+and no longer required for this sprint. Native recursive setup exhausted rows at k17;
 no recursive proof was produced. CLM-0200–0202 records this sprint.
 
 Previous output: [R2b outcome-intent workspace and evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md).

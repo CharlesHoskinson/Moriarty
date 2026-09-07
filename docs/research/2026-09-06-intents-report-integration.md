@@ -161,5 +161,13 @@ a supported direct promotion target if its existing wallet is funded. A faucet
 error and a bounded wallet-sync timeout do not establish network failure. Before
 another public attempt, observe funding independently of full sync, retain wallet
 state, and use the matching documented faucet with its exact server response.
-The actual public settlement test remains open. This amendment does not change
-the native R3 k17 stop or remove mandatory proofs and target-coverage obligations.
+The user subsequently selected Preview exclusively for this sprint. The
+[Preview experiment](../../evidence/midnight-preview-2026-09-07/README.md) received
+test NIGHT, completed sync/DUST setup and finalized a public contract deployment.
+The call failed with invalid DUST spend proof170; a fresh attempt failed DUST
+balancing. Inspect the proof inputs and failed-transaction reservations before
+another bounded call attempt, then require successful indexed execution, node
+finality and exact readback. Retain the same wallet and deployed contract.
+The supplied Preprod snapshot is reference material; no restore is needed for
+this target. This amendment does not change the native R3 k17 stop or remove
+mandatory proofs and target-coverage obligations.
