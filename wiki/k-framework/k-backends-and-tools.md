@@ -6,6 +6,11 @@ status: active
 updated_at: 2026-09-03T14:35:47Z
 sources:
   - SRC-0036
+created: 2026-09-03
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # K Backends, Tools, and pyk

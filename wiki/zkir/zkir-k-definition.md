@@ -8,6 +8,11 @@ sources:
   - SRC-0036
   - SRC-0038
   - SRC-0006
+created: 2026-09-05
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # The ZKIR semantics in K, as built

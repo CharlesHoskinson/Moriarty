@@ -18,6 +18,11 @@ sources:
   - SRC-0017
   - SRC-0031
   - SRC-0033
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Moriarty architecture decision

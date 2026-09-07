@@ -5,6 +5,10 @@
 This repository implements Andrej Karpathy's LLM Wiki pattern for Moriarty's
 Midnight financial-language research and design.
 
+- The repository root is an Obsidian vault selected by `.claude-obsidian.json`.
+  `wiki/workflow.md` describes the portable transaction workflow.
+- `inbox/` stages new inputs; `.raw/captured/` holds new immutable captures made
+  by the portable core. Existing `raw/` captures keep their canonical paths.
 - `raw/` is immutable source material, prompt inputs, receipts, and dated
   research notes. Corrections supersede; they do not overwrite.
 - `wiki/` is maintained synthesis. Update an existing concept page instead of
@@ -23,7 +27,9 @@ Midnight financial-language research and design.
 
 1. Read `wiki/index.md` and search the wiki for the source's concepts.
 2. Add a stable source identifier (`SRC-####`) to the inventory.
-3. Acquire the source into `raw/` and record provenance and SHA-256.
+3. Capture new source bytes into `.raw/captured/` through the portable core and
+   record provenance and SHA-256. Existing `raw/` receipts remain immutable.
+   Add the same SRC identifier to the legacy inventory and portable source mapping.
 4. Classify authority and lifecycle scope before extracting claims.
 5. Update the smallest applicable existing wiki pages.
 6. Link claims to their source receipt and, where relevant, pinned code.
@@ -33,8 +39,8 @@ Midnight financial-language research and design.
 ### Query
 
 Read `wiki/index.md`, then the smallest relevant linked pages and receipts.
-Return cited synthesis. If the answer establishes reusable knowledge, merge it
-into the wiki and append a query entry to the log.
+Return cited synthesis without mutation. Save reusable knowledge only through a
+separately scoped Save transaction, with the required index and log updates.
 
 ### Lint
 
@@ -45,7 +51,10 @@ the index and on-disk pages.
 
 ## Page metadata
 
-Every maintained page except `index.md` and `log.md` starts with:
+Every maintained page includes the existing domain metadata plus Obsidian
+properties. For adopted pages, `created` records the earliest retained Git
+addition date; `updated` records a content or metadata change. Preserve the
+original `updated_at` timestamp as a separate historical field. Example:
 
 ```yaml
 ---
@@ -54,6 +63,10 @@ type: overview|source|component|semantics|formal|runtime|language|security|bench
 title: Plain title
 status: active|blocked|superseded|resolved
 updated_at: YYYY-MM-DDTHH:MM:SSZ
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags:
+  - moriarty
 sources:
   - SRC-####
 ---
@@ -118,3 +131,11 @@ cooperation and keys, wallet/Runtime correctness, and future protocol support.
 Use `specified-only` for an experiment design that has not run. Use `reproduced`
 only when commands, inputs, environment, raw outputs, and acceptance predicates
 are preserved.
+
+## Portable provenance
+
+The source inventory keeps `SRC-####` identities. The portable source ledger
+keeps a lossless legacy-ID mapping and separately observed content hashes.
+The legacy claim index is navigation only; no claim is accepted by migration.
+See [the mapping](wiki/meta/provenance.md) before adding or reviewing portable
+ledger entries. Retain the original lifecycle and confidence vocabulary.

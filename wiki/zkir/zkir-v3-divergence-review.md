@@ -6,6 +6,11 @@ status: active
 updated_at: 2026-09-03T14:37:43Z
 sources:
   - SRC-0038
+created: 2026-09-03
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # ZKIR v3 in-circuit versus off-circuit divergences

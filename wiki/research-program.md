@@ -18,6 +18,11 @@ sources:
   - SRC-0029
   - SRC-0030
   - SRC-0031
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 > Historical design study. Current execution follows the [Midnight language roadmap](../ROADMAP.md) and MC01-MC08. Preserve the findings below within their original scope; this page does not authorize its former implementation sequence.
@@ -82,7 +87,7 @@ observation; reproduced; confidence high for graph counts and low-to-medium for
 inferred relationships; status S3.
 
 The graph is at
-[`../graphs/moriarty-decision-corpus/graphify-out/graph.json`](../graphs/moriarty-decision-corpus/graphify-out/graph.json).
+[`meta/legacy-decision-graph.json`](meta/legacy-decision-graph.json).
 Its shortest useful synthesis path joins the candidate taxonomy, M5 profile,
 atomic-swap stop test, backend boundedness condition, and library-only fallback.
 Graph centrality is not evidence authority.

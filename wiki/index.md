@@ -1,4 +1,19 @@
+---
+id: moriarty.wiki.index
+title: Moriarty research index
+type: overview
+status: active
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - navigation
+updated_at: 2026-09-07T18:01:49Z
+---
+
 # Moriarty language wiki index
+
+[[wiki/overview|Vault overview]] · [[wiki/workflow|Research workflow]] · [[wiki/canvases/moriarty|Language map]] · [[wiki/meta/provenance|Provenance mapping]]
 
 Read this page before searching externally. Merge new evidence into the existing
 topic pages and preserve their source and claim identifiers.
@@ -56,7 +71,7 @@ remain historical evidence. The current work is ACTUS/DeFi-led language design:
   transactions, bounded correctness and backend questions.
 - [New design cycle](../docs/superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md):
   target study, unified-semantics proposal and developer mock.
-- [Journal CLM-0187](research-journal.md#clm-0187-user-reset-after-verification-detour)
+- [Journal CLM-0187](research-journal.md)
   records the scope change. Older continuation instructions below do not
   authorize automatic native work.
 
@@ -98,7 +113,7 @@ remain historical evidence. The current work is ACTUS/DeFi-led language design:
   limitations, both offline Apalache heap failures, and the candidate-specific
   signing/verification/commit boundary under implementation, and the reviewed
   native Candidate B design with explicit stranded-escrow and clock boundaries.
-- [Candidate A continuation evidence](research-journal.md#clm-0186--checkpoint-after-the-a5-view-typecheck) —
+- [Candidate A continuation evidence](research-journal.md) —
   admitted A4 source gate and failed-export preservation, successful A5 view
   typecheck, and saved follow-up drafts; exports and verification remain open.
 

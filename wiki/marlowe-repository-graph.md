@@ -11,6 +11,11 @@ sources:
   - SRC-0013
   - SRC-0014
   - SRC-0015
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Marlowe repository and documentation graph

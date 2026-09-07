@@ -14,6 +14,11 @@ sources:
   - SRC-0047
   - SRC-0048
   - SRC-0049
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -28,7 +33,7 @@ pin. The verdict explicitly withdraws its four-primitive invariant; the checker
 classifies declaration names and labels the output a keyword seed. This source
 observation does not rerun the mathematics or certify a new basis. Preserve the
 72-row target corpus and semantic counterexamples while selecting Core from
-required behaviors. [CLM-0195](research-journal.md#clm-0195-intents-report-separates-authority-plans-and-receipts)
+required behaviors. [CLM-0195](research-journal.md)
 and the [reconciliation](../docs/research/2026-09-06-intents-report-integration.md)
 state the resulting R2b authority/refinement obligations.
 

@@ -23,6 +23,11 @@ sources:
   - SRC-0047
   - SRC-0048
   - SRC-0049
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Formal assurance matrix

@@ -15,6 +15,11 @@ sources:
   - SRC-0016
   - SRC-0017
   - SRC-0019
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 > Historical design study. Current execution follows the [Midnight language roadmap](../ROADMAP.md) and MC01-MC08. Preserve the findings below within their original scope; this page does not authorize its former implementation sequence.

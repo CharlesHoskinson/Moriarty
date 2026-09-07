@@ -7,6 +7,11 @@ updated_at: 2026-09-05T20:15:19Z
 sources:
   - SRC-0039
   - SRC-0036
+created: 2026-09-05
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # K Best Practices for the ZKIR Definition

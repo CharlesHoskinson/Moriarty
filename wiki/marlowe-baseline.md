@@ -9,6 +9,11 @@ sources:
   - SRC-0008
   - SRC-0009
   - SRC-0010
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Pinned Marlowe V1 baseline

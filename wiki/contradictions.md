@@ -38,6 +38,11 @@ sources:
   - SRC-0047
   - SRC-0048
   - SRC-0049
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
@@ -142,7 +147,7 @@ supersede automatic continuation without rewriting the old failed-run evidence.
 
 ## CLM-0190: ACTUS design-study source gaps and DeFi model scope
 
-SRC-0042's [target study](../docs/research/2026-09-06-actus-defi-design-study.md#source-discrepancies-and-dispositions)
+SRC-0042's [target study](../docs/research/2026-09-06-actus-defi-design-study.md)
 records DS-01 through DS-07. Business-day interpretation now has pinned Haskell
 and pam08/pam09 support, but the missing CSMP vector prevents a conformance
 claim. ANN initial Prnxt contains an incomplete formula; COM has quantity/sign

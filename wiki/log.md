@@ -1,3 +1,16 @@
+---
+id: moriarty.wiki.log
+title: Moriarty research log
+type: overview
+status: active
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - navigation
+updated_at: 2026-09-07T18:01:49Z
+---
+
 # Wiki log
 
 ## [2026-09-04] checkpoint | Complete S01 and begin S02 contract
@@ -961,3 +974,7 @@ Captured exact intents, PCD and DeFi report bytes as SRC-0070-SRC-0072; intents 
 ## 2026-09-07: Preserve old work and consolidate current development
 
 SRC-0076 authorizes publication and cleanup. The [historical archive](../docs/ARCHIVE.md) retains superseded implementations and their evidence; the current tree keeps the Midnight packages, financial studies and MC01-MC08 program. Publication authority changes, while product and proof acceptance remain unchanged.
+
+## 2026-09-07: Adopt the research workflow as an Obsidian vault
+
+The user requested AgriciDaniel/claude-obsidian. Adopted the WSL repository as one vault, preserving note paths, source captures, identifiers and claim scopes. Added Obsidian metadata, navigation, a language Canvas and portable source-identity mapping. The legacy claim index is navigational; no claim was automatically accepted. See [[wiki/meta/provenance|provenance mapping]] and [[wiki/workflow|workflow]].

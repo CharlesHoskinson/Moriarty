@@ -9,6 +9,11 @@ sources:
   - SRC-0005
   - SRC-0007
   - SRC-0019
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->

@@ -43,6 +43,18 @@ resource and acceptance gates. Merge status is not product acceptance.
   formal workflow does not apply here. Check live runtime before claiming a loop
   is armed, and never falsely complete an old goal to create another.
 
+## Research vault
+
+The [Obsidian migration instruction](raw/assignments/moriarty-obsidian-vault-2026-09-07.md)
+selects AgriciDaniel/claude-obsidian. The repo root is the vault; the installed tool
+is separate. Follow [wiki/workflow.md](wiki/workflow.md) and
+[docs/OBSIDIAN.md](docs/OBSIDIAN.md). Use inspected portable transactions for
+canonical wiki changes. Query is read-only; saving is a separately scoped operation.
+Keep legacy source and claim IDs, confidence, contradictions and lifecycle labels.
+Update the source inventory and portable source ledger together during intake;
+do not infer accepted claims from legacy prose. A vault migration does not
+change any financial or proof acceptance gate.
+
 ## Evidence discipline
 
 1. Query `wiki/index.md` before acquiring new material.

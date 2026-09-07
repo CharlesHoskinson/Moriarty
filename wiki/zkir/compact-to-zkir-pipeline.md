@@ -8,6 +8,11 @@ sources:
   - SRC-0006
   - SRC-0007
   - SRC-0038
+created: 2026-09-03
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Compact to ZKIR Pipeline

@@ -7,6 +7,11 @@ updated_at: 2026-09-02T18:20:00Z
 sources:
   - SRC-0005
   - SRC-0007
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Moriarty security and trust boundaries

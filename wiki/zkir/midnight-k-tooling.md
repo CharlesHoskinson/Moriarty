@@ -7,6 +7,11 @@ updated_at: 2026-09-03T14:35:56Z
 sources:
   - SRC-0006
   - SRC-0007
+created: 2026-09-03
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # Midnight's K Framework tooling: k-rust and k-framework-ts

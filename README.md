@@ -197,6 +197,10 @@ The complete [roadmap](ROADMAP.md) lists the implementation sequence, acceptance
 
 Preview is the public integration target. Existing network transactions establish connectivity and basic contract operation, not Moriarty financial settlement or proof acceptance. The [completion plan](openspec/MORIARTY-COMPLETION-PROGRAM.md) defines the dependencies and evidence required to close these gaps.
 
+## Research vault
+
+The repository is also an Obsidian vault. Open the repository folder in Obsidian, then start with the [vault overview](wiki/overview.md) or [research index](wiki/index.md). The [vault guide](docs/OBSIDIAN.md) explains the WSL setup, source provenance and agent workflow.
+
 ## Repository guide
 
 - [`experiments/moriarty-language/`](experiments/moriarty-language/): authoring language, evaluator, source examples and Compact mapping.

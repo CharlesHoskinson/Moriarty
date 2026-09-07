@@ -6,6 +6,11 @@ status: active
 updated_at: 2026-09-03T14:34:08Z
 sources:
   - SRC-0036
+created: 2026-09-03
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # K Tutorial Section 2, Intermediate Concepts

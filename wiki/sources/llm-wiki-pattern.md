@@ -6,6 +6,11 @@ status: active
 updated_at: 2026-09-02T17:18:27Z
 sources:
   - SRC-0001
+created: 2026-09-02
+updated: 2026-09-07
+tags:
+  - moriarty
+  - research
 ---
 
 # LLM Wiki research workflow
