@@ -61,7 +61,7 @@ npm --prefix experiments/moriarty-developer-mock test
 
 - [ ] 5.1 Write `evidence/moriarty-completion-program-2026-09-07/MC01/manifest.json`.
 - [ ] 5.2 Bind inputs, outputs, commands, resource receipts, and the exact candidate digest.
-- [ ] 5.3 Obtain independent Fable and GPT-6 result audits under the program protocol.
+- [ ] 5.3 Obtain independent Opus and GPT-6 result audits under the program protocol.
 - [ ] 5.4 Resolve every blocking finding without widening the accepted predicate.
 - [ ] 5.5 Recompute acceptance and update the program register.
 
@@ -71,7 +71,7 @@ Status: S2, specified-only. No implementation task is complete by this plan's ex
 The program charter in `openspec/MORIARTY-COMPLETION-PROGRAM.md` controls execution and audit gates.
 Every behavioral implementation task requires a failing test before code changes.
 Each acceptance predicate requires an independently recomputable result.
-Each result audit requires exact Fable and fresh GPT-6 identities.
+Each result audit requires exact Opus and fresh GPT-6 identities.
 Source-only review does not prove the implemented predicate.
 Missing evidence, incompatible interfaces, resource stops, and unavailable audits remain explicit blockers.
 Keep unrelated changes, old failed runs, and private wallet material intact.

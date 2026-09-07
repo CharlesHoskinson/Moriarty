@@ -52,7 +52,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Fable or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion

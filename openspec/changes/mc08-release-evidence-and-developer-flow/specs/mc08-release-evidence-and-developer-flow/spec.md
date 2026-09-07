@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Evidence-gated completion
-Completion SHALL require every dependency gate, resolved blocking findings, and admissible Fable and GPT-6 audits.
+Completion SHALL require every dependency gate, resolved blocking findings, and admissible Opus and GPT-6 audits.
 
 #### Scenario: Complete supported language
 - **WHEN** a fresh checkout runs the complete program verification and both audits accept the exact candidate
@@ -41,7 +41,7 @@ The package SHALL bind acceptance evidence to exact sources, commands, environme
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Fable or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
+- **WHEN** Opus or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
 - **THEN** the package remains pending audit and cannot promote dependent acceptance.
 
 ### Requirement: Failed predicate stops promotion

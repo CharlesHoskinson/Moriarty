@@ -5,6 +5,8 @@ before changing research artifacts.
 
 ## Current direction and mandatory footguns
 
+The [2026-09-07 reviewer replacement](raw/assignments/moriarty-opus-review-2026-09-07.md) selects exact `claude-opus-5` and fresh `gpt-6-astra` for future independent reviews. This overrides older Fable-only instructions, including inherited worktree rules. Preserve historical Fable outputs; do not relabel them or fabricate legacy acceptance flags.
+
 The latest [delegated execution instruction](raw/assignments/moriarty-autonomous-execution-2026-09-07.md)
 authorizes the assistant to make execution and bounded resource decisions for the full goal without repeated permission requests.
 Record revised envelopes and preserve prior charges. An exhausted old worker or time allocation is not itself a user-input blocker.

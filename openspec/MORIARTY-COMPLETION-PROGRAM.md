@@ -1,5 +1,7 @@
 # Moriarty target-first completion program
 
+Current review authority: [Opus replacement instruction](../raw/assignments/moriarty-opus-review-2026-09-07.md). Future audits use exact Opus and fresh GPT-6; historical Fable receipts retain their original scope.
+
 Status: S2, specified-only. The plan files do not establish an active execution loop.
 Authority: [user request](../raw/assignments/moriarty-completion-loop-2026-09-07.md).
 Machine register: [moriarty-completion-program.json](moriarty-completion-program.json).
@@ -152,7 +154,7 @@ Record the actual goal creation result and runtime state before reporting arming
 8. Dispatch through the contract-bound queue with durable process ownership.
 9. Add failing behavioral tests before implementation changes.
 10. Run the package checks and retain failures with actual resource receipts.
-11. Request independent Fable and GPT-6 result audits of the frozen candidate.
+11. Request independent Opus and GPT-6 result audits of the frozen candidate.
 12. Correct blocking findings within the existing contract limits.
 13. Recheck affected predicates and obtain updated candidate-bound verdicts.
 14. Admit only the owned, tested, audited candidate through the repository gate.
@@ -161,7 +163,7 @@ Record the actual goal creation result and runtime state before reporting arming
 The latest user request authorizes this sequence without another generic design-confirmation round.
 It does not override a failed acceptance gate or authorize unlimited retries.
 Prefer the configured cross-vendor worker after readiness succeeds.
-The user-required Fable and GPT-6 audits replace the default auditor pairing for these packages.
+The user-required Opus and GPT-6 audits replace the default auditor pairing for these packages.
 No author may approve their own result.
 If the worker route fails, retain that failure and disclose any proposed route substitution.
 Do not repair Foreman as a side task.
@@ -292,9 +294,9 @@ Preserve completed work when a ceiling prevents full completion.
 
 ## Independent audit protocol
 
-Required reviewers are exact `claude-fable-5-1` and a fresh `gpt-6-astra` agent.
+Required reviewers are exact `claude-opus-5` and a fresh `gpt-6-astra` agent.
 The current request controls these eight packages; it does not close older three-provider Council obligations.
-Keep prior Grok, Fable, and GPT review requirements visible in the MC08 crosswalk.
+Keep prior Grok, Opus, and GPT review requirements visible in the MC08 crosswalk.
 
 Before each audit, freeze the candidate commit, file manifest, source pins, acceptance predicates, and evidence digests.
 Use a cold packet containing the relevant diff and reproducible commands.
@@ -303,11 +305,11 @@ Retain a structured verdict, severity, exact locators, missing evidence, and res
 The author cannot act as the independent GPT-6 reviewer.
 Record tool-selected GPT-6 identity and the agent identifier; model self-identification is insufficient.
 
-For Fable, use the installed bounded tool-free readiness canary from a temporary directory.
-Require `modelUsage["claude-fable-5-1"].canonicalModel` to equal `claude-fable-5-1`.
+For Opus, use the installed bounded tool-free readiness canary from a temporary directory.
+Require `modelUsage["claude-opus-5"].canonicalModel` to equal `claude-opus-5`.
 Require the same verified identity in the substantive result receipt.
 A canary, alias, authentication status, or empty model usage cannot substitute for a substantive audit.
-No alternate Claude model may silently replace Fable.
+No alternate Claude model may silently replace Opus.
 
 Audit grammar, numeric semantics, target traceability, complete effects, proof binding, ledger enforcement, and durable consumption.
 Audit private witness boundaries, composition, held-outs, provenance, and resource claims where relevant.

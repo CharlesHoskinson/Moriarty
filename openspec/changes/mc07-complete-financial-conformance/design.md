@@ -77,7 +77,7 @@ Status: S2, specified-only. No implementation task is complete by this plan's ex
 The program charter in `openspec/MORIARTY-COMPLETION-PROGRAM.md` controls execution and audit gates.
 Every behavioral implementation task requires a failing test before code changes.
 Each acceptance predicate requires an independently recomputable result.
-Each result audit requires exact Fable and fresh GPT-6 identities.
+Each result audit requires exact Opus and fresh GPT-6 identities.
 Source-only review does not prove the implemented predicate.
 Missing evidence, incompatible interfaces, resource stops, and unavailable audits remain explicit blockers.
 Keep unrelated changes, old failed runs, and private wallet material intact.
