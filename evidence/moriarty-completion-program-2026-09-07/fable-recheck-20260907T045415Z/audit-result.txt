@@ -1,0 +1,178 @@
+{
+  "kind": "independent-planning-audit",
+  "verdict": "BLOCKED",
+  "candidate_sha256": "99bbf6aca17ffa702820ac8925a10ad4bab4b25ef7e6e25de843ee1223998e02",
+  "reviewer_note": "Independent plan-level audit of the frozen S2 candidate. No tools, builds, proofs, network calls, or model calls were used. Digests were not recomputed. Findings marked blocking are contradictions internal to the plan text; non-blocking findings are refinements or empirical gates correctly left to execution.",
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "high",
+      "blocking": true,
+      "title": "Master 8-hour ceiling cannot contain its own committed sub-allocations and has no per-package reservation",
+      "locators": [
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Resource and terminal contract (rows: Program actionful subprocess work; One substantive audit; Native revision-01 preflight/proving)",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Allocated native extension campaigns (table; 'All preflight, proving, and verification time consumes the eight-hour program ceiling')",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Resource and terminal contract ('Count all program worker, verification, correction, and substantive-audit process time in the eight-hour ceiling')",
+        "openspec/moriarty-completion-program.json#packages[*].dependencies"
+      ],
+      "observation": "The charter states that audit process time, native preflight/proving, worker, verification, and correction time all count against one shared 480-minute ceiling, and that either the time ceiling or the 24-dispatch ceiling stops new dispatch. The plan's own committed sub-ceilings exceed that master ceiling before any implementation work: initial result audits for 8 packages x 2 reviewers x 10 min = 160 min; pre-launch relation/contract audits for 5 native campaigns plus the MC01 profile freeze = 6 x 2 x 10 min = 120 min; native preflight and proving = 5 x 10 min + 4 x 20 min + 120 min = 250 min. Total 530 min > 480 min with zero worker rounds, zero npm/cargo/lake builds, zero Docker runs, zero Preview attempts, and zero corrections. Separately, 24 worker dispatches must cover roughly 45 numbered task groups, 5 native campaigns, and 8 closure sequences under a failing-test-first rule and 30-minute rounds. Because dependency order places MC07 (the 120-minute campaign and the largest implementation scope) last, the shared ceiling will be exhausted by earlier packages, so the 'separately allocated' MC07 campaign is not actually reserved. The charter says ceilings are not feasibility evidence, but it also presents these campaigns as allocated; under the stated arithmetic they cannot all be honored, which makes the MC08 completion predicate unreachable by the plan's own numbers rather than by an empirical outcome.",
+      "correction": "Either (a) partition the master ceiling into per-package reservations (time, dispatches, submissions, debit) whose sum is at most the master ceiling and record which packages are unreachable under the current envelope, or (b) propose a larger, user-authorized envelope with the same partition. Give substantive-audit wall time its own ceiling or state explicitly that it is excluded from subprocess time. Reconcile the 24-dispatch ceiling with the task-group count by defining bundling rules per dispatch. State the expected reachable frontier (for example MC01–MC04) for the current envelope so a resource stop is a predicted outcome, not a surprise."
+    },
+    {
+      "id": "F-02",
+      "severity": "high",
+      "blocking": true,
+      "title": "Ownership boundaries prevent required cross-package extension and requalification, leaving MC07's compiler-mapping and acceptance predicates unowned",
+      "locators": [
+        "openspec/changes/mc07-complete-financial-conformance/design.md#Interfaces (CoverageRow requires 'certificate, compiler mapping, and actual acceptance evidence')",
+        "openspec/changes/mc07-complete-financial-conformance/tasks.md#4.1 and #3.1",
+        "openspec/changes/mc07-complete-financial-conformance/design.md#Outputs and ownership (only experiments/moriarty-conformance/)",
+        "openspec/changes/mc01-bounded-language/tasks.md#4.2 ('do not claim general correspondence'; lower-compact.ts owned by MC01)",
+        "openspec/changes/mc04-ledger-correspondence-and-consumption/design.md#Outputs and ownership (Correspondence.lean, acceptance.compact, adapter.ts)",
+        "openspec/changes/mc05-mandatory-claim-acceptance/design.md#Native relation extension ('Requalify the affected MC04 theorem and adapter'; owns only mandatory-claims.compact)",
+        "openspec/changes/mc06-private-handoff-and-composition/design.md#Native relation extension ('Requalify affected MC04 correspondence and MC05 acceptance')",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Execution algorithm step 5 and every tasks.md 'Commit only owned changes'"
+      ],
+      "observation": "Every tasks file requires committing only owned paths. MC07 must bind each of 349 rows to a compiler mapping, mandatory-claim certificates, and acceptance evidence, but the Compact lowering lives in MC01-owned lower-compact.ts (specified for loan/swap only), the correspondence theorem and consumption contract live in MC04-owned files, and mandatory-claim checks live in MC05-owned files. No task in any package extends the lowering, the Lean correspondence, or the acceptance contract beyond loan/swap. MC05 and MC06 are told to 'requalify' the MC04 theorem and adapter while owning none of those files, and it is undefined whether requalification means re-running unchanged checks or editing the theorem to cover signed authority and composition. The plan also defines three separately owned Compact contracts (financial.compact, acceptance.compact, mandatory-claims.compact) without naming which one is the single 'actual acceptance path' that MC05, MC06, and MC07 must satisfy, or how durable consumption proven for one contract carries to another. Under these rules MC07's acceptance predicate cannot be satisfied by any package, which is a structural contradiction, not an execution risk.",
+      "correction": "Choose one of two resolutions and record it in the charter and register: (a) grant MC05, MC06, and MC07 explicit extension ownership over named upstream files (lower-compact.ts, Correspondence.lean, acceptance.compact, accept.ts) with an obligation to re-run and re-audit every upstream predicate those files back; or (b) add versioned profile-extension tasks to MC01 and MC04 that are gated by MC07's frozen coverage needs. In either case define a single acceptance-contract lineage with explicit versions, and state that durable-consumption and mandatory-claim predicates are re-run on each version. Define 'requalify' precisely as either re-run-unchanged or extend-and-reprove."
+    },
+    {
+      "id": "F-03",
+      "severity": "high",
+      "blocking": false,
+      "title": "MC07 conflates semantic conformance with per-row proof and ledger acceptance, making the seventh gap unattainable as written",
+      "locators": [
+        "openspec/changes/mc07-complete-financial-conformance/specs/mc07-complete-financial-conformance/spec.md#Requirement: Complete DeFi evidence",
+        "openspec/changes/mc07-complete-financial-conformance/design.md#Native relation extension: financial-coverage-01",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Allocated native extension campaigns (MC07 row: 349 episodes, 120 minutes, k at most 17)",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Resource and terminal contract (Program Preview submissions: 24)"
+      ],
+      "observation": "The user's seventh gap is conformance coverage. The plan makes every one of the 277 ACTUS fixtures and 72 DeFi rows also require certificates, a native proof episode, and acceptance evidence. The financial-coverage-01 campaign would need one recursive relation covering 18 heterogeneous ACTUS types and 72 row-specific behaviors at k at most 17, when a single fixed loan relation already exhausted rows at k17, and would need to prove episodes whose fixtures contain up to 241 events within 120 cumulative minutes. 'Actual acceptance evidence' per row is undefined relative to the 24-submission Preview ceiling. These are empirical limits, but coupling them to the conformance denominator guarantees the seventh gap reports resource-stopped even if the evaluator conforms on every fixture and field.",
+      "correction": "Split MC07 into two predicates with separate denominators: (1) semantic conformance of the evaluator against all 277 fixtures with all present fields and all 72 rows, which remains the mandatory conformance denominator; (2) proof and acceptance coverage reported per supported profile, with an explicit unsupported list and a frozen representative subset for the native campaign. Define 'acceptance evidence' for MC07 rows as local pinned-node acceptance unless Preview submissions are separately budgeted. Report the shortfall between (1) and (2) honestly in MC08 rather than failing (1) because of (2)."
+    },
+    {
+      "id": "F-04",
+      "severity": "high",
+      "blocking": false,
+      "title": "No decision tree for the likely interface-blocked outcome at MC04, which would halt gaps 4 through 7",
+      "locators": [
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Work packages and checklist mapping ('If no compatible interface exists, record the exact missing boundary and stop that adapter')",
+        "openspec/changes/mc04-ledger-correspondence-and-consumption/specs/mc04-ledger-correspondence-and-consumption/spec.md#Scenario: Missing interface",
+        "openspec/changes/mc04-ledger-correspondence-and-consumption/tasks.md#1.1, #1.2",
+        "experiments/moriarty-native-ivc-r3/README.md#Separate deployment and witness gates (proofs 0.8/circuits 7.0 vs ledger 0.7/6.2)"
+      ],
+      "observation": "Retained evidence already records a dependency version mismatch between the aggregation crate and the inspected ledger, and the Preview path exercised so far verifies Compact-compiled circuits, not arbitrary native accumulator proofs. MC05, MC06, MC07, and MC08 all depend on MC04. The plan correctly forbids a host-computed verification bit and allows read-only inspection alongside MC01, but does not require that inspection to complete before native spend, and specifies no alternatives to propose when the interface is absent. The most probable execution path therefore ends at MC04 with a halt and no reviewable next step.",
+      "correction": "Make the read-only verifier-compatibility inspection a required MC01-parallel task with a recorded outcome before MC04 dispatch. Pre-specify the candidate alternatives that a blocked result must surface for user authorization: a Compact/ZKIR wrapper or decider circuit, ledger version alignment, or narrowing 'actual acceptance' to a pinned local ledger node with the Preview gap disclosed. Record which downstream predicates each alternative can and cannot discharge."
+    },
+    {
+      "id": "F-05",
+      "severity": "medium",
+      "blocking": false,
+      "title": "MC05 dynamic signed authority does not state where signature verification lives; in-circuit Ed25519 at k at most 17 is unlikely to fit",
+      "locators": [
+        "openspec/changes/mc05-mandatory-claim-acceptance/design.md#Native relation extension: mandatory-claims-01",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Allocated native extension campaigns (MC05 row)",
+        "experiments/moriarty-native-ivc-r3/README.md#Fixed input and inspected interface (dynamic Ed25519 authorization remains required)"
+      ],
+      "observation": "The MC05 campaign requires 'actual signature and mandatory-claim checks in the proof/acceptance boundary' with dynamic signed authority, under the same k and memory limits that already failed for a fixed-authority relation. Non-native Ed25519 verification inside a recursive circuit is far larger than the fixed loan relation. The phrase 'proof/acceptance boundary' permits ledger-side or Compact-side signature checks with the circuit binding only a key or authority commitment, but the plan does not choose.",
+      "correction": "Before freezing mandatory-claims-01, record a reviewed decision on the location of signature verification (ledger transaction signature, Compact-native check, or in-circuit) and what the circuit binds in each case. Preflight the chosen relation's row count without proving and treat an over-budget result as a decision point rather than a campaign failure."
+    },
+    {
+      "id": "F-06",
+      "severity": "medium",
+      "blocking": false,
+      "title": "MC06 join assumes multi-input accumulation and successor continuation the pinned IVC interface may not provide; process isolation is under-specified",
+      "locators": [
+        "openspec/changes/mc06-private-handoff-and-composition/design.md#Interfaces and #Native relation extension: composition-01",
+        "openspec/changes/mc06-private-handoff-and-composition/tasks.md#2.1, #2.2, #3.2",
+        "experiments/moriarty-native-ivc-r3/README.md#Fixed input and inspected interface (IvcTransition single-chain API)"
+      ],
+      "observation": "The inspected aggregation interface exposes a single-chain IVC transition. Join of two independently proved branches needs two-predecessor accumulation, and handoff needs a successor to continue from retained proof bytes plus public state without the predecessor's prover state. MC04 has an explicit interface probe with an interface-blocked outcome; MC06 has none. Task 2.1 relies on 'isolated private directories', which under one OS user does not demonstrate that Bob cannot read Alice's secrets.",
+      "correction": "Add an MC06 interface probe mirroring MC04 1.1/1.2 for successor continuation and two-input join, with an interface-blocked state. Require separate OS users or containers with recorded denied-read attempts for the Alice/Bob demonstration, and list every artifact crossing the boundary in the handoff inventory."
+    },
+    {
+      "id": "F-07",
+      "severity": "medium",
+      "blocking": false,
+      "title": "Numeric profile freeze and version propagation are undefined relative to later ACTUS/DeFi needs",
+      "locators": [
+        "openspec/changes/mc01-bounded-language/tasks.md#1.1 ('Resolve foundational ambiguities before freezing; retain target-specific gaps for MC07')",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Design decisions and checkpoints ('Do not let an MC01 freeze exclude a required later target')",
+        "openspec/changes/mc07-complete-financial-conformance/design.md#Outputs (numeric-comparison-policy.json)",
+        "docs/research/2026-09-06-actus-defi-design-study.md#Source discrepancies and dispositions (lam01 rational vs decimal)"
+      ],
+      "observation": "MC01 freezes numeric-profile.json on loan and swap. ACTUS requires per-field scale, rounding, sign, year-fraction, annuity, and conversion rules; DeFi rows require convergence and share arithmetic. The plan does not enumerate which numeric decisions count as foundational for MC01 versus target-specific for MC07, and does not state what a later profile version bump invalidates. Because native campaigns forbid retry and MC03–MC06 proofs and the MC04 theorem bind to the profile, an MC07-driven bump could silently strand all earlier proof evidence.",
+      "correction": "Before the MC01 freeze, derive from the study a minimum numeric requirement list (representation, per-field rounding modes, signed quantities, year-fraction conventions, comparison policy shape) that the profile must satisfy. Define a profile-version propagation rule stating which retained proofs, theorems, and audits remain valid across a bump and which must be re-run, and make that rule part of the MC08 crosswalk."
+    },
+    {
+      "id": "F-08",
+      "severity": "medium",
+      "blocking": false,
+      "title": "Independent oracle for DeFi rows and the admissible disposition for DS-03 are undefined",
+      "locators": [
+        "openspec/changes/mc07-complete-financial-conformance/design.md#Interfaces (CoverageRow 'independent oracle')",
+        "openspec/changes/mc07-complete-financial-conformance/specs/mc07-complete-financial-conformance/spec.md#Scenario: Independent resolution ('primary-source evidence')",
+        "docs/research/2026-09-06-actus-defi-design-study.md#DS-03 (ANN todo/todo)"
+      ],
+      "observation": "ACTUS fixtures supply expected traces, but the 72 DeFi rows have source pointers and Quint helpers, not executable expected traces. The spec requires primary-source evidence for source-gap resolution, yet DS-03 has no complete primary source; the study already proposes derivation from the annuity definition, pinned comparative implementation, and fixtures. Without naming what counts as the oracle and as admissible evidence, the coverage gate can neither pass nor fail those rows honestly.",
+      "correction": "Specify the oracle construction for DeFi rows (hand-derived expected traces from pinned source pointers, reviewed by both auditors) and record it in coverage.json per row. Adopt the study's DS-03 derivation rule explicitly as the admissible disposition, with independent checking against ANN fixtures."
+    },
+    {
+      "id": "F-09",
+      "severity": "low",
+      "blocking": false,
+      "title": "MC03 is serialized behind MC01 although it proves the fixed R2 episode",
+      "locators": [
+        "openspec/moriarty-completion-program.json#packages[MC03].dependencies",
+        "openspec/changes/mc03-native-recursive-proof/design.md#Interfaces (NativeEpisode binds the original R2 episode)"
+      ],
+      "observation": "MC03's relation uses the retained R2 episode with fixed authority and its own encoding fixtures; it does not consume MC01 outputs. Requiring MC01 completion, including a two-auditor profile freeze, delays the highest-risk empirical result and consumes shared ceiling time.",
+      "correction": "Make MC03 depend on the charter only, or at most on MC01 task 1.1's numeric profile, and start its encoding review in parallel with MC01."
+    },
+    {
+      "id": "F-10",
+      "severity": "low",
+      "blocking": false,
+      "title": "Preview fixtures lack distinct counterparties and the 24-submission ceiling is tight against target-rejection controls",
+      "locators": [
+        "openspec/changes/mc02-preview-financial-operation/tasks.md#1.1, #3.2",
+        "openspec/changes/mc02-preview-financial-operation/specs/mc02-preview-financial-operation/spec.md#Scenario: Partial comparison (wrong recipient)",
+        "openspec/changes/mc05-mandatory-claim-acceptance/tasks.md#3.2 ('Require target rejection for every mandatory-claim mutation')",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Resource and terminal contract (Program Preview submissions)"
+      ],
+      "observation": "A loan or swap with a wrong-recipient control needs at least two ledger principals, but the fixtures name one dedicated wallet. MC02, MC04, MC05, and MC06 all submit to Preview, and MC05 asks for target rejection of every mutation, which could exhaust the 24-submission ceiling before MC06.",
+      "correction": "Define at least two distinct funded principals in the fixtures. Exercise mutation controls against the local pinned node with the same version as Preview, and submit only a frozen minimal positive-and-rejection subset to Preview, with per-package submission reservations."
+    },
+    {
+      "id": "F-11",
+      "severity": "low",
+      "blocking": false,
+      "title": "Fresh-checkout reproduction cannot re-execute Preview or native campaigns; re-verification scope should be explicit",
+      "locators": [
+        "openspec/changes/mc08-release-evidence-and-developer-flow/specs/mc08-release-evidence-and-developer-flow/spec.md#Scenario: Complete supported language",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Completion and broader release scope",
+        "openspec/MORIARTY-COMPLETION-PROGRAM.md#Resource and terminal contract (retained evidence excludes SRS)"
+      ],
+      "observation": "Preview submissions depend on external wallet state and chain history, and native proofs depend on a locally retained SRS and a pinned backend checkout. A fresh checkout can re-verify retained proof bytes and read chain state but cannot reproduce submissions or proving within the no-retry rules.",
+      "correction": "Split the MC08 reproduction predicate into deterministic re-execution (parser, semantics, Lean, conformance) and read-only re-verification of retained receipts (proof bytes, chain finality, readback). Add an SRS acquisition and digest step to the fresh-checkout procedure."
+    }
+  ],
+  "coverage_assessment": {
+    "gap_1_preview_financial_operation_vs_local_evaluator": "Covered by MC02 with complete-effect comparison, finality, readback, and honest 'uncertified until MC05' labeling. Feasible in ordering (after MC01 lowering). Refinements F-10 apply.",
+    "gap_2_bounded_dsl_syntax_types_semantics_compiler_mapping": "Covered by MC01 (grammar, numeric profile, bounds, typing, elaboration, evaluation, canonical encoding, initial Compact lowering) with explicit finite-work and bound-evasion predicates. Compiler mapping is loan/swap only; extension to the full target set is unowned (F-02) and profile versioning is undefined (F-07).",
+    "gap_3_real_native_recursive_proof_after_reviewed_k17_decision": "Covered by MC03 revision-01 with a changed encoding hypothesis, two-auditor pre-launch approval, separate-process verification, mutants, and hard resource stops. Circuit fit at k at most 17 remains an empirical gate correctly left to execution. Unnecessary serialization behind MC01 (F-09).",
+    "gap_4_mandatory_claims_in_actual_acceptance": "Covered by MC05 with downgrade, fake-compliance, and intent-invalid controls, but its native campaign and requalification of MC04 are undefined in ownership (F-02) and signature-location (F-05), and it depends on an MC04 outcome the plan does not branch on (F-04).",
+    "gap_5_private_witness_handoff_and_split_join": "Covered by MC06 with Alice/Bob isolation, split/join relations, competing-branch and unavailable-witness cases. Missing interface probe for multi-input accumulation and weak isolation criterion (F-06).",
+    "gap_6_complete_actus_defi_including_held_outs": "Held-outs (NAM19, accepted refinance, pending redemption), 32 dispositions, DS-01..07 visibility, and full 277/72 denominators are specified. Predicate couples conformance to per-row proof/acceptance and unowned compiler mapping (F-02, F-03); DeFi oracle and DS-03 disposition undefined (F-08).",
+    "gap_7_compiler_ledger_correspondence_and_durable_authorization_replay": "Covered by MC04 with Lean correspondence over a finite domain, effect-projection mutants, crash-point and duplicate-nonce tests, and ledger-backed consumption identity. Verifier compatibility is honestly gated but lacks a fallback decision tree (F-04).",
+    "cross_cutting": "Dependency DAG is acyclic and feasible. Audit protocol, identity binding, test-first, no-self-approval, no-mock, and honest state machine are well specified. Resource contract is internally inconsistent (F-01). Completion is correctly separated from release readiness in MC08."
+  },
+  "residual_limits": [
+    "candidate_sha256 and per-file digests were not recomputed; the value above is echoed from the frozen manifest.",
+    "Referenced inputs not included in the packet (unified semantics design, intents and PCD integration reports, developer interface design, R2 episode export, prior plan-candidate-02) were not inspected; traceability claims relying on them are unverified.",
+    "Native circuit fit at k at most 17, ledger verifier compatibility, successor continuation, multi-input join support, and Preview asset-transfer behavior are unproven and are execution-time empirical gates, not plan defects.",
+    "The Codex runtime, Foreman worker, Endstop contract, and cross-vendor GPT-6 audit tooling were not evaluated; claims about durable counters across worktrees depend on those mechanisms.",
+    "Base commit b55eca82b5218b4760abd4edf6127b7c3c485514 was not checked out or diffed; this audit covers the supplied file contents only.",
+    "This is a planning audit. Approval of a corrected plan does not approve any encoding, relation, resource contract, or result; those require the separate implemented-candidate audits the charter specifies."
+  ]
+}

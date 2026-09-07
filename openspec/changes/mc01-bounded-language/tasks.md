@@ -38,6 +38,11 @@ Status: specified-only. All implementation tasks remain unchecked.
 - [ ] 4.3 Preserve the failing result and the corrected result with source hashes.
 - [ ] 4.4 Commit only owned changes in an isolated implementation worktree.
 
+## D. Required decision intake
+
+- [ ] D.1 Define foundational numeric and extension requirements before freezing the first profile.
+- [ ] D.2 Classify profile-version changes and their signature, proof, theorem, and audit invalidation rules.
+
 ## Verification commands
 
 The implementation tasks create these entry points. They are not currently passing commands.

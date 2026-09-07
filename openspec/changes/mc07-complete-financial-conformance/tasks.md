@@ -51,6 +51,19 @@ Keep all 277 ACTUS fixtures and 72 DeFi rows mandatory. Requalify affected earli
 - [ ] P.6 Retain actual proofs and verifier controls. Stop on first failure without automatic retry.
 - [ ] P.7 Recheck affected earlier package predicates and obtain updated candidate-bound audits.
 
+## X. Extend and requalify shared implementation
+
+- [ ] X.1 Freeze the exact upstream extension paths permitted by the charter.
+- [ ] X.2 Extend required language lowering, theorem domains, and acceptance code with behavioral tests first.
+- [ ] X.3 Reprove changed correspondence and claim predicates; rerun affected earlier package checks.
+- [ ] X.4 Bind every target result to the active acceptance lineage and preserved consumption/migration rules.
+- [ ] X.5 Obtain both candidate-bound audits before promoting any affected predicate.
+
+## D. Required decision intake
+
+- [ ] D.1 Separate semantic, profile-proof, local-acceptance, and Preview-acceptance coverage; retain every mandatory target row.
+- [ ] D.2 Derive and review row-specific DeFi expected traces; resolve ANN initialization using the explicit DS-03 derivation rule.
+
 ## Verification commands
 
 The implementation tasks create these entry points. They are not currently passing commands.

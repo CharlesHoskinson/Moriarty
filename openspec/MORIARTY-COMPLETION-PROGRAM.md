@@ -83,6 +83,58 @@ Reject `sorry`, `admit`, unchecked axioms, and assumed compiler or verifier corr
 Record the theorem axiom audit and the remaining trusted computing base.
 A successful Lean build alone does not establish the requested correspondence.
 
+## Cross-package ownership and acceptance lineage
+
+MC05, MC06, and MC07 own the following explicit upstream extension paths when their new predicates require changes:
+
+- `experiments/moriarty-language/spec/grammar.ebnf`.
+- `experiments/moriarty-language/spec/numeric-profile.json`.
+- `experiments/moriarty-language/spec/semantics.md`.
+- `experiments/moriarty-language/spec/bounds.json`.
+- `experiments/moriarty-language/src/ast.ts`.
+- `experiments/moriarty-language/src/parser.ts`.
+- `experiments/moriarty-language/src/typecheck.ts`.
+- `experiments/moriarty-language/src/elaborate.ts`.
+- `experiments/moriarty-language/src/evaluate.ts`.
+- `experiments/moriarty-language/src/codec.ts`.
+- `experiments/moriarty-language/src/lower-compact.ts`.
+- `experiments/moriarty-language/tests/frontend.test.mjs`.
+- `experiments/moriarty-language/tests/semantics.test.mjs`.
+- `experiments/moriarty-ledger-adapter/correspondence-spec.md`.
+- `experiments/moriarty-ledger-adapter/formal/Correspondence.lean`.
+- `experiments/moriarty-ledger-adapter/contracts/acceptance.compact`.
+- `experiments/moriarty-ledger-adapter/src/adapter.ts`.
+- `experiments/moriarty-ledger-adapter/src/consumption.ts`.
+- `experiments/moriarty-ledger-adapter/src/effect-projection.ts`.
+- `experiments/moriarty-ledger-adapter/tests/adapter.test.mjs`.
+- `experiments/moriarty-ledger-adapter/tests/recovery.test.mjs`.
+- `experiments/moriarty-acceptance/claim-policy.json`.
+- `experiments/moriarty-acceptance/src/accept.ts`.
+- `experiments/moriarty-acceptance/src/verify-intent.ts`.
+- `experiments/moriarty-acceptance/src/certificates.ts`.
+- `experiments/moriarty-acceptance/contracts/mandatory-claims.compact`.
+- `experiments/moriarty-acceptance/formal/ContractProperties.lean`.
+- `experiments/moriarty-acceptance/formal/IntentRefinement.lean`.
+- `experiments/moriarty-acceptance/tests/acceptance.test.mjs`.
+
+Freeze the exact changed subset in each worker brief; serialize writers of shared paths.
+Keep retained native campaign sources immutable; new relation sources belong to the current package's `proof/` directory.
+Requalification means extending implementation and theorem domains when semantics change, then reproving affected theorems and rerunning affected tests.
+Rerunning unchanged checks suffices only when a reviewed impact analysis proves that their supported domain and bindings are unchanged.
+Require both audits for changed source-to-Core, proof, complete-effect, consumption, and mandatory-acceptance predicates.
+Record changed predicates as pending requalification until those gates pass; historical acceptance retains its original candidate scope.
+MC07 explicitly owns compiler and acceptance extensions required by every target row; it cannot close by editing only its runner.
+
+The deployed acceptance entry point is `experiments/moriarty-ledger-adapter/contracts/acceptance.compact` throughout MC04–MC07.
+MC02 `financial.compact` is a separate uncertified integration probe and grants no mandatory-acceptance evidence.
+MC05 `mandatory-claims.compact` is a library integrated into that acceptance entry point, not an alternative bypass contract.
+Use lineage versions `adapter-profile-01`, `mandatory-claims-01`, `composition-01`, and `financial-coverage-01`.
+Each manifest binds the deployed contract address, code hash, verifier/VK, policy, semantic version, and active entry points.
+Re-run durable consumption, replay, complete-effect, and mandatory-claim predicates against every changed deployed version.
+A replacement deployment must either authenticate consumption-state migration or reject every prior-version authorization under a fresh domain.
+No upgrade may reset a live instance's lifecycle or make previously consumed predecessors spendable.
+Bind MC06/MC07 acceptance evidence to this exact lineage; independently deployed demonstration contracts cannot substitute.
+
 ## Execution algorithm
 
 Use a new Codex runtime goal bound to this charter and the machine register.
@@ -127,6 +179,45 @@ The external Endstop contract must enforce cumulative counters across restarts a
 Use one heavy build, proof, or conformance process group at a time.
 Keep memory usage within available host capacity, even below these ceilings.
 
+### Reservations and dispatch accounting
+
+The following protected reservations sum to the 480-minute master ceiling and 24 worker dispatches.
+Minutes include worker, verification, correction, pre-launch review, result review, native, and public-submission subprocess time.
+The planning-audit bank covers the current independent plan reviews and their corrections before implementation.
+Charge measured elapsed time when available; otherwise charge the review's full ten-minute bound conservatively.
+Persist those debits before the first worker dispatch; unavailable historical timing never counts as zero.
+
+| Reservation | Cumulative minutes | Worker dispatches | Preview submissions | Gross tNIGHT debit |
+|---|---:|---:|---:|---:|
+| Program planning audits | 60 | 0 | 0 | 0 |
+| MC01 | 50 | 4 | 0 | 0 |
+| MC02 | 35 | 2 | 6 | 200 |
+| MC03 | 50 | 3 | 0 | 0 |
+| MC04 | 50 | 3 | 6 | 200 |
+| MC05 | 50 | 3 | 6 | 200 |
+| MC06 | 50 | 3 | 4 | 200 |
+| MC07 | 110 | 4 | 2 | 200 |
+| MC08 | 25 | 2 | 0 | 0 |
+| Total | 480 | 24 | 24 | 1000 |
+
+Individual command and native-campaign ceilings below are maxima, not guaranteed reservations of their entire maximum runtime.
+Effective permission is the minimum of command, campaign, package, and master remaining limits.
+Reserve two ten-minute result-review slots before authorizing a package's first implementation round.
+Pre-launch review and correction costs also consume that package's reservation; they cannot borrow another package's protected funds.
+Freeze a command's smaller runtime bound only after a reviewed estimate supports it.
+Refuse dispatch when its bound and remaining mandatory gate reserves cannot fit; do not launch hoping it finishes early.
+Use one worker dispatch for a frozen bundle of adjacent tasks sharing ownership, prerequisites, and a terminal gate.
+Numbered task groups are not one-dispatch requirements; each bundled task still needs its own required tests and evidence.
+Do not combine dependent pre-launch review and native execution in one ungated bundle.
+Interrupted or corrected worker dispatches still consume the package's dispatch allowance.
+A new profile cannot reset counters or borrow another package's allocation.
+Reallocation or a larger exhausted envelope requires a reviewed decision and explicit user authorization.
+
+The initial expected planning frontier is the MC01 profile decision and early verifier/encoding feasibility evidence.
+No measured estimate yet establishes full MC01 implementation, MC04 compatibility, or MC07 completion within these reservations.
+Keep all eight packages in scope; report the actual reached frontier when a protected reservation stops progress.
+The ledger, proof, and complete-conformance requirements remain open beyond that frontier, never silently reduced.
+
 | Scope | Initial ceiling | Terminal condition |
 |---|---|---|
 | Program actionful subprocess work | 8 cumulative hours; 24 worker dispatches | Either ceiling stops new actionful dispatch |
@@ -163,13 +254,13 @@ Do not hide state in unchecked commitments or spend the original unused budget.
 ### Allocated native extension campaigns
 
 The two-transition restriction applies only to MC03 revision-01.
-This program separately allocates the following extensions; it does not treat MC03 proofs as their evidence.
+This program permits the following extension campaigns within their protected package reservations; MC03 proofs cannot establish their predicates.
 Each campaign uses owned `proof/` artifacts listed in its package design and tasks.
 Each contract links its predecessor and has separate persistent counters under the common program ceiling.
 All campaigns retain k at most 17, 8 GiB process-group memory, and two CPU jobs.
 Each allows ten cumulative preflight minutes and 256 MiB retained outputs.
 All preflight, proving, and verification time consumes the eight-hour program ceiling.
-Each campaign has one frozen positive-case manifest, one execution allocation, and no automatic failed-campaign retry.
+Each campaign has one frozen positive-case manifest, one bounded execution permission, and no automatic failed-campaign retry.
 Both auditors must approve its implemented relation, checked encoding, exact commands, SRS, and contract before launch.
 A failure stops that campaign and dependent acceptance without converting earlier proofs into extension evidence.
 
@@ -225,11 +316,57 @@ Any unresolved blocking finding prevents acceptance.
 Source changes invalidate affected reviews and checks until reviewers bind updated verdicts to the corrected candidate.
 Preserve disagreements and rejected approaches with their reasons.
 
+## Cross-package empirical decisions
+
+Complete read-only verifier-interface inspection before any MC03 native proving or MC04 actionful dispatch.
+Record source pins and formats in `evidence/moriarty-completion-program-2026-09-07/verifier-interface-intake.json`.
+Distinguish a source-compatible interface from an executed positive verifier probe.
+If the interface is absent, propose a checked Compact/ZKIR decider wrapper or pinned-version alignment for review.
+A local-node alternative cannot discharge the Preview gate; any target change requires explicit user authorization.
+Keep native feasibility and target acceptance as separate results; do not replace either with a host verification bit.
+
+Before MC05 relation freeze, specify where signed-intent verification executes and exactly what the native circuit binds.
+Compare a target-native signature check with in-circuit verification under the actual pinned verifier interface.
+A transaction fee-payer signature does not authorize a different application's financial intent by itself.
+The selected path must authenticate the signed intent, domain, principal, nonce, and mandatory claims before effects apply.
+Unmeasured signature-circuit cost remains a preflight decision, not an assumption that Ed25519 fits k17.
+
+Before MC06 proving, probe successor continuation from retained artifacts and a two-predecessor join at the pinned interface.
+Record `interface-blocked` if either operation lacks a checked realization.
+Use separate OS users or containers with separate mounts for Alice and Bob.
+Record denied attempts to read predecessor secrets; two directories under one unrestricted user do not establish access isolation.
+Inventory every public/private artifact crossing the handoff boundary and its recovery owner.
+
+MC01 must define numeric representation, unit orientation, signed-value extension, intermediate widths, and per-field rounding/comparison policy shape.
+Classify calendar/year-fraction and bounded convergence needs before freezing the first profile.
+MC07 may fill target-specific rules, but cannot silently reinterpret signed bytes or previously proved arithmetic.
+A semantic/profile change invalidates affected signatures, proofs, certificates, theorem instantiations, and audits for the new version.
+Unchanged historical artifacts remain valid only for their original pinned statement and domain.
+A new profile requires new evidence within the existing campaign allowances; exhaustion stops promotion.
+
+Record semantic conformance, native-proof coverage, local target acceptance, and Preview acceptance as separate columns and denominators.
+Semantic coverage still requires all 277 ACTUS fixtures/all present fields and all 72 source-defined DeFi rows.
+Proof coverage may use reviewed profile theorems with explicit row-to-domain instantiations and representative real native episodes.
+Every required row must map to proved supported predicates, checked certificates, compiler mapping, and local target acceptance before MC07 closes.
+A representative episode alone cannot establish a universal profile theorem or leave a required row unsupported.
+The 349-episode ceiling is not a requirement to generate one monolithic circuit or one native proof per reference fixture.
+Use pinned local-node acceptance for full mutation matrices; freeze a minimal distinct Preview subset within package submission reservations.
+Verify matching relevant ledger/proof versions and disclose every local/Preview difference; local evidence cannot close a required Preview check.
+Use distinct principals for loan/swap counterparties and wrong-recipient controls, with external private key storage and explicit fixture funding.
+
+DeFi expected traces must be independently derived from each pinned source behavior and reviewed before implementation comparison.
+Record the oracle derivation, source pointer, omissions, and full expected fields for every row.
+For DS-03, retain the incomplete primary formula and derive ANN initialization from the annuity definition, comparative code, and fixtures.
+Require independent mathematical and fixture checks; do not describe the missing primary formula as sourced or complete.
+
 ## Completion and broader release scope
 
 Close this program only after MC01–MC08 satisfy their actual predicates and both required result audits.
 Require finalized financial effects, real recursion, mandatory acceptance, composition, complete conformance, and correspondence evidence.
-Require a fresh-checkout reproduction and a developer demonstration using the accepted implementation.
+Require fresh-checkout deterministic re-execution of parser, semantics, theorem, and conformance checks.
+Separately re-verify retained native proof bytes and canonical chain receipts without rerunning consumed campaigns or public submissions.
+Pin SRS acquisition and verify its digest before retained-proof verification; never assume an untracked SRS is present.
+Require a developer demonstration using the accepted implementation and explicitly distinguish retained evidence from fresh transactions.
 Do not substitute checkboxes, model approval, mock proofs, or expended resources for those results.
 
 MC08 maps all seven requested gaps and legacy G01–G24 requirements.

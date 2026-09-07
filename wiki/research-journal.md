@@ -3,8 +3,10 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T04:44:42.833266+00:00
+updated_at: 2026-09-07T05:16:25.972290+00:00
 sources:
+  - SRC-0068
+  - SRC-0069
   - SRC-0066
   - SRC-0067
   - SRC-0063
@@ -2949,3 +2951,25 @@ Metadata: SRC-0066 local readiness observation, S3, reproduced for this attempt;
 SRC-0067 repository observations and recommendations, S2, not a runtime experiment.
 Observed 2026-09-07 UTC. High confidence for checked source bytes and returned
 readiness result; recommendations remain subject to both required reviews.
+
+
+## CLM-0208: Exact Fable availability restored; both reviewers approve the corrected plan
+
+The [Fable check and reviews](../evidence/moriarty-completion-program-2026-09-07/fable-recheck-20260907T045415Z/README.md)
+record READY and verified canonical model identity after the user reported login.
+The first substantive review found budget-allocation and ownership blockers.
+Candidate-05 adds protected reservations, exact upstream ownership, one acceptance
+lineage, and concrete signature/interface/numeric/oracle/reproduction decisions.
+Both Fable and independent GPT-6 approved the same corrected candidate after
+strict OpenSpec validation. Summed maxima were not accepted as proof of runtime
+impossibility; that disagreement and the corrected admission policy are preserved.
+
+The [planning budget and execution findings](../evidence/moriarty-completion-program-2026-09-07/arming-intake.json)
+retain conservative prior-review charges and required execution-stage decisions.
+These are S2 planning approvals, not implementation or proving authorization.
+The old unfinished A4/A5 runtime goal still prevents arming the new loop.
+
+Metadata: SRC-0068 local tool observation, S3; SRC-0069 root planning-review
+reconciliation, S2. Observed 2026-09-07 UTC; reproduced for exact identity,
+returned verdicts, candidate hashes, and plan validation. High confidence for
+those retained results; native fit, acceptance, conformance, and execution remain open.

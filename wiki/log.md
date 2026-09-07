@@ -942,3 +942,13 @@ unfinished goal and Fable credit limit. Preserved source intake, exact input
 hashes, sample arithmetic, and concrete language-profile decisions. No old goal
 was resumed, implementation accepted, native proof retried, or public transaction
 submitted. MC01 freeze and execution remain pending their recorded gates.
+
+
+## 2026-09-07 — Recover Fable and complete independent plan review
+
+Added SRC-0068–0069 and CLM-0208. Exact Fable readiness now passes. Retained
+its initial blocking review, root dispositions, and corrected approval alongside
+GPT-6's same-candidate approval. Corrected protected budgets, shared ownership,
+acceptance lineage, and execution decision gates. Recorded planning-audit debits
+and nonblocking execution findings. The automatic loop remains unarmed because
+of the superseded unfinished goal; no product/proof/ledger completion is claimed.

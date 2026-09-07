@@ -4,9 +4,14 @@ Scope: eight S2 OpenSpec plans for the seven requested gaps.
 Authority: [user assignment](../../raw/assignments/moriarty-completion-loop-2026-09-07.md).
 Entry point: [program charter](../../openspec/MORIARTY-COMPLETION-PROGRAM.md).
 
-Latest continuation: [MC01 source preparation and readiness recheck](resume-20260907T043818Z/README.md).
-The explicit resume still found the old unfinished runtime goal and Fable's credit limit.
-Independent source preparation continued; no implementation or proof gate was bypassed.
+**Current review status:** [Fable availability recovered and both plan reviews approved](fable-recheck-20260907T045415Z/README.md).
+The [candidate-05 reconciliation](plan-admission-05.json) binds both reviews to the corrected plan.
+The [arming intake](arming-intake.json) retains the old-goal blocker and execution-stage decisions.
+The new loop is not armed; these are planning approvals only.
+
+Earlier continuation: [MC01 source preparation and readiness recheck](resume-20260907T043818Z/README.md).
+That resume still found the old unfinished goal and Fable's credit limit.
+Independent source preparation continued without bypassing implementation or proof gates.
 
 ## Evidence boundaries
 
@@ -15,10 +20,10 @@ All implementation tasks remain unchecked.
 The retained Preview hello-world result and failed R3 proof retain their original scopes.
 No new native proof campaign or public transaction ran during this planning task.
 
-## Review readiness
+## Initial readiness and review history
 
 [Foreman runtime verification](audit-readiness/foreman-install.json) returned Pass.
-The [Fable canary](audit-readiness/fable-readiness.json) failed with an explicit usage-credit limit.
+The initial [Fable canary](audit-readiness/fable-readiness.json) failed with an explicit usage-credit limit.
 Its model usage was empty, so exact Fable identity was not verified.
 This is not signed-out evidence or a substantive plan/result audit.
 No alternate model was substituted and no automatic retry ran.
@@ -33,8 +38,9 @@ The [first frozen plan candidate](plan-candidate-01.json) retains the initial au
 The [correction](gpt6-plan-correction-01.md) adds explicit MC04–MC07 proof artifacts and bounded campaigns.
 [GPT-6 review 02](gpt6-plan-audit-02.md) approved [candidate 03](plan-candidate-03.json) with no remaining blocking findings.
 [Routing evidence](gpt6-routing-receipt.json) records the fresh, tool-selected independent reviewer.
-Fable's substantive planning audit remains pending; there is no combined two-reviewer approval.
-The committed plans remain specified-only and are not admitted implementation results.
+Fable's substantive planning audit was pending at candidate-03; combined approval was not claimed at that boundary.
+Candidate-05 now has both scoped planning approvals, with all original reviews and failures preserved.
+The plans remain specified-only and are not admitted implementation results.
 
 [Archive provenance](candidate-archive-provenance.json) identifies retained source archives for all three candidates.
 Candidates 01 and 02 were reconstructed from documented corrections and verified against every original frozen file hash.
@@ -52,5 +58,5 @@ The available goal tools cannot cancel or replace an unfinished goal.
 **The new loop is not armed.** No alternate scheduler or worker loop was started.
 The checkpoint and machine register are recovery records, not active schedulers.
 Clear the obsolete goal through user controls before requesting the new goal again.
-Restore Fable availability before any gate requiring its substantive verdict can pass.
+Fable availability and the substantive plan review are now resolved; future result reviews still require fresh admissible evidence.
 Existing authorization for the program remains valid; no generic plan reconfirmation is required.

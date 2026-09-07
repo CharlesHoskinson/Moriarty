@@ -51,6 +51,11 @@ Establish the retained MC03 verifier interface before extending the relation. Re
 - [ ] P.6 Retain actual proofs and verifier controls. Stop on first failure without automatic retry.
 - [ ] P.7 Recheck affected earlier package predicates and obtain updated candidate-bound audits.
 
+## D. Required decision intake
+
+- [ ] D.1 Record the required interface-intake outcome and reviewable wrapper/version-alignment alternatives before actionful dispatch.
+- [ ] D.2 Pin the canonical acceptance lineage and migration/replay policy before its first deployment.
+
 ## Verification commands
 
 The implementation tasks create these entry points. They are not currently passing commands.

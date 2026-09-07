@@ -38,6 +38,10 @@ Status: specified-only. All implementation tasks remain unchecked.
 - [ ] 4.3 Preserve the failing result and the corrected result with source hashes.
 - [ ] 4.4 Commit only owned changes in an isolated implementation worktree.
 
+## D. Required decision intake
+
+- [ ] D.1 Complete the source-only verifier-interface intake before any native proving; retain its exact version/format limits.
+
 ## Verification commands
 
 The implementation tasks create these entry points. They are not currently passing commands.

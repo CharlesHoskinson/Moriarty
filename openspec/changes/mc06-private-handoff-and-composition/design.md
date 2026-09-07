@@ -45,6 +45,15 @@ Owned outputs:
 - `experiments/moriarty-composition/proof/resource-contract.json`
 - `experiments/moriarty-composition/proof/run-reviewed.py`
 
+## Explicit upstream extension ownership
+
+This package also owns the exact upstream extension paths listed in the program charter's ownership section.
+Extend language lowering, correspondence theorems, and acceptance predicates when its supported semantic domain changes.
+Use the single versioned `moriarty-ledger-adapter/contracts/acceptance.compact` lineage.
+Integrate mandatory-claim code as a library; do not deploy it as a bypass validator.
+Requalification includes changed-domain proofs and both audits, not just rerunning older loan/swap tests.
+Freeze the exact shared-path subset before dispatch and serialize writers.
+
 ## Trust boundaries
 
 Treat source text, solvers, indexers, remote provers, generated code, and supplied receipts as untrusted inputs.

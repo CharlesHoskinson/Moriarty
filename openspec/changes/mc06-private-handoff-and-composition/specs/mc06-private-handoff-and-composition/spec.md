@@ -61,3 +61,14 @@ The package SHALL implement, review, prove, and independently verify its allocat
 #### Scenario: Fixed proof substituted for extension
 - **WHEN** the package supplies only an earlier fixed-loan proof, exceeds its campaign allocation, or lacks a required extension proof
 - **THEN** package acceptance remains blocked and no earlier proof or counter can substitute.
+
+### Requirement: Explicit extension and acceptance lineage
+The package SHALL extend owned upstream predicates and requalify them against the single versioned acceptance lineage.
+
+#### Scenario: Changed semantic domain
+- **WHEN** a new profile changes language, proof, correspondence, or acceptance behavior
+- **THEN** the package extends and reproves affected domains, reruns their checks, and obtains both updated audits.
+
+#### Scenario: Unrelated validator or stale theorem
+- **WHEN** evidence uses an independent bypass contract or an older theorem outside its supported domain
+- **THEN** acceptance fails and affected packages remain pending requalification.
