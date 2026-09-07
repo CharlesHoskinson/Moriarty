@@ -1,6 +1,7 @@
 # Closed schemas for `moriarty-bounded-atomic/1`
 
-Status: S2 corrected candidate, specified-only and not frozen or implemented.
+Status: S2 provisional corrected candidate, specified-only and not frozen or implemented.
+Fresh independent Fable and GPT-6 audits of these exact bytes remain required.
 Every record below is closed: all listed fields are required and no other field
 is permitted. Arrays are ordered as stated; JSON `null`, JSON number tokens, and
 omitted fields are never substitutes. The literal versions in this document are
@@ -41,11 +42,16 @@ ProgramRef    = {bounds:BoundsRef, coreVersion:"moriarty-core/1",
                  schemaVersion:"moriarty-program-ref/1", sourceHash:Digest}
 ```
 
-`Span` is half-open, `startByte <= endByte <= sourceUtf8Bytes`. A source node has
-one `Source` span. A generated node has a nonempty source-ordered `spans` array.
+`Span` is half-open, `startByte <= endByte <= sourceUtf8Bytes`. In
+`moriarty-core/1`, every SourceRef has `generatedTag:"Source"` and exactly one
+span. All other GeneratedTag spellings are reserved for MC02 lowering and reject
+in this Core version; there are no generated-check Core nodes in this profile.
 `UnitVector` omits zero exponents, sorts by the ASCII bytes of `unit`, contains no
 duplicate unit, has at most eight members, and uses only declared units. Its
-empty value is dimensionless.
+empty value is dimensionless for numeric UInt128. Bool and Text expressions,
+including comparisons, references, literals, and Not, also carry exactly `[]` as
+nonnumeric metadata. Their explicit `type` distinguishes them from UInt128;
+unit-vector classification applies only to numeric expressions.
 
 ## Types and values
 
@@ -125,6 +131,7 @@ is its decoded scalar sequence. `SourceExpression` is exactly one of:
 Declarations and statements are exactly:
 
 ```text
+ReserveDecl     = {action:Identifier, closure:Identifier, span:Span, tag:"ReserveDecl"}
 UnitDecl        = {name:Identifier, span:Span, tag:"UnitDecl"}
 ConstDecl       = {name:Identifier, span:Span, tag:"ConstDecl", type:SourceType, value:SourceLiteral}
 StateDecl       = {name:Identifier, span:Span, tag:"StateDecl", type:SourceType, value:SourceLiteral}
@@ -155,10 +162,53 @@ ActionDecl      = {name:Identifier, parameters:[Parameter], span:Span,
                    tag:"ActionDecl"}
 ```
 
-`SourceDeclaration` is the union of the nine declaration families above,
-including the three status variants. `EffectKind` is exactly `Transfer`, `Fee`,
+`SourceDeclaration` is the union of UnitDecl, ConstDecl, StateDecl, ObservationDecl,
+SettlementDecl, FieldPolicyDecl, the three status variants, EffectDecl, ActionDecl,
+and ReserveDecl. `EffectKind` is exactly `Transfer`, `Fee`,
 `DueCreated`, or `DueSettled`. Field labels are the grammar's permitted labels.
 Declarations and statements preserve source order.
+
+## Exact source spans and structural lowering
+
+Offsets count original UTF-8 bytes, with no newline or Unicode normalization.
+Every nonempty syntax span begins at the first byte of its first token and ends
+immediately after its last token. Interior whitespace is included; leading and
+trailing whitespace is excluded. The SourceAST span runs from `agreement` through
+the final `}`; sourceUtf8Bytes also counts whitespace outside that span.
+
+- Declarations and statements include their terminating `;` or closing `}`.
+  An action includes its keyword, parameters and complete block. A policy or
+  effect declaration ends at its `}`. ReserveDecl covers `reserve` through `;`.
+- SourceType spans its type keyword through the last type token, including `>`
+  for Amount<Unit>. Parameter spans its name through its type. EffectFieldDecl
+  spans its label through `;`. EffectFieldExpr spans its label through the final
+  token of its expression, excluding a following comma or closing effect brace.
+- SpannedUIntToken covers only its decimal token. UIntLiteral, AmountLiteral and
+  TextLiteral produced by `uint(...)`, `amount(...)` and `text(...)` cover the
+  entire wrapper through `)`. Their `token` fields retain only the inner decimal
+  token or exact quoted JSON token. BoolLiteral covers `true` or `false`.
+  A TextLiteral used for a bare JSON token (policy documentary fields or guard
+  message) covers only that quoted token; no `text(...)` wrapper is invented.
+- A Literal SourceExpression initially has the same span as its child literal.
+  References cover every token (`state` through the identifier for StateRef);
+  Remaining covers its token. Not spans `not` through its operand. Binary nodes
+  span from the left child's start through the right child's end. FloorDiv spans
+  `floor_div` through its closing `)`.
+- Parentheses introduce no SourceExpression or Core node. Parsing `(expression)`
+  replaces only the enclosed expression root's span with the interval from that
+  `(` through its matching `)`. Repeat this rule outward for nested parentheses.
+  Descendant spans are unchanged, including the literal child of a Literal node.
+  Thus `((uint(1)))` has expression span `[0,11)` and UIntLiteral span `[2,9)`.
+- Policy targets include their complete write/effect wrapper; rounding Floor
+  includes `floor(...)` and rounding None includes only `none`.
+
+Core lowering preserves tree structure and maps each expression sourceRef to
+`{generatedTag:"Source",sourceHash:SourceAST.sourceHash,spans:[expression.span]}`.
+Core instructions and actions similarly use their exact source statement/action
+span. No extra span normalization, parenthesis node, or generated Core node is
+permitted. Literal lowering changes syntax to the corresponding tagged value,
+without retaining the separate literal-child span in Core. TypedAnnotation uses
+the same expression SourceRef. These rules apply before hashing the manifest.
 
 ## Typed program: `moriarty-typed-program/1`
 
@@ -175,9 +225,27 @@ Resolution = {tag:"Literal"|"Remaining"} |
 
 There is exactly one annotation for every expression node, in declaration,
 statement, then expression preorder. `nodeId` is `a_<action-index>_s_<statement-index>_e_<preorder-index>`.
-Indexes are canonical decimal without padding. Resolution must name the unique
-resolved declaration. Thus type, span, source version, and resolution cannot be
-detached from the source expression.
+All indexes are zero-based canonical decimal without padding. Action indexes
+count only ActionDecl nodes in source order. Statement indexes count every
+statement in the action, and expression preorder restarts at zero per statement.
+Visit each expression root before its children; binary children are left then
+right, FloorDiv children numerator then denominator, and Not has one operand.
+For Emit, concatenate the preorder walks of each field expression in source field
+order into one sequence; do not number field wrappers or literal children.
+Parentheses add no node or index. Resolution must name the unique declaration.
+
+Worked example from loan.moriarty: `accrue` is action 0 and its
+`let interest_calculated = floor_div(interest_numerator, interest_denominator);`
+is statement 5. The instruction ID is `a_0_s_5`. Its exact expression IDs are:
+
+| Expression | nodeId |
+|---|---|
+| FloorDiv root | `a_0_s_5_e_0` |
+| LocalRef interest_numerator | `a_0_s_5_e_1` |
+| LocalRef interest_denominator | `a_0_s_5_e_2` |
+
+The policy rounding node for that let is `a_0_s_5_e_0`. Statement 6 restarts
+at `a_0_s_6_e_0`; JSON key sorting never changes this traversal order.
 
 ## Core, policies, schemas, and semantic manifest
 
@@ -264,6 +332,7 @@ EpisodeRule = {field:Identifier, literal:StoredValue, tag:"ClosedWhenEqual"}
 AgreementRule = {field:Identifier, tag:"RemainingNotional"} |
                 {tag:"NoRemainingNotional"}
 StatusRules = {agreement:AgreementRule, episode:EpisodeRule}
+ReserveRule = {action:Identifier, closure:Identifier}
 ClaimRequirement = {claimId:TextValue,
                     kind:"ContractProperty"|"IntentRefinement"|
                          "TransitionValidity"|"PredecessorHistory"}
@@ -312,14 +381,16 @@ SemanticManifest = {
   stateSchema:[NamedType],
   statusRules:StatusRules,
   requiredClaims:[ClaimRequirement],
+  reserveRules:[ReserveRule],
   units:[Identifier]
 }
 BoundProgram = {manifest:SemanticManifest, programHash:Digest,
                 schemaVersion:"moriarty-program/1"}
 ```
 
-Arrays follow source declaration order except policy targets, which follow their
-source list, and `units`, which follows unit declarations. There is exactly one
+Arrays follow their source declaration order, including reserveRules and units.
+Policy targets follow their source list; requiredClaims alone uses its specified
+(kind,claimId) sort. Reserve metadata resolves over the complete action table. There is exactly one
 bounds encoding: `BoundsRef`; the numeric `bounds.json` object is never embedded.
 The full `BoundProgram`, including Core expressions, is checked against the
 program-manifest limits in `bounds.json`. The effective joint bound is the actual
@@ -329,6 +400,8 @@ signing statement and never contains `manifest`, `core`, or AST nodes.
 
 ## Hash preimages
 
+The single complete domain registry is `bounds.json.domainRegistry`; the formulas
+below apply those registry entries and do not introduce additional domains.
 Concatenation below is byte concatenation and `00` is one zero byte:
 
 ```text
@@ -344,6 +417,7 @@ statementDigest = SHA256(UTF8(authority.domain) || 00 || canonical(authority.sta
 authorityDigest = SHA256(UTF8("MORIARTY-AUTHORITY-bounded-atomic/1") || 00 || canonical(Authority))
 proofContextHash = SHA256(UTF8("MORIARTY-PROOF-CONTEXT-bounded-atomic/1") || 00 || canonical(ProofContext))
 traceHash   = SHA256(UTF8("MORIARTY-TRACE-bounded-atomic/1") || 00 || canonical(CompleteBody))
+proofDigest = SHA256(resolved raw proof bytes)
 ```
 
 None of the preimages contains the digest it defines. `BoundProgram`, genesis,
@@ -384,6 +458,13 @@ ObservationSet = {observations:[ObservationValue], schemaVersion:"moriarty-obser
 ActionCall = {arguments:[NamedStoredValue], name:Identifier,
               schemaVersion:"moriarty-action/1"}
 ```
+
+ObservationValue.evidenceDigest is an opaque external digest. The profile defines
+no preimage or algorithm for it; the genesis authenticationPolicy and trusted
+wrapper must validate it against the exact provider/name/value. Signature.algorithm
+is likewise an opaque external algorithm identifier, restricted by the deployment's
+trusted wrapper; an unsupported algorithm fails signature verification. Neither
+field permits an unvalidated client assertion.
 
 Principal bindings are unique by both principal and actor. Observation bindings
 are unique by name and cover the manifest schema exactly; `now:UInt128` is
@@ -437,20 +518,20 @@ compact `ProgramRef`, principal, nonce, interval, predecessors, and claim requir
 are therefore signed. ExactPlan compares canonical `exactWrites` against the projection of produced
 writes to `{field,value}`, in statement order, and compares each `exactEffects[i].effect` with the complete enriched
 `effects[i]` in emit order, with identical array lengths. IntentRefinement requires the selected action be allowed,
-all Transfer/Fee recipients and any calls be permitted, gross principal debits
-including fees not exceed caps without netting refunds, and credits minus debits
-including fees meet each net goal. This language has no call instruction, so
+all Transfer/Fee recipients and any calls be permitted, every outgoing principal Transfer/Fee have a matching cap and gross principal
+debits not exceed it without netting refunds. Caps and goals may name only the
+principal-bound actor. Due effects do not enter ledger debit/credit sums.
+Each net goal requires checked credits >= checked(debits + minimumLedgerAmount),
+with overflow rejecting, in ledger units after exact quantum conversion. This language has no call instruction, so
 `permittedCalls` must be empty. Array members use manifest/effect order; caps and
 goals sort by `(actor UTF-8, asset UTF-8)` and have no duplicate pair.
 
 ```text
 ExternalChecks = {authenticatedPrincipal:TextValue, genesisValid:boolean,
-                  historyProofValid:boolean, nonceFresh:boolean,
-                  observationsAuthentic:boolean, predecessorSetValid:boolean,
-                  requiredClaimsValid:boolean, signatureValid:boolean,
+                  nonceFresh:boolean, observationsAuthentic:boolean,
+                  predecessorSetValid:boolean, signatureValid:boolean,
                   stateCurrentAndUnconsumed:boolean}
 EvaluationInput = {action:ActionCall, authority:Authority, checks:ExternalChecks,
-                   claimEvidence:[ClaimEvidenceRef],
                    genesis:Genesis, observations:ObservationSet,
                    program:ProgramRef, schemaVersion:"moriarty-evaluation/1",
                    state:StateEnvelope}
@@ -458,12 +539,14 @@ EvaluationInput = {action:ActionCall, authority:Authority, checks:ExternalChecks
 
 `authenticatedPrincipal` must equal the signed principal; exactly one genesis
 binding for it must exist; its actor must equal the action's mandatory `actor`
-argument. Every boolean check must be true. These are trusted acceptance inputs,
-not self-authenticating claims by an untrusted request. A backend must return
-these trusted checks only for the exact reconstructed ProofContext below. They
-cannot be copied from a client request or reused for another context. Real cryptographic/oracle/
-PCD/ledger implementations and durable nonce/state consumption remain mandatory
-external work and fail closed when unavailable.
+argument. Every boolean precheck must be true. The trusted wrapper constructs
+these checks for the exact program, genesis, state, action, signed Authority and
+ObservationSet supplied in this EvaluationInput. It authenticates these concrete
+objects before derivation; there is no dependency on a future trace or proof.
+The checks cannot be copied from an unauthenticated client or reused with changed
+objects. EvaluationInput carries neither claim evidence nor proof verdicts.
+Missing cryptographic/oracle/current-state precheck implementations fail closed.
+Post-trace proof verification and final durable consumption are separate below.
 
 ## Settlement and result records
 
@@ -500,12 +583,13 @@ the selected action. A settlement resolution is required for Transfer, Fee, and
 DueSettled and repeats the exact checked binding; it is not an optional side map.
 
 ```text
-Diagnostic = {code:Identifier, message:TextValue, primarySpan:Span,
+DiagnosticCode = one exact code from semantics.md "Closed diagnostics"
+Diagnostic = {code:DiagnosticCode, message:TextValue, primarySpan:Span,
               relatedSpans:[Span], stage:UInt128Text}
 Rejected = {diagnostics:[Diagnostic], outcome:"Rejected",
             profile:"moriarty-bounded-atomic/1", programHash:Digest,
             schemaVersion:"moriarty-result/1"}
-CompleteBody = {after:StateEnvelope, authorityConsumption:AuthorityConsumption,
+CompleteBody = {actionHash:Digest, after:StateEnvelope, authorityConsumption:AuthorityConsumption,
                 beforeStateHash:Digest, effects:[EffectRecord],
                 obligationDelta:ObligationDelta, observationsHash:Digest,
                 outcome:"Complete", predecessors:[Digest],
@@ -526,42 +610,99 @@ reject a transition even if its individual count limits fit.
 
 ## Binding and acyclic proof acceptance
 
-The signed domain, genesisHash, instanceId and beforeStateHash must equal the
-actual input genesis/domain/state bindings. This single-input atomic profile
-requires predecessors exactly `[beforeStateHash]`, including the checked genesis
-state at revision zero. No second predecessor or reordered alternative is legal.
-The genesis claim root equals `claimRoot` of the manifest. Both signed
-requiredClaims and requiredClaimRoot equal those same requirements and root.
-The list of external evidence covers those requirements exactly once, in their
-canonical order. Missing, duplicate, extra, or mismatched evidence rejects.
+The stage-9 binding equalities in semantics.md are mandatory before execution.
+This single-input atomic profile requires predecessors exactly `[beforeStateHash]`,
+including the checked genesis state at revision zero. Both signed requiredClaims
+and requiredClaimRoot equal the manifest requirements and recomputed claimRoot.
+The unsigned candidate CompleteBody.actionHash is recomputed from the exact
+EvaluationInput.action for both authority modes; it is never supplied by the
+caller as a substitute. This binds even argument changes that leave all effects
+and resource counts unchanged.
 
 ```text
-ProofContext = {authorityDigest:Digest, beforeStateHash:Digest,
+ProofContext = {actionHash:Digest, authorityDigest:Digest, beforeStateHash:Digest,
                 domain:ExecutionDomain, genesisHash:Digest,
                 predecessors:[Digest], program:ProgramRef,
                 requiredClaimRoot:Digest, schemaVersion:"moriarty-proof-context/1",
                 traceHash:Digest}
+ResolvedProofRef = {byteLength:UInt128Text, claimId:TextValue,
+                    kind:"ContractProperty"|"IntentRefinement"|
+                         "TransitionValidity"|"PredecessorHistory",
+                    reference:TextValue}
+ProofAcceptanceInput = {claimEvidence:[ClaimEvidenceRef], proofContext:ProofContext,
+                        proofs:[ResolvedProofRef],
+                        schemaVersion:"moriarty-proof-acceptance-input/1"}
+ProofAcceptanceVerdict = {historyProofValid:boolean, proofContextHash:Digest,
+                          requiredClaimsValid:boolean,
+                          schemaVersion:"moriarty-proof-acceptance-verdict/1"}
 ```
 
-Every ClaimEvidenceRef.publicInputDigest equals proofContextHash. Its proofDigest
-is SHA256 of the actual supplied proof bytes; the verifier checks the required
-claim kind/ID against those bytes and the complete ProofContext. No boolean from
-an unauthenticated caller can stand in for this backend verification.
+Each ProofContext field equals its locally derived value: actionHash equals both
+recomputed input actionHash and CompleteBody.actionHash; authorityDigest hashes
+the complete signed Authority; program equals the recomputed ProgramRef; traceHash
+hashes the candidate CompleteBody; all remaining fields equal the input genesis,
+authority, manifest and before-state bindings. ProofAcceptanceInput.proofContext
+must equal that entire locally reconstructed context in canonical bytes.
 
-The signature commits to claim requirements, never to proof bytes or proofDigest.
-Construct the unsigned candidate effects, sign the statement, derive CompleteBody
-and traceHash without committing, construct ProofContext, then produce and verify
-proof evidence. Only successful verification permits atomic acceptance. Neither
-Authority nor CompleteBody contains ClaimEvidenceRef or proofDigest, so this
-sequence has no signature/proof/trace hash cycle. Proof construction and backend
-verification remain required implementation work, not a capability of this schema.
+External resolver contract: a trusted, profile-bound backend receives
+ProofAcceptanceInput and a resolver operation `resolve(reference) -> raw bytes | unavailable`.
+References are opaque, nonempty TextValue handles within that invocation, never
+URLs to fetch implicitly. No proof bytes enter EvaluationInput or signed objects.
+`proofs` and `claimEvidence` each contain exactly one entry per manifest requirement,
+in requiredClaims order, matching each (kind,claimId), with no omissions or extras.
+Each resolved length must equal byteLength. The limits in
+bounds.json.externalProofResolution bound count, individual raw bytes and total
+raw bytes before verification. The backend resolves each handle once and retains
+those immutable bytes for hashing and verification, rejecting unavailable,
+changed, oversized or length-mismatched data with PROOF_RESOLUTION.
 
-`requiredClaimsValid` and `historyProofValid` are backend attestations for that
-ProofContext, evaluated after deterministic execution produces the candidate
-trace and before commit. Signature/genesis/observation checks can occur earlier.
-Simulation may derive a candidate without proof evidence, but cannot return an
-accepted Complete or consume authority. Its diagnostic/display output must be
-explicitly labeled simulation and is outside Result.
+Each ClaimEvidenceRef.publicInputDigest equals the recomputed proofContextHash;
+proofDigest is SHA256 of the corresponding resolved raw bytes. The backend verifies
+those bytes against the exact required claim kind/ID and complete ProofContext.
+Unknown policy claims fail closed. The trusted verdict is accepted only from that
+backend invocation, with its proofContextHash equal to the locally recomputed
+hash and both booleans true. requiredClaimsValid covers all requirements including
+history, and historyProofValid separately affirms every PredecessorHistory claim.
+Caller booleans, a matching digest alone, and unavailable backend implementations
+cannot stand in for proof verification.
+
+The numbered protocol is normative:
+
+1. Compile and bind BoundProgram/genesis, choose the exact ActionCall and before
+   state, and obtain authenticated observations. An unsigned simulation may
+   calculate proposed writes/effects to construct an ExactPlanStatement; an
+   OutcomeStatement instead declares allowed outcomes. This simulation consumes
+   nothing and produces no accepted Result.
+2. Sign the statement bytes using its registered domain, obtaining Authority.
+   The wrapper authenticates that Authority and the exact input tuple and builds
+   EvaluationInput containing only the prechecks above.
+3. `derive(boundProgram:BoundProgram, input:EvaluationInput)` validates stages
+   9–12 and computes the provisional CompleteBody, stateHash, actionHash,
+   traceHash and ProofContext at stage 13. It returns Rejected or an internal
+   pair `(candidate:Complete, context:ProofContext)`. This pair is not an accepted
+   Result and is not a separate public wire envelope.
+4. The prover receives the exact ProofContext, requiredClaims and relation
+   witnesses, constructs each mandatory proof, and supplies the bounded resolver
+   handles and ClaimEvidenceRef values in ProofAcceptanceInput. Signature and
+   trace preimages contain no proof bytes, proofDigest, or ClaimEvidenceRef.
+5. `verifyProofs(input:ProofAcceptanceInput, resolver)` performs the resolution,
+   digest, claim and context checks above and returns the trusted closed
+   ProofAcceptanceVerdict, or a rejection diagnostic at stage 13.
+6. `commit(boundProgram, input, candidate, proofAcceptanceInput, verdict)` checks
+   equality to the locally derived candidate/context, a successful trusted
+   verdict, and the current durable state/nonce again. Only then may the wrapper
+   atomically consume state and nonce and expose Complete. A changed consumed
+   state or stale nonce rejects; no candidate state or effect is committed.
+
+The implementing acceptance API is
+`evaluate(boundProgram:BoundProgram, input:EvaluationInput, proofAcceptanceBackend)
+ -> Rejected | Complete`, where the mandatory backend callback receives the
+locally derived ProofContext and requiredClaims, obtains ProofAcceptanceInput
+through step 4, and performs step 5. It cannot bypass step 6. This callback
+interface makes the two phases explicit without requiring evidence before trace
+derivation. MC05 must implement the backend; this source profile supplies no
+proof construction or actual verifier. Simulation output is explicitly labeled
+simulation and outside accepted Result. The entire sequence remains acyclic.
 
 ## Counts, ordering, and malformed inputs
 
@@ -576,7 +717,9 @@ Other counts record actually evaluated expression nodes, instructions and effect
 maximumExpressionDepth uses root one; unitComponents is the largest evaluated
 unit vector. Static ActionResourceCounts include all syntax, even short-circuited
 branches. A TypedProgram uses typedProgramEncoding jointly with its embedded AST
-bounds. Its annotations array contains exactly one annotation per source expression.
+bounds. SourceAST.declarations has an effective maximum of 128 total entries,
+even when all per-category maxima fit. TypedProgram.annotations contains exactly
+one annotation per source expression.
 
 Named values, arguments, writes and emitted fields follow their declaration or
 statement order as applicable. Obligations retain creation order including settled

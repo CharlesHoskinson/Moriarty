@@ -23,7 +23,10 @@ declaration = unit_decl
             | field_policy
             | status_decl
             | effect_decl
-            | action_decl ;
+            | action_decl
+            | reserve_decl ;
+
+reserve_decl = "reserve", identifier, "for", identifier, ";" ;
 
 unit_decl = "unit", identifier, ";" ;
 
@@ -131,6 +134,7 @@ keyword = "agreement" | "profile" | "lifetime" | "horizon" | "unit" | "const"
         | "state" | "observation" | "settlement" | "asset" | "quantum"
         | "policy" | "targets" | "write" | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
         | "status" | "episode" | "closed_when" | "remaining_notional" | "no_remaining_notional"
+        | "reserve" | "for"
         | "effect" | "action" | "guard" | "let" | "set" | "emit"
         | "UInt128" | "Text" | "Amount"
         | "Transfer" | "Fee" | "DueCreated" | "DueSettled"
@@ -143,7 +147,7 @@ reserved_identifier = "constructor" | "prototype" | "__proto__" ;
 (* 1. At least one action_decl. Duplicate names reject inside each namespace. *)
 (* 2. Units, consts, state, observations, effects, and field policies must be *)
 (*    declared before value use. Locals cannot reference later locals. *)
-(*    Policy metadata resolves actions and rounding locals after all actions parse. *)
+(*    Policy metadata and reserve action/closure names resolve after all actions parse. *)
 (* 3. Bare identifier in an expression names a prior local only. *)
 (* 4. lifetime is a positive UInt128 genesis allowance. It never resets. *)
 (* 5. horizon is a UInt128 UTC epoch-second exclusive upper bound at genesis. *)

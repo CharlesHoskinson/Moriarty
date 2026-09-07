@@ -5,7 +5,8 @@ Author: root architect. Date: 2026-09-07 UTC.
 Profile identifier: `moriarty-bounded-atomic/1` (proposed).
 
 This proposal resolves first-profile design choices for MC01 1.1 and D.1/D.2.
-It does not close those tasks. The complete target crosswalk and both result audits remain required.
+It does not close those tasks. The retained complete target crosswalk remains mandatory; fresh Fable and GPT-6
+audits of the corrected exact bytes remain required before source-profile freeze.
 The controlling acceptance remains the MC01 OpenSpec package at commit `2aa863565fa1faae759f5bef47d2a786534fd627`.
 
 ## Developer surface
@@ -55,7 +56,7 @@ Unsupported operations produce source-located diagnostics before elaboration.
 Separate `UInt128`, `Bool`, `Text`, nominal `Amount<Unit>`, and intermediate
 `Quantity<UnitVector>` in the typed authoring AST and Core. Bool and Quantity are
 limited to expressions and lets; neither is persistent state, an input, a set
-result, or an effect operand. Every wire Amount is the closed
+result, or an effect operand. Every evaluated wire Amount is the closed
 `{tag:"Amount",unit,value}` record. Core retains its checked unit vector and source
 reference; it does not erase Amount to an untyped integer.
 
@@ -131,6 +132,7 @@ hold simultaneously:
 | Total expression nodes per entrypoint | 256 |
 | Effects per entrypoint | 16 |
 
+The SourceAST declaration array has an effective total cap of 128, including reserves.
 These are simultaneous limits. A value satisfying one bound may still fail another.
 The full program-hash preimage contains Core instructions and uses the manifest depth-40
 limit. The depth-16 signing object contains only a compact program reference plus input
@@ -150,12 +152,25 @@ Later composition must define conservation of residual budgets before it becomes
 The proposed interface remains:
 
 ```text
-parse(source) -> Result<AgreementAST, Diagnostic[]>
-check(ast, profile) -> Result<TypedAgreement, Diagnostic[]>
-elaborate(typed) -> CoreProgram
-evaluate(program, state, action, authority, observations)
+parse(source) -> SourceAST | Diagnostic[]
+check(ast:SourceAST, profile) -> TypedProgram | Diagnostic[]
+elaborate(typed:TypedProgram) -> BoundProgram | Diagnostic[]
+derive(boundProgram:BoundProgram, input:EvaluationInput)
+  -> Rejected | (candidate:Complete, context:ProofContext)
+verifyProofs(input:ProofAcceptanceInput, resolver)
+  -> ProofAcceptanceVerdict | Diagnostic[]
+evaluate(boundProgram:BoundProgram, input:EvaluationInput, proofAcceptanceBackend)
   -> Rejected | Complete
 ```
+
+EvaluationInput includes genesis, exact action/state/authority/observations,
+ProgramRef and trusted prechecks only. The candidate/context pair is an internal
+uncommitted derivation, outside accepted Result. The mandatory backend callback
+receives that exact ProofContext and requiredClaims, obtains bounded external proof
+references in ProofAcceptanceInput, and returns the context-bound trusted verdict.
+The numbered sign/derive/prove/verify/commit protocol in typed-schemas.md controls
+acceptance; neither evidence nor post-trace verdicts are required before derivation.
+Both CompleteBody and ProofContext bind the recomputed hash of input.action.
 
 `Rejected` returns diagnostics and exposes no committed partial state or effects.
 `Complete` means the selected atomic plan completed under its declared outcome policy.
@@ -195,7 +210,11 @@ The floor-rounded sample is not exact conformance to the upstream finite-decimal
 The swap example uses reserves 1,000,000 and 2,000,000, input 10,000, and price multiplier 997/1000.
 Expected output is 19,743. New reserves are 1,010,000 and 1,980,257.
 Pricing retains the fee in the input reserve. It does not emit an extra fee transfer.
-The provider's closure action returns both remaining reserves and cannot be starved by the last permitted swap.
+The explicit `reserve swap for close;` declaration requires the exact
+`remaining > uint(1)` guard on swap. It preserves one allowance for close, but
+proofs, guards, resources and result size can still prevent closure. A bounded
+state can have no representable Complete wrapper; this accepted profile limitation
+rejects RESULT_BOUNDS without consumption and carries no blanket liveness claim.
 
 Implementation must compare every field against the independent retained reference calculations.
 Required negative examples include wrong units, denominator zero, overflowing numerator, and numeric-looking text.
@@ -215,7 +234,7 @@ Include a positive boundary example beside every capacity or authority rejection
 | DS-07 | Separate episode and full-contract scope | FUTUR margin behavior and taxonomy discrepancy |
 
 The two examples do not establish coverage of the complete target corpus.
-A complete 32-row ACTUS requirements and 72-row DeFi crosswalk remains required before profile freeze.
+The retained complete 32-row ACTUS requirements and 72-row DeFi crosswalk is unchanged and remains required before profile freeze.
 Every row must state supported behavior, rejected behavior, required extension, source locator, and evidence status.
 All 277 ACTUS fixtures and 72 DeFi rows remain required for MC07 acceptance.
 
@@ -235,9 +254,11 @@ Recompute program identifiers, signature domains, proofs, certificates, theorem 
 Historical artifacts remain scoped to their original bytes and semantics.
 Do not reuse them as evidence for a changed relation.
 
-Next: review the proposed EBNF, finish typed schemas and the full target crosswalk, and independently review this decision packet.
-Then add failing frontend and full-field trace tests before implementing the parser and elaborator.
-Worker dispatch remains stopped until the execution contract can enforce the approved budget predicates.
+Next: independently audit these exact provisional source-profile bytes with
+fresh Fable and GPT-6 reviews, while retaining the complete 32/72 crosswalk.
+Frontend implementation and full-field trace tests have separate evidence gates.
+The controlling delegated-execution assignment authorizes bounded successor work;
+no historical worker stop in this proposal overrides that assignment.
 
 ## Source basis
 

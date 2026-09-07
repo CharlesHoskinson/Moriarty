@@ -21,7 +21,6 @@
   },
   "programManifestEncoding": {
     "codec": "moriarty-canonical-json/1",
-    "domain": "MORIARTY-PROGRAM-bounded-atomic/1",
     "utf8Bytes": 524288,
     "decodedDepthRootZero": 40,
     "decodedNodes": 32768,
@@ -29,14 +28,12 @@
     "arrayLength": 128,
     "textUtf8Bytes": 4096,
     "textJavascriptCodeUnits": 4096,
-    "contains": "complete typed Core program, declarations, policies, status rules, and bounds reference",
-    "boundsRepresentation": "closed {registryId,boundsHash} reference only"
+    "contains": "complete typed Core program, declarations, policies, reserveRules, status rules, and bounds reference",
+    "boundsRepresentation": "closed {registryId,boundsHash} reference only",
+    "domainRegistry": "bounds.json domainRegistry.programHash"
   },
   "signingEnvelope": {
     "codec": "moriarty-canonical-json/1",
-    "schemaDomainNew": "MORIARTY-SIGN-bounded-atomic/1",
-    "schemaDomainHistoricalExactPlan": "MORIARTY-SIGN-v1",
-    "schemaDomainHistoricalOutcome": "MORIARTY-OUTCOME-SIGN-v1",
     "utf8Bytes": 65536,
     "decodedDepthRootZero": 16,
     "decodedNodes": 8192,
@@ -44,7 +41,8 @@
     "arrayLength": 128,
     "textUtf8Bytes": 4096,
     "textJavascriptCodeUnits": 4096,
-    "contains": "one ExactPlanStatement or OutcomeStatement with compact ProgramRef; never source AST, typed AST, Core instructions, full manifest, genesis, state, observations, or signature"
+    "contains": "one ExactPlanStatement or OutcomeStatement with compact ProgramRef; never source AST, typed AST, Core instructions, full manifest, genesis, state, observations, or signature",
+    "domainRegistry": "bounds.json domainRegistry (exactPlanStatement and outcomeStatement; historical entries never accepted here)"
   },
   "evaluationEncoding": {
     "codec": "moriarty-canonical-json/1",
@@ -70,7 +68,8 @@
     "keysPerRecord": 64,
     "arrayLength": 128,
     "textUtf8Bytes": 4096,
-    "textJavascriptCodeUnits": 4096
+    "textJavascriptCodeUnits": 4096,
+    "livenessLimitation": "Accepted limitation: a valid input state can have no representable Complete wrapper, including closure; reject RESULT_BOUNDS without consuming state or authority. The reserve rule is no blanket liveness guarantee."
   },
   "programShape": {
     "declaredUnits": 64,
@@ -92,7 +91,9 @@
     "obligationRecordsIncludingSettled": 128,
     "expressionUnitComponents": 8,
     "absoluteUnitExponent": 16,
-    "predecessorFanIn": 1
+    "predecessorFanIn": 1,
+    "sourceDeclarations": 128,
+    "reserveRules": 64
   },
   "jointValidation": [
     "source bytes and lexical bounds",
@@ -102,7 +103,9 @@
     "full manifest bytes/depth/nodes/records/arrays/text",
     "compact signing bytes/depth/nodes/records/arrays/text",
     "genesis/state/observation/evaluation bytes/depth/nodes/records/arrays/text",
-    "result bytes/depth/nodes/records/arrays/text"
+    "result bytes/depth/nodes/records/arrays/text",
+    "post-trace proof acceptance objects use proofAcceptanceEncoding",
+    "external resolved proof count, per-proof bytes, and aggregate bytes"
   ],
   "representabilityRule": "Reject any failed applicable bound. Expanded internal metadata has its own finite limits. Public signing, evaluation and result encodings remain 65536 bytes and depth 16. All actual aggregate sizes are checked.",
   "lifecycle": {
@@ -110,7 +113,7 @@
     "consumption": "one-per-successful-action",
     "horizon": "UInt128-UTC-epoch-second-exclusive-upper-bound-frozen-at-genesis",
     "timeSource": "explicit-authenticated-observation-now-no-host-clock-read",
-    "closureReserve": "source guard remaining > uint(1) is required only when a distinct closure action exists",
+    "closureReserve": "Only an explicit reserve ACTION for CLOSURE declaration imposes the stage-6 RESERVE_RULE predicate: distinct existing actions, unique reserved ACTION, CLOSURE not itself reserved, and a top-level Guard with exact Gt(Remaining, Literal(UIntLiteral token 1)) AST in ACTION. No implicit roles or exceptions.",
     "revision": "increment-one-on-Complete-with-overflow-rejection",
     "resets": "forbidden",
     "pending": "UNSUPPORTED_PENDING",
@@ -122,7 +125,8 @@
     "financial-correctness",
     "ledger-acceptance",
     "ACTUS-conformance",
-    "DeFi-conformance"
+    "DeFi-conformance",
+    "transition-or-closure-liveness"
   ],
   "typedProgramEncoding": {
     "codec": "moriarty-canonical-json/1",
@@ -134,5 +138,94 @@
     "textUtf8Bytes": 4096,
     "textJavascriptCodeUnits": 4096,
     "contains": "SourceAST plus one typed annotation per expression; embedded AST retains its own bounds"
+  },
+  "domainRegistry": {
+    "sourceHash": {
+      "domain": "",
+      "preimage": "original source UTF-8 bytes; no separator"
+    },
+    "boundsHash": {
+      "domain": "MORIARTY-BOUNDS-bounded-atomic/1",
+      "preimage": "exact bounds.json bytes"
+    },
+    "programHash": {
+      "domain": "MORIARTY-PROGRAM-bounded-atomic/1",
+      "preimage": "canonical(SemanticManifest)"
+    },
+    "claimRoot": {
+      "domain": "MORIARTY-CLAIMS-bounded-atomic/1",
+      "preimage": "canonical(SemanticManifest.requiredClaims)"
+    },
+    "genesisHash": {
+      "domain": "MORIARTY-GENESIS-bounded-atomic/1",
+      "preimage": "canonical(GenesisBody)"
+    },
+    "stateHash": {
+      "domain": "MORIARTY-STATE-bounded-atomic/1",
+      "preimage": "canonical(StateBody)"
+    },
+    "actionHash": {
+      "domain": "MORIARTY-ACTION-bounded-atomic/1",
+      "preimage": "canonical(ActionCall)"
+    },
+    "observationsHash": {
+      "domain": "MORIARTY-OBSERVATIONS-bounded-atomic/1",
+      "preimage": "canonical(ObservationSet)"
+    },
+    "exactPlanStatement": {
+      "domain": "MORIARTY-SIGN-bounded-atomic/1",
+      "preimage": "canonical(ExactPlanStatement)"
+    },
+    "outcomeStatement": {
+      "domain": "MORIARTY-OUTCOME-bounded-atomic/1",
+      "preimage": "canonical(OutcomeStatement)"
+    },
+    "authorityDigest": {
+      "domain": "MORIARTY-AUTHORITY-bounded-atomic/1",
+      "preimage": "canonical(Authority)"
+    },
+    "proofContextHash": {
+      "domain": "MORIARTY-PROOF-CONTEXT-bounded-atomic/1",
+      "preimage": "canonical(ProofContext)"
+    },
+    "traceHash": {
+      "domain": "MORIARTY-TRACE-bounded-atomic/1",
+      "preimage": "canonical(CompleteBody)"
+    },
+    "proofDigest": {
+      "domain": "",
+      "preimage": "resolved raw proof bytes; no separator"
+    },
+    "historicalExactPlan": {
+      "domain": "MORIARTY-SIGN-v1",
+      "preimage": "historical only; unchanged and not accepted by this profile"
+    },
+    "historicalOutcome": {
+      "domain": "MORIARTY-OUTCOME-SIGN-v1",
+      "preimage": "historical only; unchanged and not accepted by this profile"
+    }
+  },
+  "domainRegistryRule": "This is the single complete registry for profile hashes and signature domains. Nonempty current domains use SHA256(UTF8(domain) || zero byte || preimage); signature attestation signs the same domain-prefixed statement bytes. sourceHash and proofDigest use SHA256(raw bytes). Opaque external observation evidence digests and signature algorithm names are not profile hash domains.",
+  "proofAcceptanceEncoding": {
+    "codec": "moriarty-canonical-json/1",
+    "utf8Bytes": 65536,
+    "decodedDepthRootZero": 16,
+    "decodedNodes": 8192,
+    "keysPerRecord": 64,
+    "arrayLength": 128,
+    "textUtf8Bytes": 4096,
+    "textJavascriptCodeUnits": 4096,
+    "appliesTo": [
+      "ProofContext",
+      "ProofAcceptanceInput",
+      "ProofAcceptanceVerdict"
+    ]
+  },
+  "externalProofResolution": {
+    "maximumProofs": 128,
+    "maximumBytesPerProof": 1048576,
+    "maximumTotalProofBytes": 16777216,
+    "proofBytes": "opaque raw bytes resolved outside canonical JSON; no compression expansion or network fetching by the evaluator",
+    "referenceTextUtf8Bytes": 256
   }
 }
