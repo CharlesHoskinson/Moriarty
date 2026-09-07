@@ -78,3 +78,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 
 - [ ] R.1 Satisfy the applicable RP01/RP02/RP03 prerequisites in [the reconciliation](../../REPORT-RECONCILIATION-2026-09-07.md); preserve existing package acceptance and historical evidence.
 - [ ] R.2 Check the added `Developer-visible semantics and assumptions` requirement against independent positive and rejection evidence before closure.
+
+## Sprint delivery schedule
+
+[SP01, SP02, SP08, SP12](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.

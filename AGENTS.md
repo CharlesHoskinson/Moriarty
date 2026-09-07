@@ -43,6 +43,10 @@ resource and acceptance gates. Merge status is not product acceptance.
   formal workflow does not apply here. Check live runtime before claiming a loop
   is armed, and never falsely complete an old goal to create another.
 
+## Autonomous sprint decisions
+
+The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use Fable 5.1 medium, GPT-6 and Grok 4.6 for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
+
 ## Research vault
 
 The [Obsidian migration instruction](raw/assignments/moriarty-obsidian-vault-2026-09-07.md)

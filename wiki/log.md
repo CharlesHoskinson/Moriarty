@@ -984,3 +984,7 @@ The user requested AgriciDaniel/claude-obsidian. Adopted the WSL repository as o
 Integrated the [SoK and language-design dossier](../deliverables/defi-language-design-2026-09-07/README.md), action targets, matched syntax specimens and K specification direction. SRC-0079 through SRC-0097 preserve source capsules and current user authority. Capsules contain provenance and scoped paraphrase; complete downloaded texts remain local in the ignored inbox. CLM-0922 through CLM-0925 are provisional structured findings/design records, not proof acceptance. The source extension is `.mori`; semantic changes remain a successor proposal.
 
 Research provenance supplement: SRC-0098 records the ISO catalogue check; SRC-0099 points to the retained Marlowe paper. Refreshed exact claim-ID navigation. These metadata corrections do not promote claims or change semantic acceptance.
+
+## [2026-09-07] planning | Complete language and PCD sprint schedule
+
+The [user instruction](../raw/assignments/moriarty-sprint-planning-2026-09-07.md) requests Superpowers planning in OpenSpec. The [twelve sprint contracts](../openspec/sprints/README.md) map existing MC requirements and RP gates to language, K, native verification, financial behavior, mandatory acceptance, private composition and developer delivery. Source inventory identities and historical resource charges are preserved. All sprint product work remains specified-only.

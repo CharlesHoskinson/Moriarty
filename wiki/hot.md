@@ -26,3 +26,5 @@ Preview is the public integration target. Existing hello-world deployment and ca
 Update this note only in an explicitly scoped knowledge operation. Queries are read-only; no transcript capture or automatic session-end update is configured.
 
 The current [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks, EBNF/static judgments and K. `.mori` is the source extension. Prioritize pinned action fixtures and a small K/evaluator comparison with a surviving obligation; no native proof loop is armed by this research.
+
+The [completion sprints](../openspec/sprints/README.md) are the current delivery schedule. Start with SP01 financial/admission reconciliation, then source/K work alongside the separately admitted native feasibility track. Package acceptance, resource charges and proof blockers remain controlled by the existing program records.

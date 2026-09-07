@@ -18,6 +18,10 @@ updated_at: 2026-09-07T18:01:49Z
 Read this page before searching externally. Merge new evidence into the existing
 topic pages and preserve their source and claim identifiers.
 
+## Completion sprint schedule
+
+[OpenSpec delivery plans](../openspec/sprints/README.md) assign the remaining language, K, native PCD, financial and developer work to twelve sprints. [Requirement coverage](../openspec/sprints/coverage.json) and [dependencies](../openspec/sprints/sprints.json) preserve the existing MC/RP gates. This is specified-only planning, not new implementation acceptance.
+
 ## DeFi actions and source specification
 
 [Research dossier](../deliverables/defi-language-design-2026-09-07/README.md), [surface/semantics design](../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md), [reference actions](../deliverables/defi-language-design-2026-09-07/action-targets.csv) and [OpenSpec amendment](../openspec/DEFI-LANGUAGE-DESIGN-2026-09-07.md). Source files use `.mori`; EBNF/static judgments/K define the successor specification direction. CLM-0922 through CLM-0925 distinguish direction, source findings and unimplemented semantics.

@@ -4,7 +4,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 **Goal:** Enforce all four required claims in the real transaction acceptance path.
 
-**Dependencies:** MC03, MC04.
+**Dependencies:** MC03, MC04, plus the current `mandatory` stage prerequisites for successor promotion. Package dependencies never admit dispatch.
 
 **Implementation root:** `experiments/moriarty-acceptance/`.
 
@@ -73,7 +73,7 @@ Commands alone cannot certify properties outside their declared scope.
 npm --prefix experiments/moriarty-acceptance ci
 npm --prefix experiments/moriarty-acceptance run build
 npm --prefix experiments/moriarty-acceptance test
-lake -d experiments/moriarty-acceptance/formal build
+python3 experiments/moriarty-language/formal/k/run.py prove --claims experiments/moriarty-acceptance/formal/claims.json
 npm --prefix experiments/moriarty-acceptance run verify-preview
 python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --preflight-only
 python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --execute
@@ -103,3 +103,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 
 - [ ] R.1 Satisfy the applicable RP01/RP02/RP03 prerequisites in [the reconciliation](../../REPORT-RECONCILIATION-2026-09-07.md); preserve existing package acceptance and historical evidence.
 - [ ] R.2 Check the added `Authority covers liabilities and all protected effects` requirement against independent positive and rejection evidence before closure.
+
+## Sprint delivery schedule
+
+[SP01, SP03, SP08, SP09, SP11](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.

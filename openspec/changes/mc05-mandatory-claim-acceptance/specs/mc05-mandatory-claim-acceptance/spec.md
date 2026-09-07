@@ -25,9 +25,13 @@ The proof relation SHALL connect the concrete plan and complete effects to signe
 ### Requirement: No circular or simulated evidence
 The certificate and proof construction SHALL use the non-circular commitment order and actual checked evidence.
 
-#### Scenario: Bound claims
-- **WHEN** the system builds and consumes the non-circular signed claim envelope
-- **THEN** program, policy, predecessors, observations, resulting state, and effects bind identically across signature, proof, and ledger.
+#### Scenario: Bound outcome claims
+- **WHEN** a participant signs an outcome intent before a concrete execution is selected
+- **THEN** the signature binds the canonical constraints, program/profile/policy and required claims; the proof statement binds that authorization digest, concrete predecessors, observations, resulting state and complete effects, proves refinement, and matches the actual ledger projection.
+
+#### Scenario: Bound exact-plan claims
+- **WHEN** a participant signs an exact plan
+- **THEN** acceptance additionally checks the signed canonical execution-body commitment against the concrete execution; the commitment excludes self-referential proof/signature bytes.
 
 #### Scenario: Fake compliance
 - **WHEN** an action supplies hash-linked receipts, mock proofs, signatures alone, or unchecked certificate labels

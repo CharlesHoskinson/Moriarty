@@ -27,7 +27,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 ## 3. Mechanize correspondence
 
 - [ ] 3.1 State assumptions and the finite supported domain. Implement the source/Core/target relations and proof.
-- [ ] 3.2 Run Lean without sorry or undeclared axioms. Keep trace tests separate from the theorem claim.
+- [ ] 3.2 Discharge the K-first correspondence claims under the sprint formal contract. Any justified supporting proof assistant bridge must contain no admitted proof holes or undeclared assumptions. Keep trace tests separate from theorem claims.
 - [ ] 3.3 Preserve the failing result and the corrected result with source hashes.
 - [ ] 3.4 Commit only owned changes in an isolated implementation worktree.
 
@@ -66,7 +66,7 @@ Commands alone cannot certify properties outside their declared scope.
 npm --prefix experiments/moriarty-ledger-adapter ci
 npm --prefix experiments/moriarty-ledger-adapter run build
 npm --prefix experiments/moriarty-ledger-adapter test
-lake -d experiments/moriarty-ledger-adapter/formal build
+python3 experiments/moriarty-language/formal/k/run.py prove --claims experiments/moriarty-ledger-adapter/formal/claims.json
 npm --prefix experiments/moriarty-ledger-adapter run verify-preview
 python3 experiments/moriarty-ledger-adapter/proof/run-reviewed.py --contract experiments/moriarty-ledger-adapter/proof/resource-contract.json --preflight-only
 python3 experiments/moriarty-ledger-adapter/proof/run-reviewed.py --contract experiments/moriarty-ledger-adapter/proof/resource-contract.json --execute
@@ -96,3 +96,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 
 - [ ] R.1 Satisfy the applicable RP01/RP02/RP03 prerequisites in [the reconciliation](../../REPORT-RECONCILIATION-2026-09-07.md); preserve existing package acceptance and historical evidence.
 - [ ] R.2 Check the added `Early complete verifier feasibility` requirement against independent positive and rejection evidence before closure.
+
+## Sprint delivery schedule
+
+[SP01, SP03, SP04, SP05, SP09, SP11](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.

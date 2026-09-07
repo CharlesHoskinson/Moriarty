@@ -2,6 +2,8 @@
 
 Status: specified-only amendment to RP01 and MC01-MC08. This records the user's selection of `.mori` source files, a BNF-family grammar standard and K formal semantics, plus the [research-led design](../deliverables/defi-language-design-2026-09-07/README.md). It preserves the [three-report reconciliation](REPORT-RECONCILIATION-2026-09-07.md), registered atomic profile and all existing acceptance gates. It does not dispatch a campaign.
 
+The [sprint schedule](sprints/README.md) assigns this amendment to concrete delivery gates. SP01-SP03 cover the financial contract, source specification and K; SP07-SP11 implement and qualify the complete financial domain.
+
 ## Decisions
 
 Use `.mori` for source files. Specify the successor grammar in ISO/IEC 14977 EBNF, with separate lexical rules and typing/scoping judgments. K defines executable operational semantics of the typed Core; elaboration and backend correspondence remain separate obligations. Brace-delimited financial declarations with infix arithmetic are the working surface recommendation. The successor adds explicit pre/post state semantics only through a new profile; the existing atomic profile is unchanged.

@@ -6,7 +6,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 **Dependencies:** MC01.
 
-**Implementation root:** `experiments/moriarty-native-ivc-r3/revision-01/`.
+**Implementation root:** `experiments/moriarty-native-ivc-r3/successor/`.
 
 **Interfaces:** NativeEpisode binds the original R2 financial episode, all public contexts, fixed authority scope, and the remaining lifecycle bound. ProofArtifact binds proof bytes, VK, SRS, backend pin, statement encoding, and final accumulator verification.
 
@@ -49,9 +49,9 @@ Each command requires exit 0 and the package-specific positive and negative pred
 Commands alone cannot certify properties outside their declared scope.
 
 ```sh
-python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --preflight-only
-python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --execute
-python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --verify-retained
+python3 experiments/moriarty-native-ivc-r3/successor/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/successor/resource-contract.json --preflight-only
+python3 experiments/moriarty-native-ivc-r3/successor/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/successor/resource-contract.json --execute
+python3 experiments/moriarty-native-ivc-r3/successor/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/successor/resource-contract.json --verify-retained
 ```
 
 ## Package closure
@@ -77,3 +77,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 
 - [ ] R.1 Satisfy the applicable RP01/RP02/RP03 prerequisites in [the reconciliation](../../REPORT-RECONCILIATION-2026-09-07.md); preserve existing package acceptance and historical evidence.
 - [ ] R.2 Check the added `Complete backend decision before native dispatch` requirement against independent positive and rejection evidence before closure.
+
+## Sprint delivery schedule
+
+[SP01, SP04, SP06](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.

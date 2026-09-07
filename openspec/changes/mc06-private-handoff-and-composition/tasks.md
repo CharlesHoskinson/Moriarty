@@ -74,7 +74,7 @@ Commands alone cannot certify properties outside their declared scope.
 npm --prefix experiments/moriarty-composition ci
 npm --prefix experiments/moriarty-composition run build
 npm --prefix experiments/moriarty-composition test
-lake -d experiments/moriarty-composition/formal build
+python3 experiments/moriarty-language/formal/k/run.py prove --claims experiments/moriarty-composition/formal/claims.json
 npm --prefix experiments/moriarty-composition run verify-isolated
 npm --prefix experiments/moriarty-composition run verify-preview
 python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experiments/moriarty-composition/proof/resource-contract.json --preflight-only
@@ -105,3 +105,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 
 - [ ] R.1 Satisfy the applicable RP01/RP02/RP03 prerequisites in [the reconciliation](../../REPORT-RECONCILIATION-2026-09-07.md); preserve existing package acceptance and historical evidence.
 - [ ] R.2 Check the added `Composition operators and witness ownership` requirement against independent positive and rejection evidence before closure.
+
+## Sprint delivery schedule
+
+[SP01, SP10, SP11](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.

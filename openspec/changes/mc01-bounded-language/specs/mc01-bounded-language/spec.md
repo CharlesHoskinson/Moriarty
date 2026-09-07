@@ -57,3 +57,14 @@ Before a successor language profile is frozen, RP01 SHALL trace the selected fin
 #### Scenario: Report requirement omitted
 - **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
 - **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+
+### Requirement: Complete successor specification and executable K semantics
+The successor SHALL define separate lexical rules, ISO/IEC 14977 EBNF, static judgments and executable Moriarty Core semantics in K. Required metatheorems and correspondence domains SHALL have explicit proof status.
+
+#### Scenario: Supported successor agreement
+- **WHEN** a supported `.mori` agreement is parsed, checked and elaborated
+- **THEN** its K execution and evaluator produce the independently expected complete observation, including residual duties and work.
+
+#### Scenario: Missing semantics or substituted proof
+- **WHEN** a required production, constructor or proof obligation is missing, or archived ZKIR evidence is substituted
+- **THEN** MC01 successor acceptance remains incomplete.

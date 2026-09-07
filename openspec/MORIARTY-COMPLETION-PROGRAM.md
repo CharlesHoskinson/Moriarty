@@ -7,6 +7,10 @@ Authority: [user request](../raw/assignments/moriarty-completion-loop-2026-09-07
 Machine register: [moriarty-completion-program.json](moriarty-completion-program.json).
 Execution and review receipts: [program evidence](../evidence/moriarty-completion-program-2026-09-07/).
 
+## Sprint delivery schedule
+
+The [OpenSpec sprint plans](sprints/README.md) sequence this program without replacing its acceptance or resource gates. [sprints.json](sprints/sprints.json) records preparation dependencies; [coverage.json](sprints/coverage.json) maps requirements to owners. Each behavioral task requires a concrete reviewed executable packet before dispatch. K is the selected language semantics; the sprint formal verification contract supersedes planned `lake` command shortcuts without changing historical evidence.
+
 ## Report reconciliation
 
 The [three-report reconciliation](REPORT-RECONCILIATION-2026-09-07.md) defines RP01 financial/intent challenges, RP02 complete native/ledger feasibility, and RP03 current campaign admission. Its review status is recorded in the machine register. These are early conditions inside MC01-MC08, not new completion packages or evidence of runtime enforcement. Preserve all original acceptance obligations.
@@ -83,11 +87,12 @@ MC04 and MC05 must extend that evidence to actual authorization and ledger accep
 MC06 must prove its additional split/join relations; the MC03 proof cannot substitute for them.
 Each extension requires a reviewed relation, valid feasible examples, and meaningful rejection controls.
 
-Formal outputs use pinned Lean toolchains and dependencies where the package specifies Lean.
-Name every theorem, input domain, assumption, and connection to executable code.
-Reject `sorry`, `admit`, unchecked axioms, and assumed compiler or verifier correctness as correspondence evidence.
-Record the theorem axiom audit and the remaining trusted computing base.
-A successful Lean build alone does not establish the requested correspondence.
+K is the primary executable semantics of Moriarty Core. The [sprint formal contract](sprints/README.md#formal-verification-contract) defines required claim verification.
+A supporting Lean or other proof-assistant bridge is optional only when the reviewed theorem design justifies it.
+Existing planned `.lean` paths are conditional extension ownership, not a mandate to implement a second semantics.
+Pin every selected toolchain and dependency. Name each theorem, input domain, assumption and executable-code connection.
+Reject proof holes, unchecked axioms and assumed compiler/verifier correctness as correspondence evidence.
+Record the trusted computing base. A successful compiler or proof-assistant build alone does not establish correspondence.
 
 ## Cross-package ownership and acceptance lineage
 
@@ -123,7 +128,18 @@ MC05, MC06, and MC07 own the following explicit upstream extension paths when th
 - `experiments/moriarty-acceptance/formal/IntentRefinement.lean`.
 - `experiments/moriarty-acceptance/tests/acceptance.test.mjs`.
 
-Freeze the exact changed subset in each worker brief; serialize writers of shared paths.
+Successor shared paths also include:
+
+- `experiments/moriarty-language/spec/successor/**`.
+- `experiments/moriarty-language/src/successor/**`.
+- `experiments/moriarty-language/formal/k/**`.
+- `experiments/moriarty-language/library/**`.
+- `experiments/moriarty-ledger-adapter/formal/claims.json`.
+- `experiments/moriarty-ledger-adapter/formal/correspondence.md`.
+- `experiments/moriarty-acceptance/formal/claims.json`.
+- `experiments/moriarty-composition/formal/claims.json`.
+
+Freeze the exact changed subset in each worker brief; serialize writers of shared paths. In particular, serialize SP07/SP08 changes to shared K and successor files.
 Keep retained native campaign sources immutable; new relation sources belong to the current package's `proof/` directory.
 Requalification means extending implementation and theorem domains when semantics change, then reproving affected theorems and rerunning affected tests.
 Rerunning unchanged checks suffices only when a reviewed impact analysis proves that their supported domain and bindings are unchanged.

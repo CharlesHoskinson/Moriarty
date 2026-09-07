@@ -14,14 +14,14 @@ The current local prototypes and network receipts do not satisfy this package's 
 
 ## Impact
 
-- `experiments/moriarty-native-ivc-r3/revision-01/encoding-decision.md`
-- `experiments/moriarty-native-ivc-r3/revision-01/relation-spec.md`
-- `experiments/moriarty-native-ivc-r3/revision-01/encoding-fixtures.json`
-- `experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json`
-- `experiments/moriarty-native-ivc-r3/revision-01/harness.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/verify-retained.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/tests/encoding-controls.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py`
+- `experiments/moriarty-native-ivc-r3/successor/encoding-decision.md`
+- `experiments/moriarty-native-ivc-r3/successor/relation-spec.md`
+- `experiments/moriarty-native-ivc-r3/successor/encoding-fixtures.json`
+- `experiments/moriarty-native-ivc-r3/successor/resource-contract.json`
+- `experiments/moriarty-native-ivc-r3/successor/harness.rs`
+- `experiments/moriarty-native-ivc-r3/successor/verify-retained.rs`
+- `experiments/moriarty-native-ivc-r3/successor/tests/encoding-controls.rs`
+- `experiments/moriarty-native-ivc-r3/successor/run-reviewed.py`
 - `evidence/moriarty-completion-program-2026-09-07/MC03/`
 
 ## Non-goals

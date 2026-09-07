@@ -15,14 +15,14 @@ NativeEpisode binds the original R2 financial episode, all public contexts, fixe
 
 ## Outputs and ownership
 
-- `experiments/moriarty-native-ivc-r3/revision-01/encoding-decision.md`
-- `experiments/moriarty-native-ivc-r3/revision-01/relation-spec.md`
-- `experiments/moriarty-native-ivc-r3/revision-01/encoding-fixtures.json`
-- `experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json`
-- `experiments/moriarty-native-ivc-r3/revision-01/harness.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/verify-retained.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/tests/encoding-controls.rs`
-- `experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py`
+- `experiments/moriarty-native-ivc-r3/successor/encoding-decision.md`
+- `experiments/moriarty-native-ivc-r3/successor/relation-spec.md`
+- `experiments/moriarty-native-ivc-r3/successor/encoding-fixtures.json`
+- `experiments/moriarty-native-ivc-r3/successor/resource-contract.json`
+- `experiments/moriarty-native-ivc-r3/successor/harness.rs`
+- `experiments/moriarty-native-ivc-r3/successor/verify-retained.rs`
+- `experiments/moriarty-native-ivc-r3/successor/tests/encoding-controls.rs`
+- `experiments/moriarty-native-ivc-r3/successor/run-reviewed.py`
 
 ## Trust boundaries
 
