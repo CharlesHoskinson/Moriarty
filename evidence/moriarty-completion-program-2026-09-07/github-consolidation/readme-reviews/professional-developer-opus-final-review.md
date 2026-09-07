@@ -1,0 +1,31 @@
+**Verdict: APPROVED**
+
+All five high-severity findings and the medium items I flagged as approval-gating (M1–M3) are resolved in the revision. Remaining notes are non-blocking.
+
+Let me record the review.
+
+**H1 — author/check your own agreement.** Resolved. "Check an agreement of your own" gives a runnable `check-agreement.mjs`, names `src/frontend.ts`, states `parse`/`check`/`elaborate` return values, and states plainly that there is no standalone CLI. It also correctly warns that simulating a new agreement additionally requires instance config, action inputs and authority.
+
+**H2 — Compact toolchain invisible.** Resolved. "Inspect the generated Compact" gives committed artifact links, `materialize-mapping.mjs`, `verify-mapping.py --runtime-node-modules`, the pinned 0.31.1 / 0.23.0 / 0.16.0 versions, python3 + `tsc`, and the `--skip-zk` / no-proving-keys note.
+
+**H3 — shape of generated Compact.** Resolved, and accurately: pure circuits, no ledger declarations, no witnesses, state in / next state out, test wrappers store results only, settlement adapter still owed.
+
+**H4 — pinned bounds.** Resolved: "admits the exact registered bounds document by content hash; editing its limits or even reformatting its JSON is not a supported configuration change."
+
+**H5 — expected output.** Resolved. Sample output plus "Those rejection messages are expected. The demo deliberately tampers with an input and attempts acceptance without a proof backend."
+
+**M1–M3** resolved (DeFi kernel study defined and linked; obligation vs. effect distinguished; observations defined with provider/authentication binding). M4–M8 also addressed. Most L-items (namespaces, no loop construct, exhaustion behavior, agreement/contract, `and`/`or`, hints struct) picked up as well.
+
+No overclaim introduced: the "solid = implemented / dashed = intended" legend, the "not a production SDK or an audited deployment" line, and the negative claims about history proofs, host-computed flags and balance comparison are intact.
+
+**Non-blocking items to verify before merge (not approval conditions):**
+
+1. `readFileSync(process.argv[2])` returns a `Buffer`; if `check`/the bounds loader expects a `string`, add `'utf8'` to both reads. One-word fix, worth confirming against the actual signature since this is the one snippet a new reader will paste.
+2. The sample output condenses two rejections onto one line (`adverse input: GUARD_FAILED; acceptance without proof: PROOF_INVALID`). Confirm this matches what the demo actually prints — a reader diffing against real output shouldn't find a mismatch.
+3. "The DeFi kernel study" and "the financial target study" are different names pointing at the same `deliverables/moriarty-design-sprint-2026-09-06/README.md`. If they are the same document, use one name; if not, one link is wrong.
+4. `.ts` import from an `.mjs` file relies on Node 24 type stripping; it will fail if `frontend.ts` uses enums/namespaces/parameter properties. Worth one confirmation run.
+5. `MC04` still appears unglossed in a link path (M9). Cosmetic — the descriptive link text "verifier interface analysis" carries the meaning.
+
+I'll write this up to the plan file.
+
+**APPROVED** — no remaining factual or onboarding blockers for the root README. The five verification items above are ordinary pre-merge checks, not revision requirements.

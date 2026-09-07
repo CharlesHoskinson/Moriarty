@@ -1,0 +1,13 @@
+**NEEDS_REVISION — documentation only.** The README matches the requested digest. It explains the project and distinguishes working prototypes from financial settlement and proof acceptance. Two substantive gaps remain:
+
+1. **Medium — Explain what survives bounded execution.** [README.md:48](/home/charl/Moriarty/README.md:48) introduces “contract lifetime” without distinguishing execution completion from debt discharge. The linked loan explicitly closes its demonstrated episode while principal remains outstanding.
+
+   **Exact correction:** Add after the finite-execution explanation:
+   > Execution limits do not cancel financial obligations. The loan example separates creating amounts due from settling them. Its demonstrated episode ends after those dues are settled, with 4,500 USD of principal still outstanding. Continuing that agreement requires an explicit mechanism that preserves its obligations and lifecycle constraints; that continuation is not implemented.
+
+2. **Medium — Identify who controls proof requirements and trusted verifiers.** [README.md:87](/home/charl/Moriarty/README.md:87) lists the required predicates but omits the authority that selects them. A Compact developer needs to understand why a prover cannot choose a permissive verifier or remove an inconvenient claim. The linked PCD design specifies this boundary.
+
+   **Exact correction:** Add after the mandatory-claim list:
+   > In the intended protocol, deployment policy fixes the permitted claim specifications and verifier/key versions. The participant’s signed authorization commits to the mandatory claims. Acceptance must reject missing required evidence, unsupported mandatory claims and unresolved dependencies. A prover cannot substitute its own verifier or remove a signed requirement. Enforcement in the ledger acceptance path remains unimplemented.
+
+These corrections explain essential financial and trust boundaries without adding chronology or implementation-review detail.

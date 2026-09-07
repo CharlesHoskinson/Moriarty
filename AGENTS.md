@@ -5,6 +5,8 @@ before changing research artifacts.
 
 ## Current direction and mandatory footguns
 
+The [GitHub consolidation instruction](raw/assignments/moriarty-github-consolidation-2026-09-07.md) authorizes merging experimental and historical work to main. A merge is not package acceptance or permission to resume superseded experiments. Root README describes the current product and its limitations for new developers.
+
 The [2026-09-07 reviewer replacement](raw/assignments/moriarty-opus-review-2026-09-07.md) selects exact `claude-opus-5` and fresh `gpt-6-astra` for future independent reviews. This overrides older Fable-only instructions, including inherited worktree rules. Preserve historical Fable outputs; do not relabel them or fabricate legacy acceptance flags.
 
 The latest [delegated execution instruction](raw/assignments/moriarty-autonomous-execution-2026-09-07.md)
