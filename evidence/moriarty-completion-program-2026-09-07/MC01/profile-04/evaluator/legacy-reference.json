@@ -1,0 +1,1482 @@
+{
+  "scope": "Executed legacy R2 financial reference for complete-field/effect comparison with future frontend. Not new DSL execution, conformance, PCD or ledger evidence.",
+  "sources": [
+    {
+      "path": "experiments/moriarty-developer-mock/src/language/core.ts",
+      "sha256": "b41dcb54404426aa7b9358197e03847083558530bb73833a8e743086cd198814"
+    },
+    {
+      "path": "experiments/moriarty-developer-mock/src/language/packages.ts",
+      "sha256": "ea69cb8c398b9244709d2abd360f3ce2de922a5ff595122fe141f8afccb34e3b"
+    }
+  ],
+  "cases": {
+    "loan": {
+      "source": {
+        "language": "moriarty-r2/1",
+        "package": "Actus.LAM.FirstPeriod",
+        "terms": {
+          "instance": "loan:demo",
+          "denomination": "USD",
+          "asset": "demo:USD6",
+          "borrower": "borrower",
+          "lender": "lender",
+          "notional": "5000000000",
+          "principalPayment": "500000000",
+          "rateNumerator": "8",
+          "rateDenominator": "100",
+          "dayCountNumerator": "31",
+          "dayCountDenominator": "365",
+          "borrowerCash": "20000000000",
+          "lenderCash": "0"
+        }
+      },
+      "program": {
+        "version": "moriarty-core/1",
+        "stateSchema": {
+          "notional": "UInt128",
+          "principalDue": "UInt128",
+          "interestDue": "UInt128",
+          "principalPaid": "UInt128",
+          "interestPaid": "UInt128",
+          "borrowerCash": "UInt128",
+          "lenderCash": "UInt128",
+          "cursor": "UInt128",
+          "closed": "UInt128"
+        },
+        "effectSchemas": {
+          "Transfer": {
+            "asset": "String",
+            "from": "String",
+            "to": "String",
+            "amount": "UInt128"
+          },
+          "Fee": {
+            "asset": "String",
+            "from": "String",
+            "to": "String",
+            "amount": "UInt128"
+          },
+          "DueCreated": {
+            "dueId": "String",
+            "debtor": "String",
+            "creditor": "String",
+            "denomination": "String",
+            "amount": "UInt128"
+          },
+          "DueSettled": {
+            "dueId": "String",
+            "debtor": "String",
+            "creditor": "String",
+            "denomination": "String",
+            "amount": "UInt128",
+            "asset": "String"
+          }
+        },
+        "entrypoints": {
+          "accrue": {
+            "argSchema": {
+              "actor": "String",
+              "event": "String"
+            },
+            "instructions": [
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "actor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "borrower"
+                  }
+                },
+                "message": "borrower actor required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "event"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "PR_IP"
+                  }
+                },
+                "message": "PR_IP event required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "cursor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "first-period accrual is out of order"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "closed"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "loan is closed"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "lte",
+                  "left": {
+                    "op": "literal",
+                    "value": "500000000"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "notional"
+                  }
+                },
+                "message": "principal payment exceeds notional"
+              },
+              {
+                "op": "let",
+                "name": "interestNumerator",
+                "value": {
+                  "op": "mul",
+                  "left": {
+                    "op": "mul",
+                    "left": {
+                      "op": "mul",
+                      "left": {
+                        "op": "state",
+                        "field": "notional"
+                      },
+                      "right": {
+                        "op": "literal",
+                        "value": "8"
+                      }
+                    },
+                    "right": {
+                      "op": "literal",
+                      "value": "31"
+                    }
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "1"
+                  }
+                }
+              },
+              {
+                "op": "let",
+                "name": "interestDenominator",
+                "value": {
+                  "op": "mul",
+                  "left": {
+                    "op": "literal",
+                    "value": "100"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "365"
+                  }
+                }
+              },
+              {
+                "op": "let",
+                "name": "interest",
+                "value": {
+                  "op": "div",
+                  "left": {
+                    "op": "local",
+                    "name": "interestNumerator"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "interestDenominator"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "principalDue",
+                "value": {
+                  "op": "literal",
+                  "value": "500000000"
+                }
+              },
+              {
+                "op": "set",
+                "field": "interestDue",
+                "value": {
+                  "op": "local",
+                  "name": "interest"
+                }
+              },
+              {
+                "op": "set",
+                "field": "notional",
+                "value": {
+                  "op": "sub",
+                  "left": {
+                    "op": "state",
+                    "field": "notional"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "500000000"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "DueCreated",
+                "fields": {
+                  "dueId": {
+                    "op": "literal",
+                    "value": "loan:demo:principal"
+                  },
+                  "debtor": {
+                    "op": "literal",
+                    "value": "borrower"
+                  },
+                  "creditor": {
+                    "op": "literal",
+                    "value": "lender"
+                  },
+                  "denomination": {
+                    "op": "literal",
+                    "value": "USD"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "principalDue"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "DueCreated",
+                "fields": {
+                  "dueId": {
+                    "op": "literal",
+                    "value": "loan:demo:interest"
+                  },
+                  "debtor": {
+                    "op": "literal",
+                    "value": "borrower"
+                  },
+                  "creditor": {
+                    "op": "literal",
+                    "value": "lender"
+                  },
+                  "denomination": {
+                    "op": "literal",
+                    "value": "USD"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "interestDue"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "cursor",
+                "value": {
+                  "op": "literal",
+                  "value": "1"
+                }
+              }
+            ]
+          },
+          "settle": {
+            "argSchema": {
+              "actor": "String",
+              "asset": "String",
+              "amount": "UInt128"
+            },
+            "instructions": [
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "actor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "borrower"
+                  }
+                },
+                "message": "borrower actor required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "asset"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "demo:USD6"
+                  }
+                },
+                "message": "settlement asset mismatch"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "cursor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "1"
+                  }
+                },
+                "message": "settlement is out of order"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "closed"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "loan is closed"
+              },
+              {
+                "op": "let",
+                "name": "total",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "principalDue"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "interestDue"
+                  }
+                }
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "amount"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "total"
+                  }
+                },
+                "message": "full due amount required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "lte",
+                  "left": {
+                    "op": "local",
+                    "name": "total"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "borrowerCash"
+                  }
+                },
+                "message": "insufficient borrower balance"
+              },
+              {
+                "op": "set",
+                "field": "borrowerCash",
+                "value": {
+                  "op": "sub",
+                  "left": {
+                    "op": "state",
+                    "field": "borrowerCash"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "total"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "lenderCash",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "lenderCash"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "total"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "principalPaid",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "principalPaid"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "principalDue"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "interestPaid",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "interestPaid"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "interestDue"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "Transfer",
+                "fields": {
+                  "asset": {
+                    "op": "arg",
+                    "name": "asset"
+                  },
+                  "from": {
+                    "op": "literal",
+                    "value": "borrower"
+                  },
+                  "to": {
+                    "op": "literal",
+                    "value": "lender"
+                  },
+                  "amount": {
+                    "op": "local",
+                    "name": "total"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "DueSettled",
+                "fields": {
+                  "dueId": {
+                    "op": "literal",
+                    "value": "loan:demo:principal"
+                  },
+                  "debtor": {
+                    "op": "literal",
+                    "value": "borrower"
+                  },
+                  "creditor": {
+                    "op": "literal",
+                    "value": "lender"
+                  },
+                  "denomination": {
+                    "op": "literal",
+                    "value": "USD"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "principalDue"
+                  },
+                  "asset": {
+                    "op": "arg",
+                    "name": "asset"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "DueSettled",
+                "fields": {
+                  "dueId": {
+                    "op": "literal",
+                    "value": "loan:demo:interest"
+                  },
+                  "debtor": {
+                    "op": "literal",
+                    "value": "borrower"
+                  },
+                  "creditor": {
+                    "op": "literal",
+                    "value": "lender"
+                  },
+                  "denomination": {
+                    "op": "literal",
+                    "value": "USD"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "interestDue"
+                  },
+                  "asset": {
+                    "op": "arg",
+                    "name": "asset"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "principalDue",
+                "value": {
+                  "op": "literal",
+                  "value": "0"
+                }
+              },
+              {
+                "op": "set",
+                "field": "interestDue",
+                "value": {
+                  "op": "literal",
+                  "value": "0"
+                }
+              },
+              {
+                "op": "set",
+                "field": "cursor",
+                "value": {
+                  "op": "literal",
+                  "value": "2"
+                }
+              },
+              {
+                "op": "set",
+                "field": "closed",
+                "value": {
+                  "op": "literal",
+                  "value": "1"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "initialState": {
+        "instance": "loan:demo",
+        "revision": "0",
+        "remaining": "2",
+        "values": {
+          "notional": "5000000000",
+          "principalDue": "0",
+          "interestDue": "0",
+          "principalPaid": "0",
+          "interestPaid": "0",
+          "borrowerCash": "20000000000",
+          "lenderCash": "0",
+          "cursor": "0",
+          "closed": "0"
+        }
+      },
+      "steps": [
+        {
+          "action": {
+            "name": "accrue",
+            "args": {
+              "actor": "borrower",
+              "event": "PR_IP"
+            }
+          },
+          "result": {
+            "outcome": "evaluated",
+            "before": {
+              "instance": "loan:demo",
+              "revision": "0",
+              "remaining": "2",
+              "values": {
+                "notional": "5000000000",
+                "principalDue": "0",
+                "interestDue": "0",
+                "principalPaid": "0",
+                "interestPaid": "0",
+                "borrowerCash": "20000000000",
+                "lenderCash": "0",
+                "cursor": "0",
+                "closed": "0"
+              }
+            },
+            "after": {
+              "instance": "loan:demo",
+              "revision": "1",
+              "remaining": "1",
+              "values": {
+                "notional": "4500000000",
+                "principalDue": "500000000",
+                "interestDue": "33972602",
+                "principalPaid": "0",
+                "interestPaid": "0",
+                "borrowerCash": "20000000000",
+                "lenderCash": "0",
+                "cursor": "1",
+                "closed": "0"
+              }
+            },
+            "effects": [
+              {
+                "kind": "DueCreated",
+                "fields": {
+                  "dueId": "loan:demo:principal",
+                  "debtor": "borrower",
+                  "creditor": "lender",
+                  "denomination": "USD",
+                  "amount": "500000000"
+                }
+              },
+              {
+                "kind": "DueCreated",
+                "fields": {
+                  "dueId": "loan:demo:interest",
+                  "debtor": "borrower",
+                  "creditor": "lender",
+                  "denomination": "USD",
+                  "amount": "33972602"
+                }
+              }
+            ],
+            "writes": [
+              "principalDue",
+              "interestDue",
+              "notional",
+              "cursor"
+            ],
+            "steps": "14"
+          }
+        },
+        {
+          "action": {
+            "name": "settle",
+            "args": {
+              "actor": "borrower",
+              "asset": "demo:USD6",
+              "amount": "533972602"
+            }
+          },
+          "result": {
+            "outcome": "evaluated",
+            "before": {
+              "instance": "loan:demo",
+              "revision": "1",
+              "remaining": "1",
+              "values": {
+                "notional": "4500000000",
+                "principalDue": "500000000",
+                "interestDue": "33972602",
+                "principalPaid": "0",
+                "interestPaid": "0",
+                "borrowerCash": "20000000000",
+                "lenderCash": "0",
+                "cursor": "1",
+                "closed": "0"
+              }
+            },
+            "after": {
+              "instance": "loan:demo",
+              "revision": "2",
+              "remaining": "0",
+              "values": {
+                "notional": "4500000000",
+                "principalDue": "0",
+                "interestDue": "0",
+                "principalPaid": "500000000",
+                "interestPaid": "33972602",
+                "borrowerCash": "19466027398",
+                "lenderCash": "533972602",
+                "cursor": "2",
+                "closed": "1"
+              }
+            },
+            "effects": [
+              {
+                "kind": "Transfer",
+                "fields": {
+                  "asset": "demo:USD6",
+                  "from": "borrower",
+                  "to": "lender",
+                  "amount": "533972602"
+                }
+              },
+              {
+                "kind": "DueSettled",
+                "fields": {
+                  "dueId": "loan:demo:principal",
+                  "debtor": "borrower",
+                  "creditor": "lender",
+                  "denomination": "USD",
+                  "amount": "500000000",
+                  "asset": "demo:USD6"
+                }
+              },
+              {
+                "kind": "DueSettled",
+                "fields": {
+                  "dueId": "loan:demo:interest",
+                  "debtor": "borrower",
+                  "creditor": "lender",
+                  "denomination": "USD",
+                  "amount": "33972602",
+                  "asset": "demo:USD6"
+                }
+              }
+            ],
+            "writes": [
+              "borrowerCash",
+              "lenderCash",
+              "principalPaid",
+              "interestPaid",
+              "principalDue",
+              "interestDue",
+              "cursor",
+              "closed"
+            ],
+            "steps": "18"
+          }
+        }
+      ]
+    },
+    "swap": {
+      "source": {
+        "language": "moriarty-r2/1",
+        "package": "Exchange.ConstantProduct",
+        "terms": {
+          "instance": "pool:demo",
+          "assetA": "demo:A",
+          "assetB": "demo:B",
+          "trader": "trader",
+          "provider": "provider",
+          "reserveA": "1000000",
+          "reserveB": "2000000",
+          "traderA": "100000",
+          "traderB": "0",
+          "providerA": "0",
+          "providerB": "0",
+          "feeNumerator": "997",
+          "feeDenominator": "1000"
+        }
+      },
+      "program": {
+        "version": "moriarty-core/1",
+        "stateSchema": {
+          "reserveA": "UInt128",
+          "reserveB": "UInt128",
+          "traderA": "UInt128",
+          "traderB": "UInt128",
+          "providerA": "UInt128",
+          "providerB": "UInt128",
+          "closed": "UInt128"
+        },
+        "effectSchemas": {
+          "Transfer": {
+            "asset": "String",
+            "from": "String",
+            "to": "String",
+            "amount": "UInt128"
+          },
+          "Fee": {
+            "asset": "String",
+            "from": "String",
+            "to": "String",
+            "amount": "UInt128"
+          },
+          "DueCreated": {
+            "dueId": "String",
+            "debtor": "String",
+            "creditor": "String",
+            "denomination": "String",
+            "amount": "UInt128"
+          },
+          "DueSettled": {
+            "dueId": "String",
+            "debtor": "String",
+            "creditor": "String",
+            "denomination": "String",
+            "amount": "UInt128",
+            "asset": "String"
+          }
+        },
+        "entrypoints": {
+          "swap": {
+            "argSchema": {
+              "actor": "String",
+              "amountIn": "UInt128",
+              "minOut": "UInt128",
+              "recipient": "String",
+              "assetIn": "String",
+              "assetOut": "String"
+            },
+            "instructions": [
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "actor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "trader"
+                  }
+                },
+                "message": "trader actor required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "recipient"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "trader"
+                  }
+                },
+                "message": "first-slice recipient must be trader"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "assetIn"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "demo:A"
+                  }
+                },
+                "message": "assetIn mismatch"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "assetOut"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "demo:B"
+                  }
+                },
+                "message": "assetOut mismatch"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "gt",
+                  "left": {
+                    "op": "remaining"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "1"
+                  }
+                },
+                "message": "final allowance is reserved for closure"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "closed"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "pool is closed"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "gt",
+                  "left": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "input must be positive"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "lte",
+                  "left": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "traderA"
+                  }
+                },
+                "message": "insufficient trader balance"
+              },
+              {
+                "op": "let",
+                "name": "effective",
+                "value": {
+                  "op": "mul",
+                  "left": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "997"
+                  }
+                }
+              },
+              {
+                "op": "let",
+                "name": "numerator",
+                "value": {
+                  "op": "mul",
+                  "left": {
+                    "op": "state",
+                    "field": "reserveB"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "effective"
+                  }
+                }
+              },
+              {
+                "op": "let",
+                "name": "denominator",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "mul",
+                    "left": {
+                      "op": "state",
+                      "field": "reserveA"
+                    },
+                    "right": {
+                      "op": "literal",
+                      "value": "1000"
+                    }
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "effective"
+                  }
+                }
+              },
+              {
+                "op": "let",
+                "name": "amountOut",
+                "value": {
+                  "op": "div",
+                  "left": {
+                    "op": "local",
+                    "name": "numerator"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "denominator"
+                  }
+                }
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "gt",
+                  "left": {
+                    "op": "local",
+                    "name": "amountOut"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "quantized output must be positive"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "lte",
+                  "left": {
+                    "op": "arg",
+                    "name": "minOut"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "amountOut"
+                  }
+                },
+                "message": "minimum output not met"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "lt",
+                  "left": {
+                    "op": "local",
+                    "name": "amountOut"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "reserveB"
+                  }
+                },
+                "message": "output would empty reserve"
+              },
+              {
+                "op": "set",
+                "field": "traderA",
+                "value": {
+                  "op": "sub",
+                  "left": {
+                    "op": "state",
+                    "field": "traderA"
+                  },
+                  "right": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "reserveA",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "reserveA"
+                  },
+                  "right": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "reserveB",
+                "value": {
+                  "op": "sub",
+                  "left": {
+                    "op": "state",
+                    "field": "reserveB"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "amountOut"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "traderB",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "traderB"
+                  },
+                  "right": {
+                    "op": "local",
+                    "name": "amountOut"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "Transfer",
+                "fields": {
+                  "asset": {
+                    "op": "arg",
+                    "name": "assetIn"
+                  },
+                  "from": {
+                    "op": "literal",
+                    "value": "trader"
+                  },
+                  "to": {
+                    "op": "literal",
+                    "value": "pool:demo"
+                  },
+                  "amount": {
+                    "op": "arg",
+                    "name": "amountIn"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "Transfer",
+                "fields": {
+                  "asset": {
+                    "op": "arg",
+                    "name": "assetOut"
+                  },
+                  "from": {
+                    "op": "literal",
+                    "value": "pool:demo"
+                  },
+                  "to": {
+                    "op": "arg",
+                    "name": "recipient"
+                  },
+                  "amount": {
+                    "op": "local",
+                    "name": "amountOut"
+                  }
+                }
+              }
+            ]
+          },
+          "close": {
+            "argSchema": {
+              "actor": "String"
+            },
+            "instructions": [
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "arg",
+                    "name": "actor"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "provider"
+                  }
+                },
+                "message": "provider actor required"
+              },
+              {
+                "op": "guard",
+                "condition": {
+                  "op": "eq",
+                  "left": {
+                    "op": "state",
+                    "field": "closed"
+                  },
+                  "right": {
+                    "op": "literal",
+                    "value": "0"
+                  }
+                },
+                "message": "pool is closed"
+              },
+              {
+                "op": "set",
+                "field": "providerA",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "providerA"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "reserveA"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "providerB",
+                "value": {
+                  "op": "add",
+                  "left": {
+                    "op": "state",
+                    "field": "providerB"
+                  },
+                  "right": {
+                    "op": "state",
+                    "field": "reserveB"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "Transfer",
+                "fields": {
+                  "asset": {
+                    "op": "literal",
+                    "value": "demo:A"
+                  },
+                  "from": {
+                    "op": "literal",
+                    "value": "pool:demo"
+                  },
+                  "to": {
+                    "op": "literal",
+                    "value": "provider"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "reserveA"
+                  }
+                }
+              },
+              {
+                "op": "emit",
+                "kind": "Transfer",
+                "fields": {
+                  "asset": {
+                    "op": "literal",
+                    "value": "demo:B"
+                  },
+                  "from": {
+                    "op": "literal",
+                    "value": "pool:demo"
+                  },
+                  "to": {
+                    "op": "literal",
+                    "value": "provider"
+                  },
+                  "amount": {
+                    "op": "state",
+                    "field": "reserveB"
+                  }
+                }
+              },
+              {
+                "op": "set",
+                "field": "reserveA",
+                "value": {
+                  "op": "literal",
+                  "value": "0"
+                }
+              },
+              {
+                "op": "set",
+                "field": "reserveB",
+                "value": {
+                  "op": "literal",
+                  "value": "0"
+                }
+              },
+              {
+                "op": "set",
+                "field": "closed",
+                "value": {
+                  "op": "literal",
+                  "value": "1"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "initialState": {
+        "instance": "pool:demo",
+        "revision": "0",
+        "remaining": "8",
+        "values": {
+          "reserveA": "1000000",
+          "reserveB": "2000000",
+          "traderA": "100000",
+          "traderB": "0",
+          "providerA": "0",
+          "providerB": "0",
+          "closed": "0"
+        }
+      },
+      "steps": [
+        {
+          "action": {
+            "name": "swap",
+            "args": {
+              "actor": "trader",
+              "amountIn": "10000",
+              "minOut": "19743",
+              "recipient": "trader",
+              "assetIn": "demo:A",
+              "assetOut": "demo:B"
+            }
+          },
+          "result": {
+            "outcome": "evaluated",
+            "before": {
+              "instance": "pool:demo",
+              "revision": "0",
+              "remaining": "8",
+              "values": {
+                "reserveA": "1000000",
+                "reserveB": "2000000",
+                "traderA": "100000",
+                "traderB": "0",
+                "providerA": "0",
+                "providerB": "0",
+                "closed": "0"
+              }
+            },
+            "after": {
+              "instance": "pool:demo",
+              "revision": "1",
+              "remaining": "7",
+              "values": {
+                "reserveA": "1010000",
+                "reserveB": "1980257",
+                "traderA": "90000",
+                "traderB": "19743",
+                "providerA": "0",
+                "providerB": "0",
+                "closed": "0"
+              }
+            },
+            "effects": [
+              {
+                "kind": "Transfer",
+                "fields": {
+                  "asset": "demo:A",
+                  "from": "trader",
+                  "to": "pool:demo",
+                  "amount": "10000"
+                }
+              },
+              {
+                "kind": "Transfer",
+                "fields": {
+                  "asset": "demo:B",
+                  "from": "pool:demo",
+                  "to": "trader",
+                  "amount": "19743"
+                }
+              }
+            ],
+            "writes": [
+              "traderA",
+              "reserveA",
+              "reserveB",
+              "traderB"
+            ],
+            "steps": "21"
+          }
+        },
+        {
+          "action": {
+            "name": "close",
+            "args": {
+              "actor": "provider"
+            }
+          },
+          "result": {
+            "outcome": "evaluated",
+            "before": {
+              "instance": "pool:demo",
+              "revision": "1",
+              "remaining": "7",
+              "values": {
+                "reserveA": "1010000",
+                "reserveB": "1980257",
+                "traderA": "90000",
+                "traderB": "19743",
+                "providerA": "0",
+                "providerB": "0",
+                "closed": "0"
+              }
+            },
+            "after": {
+              "instance": "pool:demo",
+              "revision": "2",
+              "remaining": "6",
+              "values": {
+                "reserveA": "0",
+                "reserveB": "0",
+                "traderA": "90000",
+                "traderB": "19743",
+                "providerA": "1010000",
+                "providerB": "1980257",
+                "closed": "1"
+              }
+            },
+            "effects": [
+              {
+                "kind": "Transfer",
+                "fields": {
+                  "asset": "demo:A",
+                  "from": "pool:demo",
+                  "to": "provider",
+                  "amount": "1010000"
+                }
+              },
+              {
+                "kind": "Transfer",
+                "fields": {
+                  "asset": "demo:B",
+                  "from": "pool:demo",
+                  "to": "provider",
+                  "amount": "1980257"
+                }
+              }
+            ],
+            "writes": [
+              "providerA",
+              "providerB",
+              "reserveA",
+              "reserveB",
+              "closed"
+            ],
+            "steps": "9"
+          }
+        }
+      ]
+    }
+  }
+}

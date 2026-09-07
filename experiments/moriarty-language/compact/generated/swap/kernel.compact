@@ -1,0 +1,148 @@
+// Generated restricted Moriarty Core kernel; no ledger effects or accepted PCD.
+// sourceHash 0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e
+// programHash b00a55b8da611d23c08461a11853151aa50ec7ee8150f9d16afbc66d62e018fa
+include "arithmetic";
+export struct DivisionHint { q: Uint<128>; r: Uint<128>; product: MulHint; }
+export struct KernelState { f0: Uint<128>; f1: Uint<128>; f2: Uint<128>; f3: Uint<128>; f4: Uint<128>; f5: Uint<128>; f6: Uint<128>; }
+export struct KernelObservations { o0: Uint<128>; }
+export struct Arguments0 { a0: Uint<32>; a1: Uint<32>; a2: Uint<32>; a3: Uint<32>; a4: Uint<128>; a5: Uint<128>; }
+export struct Hints0 { h0: MulHint; h1: MulHint; h2: MulHint; h3: DivisionHint; }
+export struct Effect0_0 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<128>; }
+export struct Effect0_1 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<128>; }
+export struct Result0 { after: KernelState; remaining: Uint<128>; revision: Uint<128>; effect0: Effect0_0; effect1: Effect0_1; }
+export pure circuit transition0(before: KernelState, args: Arguments0, observations: KernelObservations, remaining: Uint<128>, revision: Uint<128>, hints: Hints0): Result0 {
+  assert(checkedAdd(revision, remaining) == 8, "LIFETIME_INVARIANT");
+  assert(remaining > 0, "LIFETIME_EXHAUSTED");
+  assert(observations.o0 < 2000000000, "HORIZON_EXPIRED");
+  const e0: Uint<128> = observations.o0;
+  const e1: Uint<128> = 2000000000;
+  const e2: Boolean = e0 < e1;
+  assert(e2, "horizon expired");
+  const e3: Uint<128> = remaining;
+  const e4: Uint<128> = 1;
+  const e5: Boolean = e3 > e4;
+  assert(e5, "final allowance is reserved for closure");
+  const e6: Uint<32> = args.a0;
+  const e7: Uint<32> = 4;
+  const e8: Boolean = e6 == e7;
+  assert(e8, "trader authority required");
+  const e9: Uint<32> = args.a1;
+  const e10: Uint<32> = 4;
+  const e11: Boolean = e9 == e10;
+  assert(e11, "recipient must be trader");
+  const e12: Uint<32> = args.a2;
+  const e13: Uint<32> = 0;
+  const e14: Boolean = e12 == e13;
+  assert(e14, "asset_in mismatch");
+  const e15: Uint<32> = args.a3;
+  const e16: Uint<32> = 1;
+  const e17: Boolean = e15 == e16;
+  assert(e17, "asset_out mismatch");
+  const e18: Uint<128> = before.f6;
+  const e19: Uint<128> = 0;
+  const e20: Boolean = e18 == e19;
+  assert(e20, "epoch is closed");
+  const e21: Uint<128> = args.a4;
+  const e22: Uint<128> = 0;
+  const e23: Boolean = e21 > e22;
+  assert(e23, "input must be positive");
+  const e24: Uint<128> = args.a4;
+  const e25: Uint<128> = before.f2;
+  const e26: Boolean = e24 <= e25;
+  assert(e26, "insufficient synthetic balance");
+  const e27: Uint<128> = args.a4;
+  const e28: Uint<128> = 997;
+  const e29: Uint<128> = checkedMul(e27, e28, hints.h0);
+  const e30: Uint<128> = e29;
+  const e31: Uint<128> = before.f1;
+  const e32: Uint<128> = checkedMul(e30, e31, hints.h1);
+  const e33: Uint<128> = before.f0;
+  const e34: Uint<128> = 1000;
+  const e35: Uint<128> = checkedMul(e33, e34, hints.h2);
+  const e36: Uint<128> = e29;
+  const e37: Uint<128> = checkedAdd(e35, e36);
+  const e38: Uint<128> = e32;
+  const e39: Uint<128> = e37;
+  const e40: Uint<128> = checkedDiv(e38, e39, hints.h3.q, hints.h3.r, hints.h3.product);
+  const e41: Uint<128> = e40;
+  const e42: Uint<128> = 19743;
+  const e43: Boolean = e41 == e42;
+  assert(e43, "independent output value mismatch");
+  const e44: Uint<128> = args.a5;
+  const e45: Uint<128> = e40;
+  const e46: Boolean = e44 <= e45;
+  assert(e46, "minimum output not met");
+  const e47: Uint<128> = e40;
+  const e48: Uint<128> = before.f1;
+  const e49: Boolean = e47 < e48;
+  assert(e49, "output would empty reserve");
+  const e50: Uint<128> = before.f2;
+  const e51: Uint<128> = args.a4;
+  const e52: Uint<128> = checkedSub(e50, e51);
+  const e53: Uint<128> = before.f0;
+  const e54: Uint<128> = args.a4;
+  const e55: Uint<128> = checkedAdd(e53, e54);
+  const e56: Uint<128> = before.f1;
+  const e57: Uint<128> = e40;
+  const e58: Uint<128> = checkedSub(e56, e57);
+  const e59: Uint<128> = before.f3;
+  const e60: Uint<128> = e40;
+  const e61: Uint<128> = checkedAdd(e59, e60);
+  const e62: Uint<128> = e55;
+  const e63: Uint<128> = 1010000;
+  const e64: Boolean = e62 == e63;
+  assert(e64, "reserve_a mismatch");
+  const e65: Uint<128> = e58;
+  const e66: Uint<128> = 1980257;
+  const e67: Boolean = e65 == e66;
+  assert(e67, "reserve_b mismatch");
+  const e68: Uint<32> = args.a2;
+  const e69: Uint<32> = 4;
+  const e70: Uint<32> = 2;
+  const e71: Uint<128> = args.a4;
+  const e72: Uint<32> = args.a3;
+  const e73: Uint<32> = 2;
+  const e74: Uint<32> = args.a1;
+  const e75: Uint<128> = e40;
+  return Result0 { after: KernelState { f0: e55, f1: e58, f2: e52, f3: e61, f4: before.f4, f5: before.f5, f6: before.f6 }, remaining: checkedSub(remaining, 1), revision: checkedAdd(revision, 1), effect0: Effect0_0 { v0: e68, v1: e69, v2: e70, v3: e71 }, effect1: Effect0_1 { v0: e72, v1: e73, v2: e74, v3: e75 } };
+}
+export struct Arguments1 { a0: Uint<32>; }
+export struct Hints1 { unused: Uint<1>; }
+export struct Effect1_0 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<128>; }
+export struct Effect1_1 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<128>; }
+export struct Result1 { after: KernelState; remaining: Uint<128>; revision: Uint<128>; effect0: Effect1_0; effect1: Effect1_1; }
+export pure circuit transition1(before: KernelState, args: Arguments1, observations: KernelObservations, remaining: Uint<128>, revision: Uint<128>, hints: Hints1): Result1 {
+  assert(checkedAdd(revision, remaining) == 8, "LIFETIME_INVARIANT");
+  assert(remaining > 0, "LIFETIME_EXHAUSTED");
+  assert(observations.o0 < 2000000000, "HORIZON_EXPIRED");
+  const e0: Uint<128> = observations.o0;
+  const e1: Uint<128> = 2000000000;
+  const e2: Boolean = e0 < e1;
+  assert(e2, "horizon expired");
+  const e3: Uint<32> = args.a0;
+  const e4: Uint<32> = 3;
+  const e5: Boolean = e3 == e4;
+  assert(e5, "provider authority required");
+  const e6: Uint<128> = before.f6;
+  const e7: Uint<128> = 0;
+  const e8: Boolean = e6 == e7;
+  assert(e8, "epoch is closed");
+  const e9: Uint<128> = before.f4;
+  const e10: Uint<128> = before.f0;
+  const e11: Uint<128> = checkedAdd(e9, e10);
+  const e12: Uint<128> = before.f5;
+  const e13: Uint<128> = before.f1;
+  const e14: Uint<128> = checkedAdd(e12, e13);
+  const e15: Uint<32> = 0;
+  const e16: Uint<32> = 2;
+  const e17: Uint<32> = 3;
+  const e18: Uint<128> = before.f0;
+  const e19: Uint<32> = 1;
+  const e20: Uint<32> = 2;
+  const e21: Uint<32> = 3;
+  const e22: Uint<128> = before.f1;
+  const e23: Uint<128> = 0;
+  const e24: Uint<128> = 0;
+  const e25: Uint<128> = 1;
+  return Result1 { after: KernelState { f0: e23, f1: e24, f2: before.f2, f3: before.f3, f4: e11, f5: e14, f6: e25 }, remaining: checkedSub(remaining, 1), revision: checkedAdd(revision, 1), effect0: Effect1_0 { v0: e15, v1: e16, v2: e17, v3: e18 }, effect1: Effect1_1 { v0: e19, v1: e20, v2: e21, v3: e22 } };
+}

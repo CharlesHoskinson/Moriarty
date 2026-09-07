@@ -1,0 +1,161 @@
+{
+  "status": "source-profile-verification-vectors-not-implementation",
+  "profile": "moriarty-bounded-atomic/1",
+  "codec": {
+    "domain": "MORIARTY-CANONICAL-VECTOR/1",
+    "decoded": {
+      "z": [
+        "0",
+        true
+      ],
+      "a": "line\n"
+    },
+    "canonicalUtf8": "{\"a\":\"line\\n\",\"z\":[\"0\",true]}",
+    "domainSeparatedSha256": "5d14dd3ffb4fd1504ff5d543d5a1b5197daff5f4b3adedfb6fab767254d8d40a"
+  },
+  "action": {
+    "domain": "MORIARTY-ACTION-bounded-atomic/1",
+    "decoded": {
+      "schemaVersion": "moriarty-action/1",
+      "name": "accrue",
+      "arguments": [
+        {
+          "name": "actor",
+          "value": {
+            "tag": "Text",
+            "value": "borrower"
+          }
+        }
+      ]
+    },
+    "canonicalUtf8": "{\"arguments\":[{\"name\":\"actor\",\"value\":{\"tag\":\"Text\",\"value\":\"borrower\"}}],\"name\":\"accrue\",\"schemaVersion\":\"moriarty-action/1\"}",
+    "actionHash": "a23fecd50e4031491603645da50faab1a4aa8730a74b6b801ab3070d6d3414e8"
+  },
+  "artifactDigests": {
+    "boundsDomainSeparatedSha256": "ad0e1d45c9cfb5b1843d73f4d497d7d07f0450caddfcd49f3ef81f07f63d567c",
+    "loanSourceSha256": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "swapSourceSha256": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "targetCrosswalkSha256": "0cc5bddf6a10ea9a2df7b7b5686c148314eb8f9b48f97c54ba02ab32154de884"
+  },
+  "quantum": {
+    "binding": {
+      "asset": "TEN_QUANTUM_ASSET",
+      "name": "ten_quantum",
+      "quantum": {
+        "tag": "Amount",
+        "unit": "TestUnit",
+        "value": "10"
+      },
+      "unit": "TestUnit"
+    },
+    "success": {
+      "nominal": {
+        "tag": "Amount",
+        "unit": "TestUnit",
+        "value": "20"
+      },
+      "expectedLedgerAmount": "2"
+    },
+    "rejection": {
+      "nominal": {
+        "tag": "Amount",
+        "unit": "TestUnit",
+        "value": "15"
+      },
+      "expectedCode": "SETTLEMENT_NON_DIVISIBLE"
+    }
+  },
+  "loan": {
+    "initial": {
+      "notional": "5000000000",
+      "remaining": "2",
+      "revision": "0",
+      "episodeStatus": "Open",
+      "agreementStatus": "Outstanding",
+      "obligations": []
+    },
+    "afterAccrue": {
+      "interest": "33972602",
+      "interestExact": "2480000000/73",
+      "discardedRemainder": "54/73",
+      "notional": "4500000000",
+      "remaining": "1",
+      "revision": "1",
+      "episodeStatus": "Open",
+      "agreementStatus": "Outstanding",
+      "obligations": [
+        {
+          "dueId": "lam01:period1:PR",
+          "amount": "500000000",
+          "status": "Outstanding"
+        },
+        {
+          "dueId": "lam01:period1:IP",
+          "amount": "33972602",
+          "status": "Outstanding"
+        }
+      ]
+    },
+    "afterSettle": {
+      "settlementNominal": "533972602",
+      "settlementLedger": "533972602",
+      "notional": "4500000000",
+      "remaining": "0",
+      "revision": "2",
+      "episodeStatus": "Closed",
+      "agreementStatus": "Outstanding",
+      "obligations": [
+        {
+          "dueId": "lam01:period1:PR",
+          "amount": "500000000",
+          "status": "Settled"
+        },
+        {
+          "dueId": "lam01:period1:IP",
+          "amount": "33972602",
+          "status": "Settled"
+        }
+      ]
+    },
+    "adverseCodes": [
+      "OBLIGATION_DUPLICATE",
+      "OBLIGATION_UNKNOWN",
+      "OBLIGATION_ALREADY_SETTLED",
+      "OBLIGATION_PARTIAL_UNSUPPORTED",
+      "OBLIGATION_EXCESS",
+      "OBLIGATION_MISMATCH"
+    ]
+  },
+  "swap": {
+    "initial": {
+      "reserveA": "1000000",
+      "reserveB": "2000000",
+      "traderA": "100000",
+      "traderB": "0",
+      "remaining": "8",
+      "revision": "0",
+      "episodeStatus": "Open"
+    },
+    "afterSwap": {
+      "output": "19743",
+      "outputExact": "1994000000/100997",
+      "reserveA": "1010000",
+      "reserveB": "1980257",
+      "traderA": "90000",
+      "traderB": "19743",
+      "remaining": "7",
+      "revision": "1",
+      "episodeStatus": "Open"
+    },
+    "afterClose": {
+      "reserveA": "0",
+      "reserveB": "0",
+      "providerA": "1010000",
+      "providerB": "1980257",
+      "remaining": "6",
+      "revision": "2",
+      "episodeStatus": "Closed"
+    },
+    "scope": "fixed-vector one-transition fixture; not reusable constant-product or protocol conformance"
+  }
+}

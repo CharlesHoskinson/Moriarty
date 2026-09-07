@@ -1,0 +1,160 @@
+(* Proposal only: moriarty-bounded-atomic/1. Specified-only. No parser, freeze, or audit. *)
+(* Source is UTF-8. Spans are 0-based UTF-8 byte offsets [start, end). *)
+(* Whitespace: ASCII space, tab, CR, LF between tokens. No source comments. *)
+(* Lexer uses longest operator match for ==, <=, >=. No !=. *)
+(* A word that exactly equals a keyword is a keyword, otherwise it may be an identifier. *)
+(* Keywords cannot be identifiers. Identifiers are 1..64 ASCII [A-Za-z][A-Za-z0-9_]*. *)
+(* Binary operators associate left. Comparisons cannot chain. There is no plain division. *)
+(* Numeric, schema, units, lifecycle, horizon, and capacity checks are semantic. *)
+(* Header horizon is an unsigned UTC epoch-second upper bound, not host-clock access. *)
+(* Evaluation receives authenticated observation time explicitly. *)
+
+agreement = "agreement", identifier, "profile", json_string, "{",
+            "lifetime", uint_token, ";",
+            "horizon", uint_token, ";",
+            { declaration },
+            "}" ;
+
+declaration = unit_decl
+            | const_decl
+            | state_decl
+            | observation_decl
+            | settlement_decl
+            | field_policy
+            | status_decl
+            | effect_decl
+            | action_decl
+            | reserve_decl ;
+
+reserve_decl = "reserve", identifier, "for", identifier, ";" ;
+
+unit_decl = "unit", identifier, ";" ;
+
+const_decl = "const", identifier, ":", stored_type, "=", literal, ";" ;
+
+state_decl = "state", identifier, ":", stored_type, "=", literal, ";" ;
+
+observation_decl = "observation", identifier, ":", stored_type, ";" ;
+
+settlement_decl = "settlement", identifier, "asset", literal, "quantum", literal, ";" ;
+
+field_policy = "policy", identifier, "targets", policy_target,
+               { ",", policy_target }, "{",
+               "unit", identifier, ";",
+               "derivation", json_string, ";",
+               "rounding", rounding_form, ";",
+               "remainder", json_string, ";",
+               "comparison", json_string, ";",
+               "proof", json_string, ";",
+               "}" ;
+
+policy_target = "write", "(", identifier, ",", identifier, ")"
+              | "effect", "(", identifier, ",", uint_token, ",", field_label, ")" ;
+
+rounding_form = "none" | "floor", "(", identifier, ",", identifier, ")" ;
+
+status_decl = "status", "episode", "closed_when", identifier, "==", literal, ";"
+            | "status", "agreement", "remaining_notional", identifier, ";"
+            | "status", "agreement", "no_remaining_notional", ";" ;
+
+effect_decl = "effect", effect_kind, "{", field_decl, { field_decl }, "}" ;
+
+field_decl = field_label, ":", effect_type, ";" ;
+
+stored_type = "UInt128" | "Text" | "Amount", "<", identifier, ">" ;
+
+effect_type = stored_type | "Amount" ;
+
+effect_kind = "Transfer" | "Fee" | "DueCreated" | "DueSettled" ;
+
+action_decl = "action", identifier, "(", [ parameters ], ")", block ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", stored_type ;
+
+block = "{", { statement }, "}" ;
+
+statement = "guard", expression, ",", json_string, ";"
+          | "let", identifier, "=", expression, ";"
+          | "set", identifier, "=", expression, ";"
+          | "emit", effect_kind, "{", effect_field,
+            { ",", effect_field }, "}", ";" ;
+
+effect_field = field_label, ":", expression ;
+
+field_label = identifier | "asset" | "amount" ;
+(* Only asset and amount are contextual keyword spellings, and only as effect labels. *)
+(* Reserved prototype names remain forbidden in all names and labels. *)
+
+expression = disjunction ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = comparison, { "and", comparison } ;
+
+comparison = sum, [ comparison_op, sum ] ;
+
+comparison_op = "==" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = unary, { "*", unary } ;
+
+unary = [ "not" ], primary ;
+
+primary = literal
+        | "remaining"
+        | "floor_div", "(", expression, ",", expression, ")"
+        | "state", ".", identifier
+        | "arg", ".", identifier
+        | "obs", ".", identifier
+        | "const", ".", identifier
+        | identifier
+        | "(", expression, ")" ;
+
+literal = "uint", "(", uint_token, ")"
+        | "text", "(", json_string, ")"
+        | "amount", "(", uint_token, ",", identifier, ")"
+        | "true" | "false" ;
+
+identifier = ascii_letter, { ascii_letter | digit | "_" } ;
+
+uint_token = "0" | nonzero_digit, { digit } ;
+
+digit = "0" | nonzero_digit ;
+
+nonzero_digit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+ascii_letter = ? ASCII A through Z or a through z ? ;
+
+json_string = ? JSON string token with valid Unicode scalar values after decoding ? ;
+
+keyword = "agreement" | "profile" | "lifetime" | "horizon" | "unit" | "const"
+        | "state" | "observation" | "settlement" | "asset" | "quantum"
+        | "policy" | "targets" | "write" | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
+        | "status" | "episode" | "closed_when" | "remaining_notional" | "no_remaining_notional"
+        | "reserve" | "for"
+        | "effect" | "action" | "guard" | "let" | "set" | "emit"
+        | "UInt128" | "Text" | "Amount"
+        | "Transfer" | "Fee" | "DueCreated" | "DueSettled"
+        | "uint" | "text" | "amount" | "true" | "false" | "remaining" | "floor_div"
+        | "arg" | "obs" | "not" | "and" | "or" ;
+
+reserved_identifier = "constructor" | "prototype" | "__proto__" ;
+
+(* Semantic obligations that the EBNF cannot state: *)
+(* 1. At least one action_decl. Duplicate names reject inside each namespace. *)
+(* 2. Units, consts, state, observations, and effect schemas must be *)
+(*    declared before value use. Locals cannot reference later locals. *)
+(*    Policy metadata and reserve action/closure names resolve after all actions parse. *)
+(* 3. Bare identifier in an expression names a prior local only. *)
+(* 4. lifetime is a positive UInt128 genesis allowance. It never resets. *)
+(* 5. horizon is a UInt128 UTC epoch-second exclusive upper bound at genesis. *)
+(* 6. floor_div(n,d) is the only division form and elaborates to FloorDiv(n,d). *)
+(* 7. Amount without a parameter is emit-only and records the operand unit. *)
+(* 8. Bool literals type as Bool. Bool is expression-only in this profile. *)
+(* 9. Source comments are forbidden so numeric-looking text cannot hide. *)
+(* 10. not binds tighter than comparison: `not a == b` parses `(not a) == b`. *)
+(* 11. Each action may write a state field at most once. Effect ordinals are *)
+(*     zero-based in source emit order within that action. Policy targets must exist. *)

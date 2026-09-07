@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "moriarty-frontend-review-correction/1",
+  "observedAt": "2026-09-07T09:07:50.185413+00:00",
+  "baseCommit": "2619d98e1554266a073c5af99c5d79e6dcc4484b",
+  "authority": "amendment12 bounded900-second correction; no normative changes",
+  "audit": {
+    "sha256": "7f9b6f5dfd2fcf7d1daabe486aa9b7b86f46aa7ab41fc0cacd91003f4dfbd3be",
+    "file": "fable07-audit-input.json",
+    "candidateSha256": "266b7c41a848ce220de96cf58e28135c2a7e3ee691ce0137abb8021e81e631cb",
+    "originalVerdict": "BLOCKED",
+    "addressedBlockingFinding": "B1",
+    "notClaimedAddressedHere": "B2 belongs to the runtime/evidence worker"
+  },
+  "changes": [
+    "Removed policy-after-action NAME_RESOLUTION restriction in both stage5 preflight and lowering; removed obsolete POLICY_DECLARATION_ORDER alias.",
+    "Policy target actions and rounding locals resolve over the complete action table at stage6.",
+    "Unexpected non-ASCII lexical tokens use full Unicode scalar width for source spans.",
+    "Removed stale128-parenthesis limitation from future materialization receipts; retained old historical receipt bytes."
+  ],
+  "validation": {
+    "frontendTests": {
+      "command": "node --test experiments/moriarty-language/tests/frontend.test.mjs",
+      "passed": 26,
+      "failed": 0,
+      "rawOutput": "frontend-tests.log"
+    },
+    "strictTypeScript": {
+      "command": "npm run build --prefix experiments/moriarty-language",
+      "result": "passed",
+      "rawOutput": "typecheck.log"
+    },
+    "materializer": {
+      "command": "node experiments/moriarty-language/src/materialize.ts evidence/moriarty-completion-program-2026-09-07/MC01/review-corrections-08/frontend/materialized-check",
+      "result": "passed",
+      "rawOutput": "materializer.log"
+    },
+    "fullSharedTests": "Not run; other workers were changing shared runtime files."
+  },
+  "positivePolicyControls": [
+    "All loan policies moved after both actions, preserving order.",
+    "All loan policies moved after both actions, reversing order.",
+    "All swap policies moved after both actions, preserving order.",
+    "All swap policies moved after both actions, reversing order."
+  ],
+  "manifestComparison": "Relocating source necessarily changes sourceHash and sourceRef spans and therefore programHash. Tests assert every other manifest field is identical, accounting only for the intentionally reversed policy array; source binding and original unchanged-example byte equality are also asserted.",
+  "negativeMetadataControls": [
+    "Unknown target action/field and out-of-range effect ordinal: POLICY_TARGET6.",
+    "Unknown rounding action/local, wrong action and non-FloorDiv local: POLICY_ROUNDING6.",
+    "Undeclared policy unit still rejects NAME_RESOLUTION5."
+  ],
+  "astralControls": [
+    "U+1F600, U+10000 and U+10FFFF outside strings: exact4-byte LEXICAL_TOKEN spans.",
+    "BMP/ASCII controls preserve correct2-byte/1-byte spans.",
+    "Lone surrogate source remains SOURCE_ENCODING."
+  ],
+  "artifacts": [
+    {
+      "program": "loan",
+      "kind": "source-ast",
+      "sha256": "7a7cd73590bdeebc67d42b66164b5398f821003d1099f8ce562cd2cd559a5f92",
+      "utf8Bytes": 30504,
+      "matchesOriginal": true
+    },
+    {
+      "program": "loan",
+      "kind": "typed-program",
+      "sha256": "ae962937c32576085e36dcfffda5f53d62a5427251d85ac9be2566d743ba2128",
+      "utf8Bytes": 60910,
+      "matchesOriginal": true
+    },
+    {
+      "program": "loan",
+      "kind": "bound-program",
+      "sha256": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+      "utf8Bytes": 47206,
+      "matchesOriginal": true
+    },
+    {
+      "program": "loan",
+      "kind": "semantic-manifest",
+      "sha256": "e22b100a6fe78d4f513bcb82708e388c03deb0aef23a994004e379f956ad1a7e",
+      "utf8Bytes": 47075,
+      "matchesOriginal": true
+    },
+    {
+      "program": "swap",
+      "kind": "source-ast",
+      "sha256": "f89ea511b4f01763d3448b13860a719490dd231e10b2825ff1f76f492a430d8c",
+      "utf8Bytes": 28238,
+      "matchesOriginal": true
+    },
+    {
+      "program": "swap",
+      "kind": "typed-program",
+      "sha256": "f6a2992ed16cc140e5b79614257201e4196a86b51d6df90b4b8fb53d775a5a4f",
+      "utf8Bytes": 60200,
+      "matchesOriginal": true
+    },
+    {
+      "program": "swap",
+      "kind": "bound-program",
+      "sha256": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
+      "utf8Bytes": 47968,
+      "matchesOriginal": true
+    },
+    {
+      "program": "swap",
+      "kind": "semantic-manifest",
+      "sha256": "70e08bbbc7eb4e9834b9fd53dc48167a1c6bbcad57f12c1f845a7e6f8237becf",
+      "utf8Bytes": 47837,
+      "matchesOriginal": true
+    }
+  ],
+  "implementationFiles": [
+    {
+      "path": "experiments/moriarty-language/src/validate.ts",
+      "sha256": "350e137853c043b7fdd9f4501e86b087f0668ce7f0e8b826ded43b8dc5f10d4c"
+    },
+    {
+      "path": "experiments/moriarty-language/src/checker.ts",
+      "sha256": "e8c04d8d81f4a28df0c74cb5b8998acb7fb64f2f872c7017125024ce348e9c08"
+    },
+    {
+      "path": "experiments/moriarty-language/src/diagnostics.ts",
+      "sha256": "c61fa537db8a3e828f589c469dd1aec0183f5b5b05d6d0167f4166d58fb801d1"
+    },
+    {
+      "path": "experiments/moriarty-language/src/parser.ts",
+      "sha256": "a85f55d80acfafcea05a9b189b14bc504263632bc35e2abd4ef2fcd964c1522e"
+    },
+    {
+      "path": "experiments/moriarty-language/src/materialize.ts",
+      "sha256": "6de0a02c1b10c394bc5c045f4f63ea37f68a96de9730bf7a3ded5a4a4cf9f79e"
+    },
+    {
+      "path": "experiments/moriarty-language/tests/frontend.test.mjs",
+      "sha256": "b71b8dd7e4f88ce2153983d2bd7b8bccc67d326c6eab5c899f0f7bbc806f42be"
+    }
+  ],
+  "scopeLimitations": [
+    "Named frontend review findings only; independent successor audit still required.",
+    "No claim of evaluator B2 closure, full shared-suite completion, MC01 admission, proofs, PCD or corpus conformance."
+  ]
+}

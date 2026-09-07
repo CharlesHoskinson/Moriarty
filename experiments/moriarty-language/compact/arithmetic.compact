@@ -1,0 +1,37 @@
+pragma language_version >= 0.23 && <= 0.23;
+import CompactStandardLibrary;
+
+export struct MulHint {
+  aLo: Uint<64>;
+  aHi: Uint<64>;
+  bLo: Uint<64>;
+  bHi: Uint<64>;
+  lo: Uint<64>;
+  carry: Uint<64>;
+}
+
+export pure circuit checkedAdd(a: Uint<128>, b: Uint<128>): Uint<128> {
+  return (a + b) as Uint<128>;
+}
+
+export pure circuit checkedSub(a: Uint<128>, b: Uint<128>): Uint<128> {
+  assert(a >= b, "UINT_UNDERFLOW");
+  return a - b;
+}
+
+export pure circuit checkedMul(a: Uint<128>, b: Uint<128>, h: MulHint): Uint<128> {
+  assert(a == h.aHi * 18446744073709551616 + h.aLo, "MUL_A_SPLIT");
+  assert(b == h.bHi * 18446744073709551616 + h.bLo, "MUL_B_SPLIT");
+  assert(h.aLo * h.bLo == h.carry * 18446744073709551616 + h.lo, "MUL_PRODUCT_SPLIT");
+  assert(h.aHi * h.bHi == 0, "UINT_OVERFLOW_HIGH");
+  const middle = h.aLo * h.bHi + h.aHi * h.bLo + h.carry;
+  assert(middle < 18446744073709551616, "UINT_OVERFLOW_MIDDLE");
+  return (middle * 18446744073709551616 + h.lo) as Uint<128>;
+}
+
+export pure circuit checkedDiv(n: Uint<128>, d: Uint<128>, q: Uint<128>, r: Uint<128>, h: MulHint): Uint<128> {
+  assert(d > 0, "DIVISION_BY_ZERO");
+  assert(r < d, "DIVISION_REMAINDER");
+  assert(checkedAdd(checkedMul(d, q, h), r) == n, "DIVISION_EQUATION");
+  return q;
+}
