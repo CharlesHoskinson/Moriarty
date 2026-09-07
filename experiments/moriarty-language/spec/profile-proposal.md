@@ -155,7 +155,7 @@ The proposed interface remains:
 parse(source) -> SourceAST | Diagnostic[]
 check(ast:SourceAST, profile) -> TypedProgram | Diagnostic[]
 elaborate(typed:TypedProgram) -> BoundProgram | Diagnostic[]
-derive(boundProgram:BoundProgram, input:EvaluationInput)
+derive(boundProgram:BoundProgram, input:EvaluationInput, programBinding:ProgramBinding)
   -> Rejected | (candidate:Complete, context:ProofContext)
 verifyProofs(input:ProofAcceptanceInput, resolver)
   -> ProofAcceptanceVerdict | Diagnostic[]

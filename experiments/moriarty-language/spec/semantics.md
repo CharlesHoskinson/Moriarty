@@ -31,9 +31,19 @@ There are no user functions, recursion, loops, dynamic evaluation, collections,
 or implicit iteration. Recursive-looking expression records are finite bounded
 trees, not executable recursion. Value and type names resolve declaration-before-use; a bare
 identifier resolves only to an earlier local. Duplicate names reject within each
-namespace. Policy target actions, rounding locals, and reserve action/closure names are forward
+namespace. The separate namespaces are units, constants, state fields,
+observations, settlement bindings, field policies, effect kinds, actions, and
+(each separately per action) parameters and locals. Cross-namespace name
+collisions are permitted; prefixed references select the namespace.
+Policy target actions, rounding locals, and reserve action/closure names are forward
 metadata references: resolve them over the complete action table in stage 6,
-then require all target/value-local constraints before evaluation. Each action has exactly one `actor: Text` parameter. A word that
+then require all target/value-local constraints before evaluation. A policy may
+precede or follow the action it covers. Its unit reference still requires a
+previous unit declaration. Settlement bindings may precede or follow the actions
+that use them, but their quantum unit must precede the settlement declaration.
+Status-rule state references require previously declared state fields;
+ReserveDecl and action-target/rounding metadata are position-independent.
+Effect schemas still precede their emits. Each action has exactly one `actor: Text` parameter. A word that
 exactly equals a grammar keyword is a keyword, never an identifier; only `asset`
 and `amount` are contextual effect-field labels. `not` binds tighter than a
 comparison, so `not a == b` parses `(not a) == b` and normally fails typing.
@@ -173,6 +183,11 @@ The state retains at most 128 `ObligationRecord` values, including settled
 identity tombstones. Identity is `(instanceId,dueId)` for the entire nonresetting
 genesis lifetime. Effects are processed in source emit order against a private
 obligation copy after their typed values and settlements are resolved.
+The delta arrays capture immutable snapshots at each successful event: DueCreated
+appends an Outstanding copy to created; DueSettled appends the updated Settled
+copy to settled. Creating, transferring and settling one due in the same action
+therefore retains both snapshots and a final Settled tombstone. It never rewrites
+the created snapshot to the final status.
 
 For DueCreated:
 
@@ -426,7 +441,7 @@ exact source guard message. Parsing/checking returns this same diagnostic direct
 | UINT_RANGE | 6 | Source integer outside UInt128, or lifetime is zero. |
 | UNIT_VECTOR | 6 | Invalid numeric unit vector/classification, component count or exponent bound. |
 | POLICY_TARGET | 6 | Duplicate, absent, unknown, wrong-kind, wrong-unit, out-of-range or nonfinancial policy target; uncovered Amount occurrence. |
-| POLICY_ROUNDING | 6 | Rounding reference is unknown, wrong-action, ambiguous, not a prior reachable unique let, or its root is not FloorDiv. |
+| POLICY_ROUNDING | 6 | Rounding reference is unknown, wrong-action, ambiguous, unknown, wrong-action, ambiguous, non-let or non-FloorDiv-root reference, or its root is not FloorDiv. |
 | SETTLEMENT_DECLARATION | 6 | Empty asset, nonpositive quantum, quantum/declared-unit mismatch or malformed settlement declaration. |
 | SETTLEMENT_BINDING_AMBIGUOUS | 6 | Duplicate settlement name, unit or asset prevents one-to-one binding. |
 | STATUS_RULE | 6 | Missing/duplicate status rule or rule field/literal has wrong type or missing declaration. |
@@ -541,3 +556,27 @@ effect/obligation/status/authority schema, lifecycle, hashing, or lowering creat
 a new semantic profile and new program hashes/domains. It invalidates affected
 proofs, certificates, theorem instances, vectors, and audits, while historical
 artifacts remain bound to their original bytes and predicates.
+
+
+## Count scopes and parser implementation
+
+In bounds.json programShape, policyTargets is the total number of target entries
+across all field policies; effectFields applies separately to each effect schema.
+argumentFieldsPerEntrypoint, instructionsPerEntrypoint, localsPerEntrypoint,
+expressionNodesPerEntrypoint and effectsPerEntrypoint apply to each action.
+expressionDepthRootOne applies to each expression tree. All declaration-category
+counts and reserveRules are program totals. obligationRecordsIncludingSettled
+applies to each state; expressionUnitComponents and absoluteUnitExponent apply
+to each unit vector/component; predecessorFanIn applies to each transition.
+Parenthesis nesting has no separate limit: the finite source byte cap bounds it.
+A conforming parser must handle profile-valid redundant parentheses without an
+implementation-specific recursion-depth rejection.
+
+Outcome intent debit caps do not bound new nominal obligations. DueCreated and
+DueSettled are excluded from ledger debit/credit sums; allowedActions and mandatory
+contract/refinement proofs still govern those transitions. Applications requiring
+an explicit signed nominal-debt cap need a future profile extension.
+
+Freeze status is an external approval record bound to exact file digests. Do not
+edit status strings inside bounds.json to record approval; its exact bytes are
+part of boundsHash. Historical candidate status text remains its provenance.
