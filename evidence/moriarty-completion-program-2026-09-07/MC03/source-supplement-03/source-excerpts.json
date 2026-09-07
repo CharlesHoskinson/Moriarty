@@ -1,0 +1,245 @@
+[
+  {
+    "title": "MockProver two-argument API and RowSizer",
+    "path": "proofs/src/dev/mod.rs",
+    "startLine": 595,
+    "endLine": 633,
+    "fileSha256": "e1104ad7d727da562fbffcab3ce700150674c144b3ef5e3a72d3c3a6a3600746",
+    "excerptSha256": "1313f6563b72f93618123ae9b830605f7f589738e7bf028f20e7efe537c6cebe",
+    "text": "impl<F: FromUniformBytes<64> + Ord> RowSizer<F> {\n    /// Synthesizes `circuit` and returns `(k, n)` \u2014 the minimum circuit size\n    /// parameters such that `n = 2^k` is large enough to hold all assigned\n    /// rows.\n    pub fn min_k<ConcreteCircuit: Circuit<F>>(\n        circuit: &ConcreteCircuit,\n        instance: Vec<Vec<F>>,\n    ) -> Result<(u32, usize), Error> {\n        let mut cs = ConstraintSystem::default();\n        #[cfg(feature = \"circuit-params\")]\n        let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());\n        #[cfg(not(feature = \"circuit-params\"))]\n        let config = ConcreteCircuit::configure(&mut cs);\n\n        let mut sizer = RowSizer::new(instance);\n        let constants = cs.constants.clone();\n        ConcreteCircuit::FloorPlanner::synthesize(&mut sizer, circuit, config, constants)?;\n\n        let blinding_factors = cs.blinding_factors();\n        // Find the maximum positive rotation used by any gate query. Rows near the end\n        // of usable_rows that are accessed with a positive rotation could\n        // otherwise land in blinding rows, causing Value::Poison to appear\n        // during constraint verification.\n        let max_positive_rotation = cs\n            .advice_queries()\n            .iter()\n            .map(|(_, r)| r.0)\n            .chain(cs.fixed_queries().iter().map(|(_, r)| r.0))\n            .chain(cs.instance_queries().iter().map(|(_, r)| r.0))\n            .filter(|&r| r > 0)\n            .max()\n            .unwrap_or(0) as usize;\n        let required_n = (*sizer.max_row.borrow() + blinding_factors + 2 + max_positive_rotation)\n            .max(cs.minimum_rows());\n        let n = required_n.next_power_of_two();\n        let k = n.trailing_zeros();\n        Ok((k, n))\n    }\n}\n"
+  },
+  {
+    "title": "MockProver run",
+    "path": "proofs/src/dev/mod.rs",
+    "startLine": 744,
+    "endLine": 775,
+    "fileSha256": "e1104ad7d727da562fbffcab3ce700150674c144b3ef5e3a72d3c3a6a3600746",
+    "excerptSha256": "1e34dc5f93434ad240cb7a606d6ff5b7509eca430fcc5390339da341d6b54490",
+    "text": "\nimpl<F: FromUniformBytes<64> + Ord> MockProver<F> {\n    /// Runs a synthetic keygen-and-prove operation on the given circuit,\n    /// automatically determining the minimum required `k` (circuit size\n    /// parameter).\n    ///\n    /// Uses [`RowSizer`] for a lightweight dry run to find the minimum `k`,\n    /// then performs full synthesis with that `k`.\n    pub fn run<ConcreteCircuit: Circuit<F>>(\n        circuit: &ConcreteCircuit,\n        instance: Vec<Vec<F>>,\n    ) -> Result<Self, Error> {\n        let mut cs = ConstraintSystem::default();\n        #[cfg(feature = \"circuit-params\")]\n        let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());\n        #[cfg(not(feature = \"circuit-params\"))]\n        let config = ConcreteCircuit::configure(&mut cs);\n\n        assert_eq!(instance.len(), cs.num_instance_columns);\n\n        // Dry run via RowSizer to find the minimum n = 2^k.\n        let (k, n) = RowSizer::min_k(circuit, instance.clone())?;\n        let constants = cs.constants.clone();\n\n        let instance = instance\n            .into_iter()\n            .map(|instance| {\n                assert!(\n                    instance.len() <= n - (cs.blinding_factors() + 1),\n                    \"instance.len={}, n={}, cs.blinding_factors={}\",\n                    instance.len(),\n                    n,\n"
+  },
+  {
+    "title": "PCS trait method",
+    "path": "proofs/src/poly/commitment.rs",
+    "startLine": 113,
+    "endLine": 125,
+    "fileSha256": "9a63fce3fccbdf2f61ff41f64bff0965135498ba9b49ec0375f7b351d0959782",
+    "excerptSha256": "7f9d5f6b0804754a23de845db4b76bbf4ca275f0b14b6c7c98cf5f40d67b1dee",
+    "text": "    /// Multiplicative blow-up factor by which `params.g_monomial_size()` must\n    /// exceed `2^k` (the circuit's Lagrange-domain size) for this PCS to\n    /// commit every polynomial it produces at the requested circuit size.\n    /// Returns `1` when no extension is needed.\n    ///\n    /// `cs_degree` is the constraint system's `cs.degree()`. Schemes that\n    /// commit to a single combined polynomial (e.g. `single-h-commitment`,\n    /// fflonk's bundles) factor that into their requested blow-up.\n    fn srs_monomial_blowup(cs_degree: usize) -> usize {\n        let _ = cs_degree; // Just to avoid a clippy warning.\n        1\n    }\n\n"
+  },
+  {
+    "title": "KZG implementation",
+    "path": "proofs/src/poly/kzg/mod.rs",
+    "startLine": 113,
+    "endLine": 126,
+    "fileSha256": "1f56dd2a2c1bb3243f3ee797406f59c395ed904e82af687bc2fbbdd4446fa0b7",
+    "excerptSha256": "0e88aa4fb9e748ee0d1248eeb7fa85b8fb7f0e6a95120bc5117204d78cfe8e27",
+    "text": "\n    /// With `single-h-commitment` the quotient is committed as one polynomial\n    /// of degree up to `(cs_degree - 1) * n`, so the monomial basis must be\n    /// blown up to the next power of two of `cs_degree - 1`. Otherwise KZG\n    /// commits each polynomial at the Lagrange size and needs no extension.\n    fn srs_monomial_blowup(cs_degree: usize) -> usize {\n        if cfg!(feature = \"single-h-commitment\") {\n            (cs_degree - 1).next_power_of_two()\n        } else {\n            1\n        }\n    }\n\n    fn read_commitment<T: Transcript>(\n"
+  },
+  {
+    "title": "Params trait",
+    "path": "proofs/src/poly/commitment.rs",
+    "startLine": 174,
+    "endLine": 202,
+    "fileSha256": "9a63fce3fccbdf2f61ff41f64bff0965135498ba9b49ec0375f7b351d0959782",
+    "excerptSha256": "8ff2b8df95697db2e4025aba95ed4cb53cb9f379ce959820f01d7b52722f2d5e",
+    "text": "    {\n        assert_eq!(guards.len(), params.len());\n        guards\n            .into_iter()\n            .zip(params)\n            .try_for_each(|(guard, params)| guard.verify(params))\n    }\n}\n\n/// Interface for PCS params\npub trait Params: Send + Sync {\n    /// Returns the size of the Lagrange basis, expressed as the exponent `k`\n    /// such that the Lagrange domain has `2^k` elements. This equals the\n    /// circuit domain size and is used by keygen to validate the SRS.\n    fn max_k(&self) -> u32;\n\n    /// Returns the number of monomial-basis elements `[s^i]G\u2081` available in\n    /// the SRS. For a standard SRS this equals `1 << max_k()`. When the\n    /// `single-h-commitment` feature is enabled the monomial basis may be\n    /// larger than the Lagrange basis (which covers only the circuit\n    /// domain), so this method returns the true capacity for\n    /// coefficient-form commitments.\n    fn g_monomial_size(&self) -> usize {\n        1 << self.max_k()\n    }\n\n    /// Downsize the params to work with a circuit of size `new_k`\n    fn downsize(&mut self, new_k: u32);\n\n"
+  },
+  {
+    "title": "ParamsKZG methods",
+    "path": "proofs/src/poly/kzg/params.rs",
+    "startLine": 58,
+    "endLine": 76,
+    "fileSha256": "3dffddf75e91d5b2555056756f99fb81b587f7ef0b38756a23d3960e5b52a24f",
+    "excerptSha256": "7648e8f0db4bcbaa81955d9ef4879626153bf5436d4e922c77331b28be9160cc",
+    "text": "\nimpl<E: Engine> Params for ParamsKZG<E>\nwhere\n    E::G1Affine: CurveAffine,\n{\n    fn max_k(&self) -> u32 {\n        #[cfg(not(feature = \"single-h-commitment\"))]\n        assert_eq!(self.g.len(), self.g_lagrange.len());\n        self.g_lagrange.len().ilog2()\n    }\n\n    fn g_monomial_size(&self) -> usize {\n        self.g.len()\n    }\n\n    fn downsize(&mut self, new_k: u32) {\n        ParamsKZG::<E>::downsize(self, new_k)\n    }\n}\n"
+  },
+  {
+    "title": "ParamsKZG read_custom",
+    "path": "proofs/src/poly/kzg/params.rs",
+    "startLine": 281,
+    "endLine": 345,
+    "fileSha256": "3dffddf75e91d5b2555056756f99fb81b587f7ef0b38756a23d3960e5b52a24f",
+    "excerptSha256": "95c812c745c38a830b785e2644df14660e29595a60d6b6141ec516eb07cfa320",
+    "text": "    /// Reads params from a buffer.\n    pub fn read_custom<R: io::Read>(reader: &mut R, format: SerdeFormat) -> io::Result<Self>\n    where\n        E::G1Affine: SerdeObject,\n        E::G2: ProcessedSerdeObject,\n    {\n        let mut k = [0u8; 4];\n        reader.read_exact(&mut k[..])?;\n        let k = u32::from_le_bytes(k);\n        let n = 1 << k;\n\n        let (g, g_lagrange) = match format {\n            SerdeFormat::Processed => {\n                let load_points_from_file_parallelly =\n                    |reader: &mut R| -> io::Result<Vec<E::G1Affine>> {\n                        let mut points_compressed =\n                            vec![<E::G1Affine as GroupEncoding>::Repr::default(); n];\n                        for points_compressed in points_compressed.iter_mut() {\n                            reader.read_exact((*points_compressed).as_mut())?;\n                        }\n                        let mut points = vec![Option::<E::G1Affine>::None; n];\n                        parallelize(&mut points, |points, chunks| {\n                            for (i, point) in points.iter_mut().enumerate() {\n                                *point = Option::from(E::G1Affine::from_bytes(\n                                    &points_compressed[chunks + i],\n                                ));\n                            }\n                        });\n                        points\n                            .into_iter()\n                            .map(|p| p.ok_or_else(|| io::Error::other(\"invalid point encoding\")))\n                            .collect()\n                    };\n\n                let g = load_points_from_file_parallelly(reader)?;\n                let g_lagrange = load_points_from_file_parallelly(reader)?;\n                (g, g_lagrange)\n            }\n            SerdeFormat::RawBytes => {\n                let g =\n                    (0..n).map(|_| E::G1Affine::read_raw(reader)).collect::<Result<Vec<_>, _>>()?;\n                let g_lagrange =\n                    (0..n).map(|_| E::G1Affine::read_raw(reader)).collect::<Result<Vec<_>, _>>()?;\n                (g, g_lagrange)\n            }\n            SerdeFormat::RawBytesUnchecked => {\n                let g = (0..n).map(|_| E::G1Affine::read_raw_unchecked(reader)).collect::<Vec<_>>();\n                let g_lagrange =\n                    (0..n).map(|_| E::G1Affine::read_raw_unchecked(reader)).collect::<Vec<_>>();\n                (g, g_lagrange)\n            }\n        };\n\n        let g2 = E::G2::read(reader, format)?;\n        let s_g2 = E::G2::read(reader, format)?;\n\n        let g_lagrange_delta = suffix_sum(&g_lagrange);\n        let g_lagrange_double_delta = suffix_sum(&g_lagrange_delta);\n        Ok(Self {\n            g,\n            g_lagrange,\n            g_lagrange_delta,\n            g_lagrange_double_delta,\n            g2,\n            s_g2,\n"
+  },
+  {
+    "title": "Verifier public reexports",
+    "path": "circuits/src/verifier/mod.rs",
+    "startLine": 32,
+    "endLine": 54,
+    "fileSha256": "3a22403386081cd96a2411588760d21cb9443497e5675bdae946e73e3dea1c83",
+    "excerptSha256": "4539fe767e01f8b8c66b692a34483790b7fcbe6f107cb83084b97471e3fae4fd",
+    "text": "mod argument;\nmod expressions;\nmod kzg;\nmod lookup;\nmod msm;\npub(crate) mod pcs;\nmod permutation;\nmod traces;\nmod transcript_gadget;\nmod types;\nmod utils;\nmod verifier_gadget;\n\npub use accumulator::{Accumulator, AssignedAccumulator};\npub use kzg::{AssignedKZGCommitment, AssignedKZGMultiCommitment, InCircuitKZG};\npub use msm::{AssignedMsm, AssignedPoint, Msm, Point};\npub use pcs::{InCircuitHomomorphicCommitment, InCircuitPCS};\n#[cfg(feature = \"dev-curves\")]\npub use types::BnEmulation;\npub use types::{BlstrsEmulation, SelfEmulation};\npub use verifier_gadget::VerifierGadget;\n\ntype VerifyingKey<S> =\n"
+  },
+  {
+    "title": "IVC setup",
+    "path": "aggregation/src/ivc/setup.rs",
+    "startLine": 24,
+    "endLine": 67,
+    "fileSha256": "8edf56b4b1e64ee754d484bac12207b7633f26073800efc1e368d4eb30d6614e",
+    "excerptSha256": "ddc481109b533f8db9bb60cbed67da163baed970f3768b726893a6ee1a9aaacb",
+    "text": "pub fn setup<T: Ivc>(\n    params: ParamsKZG<E>,\n    k: u32,\n    ctx: T::Context,\n) -> (IvcProver<T>, IvcVerifier<T>) {\n    let mut cs = ConstraintSystem::default();\n    ZkStdLib::configure(&mut cs, (IvcCircuit::<T>::arch(), (k - 1) as u8));\n    let domain = EvaluationDomain::new(cs.degree() as u32, k);\n    let relation = IvcCircuit::<T>::new(domain, cs, ctx.clone());\n\n    // Uncomment for visualizing the size of this IVC circuit.\n    // dbg!(midnight_zk_stdlib::cost_model(&relation, Some(k)));\n\n    let vk = midnight_zk_stdlib::setup_vk(&params, &relation);\n    let pk = midnight_zk_stdlib::setup_pk(&relation, &vk);\n\n    let fixed_base_labels: Vec<PolynomialLabel> =\n        fixed_bases::<S>(vk.vk()).keys().cloned().collect();\n\n    let verifier = IvcVerifier {\n        ctx: ctx.clone(),\n        vk,\n        params_verifier: params.verifier_params(),\n    };\n\n    let prover = IvcProver {\n        params,\n        relation,\n        pk,\n        state: T::genesis(&ctx),\n        proof: vec![],\n        acc: Accumulator::<S>::trivial(&fixed_base_labels),\n    };\n\n    (prover, verifier)\n}\n"
+  },
+  {
+    "title": "IVC error variants",
+    "path": "aggregation/src/ivc/error.rs",
+    "startLine": 1,
+    "endLine": 26,
+    "fileSha256": "4e201e1b19a55827dc59aa5fb2954dc98359823f979f5162d84796db2b947dd3",
+    "excerptSha256": "ce2ef43cdd382aa4d1f2ca9b9227cb1969d9decf8b9fd6cae1695c975e64d775",
+    "text": "//! Custom error type for the IVC module.\n\nuse std::fmt;\n\nuse midnight_proofs::plonk;\n\n/// Error type for IVC operations.\n#[derive(Debug)]\npub enum IvcError {\n    /// A proof generation failed.\n    ProofGeneration(plonk::Error),\n    /// The provided instance is malformed.\n    InvalidInstance,\n    /// The provided witness is invalid.\n    InvalidWitness(String),\n    /// The instance's VK representation does not match the verifier's key.\n    VkMismatch,\n    /// The proof is invalid (accumulator pairing check failed).\n    InvalidProof,\n    /// The proof transcript contains trailing data.\n    TranscriptNotEmpty,\n    /// The application-level decider check failed.\n    DeciderFailed,\n}\n\nimpl From<plonk::Error> for IvcError {\n"
+  },
+  {
+    "title": "Stdlib instruction delegation",
+    "path": "zk_stdlib/src/instructions.rs",
+    "startLine": 30,
+    "endLine": 50,
+    "fileSha256": "1c076443c162853572f3a8b8390bb8065357d47233b5bcc787eea4e7c87d0941",
+    "excerptSha256": "a2a55d8cec7e2ce6df056a63dadbcd115526722242d2ba2bef77512c1277ebf9",
+    "text": "impl<T> AssignmentInstructions<F, T> for ZkStdLib\nwhere\n    T: InnerValue,\n    T::Element: Clone,\n    NG: AssignmentInstructions<F, T>,\n{\n    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<T::Element>,\n    ) -> Result<T, Error> {\n        self.native_gadget.assign(layouter, value)\n    }\n\n    fn assign_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        constant: T::Element,\n    ) -> Result<T, Error> {\n        self.native_gadget.assign_fixed(layouter, constant)\n    }\n"
+  },
+  {
+    "title": "Stdlib select",
+    "path": "zk_stdlib/src/instructions.rs",
+    "startLine": 304,
+    "endLine": 320,
+    "fileSha256": "1c076443c162853572f3a8b8390bb8065357d47233b5bcc787eea4e7c87d0941",
+    "excerptSha256": "d7f21d126e88c2fab6ad57d6a44c0e2361f006d65de21e7870dcbafb75529117",
+    "text": "impl<Assigned> ControlFlowInstructions<F, Assigned> for ZkStdLib\nwhere\n    Assigned: InnerValue,\n    NG: ControlFlowInstructions<F, Assigned>,\n{\n    fn select(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n        x: &Assigned,\n        y: &Assigned,\n    ) -> Result<Assigned, Error> {\n        self.native_gadget.select(layouter, cond, x, y)\n    }\n\n    fn cond_swap(\n        &self,\n"
+  },
+  {
+    "title": "Stdlib range check",
+    "path": "zk_stdlib/src/instructions.rs",
+    "startLine": 336,
+    "endLine": 355,
+    "fileSha256": "1c076443c162853572f3a8b8390bb8065357d47233b5bcc787eea4e7c87d0941",
+    "excerptSha256": "2f245a34f51ac31d5b0998c3a0abfa93f03e1ee33f6adbc3dfbca10f1564f191",
+    "text": "impl RangeCheckInstructions<F, AssignedNative<F>> for ZkStdLib {\n    fn assign_lower_than_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<F>,\n        bound: &BigUint,\n    ) -> Result<AssignedNative<F>, Error> {\n        self.native_gadget.assign_lower_than_fixed(layouter, value, bound)\n    }\n\n    fn assert_lower_than_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        bound: &BigUint,\n    ) -> Result<(), Error> {\n        self.native_gadget.assert_lower_than_fixed(layouter, x, bound)\n    }\n}\n\n"
+  },
+  {
+    "title": "Native strict bound implementation",
+    "path": "circuits/src/field/native/native_gadget.rs",
+    "startLine": 274,
+    "endLine": 306,
+    "fileSha256": "770717b4198d80615235d53141859f9b7ddb88c2f52e3ebb7af7d3cdd0c35c04",
+    "excerptSha256": "3a3ca16b6847c385e5fe2e1e03863b353a0efd66900eb7bcc07ddad7549d8668",
+    "text": "    fn assert_lower_than_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        bound: &BigUint,\n    ) -> Result<(), Error> {\n        if let Some(current_bound) = self.constrained_cells.borrow().get(x)\n            && current_bound <= bound\n        {\n            return Ok(());\n        }\n        self.update_bound(x, bound.clone());\n\n        // compute largest k such that 2^k <= bound\n        let k = (bound.bits() - 1) as usize;\n        let two_pow_k = BigUint::from(1u8) << k; // 2^k\n\n        // if the bound is a power of 2, the check is easier\n        if two_pow_k == *bound {\n            return self.core_decomposition_chip.assert_less_than_pow2(layouter, x, k);\n        }\n\n        // b := x in [0, 2^k)\n        let b_value = x.value().map(|x| x.to_biguint() < two_pow_k);\n        let b: AssignedBit<F> = self.assign(layouter, b_value)?;\n\n        let diff: F = big_to_fe(bound - two_pow_k);\n\n        // x in [0, bound) <=> x in [0, 2^k) or (x - diff) in [0, 2^k)\n        let shifted_x = self.add_constant(layouter, x, -diff)?;\n        let y = self.select(layouter, &b, x, &shifted_x)?;\n        self.core_decomposition_chip.assert_less_than_pow2(layouter, &y, k)\n    }\n"
+  },
+  {
+    "title": "Native select meaning",
+    "path": "circuits/src/field/native/native_chip.rs",
+    "startLine": 1523,
+    "endLine": 1550,
+    "fileSha256": "f2da7a69c32dbaf46467cff26eaf699814bb5b954409e34a762c39728f818695",
+    "excerptSha256": "9f644d4978a37ec21287a31a6909d48b819e137a9974217d1b65985fff9db5d4",
+    "text": "impl<F> ControlFlowInstructions<F, AssignedNative<F>> for NativeChip<F>\nwhere\n    F: CircuitField + From<u64> + Neg<Output = F>,\n{\n    fn select(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n        x: &AssignedNative<F>,\n        y: &AssignedNative<F>,\n    ) -> Result<AssignedNative<F>, Error> {\n        // Return bit * x + (1 - bit) * y.\n\n        // 0*bit + 0*x + 1*y + 0 + bit*x - bit*y\n        self.add_and_double_mul(\n            layouter,\n            (F::ZERO, &cond.0),\n            (F::ZERO, x),\n            (F::ONE, y),\n            F::ZERO,\n            (F::ONE, -F::ONE),\n        )\n    }\n\n    fn cond_swap(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n"
+  },
+  {
+    "title": "Native equality bit constraints",
+    "path": "circuits/src/field/native/native_chip.rs",
+    "startLine": 1377,
+    "endLine": 1421,
+    "fileSha256": "f2da7a69c32dbaf46467cff26eaf699814bb5b954409e34a762c39728f818695",
+    "excerptSha256": "2ac757921756bd0eec8b13e6adf2a888a1763ea43392a0d6e1681e07804251e2",
+    "text": "    fn is_equal_to_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        c: F,\n    ) -> Result<AssignedBit<F>, Error> {\n        // We enforce (i) (x - c) * aux = 1 - res\n        // and       (ii) (x - c) * res = 0.\n        //  * If  x = c, (i)  implies res = 1; (ii) becomes trivial.\n        //  * If x != c, (ii) implies res = 0; (i) can be relaxed with aux = (x - c)^-1.\n\n        let value_cols = &self.config.value_cols;\n        let res_val = x.value().map(|x| F::from((*x == c) as u64));\n        let aux_val = x.value().map(|x| (*x - c).invert().unwrap_or(F::ONE));\n\n        // (i) enforced as res - c * aux + aux * x - 1 = 0.\n        let res = layouter.assign_region(\n            || \"is_equal (i)\",\n            |mut region| {\n                region.assign_advice(|| \"aux\", value_cols[0], 0, || aux_val)?;\n                self.copy_in_row(&mut region, x, &value_cols[1], 0)?;\n                let res = region.assign_advice(|| \"res\", value_cols[4], 0, || res_val)?;\n                let mut coeffs = vec![F::ZERO; self.config.coeff_cols.len()];\n                coeffs[0] = -c; // coeff of aux\n                coeffs[4] = F::ONE; // coeff of res\n                self.custom(&mut region, &coeffs, F::ZERO, (F::ONE, F::ZERO), -F::ONE, 0)?;\n                Ok(res)\n            },\n        )?;\n\n        // (ii) enforced as -c * res + res * x = 0.\n        let must_be_zero = self.add_and_mul(\n            layouter,\n            (-c, &res),\n            (F::ZERO, x),\n            (F::ZERO, x),\n            F::ZERO,\n            F::ONE,\n        )?;\n        self.assert_zero(layouter, &must_be_zero)?;\n\n        // The two equations we have enforced guarantee the bit-ness of `res`.\n        Ok(AssignedBit(res))\n    }\n\n"
+  },
+  {
+    "title": "Fixed constant assignment",
+    "path": "circuits/src/field/native/native_chip.rs",
+    "startLine": 578,
+    "endLine": 605,
+    "fileSha256": "f2da7a69c32dbaf46467cff26eaf699814bb5b954409e34a762c39728f818695",
+    "excerptSha256": "0bd7e12361507ec0f4d458f6f9e574d3f2504602472d52d1acb0be496c5ab27f",
+    "text": "    fn assign_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        constant: F,\n    ) -> Result<AssignedNative<F>, Error> {\n        let constant_big = constant.to_biguint();\n        if let Some(assigned) = self.cached_fixed.borrow().get(&constant_big) {\n            return Ok(assigned.clone());\n        };\n\n        let x = layouter.assign_region(\n            || \"Assign fixed\",\n            |mut region| {\n                let mut x = region.assign_fixed(\n                    || \"fixed\",\n                    self.config.fixed_values_col,\n                    0,\n                    || Value::known(constant),\n                )?;\n                // This is hacky but necessary because we are treating a fixed cell as an\n                // assigned one. Fixed cells do not get properly filled until the end.\n                x.update_value(constant)?;\n                Ok(x)\n            },\n        )?;\n\n        // Save the assigned constant in the cache.\n        self.cached_fixed.borrow_mut().insert(constant_big.clone(), x.clone());\n"
+  },
+  {
+    "title": "Decomposition copy equality",
+    "path": "circuits/src/field/decomposition/instructions.rs",
+    "startLine": 48,
+    "endLine": 68,
+    "fileSha256": "21a89d39c6a4f845f12e2f0d52b7eee7d5443172c3e96775b561bd9ffaf28595",
+    "excerptSha256": "9a0e3bd5749da8f63e5debed499aca8bc49c8452df5228da1980d9b698f1a373",
+    "text": "    fn assign_less_than_pow2(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<F>,\n        bit_length: usize,\n    ) -> Result<AssignedNative<F>, Error>;\n\n    /// Function that guarantees that x < 2^{bit_length}\n    fn assert_less_than_pow2(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        bit_length: usize,\n    ) -> Result<(), Error> {\n        let y = self.assign_less_than_pow2(layouter, x.value().copied(), bit_length)?;\n        layouter.assign_region(\n            || \"copy\",\n            |mut region| region.constrain_equal(x.cell(), y.cell()),\n        )\n    }\n\n"
+  },
+  {
+    "title": "Decomposition power-of-two assignment",
+    "path": "circuits/src/field/decomposition/chip.rs",
+    "startLine": 405,
+    "endLine": 429,
+    "fileSha256": "c4238414c3583ca67a9a8f615758175fe76aa39f4bfc86dafe48bb3e073fdd97",
+    "excerptSha256": "bff9271e2648eee1f2a7a39d178cdd65d6dbbd172cc5cd44e64e10885abef0ea",
+    "text": "    fn assign_less_than_pow2(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<F>,\n        bit_length: usize,\n    ) -> Result<AssignedNative<F>, Error> {\n        #[cfg(not(test))]\n        assert!((bit_length as u32) < F::NUM_BITS);\n\n        // 1. get the limb sizes that minimize the number of parallel lookup rangechecks\n        // should never panic since the HashMap contains all possible solutions\n        let mut optimal_limb_sizes = self.opt_limbs.get(&(bit_length as i32)).unwrap().clone();\n\n        // 2. process them by adding 0 terms in non-full rows\n        optimal_limb_sizes\n            .iter_mut()\n            .for_each(|row| process_limb_sizes(self.pow2range_chip.config().val_cols.len(), row));\n        let limb_sizes = optimal_limb_sizes.concat();\n\n        // 3. use decompose_core to compute the result\n        let (y, _) = self.decompose_core(layouter, value, &limb_sizes)?;\n\n        Ok(y)\n    }\n\n"
+  },
+  {
+    "title": "Decomposition limb assignment",
+    "path": "circuits/src/field/decomposition/chip.rs",
+    "startLine": 248,
+    "endLine": 283,
+    "fileSha256": "c4238414c3583ca67a9a8f615758175fe76aa39f4bfc86dafe48bb3e073fdd97",
+    "excerptSha256": "f1b731f32b8bdceb2114226f152982415875241606da7a711abc0c8ba264e256",
+    "text": "            || \"decompose core\",\n            |mut region| {\n                let mut offset = 0;\n\n                // compute the range_check tags for each column\n                let tags = limb_sizes.chunks(nr_pow2range_cols).map(|x| x[0]).collect::<Vec<_>>();\n\n                // compute the linear combination terms, i.e. (coef, limb) pairs\n                // by convention the coefficient of a zero sized limb is 0 so no constraint\n                // needs to be imposed in the corresponding limb\n                let coefficients = variable_limbsize_coefficients::<F>(limb_sizes);\n                let limbs = x\n                    .map(|x_value| decompose_in_variable_limbsizes(&x_value, limb_sizes))\n                    .transpose_vec(limb_sizes.len());\n\n                // we create the terms for the linear combination.\n                let terms = coefficients.into_iter().zip(limbs.iter().copied()).collect::<Vec<_>>();\n\n                // assign terms for linear combination\n                let native_chip = self.native_chip();\n                let (assigned_limbs, assigned_result) = native_chip.assign_linear_combination_aux(\n                    &mut region,\n                    terms.as_slice(),\n                    F::ZERO,\n                    &x,\n                    nr_pow2range_cols,\n                    &mut offset,\n                )?;\n                offset += 1;\n\n                // enable the appropriate copy constraints in the rows where we assigned the\n                // linear combination terms\n                let pow2range_chip = self.pow2range_chip();\n\n                // we reverse since we do the range-checks from higher end to start\n                for (i, tag) in tags.into_iter().rev().enumerate() {\n"
+  },
+  {
+    "title": "Known witness decomposition boundary",
+    "path": "circuits/src/field/decomposition/cpu_utils.rs",
+    "startLine": 30,
+    "endLine": 71,
+    "fileSha256": "3473a154838bfde80aa1f6c0f030129d96315561f0c8fa96bf063fdbbf179860",
+    "excerptSha256": "645923e8749d3248248f9440da6d1796641e8fc9b7451cbc38c99148f14de03e",
+    "text": "/// # Panics\n///\n/// If the field element cannot be represented with limb_sizes\npub(crate) fn decompose_in_variable_limbsizes<InF: CircuitField, OutF: CircuitField>(\n    x: &InF,\n    limb_sizes: &[usize],\n) -> Vec<OutF> {\n    // convert the given number to bigint for efficient bitwise operations\n    let x: BigInt = x.to_biguint().into();\n\n    // vector to keep the result\n    let mut limbs: Vec<OutF> = Vec::with_capacity(limb_sizes.len());\n\n    // each time we shift the mask to \"extract\" the correct bits. This variable\n    // holds the next shift\n    let mut shift = 0;\n\n    for limb_size in limb_sizes {\n        // compute the mask vector i.e. 111..1 (limb_size ones)\n        // NOTE: when the limb_size is 0 he mask will always be 0\n        let mask_bits: u64 = (1 << limb_size) - 1;\n        let mask = BigInt::from(mask_bits);\n\n        // right shift the number and perform an and operation to take the limb\n        let limb_int = (x.clone() >> shift) & mask;\n        let limb = bigint_to_fe(&limb_int);\n        limbs.push(limb);\n\n        // update shift to get the next limb\n        shift += limb_size;\n    }\n\n    // sanity check. Panics if the limbs are not enough to represent the number\n    #[cfg(not(test))]\n    debug_assert_eq!(\n        x.clone() >> shift,\n        0.into(),\n        \"Decomposition Chip: the integer cannot be represented with the given limb_sizes\"\n    );\n\n    limbs\n}\n"
+  },
+  {
+    "title": "Linear combination source",
+    "path": "circuits/src/field/native/native_chip.rs",
+    "startLine": 425,
+    "endLine": 478,
+    "fileSha256": "f2da7a69c32dbaf46467cff26eaf699814bb5b954409e34a762c39728f818695",
+    "excerptSha256": "e2d190f2471ea741c7851dba743661988adc6b79f017cdcbfe466c714db26004",
+    "text": "    pub(crate) fn assign_linear_combination_aux(\n        &self,\n        region: &mut Region<'_, F>,\n        terms: &[(F, Value<F>)],\n        constant: F,\n        result: &Value<F>,\n        cols_used: usize,\n        offset: &mut usize,\n    ) -> Result<(Vec<AssignedNative<F>>, AssignedNative<F>), Error> {\n        assert!(cols_used < self.config.value_cols.len());\n\n        // If |terms| <= cols_used, we assert the relation in one row.\n        // Otherwise we consume up to `cols_used` terms to reduce to a linear\n        // combination of smaller size.\n        let chunk_len = min(terms.len(), cols_used);\n\n        // Initialize the coefficients vector\n        let mut coeffs = vec![F::ZERO; self.config.coeff_cols.len()];\n\n        // assign the lc result in the first advice column\n        let assigned_result = region.assign_advice(\n            || \"assign linear combination term\",\n            self.config.value_cols[0],\n            *offset,\n            || *result,\n        )?;\n        coeffs[0] = -F::ONE;\n\n        // assign the first `chunk_len` terms values in the current row\n        let mut assigned_limbs = terms[0..chunk_len]\n            .iter()\n            .enumerate()\n            .map(|(i, term)| {\n                coeffs[i + 1] = term.0;\n                region.assign_advice(\n                    || \"assign linear combination term\",\n                    self.config.value_cols[i + 1],\n                    *offset,\n                    || term.1,\n                )\n            })\n            .collect::<Result<Vec<_>, _>>()?;\n\n        // If everything fits in this row, we add the constraint in the current row and\n        // finish.\n        if terms.len() <= cols_used {\n            self.custom(\n                region,\n                &coeffs,\n                F::ZERO,\n                (F::ZERO, F::ZERO),\n                constant,\n                *offset,\n            )?;\n"
+  },
+  {
+    "title": "Queried-tag lookup loading",
+    "path": "circuits/src/field/decomposition/pow2range.rs",
+    "startLine": 205,
+    "endLine": 229,
+    "fileSha256": "9a114628d51d90ce1952feb453f122cffa381babba3459fe0840e68081d17044",
+    "excerptSha256": "3376a65c76ec05d5cb1e4d90f576b249717e15e882cd481d2446a3b9bff94a0a",
+    "text": "    /// Load the pow2range lookup table (to be used in synthesis).\n    pub fn load_table(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {\n        layouter.assign_table(\n            || \"pow2range table\",\n            |mut table| {\n                let mut offset = 0;\n                for bit_len in 0..=self.max_bit_len {\n                    // The lookup is disabled with tag 0, which we always include.\n                    if bit_len > 0 && !self.queried_tags.borrow().contains(&bit_len) {\n                        continue;\n                    }\n                    let tag = Value::known(F::from(bit_len as u64));\n                    for value in 0..(1 << bit_len) {\n                        let val = Value::known(F::from(value));\n                        table.assign_cell(|| \"t_tag\", self.config.t_tag, offset, || tag)?;\n                        table.assign_cell(|| \"t_val\", self.config.t_val, offset, || val)?;\n                        offset += 1;\n                    }\n                }\n                Ok(())\n            },\n        )\n    }\n}\n\n"
+  },
+  {
+    "title": "Circuit k and unknown witnesses",
+    "path": "zk_stdlib/src/interface.rs",
+    "startLine": 55,
+    "endLine": 80,
+    "fileSha256": "f679793a7ab046a01bca3612247bb7b14c8c56273e3056f84baa51b8980d89e5",
+    "excerptSha256": "6dfc69e68c34bced4324834a1193714fa77bf049d4f8c310b6269e9473e05bac",
+    "text": "}\n\nimpl<'a, R: Relation> MidnightCircuit<'a, R> {\n    /// A MidnightCircuit with unknown instance-witness for the given relation.\n    /// `k` is the log2 of the circuit size (i.e. the circuit has `2^k` rows).\n    /// If `k` is `None`, the optimal value is computed automatically.\n    pub fn from_relation(relation: &'a R, k: Option<u32>) -> Self {\n        MidnightCircuit::new(relation, Value::unknown(), Value::unknown(), k)\n    }\n\n    /// Creates a new MidnightCircuit for the given relation.\n    /// `k` is the log2 of the circuit size (i.e. the circuit has `2^k` rows).\n    /// If `k` is `None`, the optimal value is computed automatically.\n    pub fn new(\n        relation: &'a R,\n        instance: Value<R::Instance>,\n        witness: Value<R::Witness>,\n        k: Option<u32>,\n    ) -> Self {\n        let k = k.unwrap_or_else(|| optimal_k(relation));\n        MidnightCircuit {\n            relation,\n            k,\n            instance,\n            witness,\n            nb_public_inputs: Rc::new(RefCell::new(None)),\n"
+  },
+  {
+    "title": "Circuit params",
+    "path": "zk_stdlib/src/interface.rs",
+    "startLine": 396,
+    "endLine": 414,
+    "fileSha256": "f679793a7ab046a01bca3612247bb7b14c8c56273e3056f84baa51b8980d89e5",
+    "excerptSha256": "06e302c53cd07db9529e6c9a01d7a41fa5430603343db5b6fcdffd5bd6c645f7",
+    "text": "    type Params = (ZkStdLibArch, u8);\n\n    fn without_witnesses(&self) -> Self {\n        unreachable!()\n    }\n\n    fn params(&self) -> Self::Params {\n        (self.relation.used_chips(), (self.k - 1) as u8)\n    }\n\n    fn configure_with_params(\n        meta: &mut ConstraintSystem<F>,\n        params: (ZkStdLibArch, u8),\n    ) -> Self::Config {\n        ZkStdLib::configure(meta, params)\n    }\n\n    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {\n        ZkStdLib::configure(meta, (ZkStdLibArch::default(), 8))\n"
+  },
+  {
+    "title": "VK and PK keygen unknown witnesses",
+    "path": "zk_stdlib/src/interface.rs",
+    "startLine": 494,
+    "endLine": 526,
+    "fileSha256": "f679793a7ab046a01bca3612247bb7b14c8c56273e3056f84baa51b8980d89e5",
+    "excerptSha256": "a53912d123869bd1fcaeabded99e86d04afdfadaaa8089bbb9fa47aacbaa18ea",
+    "text": "pub fn setup_vk<R: Relation>(\n    params: &ParamsKZG<midnight_curves::Bls12>,\n    relation: &R,\n) -> MidnightVK {\n    let k = params.max_k();\n    let circuit = MidnightCircuit::from_relation(relation, Some(k));\n    let vk = keygen_vk_with_k(params, &circuit, k).expect(\"keygen_vk should not fail\");\n\n    // During the call to [setup_vk] the circuit RefCell on public inputs has been\n    // mutated with the correct value. The following [unwrap] is safe here.\n    let nb_public_inputs = circuit.nb_public_inputs.clone().borrow().unwrap();\n\n    MidnightVK {\n        architecture: relation.used_chips(),\n        k: circuit.k as u8,\n        nb_public_inputs,\n        vk,\n    }\n}\n\n/// Generates a proving key for a `MidnightCircuit<R>` circuit.\npub fn setup_pk<R: Relation>(relation: &R, vk: &MidnightVK) -> MidnightPK<R> {\n    let circuit = MidnightCircuit::new(\n        relation,\n        Value::unknown(),\n        Value::unknown(),\n        Some(vk.k() as u32),\n    );\n    let pk = BlstPLONK::<MidnightCircuit<R>>::setup_pk(&circuit, &vk.vk);\n    MidnightPK {\n        k: vk.k(),\n        relation: relation.clone(),\n        pk,\n"
+  },
+  {
+    "title": "IVC module exports",
+    "path": "aggregation/src/ivc/mod.rs",
+    "startLine": 19,
+    "endLine": 48,
+    "fileSha256": "ee417bc43b5d4febdb93fb347acb2ddc888d0b4546b82f3caa1867f3bd0c4017",
+    "excerptSha256": "a9edbaf2c27f19afbcc3b2e296f0d6c048c61ae942395df53cec94e2158c9aaa",
+    "text": "//! the chain length is relevant, it can be tracked by including a counter in\n//! the state that the transition function increments at each step.\n\npub use circuit::{IvcCircuit, IvcInstance, IvcWitness};\npub use error::IvcError;\nuse midnight_circuits::{\n    instructions::{BinaryInstructions, EqualityInstructions},\n    types::{AssignedBit, AssignedNative},\n    verifier::{BlstrsEmulation, SelfEmulation},\n};\nuse midnight_proofs::{\n    circuit::{Layouter, Value},\n    plonk::Error,\n};\nuse midnight_zk_stdlib::{ZkStdLib, ZkStdLibArch};\npub use prover::IvcProver;\npub use setup::setup;\npub use verifier::IvcVerifier;\n\npub(crate) type S = BlstrsEmulation;\npub(crate) type F = <S as SelfEmulation>::F;\npub(crate) type C = <S as SelfEmulation>::C;\npub(crate) type E = <S as SelfEmulation>::Engine;\n\npub mod circuit;\npub mod error;\npub mod prover;\npub mod setup;\npub mod verifier;\n\n"
+  }
+]

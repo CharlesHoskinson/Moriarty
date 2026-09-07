@@ -34,6 +34,9 @@ These rules apply to research, planning, implementation and recovery.
    rejection and termination. Finite state may still be too large to enumerate.
    Prefix checking needs a completeness argument before becoming a lifetime
    claim. Continuations must not silently reset a promised lifecycle bound.
+   Admit the exact registered bounds bytes and hash. Matching schema or profile
+   labels do not authorize changed limits or hash domains. Reject malformed
+   bounds with the defined diagnostic before authentication or consumption.
 
 6. **PCD is part of transaction acceptance.** The design must bind a transaction
    to its semantic/program versions, predecessors, authorization, observations,
@@ -112,3 +115,10 @@ effect on target coverage, not adding another layer of approval machinery.
     Replace documents atomically so interruption cannot delete a required file.
     A worker timeout does not erase completed artifacts, but its report is not
     evidence until the host checks the actual output.
+
+16. **Bind the actual review input before dispatch.** A filename or review tag is
+    not candidate identity. Verify the manifest digest, candidate commit, worktree
+    HEAD and every source hash before launching the reviewer. Verify the returned
+    identity and unchanged bytes before admitting its verdict. The implementation07
+    GPT-6 launcher accidentally supplied the implementation06 manifest; that review
+    cannot approve implementation07. Preserve the report and recheck useful findings.

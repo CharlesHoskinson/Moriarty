@@ -1,0 +1,140 @@
+{
+  "verdict": "BLOCKED",
+  "scope": "MC01 implementation conformance only",
+  "candidate": {
+    "commit": "2a64385ff251e4934802bfb9976b8b4622a8f744",
+    "digest": "3f74b8d062984729cc01b3c20369ccde4fa727707fca43fc1fac2a6d5b21fd8e",
+    "manifest": "/home/charl/.local/state/moriarty/mc01-supervised-20260907/implementation-candidate-06.json",
+    "binding_verified": true,
+    "digest_method": "SHA256 of sorted-key, compact JSON manifest with candidate_sha256 omitted",
+    "manifest_hashes_verified": 150,
+    "manifest_hash_mismatches": 0,
+    "current_verification_hashes_verified": 46,
+    "current_verification_hash_mismatches": 0,
+    "source_profile_commit": "1c2616efbec89791c12a249bb99fef24d96a034d",
+    "source_profile_bytes_unchanged": true,
+    "final_worktree_clean": true
+  },
+  "summary": "The exact candidate lacks the described successor admission fixes. Its 49 existing language tests pass, but independent probes reproduce bounds substitution, validation after authentication, forbidden runtime-object normalization, and source-profile conformance errors. No accepted-Complete or cryptographic bypass is claimed.",
+  "findings": [
+    {
+      "id": "MC01-AUDIT-01",
+      "severity": "high",
+      "classification": "experiment observation",
+      "title": "Public entry points admit unregistered bounds under the frozen profile",
+      "locations": [
+        "experiments/moriarty-language/src/frontend.ts:10",
+        "experiments/moriarty-language/src/checker.ts:16",
+        "experiments/moriarty-language/src/evaluate.ts:198",
+        "experiments/moriarty-language/spec/typed-schemas.md:620"
+      ],
+      "observed": "Bounds admission checks registry/profile labels but does not require the exact registered 8861 bytes. Raising instructionsPerEntrypoint and localsPerEntrypoint from 64 to 65 admits a 65-let action rejected by the pinned bounds. createSimulator then returns Simulation with executedInstructions='65'. Appending one whitespace byte to bounds also compiles and produces another boundsHash under the same registry/profile.",
+      "required_correction": "Register and enforce the exact frozen bounds bytes across public parse/check/elaborate/compile, simulator, derivation and mapping admission. Keep custom limits exclusively in explicitly NONADMITTED internal helpers. Add positive pinned-byte and negative changed-byte/raised-limit tests."
+    },
+    {
+      "id": "MC01-AUDIT-02",
+      "severity": "high",
+      "classification": "experiment observation",
+      "title": "Backend authentication runs before source and runtime admission",
+      "locations": [
+        "experiments/moriarty-language/src/evaluate.ts:217",
+        "experiments/moriarty-language/src/evaluate.ts:220",
+        "experiments/moriarty-language/src/evaluate.ts:221"
+      ],
+      "observed": "An invalid backend source invokes authenticate once before returning stage-8 PROGRAM_ENCODING. With the pinned loan source/bounds, an input containing an extra field invokes authenticate once before returning stage-9 INPUT_SCHEMA. Neither probe reaches commit.",
+      "required_correction": "Complete source/bounds/BoundProgram correspondence and inert closed runtime-schema/bounds admission before invoking authenticate. Authenticate an immutable admitted tuple, then perform authenticated checks, derivation and the deployment-owned verification/commit interface. Add callback-count negative controls requiring zero authentication calls for inadmissible inputs."
+    },
+    {
+      "id": "MC01-AUDIT-03",
+      "severity": "high",
+      "classification": "experiment observation",
+      "title": "Cloning bypasses forbidden runtime-object checks",
+      "locations": [
+        "experiments/moriarty-language/src/evaluate.ts:10",
+        "experiments/moriarty-language/src/evaluate.ts:68",
+        "experiments/moriarty-language/src/evaluate.ts:199",
+        "experiments/moriarty-language/src/evaluate.ts:220",
+        "experiments/moriarty-language/src/codec.ts:39"
+      ],
+      "observed": "Using the pinned loan example, inputs with a hidden unknown property, symbol property, custom prototype, or enumerable action getter all return Simulation. The getter executes once. canonicalEncode rejects these original objects, but structuredClone removes forbidden properties/prototypes or evaluates accessors before validation examines the clone.",
+      "required_correction": "Validate and snapshot original runtime objects through a bounded descriptor-based inert-data admission routine before cloning or reading accessors. Reject forbidden properties and prototypes without invoking getters. Cover both derive/simulate and evaluate with regression probes."
+    },
+    {
+      "id": "MC01-AUDIT-04",
+      "severity": "medium",
+      "classification": "experiment observation",
+      "title": "Valid policies following their target action are rejected",
+      "locations": [
+        "experiments/moriarty-language/src/validate.ts:62",
+        "experiments/moriarty-language/src/checker.ts:138",
+        "experiments/moriarty-language/spec/semantics.md:39"
+      ],
+      "observed": "A valid rounding-none policy targeting write(run,cash) produces TypedProgram when placed before run, but NAME_RESOLUTION when placed after run. The frozen semantics explicitly permits policies before or after their actions and resolves action/local metadata over the complete action table.",
+      "required_correction": "Remove the policy-before-action restriction from both validation and lowering. Preserve declaration-before-use for the policy unit and required rounding-local relationships. Test valid policies in both positions and invalid metadata references."
+    },
+    {
+      "id": "MC01-AUDIT-05",
+      "severity": "medium",
+      "classification": "experiment observation",
+      "title": "Closed diagnostic priority and source-map classification are not preserved",
+      "locations": [
+        "experiments/moriarty-language/src/frontend.ts:16",
+        "experiments/moriarty-language/src/frontend.ts:25",
+        "experiments/moriarty-language/src/evaluate.ts:197",
+        "experiments/moriarty-language/spec/semantics.md:420",
+        "experiments/moriarty-language/spec/typed-schemas.md:629"
+      ],
+      "observed": "A source with duplicate unit declarations returns stage-4 DUPLICATE_NAME with pinned bounds, but stage-8 PROGRAM_ENCODING with '{}', masking the earlier source error. Separately, altering a Core sourceRef span and recomputing programHash returns PROGRAM_ENCODING instead of the required SOURCE_MAP.",
+      "required_correction": "Preserve source-stage priority while enforcing registered bounds, and distinguish deterministic source-map/Core correspondence failures from other program-encoding failures. Add mixed-stage and source-map-specific diagnostic tests."
+    }
+  ],
+  "verification": {
+    "toolchain": {
+      "node": "24.18.1",
+      "typescript": "7.0.2",
+      "compact": "0.31.1",
+      "compact_language": "0.23.0",
+      "compact_runtime": "0.16.0"
+    },
+    "fresh_checks": [
+      "Strict language build passed.",
+      "Direct execution of complete frontend, semantics and lowering test files passed: 23 + 20 + 6 = 49 tests.",
+      "Historical developer-mock build and six test files passed: 67 tests.",
+      "Four standalone developer simulations and adverse-input/missing-backend controls passed.",
+      "Existing checked-arithmetic verifier passed with Compact --skip-zk.",
+      "Independent Python source-profile and complete materialization checks passed.",
+      "Correctly parameterized EBNF checks accepted both complete examples.",
+      "Both generated kernels, harnesses, metadata and BoundPrograms exactly matched fresh in-memory generation.",
+      "All manifest hashes and clean Git status were rechecked after testing."
+    ],
+    "candidate_description_discrepancy": "This commit contains 49 language tests, not 59. The claimed ten successor admission tests and exact bounds-registration implementation are absent. The retained implementation-06 README and command receipt report 49.",
+    "failure_evidence": "The historical incomplete EBNF invocation and corrected success remain preserved. Initial arithmetic failures are explicitly reconstructed observations, not raw stdout. One audit helper failed while parsing empty child-process stdout; the object-admission probes were rerun successfully using the hash-verified retained example input."
+  },
+  "substantive_positive_results": [
+    "Both examples are source-driven through the generic frontend/evaluator/mapper; no package-name dispatch was found in those implementation paths.",
+    "All four comparisons check complete state values, lifecycle counters and emitted operands. Evaluator comparisons additionally cover enriched settlement records, obligation deltas and hashes.",
+    "Nominal units, checked UInt128 intermediates, floor provenance, source-order writes/emits, gross debit caps, fee-inclusive net goals, obligation identity/tombstones and settlement conservation have substantive implementation and passing controls.",
+    "Compact arithmetic hints are constrained; mutation controls reject altered limbs, quotient/remainder, overflow, actor, minimum output and lifecycle inputs. Unsupported persistent/observation Text and short-circuit lowering reject explicitly.",
+    "Simulation remains unaccepted and non-consuming. Missing acceptance backend rejects. The backend interface does not constitute cryptography, durable consumption, PCD or financial settlement."
+  ],
+  "read_scope": {
+    "reviewed": [
+      "Current language implementation files, complete current language tests, numeric/bounds/grammar specifications, typed schemas and semantics, profile proposal, both complete source examples.",
+      "Both complete generated Compact kernels, arithmetic helpers/harness/tests, mapper, metadata-generation and verification code.",
+      "Current verification receipts, relevant historical failure records and selected historical mock/reference implementation."
+    ],
+    "machine_checked": [
+      "Every file in the 150-file candidate manifest.",
+      "Complete materialized example AST/typed/Core records through canonical-byte and structural checks.",
+      "Complete generated mapping artifacts through deterministic byte comparison.",
+      "All 104 crosswalk rows retain mandatory downstream status: 32 ACTUS and 72 DeFi."
+    ],
+    "limitations": [
+      "Not every archival generated JavaScript/ZKIR/source-map line or historical mock/UI/test source was manually reviewed; these were hash-verified, and applicable existing tests were executed.",
+      "No exhaustive parser, evaluator or compiler correspondence metatheorem was attempted.",
+      "No other auditor, source-profile audit output, wallet, secrets or network was consulted. No native proof build, proving key generation or public submission occurred.",
+      "MC02/04/05 settlement, authentication, obligation-ledger integration, durable consumption and PCD remain downstream requirements, not demands for MC01 closure. Signed/calendar/Pending/composition extensions and full ACTUS/DeFi conformance remain open."
+    ]
+  },
+  "approval_condition": "Correct the reproduced MC01 admission and conformance defects, bind the successor implementation and actual test evidence to a new exact commit/digest, and obtain the required independent reviews."
+}
