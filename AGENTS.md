@@ -41,12 +41,13 @@ The user then [selected Preview](raw/assignments/midnight-preview-steering-2026-
 for the public settlement attempt. Use a dedicated Preview wallet and preserve
 Preprod keys; no further Preprod retry is required by the old checkpoint.
 The subsequent [Preview execution](evidence/midnight-preview-2026-09-07/README.md)
-received test NIGHT and finalized a public contract deployment. The call failed
-with invalid DUST proof170; one fresh attempt could not balance DUST. Preserve
-the wallet and existing contract; diagnose proof inputs and failed-transaction
-reservations before further calls. Public deployment works; full deploy/call
-acceptance and Moriarty PCD remain open. Preview is the sole public execution
-target for this sprint; the supplied Preprod snapshot is reference material.
+received test NIGHT and finalized both public deployment and a contract call,
+with exact message readback. The failed call's DUST reservation was recovered by
+replaying DUST only; the original state and failures remain preserved. The normal
+runtime now restores a spendable sequence2 coin. The cause of the first proof170
+rejection remains unconfirmed; do not claim a general SDK fix. Preserve this wallet
+and contract. Preview is the sole public execution target for this sprint;
+the supplied Preprod snapshot is reference material. Moriarty PCD remains open.
 Neither local settlement nor application MockProver checks establish Moriarty PCD.
 The [published documentation capture](evidence/midnight-docs-2026-09-07/README.md)
 covers all indexed Markdown routes with explicit HTML/asset limitations. Keep

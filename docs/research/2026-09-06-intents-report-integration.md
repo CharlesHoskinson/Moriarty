@@ -92,7 +92,7 @@ solver network, compositional authority theorem or wallet authorization.
 | --- | --- |
 | R2: exact-plan executable slice | Loan accrual/settlement and pool swap/closure share one bounded evaluator. Independent effect checks, genuine local signing and fail-closed required-proof status run in the browser. This remains S3. |
 | R2b: outcome intent and authority profile | Reviewable bounded IntentIR/PlanIR/Receipt schemas plus the concrete checker and signing summary described below. Preserve positive feasibility and adversarial rejection. |
-| R3: native proof boundary | The fixed financial harness compiled and passed application checks, but recursive VK setup exhausted rows at k17; no native proof exists. Local Compact deployment/call settled separately. Public Preprod, native proof-to-ledger compatibility and R2b authority/refinement binding remain open. Review state encoding or resource limits before further native execution. |
+| R3: native proof boundary | The fixed financial harness compiled and passed application checks, but recursive VK setup exhausted rows at k17; no native proof exists. Local Compact deployment/call settled separately. Public Preview deployment/call are now demonstrated; native proof-to-ledger compatibility and R2b authority/refinement binding remain open. Review state encoding or resource limits before further native execution. |
 | R4: private composition | Independent witness handoff, residual-authority chains and split/join obligations; conflicts and finality checked separately from PCD. |
 | R5: certificates and target coverage | Connect named bounded contract certificates, compiler/adapter refinement and held-out workloads; retain all 18 ACTUS types, 277 fixtures and 72 DeFi rows. |
 | R6: acceleration | Only measure a concrete repeated workload after the acceptance relation exists. Fallback preserves all mandatory claims. |
@@ -146,8 +146,8 @@ now records a concrete k17 recursive-row failure after passing fixed application
 checks. No cryptographic proof was produced. Choose a reviewed smaller checked
 state encoding or a separately justified resource ceiling before another run.
 The [network experiment](../../evidence/moriarty-midnight-network-2026-09-07/README.md)
-settled a local Compact deployment/call; public Preprod still requires faucet
-CAPTCHA funding and wallet synchronization. These transactions do not consume a
+settled a local Compact deployment/call; the later Preview follow-up also
+finalized deployment/call and exact readback on the public target. These transactions do not consume a
 Moriarty history proof. R4 owns private/residual composition, and R5 retains
 certificates and full target coverage. No gate is waived by local SDK success.
 
@@ -164,10 +164,14 @@ state, and use the matching documented faucet with its exact server response.
 The user subsequently selected Preview exclusively for this sprint. The
 [Preview experiment](../../evidence/midnight-preview-2026-09-07/README.md) received
 test NIGHT, completed sync/DUST setup and finalized a public contract deployment.
-The call failed with invalid DUST spend proof170; a fresh attempt failed DUST
-balancing. Inspect the proof inputs and failed-transaction reservations before
-another bounded call attempt, then require successful indexed execution, node
-finality and exact readback. Retain the same wallet and deployed contract.
+The first call failed with proof170 and then DUST balancing. The user approved
+a follow-up: a read-only copy exposed a hidden DUST reservation, DUST-only replay
+recovered the coin, and a fresh call passed indexed execution, node finality and
+exact readback. The original state/failures remain preserved. The first proof
+rejection's cause is unconfirmed; no general SDK fix is claimed. The same wallet
+and deployed contract remain the public runtime. Next, specify a single bounded
+Moriarty financial operation for this proven network path; do not treat this
+hello-world test as financial semantics or PCD acceptance.
 The supplied Preprod snapshot is reference material; no restore is needed for
 this target. This amendment does not change the native R3 k17 stop or remove
 mandatory proofs and target-coverage obligations.

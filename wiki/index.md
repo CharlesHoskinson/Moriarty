@@ -9,9 +9,10 @@ will grow by merging evidence into durable topic pages.
 Local Docker is the daily development default; Preview is preferred for early
 public integration and Preprod remains valid for final validation. Faucet URL
 drift and wallet sync are separate from network availability; public settlement
-now has [a finalized Preview deployment](../evidence/midnight-preview-2026-09-07/README.md).
-The contract call failed with DUST proof170 and then a balancing error. Preview
-is the sole public execution target this sprint. See CLM-0203–0204 and SRC-0057–0058.
+now has [finalized Preview deployment and call](../evidence/midnight-preview-2026-09-07/README.md).
+DUST replay recovered the hidden reservation; a fresh call settled and exact
+readback passed. Preview is the sole public execution target this sprint. See
+CLM-0205 and SRC-0061–0062; prior failures remain in CLM-0204.
 
 **Latest implementation output:** [Midnight Docker settlement evidence](../evidence/moriarty-midnight-network-2026-09-07/README.md),
 [published documentation capture](../evidence/midnight-docs-2026-09-07/README.md), and

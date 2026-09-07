@@ -913,3 +913,12 @@ block. Retained both failed call attempts and the failing combined gate. Updated
 execution instructions and the controlling roadmap to preserve the wallet and
 contract for DUST diagnosis; Preprod snapshot instructions remain reference only.
 No native R3 proof rerun or Moriarty PCD completion is claimed.
+
+
+## 2026-09-07 — Preview call recovery and combined settlement gate passed
+
+Added SRC-0061–0062 and CLM-0205. Read-only diagnostics exposed reserved DUST;
+DUST-only replay recovered the same wallet, and a fresh call settled with exact
+readback. Verified deployment and call against indexer SUCCESS and canonical
+node finality. Preserved failures, promoted the recovered private snapshot with
+backup, and checked normal-runtime restore. No general SDK fix or PCD is claimed.

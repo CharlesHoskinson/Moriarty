@@ -3,8 +3,10 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T03:29:21.695102+00:00
+updated_at: 2026-09-07T03:49:23.982391+00:00
 sources:
+  - SRC-0061
+  - SRC-0062
   - SRC-0058
   - SRC-0059
   - SRC-0060
@@ -2875,3 +2877,28 @@ Native R3 remains stopped. SRC-0059 preserves the Preprod snapshot instructions;
 the [bounded assessment](../evidence/midnight-indexer-snapshot-assessment-2026-09-07/README.md)
 received403 and did not download or restore the archive. Preview supersedes that
 execution target; the supplied database claims remain unverified.
+
+
+## CLM-0205: Preview call and exact readback finalized after DUST recovery
+
+The [combined receipt](../evidence/midnight-preview-2026-09-07/settlement-2026-09-07T03-46-27-714Z.json)
+records SUCCESS for the original deployment and a call in block755889. Both block
+hashes matched node RPC and were below finalized height755891; readback matched
+`Moriarty Preview settlement test`. The call used the existing wallet/contract.
+
+Read-only diagnostics exposed a hidden ledger DUST reservation despite an empty
+SDK pending list. DUST-only replay in a separate private directory recovered the
+coin; fresh sync, proof generation and one submission succeeded. The reconstructed
+DUST snapshot was promoted to the normal runtime with the original preserved;
+a fresh restore exposed a spendable sequence2 coin and no pending reservation.
+The first error170's precise cause remains unconfirmed. This is an evidenced
+state recovery, not a general SDK bugfix or a Moriarty PCD result. Original
+failures and the failed combined gate remain unchanged.
+
+Metadata: SRC-0061 user approval; SRC-0062 live receipt; installed SDK source hashes
+in the [inspection record](../evidence/midnight-preview-2026-09-07/dust-source-inspection.json),
+with the ledger source at a8ab82ba2124c36f92795c683e70bd888bc1d1fb. Observed
+2026-09-07 UTC; experimental authority, S3; experiment observation, reproduced
+for the stated recovery/settlement/readback predicates; high confidence for
+retained results, unknown for recurrence or the initial proof error's root cause.
+The native k17 stop, financial target coverage and mandatory PCD remain unchanged.
