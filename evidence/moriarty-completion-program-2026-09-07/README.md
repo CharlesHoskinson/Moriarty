@@ -4,6 +4,10 @@ Scope: eight S2 OpenSpec plans for the seven requested gaps.
 Authority: [user assignment](../../raw/assignments/moriarty-completion-loop-2026-09-07.md).
 Entry point: [program charter](../../openspec/MORIARTY-COMPLETION-PROGRAM.md).
 
+Latest continuation: [MC01 source preparation and readiness recheck](resume-20260907T043818Z/README.md).
+The explicit resume still found the old unfinished runtime goal and Fable's credit limit.
+Independent source preparation continued; no implementation or proof gate was bypassed.
+
 ## Evidence boundaries
 
 No MC01–MC08 implementation result is established by this package.

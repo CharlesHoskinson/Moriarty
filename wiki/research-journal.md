@@ -3,8 +3,10 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T04:14:56.275554+00:00
+updated_at: 2026-09-07T04:44:42.833266+00:00
 sources:
+  - SRC-0066
+  - SRC-0067
   - SRC-0063
   - SRC-0064
   - SRC-0065
@@ -2926,3 +2928,24 @@ Metadata: SRC-0063 normative user authority, S2, source fact; SRC-0064–0065 lo
 tool observations, S3, experiment observations, reproduced for those attempts.
 Observed 2026-09-07 UTC; high confidence for retained outcomes. Availability can
 change and requires fresh checks. Plan and result audits have separate scopes.
+
+
+## CLM-0207: MC01 source preparation resumed; external blockers persist
+
+The [resume intake](../evidence/moriarty-completion-program-2026-09-07/resume-20260907T043818Z/README.md)
+records a fresh usage-credit refusal from Fable and the unchanged superseded
+A4/A5 runtime goal. No new completion loop was armed. Independent source inspection
+identified reusable bounded Core behavior and concrete decisions for units,
+numeric literals, codec limits, claim versions, and complete/pending semantics.
+The first-period sample's closed flag does not discharge its remaining principal.
+
+The source report classifies foundational and target-specific parts of DS-01–07.
+Independent rational/integer calculations reproduce the two retained example
+formulas; they establish no evaluator, conformance, ledger, or proof result.
+All MC01 implementation/freeze tasks remain open. The candidate-03 plan files
+remain unchanged, so no new planning approval is inferred or required by this intake.
+
+Metadata: SRC-0066 local readiness observation, S3, reproduced for this attempt;
+SRC-0067 repository observations and recommendations, S2, not a runtime experiment.
+Observed 2026-09-07 UTC. High confidence for checked source bytes and returned
+readiness result; recommendations remain subject to both required reviews.

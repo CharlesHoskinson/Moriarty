@@ -933,3 +933,12 @@ receipt and its corrected candidate. Fable readiness returned a credit limit;
 new goal creation was refused by the superseded unfinished A4/A5 runtime goal.
 The program evidence records actual review status. No loop or implementation
 completion is inferred from the plans.
+
+
+## 2026-09-07 — Resume MC01 source preparation
+
+Added SRC-0066–0067 and CLM-0207. The explicit resume still found the obsolete
+unfinished goal and Fable credit limit. Preserved source intake, exact input
+hashes, sample arithmetic, and concrete language-profile decisions. No old goal
+was resumed, implementation accepted, native proof retried, or public transaction
+submitted. MC01 freeze and execution remain pending their recorded gates.
