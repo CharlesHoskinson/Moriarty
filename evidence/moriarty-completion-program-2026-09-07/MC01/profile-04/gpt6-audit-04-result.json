@@ -1,0 +1,31 @@
+{
+  "candidate_commit": "352dfdb284e3c021cf1a4c53d896eeab336787fc",
+  "candidate_sha256": "28e749d2ddf2058d349cbaa4f9d3a8d0b7a9673310a232edd4b8333bbf9c3c8b",
+  "verdict": "BLOCKED",
+  "scope": "MC01 1.1/1.2/D.1/D.2 specification freeze only. Reviewed all nine normative files and complete materialized examples. All 56 manifest hashes match worktree and candidate-commit bytes; the candidate digest recomputes exactly. Grammar, arithmetic, materialized bounds/hashes/source links, example typing and units, and lossless 32/72 source-dictionary checks passed. Two remaining canonical-output definitions require clarification.",
+  "findings": [
+    {
+      "id": "MC01-04-01",
+      "severity": "medium",
+      "blocking": true,
+      "locator": "experiments/moriarty-language/spec/typed-schemas.md:572,594,724-726; experiments/moriarty-language/spec/semantics.md:174-195",
+      "problem": "ObligationDelta has a closed shape and ordering, but its record snapshot semantics are unspecified. The supported rules permit creating a due, emitting its matching Transfer, and settling that due in one action. They determine the final obligation as Settled, but do not determine whether delta.created contains the Outstanding record captured at creation or the final Settled record. Both satisfy the listed record schema and ordering. This changes CompleteBody bytes, resource counts, traceHash and ProofContext despite identical financial effects and final state. An independently checked grammar example confirms that this action shape is expressible.",
+      "required_fix": "Define exact delta membership and snapshot timing. For example, append an immutable Outstanding snapshot to created when DueCreated succeeds and an immutable Settled snapshot to settled when DueSettled succeeds, retaining both entries when creation and settlement occur in one action. Supply an explicit expected delta for that case."
+    },
+    {
+      "id": "MC01-04-02",
+      "severity": "medium",
+      "blocking": true,
+      "locator": "experiments/moriarty-language/spec/grammar.ebnf:78-80; experiments/moriarty-language/spec/typed-schemas.md:290-292,575-578,716-719",
+      "problem": "Empty action bodies are permitted, but the maximum-based resource fields have no empty-set definition. A valid action idle(actor: Text) {} has no expression root or evaluated unit vector. The specification does not assign its static expressionDepth, runtime maximumExpressionDepth or unitComponents. These required values enter the program hash or trace hash, so implementations must invent a convention or introduce an unspecified rejection. An independently checked grammar example confirms empty-action representability.",
+      "required_fix": "Define these maxima as zero when their measured set is empty, or explicitly prohibit empty actions with a specified diagnostic. State the numeric cardinality measured by unitComponents and retain a canonical empty-action count vector."
+    }
+  ],
+  "residual_limitations": [
+    "The findings concern deterministic serialization within the supported profile, not missing future ACTUS/DeFi algorithms.",
+    "The loan retains 4500000000 micro-USD remaining notional after episode closure; the swap's compound-unit arithmetic is representable.",
+    "The precheck and post-trace proof interfaces specify trusted acceptance checks; this review establishes no implemented verifier, mandatory PCD, native proof, authenticated asset movement or ledger acceptance.",
+    "Frontend implementation admission, MC07 behavioral conformance, later signed/calendar/convergence/composition extensions, and whole MC01 closure remain open.",
+    "No concurrent evaluator files, other reviewers' verdicts, wallet, native or network execution were used."
+  ]
+}

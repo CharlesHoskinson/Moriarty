@@ -97,3 +97,18 @@ effect on target coverage, not adding another layer of approval machinery.
     establish a terminal goal. A valid signature, keyword certificate or
     taxonomy classification proves none of these semantics. See the
     [intents amendment](research/2026-09-06-intents-report-integration.md).
+
+14. **Apply skills only within their stated scope.** The bridge formal workflow
+    applies to the bridge repository. Missing bridge files in Moriarty are not
+    an installation failure to repair. Check applicability before obeying a
+    foreign repository's stop rule. Worker 04 stopped before edits after this
+    exact mistake; preserve its receipt in MC01/profile-02.
+
+15. **Use delegated authority and preserve useful output.** The latest user
+    instruction delegates execution decisions and forbids repeated permission
+    loops. Record a justified bounded successor when needed, then continue.
+    Keep independent correctness reviews and actual completion requirements.
+    Do not reuse an inadequate short timeout for a large schema correction.
+    Replace documents atomically so interruption cannot delete a required file.
+    A worker timeout does not erase completed artifacts, but its report is not
+    evidence until the host checks the actual output.

@@ -1,6 +1,6 @@
 # Tasks: Bounded language and semantic contract
 
-Status: specified-only. All implementation tasks remain unchecked.
+Status: source specification approved by both named auditors; implementation verification in progress. See `evidence/moriarty-completion-program-2026-09-07/MC01/source-approval-05/source-freeze.json`.
 
 **Goal:** Define and implement the Moriarty authoring language over a finite typed Core.
 
@@ -12,8 +12,8 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 ## 1. Freeze the language profile
 
-- [ ] 1.1 Write the grammar, numeric profile, transition judgments, and bounds. Classify DS-01 through DS-07 dependencies. Resolve foundational ambiguities before freezing; retain target-specific gaps for MC07.
-- [ ] 1.2 Review traceability against the complete target matrices. Require both named auditors before freezing this profile.
+- [x] 1.1 Write the grammar, numeric profile, transition judgments, and bounds. Classify DS-01 through DS-07 dependencies. Resolve foundational ambiguities before freezing; retain target-specific gaps for MC07.
+- [x] 1.2 Review traceability against the complete target matrices. Require both named auditors before freezing this profile.
 - [ ] 1.3 Preserve the failing result and the corrected result with source hashes.
 - [ ] 1.4 Commit only owned changes in an isolated implementation worktree.
 
@@ -40,8 +40,8 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 ## D. Required decision intake
 
-- [ ] D.1 Define foundational numeric and extension requirements before freezing the first profile.
-- [ ] D.2 Classify profile-version changes and their signature, proof, theorem, and audit invalidation rules.
+- [x] D.1 Define foundational numeric and extension requirements before freezing the first profile.
+- [x] D.2 Classify profile-version changes and their signature, proof, theorem, and audit invalidation rules.
 
 ## Verification commands
 

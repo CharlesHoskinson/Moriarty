@@ -1,0 +1,78 @@
+# Independent GPT-6 MC01 source profile audit
+
+**Verdict: BLOCKED.**
+
+Independent source specification freeze review only: MC01 1.1/1.2/D.1/D.2 for moriarty-bounded-atomic/1. No parser, evaluator, PCD, native proof, network, ledger, full financial conformance, or whole-MC01 approval.
+
+Candidate commit: `d5580f26d913bbd03b7e39eca966d2b6e3c24382`
+Candidate digest: `fd7b297b3ca15c1657b35b1fffc68c7ed313c20f7dd3a9601017cd9119d1db05`
+
+The supplied commit and all file hashes match. Complete target inventory traceability and both independent arithmetic calculations pass. The profile is not yet precise enough for deterministic implementation.
+
+## G6-MC01-001 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/examples/loan.moriarty:79; experiments/moriarty-language/spec/grammar.ebnf:58,103,122; experiments/moriarty-language/spec/typed-schemas.md:63`
+
+The required complete loan example is not expressible by the frozen grammar. Its settle parameter is named asset and its body reads arg.asset, but asset is a keyword; parameter and ArgRef require identifier. The keyword exception applies only to effect record labels. The host correction therefore fixes emit labels but leaves this example invalid.
+
+Required fix: Rename the parameter to a legal identifier such as settlement_asset and update every arg reference, or deliberately specify a broader contextual-keyword rule consistently across the lexer, grammar, schemas and examples. Demonstrate that both complete examples conform to the revised grammar.
+
+## G6-MC01-002 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/profile-proposal.md:102-121; experiments/moriarty-language/spec/bounds.json:/signingEnvelope,/contradictionDisposition; experiments/moriarty-language/spec/numeric-profile.json:/integer/floorNode; experiments/moriarty-language/spec/grammar.ebnf:1-8,93-106`
+
+The candidate gives incompatible instructions for the same profile without a normative precedence rule. The proposal requires depth-40 public envelopes and maximum-depth expressions inside signing envelopes, while bounds explicitly rejects that draft and requires depth 16 plus a program hash. The numeric profile still defines binary slash and an identity floor(e), while the grammar and semantics allow only floor_div and use floor(identifier) solely in policy declarations. These differences change accepted source or signed bytes.
+
+Required fix: Reconcile every frozen document with one authoritative depth-16 signing envelope and separate AST limits, and one division syntax/evaluation rule. Remove or explicitly mark superseded prose as nonnormative historical material. Preserve historical signature domains and bytes; do not repair by silently changing old claims.
+
+## G6-MC01-003 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/semantics.md:38; experiments/moriarty-language/spec/typed-schemas.md:34; experiments/moriarty-language/spec/grammar.ebnf:33-43; experiments/moriarty-language/spec/examples/loan.moriarty:26-41,71-93; experiments/moriarty-language/spec/examples/swap.moriarty:24-31,55-71`
+
+Mandatory financial policy checking cannot be implemented from the specified surface, and the examples do not satisfy the stated coverage rule. The loan has policies only for principal_due and interest_due, yet calculates notional, borrower_cash, lender_cash, principal_paid and interest_paid and emits a combined transfer amount. The swap has only swap_output, which is neither a declared state field nor a local, and updates/emits amounts in two units. No rule binds a policy identifier to particular action/write/emit occurrences, resolves a rounding local across actions, propagates a policy through sums or copies, or determines when derivation/remainder/comparison text is stale.
+
+Required fix: Specify a deterministic policy-target and rounding-node identity scheme, the exact coverage requirement, propagation rules if any, and machine-checkable meaning or explicitly opaque status of each textual field. Supply all policies/bindings required for every financial write and effect in both examples. Make ambiguity, missing targets and stale rounding references reject without heuristics.
+
+## G6-MC01-004 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/semantics.md:40,57,68; experiments/moriarty-language/spec/typed-schemas.md:46,58,61; experiments/moriarty-language/spec/grammar.ebnf:45-53`
+
+Obligation and status semantics are named but not defined. Effect declarations permit arbitrary closed field sets for DueCreated and DueSettled; there is no mandatory semantic schema or mapping from those fields to obligations. The profile does not define obligation identity scope, duplicate creation, unknown/already-settled IDs, partial or excessive settlement, counterparty/denomination matching, or the state update relation. episodeStatus and agreementStatus have neither value domains nor derivation/update rules. Implementers could therefore produce different obligations and Complete receipts for the same trace, including a spurious discharge, while following the current prose.
+
+Required fix: Define the required obligation effect schemas and deterministic created/settled/outstanding transition rules, including rejection cases and bounded representation. Define status domains and a source/manifest rule for deriving them. Show the loan transition retaining separate PR/IP identities and reporting the remaining 4500000000 micro-USD notional after episode closure; no native proof implementation is required for this source-level fix.
+
+## G6-MC01-005 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/semantics.md:36,40,57; experiments/moriarty-language/spec/typed-schemas.md:32; experiments/moriarty-language/spec/numeric-profile.json:/units/conversion,/units/unitErasure; experiments/moriarty-language/spec/grammar.ebnf:31`
+
+Settlement quantum is a positive nominal amount, but its arithmetic meaning and binding resolution are absent. For a declared quantum amount(10,U), the profile does not say whether emitting amount(15,U) transfers 15 ledger units, rejects nondivisibility, or performs some rounding/conversion. It also lacks a uniqueness/selection rule when several settlement declarations refer to the same unit or asset. The examples use quantum one and conceal this ambiguity. This affects actual effect amounts and cannot be left to nominal-unit erasure or unspecified wrapper behavior.
+
+Required fix: Define quantum orientation, exact unit-to-ledger conversion, divisibility/remainder/overflow behavior, and deterministic binding selection with ambiguity rejection. Either constrain this first profile explicitly to a reviewed one-to-one mapping or specify the general rule. Specify the resulting transfer amount representation and keep asset authentication an external predicate.
+
+## G6-MC01-006 — high, blocking
+
+Locator: `experiments/moriarty-language/spec/typed-schemas.md:18,25-39,45-51,58-63; experiments/moriarty-language/spec/bounds.json:/signingEnvelope/signedObject; experiments/moriarty-language/spec/semantics.md:54-55,64`
+
+The hash domains now have noncircular preimages, but the objects being hashed and accepted are still only schema sketches. Declaration/instruction records, typed values, canonical unit vectors (including negative exponents), coreVersion, authority variants, observation authentication bindings and several receipt fields lack exact field/value schemas. The manifest permits the complete bounds object even though bounds.json contains numeric JSON values forbidden by the stated codec. It is also unclear which manifest subset is the depth-16 public signing object because the complete manifest contains actions/instructions. The authority prose names principal and action binding but does not specify how an authenticated principal is related to the examples' freely supplied arg.actor text. These gaps leave implementers to invent accepted bytes and authorization associations.
+
+Required fix: Freeze exact closed source/Core/manifest/public-envelope schemas and version literals, or pin an existing normative schema by exact version and define all deltas. Define canonical signed-exponent and bounds representations, distinguish the full program-hash preimage from its compact signing reference, and specify source-to-compiled statement bindings. Define required authority/observation data and binding predicates, including principal-to-action identity checks. Cryptographic verification, durable nonce handling and ledger execution can remain external/unimplemented; the interface and required checks must be precise.
+
+## Verification
+
+- Read supplied audit-instructions.md and profile-candidate-01.json; read actual nine candidate source files, with the crosswalk inspected structurally and compared in full as parsed JSON.
+- Verified worktree HEAD equals d5580f26d913bbd03b7e39eca966d2b6e3c24382 and git status --porcelain is empty.
+- Recomputed SHA-256 for all nine manifest paths; all match.
+- Recomputed candidate digest over sorted-key compact JSON with only candidate_sha256 omitted; result exactly fd7b297b3ca15c1657b35b1fffc68c7ed313c20f7dd3a9601017cd9119d1db05.
+- Compared source dictionaries using exact multiset equality against both retained CSVs: 32/32 ACTUS and 72/72 DeFi; 104 unique row IDs; every row mc07_mandatory true.
+- Recomputed sample amounts independently using Python Fraction; inspected dimensional cancellation A*B/A -> B and UInt128 intermediate rejection rules.
+- Read applicable AGENTS.md, docs/FOOTGUNS.md and MC01 design/task scope; inspected the referenced existing claims.ts canonical function to confirm depth 16, numeric-token rejection and string limits.
+- Manually checked grammar/keyword use, required policy coverage, effect/obligation semantics, settlement mapping, manifest/hash fields, version invalidation and source-versus-implementation scope.
+
+## Limits and provenance
+
+- Source-only, time-bounded audit; no builds, parser/evaluator runs, proof runs, network activity, private-key access or other-model calls.
+- All 32 ACTUS and 72 DeFi rows are losslessly retained and marked mandatory for MC07. This verifies inventory traceability, not behavior or upstream conformance. DS-01 through DS-07 are classified as foundation versus future obligations in the proposal.
+- Independent arithmetic confirms loan interest 2480000000/73, floor 33972602, remainder 54/73, settlement 533972602 and remaining notional 4500000000; swap output 1994000000/100997, floor 19743 and reserves 1010000/1980257. These calculations are not evaluator execution.
+- The documents correctly distinguish Rejected/Complete/Pending, disallow Pending in this version, require finite nonresetting lifetime/horizon, require UInt128 overflow rejection before division, retain nominal unit vectors, and disclaim authenticated movement and implemented PCD. Those sound requirements do not resolve the listed gaps.
+- The dispatch disclosed worker timeout and root recovery, structural checks, effect-label correction, hash-preimage correction and candidate commit. This provenance was retained as supplied; worker execution was not reproduced. No other reviewer verdict or report was consulted.
+- Review confined to the supplied candidate and directly relevant local sources. No candidate or main-repository files were mutated.

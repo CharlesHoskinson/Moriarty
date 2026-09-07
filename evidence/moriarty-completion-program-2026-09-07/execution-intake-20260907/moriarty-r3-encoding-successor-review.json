@@ -1,0 +1,73 @@
+{
+  "kind": "moriarty-r3-checked-encoding-successor-review",
+  "status": "source-only correction; implementation preparation; unbuilt and unproved",
+  "supersedes": ["/tmp/moriarty-r3-encoding-successor.json", "/tmp/moriarty-r3-encoding-successor.md"],
+  "finding": "The prior bare phase proposal is unsound as stated. Rust host assertions, host decoding, IvcState::decider, and Context values that never enter synthesized constraints do not bind the recursive circuit VK to the financial/digest table. A synthesized generic 0->1->2 relation proves only a counter.",
+  "source_basis": [
+    {"path":"experiments/moriarty-native-ivc-r3/harness/moriarty_loan_r3.rs","locators":"IvcContext::new; IvcState::decider; IvcIO; IvcTransition::circuit_transition","observation":"Host assertions and decider are separate from circuit_transition. The retained circuit binds episode rows because it assigns before0/before1/after1 constants and asserts every assigned state limb equal to the selected row."},
+    {"path":"repos/midnightntwrk/midnight-zk/aggregation/src/ivc/circuit.rs","locators":"128-180","observation":"format_instance exposes T::format_public_input(state); circuit assigns prev_state through IvcIO, constrains next_state through IvcIO, and invokes circuit_transition. Binding therefore depends on constraints emitted by assign/circuit_transition/constrain_as_public_input, not host-only data."}
+  ],
+  "comparison": {
+    "a_phase_plus_episode_digest": {
+      "description":"Expose phase and a complete-episode context digest, constrain the digest to a fixed constant, and decode state off circuit.",
+      "assessment":"Insufficient unless the circuit also recomputes that digest from all canonical episode fields or proves a checked lookup/opening. Equality to a fixed digest alone binds bytes only by an external correspondence assertion; it does not constrain those bytes or either loan transition. In-circuit SHA256/Poseidon recomputation could repair it but adds a new hash gadget, encoding specification, collision-resistance assumption, and unknown row cost.",
+      "decision":"Do not select for the next smallest experiment."
+    },
+    "b_private_full_state_compact_public_binding": {
+      "description":"Keep phase plus all 54 canonical limbs in AssignedState as private constrained values. Expose only phase. For each transition, select the complete pinned before/after rows by phase and assert equality for every private limb; output all selected after limbs and phase+1.",
+      "assessment":"Defensible for this finite fixed specialization without an in-circuit hash. Public phase acts as an exact table index because synthesized constraints prove membership in one of three exhaustive constant rows. It is not a general commitment and must not be described as cryptographic commitment.",
+      "decision":"Recommended smallest defensible checked representation."
+    }
+  },
+  "recommended_representation": {
+    "state_native":"State { phase: u64, financial: [u128;11], digests:[[u64;4];8] } remains complete.",
+    "assigned_state":"AssignedState { phase: AssignedNative, limbs: [AssignedNative;54] }.",
+    "public_application_input":"One canonical field element phase.",
+    "private_checked_input":"54 limbs: 22 u64 limbs for 11 u128 financial values and 32 u64 limbs for eight 256-bit digests.",
+    "synthesized_relation":[
+      "Range constrain phase and all 54 limbs; phase must be 0 or 1 for an ordinary transition.",
+      "Compute selector phase==0.",
+      "For each of 54 before limbs, assign both fixed row0 and row1 constants, select by phase, and assert the private input limb equals the selected constant.",
+      "For each of 54 after limbs, select fixed row1 or row2 constant and return it as the private next-state limb.",
+      "Return next_phase=phase+1 and constrain only next_phase as application PI.",
+      "IvcIO::assign must assign phase and all full limbs; as_public_input/constrain_as_public_input expose only phase. format_public_input returns only phase.",
+      "Genesis host state is complete row0; first circuit step constrains its private row0 values. Every recursive successor constrains the prior complete row and produces the complete next row."
+    ],
+    "binding_claim":"For the fixed three-row episode, the circuit constraints bind phase to every original financial, contract/program/specification, intent, predecessor, output/transition, effects/history, and authority/obligation field. Those constants enter the constraint system and hence the VK. The claim assumes correct constant generation from the pinned episode fixture; it does not prove SHA256 preimages or dynamic semantics.",
+    "public_input_inventory":{"vk_repr":1,"application_phase":1,"accumulator":"unchanged, construction-dependent","private_application_witness":55,"private_breakdown":"1 phase + 22 financial u64 limbs + 32 digest u64 limbs"}
+  },
+  "controls": [
+    "Reject noncanonical phase values and phase 2 as an ordinary predecessor; constrain phase directly without truncation or modular parsing.",
+    "Reject 0->2, 1->0, repeated phase, and any mutation of each low/high financial limb or digest limb because every private limb is equality-constrained to its selected row.",
+    "Range constrain every u64 limb below 2^64, preserving unique u128 reconstruction and preventing modular aliases.",
+    "Keep fixed row constants in the synthesized circuit; a refactor that leaves them only in host decode/decider is forbidden.",
+    "Retain forged-genesis, wrong domain/program/specification/intent/predecessor/output/effects/authority, malformed proof, statement mismatch, and final-accumulator controls.",
+    "Hash and record episode.rs, generated source/preimages, harness, Cargo.lock, backend, SRS and resulting VK representation."
+  ],
+  "exact_source_changes": [
+    {"path":"experiments/moriarty-native-ivc-r3/harness/moriarty_loan_r3.rs","change":"Add phase to complete State/AssignedState; assign all 54 private limbs plus phase; expose only phase in IvcIO PI methods; retain the existing per-limb selected fixed constants and equality constraints; produce selected complete next row plus next phase. Rewrite preflight to assert the one-element PI and retain exhaustive limb mutation rejection."},
+    {"path":"experiments/moriarty-native-ivc-r3/harness/episode.rs","change":"No semantic change; its exact constants must continue to be referenced inside circuit_transition so they affect the constraint system/VK."},
+    {"path":"experiments/moriarty-native-ivc-r3/run-native.py","change":"Use a fresh successor manifest/output and bind hashes for the changed harness and unchanged episode. Preserve the reviewed pins and limits."}
+  ],
+  "pins_and_proposed_bound": {
+    "midnight_zk":"695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+    "rust":"1.90.0",
+    "features":["truncated-challenges"],
+    "cargo":"--locked --release --jobs 2",
+    "srs_sha256":"4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74",
+    "srs_k":17,
+    "proposal":"one fresh attempt; 480 seconds; k<=17; 8GiB; zero swap; 2 CPUs/jobs; 256MiB retained output; stop at first failure; no automatic retry or k increase"
+  },
+  "scope_boundaries": {
+    "application":"Fixed original two-loan-step table lookup relation with private complete state and public phase.",
+    "recursive":"Native proof chain, canonical VK, decider, transcript EOF and accumulator discharge remain separate required executed predicates.",
+    "ledger":"Preview ContractCall statement/effect/VK/version adapter remains unresolved and separate."
+  },
+  "unresolved": [
+    "Whether reducing public exposure while retaining 54 private assigned/range/equality-constrained limbs reduces enough recursive rows to fit k17.",
+    "The prior failure has no row attribution; public-input constraints may not be the dominant cost.",
+    "Whether IVC internals require all AssignedState components to be represented publicly for sound recursive predecessor linkage; source flow suggests assigned previous state is witness and next PI is chosen by IvcIO, but this altered representation requires code review and rejection tests.",
+    "A general compact commitment for dynamic Moriarty state still requires an in-circuit hash/commitment and checked encoding; this finite lookup does not supply it.",
+    "No build, synthesis, MockProver or proof supports feasibility."
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "schemaVersion": "moriarty-mc02-ledger-interface-intake/1",
+  "status": "source-inspected-design-only",
+  "observedAt": "2026-09-07T08:36:15.705572+00:00",
+  "authority": "source-preparation-dispatch.json",
+  "mainHead": "2aa863565fa1faae759f5bef47d2a786534fd627",
+  "runtimeWorktreeHead": "b58afea79fd0492f079d47bb617e5bebcb594a52",
+  "packages": {
+    "ledger-v8": "8.1.0",
+    "onchain-runtime-v3": "3.0.0",
+    "compact-runtime": "0.16.0",
+    "midnight-js-contracts": "4.1.1",
+    "midnight-js-types": "4.1.1",
+    "midnight-js-indexer-public-data-provider": "4.1.1",
+    "midnight-js-protocol": "4.1.1"
+  },
+  "compilerCompatibility": {
+    "compiler": "0.31.1",
+    "language": "0.23.0",
+    "runtime": "0.16.0",
+    "basis": "retained documentation and installed manifests; no compile or execution in this intake"
+  },
+  "actions": [
+    {
+      "step": 0,
+      "name": "deploy",
+      "financialMovement": "none"
+    },
+    {
+      "step": 1,
+      "name": "initialize",
+      "mint": {
+        "USD": "20000000000",
+        "A": "1100000",
+        "B": "2000000"
+      },
+      "walletCredits": {
+        "borrower.USD": "20000000000",
+        "trader.A": "100000"
+      },
+      "contractCustody": {
+        "USD": "0",
+        "A": "1000000",
+        "B": "2000000"
+      }
+    },
+    {
+      "step": 2,
+      "name": "accrue",
+      "financialMovement": "none",
+      "obligations": {
+        "PR": "500000000",
+        "IP": "33972602"
+      },
+      "remainingNotional": "4500000000"
+    },
+    {
+      "step": 3,
+      "name": "settle",
+      "receive": {
+        "USD": "533972602"
+      },
+      "send": {
+        "lender.USD": "533972602"
+      },
+      "contractCustody": {
+        "USD": "0",
+        "A": "1000000",
+        "B": "2000000"
+      }
+    },
+    {
+      "step": 4,
+      "name": "swap",
+      "receive": {
+        "A": "10000"
+      },
+      "send": {
+        "trader.B": "19743"
+      },
+      "contractCustody": {
+        "USD": "0",
+        "A": "1010000",
+        "B": "1980257"
+      }
+    },
+    {
+      "step": 5,
+      "name": "close",
+      "send": {
+        "provider.A": "1010000",
+        "provider.B": "1980257"
+      },
+      "contractCustody": {
+        "USD": "0",
+        "A": "0",
+        "B": "0"
+      }
+    }
+  ],
+  "quantum": "1",
+  "publicSubmissionsPlanned": 6,
+  "publicSubmissionsPerformed": 0,
+  "decoderRequiredFields": [
+    "raw finalized and included transaction bytes/digests",
+    "identifiers and merge-aware transaction hash binding",
+    "all segment IDs, all guaranteed/fallible offers and transcript effects/program/gas",
+    "UTXO spend owner verifying key plus addressFromKey, color,value,intentHash,outputNo",
+    "UTXO outputs and balancing change, preserving output ordinal",
+    "unshieldedMints,unshieldedInputs,unshieldedOutputs,claimedUnshieldedSpends",
+    "all shielded and contract-call effect fields, rejected when unexpected",
+    "ContractState.data plus real ContractState.balance before/after",
+    "DUST ctime,registrations and each spend vFee,oldNullifier,newCommitment",
+    "indexer success/segments/fees, raw data and protocolVersion",
+    "canonical finalized block hash/height and fixed-block state readback"
+  ],
+  "unresolved": [
+    "Module-packaging/prefix refactor must be compiled only after MC01 acceptance; existing kernels are top-level files, not named modules.",
+    "Strong actor authentication and recoverable distinct lender/provider identity binding remain implementation obligations.",
+    "RawTokenType/address byte conversion must use pinned encode/decode APIs, not assume documentation width comments equal Compact Bytes32.",
+    "Exact standard-library mint/receive/send transcript partition and balance-field coefficients need local generated-wrapper checks before public use.",
+    "SDK queryUnshieldedBalances ContractCall branch selects deploy.unshieldedBalances: independently validate freshness against pinned ContractState.balance and raw contractAction.",
+    "SDK unshielded summaries omit outputNo; raw intents are mandatory for exact UTXO identity.",
+    "SDK FinalizedTxData construction polls indexer inclusion without node finality verification; add retained canonical-finality protocol.",
+    "End-of-block state may include later calls; require exact contractAction state/transaction index or prohibit intervening actions.",
+    "Full Moriarty obligation/refinement/history/PCD correspondence is not established by financial token settlement."
+  ],
+  "sources": [
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "sha256": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36",
+      "bytes": 93666
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_bg.wasm",
+      "sha256": "88ff7c7c47c30138ee8f3a0c8bcbf12dbdcdeba591edebfb955c30d732ea7638",
+      "bytes": 10143782
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/index.d.ts",
+      "sha256": "82b7786199a65ab3e72b094c6aafa3b31a365a7cebe7168bcdb427551cac163e",
+      "bytes": 2221
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-types/dist/index.d.ts",
+      "sha256": "c6b9fb7c40e4cbe00a9054ad99026912df4358a3a450a90ede912a87929efb30",
+      "bytes": 44226
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs",
+      "sha256": "23a1883b796fbea037817ae0a7e0f5ed3c072a7d30974154a8de917893cd7f2f",
+      "bytes": 79196
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs",
+      "sha256": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072",
+      "bytes": 97750
+    },
+    {
+      "path": "experiments/moriarty-midnight-network/preview-call.mjs",
+      "sha256": "bebe38ed40696da7036e26afc99abf24f7fbee0649b82e2056b9cfb131566c59",
+      "bytes": 7043
+    },
+    {
+      "path": "experiments/moriarty-midnight-network/preview-verify.mjs",
+      "sha256": "71ca87a30c86b479fc946cdaab7b238556688ad6f010df41cc3ef2f8a1e43233",
+      "bytes": 4163
+    },
+    {
+      "path": "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md",
+      "sha256": "60005ede6545ce13c213a2ab08705486a2c79d341308e15baf4bf35fc70bedf6",
+      "bytes": 45512
+    },
+    {
+      "path": "raw/midnight-docs-2026-09-07/markdown/examples/contracts/token-transfers.md",
+      "sha256": "bbc3a7cf8f49a9c2352ad16facf33c921919cb7eb1dfd378f2346cb1148e88ea",
+      "bytes": 3017
+    },
+    {
+      "path": "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md",
+      "sha256": "61a828679c922fce519352c5f184098c8f2f9d0cd02e609a64e8d876fed469ce",
+      "bytes": 192470
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/package.json",
+      "sha256": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+      "bytes": 860
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/onchain-runtime-v3/package.json",
+      "sha256": "bea88fd56d85fdc8178945a784993980981fd7987e39018f9c0b3b25b3134f54",
+      "bytes": 986
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/package.json",
+      "sha256": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+      "bytes": 1765
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/package.json",
+      "sha256": "d3b6cc94cb5522a37f64ebc2a080e1db228a5901e2e8dfb7c3d14b01ca496701",
+      "bytes": 1469
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-types/package.json",
+      "sha256": "a599f54e31f3b68e8e053fe26732df86bf13a8574b4848cd7f6863428a92b9bb",
+      "bytes": 1050
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/package.json",
+      "sha256": "9a3c306c8d9239c454f641e939f570f55f479f1b4a19709fe74293baf581b6b4",
+      "bytes": 1685
+    },
+    {
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/package.json",
+      "sha256": "bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd",
+      "bytes": 3829
+    }
+  ],
+  "nonActions": [
+    "No wallet files read or generated",
+    "No network/scraping/install",
+    "No compilation/key generation/proofs/transactions",
+    "No edits to frozen MC01 worktree"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "kind": "moriarty-r3-checked-encoding-successor",
+  "status": "implementation-preparation; source-inspected; unbuilt and unproved",
+  "recommendation": {
+    "name": "closed finite-episode ordinal state",
+    "change": "Replace the 54-element public application state (22 u64 financial limbs plus 32 u64 digest limbs) with one canonical field element phase in {0,1,2}. The pinned episode table maps each phase injectively to one complete original state. Preserve exactly the original genesis->accrued and accrued->settled loan steps.",
+    "why_smallest": "This fixed-instance relation has exactly three admitted states and two edges. One field element is sufficient and zero elements cannot distinguish the three states. This is valid only for the fixed episode specialization; it is not a general commitment scheme or dynamic Moriarty state encoding."
+  },
+  "owned_source_changes": [
+    {
+      "path": "experiments/moriarty-native-ivc-r3/harness/moriarty_loan_r3.rs",
+      "locators": "State/AssignedState/LIMBS; fixed_state/state_index/checked_transition/wire; IvcState; IvcIO; IvcTransition::circuit_transition; preflight controls; artifact serialization",
+      "change": "Keep FullState (11 u128 financial fields and eight 256-bit digest fields) as the host fixture table, but make IVC State a phase u8/u64. Decode phase only by exact indexed lookup into episode::FINANCIAL and episode::DIGESTS. Assign one native cell; constrain phase < 3; transition requires phase < 2 and outputs phase+1. Decider accepts only 0,1,2. Retain host checks over every field/digest mutation and both decoded transitions."
+    },
+    {
+      "path": "experiments/moriarty-native-ivc-r3/harness/episode.rs",
+      "locators": "FINANCIAL, DIGESTS, EPISODE_SHA256, INPUT_SOURCE_COMMIT",
+      "change": "No semantic value change. Treat this generated table and its source hash as the exhaustive phase decoder."
+    },
+    {
+      "path": "experiments/moriarty-native-ivc-r3/run-native.py",
+      "locators": "PIN/SRS_HASH/limits/manifest/harness hashes",
+      "change": "Create a successor runner or correction manifest that hashes both changed harness and unchanged episode module, records the ordinal hypothesis, uses a fresh output directory, and preserves the stated k17/8GiB/2CPU envelope. Do not reuse the consumed R3 output."
+    }
+  ],
+  "constraints": {
+    "genesis": "phase == 0; fixed_context must equal the pinned four immutable digest values; setup/VK therefore specializes the relation context.",
+    "ordinary_transition": "Constrain before phase to 0 or 1, equivalently before < 2; constrain after = before + 1 without field wrap; admitted edges are exactly 0->1 and 1->2.",
+    "decider": "Accept phase only if its canonical integer is 0, 1, or 2. Reject every other field element.",
+    "closed": "phase 2 has no ordinary successor.",
+    "full_binding": "phase 0, 1, and 2 select exactly rows 0, 1, and 2 of the unchanged generated FINANCIAL/DIGESTS table. Thus revision, remaining, notional, dues, paid amounts, borrower/lender cash, cursor, closed flag, domain, program, specification, intent, predecessor, output, effects, and authorityObligation remain fixed by the specialized relation and VK. No field becomes witness-selectable.",
+    "history": "The recursive witness binds the previous phase and accumulator; the application transition admits only the two ordered edges. The existing native verifier must still verify canonical vk_repr, decider, transcript EOF and combined KZG accumulator.",
+    "limitation": "The application public input no longer independently reveals the 43 full fields/limbs. A verifier that needs them must use the pinned phase decoder and verify its episode source/hash provenance. This does not support arbitrary states, dynamic authority, joins, or general refinement."
+  },
+  "public_input_inventory": {
+    "application_before": {"elements": 54, "financial": "11 u128 as 22 little-endian u64 limbs", "digests": "8 x 256-bit as 32 little-endian u64 limbs"},
+    "application_after": {"elements": 1, "items": [{"index": 0, "name": "phase", "domain": "canonical integer 0..2", "meaning": "index into the complete pinned episode table"}]},
+    "full_ivc_instance_after": {"formula": "1 vk_repr field + 1 application phase field + accumulator public-input fields", "note": "Accumulator dimension is construction-dependent because each MSM serializes its variable points/scalars; retained source exposes no constant total independent of the instantiated accumulator. The successor changes only the application contribution, from 54 to 1."},
+    "reduction": {"application_elements": 53, "application_ratio": "54:1"}
+  },
+  "controls": [
+    "Reject phase represented by any field value other than canonical 0,1,2; do not truncate a field element to u8/u64.",
+    "Use field equality/range constraints and field addition only after phase<2, so after=before+1 cannot wrap modulo F.",
+    "Reject 2->anything, 1->0, 0->2, repeated phase, and phase values 3, 2^64, F-1.",
+    "Host serialization reads exactly one fixed-width canonical field representation and rejects trailing bytes/noncanonical field encodings; do not deserialize by modular reduction.",
+    "Retain mutation tests for every bit of all 11 u128 values and all 32 digest limbs in each decoded table row; mutations must not map to an admitted phase row.",
+    "Retain wrong domain/program/specification/intent/predecessor/output/effects/authorityObligation controls by substituting a mutated table/context and requiring decider/setup mismatch or a different VK.",
+    "Retain forged genesis and false-predecessor controls: genesis is phase0 only, and step2 proof for a phase/state mismatch rejects.",
+    "Retain absent, truncated, altered, appended and prior-step-proof-for-final-statement proof rejection plus final accumulator discharge.",
+    "Bind artifacts to episode.rs hash, EPISODE_SHA256, INPUT_SOURCE_COMMIT, harness hash, backend commit, Cargo.lock hash, SRS hash and verifier VK representation."
+  ],
+  "pins": {
+    "midnight_zk": {"commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7", "features": ["truncated-challenges"], "aggregation_dependencies": "proofs 0.8.0; circuits 7.0.0"},
+    "rust_toolchain": "1.90.0",
+    "cargo": "--locked --release --jobs 2",
+    "srs": {"url": "https://srs.midnight.network/midnight-srs-2p17", "k": 17, "bytes": 25166212, "sha256": "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74", "catalog_commit": "3ea610263b228af24840f7b00661ee22360db6d8", "format": "RawBytesUnchecked with exact EOF and max_k checks"}
+  },
+  "bounded_native_proposal": {
+    "status": "proposed only; not executed",
+    "command": "systemd-run --user --wait --pipe --unit=moriarty-r3-ordinal-<UTC> -p MemoryMax=8589934592 -p MemorySwapMax=0 -p RuntimeMaxSec=480 -p KillMode=control-group -p OOMPolicy=kill -p TasksMax=128 -p CPUQuota=200% -p LimitCORE=0 python3 experiments/moriarty-native-ivc-r3/run-native-successor.py --repo <isolated-midnight-zk-695351f> --srs <verified-midnight-srs-2p17> --output <fresh-output>",
+    "inner_command": "cargo run --locked --release --jobs 2 -p midnight-aggregation --features truncated-challenges --example moriarty_loan_r3",
+    "limits": {"k": 17, "memory_bytes": 8589934592, "swap_bytes": 0, "cpu_quota": "200%", "build_jobs": 2, "wall_seconds": 480, "positive_steps": 2, "fresh_attempts": 1, "retained_output_bytes": 268435456},
+    "stop": "Stop on build/setup/prove/verification/control failure, timeout, OOM, output bound, or row exhaustion. Do not raise k or retry automatically."
+  },
+  "layer_boundaries": {
+    "application_relation": "The ordinal encoding and exact two-edge loan episode described here.",
+    "recursive_accumulator_and_final_decider": "Midnight IVC proof chain, canonical VK check, application decider, transcript EOF and combined KZG pairing. A row-fit result alone does not establish these predicates; the positive and negative native checks must execute.",
+    "ledger_adapter": "Separate unresolved mapping to the exact Preview-compatible ledger ContractCall public inputs, proof transcript/version, effects and operation VK. No application encoding success establishes ledger acceptance."
+  },
+  "unresolved": [
+    "Whether this smaller checked application state makes recursive setup fit k17; no build, synthesis, MockProver or proof was run.",
+    "Exact instantiated accumulator public-input dimension and whether it dominates row usage.",
+    "Whether range/select constraints were the cause of the prior row exhaustion; the failed setup did not provide a row attribution.",
+    "Whether an ordinal-only public application state is acceptable to downstream product interfaces that require explicit state fields.",
+    "Exact Preview verifier source/build/features and a native IVC-to-ledger adapter remain unresolved."
+  ]
+}

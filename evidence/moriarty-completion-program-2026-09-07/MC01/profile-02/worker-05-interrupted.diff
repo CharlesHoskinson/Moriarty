@@ -1,0 +1,535 @@
+diff --git a/experiments/moriarty-language/spec/bounds.json b/experiments/moriarty-language/spec/bounds.json
+index dac6168..cf1ba4a 100644
+--- a/experiments/moriarty-language/spec/bounds.json
++++ b/experiments/moriarty-language/spec/bounds.json
+@@ -3,120 +3,39 @@
+   "semanticProfile": "moriarty-bounded-atomic/1",
+   "schemaVersion": "moriarty-bounds/1",
+   "kind": "simultaneous-limits",
+-  "note": "A value that satisfies one bound may still fail another. Finite bounds do not imply practical enumerability, native-proof fit, or financial correctness.",
+-  "sourceIntake": {
+-    "role": "UTF-8 .moriarty source and decoded AST JSON before signing",
+-    "sourceUtf8Bytes": 65536,
+-    "decodedDepthRootZero": 40,
+-    "decodedNodes": 8192,
+-    "keysPerRecord": 64,
+-    "textUtf8Bytes": 256,
+-    "identifierAsciiCharacters": 64,
+-    "basis": "experiments/moriarty-developer-mock/src/language/core.ts LIMITS and safeJsonValue; language Text uses UTF-8 bytes, not JavaScript string length"
++  "note": "Every applicable bound is checked jointly. Per-category maxima do not imply that their Cartesian product is encodable.",
++  "sourceEncoding": {"sourceUtf8Bytes":65536,"identifierAsciiCharacters":64,"languageTextUtf8Bytes":256},
++  "astEncoding": {"codec":"moriarty-canonical-json/1","utf8Bytes":65536,"decodedDepthRootZero":40,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,"textUtf8Bytes":4096,"textJavascriptCodeUnits":4096},
++  "programManifestEncoding": {
++    "codec":"moriarty-canonical-json/1","domain":"MORIARTY-PROGRAM-bounded-atomic/1","utf8Bytes":65536,
++    "decodedDepthRootZero":40,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,
++    "textUtf8Bytes":4096,"textJavascriptCodeUnits":4096,
++    "contains":"complete typed Core program, declarations, policies, status rules, and bounds reference",
++    "boundsRepresentation":"closed {registryId,boundsHash} reference only"
+   },
+   "signingEnvelope": {
+-    "role": "actual public canonical signing envelope; do not raise these limits in this profile",
+-    "codec": "experiments/moriarty-developer-mock/src/language/claims.ts canonical()",
+-    "schemaDomainNew": "MORIARTY-SIGN-bounded-atomic/1",
+-    "schemaDomainHistoricalExactPlan": "MORIARTY-SIGN-v1",
+-    "schemaDomainHistoricalOutcome": "MORIARTY-OUTCOME-SIGN-v1",
+-    "publicEnvelopeUtf8Bytes": 65536,
+-    "decodedDepthRootZero": 16,
+-    "decodedNodes": 8192,
+-    "keysPerRecord": 64,
+-    "arrayLength": 128,
+-    "textUtf8Bytes": 4096,
+-    "textJavascriptLengthAlso": 4096,
+-    "canonicalKeyAlphabet": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+-    "numericJsonTokens": "forbidden",
+-    "keyOrder": "lexicographic-ASCII",
+-    "whitespace": "forbidden-in-canonical-bytes",
+-    "signedObject": "bound-semantic-manifest-with-programHash-not-nested-AST",
+-    "representabilityRule": "If a candidate signed object exceeds these actual envelope bounds, reject as unrepresentable. Do not embed FloorDiv trees in the envelope.",
+-    "roundtripObligation": "Maximum-depth expressions are tested inside the elaborated program object. The signing envelope binds programHash, state, action, effects, authority summary, and versions. A nested AST that cannot fit depth 16 is not a signing object."
++    "codec":"moriarty-canonical-json/1","schemaDomainNew":"MORIARTY-SIGN-bounded-atomic/1",
++    "schemaDomainHistoricalExactPlan":"MORIARTY-SIGN-v1","schemaDomainHistoricalOutcome":"MORIARTY-OUTCOME-SIGN-v1",
++    "utf8Bytes":65536,"decodedDepthRootZero":16,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,
++    "textUtf8Bytes":4096,"textJavascriptCodeUnits":4096,
++    "contains":"compact program reference and evaluation/authority data; never source AST, typed AST, Core instructions, or full manifest"
+   },
++  "resultEncoding": {"codec":"moriarty-canonical-json/1","utf8Bytes":65536,"decodedDepthRootZero":16,"decodedNodes":8192,"keysPerRecord":64,"arrayLength":128,"textUtf8Bytes":4096,"textJavascriptCodeUnits":4096},
+   "programShape": {
+-    "declaredUnits": 64,
+-    "entrypoints": 64,
+-    "stateFields": 64,
+-    "constFields": 64,
+-    "observationFields": 64,
+-    "argumentFields": 64,
+-    "effectKinds": 4,
+-    "effectFields": 64,
+-    "fieldPolicies": 64,
+-    "settlementBindings": 64,
+-    "instructionsPerEntrypoint": 64,
+-    "localsPerEntrypoint": 64,
+-    "expressionDepthRootOne": 16,
+-    "expressionNodesPerEntrypoint": 256,
+-    "effectsPerEntrypoint": 16,
+-    "expressionUnitComponents": 8,
+-    "absoluteUnitExponent": 16
++    "declaredUnits":64,"entrypoints":64,"stateFields":64,"constFields":64,"observationFields":64,
++    "argumentFieldsPerEntrypoint":64,"effectKinds":4,"effectFields":64,"fieldPolicies":64,"policyTargets":128,
++    "settlementBindings":64,"instructionsPerEntrypoint":64,"localsPerEntrypoint":64,
++    "expressionDepthRootOne":16,"expressionNodesPerEntrypoint":256,"effectsPerEntrypoint":16,
++    "obligationsOutstanding":128,"expressionUnitComponents":8,"absoluteUnitExponent":16
+   },
++  "jointValidation": ["source bytes and lexical bounds","AST bytes/depth/nodes/records/arrays/text","all program-shape counts","full manifest bytes/depth/nodes/records/arrays/text","compact signing bytes/depth/nodes/records/arrays/text","result bytes/depth/nodes/records/arrays/text"],
++  "representabilityRule":"Reject if any applicable limit fails. In particular, 64 entrypoints each with 256 expression nodes is not promised to fit an 8192-node manifest; actual aggregate nodes and bytes decide.",
+   "lifecycle": {
+-    "initialAllowance": "positive-UInt128-frozen-at-authenticated-genesis",
+-    "consumption": "one-per-successful-action",
+-    "horizon": "UInt128-UTC-epoch-second-exclusive-upper-bound-frozen-at-genesis",
+-    "timeSource": "explicit-authenticated-observation-now-no-host-clock-read",
+-    "closureReserve": "package-specific-guard-required-in-source",
+-    "revision": "increment-one-on-Complete-never-wraps-in-this-profile",
+-    "resets": "forbidden",
+-    "pending": "unsupported-profile-evaluate-rejects-UNSUPPORTED_PENDING",
+-    "splitJoin": "unsupported-profile",
+-    "genesisVersusDynamic": {
+-      "genesisFrozen": [
+-        "semanticProfile",
+-        "lifetime",
+-        "horizon",
+-        "unitDeclarations",
+-        "constFields",
+-        "stateSchema",
+-        "observationSchema",
+-        "effectSchemas",
+-        "fieldPolicies",
+-        "settlementBindings",
+-        "actionDeclarations",
+-        "initialStateLiterals"
+-      ],
+-      "dynamicChecked": [
+-        "stateFieldValues",
+-        "revision",
+-        "remaining",
+-        "effects",
+-        "obligations"
+-      ],
+-      "evaluatorManagedNotSourceState": [
+-        "instance",
+-        "revision",
+-        "remaining"
+-      ]
+-    }
++    "initialAllowance":"positive-UInt128-frozen-at-authenticated-genesis","consumption":"one-per-successful-action",
++    "horizon":"UInt128-UTC-epoch-second-exclusive-upper-bound-frozen-at-genesis",
++    "timeSource":"explicit-authenticated-observation-now-no-host-clock-read",
++    "closureReserve":"source guard remaining > uint(1) is required only when a distinct closure action exists",
++    "revision":"increment-one-on-Complete-with-overflow-rejection","resets":"forbidden","pending":"UNSUPPORTED_PENDING","splitJoin":"unsupported-profile"
+   },
+-  "jointValidation": "all-limits-must-hold-in-the-actual-canonical-signing-envelope-and-in-source-intake",
+-  "finiteDoesNotImply": [
+-    "practical-enumerability",
+-    "native-proof-fit",
+-    "financial-correctness",
+-    "ledger-acceptance",
+-    "ACTUS-conformance",
+-    "DeFi-conformance"
+-  ],
+-  "contradictionDisposition": [
+-    {
+-      "topic": "signing-depth",
+-      "rejectedDraft": "raise signing envelope depth from 16 to 40",
+-      "decision": "keep actual claims.ts depth 16, bytes 65536, nodes 8192; hash the program; source/AST intake may use depth 40"
+-    },
+-    {
+-      "topic": "identifier-alphabet",
+-      "rejectedDraft": "allow . : - in source identifiers because core.ts and packages.ts do",
+-      "decision": "source and canonical keys use [A-Za-z][A-Za-z0-9_]{0,63}; external labels including loan:demo are Text values"
+-    },
+-    {
+-      "topic": "text-length",
+-      "rejectedDraft": "JavaScript string length 256 for all strings",
+-      "decision": "language Text is 256 UTF-8 bytes; signing envelope strings keep the actual 4096 UTF-8 and 4096 JS-length dual bound"
+-    }
+-  ]
++  "finiteDoesNotImply":["practical-enumerability","native-proof-fit","financial-correctness","ledger-acceptance","ACTUS-conformance","DeFi-conformance"]
+ }
+diff --git a/experiments/moriarty-language/spec/examples/loan.moriarty b/experiments/moriarty-language/spec/examples/loan.moriarty
+index ce9d2d1..13406b7 100644
+--- a/experiments/moriarty-language/spec/examples/loan.moriarty
++++ b/experiments/moriarty-language/spec/examples/loan.moriarty
+@@ -23,15 +23,17 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
+   state episode_closed: UInt128 = uint(0);
+   observation now: UInt128;
+   settlement USD_micro_asset asset text("USD_TEST_ASSET") quantum amount(1, USD_micro);
+-  field interest_due {
++  status episode closed_when episode_closed == uint(1);
++  status agreement remaining_notional notional;
++  policy accrued_interest targets write(accrue, interest_due), effect(accrue, 1, amount) {
+     unit USD_micro;
+     derivation "notional*8*31/(100*365)";
+-    rounding floor(interest_calculated);
++    rounding floor(accrue, interest_calculated);
+     remainder "discard 54/73 micro-USD for this sample only";
+     comparison "exact integer sample value; no ACTUS tolerance claim";
+     proof "loan_first_period_interest_floor_v1";
+   }
+-  field principal_due {
++  policy accrued_principal targets write(accrue, principal_due), write(accrue, notional), effect(accrue, 0, amount) {
+     unit USD_micro;
+     derivation "fixed first-period principal installment";
+     rounding none;
+@@ -39,6 +41,14 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
+     comparison "exact micro-unit value";
+     proof "loan_first_period_principal_v1";
+   }
++  policy settled_cash targets write(settle, borrower_cash), write(settle, lender_cash), write(settle, principal_paid), write(settle, interest_paid), write(settle, principal_due), write(settle, interest_due), effect(settle, 0, amount), effect(settle, 1, amount), effect(settle, 2, amount) {
++    unit USD_micro;
++    derivation "exact additions, subtractions, copies, and zeroing during settlement";
++    rounding none;
++    remainder "none";
++    comparison "exact micro-unit values";
++    proof "loan_first_period_settlement_exact_v1";
++  }
+   effect Transfer {
+     asset: Text;
+     from: Text;
+@@ -76,11 +86,11 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
+     emit DueCreated { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due };
+     emit DueCreated { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due };
+   }
+-  action settle(actor: Text, asset: Text, amount_due: Amount<USD_micro>) {
++  action settle(actor: Text, settlement_asset: Text, amount_due: Amount<USD_micro>) {
+     guard obs.now < uint(2000000000), "horizon expired";
+     guard arg.actor == const.borrower, "borrower authority required";
+     guard state.cursor == uint(1), "dues are not ready";
+-    guard arg.asset == text("USD_TEST_ASSET"), "settlement asset mismatch";
++    guard arg.settlement_asset == text("USD_TEST_ASSET"), "settlement asset mismatch";
+     guard arg.amount_due == state.principal_due + state.interest_due, "settlement amount mismatch";
+     guard arg.amount_due == const.expected_total_due, "independent total value mismatch";
+     guard state.borrower_cash >= arg.amount_due, "insufficient synthetic balance";
+@@ -88,9 +98,9 @@ agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
+     set lender_cash = state.lender_cash + arg.amount_due;
+     set principal_paid = state.principal_paid + state.principal_due;
+     set interest_paid = state.interest_paid + state.interest_due;
+-    emit Transfer { asset: arg.asset, from: const.borrower, to: const.lender, amount: arg.amount_due };
+-    emit DueSettled { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due, asset: arg.asset };
+-    emit DueSettled { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due, asset: arg.asset };
++    emit Transfer { asset: arg.settlement_asset, from: const.borrower, to: const.lender, amount: arg.amount_due };
++    emit DueSettled { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due, asset: arg.settlement_asset };
++    emit DueSettled { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due, asset: arg.settlement_asset };
+     set principal_due = amount(0, USD_micro);
+     set interest_due = amount(0, USD_micro);
+     set cursor = uint(2);
+diff --git a/experiments/moriarty-language/spec/examples/swap.moriarty b/experiments/moriarty-language/spec/examples/swap.moriarty
+index 851702a..12a2ebe 100644
+--- a/experiments/moriarty-language/spec/examples/swap.moriarty
++++ b/experiments/moriarty-language/spec/examples/swap.moriarty
+@@ -21,14 +21,40 @@ agreement ConstantProductEpoch profile "moriarty-bounded-atomic/1" {
+   observation now: UInt128;
+   settlement asset_a_binding asset text("ASSET_A") quantum amount(1, AssetA_quantum);
+   settlement asset_b_binding asset text("ASSET_B") quantum amount(1, AssetB_quantum);
+-  field swap_output {
++  status episode closed_when epoch_closed == uint(1);
++  status agreement no_remaining_notional;
++  policy swap_output targets write(swap, reserve_b), write(swap, trader_b), effect(swap, 1, amount) {
+     unit AssetB_quantum;
+     derivation "floor((amount_in*997)*reserve_b/(reserve_a*1000+amount_in*997))";
+-    rounding floor(output_calculated);
++    rounding floor(swap, output_calculated);
+     remainder "unpaid output remains in reserve_b";
+     comparison "exact integer output and reserves";
+     proof "constant_product_exact_input_floor_v1";
+   }
++  policy swap_input targets write(swap, trader_a), write(swap, reserve_a), effect(swap, 0, amount) {
++    unit AssetA_quantum;
++    derivation "exact input debit, reserve credit, and transfer";
++    rounding none;
++    remainder "none";
++    comparison "exact integer amount";
++    proof "constant_product_input_exact_v1";
++  }
++  policy close_asset_a targets write(close, provider_a), write(close, reserve_a), effect(close, 0, amount) {
++    unit AssetA_quantum;
++    derivation "exact reserve transfer and zeroing";
++    rounding none;
++    remainder "none";
++    comparison "exact integer amount";
++    proof "constant_product_close_a_exact_v1";
++  }
++  policy close_asset_b targets write(close, provider_b), write(close, reserve_b), effect(close, 1, amount) {
++    unit AssetB_quantum;
++    derivation "exact reserve transfer and zeroing";
++    rounding none;
++    remainder "none";
++    comparison "exact integer amount";
++    proof "constant_product_close_b_exact_v1";
++  }
+   effect Transfer {
+     asset: Text;
+     from: Text;
+diff --git a/experiments/moriarty-language/spec/grammar.ebnf b/experiments/moriarty-language/spec/grammar.ebnf
+index 4a9f252..8df44f4 100644
+--- a/experiments/moriarty-language/spec/grammar.ebnf
++++ b/experiments/moriarty-language/spec/grammar.ebnf
+@@ -2,6 +2,7 @@
+ (* Source is UTF-8. Spans are 0-based UTF-8 byte offsets [start, end). *)
+ (* Whitespace: ASCII space, tab, CR, LF between tokens. No source comments. *)
+ (* Lexer uses longest operator match for ==, <=, >=. No !=. *)
++(* A word that exactly equals a keyword is a keyword, otherwise it may be an identifier. *)
+ (* Keywords cannot be identifiers. Identifiers are 1..64 ASCII [A-Za-z][A-Za-z0-9_]*. *)
+ (* Binary operators associate left. Comparisons cannot chain. There is no plain division. *)
+ (* Numeric, schema, units, lifecycle, horizon, and capacity checks are semantic. *)
+@@ -20,6 +21,7 @@ declaration = unit_decl
+             | observation_decl
+             | settlement_decl
+             | field_policy
++            | status_decl
+             | effect_decl
+             | action_decl ;
+ 
+@@ -33,7 +35,8 @@ observation_decl = "observation", identifier, ":", stored_type, ";" ;
+ 
+ settlement_decl = "settlement", identifier, "asset", literal, "quantum", literal, ";" ;
+ 
+-field_policy = "field", identifier, "{",
++field_policy = "policy", identifier, "targets", policy_target,
++               { ",", policy_target }, "{",
+                "unit", identifier, ";",
+                "derivation", json_string, ";",
+                "rounding", rounding_form, ";",
+@@ -42,7 +45,14 @@ field_policy = "field", identifier, "{",
+                "proof", json_string, ";",
+                "}" ;
+ 
+-rounding_form = "none" | "floor", "(", identifier, ")" ;
++policy_target = "write", "(", identifier, ",", identifier, ")"
++              | "effect", "(", identifier, ",", uint_token, ",", field_label, ")" ;
++
++rounding_form = "none" | "floor", "(", identifier, ",", identifier, ")" ;
++
++status_decl = "status", "episode", "closed_when", identifier, "==", literal, ";"
++            | "status", "agreement", "remaining_notional", identifier, ";"
++            | "status", "agreement", "no_remaining_notional", ";" ;
+ 
+ effect_decl = "effect", effect_kind, "{", field_decl, { field_decl }, "}" ;
+ 
+@@ -70,8 +80,8 @@ statement = "guard", expression, ",", json_string, ";"
+ 
+ effect_field = field_label, ":", expression ;
+ 
+-field_label = identifier | keyword ;
+-(* Keywords such as asset and amount are permitted only as effect record labels. *)
++field_label = identifier | "asset" | "amount" ;
++(* Only asset and amount are contextual keyword spellings, and only as effect labels. *)
+ (* Reserved prototype names remain forbidden in all names and labels. *)
+ 
+ expression = disjunction ;
+@@ -119,12 +129,13 @@ json_string = ? JSON string token with valid Unicode scalar values after decodin
+ 
+ keyword = "agreement" | "profile" | "lifetime" | "horizon" | "unit" | "const"
+         | "state" | "observation" | "settlement" | "asset" | "quantum" | "field"
+-        | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
++        | "policy" | "targets" | "write" | "derivation" | "rounding" | "remainder" | "comparison" | "proof" | "none" | "floor"
++        | "status" | "episode" | "closed_when" | "agreement" | "remaining_notional" | "no_remaining_notional"
+         | "effect" | "action" | "guard" | "let" | "set" | "emit"
+         | "UInt128" | "Text" | "Amount"
+         | "Transfer" | "Fee" | "DueCreated" | "DueSettled"
+         | "uint" | "text" | "amount" | "true" | "false" | "remaining" | "floor_div"
+-        | "state" | "arg" | "obs" | "const" | "not" | "and" | "or" ;
++        | "arg" | "obs" | "not" | "and" | "or" ;
+ 
+ reserved_identifier = "constructor" | "prototype" | "__proto__" ;
+ 
+@@ -139,3 +150,6 @@ reserved_identifier = "constructor" | "prototype" | "__proto__" ;
+ (* 7. Amount without a parameter is emit-only and records the operand unit. *)
+ (* 8. Bool literals type as Bool. Bool is expression-only in this profile. *)
+ (* 9. Source comments are forbidden so numeric-looking text cannot hide. *)
++(* 10. not binds tighter than comparison: `not a == b` parses `(not a) == b`. *)
++(* 11. Each action may write a state field at most once. Effect ordinals are *)
++(*     zero-based in source emit order within that action. Policy targets must exist. *)
+diff --git a/experiments/moriarty-language/spec/numeric-profile.json b/experiments/moriarty-language/spec/numeric-profile.json
+index 5bbfdd8..d9e8460 100644
+--- a/experiments/moriarty-language/spec/numeric-profile.json
++++ b/experiments/moriarty-language/spec/numeric-profile.json
+@@ -14,7 +14,7 @@
+     "underflow": "reject-entire-action",
+     "divisionByZero": "reject-entire-action",
+     "divisionRounding": "floor-at-each-explicit-FloorDiv-node",
+-    "floorNode": "binary-slash-elaborates-to-FloorDiv; floor(e) is the recorded rounding node and is identity on UInt128 and on Amount<U>",
++    "floorNode": "floor_div(n,d) is the sole division form and elaborates to one FloorDiv node; floor(action,local) occurs only in a policy and must name the unique local whose value expression root is that FloorDiv node",
+     "reassociation": "forbidden-if-observable-behavior-changes",
+     "hostBigInt": "calculation-device-only-not-a-wider-accepted-intermediate",
+     "widthBoundary": {
+@@ -35,7 +35,7 @@
+       "Bool",
+       "Quantity<UnitExponentVector>"
+     ],
+-    "amountCoreRepresentation": "UInt128-with-manifest-bound-nominal-unit-map",
++    "amountCoreRepresentation": "closed {value:UInt128Text,unit:Identifier} on every AST, manifest, input, state, effect, obligation, and result wire object",
+     "boolState": "rejected-until-reviewed-core-extension",
+     "literalForms": [
+       "uint(n)",
+@@ -68,9 +68,12 @@
+     "quantityClassification": {
+       "emptyVector": "UInt128",
+       "singleDeclaredUnitExponentOne": "Amount<Unit>",
+-      "anyOtherVector": "expression-only Quantity; cannot store or emit until FloorDiv/settlement yields Amount or UInt128"
++      "anyOtherVector": "expression-only Quantity; may be let-bound, but cannot be persistent state, action/observation/constant data, a set result, or an emit operand"
+     },
+-    "unitErasure": "forbidden-except-checked-Transfer-or-Fee-emit-after-settlement-asset-binding"
++    "unitVectorWire": "ordered array of closed {unit:Identifier,exponent:SignedExponentText}; omit zero exponents; order by unit ASCII; empty array is UInt128",
++    "signedExponentText": "canonical decimal text: 0 or -?[1-9][0-9]*, range -16..16; plus sign and -0 forbidden",
++    "settlementOrientation": "quantum.value nominal subunits per one ledger base unit; require value mod quantum.value = 0 and ledgerAmount=value/quantum.value with UInt128 checks",
++    "unitErasure": "only Transfer, Fee, and DueSettled after exact unique asset/unit binding and quantum conversion"
+   },
+   "fieldPolicyRequired": [
+     "unit",
+@@ -81,6 +84,7 @@
+     "proofStatement"
+   ],
+   "fieldPolicyBinding": "elaboration-and-proof-statements; not optional source annotations",
++  "fieldPolicyCoverage": "every Amount-valued set target and every Amount-valued effect field occurrence has exactly one explicit policy target; targets are disjoint and exhaustive",
+   "genesisVersusDynamic": {
+     "declaredDynamicValues": "state field values change by set during evaluation",
+     "checkedGenesisMetadata": "profile, lifetime, horizon, units, consts, schemas, field policies, settlement bindings, action bodies, and initial literals are authenticated at genesis and are not rewritten by evaluate"
+@@ -108,7 +112,8 @@
+         "1010000",
+         "1980257"
+       ],
+-      "protocolConformance": false
++      "protocolConformance": false,
++      "scope": "fixed-vector one-transition fixture; expected_output prevents reuse for a second input"
+     }
+   },
+   "extensionsRequiringNewVersion": [
+diff --git a/experiments/moriarty-language/spec/profile-proposal.md b/experiments/moriarty-language/spec/profile-proposal.md
+index 57f835f..f6781ce 100644
+--- a/experiments/moriarty-language/spec/profile-proposal.md
++++ b/experiments/moriarty-language/spec/profile-proposal.md
+@@ -25,7 +25,7 @@ Illustrative transition fragment, not an executable or complete agreement:
+ action accrue_period() {
+   guard state.cursor == uint(0), "period already accrued";
+   let numerator = state.notional * uint(8) * uint(31);
+-  let interest = numerator / (uint(100) * uint(365));
++  let interest = floor_div(numerator, uint(100) * uint(365));
+   set principal_due = amount(500000000, USD_micro);
+   set interest_due = interest;
+   set notional = state.notional - state.principal_due;
+@@ -41,8 +41,8 @@ The fragment only illustrates syntax and sequential state reads. It is not a val
+ In particular, this proposal does not use a package-selection form as a substitute for an authoring language.
+ 
+ Proposed statement forms are `guard`, single-definition `let`, `set`, and `emit`.
+-Proposed expression forms are typed literals, state/argument/local reads, remaining lifetime, comparisons, Boolean operators, and checked arithmetic.
+-Parentheses determine grouping. Multiplication/division bind before addition/subtraction, then comparisons, then `and`, then `or`.
++Proposed expression forms are typed literals, state, argument, observation, constant and local reads, remaining lifetime, comparisons, Boolean operators, multiplication, addition, subtraction, and `floor_div(n,d)`.
++There is no slash operator or `floor(e)` expression. Parentheses determine grouping. `not` binds first, then multiplication, then addition/subtraction, comparisons, `and`, and `or`; `floor_div` is a primary call.
+ Reject chained comparisons. Boolean `and` and `or` short-circuit left to right.
+ The accompanying grammar.ebnf proposes the EBNF and UTF-8 byte source spans. It requires review before parser implementation.
+ 
+@@ -99,15 +99,19 @@ Reject duplicate keys before object construction, noncanonical wire bytes, lone
+ Do not normalize text silently. Integers on the wire are canonical decimal strings.
+ Booleans are JSON booleans only where the schema permits them.
+ 
+-Proposed common intake limits:
++The normative limits are in `bounds.json`. Source, decoded AST, full program manifest,
++compact signing envelope, and result are distinct encodings and all applicable limits
++hold simultaneously:
+ 
+ | Resource | Bound |
+ |---|---:|
+-| Each source or public canonical envelope | 65,536 UTF-8 bytes |
+-| Whole decoded envelope depth, root at zero | 40 |
+-| Whole decoded envelope nodes | 8,192 |
++| Source, AST, manifest, signing envelope, or result | 65,536 UTF-8 bytes each |
++| AST and full manifest decoded depth, root at zero | 40 |
++| Compact signing and result decoded depth, root at zero | 16 |
++| Nodes in each decoded object | 8,192 |
+ | Keys per record | 64 |
+-| Each text value | 256 UTF-8 bytes |
++| Language Text | 256 UTF-8 bytes |
++| Canonical-object text | 4,096 UTF-8 bytes and 4,096 JavaScript code units |
+ | Each identifier | 64 ASCII characters |
+ | Entrypoints, state fields, or action fields | 64 each |
+ | Instructions or locals per entrypoint | 64 each |
+@@ -116,9 +120,11 @@ Proposed common intake limits:
+ | Effects per entrypoint | 16 |
+ 
+ These are simultaneous limits. A value satisfying one bound may still fail another.
+-The existing signing codec's whole-object depth limit of 16 cannot implement this proposal unchanged.
+-The new canonical codec must use the common envelope limits and an explicit new schema domain.
+-Roundtrip tests must include maximum-depth expressions inside their actual signing envelopes.
++The full program-hash preimage contains Core instructions and uses the manifest depth-40
++limit. The depth-16 signing object contains only a compact program reference plus input
++and authority data; it never embeds expressions. Both use the exact
++`moriarty-canonical-json/1` rules in `typed-schemas.md`. A program is rejected if its
++actual aggregate bytes or nodes fail even when every per-action count fits.
+ Test UTF-8 byte counts independently from JavaScript string lengths.
+ 
+ Bind the profile's total lifecycle allowance, horizon, and initial state at authenticated genesis.
+diff --git a/experiments/moriarty-language/spec/typed-schemas.md b/experiments/moriarty-language/spec/typed-schemas.md
+deleted file mode 100644
+index c4f7fde..0000000
+--- a/experiments/moriarty-language/spec/typed-schemas.md
++++ /dev/null
+@@ -1,63 +0,0 @@
+-# Typed schema tables for `moriarty-bounded-atomic/1`
+-
+-Status: S2, specified-only. Fields are closed unless marked as maps or arrays. `UInt128Text` is a canonical decimal string in `[0,2^128-1]`; JSON numeric tokens are forbidden. `Span` is `{startByte: UInt128Text, endByte: UInt128Text}` with `startByte <= endByte <= sourceUtf8Bytes`.
+-
+-## Source AST envelope
+-
+-| Field | Type | Required rule |
+-|---|---|---|
+-| `schemaVersion` | literal `moriarty-ast/1` | semantic-versioned |
+-| `profile` | literal `moriarty-bounded-atomic/1` | exact match |
+-| `sourceHash` | 32-byte digest as lowercase hex text | hash of original UTF-8 bytes |
+-| `sourceUtf8Bytes` | `UInt128Text` | at most 65,536 |
+-| `span` | `Span` | whole agreement |
+-| `name` | `Identifier` | 1..64 ASCII characters |
+-| `lifetime`, `horizon` | `UInt128Text` with spans | lifetime positive; horizon exclusive |
+-| `declarations` | ordered array of tagged declarations | source order, at most profile aggregate bounds |
+-
+-Declaration tags are `UnitDecl`, `ConstDecl`, `StateDecl`, `ObservationDecl`, `SettlementDecl`, `FieldPolicyDecl`, `EffectDecl`, and `ActionDecl`. Every node has `tag` and `span`. Literal nodes are distinct `UIntLiteral{token,value}`, `TextLiteral{token,decoded}`, `AmountLiteral{token,value,unit}`, and `BoolLiteral{value}`; both token and value are retained, so numeric-looking text and lexical spelling are lossless. Expression tags are `Literal`, `Remaining`, `StateRef`, `ArgRef`, `ObservationRef`, `ConstRef`, `LocalRef`, `FloorDiv`, `Add`, `Sub`, `Mul`, `Eq`, `Lt`, `Lte`, `Gt`, `Gte`, `And`, `Or`, and `Not`. `FloorDiv` has explicit `numerator` and `denominator`. Statements are `Guard`, `Let`, `Set`, and `Emit`, each with its source span. Typed nodes add `type`, canonical unit vector, and resolution target without deleting source tokens/spans.
+-
+-## Bound semantic manifest
+-
+-| Field | Type | Binding |
+-|---|---|---|
+-| `schemaVersion` | `moriarty-manifest/1` | canonical schema |
+-| `profile`, `coreVersion` | text literals | semantic and lowering versions |
+-| `programHash`, `sourceHash` | lowercase digest text | canonical program and source bytes |
+-| `instanceGenesis` | text | agreement instance domain |
+-| `lifetime`, `horizon` | `UInt128Text` | frozen genesis values |
+-| `unitMap` | identifier -> canonical exponent vector | checked elaboration result |
+-| `constValues`, `initialState` | closed typed maps | frozen values and initial dynamic values |
+-| `stateSchema`, `observationSchema` | closed typed maps | state/observation types |
+-| `settlementBindings` | closed records `{unit,asset,quantum}` | asset mapping; no custody assertion |
+-| `effectSchemas` | effect kind -> closed field map | exactly declared fields |
+-| `fieldPolicies` | field -> `{unit,derivation,roundingNode,remainderDisposition,comparisonPolicy,proofStatement}` | mandatory elaboration and proof binding |
+-| `actions` | identifier -> `{argSchema,instructions,sourceMap,resourceCounts}` | deterministic Core plus origin spans |
+-| `bounds` | complete `moriarty-bounds/1` object or digest plus registry ID | simultaneous limits |
+-| `canonicalization` | `{domain,keyOrder,stringEncoding,integerEncoding}` | exact signing codec |
+-
+-Canonical signing uses domain `MORIARTY-SIGN-bounded-atomic/1`, lexicographic ASCII keys, UTF-8, canonical JSON escaping, no whitespace, no duplicate or unknown keys, and decimal strings for integers. The actual public envelope limits are 65,536 UTF-8 bytes, depth 16 with root at zero, 8,192 nodes, 64 keys per record, arrays of at most 128, text at most 4,096 UTF-8 bytes and 4,096 JavaScript code units. It binds `programHash`; it does not embed a depth-40 AST.
+-
+-## Evaluation input
+-
+-| Field | Type | Rule |
+-|---|---|---|
+-| `schemaVersion`, `profile`, `programHash` | fixed/versioned text | exact manifest binding |
+-| `state` | `{instance,revision,remaining,values,obligations,episodeStatus,agreementStatus}` | closed schema; integers are `UInt128Text` |
+-| `action` | `{name,args}` | declared action and exact argument schema |
+-| `authority` | tagged `ExactPlan` or `IntentRefinement` | binds domain, principal, key, nonce, validity interval, predecessors, program/profile/instance, action or outcomes, permitted effects/calls, gross caps including fees, net goals, required claims, signature |
+-| `observations` | closed typed map including `now` | declared schema; externally authenticated |
+-
+-The profile does not define counterparty authentication, oracle truth, nonce durability, signature implementation, or ledger consumption; wrappers must supply and bind those predicates. Missing required authority or observations fail closed.
+-
+-## Result envelope
+-
+-| Variant | Required fields | Meaning |
+-|---|---|---|
+-| `Rejected` | `{schemaVersion,profile,programHash,outcome:"Rejected",diagnostics:[Diagnostic]}` | no committed next state or effects |
+-| `Complete` | `{schemaVersion,profile,programHash,outcome:"Complete",beforeHash,after,effects,writes,obligations,episodeStatus,agreementStatus,authorityConsumption,observationsHash,predecessors,resourceCounts,traceHash}` | selected atomic plan completed; future obligations may remain |
+-| `Pending` | `{...,outcome:"Pending",progress,residualAuthority,residualObligations,residualLifetime,residualHorizon}` | reserved schema only; this profile always rejects before producing it |
+-
+-`Diagnostic` is `{stage,code,message,primarySpan,relatedSpans}`. Spans are UTF-8 byte offsets. `effects` uses closed declared schemas. `obligations` retains separate created/settled/outstanding identities; it is not inferred from transfers. `resourceCounts` includes executed instructions, expression nodes/depth, emits, unit components, and canonical byte/node/depth counts. All result fields except `traceHash` are included in canonical trace hashing.
+-
+-Hash preimages are explicit and noncircular. `programHash` is SHA-256 over UTF-8 `MORIARTY-PROGRAM-bounded-atomic/1`, one zero byte, and the canonical bound-manifest object with only its `programHash` member omitted. `sourceHash` is SHA-256 over the original source UTF-8 bytes. `traceHash` is SHA-256 over UTF-8 `MORIARTY-TRACE-bounded-atomic/1`, one zero byte, and the canonical result object with only its `traceHash` member omitted. Verifiers receive the complete preimage or an independently checked binding to it. No unhashed optional unit or policy map may substitute. Effect record labels may use keyword spellings such as `asset` and `amount`; declaration identifiers remain keyword-restricted.

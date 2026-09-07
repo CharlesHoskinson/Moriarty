@@ -5,6 +5,12 @@ before changing research artifacts.
 
 ## Current direction and mandatory footguns
 
+The latest [delegated execution instruction](raw/assignments/moriarty-autonomous-execution-2026-09-07.md)
+authorizes the assistant to make execution and bounded resource decisions for the full goal without repeated permission requests.
+Record revised envelopes and preserve prior charges. An exhausted old worker or time allocation is not itself a user-input blocker.
+Keep independent Fable/GPT-6 correctness gates, actual proof/ledger evidence, Preview-only public execution, and full target coverage.
+Apply repository-specific skills only to their stated repository. The bridge-formal workflow does not apply to Moriarty.
+
 The latest [completion-loop assignment](raw/assignments/moriarty-completion-loop-2026-09-07.md)
 authorizes the [MC01–MC08 OpenSpec program](openspec/MORIARTY-COMPLETION-PROGRAM.md).
 Use its dependency, resource, acceptance, and independent Fable/GPT-6 audit gates.
