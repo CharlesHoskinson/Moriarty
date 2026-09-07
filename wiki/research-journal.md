@@ -3,8 +3,12 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-06T22:00:49.403297+00:00
+updated_at: 2026-09-07T02:33:43.401543+00:00
 sources:
+  - SRC-0054
+  - SRC-0053
+  - SRC-0051
+  - SRC-0052
   - SRC-0050
   - SRC-0043
   - SRC-0044
@@ -2742,3 +2746,66 @@ framing; observed 2026-09-06; pinned source observation and design disposition,
 S2; financial execution not reproduced; confidence high for source locators,
 medium for extension design. Native R3 remains specified-only, with certificates,
 private/residual composition and full ACTUS/DeFi coverage still open.
+
+## CLM-0200: Published Midnight documentation acquired for real development
+
+SRC-0051 expanded R3 to Docker tooling, test tokens and observed settlement.
+SRC-0052 preserves every Markdown documentation route in the live official
+`llms.txt` index, including generated API and release/version pages. The
+[coverage record](../evidence/midnight-docs-2026-09-07/README.md) and per-page
+receipts bind content to requested/canonical URLs and retrieval timestamps.
+The live sitemap and HTML routes returned security checkpoints; the complete
+indexed Markdown/text corpus is not a full HTML/asset mirror. The official
+pinned repository robots policy supplied an explicit fallback. Initial discovery
+responses were overwritten by the first verification pass; the retained discovery
+records are that later capture. The corrected crawler verifies and reuses existing
+raw captures without network calls or writes. It rejects incomplete/corrupt caches.
+
+Metadata: official descriptive/normative documentation acquired2026-09-07 UTC;
+source observation and acquisition experiment, S3 local tool/corpus; capture/hash
+checks reproduced, confidence high for preserved contents. Published compatibility
+claims are not proof that each component was installed or interoperates with R3.
+Current versions and source locators remain in the canonical coverage README.
+
+## CLM-0201: Fixed financial IVC reaches a k17 row limit
+
+The [R3 evidence](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md)
+preserves the actual R2 loan export, independent checked UInt128 arithmetic,
+54-limb fixed application relation, prior source review and three bounded runs.
+The initial compile failure was corrected with an explicit UInt128 annotation.
+The second run passed application controls but failed recursive VK synthesis;
+one diagnostic-only line in the third exposed k17 row exhaustion. Execution
+stopped without increasing k or changing the financial relation. No recursive
+proof or proof-mutation rejection exists. Fixed authority and fixed canonical
+hash preimages do not implement dynamic signing, general refinement or PCD.
+
+Metadata: SRC-0051 user-authorized experiment; SRC-0045 native backend pin
+`695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`; SRC-0053 catalog-checked SRS;
+observed 2026-09-07 UTC; experimental authority, S3 local fixed relation;
+experiment observation, reproduced for compilation/application checks and failed
+recursive setup; confidence high for these outcomes, unknown for full native
+proof feasibility. Review a smaller checked state representation or an explicit
+resource change before further runs. Original raw failures remain evidence.
+
+## CLM-0202: Docker Compact contract settles locally; public funding remains open
+
+The [network receipt package](../evidence/moriarty-midnight-network-2026-09-07/README.md)
+records NIGHT transfer, DUST registration, hello-world deployment and
+`storeMessage` call on the local `undeployed` network. The call read back
+`Moriarty settlement test`; a second deployment/call from the dedicated funded
+wallet read back `Dedicated wallet settlement`, bringing the recorded total to
+six transactions. Transaction IDs, successful indexer results, block
+hashes and later node finality are preserved. The official local-dev repository
+is pinned to `902561ddc27a4b096f19835ab1528f38ace515f1`; exact Docker image
+digests are in the receipts. Duplicate WASM runtime module identities initially
+broke the contract call; the exact runtime override and dependency deduplication
+resolved that error. Dedicated secret seeds stay outside the repository.
+
+Public Preprod funding requires the official faucet's human CAPTCHA. The first
+bounded wallet sync timed out and no public transaction was submitted. Local
+funding does not establish possession of public tNight. Contract settlement does
+not establish Moriarty financial semantics, PCD, or the native proof-to-ledger
+adapter. Metadata: SRC-0051 authorized target, SRC-0052 official implementation
+guidance, SRC-0054 pinned development sources; primary pinned implementation plus local experiment, observed
+2026-09-07 UTC, S3; reproduced for named local transactions, not reproduced for
+public settlement; confidence high for preserved local receipts.

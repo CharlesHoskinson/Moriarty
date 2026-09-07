@@ -1,0 +1,57 @@
+# CoinInfo
+
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+[**@midnight-ntwrk/compact-runtime v0.9.0**](/api-reference/compact-runtime.md)
+
+***
+
+[@midnight-ntwrk/compact-runtime](/api-reference/compact-runtime/globals.md) / CoinInfo
+
+# Type Alias: CoinInfo
+
+```
+type CoinInfo = {
+
+  nonce: Nonce;
+
+  type: TokenType;
+
+  value: bigint;
+
+};
+```
+
+Information required to create a new coin, alongside details about the recipient
+
+## Properties[​](#properties "Direct link to Properties")
+
+### nonce[​](#nonce "Direct link to nonce")
+
+```
+nonce: Nonce;
+```
+
+The coin's randomness, preventing it from colliding with other coins
+
+***
+
+### type[​](#type "Direct link to type")
+
+```
+type: TokenType;
+```
+
+The coin's type, identifying the currency it represents
+
+***
+
+### value[​](#value "Direct link to value")
+
+```
+value: bigint;
+```
+
+The coin's value, in atomic units dependent on the currency
+
+Bounded to be a non-negative 64-bit integer

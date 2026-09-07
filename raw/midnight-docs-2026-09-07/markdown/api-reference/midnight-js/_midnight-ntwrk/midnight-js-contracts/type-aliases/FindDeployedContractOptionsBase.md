@@ -1,0 +1,45 @@
+# FindDeployedContractOptionsBase
+
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+[**Midnight.js API Reference v4.0.4**](/api-reference/midnight-js.md)
+
+***
+
+[Midnight.js API Reference](/api-reference/midnight-js/packages.md) / [@midnight-ntwrk/midnight-js-contracts](/api-reference/midnight-js/@midnight-ntwrk/midnight-js-contracts.md) / FindDeployedContractOptionsBase
+
+# Type Alias: FindDeployedContractOptionsBase\<C>
+
+> **FindDeployedContractOptionsBase**<`C`> = `object`
+
+Base type for the configuration options for [findDeployedContract](/api-reference/midnight-js/@midnight-ntwrk/midnight-js-contracts/functions/findDeployedContract.md).
+
+## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
+
+### C[​](#c "Direct link to C")
+
+`C` *extends* `Contract.Any`
+
+## Properties[​](#properties "Direct link to Properties")
+
+### compiledContract[​](#compiledcontract "Direct link to compiledContract")
+
+> `readonly` **compiledContract**: `CompiledContract.CompiledContract`<`C`, `any`>
+
+The compiled contract to use to execute circuits.
+
+***
+
+### contractAddress[​](#contractaddress "Direct link to contractAddress")
+
+> `readonly` **contractAddress**: [`ContractAddress`](#)
+
+The address of a previously deployed contract.
+
+***
+
+### signingKey?[​](#signingkey "Direct link to signingKey?")
+
+> `readonly` `optional` **signingKey?**: `SigningKey`
+
+The signing key to use to perform contract maintenance updates. If defined, the given signing key is stored for this contract address. This is useful when someone has already added the given signing key to the contract maintenance authority. If undefined, and there is an existing signing key for the contract address locally, the existing signing key is kept. This is useful when the contract was deployed locally. If undefined, and there is not an existing signing key for the contract address locally, a fresh signing key is generated and stored for the contract address locally. This is useful when you want to give a signing key to someone else to add you as a maintenance authority.

@@ -875,3 +875,21 @@ remain open. Historical A4/A5 evidence is preserved.
   journal CLM-0198/0199, assurance, index and the controlling amendment.
 - [Evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md) records checks,
   review corrections and scope. R3 is the next bounded native deliverable; A4/A5 stay historical.
+
+## 2026-09-07T02:26:15.985321+00:00 — Midnight published documentation acquisition
+
+- Added SRC-0051 R3/network steering, SRC-0052 full published Markdown index
+  capture and SRC-0053 catalog-verified native SRS dependency.
+- Recorded CLM-0200 and linked the corpus from the Midnight inventory.
+- Retained exact crawl coverage and disclosure of overwritten initial discovery
+  receipts. Corrected offline cache verification preserves all raw files.
+
+
+## 2026-09-07 — R3 native limit and local Midnight settlement
+
+Integrated CLM-0201–0202, exact bounded native failure evidence, Docker/SDK
+settlement receipts and executable reproduction artifacts. Updated the index,
+formal assurance matrix, controlling intents roadmap and AGENTS recovery rules.
+No recursive proof was produced at k17. Local deployment/call settlement does
+not satisfy public Preprod or Moriarty PCD; faucet CAPTCHA and wallet sync remain
+open. No automatic native retry or abandoned A4/A5 continuation is authorized.

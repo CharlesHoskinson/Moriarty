@@ -1,0 +1,206 @@
+diff --git a/accounts.moriarty.json b/accounts.moriarty.json
+new file mode 100644
+index 0000000..b702df3
+--- /dev/null
++++ b/accounts.moriarty.json
+@@ -0,0 +1,8 @@
++{
++  "accounts": [
++    {
++      "name": "Moriarty Local Test Wallet",
++      "seedFile": "/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed"
++    }
++  ]
++}
+diff --git a/package.json b/package.json
+index cecf7cd..4f3b496 100644
+--- a/package.json
++++ b/package.json
+@@ -11,6 +11,7 @@
+     "devnet:health": "bash scripts/assert-devnet-health.sh",
+     "prestart": "node scripts/preflight.mjs",
+     "start": "tsx src/index.ts",
++    "public-wallet": "tsx src/public-wallet.ts",
+     "typecheck": "tsc --noEmit",
+     "pretest": "node -e \"const {globSync}=require('node:fs');const n=globSync('test/**/*.test.ts').length;if(!n){console.error('No test files matched test/**/*.test.ts');process.exit(1)}console.log(n+' test file(s)')\"",
+     "test": "node --import tsx --test \"test/**/*.test.ts\""
+diff --git a/src/config.ts b/src/config.ts
+index 34ee005..1e5b385 100644
+--- a/src/config.ts
++++ b/src/config.ts
+@@ -66,3 +66,29 @@ export class StandaloneConfig implements Config {
+     };
+   }
+ }
++
++export class PreprodConfig implements Config {
++  readonly logDir = path.resolve(currentDir, '..', 'logs', `${timestampForFilename()}-preprod.log`);
++  readonly networkId = 'preprod';
++  readonly indexer = 'https://indexer.preprod.midnight.network/api/v4/graphql';
++  readonly indexerWS = 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws';
++  readonly node = 'https://rpc.preprod.midnight.network';
++  readonly nodeWS = 'wss://rpc.preprod.midnight.network';
++  readonly proofServer = fromEnv('MN_PREPROD_PROOF_SERVER_URL', 'http://127.0.0.1:16300');
++  readonly faucet = 'https://faucet.preprod.midnight.network/';
++
++  constructor() { setNetworkId(this.networkId); }
++
++  envConfig(): EnvironmentConfiguration {
++    return {
++      walletNetworkId: this.networkId,
++      networkId: this.networkId,
++      indexer: this.indexer,
++      indexerWS: this.indexerWS,
++      node: this.node,
++      nodeWS: this.nodeWS,
++      proofServer: this.proofServer,
++      faucet: this.faucet,
++    };
++  }
++}
+diff --git a/src/funding.ts b/src/funding.ts
+index e5715b6..09a9b15 100644
+--- a/src/funding.ts
++++ b/src/funding.ts
+@@ -35,7 +35,8 @@ export interface FundedAccount {
+ 
+ interface AccountConfig {
+   name: string;
+-  mnemonic: string;
++  mnemonic?: string;
++  seedFile?: string;
+ }
+ 
+ interface AccountsFile {
+@@ -111,7 +112,13 @@ export async function fundFromConfigFile(
+     logger.info(`\n--- Account ${i + 1}/${accountsFile.accounts.length}: ${account.name} ---`);
+ 
+     // Build recipient wallet from mnemonic and start it so we can observe funds
+-    const recipientWallet = await buildWallet(config, { kind: 'mnemonic', value: account.mnemonic });
++    const secret = account.seedFile === undefined
++      ? { kind: 'mnemonic' as const, value: account.mnemonic ?? '' }
++      : { kind: 'seed' as const, value: (await fs.readFile(account.seedFile, 'utf8')).trim() };
++    if (secret.value.length === 0) {
++      throw new Error(`Account ${account.name} must provide mnemonic or seedFile`);
++    }
++    const recipientWallet = await buildWallet(config, secret);
+ 
+     // The recipient wallet holds an open websocket. Closing it in a `finally`
+     // is what lets the process exit: if a transfer throws and the wallet is
+diff --git a/src/network.ts b/src/network.ts
+index 6556fa7..5c809ff 100644
+--- a/src/network.ts
++++ b/src/network.ts
+@@ -5,10 +5,10 @@ import { type Config } from './config.js';
+ import { currentDir } from './config.js';
+ import { type Logger } from 'pino';
+ 
+-const CONTAINER_NAMES = ['midnight-node', 'midnight-indexer', 'midnight-proof-server'];
++const CONTAINER_NAMES = ['moriarty-midnight-node', 'moriarty-midnight-indexer', 'moriarty-midnight-proof-server'];
+ 
+ /** Compose project name. Kept explicit so teardown never depends on the checkout directory name. */
+-export const COMPOSE_PROJECT_NAME = 'midnight-local-dev';
++export const COMPOSE_PROJECT_NAME = 'moriarty-midnight-local-dev';
+ 
+ /**
+  * Ceiling for each per-service health wait.
+@@ -25,9 +25,9 @@ export const createDockerEnv = (): DockerComposeEnvironment => {
+   return new DockerComposeEnvironment(path.resolve(currentDir, '..'), 'standalone.yml')
+     .withProjectName(COMPOSE_PROJECT_NAME)
+     .withStartupTimeout(STARTUP_TIMEOUT_MS)
+-    .withWaitStrategy('midnight-proof-server', Wait.forHealthCheck())
+-    .withWaitStrategy('midnight-node', Wait.forHealthCheck())
+-    .withWaitStrategy('midnight-indexer', Wait.forHealthCheck());
++    .withWaitStrategy('moriarty-midnight-proof-server', Wait.forHealthCheck())
++    .withWaitStrategy('moriarty-midnight-node', Wait.forHealthCheck())
++    .withWaitStrategy('moriarty-midnight-indexer', Wait.forHealthCheck());
+ };
+ 
+ /**
+diff --git a/src/public-wallet.ts b/src/public-wallet.ts
+new file mode 100644
+index 0000000..22fe22b
+--- /dev/null
++++ b/src/public-wallet.ts
+@@ -0,0 +1,25 @@
++import { readFile } from 'node:fs/promises';
++import { nativeToken } from '@midnight-ntwrk/midnight-js-protocol/ledger';
++import * as Rx from 'rxjs';
++import { PreprodConfig } from './config.js';
++import { buildWallet, closeWallet } from './wallet.js';
++
++const seedPath = process.argv[2];
++if (!seedPath) throw new Error('usage: npm run public-wallet -- /absolute/path/to/seed');
++
++const config = new PreprodConfig();
++const seed = (await readFile(seedPath, 'utf8')).trim();
++const ctx = await buildWallet(config, { kind: 'seed', value: seed });
++try {
++  const address = ctx.unshieldedKeystore.getBech32Address().asString();
++  console.log(JSON.stringify({ network: config.networkId, address, faucet: config.faucet, status: 'syncing' }));
++  const state = await Rx.firstValueFrom(ctx.wallet.state().pipe(
++    Rx.filter((s) => s.isSynced),
++    Rx.timeout({ first: 600_000 }),
++  ));
++  const night = state.unshielded.balances[nativeToken().raw] ?? 0n;
++  const dust = state.dust.balance(new Date());
++  console.log(JSON.stringify({ network: config.networkId, address, night: night.toString(), dust: dust.toString(), faucet: config.faucet }));
++} finally {
++  await closeWallet(ctx);
++}
+diff --git a/standalone.yml b/standalone.yml
+index 406b2e3..de0a64a 100644
+--- a/standalone.yml
++++ b/standalone.yml
+@@ -1,12 +1,15 @@
+ services:
+   proof-server:
+-    container_name: 'midnight-proof-server'
++    container_name: 'moriarty-midnight-proof-server'
+     image: 'midnightntwrk/proof-server:8.1.0'
+     command: ['midnight-proof-server', '-v']
+     ports:
+       - '127.0.0.1:${MN_PROOF_SERVER_PORT:-6300}:6300'
+     environment:
+       RUST_BACKTRACE: 'full'
++    mem_limit: 5g
++    cpus: 4.0
++    pids_limit: 1024
+     healthcheck:
+       test: ['CMD-SHELL', 'echo > /dev/tcp/127.0.0.1/6300']
+       interval: 10s
+@@ -15,7 +18,7 @@ services:
+       start_period: 10s
+ 
+   indexer:
+-    container_name: 'midnight-indexer'
++    container_name: 'moriarty-midnight-indexer'
+     image: 'midnightntwrk/indexer-standalone:4.3.3'
+     env_file: standalone.env.example
+     ports:
+@@ -30,6 +33,9 @@ services:
+       APP__INFRA__SECRET: '303132333435363738393031323334353637383930313233343536373839303132'
+       APP__INFRA__SPO_NODE__URL: 'ws://node:9944'
+       APP__INFRA__SPO_NODE__BLOCKFROST_ID: 'e2e-test-dummy-id'
++    mem_limit: 5g
++    cpus: 4.0
++    pids_limit: 1024
+     healthcheck:
+       test: ['CMD-SHELL', 'cat /var/run/indexer-standalone/running']
+       interval: 10s
+@@ -42,7 +48,7 @@ services:
+ 
+   node:
+     image: 'midnightntwrk/midnight-node:1.0.0'
+-    container_name: 'midnight-node'
++    container_name: 'moriarty-midnight-node'
+     ports:
+       - '127.0.0.1:${MN_NODE_PORT:-9944}:9944'
+     healthcheck:
+@@ -64,3 +70,6 @@ services:
+     environment:
+       CFG_PRESET: 'dev'
+       SIDECHAIN_BLOCK_BENEFICIARY: '04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e'
++    mem_limit: 5g
++    cpus: 4.0
++    pids_limit: 1024

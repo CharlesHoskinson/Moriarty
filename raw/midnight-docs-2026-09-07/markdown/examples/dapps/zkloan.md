@@ -1,0 +1,225 @@
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+# ZK Loan DApp
+
+The ZK Loan example shows how a loan application can be evaluated against private credit data without that data ever leaving the user's machine. A bank-style attestation provider signs the credit profile off-chain; the smart contract verifies the signature inside a zero-knowledge circuit and writes only the loan status and authorized amount to the ledger.
+
+The credit score, monthly income, employment tenure, attestation signature, and user PIN all stay private. The blockchain learns *whether* the user qualifies for which tier, never *why*.
+
+## What this DApp demonstrates[​](#what-this-dapp-demonstrates "Direct link to What this DApp demonstrates")
+
+This example is intentionally larger than the [Bulletin board](/examples/dapps/bboard.md) DApp. It stitches together several Midnight building blocks in one place:
+
+* **Witness-provided private inputs**: TypeScript code feeds credit data into the zero-knowledge prover at proving time without exposing it on-chain.
+* **Schnorr-on-Jubjub signature verification inside a circuit**: a hand-rolled Compact module (replaceable with `jubjubSchnorrVerify` once it ships in the standard library) proves the credit data came from a registered attestation provider.
+* **PIN-derived on-chain identity**: a witness-supplied user secret is hashed with a secret PIN to produce a per-user public key, so the same user cannot be linked across loans without knowing both the secret and the PIN.
+* **Two-phase approval flow**: requests above the user's tier cap are stored as `Proposed` and require a follow-up `respondToLoan` call to accept or decline.
+* **Witness-derived admin and identity**: caller identity (both admin and per-user) is derived from a 32-byte witness secret. `ownPublicKey()` is not used by the contract. Only the holder of the admin's secret can register providers, blacklist users, or rotate the admin role; only the holder of a user's secret can request, accept, or decline that user's loans.
+
+## Project structure[​](#project-structure "Direct link to Project structure")
+
+The repo is a single monorepo with four workspaces — contract, CLI, attestation API, and an optional UI:
+
+```
+zkloan-credit-scorer/
+
+├── contract/                              # Compact smart contract
+
+│   └── src/
+
+│       ├── zkloan-credit-scorer.compact   # Loan logic, eligibility tiers, ledger
+
+│       ├── schnorr.compact                # In-circuit signature verification
+
+│       └── witnesses.ts                   # Private state (TypeScript)
+
+├── zkloan-credit-scorer-cli/              # Interactive CLI (deploy + transact)
+
+│   ├── src/{api,cli,...}.ts
+
+│   └── standalone.yml                     # Local node + indexer + proof server
+
+├── zkloan-credit-scorer-attestation-api/  # REST server signing credit data
+
+│   └── src/{signing,server,index}.ts
+
+└── zkloan-credit-scorer-ui/               # React + Vite UI (Preprod only)
+
+    └── src/{components,contexts,...}
+```
+
+## Prerequisites[​](#prerequisites "Direct link to Prerequisites")
+
+* **Node.js** v22 or newer — the SDK uses Iterator helpers, so Node 20 crashes at first sync
+* **npm** v10 or newer
+* **Docker and Docker Compose** — for the local standalone network
+* **Compact toolchain** — install with the `compact` devtool, then run `compact update` and verify with `compact compile --version` (last validated against `0.31.1`)
+* **Midnight Lace wallet** — for the Preprod (remote) flow only; see the [installation guide](/getting-started/installation.md)
+
+**Versions targeted** — the repo pins ledger v8 and the 4.x Midnight JS SDK:
+
+| Component                                                                                                               | Version                                  |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@midnight-ntwrk/midnight-js-protocol` (provides the `/ledger`, `/compact-runtime`, `/compact-js` subpaths)             | `4.1.1`                                  |
+| ↳ wrapped ledger (`@midnight-ntwrk/midnight-js-protocol/ledger`)                                                        | `8.1.0`                                  |
+| `@midnight-ntwrk/compact-runtime`                                                                                       | `0.16.0`                                 |
+| `@midnight-ntwrk/midnight-js-*`                                                                                         | `4.1.1`                                  |
+| `@midnight-ntwrk/dapp-connector-api`                                                                                    | `4.0.1`                                  |
+| `@midnight-ntwrk/wallet-sdk` (single barrel — replaces `-facade`/`-hd`/`-shielded`/`-dust-wallet`/`-unshielded-wallet`) | `1.2.0`                                  |
+| `@midnight-ntwrk/wallet-sdk-address-format`                                                                             | `3.1.2`                                  |
+| Compact toolchain (`compact compile`)                                                                                   | `0.31.1`                                 |
+| Compact language pragma                                                                                                 | `>= 0.22 && <= 0.23`                     |
+| Proof-server image                                                                                                      | `midnightntwrk/proof-server:8.1.0`       |
+| Indexer image                                                                                                           | `midnightntwrk/indexer-standalone:4.3.3` |
+| Node image                                                                                                              | `midnightntwrk/midnight-node:1.0.0`      |
+
+Keep `@midnight-ntwrk/wallet-sdk` pinned exactly — npm's `latest` dist-tag still resolves to `1.1.0`, so a caret range or a fresh `npm install @midnight-ntwrk/wallet-sdk` gives you the older release.
+
+## Set it up[​](#set-it-up "Direct link to Set it up")
+
+You'll end up with up to four terminals running at once: docker network, attestation API, CLI, and (optionally) UI. Follow the steps in order — each one produces what the next one needs.
+
+### 1. Install dependencies[​](#1-install-dependencies "Direct link to 1. Install dependencies")
+
+```
+git clone https://github.com/midnightntwrk/example-zkloan.git zkloan-credit-scorer
+
+cd zkloan-credit-scorer
+
+npm install
+```
+
+This installs all four workspaces.
+
+### 2. Compile and build the contract[​](#2-compile-and-build-the-contract "Direct link to 2. Compile and build the contract")
+
+```
+cd contract
+
+npm run compact   # generates src/managed/ (JS bindings + prover/verifier keys + ZK IR)
+
+npm run build     # produces dist/ that the CLI and UI consume
+
+cd ..
+```
+
+### 3. Configure the CLI environment[​](#3-configure-the-cli-environment "Direct link to 3. Configure the CLI environment")
+
+The CLI's [`level-private-state-provider`](https://www.npmjs.com/package/@midnight-ntwrk/midnight-js-level-private-state-provider) encrypts the contract's private state on disk; it refuses to run without a strong password.
+
+```
+cd zkloan-credit-scorer-cli
+
+cp .env.example .env
+
+# Edit .env and set MIDNIGHT_STORAGE_PASSWORD
+```
+
+Password rules (enforced by v4 of the provider):
+
+* At least 16 characters
+* Characters from at least three of: uppercase, lowercase, digits, symbols
+* No 4-or-more identical characters in a row
+* No 4-or-more sequential character codes such as `abcd` or `1234`
+
+Losing this password means losing access to the encrypted private state — there is no recovery.
+
+### 4. Start the local standalone network[​](#4-start-the-local-standalone-network "Direct link to 4. Start the local standalone network")
+
+Skip this step if you only plan to use the Preprod (remote) flow.
+
+The CLI workspace ships a `standalone.yml` pinned to the versions above:
+
+```
+# Terminal A
+
+cd zkloan-credit-scorer-cli
+
+docker compose -f standalone.yml up -d
+```
+
+Services come up on `ws://127.0.0.1:9944` (node), `http://127.0.0.1:8088` (indexer), `http://127.0.0.1:6300` (proof server). Wait \~15–20s for the node to become healthy: `docker compose -f standalone.yml ps`. On a brand-new chain the indexer can exit once if it connects before the node produces its first block — `standalone.yml` sets `restart: on-failure` so it recovers on its own; give it a restart or two before assuming something is wrong.
+
+### 5. Start the attestation API[​](#5-start-the-attestation-api "Direct link to 5. Start the attestation API")
+
+The attestation API signs credit data with a Schnorr signature on Jubjub; the contract verifies the signature inside the ZK circuit.
+
+```
+# Terminal B — leave it open
+
+cd zkloan-credit-scorer-attestation-api
+
+PROVIDER_SECRET_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')" \
+
+PORT=4000 \
+
+npm run dev
+```
+
+On startup it prints three values you'll need next: **Provider ID** (default `1`), **public key x**, **public key y**. Save the generated `PROVIDER_SECRET_KEY` somewhere safe — every restart without it generates a new Jubjub key and invalidates any on-chain registration.
+
+### 6. Run the CLI[​](#6-run-the-cli "Direct link to 6. Run the CLI")
+
+Two options. Both use the `.env` from step 3.
+
+**Option A — Standalone (local docker)** — Requires step 4:
+
+```
+# Terminal C
+
+cd zkloan-credit-scorer-cli
+
+npm run standalone
+```
+
+The CLI uses a pre-funded hex seed against the local `undeployed` network, so no faucet or wallet extension is required.
+
+**Option B — Preprod (remote)** — Requires a 24-word BIP-39 mnemonic for a Preprod wallet funded from the [Preprod faucet](https://midnight-tmnight-preprod.nethermind.dev/), plus a local proof server on port `6300` (already running if you did step 4; otherwise `docker run --rm -p 6300:6300 midnightntwrk/proof-server:8.1.0 midnight-proof-server -v`):
+
+```
+# Add WALLET_MNEMONIC="…" to zkloan-credit-scorer-cli/.env first
+
+cd zkloan-credit-scorer-cli
+
+npm run preprod-remote
+```
+
+After the wallet syncs, do these first actions in order — every loan request fails inside `evaluateApplicant` until step 2 is done:
+
+1. **Deploy** (option 1). Save the printed contract address.
+2. **Register the attestation provider** (admin menu → option 8). Paste the Provider ID, x, and y from step 5.
+
+Then you can request loans, respond to proposals, change PIN, display state, and run the other admin actions.
+
+### 7. Run the UI (Preprod only)[​](#7-run-the-ui-preprod-only "Direct link to 7. Run the UI (Preprod only)")
+
+The UI is Preprod-only — Lace cannot balance or sign transactions for the local `undeployed` chain, so use the CLI for any local iteration.
+
+```
+# Terminal D
+
+cd zkloan-credit-scorer-ui
+
+npm run dev              # dev server on http://localhost:5173
+
+npm run build            # production bundle
+```
+
+To connect:
+
+1. Install the Midnight Lace wallet extension and switch it to the Preprod network.
+2. Fund the wallet from the [Preprod faucet](https://midnight-tmnight-preprod.nethermind.dev/).
+3. Make sure steps 5 and 6 (Preprod option) have already run — the attestation API is up, a Preprod contract is deployed, and the provider is registered on it.
+4. Open the UI, click **Connect Lace wallet**, then paste the contract address into **01 · Contract** and click **Connect**.
+
+Wait for Lace to finish syncing (the extension shows a `Wallet syncing (…%)` banner) before submitting a loan — mid-sync submissions fail with a generic "Transaction submission failed" error.
+
+## Build it from scratch[​](#build-it-from-scratch "Direct link to Build it from scratch")
+
+If you want to understand *why* each piece looks the way it does, work through the three-part tutorial that builds this exact DApp from an empty directory. It walks through the witness/disclose split, the Schnorr-in-circuit verification, the PIN-derived identity, and the wallet-and-provider wiring:
+
+* [Part 1 — ZK Loan smart contract](/tutorials/zk-loan/smart-contract.md): Compact contract, Schnorr verification module, witness implementation, contract compile + build.
+* [Part 2 — Attestation API](/tutorials/zk-loan/attestation-api.md): Off-chain Schnorr signer, REST endpoints, proof-server Docker setup.
+* [Part 3 — CLI and end-to-end testing](/tutorials/zk-loan/cli.md): Wallet derivation, provider wiring, interactive menu, full local-dev walkthrough.
+
+The tutorial covers every file in this repository line by line, with commentary explaining the design choices.

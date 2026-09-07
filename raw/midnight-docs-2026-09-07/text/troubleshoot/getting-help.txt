@@ -1,0 +1,22 @@
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+# Support
+
+As a participant in the Midnight Testnet, you have the opportunity to shape the future of Midnight by reporting issues, suggesting enhancements, and directly influencing the development process.
+
+## Connectivity failures, bugs, general problems, and suggestions[​](#connectivity-failures-bugs-general-problems-and-suggestions "Direct link to Connectivity failures, bugs, general problems, and suggestions")
+
+There are two ways to report problems, make suggestions, give feedback, or just ask for help:
+
+1. Participate in a discussion on the [Midnight Discord server](https://discord.gg/midnightnetwork). The Midnight team will be monitoring the `#support` channel regularly. **Important:** when you first join the Midnight Discord server, you must accept the rules in the `#rules` before you can access other content on the server.
+2. Send email to [Midnight support](mailto:support@midnight.network).
+
+## Security vulnerabilities[​](#security-vulnerabilities "Direct link to Security vulnerabilities")
+
+If you discover any security vulnerabilities in the Midnight libraries or infrastructure, please report them using the following protocol:
+
+1. Do *not* post security vulnerabilities on the support channel on Discord.
+2. Instead, please send a report of what you have found to the Midnight support email address: <support@midnight.network>. If you have a fix or workaround for the vulnerability, please describe that, too.
+3. The Midnight team will evaluate your report and may release a fix or publish instructions for mitigating the vulnerability. The team will inform you of the outcome directly.
+4. Unless you request otherwise, the Midnight team will credit you for finding the problem in any publication of a fix or mitigation.
+5. After the Midnight team has either published a fix or informed you that the vulnerability will not be addressed, you are free to disclose it publicly.

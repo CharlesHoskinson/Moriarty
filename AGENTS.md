@@ -24,9 +24,17 @@ The [report reconciliation](docs/research/2026-09-06-pcd-report-integration.md)
 and its R0–R6 sequence now control execution. The local mock, typed mandatory-claim interface, shared bounded loan/swap
 evaluator and R2b atomic outcome-intent profile are implemented as local
 experiments. See the [R2b evidence](evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
-Next is the specified R3 native financial IVC boundary: implement and review its
-bounded command before running it, prioritize the inspected native Midnight
-route, and separately test ledger acceptance and private witness handoff. Optional acceleration cannot bypass required proofs. Compact's lack
+The [R3 run](evidence/moriarty-native-ivc-r3-2026-09-07/README.md) compiled and
+passed fixed financial/application checks but recursive VK synthesis exhausted
+rows at k17. No recursive proof exists. Stop native runs until a reviewed smaller
+checked state encoding or revised resource/k decision is adopted; unused budget
+is not automatic retry authorization. [Docker evidence](evidence/moriarty-midnight-network-2026-09-07/README.md)
+records local NIGHT, DUST, Compact deployment and call settlement. Public Preprod
+funding/settlement remains pending the official faucet CAPTCHA and wallet sync.
+Neither local settlement nor application MockProver checks establish Moriarty PCD.
+The [published documentation capture](evidence/midnight-docs-2026-09-07/README.md)
+covers all indexed Markdown routes with explicit HTML/asset limitations. Keep
+native proof acceptance, ledger compatibility and private witness handoff separate. Optional acceleration cannot bypass required proofs. Compact's lack
 of source recursion does not establish absence of backend recursive proofs.
 ACTUS conformance and real PCD integration remain open. No old loop resumes.
 

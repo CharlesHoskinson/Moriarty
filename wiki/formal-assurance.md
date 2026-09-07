@@ -3,8 +3,11 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-06T22:00:49.403297+00:00
+updated_at: 2026-09-07T02:33:43.401543+00:00
 sources:
+  - SRC-0054
+  - SRC-0053
+  - SRC-0051
   - SRC-0050
   - SRC-0043
   - SRC-0044
@@ -31,7 +34,25 @@ authenticate key possession and bindings. These are S3 checks, not a proved
 compiler/refinement theorem or contract/history certificate. All required real
 claims remain unavailable. See [evidence](../evidence/moriarty-r2-language-2026-09-06/README.md)
 and the [intents amendment](../docs/research/2026-09-06-intents-report-integration.md).
-R2b authority composition and R3 native/ledger proof gates remain open.
+R2b general authority composition and R3 native/ledger proof gates remain open.
+
+## R3 and local Midnight observations — 2026-09-07
+
+CLM-0201 records an implemented fixed loan relation at native pin
+`695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`: independent UInt128 arithmetic and
+application MockProver controls passed; recursive VK synthesis failed with
+`NotEnoughRowsAvailable { current_k: 17 }`. No recursive proof, history
+certificate or proof-mutation rejection was produced. The SRS hash was checked;
+ceremony validity remains an assumption. See [exact runs](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md).
+
+CLM-0202 records successful local NIGHT funding, DUST registration, Compact
+hello-world deployment and call with indexed blocks below the finalized head.
+This tests the pinned Docker/SDK route, not the Moriarty financial relation or
+native proof-to-ledger compatibility. Public Preprod remains unfunded pending
+CAPTCHA and full wallet sync; no public transaction was submitted. See
+[receipts](../evidence/moriarty-midnight-network-2026-09-07/README.md).
+Both are S3 experiments with narrowly reproduced predicates, not language-wide
+correctness evidence.
 
 The theorem inventory was reproduced from pinned Isabelle sources at
 `marlowe-lang/marlowe` commit

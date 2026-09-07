@@ -5,7 +5,14 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
-**Latest output:** [R2b outcome-intent workspace and evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
+**Latest output:** [Midnight Docker settlement evidence](../evidence/moriarty-midnight-network-2026-09-07/README.md),
+[published documentation capture](../evidence/midnight-docs-2026-09-07/README.md), and
+[R3 native result](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md).
+Local NIGHT/DUST/deploy/call transactions settled; public Preprod still awaits
+faucet CAPTCHA and wallet sync. Native recursive setup exhausted rows at k17;
+no recursive proof was produced. CLM-0200–0202 records this sprint.
+
+Previous output: [R2b outcome-intent workspace and evidence](../evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
 At `/intents`, sign bounded outcome authority before choosing a pool route, or
 settle loan dues through the same checker. Independent gross debit/net goal
 checks, local expiry and atomic nonce consumption are implemented. Required
@@ -17,8 +24,8 @@ continues to control the scope. R2 exact-plan mode remains at `/language`.
 The [PCD report integration](../deliverables/pcd-report-integration-2026-09-06/README.md)
 and [ACTUS/DeFi target study](../deliverables/moriarty-design-sprint-2026-09-06/README.md)
 remain controlling foundations. The [native R3 test](../experiments/moriarty-native-ivc-r3/README.md)
-is specified-only. No general DSL, contract theorem, complete conformance or
-real PCD integration is claimed complete. Journal CLM-0198–0199 records the latest step.
+is implemented and blocked at recursive setup. No general DSL, contract theorem,
+complete conformance or real PCD integration is claimed complete.
 
 The [user reset](../raw/assignments/moriarty-target-first-reset-2026-09-06.md)
 supersedes the old A4/A5 execution loop. Its results and unfinished obligations

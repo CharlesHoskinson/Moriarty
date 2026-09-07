@@ -1,0 +1,186 @@
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+# Set up full node
+
+This guide provides step-by-step instructions for setting up a full node for Midnight.
+
+## Prerequisites[​](#prerequisites "Direct link to Prerequisites")
+
+Before setting up your Midnight full node, ensure you have the following:
+
+* [Cardano-db-sync instance set up](/nodes/cardano-db-sync.md) with accessible PostgreSQL port.
+* Sufficient resources (CPU, memory, and storage).
+
+## Install Midnight node[​](#install-midnight-node "Direct link to Install Midnight node")
+
+The Midnight node is the core client for the Midnight protocol. Install the Midnight node by following the steps below.
+
+Create directories for the node:
+
+```
+mkdir -p ~/data ~/res ~/.local/bin
+```
+
+* `~/data`: For node database/base path.
+* `~/res`: For chain configuration files.
+* All owned by `midnight` user.
+
+Download and install the Midnight node binary:
+
+Create a temporary directory and navigate to it:
+
+```
+mkdir -p ~/tmp && cd ~/tmp
+```
+
+Download the Midnight node binary:
+
+```
+curl -L -O https://github.com/midnightntwrk/midnight-node/releases/download/node-0.22.5/midnight-node-0.22.5-linux-amd64.tar.gz
+```
+
+note
+
+Always verify the latest release version from the [compatibility matrix](/relnotes/support-matrix.md) before downloading the binary.
+
+Extract the binary:
+
+```
+tar -xvzf midnight-node-0.22.5-linux-amd64.tar.gz
+```
+
+Move the binary to the local bin directory:
+
+```
+mv ~/tmp/midnight-node ~/.local/bin/
+```
+
+Move the chain config files to the res directory:
+
+```
+mv ~/tmp/res ~/res
+```
+
+Reload the shell environment:
+
+```
+source ~/.bashrc # or source ~/.zshrc
+```
+
+### Set environment variables[​](#set-environment-variables "Direct link to Set environment variables")
+
+Create an `.env` configuration file and set the environment variables for the PostgreSQL database:
+
+```
+# PostgreSQL connection
+
+export POSTGRES_HOST="localhost"
+
+export POSTGRES_DB="cexplorer"
+
+export POSTGRES_PORT="5432"
+
+export POSTGRES_USER="midnight"
+
+export POSTGRES_PASSWORD="YOUR_POSTGRES_PASSWORD"
+
+
+
+# Cardano database connection string
+
+export DB_SYNC_POSTGRES_CONNECTION_STRING="postgresql://midnight:YOUR_POSTGRES_PASSWORD@localhost:5432/cexplorer"
+
+
+
+export NODE_NAME="your_node_name"
+```
+
+Load the variables into the shell environment:
+
+```
+source ~/.env
+```
+
+Confirm that the variables are loaded successfully:
+
+```
+echo $DB_SYNC_POSTGRES_CONNECTION_STRING
+```
+
+## Run a full node[​](#run-a-full-node "Direct link to Run a full node")
+
+Once the environment variables are set, run the Midnight node using the following command:
+
+* Preview
+* Preprod
+
+```
+midnight-node \
+
+  --chain /home/midnight/res/preview/chain-spec-raw.json \
+
+  --base-path /home/midnight/data \
+
+  --pool-limit 35 \
+
+  --name $NODE_NAME \
+
+  --no-private-ip
+```
+
+```
+midnight-node \
+
+  --chain /home/midnight/res/preprod/chain-spec-raw.json \
+
+  --base-path /home/midnight/data \
+
+  --pool-limit 35 \
+
+  --name $NODE_NAME \
+
+  --no-private-ip
+```
+
+### Available networks[​](#available-networks "Direct link to Available networks")
+
+The `--chain` flag lets you specify the network to run the node on. The available networks are:
+
+* `local`: For local testing. This is the default network if you do not specify a network.
+* `preview`: For the Preview network.
+* `preprod`: For the Preprod network.
+* `mainnet`: For the Mainnet network.
+
+## Verify the node[​](#verify-the-node "Direct link to Verify the node")
+
+Monitor the node's logs to ensure it syncs with the network. What to look for in the output:
+
+* **Cardano db connection**: If you see `Postgres connection established`, then your DB settings are correct.
+* **Peers**: Look for `IDLE (0 peers)`. If it stays at 0, then check your firewall (port 30333) or the `-bootnodes` address.
+* **Syncing**: You should see `Best: #0 ...` start to increment as it pulls blocks from the network.
+
+## Full node vs. archive node[​](#full-node-vs-archive-node "Direct link to Full node vs. archive node")
+
+A full node syncs with the blockchain, validates transactions, and provides real-time state queries. It prunes historical states older than a configurable number (defaulting to 256 blocks). This makes it suitable for most DApp development and real-time interactions with the network. Its key advantage lies in its efficient use of disk space, requiring significantly less storage than an archive node.
+
+An archive node maintains the entire history of the blockchain, including all blocks and states. This comprehensive storage consumes substantial disk space. However, it is essential for use cases requiring access to historical data, such as building block explorers, conducting in-depth debugging, or querying past events.
+
+To run the Midnight node in archive mode, use the `--pruning archive` flag.
+
+```
+midnight-node \
+
+  --chain /home/midnight/res/preview/chain-spec-raw.json \
+
+  --base-path /home/midnight/data \
+
+  --pruning archive \
+
+  --no-private-ip \
+
+  --name $NODE_NAME
+```
+
+## Next steps[​](#next-steps "Direct link to Next steps")
+
+With the full node set up, you can start using the [Node endpoints](/nodes/node-endpoints.md) to interact with the Midnight blockchain.

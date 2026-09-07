@@ -92,7 +92,7 @@ solver network, compositional authority theorem or wallet authorization.
 | --- | --- |
 | R2: exact-plan executable slice | Loan accrual/settlement and pool swap/closure share one bounded evaluator. Independent effect checks, genuine local signing and fail-closed required-proof status run in the browser. This remains S3. |
 | R2b: outcome intent and authority profile | Reviewable bounded IntentIR/PlanIR/Receipt schemas plus the concrete checker and signing summary described below. Preserve positive feasibility and adversarial rejection. |
-| R3: native proof boundary | Read-only interface specification can proceed alongside R2b. A narrow native financial IVC experiment remains specified-only until its bounded command is implemented and reviewed. Production acceptance also needs R2b authority/refinement binding and a separate ledger result. |
+| R3: native proof boundary | The fixed financial harness compiled and passed application checks, but recursive VK setup exhausted rows at k17; no native proof exists. Local Compact deployment/call settled separately. Public Preprod, native proof-to-ledger compatibility and R2b authority/refinement binding remain open. Review state encoding or resource limits before further native execution. |
 | R4: private composition | Independent witness handoff, residual-authority chains and split/join obligations; conflicts and finality checked separately from PCD. |
 | R5: certificates and target coverage | Connect named bounded contract certificates, compiler/adapter refinement and held-out workloads; retain all 18 ACTUS types, 277 fixtures and 72 DeFi rows. |
 | R6: acceleration | Only measure a concrete repeated workload after the acceptance relation exists. Fallback preserves all mandatory claims. |
@@ -141,5 +141,12 @@ not distributed uniqueness. Mandatory real claims remain unavailable.
 [Held-out source records](../../evidence/moriarty-r2b-heldouts-2026-09-06/README.md)
 freeze ACTUS NAM19 capitalization, Maple refinance and Huma pending redemption.
 All three need extensions; no new Core semantics or conformance result is claimed.
-The next bounded deliverable is R3's native proof-interface experiment. R4 owns
-private/residual composition, and R5 retains certificates and full target coverage.
+The [R3 experiment](../../evidence/moriarty-native-ivc-r3-2026-09-07/README.md)
+now records a concrete k17 recursive-row failure after passing fixed application
+checks. No cryptographic proof was produced. Choose a reviewed smaller checked
+state encoding or a separately justified resource ceiling before another run.
+The [network experiment](../../evidence/moriarty-midnight-network-2026-09-07/README.md)
+settled a local Compact deployment/call; public Preprod still requires faucet
+CAPTCHA funding and wallet synchronization. These transactions do not consume a
+Moriarty history proof. R4 owns private/residual composition, and R5 retains
+certificates and full target coverage. No gate is waived by local SDK success.

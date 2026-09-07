@@ -3,8 +3,10 @@ id: midnight.repositories.inventory
 type: component
 title: Midnight and Compact repository inventory
 status: active
-updated_at: 2026-09-02T18:20:00Z
+updated_at: 2026-09-07T02:26:15.985321+00:00
 sources:
+  - SRC-0051
+  - SRC-0052
   - SRC-0005
   - SRC-0006
   - SRC-0007
@@ -51,3 +53,18 @@ The ZKIR repository is tightly coupled to a fixed ledger revision. Its workspace
 at the pinned commit patches Midnight ledger crates to
 `9a8777c4d035fc7f38ae286bcf5f8656668efd9f`. This coupling is evidence that
 raw ZKIR is not currently a stable, blockchain-independent target contract.
+
+## Published documentation snapshot — 2026-09-07
+
+The [Midnight documentation corpus](../evidence/midnight-docs-2026-09-07/README.md)
+adds the full published Markdown index to the earlier repository pins. It includes
+API and version documentation, current installation instructions, the support
+matrix, network endpoints, faucet and NIGHT-to-DUST registration guidance.
+Consult its per-page timestamps before reusing moving version claims. Repository
+heads above remain historical pins and are not updated to match documentation
+silently. See journal CLM-0200 for acquisition scope and the discovery limitation.
+
+Metadata: SRC-0051 task input, SRC-0052 primary published docs; source observation,
+2026-09-07; S3 local acquisition, reproduced hashes; confidence high for captured
+content, untested for component-level compatibility unless separate execution
+evidence is linked. A published instruction is not a successful network test.

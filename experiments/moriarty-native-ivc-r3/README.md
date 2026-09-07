@@ -1,8 +1,14 @@
-# R3 native financial IVC experiment — specified-only
+# R3 native financial IVC experiment — blocked at k17
+
+The fixed loan harness is implemented and was run under the specified resource
+ceiling. It compiled and passed the independent financial/application-circuit
+checks, but recursive VK synthesis exhausted rows at k17. **No recursive proof
+was produced.** See [actual results](../../evidence/moriarty-native-ivc-r3-2026-09-07/README.md).
+The specification below records the intended predicate and controls; controls
+after key setup remain unexecuted. Docker/network settlement is a separate test.
 
 Decision: can the inspected Midnight IVC interface prove and extend one bounded
-Moriarty financial episode? This is an experiment specification. No Rust harness,
-native proof, application adapter or ledger submission was produced in R2.
+Moriarty financial episode? At the fixed k17, this specialization did not fit.
 
 ## Fixed input and inspected interface
 
@@ -46,24 +52,24 @@ label a narrower IVC success `HistoryCompliance` for a stronger signed profile.
 ## Harness and stopping contract
 
 Create a local isolated checkout at that pin and add a single proposed example
-named `moriarty_loan_r3`. That example does not exist yet. It must accept no
-unbounded workload, perform exactly two positive proving steps, serialize a
-receipt with its predicate and source/input hashes, and run the negative checks
+named `moriarty_loan_r3`. The harness is preserved under `harness/`. It accepts no
+unbounded workload. Its intended run performs exactly two positive proving steps,
+serializes a receipt with its predicate and source/input hashes, and runs the negative checks
 below using retained proof bytes. Do not run the upstream example as a substitute:
 it performs 1,000 Poseidon iterations per step and demonstrates a different task.
 
-Proposed resource ceiling for the future single attempt: 20 minutes cumulative
+Original resource ceiling for the bounded experiment: 20 minutes cumulative
 wall time including build/setup/proving, two build jobs, 8 GiB process-group
 memory, one fixed `k = 17`, two proving steps and at most 256 MiB of retained
-outputs. These are a planning ceiling, not a claim that the circuit fits or an
-instruction to run it now. Confirm available resources and enforce the group
+outputs. This ceiling did not establish that the circuit would fit. The executed result
+above records the failure; no automatic retry or increase is authorized by it. Confirm available resources and enforce the group
 limit before the command; do not approximate it with a JavaScript heap flag.
 
 Once the example, lockfile, SRS receipt and resource wrapper are reviewable, the
 inner candidate command is:
 
 ```sh
-cargo run --locked --release --jobs 2 -p midnight-aggregation --example moriarty_loan_r3
+cargo run --locked --release --jobs 2 -p midnight-aggregation --features truncated-challenges --example moriarty_loan_r3
 ```
 
 Record the complete outer resource-wrapper command before execution. Stop after
@@ -92,3 +98,20 @@ histories. IVC's stateful prover API alone does not demonstrate safe cross-party
 handoff. Ledger duplicate consumption and competing valid branches remain
 separate checks. The [intents amendment](../../docs/research/2026-09-06-intents-report-integration.md)
 adds residual authority and obligations to that relation.
+
+## Executable artifacts and reproduction boundary
+
+`export-episode.mjs` performs a fresh R2 build and emits `episode.json` and
+`harness/episode.rs`, including original preimages and source/executable hashes.
+`harness/moriarty_loan_r3.rs` supplies the finite native/application relation.
+Copy the generated module to `aggregation/examples/moriarty_r3/episode.rs` and
+the harness to `aggregation/examples/moriarty_loan_r3.rs` in an isolated checkout
+of the pinned backend. The source catalog identifies the required local SRS.
+
+`run-native.py` wraps the recorded command in verified cgroup limits. Its
+`--correction` path requires an explicit changed hypothesis tied to a prior failed
+terminal receipt and subtracts that run from the original cumulative ceiling.
+The exact three invocations and source snapshots are in the evidence package.
+The diagnostic-only backend patch is separate from the pinned financial relation.
+Do not repeat these runs or change k based on this reproduction description;
+first resolve the recorded public-state-size/resource decision.
