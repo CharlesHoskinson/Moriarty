@@ -1,0 +1,100 @@
+agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {
+  lifetime 2;
+  horizon 2000000000;
+  unit USD_micro;
+  const borrower: Text = text("borrower");
+  const lender: Text = text("lender");
+  const annual_rate_numerator: UInt128 = uint(8);
+  const annual_rate_denominator: UInt128 = uint(100);
+  const day_count_numerator: UInt128 = uint(31);
+  const day_count_denominator: UInt128 = uint(365);
+  const principal_installment: Amount<USD_micro> = amount(500000000, USD_micro);
+  const expected_interest: Amount<USD_micro> = amount(33972602, USD_micro);
+  const expected_total_due: Amount<USD_micro> = amount(533972602, USD_micro);
+  const expected_outstanding_notional: Amount<USD_micro> = amount(4500000000, USD_micro);
+  state notional: Amount<USD_micro> = amount(5000000000, USD_micro);
+  state principal_due: Amount<USD_micro> = amount(0, USD_micro);
+  state interest_due: Amount<USD_micro> = amount(0, USD_micro);
+  state principal_paid: Amount<USD_micro> = amount(0, USD_micro);
+  state interest_paid: Amount<USD_micro> = amount(0, USD_micro);
+  state borrower_cash: Amount<USD_micro> = amount(20000000000, USD_micro);
+  state lender_cash: Amount<USD_micro> = amount(0, USD_micro);
+  state cursor: UInt128 = uint(0);
+  state episode_closed: UInt128 = uint(0);
+  observation now: UInt128;
+  settlement USD_micro_asset asset text("USD_TEST_ASSET") quantum amount(1, USD_micro);
+  field interest_due {
+    unit USD_micro;
+    derivation "notional*8*31/(100*365)";
+    rounding floor(interest_calculated);
+    remainder "discard 54/73 micro-USD for this sample only";
+    comparison "exact integer sample value; no ACTUS tolerance claim";
+    proof "loan_first_period_interest_floor_v1";
+  }
+  field principal_due {
+    unit USD_micro;
+    derivation "fixed first-period principal installment";
+    rounding none;
+    remainder "none";
+    comparison "exact micro-unit value";
+    proof "loan_first_period_principal_v1";
+  }
+  effect Transfer {
+    asset: Text;
+    from: Text;
+    to: Text;
+    amount: Amount;
+  }
+  effect DueCreated {
+    due_id: Text;
+    debtor: Text;
+    creditor: Text;
+    denomination: Text;
+    amount: Amount;
+  }
+  effect DueSettled {
+    due_id: Text;
+    debtor: Text;
+    creditor: Text;
+    denomination: Text;
+    amount: Amount;
+    asset: Text;
+  }
+  action accrue(actor: Text) {
+    guard obs.now < uint(2000000000), "horizon expired";
+    guard arg.actor == const.borrower, "borrower authority required";
+    guard state.cursor == uint(0), "period already accrued";
+    let interest_numerator = state.notional * const.annual_rate_numerator * const.day_count_numerator;
+    let interest_denominator = const.annual_rate_denominator * const.day_count_denominator;
+    let interest_calculated = floor_div(interest_numerator, interest_denominator);
+    guard interest_calculated == const.expected_interest, "independent interest value mismatch";
+    set principal_due = const.principal_installment;
+    set interest_due = interest_calculated;
+    set notional = state.notional - const.principal_installment;
+    guard state.notional == const.expected_outstanding_notional, "outstanding notional mismatch";
+    set cursor = uint(1);
+    emit DueCreated { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due };
+    emit DueCreated { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due };
+  }
+  action settle(actor: Text, asset: Text, amount_due: Amount<USD_micro>) {
+    guard obs.now < uint(2000000000), "horizon expired";
+    guard arg.actor == const.borrower, "borrower authority required";
+    guard state.cursor == uint(1), "dues are not ready";
+    guard arg.asset == text("USD_TEST_ASSET"), "settlement asset mismatch";
+    guard arg.amount_due == state.principal_due + state.interest_due, "settlement amount mismatch";
+    guard arg.amount_due == const.expected_total_due, "independent total value mismatch";
+    guard state.borrower_cash >= arg.amount_due, "insufficient synthetic balance";
+    set borrower_cash = state.borrower_cash - arg.amount_due;
+    set lender_cash = state.lender_cash + arg.amount_due;
+    set principal_paid = state.principal_paid + state.principal_due;
+    set interest_paid = state.interest_paid + state.interest_due;
+    emit Transfer { asset: arg.asset, from: const.borrower, to: const.lender, amount: arg.amount_due };
+    emit DueSettled { due_id: text("lam01:period1:PR"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.principal_due, asset: arg.asset };
+    emit DueSettled { due_id: text("lam01:period1:IP"), debtor: const.borrower, creditor: const.lender, denomination: text("USD_micro"), amount: state.interest_due, asset: arg.asset };
+    set principal_due = amount(0, USD_micro);
+    set interest_due = amount(0, USD_micro);
+    set cursor = uint(2);
+    set episode_closed = uint(1);
+    guard state.notional == const.expected_outstanding_notional, "episode closure cannot discharge remaining notional";
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "status": "proposed-not-frozen",
+  "semanticProfile": "moriarty-bounded-atomic/1",
+  "schemaVersion": "moriarty-numeric/1",
+  "integer": {
+    "representation": "unsigned",
+    "bits": 128,
+    "minimum": "0",
+    "maximum": "340282366920938463463374607431768211455",
+    "wire": "canonical-decimal-string",
+    "sourceToken": "unsigned-decimal-no-sign-no-exponent-no-separator-no-leading-zero-except-0",
+    "intermediateBits": 128,
+    "overflow": "reject-entire-action",
+    "underflow": "reject-entire-action",
+    "divisionByZero": "reject-entire-action",
+    "divisionRounding": "floor-at-each-explicit-FloorDiv-node",
+    "floorNode": "binary-slash-elaborates-to-FloorDiv; floor(e) is the recorded rounding node and is identity on UInt128 and on Amount<U>",
+    "reassociation": "forbidden-if-observable-behavior-changes",
+    "hostBigInt": "calculation-device-only-not-a-wider-accepted-intermediate",
+    "widthBoundary": {
+      "operandA": "340282366920938463463374607431768211455",
+      "operandB": "2",
+      "eachOperandFitsUInt128": true,
+      "productFitsUInt128": false,
+      "requiredBehavior": "reject-overflow-even-when-a-later-quotient-would-fit"
+    }
+  },
+  "types": {
+    "stored": [
+      "UInt128",
+      "Text",
+      "Amount<Unit>"
+    ],
+    "expressionOnly": [
+      "Bool",
+      "Quantity<UnitExponentVector>"
+    ],
+    "amountCoreRepresentation": "UInt128-with-manifest-bound-nominal-unit-map",
+    "boolState": "rejected-until-reviewed-core-extension",
+    "literalForms": [
+      "uint(n)",
+      "text(json_string)",
+      "amount(n, Unit)",
+      "true",
+      "false"
+    ],
+    "numericLookingText": "text(\"123\") remains Text; contents never infer UInt128"
+  },
+  "units": {
+    "USD_micro": "one-millionth-of-reference-USD-denomination-not-a-ledger-token",
+    "conversion": "explicit-bound-settlement-policy-required",
+    "sameUnitRequired": [
+      "add",
+      "sub",
+      "eq",
+      "lt",
+      "lte",
+      "gt",
+      "gte"
+    ],
+    "multiplication": "add-unit-exponents",
+    "division": "subtract-unit-exponents",
+    "UInt128UnitVector": "empty",
+    "BoolAndTextUnitVector": "not-applicable",
+    "maximumExpressionUnitComponents": 8,
+    "maximumAbsoluteUnitExponent": 16,
+    "assignment": "exact-result-unit-vector-matches-declared-type",
+    "quantityClassification": {
+      "emptyVector": "UInt128",
+      "singleDeclaredUnitExponentOne": "Amount<Unit>",
+      "anyOtherVector": "expression-only Quantity; cannot store or emit until FloorDiv/settlement yields Amount or UInt128"
+    },
+    "unitErasure": "forbidden-except-checked-Transfer-or-Fee-emit-after-settlement-asset-binding"
+  },
+  "fieldPolicyRequired": [
+    "unit",
+    "derivation",
+    "roundingNode",
+    "remainderDisposition",
+    "comparisonPolicy",
+    "proofStatement"
+  ],
+  "fieldPolicyBinding": "elaboration-and-proof-statements; not optional source annotations",
+  "genesisVersusDynamic": {
+    "declaredDynamicValues": "state field values change by set during evaluation",
+    "checkedGenesisMetadata": "profile, lifetime, horizon, units, consts, schemas, field policies, settlement bindings, action bodies, and initial literals are authenticated at genesis and are not rewritten by evaluate"
+  },
+  "firstExamples": {
+    "loanInterest": {
+      "formula": "floor(notional*rateNumerator*dayCountNumerator/(rateDenominator*dayCountDenominator))",
+      "rounding": "one-final-floor",
+      "remainderDisposition": "discarded-in-first-period-sample-only",
+      "comparison": "exact-micro-unit-sample-expectation",
+      "independentFlooredInterestMicroUSD": "33972602",
+      "independentExactInterestMicroUSD": "2480000000/73",
+      "discardedFractionMicroUSD": "54/73",
+      "outstandingNotionalAfterCloseMicroUSD": "4500000000",
+      "upstreamConformance": false
+    },
+    "swapOutput": {
+      "formula": "floor((dx*feeNumerator)*reserveB/(reserveA*feeDenominator+dx*feeNumerator))",
+      "rounding": "one-final-floor",
+      "remainderDisposition": "output-remains-in-pool-reserve",
+      "comparison": "exact-integer-output-and-reserves",
+      "independentFlooredOutput": "19743",
+      "independentExactOutput": "1994000000/100997",
+      "reservesAfter": [
+        "1010000",
+        "1980257"
+      ],
+      "protocolConformance": false
+    }
+  },
+  "extensionsRequiringNewVersion": [
+    "signed-values-and-negative-rounding",
+    "package-specific-quantity-price-orientation-and-conversion",
+    "calendar-and-year-fraction-operations",
+    "bounded-convergence-with-iteration-and-tolerance-policy",
+    "wider-intermediates",
+    "pending-residual-authority-and-composition",
+    "bool-or-signed-state-fields",
+    "user-functions-recursion-or-loops"
+  ],
+  "invalidatedBySemanticChange": [
+    "program-identifiers",
+    "signature-domains",
+    "proofs",
+    "certificates",
+    "theorem-instances",
+    "affected-audits"
+  ],
+  "historicalArtifacts": "retain-original-statement-and-domain-only"
+}
