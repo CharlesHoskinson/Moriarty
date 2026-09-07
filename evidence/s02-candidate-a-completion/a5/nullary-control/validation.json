@@ -1,0 +1,182 @@
+{
+  "command": "/home/charl/Moriarty/.venv/bin/python - <<'PY'\nfrom pathlib import Path\nimport hashlib,json,tarfile\nroot=Path('/tmp/moriarty-a5-nullary-control.7xc9Oc')\narchive=Path('evidence/s02-candidate-a-completion/a5/nullary-control/control-evidence.tar.gz')\nh=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()\nmembers=[]\nwith tarfile.open(archive,'r:gz') as t:\n for m in t:\n  if m.isfile():\n   raw=t.extractfile(m).read()\n   assert raw==(root/m.name).read_bytes(),m.name\n   members.append({'path':m.name,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})\nfor stage,code in [('compile-agreement',0),('compile-wrong',0),('check-agreement',0),('check-wrong',12)]:\n r=json.loads((root/stage/'result.json').read_text());i=json.loads((root/stage/'input.json').read_text())\n assert r['exitCode']==code and not r['timedOut'] and r['sourceAndToolsUnchanged'],stage\n stdout=root/stage/('input.qnt.json' if stage.startswith('compile-')else 'stdout.txt')\n assert h(stdout)==r['stdoutSha256'] and h(root/stage/'stderr.txt')==r['stderrSha256']\n assert all(h(Path(p['path']))==p['sha256']for p in i['pins'])\n if stage=='check-agreement':assert 'Checker reports no error up to computation length 2' in stdout.read_text()\n if stage=='check-wrong':assert 'State 1: state invariant 0 violated.' in stdout.read_text()\nv=json.loads((root/'compile-agreement/input.qnt.json').read_text())\nd=next(d for d in v['modules'][0]['declarations']if d.get('name')=='cached')\nassert d['expr']['expr']['kind']=='let'\nassert d['expr']['expr']['opdef']['qualifier']=='val'\nidentity=json.loads((root/'java-identity-before-check.json').read_text())\nassert h(Path(identity['path']))==identity['sha256']\ntraces=list((root/'check-wrong').rglob('violation1.itf.json'))\nassert len(traces)==1\nprint(json.dumps({'status':'diagnostic-control-validated-not-A5-acceptance','archiveSha256':h(archive),'members':members,'counterexample':str(traces[0].relative_to(root))},indent=2))\nPY",
+  "result": {
+    "chunk_id": "1f4c87",
+    "wall_time_seconds": 0.295149444,
+    "exit_code": 0,
+    "original_token_count": 1629,
+    "output": "{\n  \"status\": \"diagnostic-control-validated-not-A5-acceptance\",\n  \"archiveSha256\": \"496559af4c1e8bc27018dc884c124c492bac3c53df4499dd7145e160bc1e3d0e\",\n  \"members\": [\n    {\n      \"path\": \"./check-wrong/result.json\",\n      \"sha256\": \"851c80bdd4144b74224fda3772aebf47a9335f0ea8be4f5b564a11bbee2dc0c4\",\n      \"bytes\": 289\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.itf.json\",\n      \"sha256\": \"cc39b2480e37690ad55659867d9834466ebacc5d1da1501ed41f4ed67f91dd5a\",\n      \"bytes\": 483\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.json\",\n      \"sha256\": \"e6f2f5749711cb1cda7abd44a501d9445d295a22b521601efc62b43a2e5076bc\",\n      \"bytes\": 3054\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/MCviolation1.out\",\n      \"sha256\": \"4a9e7f8901e577258d1ca0d66f40e136a1132084d82555579c97fcd06fb5efad\",\n      \"bytes\": 406\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.tla\",\n      \"sha256\": \"46064511725d3f9ee8f51673e8bd3e56b62d45736fb9b909b9cccf3c53c265e7\",\n      \"bytes\": 561\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.itf.json\",\n      \"sha256\": \"cc39b2480e37690ad55659867d9834466ebacc5d1da1501ed41f4ed67f91dd5a\",\n      \"bytes\": 483\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.json\",\n      \"sha256\": \"e6f2f5749711cb1cda7abd44a501d9445d295a22b521601efc62b43a2e5076bc\",\n      \"bytes\": 3054\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/MCviolation.out\",\n      \"sha256\": \"4a9e7f8901e577258d1ca0d66f40e136a1132084d82555579c97fcd06fb5efad\",\n      \"bytes\": 406\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.tla\",\n      \"sha256\": \"46064511725d3f9ee8f51673e8bd3e56b62d45736fb9b909b9cccf3c53c265e7\",\n      \"bytes\": 561\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/log0.smt\",\n      \"sha256\": \"c0a6e962b48d940e2c94211ebf831179df3ab27bac218e2147423717c09ea517\",\n      \"bytes\": 76\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/detailed.log\",\n      \"sha256\": \"8f4606fa26e9ebd1480a96d1d630966221d8be4dfa47c21df5fbdd927b75ccb4\",\n      \"bytes\": 9324\n    },\n    {\n      \"path\": \"./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/run.txt\",\n      \"sha256\": \"3b9062c2124692af8d512b14914bb24ac6d4d9bb849f63a075818c58ea4cbd86\",\n      \"bytes\": 215\n    },\n    {\n      \"path\": \"./check-wrong/stderr.txt\",\n      \"sha256\": \"c0ad2153fec5f97ae042535ce5cb213d3e887830f4348191de8836692d871708\",\n      \"bytes\": 931\n    },\n    {\n      \"path\": \"./check-wrong/stdout.txt\",\n      \"sha256\": \"2713a2abebe706b9e36312d188d1b62101cf6bf2cb7d8fcbf8ac643dabebe56a\",\n      \"bytes\": 6021\n    },\n    {\n      \"path\": \"./check-wrong/input.json\",\n      \"sha256\": \"010f85eff2496fdb90211f37814893c9539112f2fbd99cc39db77b972fcca78a\",\n      \"bytes\": 1804\n    },\n    {\n      \"path\": \"./check-agreement/result.json\",\n      \"sha256\": \"598187cabe90bd9365496381ab9051850d2c1213360590e140840b721a18164d\",\n      \"bytes\": 289\n    },\n    {\n      \"path\": \"./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/log0.smt\",\n      \"sha256\": \"c0a6e962b48d940e2c94211ebf831179df3ab27bac218e2147423717c09ea517\",\n      \"bytes\": 76\n    },\n    {\n      \"path\": \"./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/detailed.log\",\n      \"sha256\": \"ad91e84bb3cc616fae71bf26d50d5db5a71cd63d716b97900fe62736622b4d70\",\n      \"bytes\": 10774\n    },\n    {\n      \"path\": \"./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/run.txt\",\n      \"sha256\": \"d56b22722ade6153de366b8cf204f68ad2050cfa869381210bc2e0610012d284\",\n      \"bytes\": 223\n    },\n    {\n      \"path\": \"./check-agreement/stderr.txt\",\n      \"sha256\": \"c0ad2153fec5f97ae042535ce5cb213d3e887830f4348191de8836692d871708\",\n      \"bytes\": 931\n    },\n    {\n      \"path\": \"./check-agreement/stdout.txt\",\n      \"sha256\": \"e4d106d11ef5ddc9b729cd7a5e50ae5c9739985ba439da5904d28ab954dfcee0\",\n      \"bytes\": 6176\n    },\n    {\n      \"path\": \"./check-agreement/input.json\",\n      \"sha256\": \"7c18232bd637ae05c9daa19032f1934eda2c0cf9cc05b85f47e1782437eb48e4\",\n      \"bytes\": 1820\n    },\n    {\n      \"path\": \"./java-identity-before-check.json\",\n      \"sha256\": \"96891ef7335003df12538d1bd037a6976ebf7995b89c9ba64ecc4ab674f3284e\",\n      \"bytes\": 394\n    },\n    {\n      \"path\": \"./compile-wrong/result.json\",\n      \"sha256\": \"04acdee2041a8ab07ea82e414573493861f5287abb8e51bba3a17e0c805ced9c\",\n      \"bytes\": 290\n    },\n    {\n      \"path\": \"./compile-wrong/stderr.txt\",\n      \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n      \"bytes\": 0\n    },\n    {\n      \"path\": \"./compile-wrong/input.qnt.json\",\n      \"sha256\": \"d0cc92cb7ac297deee694357849468767197c8dd659efd6a71ce2326b8460f35\",\n      \"bytes\": 25397\n    },\n    {\n      \"path\": \"./compile-wrong/input.json\",\n      \"sha256\": \"6c0567eda94777e7da49d9c73046c45501a74fca4215335f706af0d983f0295f\",\n      \"bytes\": 1500\n    },\n    {\n      \"path\": \"./compile-agreement/result.json\",\n      \"sha256\": \"fe542ef301ff9ba45265f53163c88782d3ec8d128238ae091414a5bf278df2e1\",\n      \"bytes\": 290\n    },\n    {\n      \"path\": \"./compile-agreement/stderr.txt\",\n      \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n      \"bytes\": 0\n    },\n    {\n      \"path\": \"./compile-agreement/input.qnt.json\",\n      \"sha256\": \"15af23f89408b3b9a11f77bd8f09d5ef79eb8c568fa9c7b4be51e082ff07f0e2\",\n      \"bytes\": 25836\n    },\n    {\n      \"path\": \"./compile-agreement/input.json\",\n      \"sha256\": \"91d32e4b9315d79575d1da5c51d12084d1c0828acb83de63a6aabe39d8c87f5a\",\n      \"bytes\": 1508\n    },\n    {\n      \"path\": \"./capture.py\",\n      \"sha256\": \"72e0605bd0859f26f4275532ea25254114e19df2f9fad0724741456be139b1e5\",\n      \"bytes\": 2792\n    },\n    {\n      \"path\": \"./nullary_control.qnt\",\n      \"sha256\": \"9c76b79c7ce0be995eb7cf454fe653390ff6175ec8b594126319d86f34edeb82\",\n      \"bytes\": 345\n    }\n  ],\n  \"counterexample\": \"check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.itf.json\"\n}\n"
+  },
+  "validation": {
+    "status": "diagnostic-control-validated-not-A5-acceptance",
+    "archiveSha256": "496559af4c1e8bc27018dc884c124c492bac3c53df4499dd7145e160bc1e3d0e",
+    "members": [
+      {
+        "path": "./check-wrong/result.json",
+        "sha256": "851c80bdd4144b74224fda3772aebf47a9335f0ea8be4f5b564a11bbee2dc0c4",
+        "bytes": 289
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.itf.json",
+        "sha256": "cc39b2480e37690ad55659867d9834466ebacc5d1da1501ed41f4ed67f91dd5a",
+        "bytes": 483
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.json",
+        "sha256": "e6f2f5749711cb1cda7abd44a501d9445d295a22b521601efc62b43a2e5076bc",
+        "bytes": 3054
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/MCviolation1.out",
+        "sha256": "4a9e7f8901e577258d1ca0d66f40e136a1132084d82555579c97fcd06fb5efad",
+        "bytes": 406
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.tla",
+        "sha256": "46064511725d3f9ee8f51673e8bd3e56b62d45736fb9b909b9cccf3c53c265e7",
+        "bytes": 561
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.itf.json",
+        "sha256": "cc39b2480e37690ad55659867d9834466ebacc5d1da1501ed41f4ed67f91dd5a",
+        "bytes": 483
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.json",
+        "sha256": "e6f2f5749711cb1cda7abd44a501d9445d295a22b521601efc62b43a2e5076bc",
+        "bytes": 3054
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/MCviolation.out",
+        "sha256": "4a9e7f8901e577258d1ca0d66f40e136a1132084d82555579c97fcd06fb5efad",
+        "bytes": 406
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation.tla",
+        "sha256": "46064511725d3f9ee8f51673e8bd3e56b62d45736fb9b909b9cccf3c53c265e7",
+        "bytes": 561
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/log0.smt",
+        "sha256": "c0a6e962b48d940e2c94211ebf831179df3ab27bac218e2147423717c09ea517",
+        "bytes": 76
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/detailed.log",
+        "sha256": "8f4606fa26e9ebd1480a96d1d630966221d8be4dfa47c21df5fbdd927b75ccb4",
+        "bytes": 9324
+      },
+      {
+        "path": "./check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/run.txt",
+        "sha256": "3b9062c2124692af8d512b14914bb24ac6d4d9bb849f63a075818c58ea4cbd86",
+        "bytes": 215
+      },
+      {
+        "path": "./check-wrong/stderr.txt",
+        "sha256": "c0ad2153fec5f97ae042535ce5cb213d3e887830f4348191de8836692d871708",
+        "bytes": 931
+      },
+      {
+        "path": "./check-wrong/stdout.txt",
+        "sha256": "2713a2abebe706b9e36312d188d1b62101cf6bf2cb7d8fcbf8ac643dabebe56a",
+        "bytes": 6021
+      },
+      {
+        "path": "./check-wrong/input.json",
+        "sha256": "010f85eff2496fdb90211f37814893c9539112f2fbd99cc39db77b972fcca78a",
+        "bytes": 1804
+      },
+      {
+        "path": "./check-agreement/result.json",
+        "sha256": "598187cabe90bd9365496381ab9051850d2c1213360590e140840b721a18164d",
+        "bytes": 289
+      },
+      {
+        "path": "./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/log0.smt",
+        "sha256": "c0a6e962b48d940e2c94211ebf831179df3ab27bac218e2147423717c09ea517",
+        "bytes": 76
+      },
+      {
+        "path": "./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/detailed.log",
+        "sha256": "ad91e84bb3cc616fae71bf26d50d5db5a71cd63d716b97900fe62736622b4d70",
+        "bytes": 10774
+      },
+      {
+        "path": "./check-agreement/apalache/input.qnt.json/2026-09-05T12-21-26_5687200607792185930/run.txt",
+        "sha256": "d56b22722ade6153de366b8cf204f68ad2050cfa869381210bc2e0610012d284",
+        "bytes": 223
+      },
+      {
+        "path": "./check-agreement/stderr.txt",
+        "sha256": "c0ad2153fec5f97ae042535ce5cb213d3e887830f4348191de8836692d871708",
+        "bytes": 931
+      },
+      {
+        "path": "./check-agreement/stdout.txt",
+        "sha256": "e4d106d11ef5ddc9b729cd7a5e50ae5c9739985ba439da5904d28ab954dfcee0",
+        "bytes": 6176
+      },
+      {
+        "path": "./check-agreement/input.json",
+        "sha256": "7c18232bd637ae05c9daa19032f1934eda2c0cf9cc05b85f47e1782437eb48e4",
+        "bytes": 1820
+      },
+      {
+        "path": "./java-identity-before-check.json",
+        "sha256": "96891ef7335003df12538d1bd037a6976ebf7995b89c9ba64ecc4ab674f3284e",
+        "bytes": 394
+      },
+      {
+        "path": "./compile-wrong/result.json",
+        "sha256": "04acdee2041a8ab07ea82e414573493861f5287abb8e51bba3a17e0c805ced9c",
+        "bytes": 290
+      },
+      {
+        "path": "./compile-wrong/stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "./compile-wrong/input.qnt.json",
+        "sha256": "d0cc92cb7ac297deee694357849468767197c8dd659efd6a71ce2326b8460f35",
+        "bytes": 25397
+      },
+      {
+        "path": "./compile-wrong/input.json",
+        "sha256": "6c0567eda94777e7da49d9c73046c45501a74fca4215335f706af0d983f0295f",
+        "bytes": 1500
+      },
+      {
+        "path": "./compile-agreement/result.json",
+        "sha256": "fe542ef301ff9ba45265f53163c88782d3ec8d128238ae091414a5bf278df2e1",
+        "bytes": 290
+      },
+      {
+        "path": "./compile-agreement/stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "./compile-agreement/input.qnt.json",
+        "sha256": "15af23f89408b3b9a11f77bd8f09d5ef79eb8c568fa9c7b4be51e082ff07f0e2",
+        "bytes": 25836
+      },
+      {
+        "path": "./compile-agreement/input.json",
+        "sha256": "91d32e4b9315d79575d1da5c51d12084d1c0828acb83de63a6aabe39d8c87f5a",
+        "bytes": 1508
+      },
+      {
+        "path": "./capture.py",
+        "sha256": "72e0605bd0859f26f4275532ea25254114e19df2f9fad0724741456be139b1e5",
+        "bytes": 2792
+      },
+      {
+        "path": "./nullary_control.qnt",
+        "sha256": "9c76b79c7ce0be995eb7cf454fe653390ff6175ec8b594126319d86f34edeb82",
+        "bytes": 345
+      }
+    ],
+    "counterexample": "check-wrong/apalache/input.qnt.json/2026-09-05T12-21-27_8775193873252505553/violation1.itf.json"
+  }
+}

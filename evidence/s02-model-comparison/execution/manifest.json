@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "unit": "S02 common execution evidence and atomic settlement envelope",
+  "recorded_at": "2026-09-05 09:19:51 UTC",
+  "status": "implemented-envelope-awaiting-independent-evidence-review",
+  "source_commit": "46fe589",
+  "tool_versions": {
+    "quint": "0.32.0",
+    "node": "v24.18.1",
+    "final_backend": "rust",
+    "limit": "Version report, not a complete backend/runtime lock."
+  },
+  "results": {
+    "pipeline_tests": 8,
+    "adversarial_tests": 42,
+    "foundation_tests": {
+      "effects": 10,
+      "consumption": 16,
+      "observations": 37,
+      "policies": 72,
+      "authorization": 41
+    },
+    "python_tests": 286,
+    "local_S01_gates": 10,
+    "sampled_traces": 1000,
+    "witnesses": {
+      "aliceChecked": 1000,
+      "bobChecked": 1000,
+      "signaturesReady": 1000,
+      "settlementProposed": 1000,
+      "settlementVerified": 1000,
+      "settlementCommitted": 1000,
+      "completeAfter": 494,
+      "completeBefore": 506
+    }
+  },
+  "scope_limits": [
+    "The sampled path begins with prefunded swap escrow and unsigned disposition policies; it executes actual symbolic checks/signatures, proposal, verification, and atomic settlement under both signing profiles.",
+    "EvidenceValid is an abstract trusted external-verifier result. This unit checks all bindings and authority constraints but does not implement cryptographic verification, candidate execution, or Core correspondence.",
+    "Generic parent fill/cancel/recovery commit helpers exist; complete race/recovery lifecycle traces and rejected/aborted attempt classification remain required and unimplemented by this harness.",
+    "Parent contexts in adversarial tests are constructed guard fixtures, not lifecycle witnesses.",
+    "No candidate A–D selection, Council gate, S02 gate, or XML release gate follows.",
+    "Pure-update fallback branches are not enabled actions: all exposed state transitions pair them with the corresponding public guard."
+  ],
+  "process_notes": [
+    "Initial disabled proposal/verification/commit steps each have preserved RED source and terminal output; each new action was typechecked and sampled before adding the next.",
+    "Independent test author found lifecycle cancellation admitting an invented accepted Core projection; test committed523ee14 before correction46fe589.",
+    "The controller first guessed the author's RED command incorrectly. That metadata was corrected from the exact author report, and git history preserves the reporting error. Original RED had seed0x502 and no explicit backend; final GREEN explicitly used Rust and seed42.",
+    "The author's standalone typecheck terminal status was lost/unknown; no success is claimed. Its final42-test command typechecked imports and exited0.",
+    "Final sampled CLI prints backend end-state seed0xe280; the explicit starting argument --seed=42 is preserved."
+  ],
+  "pins": [
+    {
+      "sha256": "b59779d5e2e7f1bf0a14952dfe1cd3ab70bcfe813210d690abbb3e3205a6df61",
+      "path": "specs/quint/s02/authorization.qnt"
+    },
+    {
+      "sha256": "6c07efb9cbd943f51ee9eff45e0821b0927956b7f3d700dbfb0a23925cb881a9",
+      "path": "specs/quint/s02/authorization_harness.qnt"
+    },
+    {
+      "sha256": "80241e699e57cade8bb5eea7c71f45a5ccc5e9f39f54e8d6bd34b39226fc0552",
+      "path": "specs/quint/s02/authorization_test.qnt"
+    },
+    {
+      "sha256": "3dd07f3c5f274aff4fce4de9c245aa0b1f1fe7f68e29e5de95a0b1c42a00f93b",
+      "path": "specs/quint/s02/consumption.qnt"
+    },
+    {
+      "sha256": "41440c269e7a42c597d41fede9fe3583177c3f2ae4118b0f788806666911eb0e",
+      "path": "specs/quint/s02/consumption_harness.qnt"
+    },
+    {
+      "sha256": "0d561cdc75d142997a7fb2373570266d314b927ce67b15c74eca665a71801943",
+      "path": "specs/quint/s02/consumption_test.qnt"
+    },
+    {
+      "sha256": "dccc9208d9a42f01685000b1358f1d2f9684bf5e8ebe1d5deadd0c992557504c",
+      "path": "specs/quint/s02/effects.qnt"
+    },
+    {
+      "sha256": "9882eb281b4a45628501106d2a09a0c4c69ea05d46e70bab9ae41940dc85a9dc",
+      "path": "specs/quint/s02/effects_harness.qnt"
+    },
+    {
+      "sha256": "4990c486644b2ffb0027a0a1ca580bfd15bc918feaf6faabe5bca7ebe6d117ff",
+      "path": "specs/quint/s02/effects_test.qnt"
+    },
+    {
+      "sha256": "55a52f037d83f426385966685f244a4814b71eb59f7cda79f7a47f2ec45feaed",
+      "path": "specs/quint/s02/execution.qnt"
+    },
+    {
+      "sha256": "e4799beb38a7f0cc0ce0822fb852fce95c1a53d234c22286f827fddcadf962aa",
+      "path": "specs/quint/s02/execution_adversarial_test.qnt"
+    },
+    {
+      "sha256": "b548c4a4d0d2189b710ce28c6b383867deaa968ae0cf00049cc2bbf550149f5d",
+      "path": "specs/quint/s02/execution_harness.qnt"
+    },
+    {
+      "sha256": "bad42b667f873253ac4a07c8f8f1a266d9269da2ac5bfd57b2e99748bb3b82e6",
+      "path": "specs/quint/s02/execution_test.qnt"
+    },
+    {
+      "sha256": "e44484ed9035e560ef9f4d012198671917750da42ab404022592db16cdd59bc3",
+      "path": "specs/quint/s02/observations.qnt"
+    },
+    {
+      "sha256": "2c0383dedb6abf4cd31ee4a5c2a892be85c8caa8bb8df3b72a81d80299ea2b0b",
+      "path": "specs/quint/s02/observations_harness.qnt"
+    },
+    {
+      "sha256": "ef3a883a39fb2c297a899189dadac1253e3e2c149fd4f71fe4bc5efcfb7dfeee",
+      "path": "specs/quint/s02/observations_test.qnt"
+    },
+    {
+      "sha256": "0886619203c3de16f2326e27e9d4ae2ddfda8c54742c231dd4e824397c5fa9fe",
+      "path": "specs/quint/s02/policies.qnt"
+    },
+    {
+      "sha256": "00b8867f566035a5d1ac16de5155d98c58a2f2e63a481b5900f8653015481c09",
+      "path": "specs/quint/s02/policies_harness.qnt"
+    },
+    {
+      "sha256": "b5cfb4495aa6b7dbd5e35c39bef90dfeecaa0f4855faebdde1ee0b2e137790d2",
+      "path": "specs/quint/s02/policies_test.qnt"
+    },
+    {
+      "sha256": "c7e9b020ff4cfb76e21ed9a5e72569324ddacc6ade317e65a38426814eec0174",
+      "path": "evidence/s02-model-comparison/execution/authorization-regression.json"
+    },
+    {
+      "sha256": "576d84ab077bbb730337856423578d8707923865ad69ead059cd595c5a40ecbc",
+      "path": "evidence/s02-model-comparison/execution/cancellation-projection-focused.json"
+    },
+    {
+      "sha256": "d2c4c6ffccaef52a15fb5d4ee7dc64cb7ca1a4ec649d05ab5b05975d82e7c6cd",
+      "path": "evidence/s02-model-comparison/execution/cancellation-projection-red.json"
+    },
+    {
+      "sha256": "ce2d59f52d79ecce625b5dba730d9d5a4a44233dc74edcca00d629d5053d28a1",
+      "path": "evidence/s02-model-comparison/execution/commit-red.json"
+    },
+    {
+      "sha256": "798c2b2e2f4dceedd78caeaf3a58473d7f4712f9b73757b5d1bab645b10278a9",
+      "path": "evidence/s02-model-comparison/execution/commit-run.json"
+    },
+    {
+      "sha256": "40e5c9a2266554199068adf34753dde4e5cbe8d23a79e12aa9380b1bf3443054",
+      "path": "evidence/s02-model-comparison/execution/commit-tests.json"
+    },
+    {
+      "sha256": "77e8920a45cf895342554d429ada5e635de7ee2647077c6ce173876d55b4db65",
+      "path": "evidence/s02-model-comparison/execution/commit-typecheck.json"
+    },
+    {
+      "sha256": "9341f83fd9d5e20efefec5c1818fe19ccf5ebe289a819a2d14921bb4ce916e9d",
+      "path": "evidence/s02-model-comparison/execution/consumption-regression.json"
+    },
+    {
+      "sha256": "6a642f1f27a9cda2fcc2e2df119e445cd4cd8781d43e3e7258b4145539a5ea3f",
+      "path": "evidence/s02-model-comparison/execution/effects-regression.json"
+    },
+    {
+      "sha256": "4522d533cc5c931a11553496d308183709c67df78c6f3dfb473e07b5350d1e86",
+      "path": "evidence/s02-model-comparison/execution/final-run.json"
+    },
+    {
+      "sha256": "d497ec8712755947df5bafa072c0e28357712c08f35b7272aeb508181b4fdb6c",
+      "path": "evidence/s02-model-comparison/execution/final-tests.json"
+    },
+    {
+      "sha256": "970870119f797efafb1b6502c2022536884114fd37a2bc87e395c770d65cedbc",
+      "path": "evidence/s02-model-comparison/execution/final-typecheck.json"
+    },
+    {
+      "sha256": "6eb08f81c2b93330c946babdf4f273f99079c0c966cf7cb8850945aa8c5c244c",
+      "path": "evidence/s02-model-comparison/execution/observations-regression.json"
+    },
+    {
+      "sha256": "c7640755a7728b881fab38748e3358bcbd3efa6f19f9d3dbfab21d43e9078731",
+      "path": "evidence/s02-model-comparison/execution/pipeline-run.json"
+    },
+    {
+      "sha256": "cb67851d6aa3c7521113dc16b431ac884809a5306c30cb7630c5e77599b47dec",
+      "path": "evidence/s02-model-comparison/execution/pipeline-tests.json"
+    },
+    {
+      "sha256": "1cc57b93c3a244d141c34a1d644656ef755631938fc0737fee4b8f984bed5c1b",
+      "path": "evidence/s02-model-comparison/execution/pipeline-typecheck.json"
+    },
+    {
+      "sha256": "55336e8e446435c976078408f6f15bd23c0181e93fb6fb5e52999e4f064cb451",
+      "path": "evidence/s02-model-comparison/execution/policies-regression.json"
+    },
+    {
+      "sha256": "24f4035c76260640c14f0d82119d0b191ffb3b8c7f76c6aa18b19d55df17d73c",
+      "path": "evidence/s02-model-comparison/execution/propose-red.json"
+    },
+    {
+      "sha256": "90a81d0b0b9df25c27d7cb820ea0d68c8cb09cf947897db0a6169e2388b0232f",
+      "path": "evidence/s02-model-comparison/execution/propose-run.json"
+    },
+    {
+      "sha256": "ffd2e8d52b89da3f45d7295293300b36c1a0a75732b292418d759fad339b5d46",
+      "path": "evidence/s02-model-comparison/execution/propose-tests.json"
+    },
+    {
+      "sha256": "6f38ef9e2148cb6df04e62d9205d7d1967f49515a8e7ca9e31284f542deba9dd",
+      "path": "evidence/s02-model-comparison/execution/propose-typecheck.json"
+    },
+    {
+      "sha256": "add1c7cdb63a4245246ebe0467ad6ad6718b42921a3a5f871e276cdd21b5d64d",
+      "path": "evidence/s02-model-comparison/execution/python-regression.json"
+    },
+    {
+      "sha256": "990fda22964c70b9a9a97c0db87abcba5bb982c959bdee0ea11db3521db8772c",
+      "path": "evidence/s02-model-comparison/execution/s01-regression.json"
+    },
+    {
+      "sha256": "f89f6d2a8cd0d82fbd06557e39c4c8d77a200de08e5b5ff5bef91c3c09518476",
+      "path": "evidence/s02-model-comparison/execution/verify-red.json"
+    },
+    {
+      "sha256": "ba1f36910913a347c303a9eaf4f999d7cc60a7dfaaa61f27123afe799af5dff8",
+      "path": "evidence/s02-model-comparison/execution/verify-run.json"
+    },
+    {
+      "sha256": "c98caff1856534acc2d40d06513a302a87ef8270371450abb1b5d47b1732eeec",
+      "path": "evidence/s02-model-comparison/execution/verify-tests.json"
+    },
+    {
+      "sha256": "b74ad87e24adec7468642ea00e5a3d6cd623c2d302733636d407ab95d5df5181",
+      "path": "evidence/s02-model-comparison/execution/verify-typecheck.json"
+    },
+    {
+      "sha256": "6b693ef1301fdf62c3a5cf107cb3cb205dbd65241b1fc7733ae1936aab11ddf6",
+      "path": "evidence/s02-model-comparison/execution/adversarial-author-report.md"
+    }
+  ]
+}

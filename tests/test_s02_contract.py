@@ -13,9 +13,9 @@ def test_s02_requirement_vocabulary_is_closed():
         "scope_version", "scope_sha256", "candidates", "workloads",
         "signing_profiles", "properties", "witnesses", "controls",
         "package_gates", "excluded_claims", "verification_backend",
-        "evidence", "selected_candidate",
+        "evidence", "selected_candidate", "required_subscenarios",
     }
-    assert value["schema_version"] == 1
+    assert value["schema_version"] == 2
     assert value["package"] == "S02"
     assert value["status"] == "specified-only"
     assert value["prompt_sha256"] == "86b80dd1cbd14d1e5759988be9f619355495fc10c4e2fb6b6d9162367670ddcd"
@@ -58,6 +58,66 @@ def test_s02_requirement_vocabulary_is_closed():
     assert value["selected_candidate"] is None
 
 
+def test_s02_recovery_subscenarios_are_closed_and_conserve_money():
+    value = json.loads(REGISTRY.read_text())
+    expected_subscenarios = [
+        {
+            "id": "cancel-wins/recovery-before-any-fill",
+            "witness_id": "cancel-wins",
+            "workload": "two-installment-obligation",
+            "candidates": ["A", "B", "C", "D"],
+            "signing_profiles": ["SignAfterResolve", "SignBeforeResolve"],
+            "package_gates": ["S02-05", "S02-09"],
+            "required_events": [
+                "parent-cancelled", "recovery-signed", "recovery-verified",
+                "recovery-committed",
+            ],
+            "terminal": {
+                "escrow": 0,
+                "paid_to_bob": 0,
+                "refunded_to_alice": 10,
+                "parent_cancelled": True,
+                "used_slots": [],
+                "parent_nonce": 0,
+                "recovery_nonce": 1,
+                "recovery_consumed": True,
+                "second_slot_authorized": False,
+            },
+        },
+        {
+            "id": "fill-wins/recovery-after-first-fill",
+            "witness_id": "fill-wins",
+            "workload": "two-installment-obligation",
+            "candidates": ["A", "B", "C", "D"],
+            "signing_profiles": ["SignAfterResolve", "SignBeforeResolve"],
+            "package_gates": ["S02-05", "S02-09"],
+            "required_events": [
+                "first-fill-committed", "stale-cancel-rejected",
+                "fresh-parent-cancelled", "recovery-signed", "recovery-verified",
+                "recovery-committed",
+            ],
+            "terminal": {
+                "escrow": 0,
+                "paid_to_bob": 5,
+                "refunded_to_alice": 5,
+                "parent_cancelled": True,
+                "used_slots": [1],
+                "parent_nonce": 0,
+                "recovery_nonce": 1,
+                "recovery_consumed": True,
+                "second_slot_authorized": False,
+            },
+        },
+    ]
+    assert value["required_subscenarios"] == expected_subscenarios
+    for subscenario in value["required_subscenarios"]:
+        assert subscenario["witness_id"] in value["witnesses"]
+        assert subscenario["candidates"] == value["candidates"]
+        assert subscenario["signing_profiles"] == value["signing_profiles"]
+        terminal = subscenario["terminal"]
+        assert terminal["escrow"] + terminal["paid_to_bob"] + terminal["refunded_to_alice"] == 10
+
+
 def test_s02_contract_is_complete_but_not_execution_evidence():
     paths = {
         ".openspec.yaml", "README.md", "proposal.md", "design.md", "tasks.md",
@@ -83,3 +143,19 @@ def test_s02_contract_is_complete_but_not_execution_evidence():
     assert "0.0.0-e00.2" in text
     assert "candidate-unmechanized" in text
     assert "277" in text
+
+
+def test_s02_binds_observation_supplement_and_recovery_subscenarios():
+    import hashlib
+
+    supplement = ROOT / "docs/superpowers/specs/2026-09-04-moriarty-s02-observation-authorization-design.md"
+    design = (CHANGE / "design.md").read_text()
+    spec = (CHANGE / "specs/architecture-comparison/spec.md").read_text()
+    assert supplement.name in design
+    assert hashlib.sha256(supplement.read_bytes()).hexdigest() in design
+    for identifier in (
+        "cancel-wins/recovery-before-any-fill",
+        "fill-wins/recovery-after-first-fill",
+    ):
+        assert identifier in design and identifier in spec
+    assert "pre-sign" in spec

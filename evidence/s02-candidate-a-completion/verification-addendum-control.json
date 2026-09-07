@@ -1,0 +1,52 @@
+{
+  "cmd": "quint typecheck entry.qnt",
+  "cwd": "/tmp/moriarty-typecheck-closure-control.QBOwAB",
+  "files": {
+    "dependency.qnt": "module dependency {\n  pure val ok = true\n  pure val unusedBroken: bool = 1\n}\n",
+    "entry.qnt": "module entry {\n  import dependency.ok from \"./dependency\"\n  pure val entryOk = ok\n}\n"
+  },
+  "outputs": [
+    {
+      "chunk_id": "b592b2",
+      "wall_time_seconds": 0.138477777,
+      "exit_code": 1,
+      "original_token_count": 62,
+      "output": "\n Error [QNT000]: Couldn't unify int and bool\nTrying to unify int and bool\n\n\n  at /tmp/moriarty-typecheck-closure-control.QBOwAB/dependency.qnt:3:12\n  3:   pure val unusedBroken: bool = 1\n                ^^^^^^^^^^^^\n\nerror: typechecking failed\n"
+    }
+  ],
+  "green": {
+    "files": {
+      "dependency.qnt": "module dependency {\n  pure val ok = true\n  pure val unusedBroken: bool = true\n}\n",
+      "entry.qnt": "module entry {\n  import dependency.ok from \"./dependency\"\n  pure val entryOk = ok\n}\n"
+    },
+    "output": {
+      "chunk_id": "1c05e1",
+      "wall_time_seconds": 0.169598926,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    }
+  },
+  "tools": {
+    "cli": {
+      "path": "/home/charl/.npm-global/bin/quint",
+      "version": "0.32.0",
+      "sha256": "ac12595b1cb7253feec93c79417615c6eb20fc3b6a3df35c5e3530b24e90a501"
+    },
+    "implementation": [
+      {
+        "path": "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/cliCommands.js",
+        "sha256": "b18672d656782aefde254fe1021dc13fdffdcf8f4ad8709e3126fb5fa293362a"
+      },
+      {
+        "path": "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/quintAnalyzer.js",
+        "sha256": "fd53e14aafb5b2e6c5846eddc8ef9f175b76a53b55fa187c0a519706472b512a"
+      },
+      {
+        "path": "/home/charl/.npm-global/lib/node_modules/@informalsystems/quint/dist/src/parsing/quintParserFrontend.js",
+        "sha256": "4d22b256295adf521c1af60865eb0f8254e65c024c5e8b2271d1b7f8701d7b85"
+      }
+    ]
+  },
+  "scope": "Tool recursive-typechecking control only; no Moriarty behavioral acceptance"
+}

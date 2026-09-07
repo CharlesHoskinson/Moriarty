@@ -74,6 +74,13 @@ as an unreachability proof, and missing or inconclusive checks SHALL NOT pass.
 - WHEN witness results are recomputed for each candidate
 - THEN eligible candidates SHALL show preserved witness paths and rejected candidates SHALL have decisive dispositions
 - AND zero sampled observations or incomplete checks SHALL NOT establish unreachability or satisfy the gate.
+- AND every candidate and both signing profiles SHALL preserve
+  `cancel-wins/recovery-before-any-fill` and
+  `fill-wins/recovery-after-first-fill`, including final escrow, payment,
+  refund, and authority states.
+- AND `SignAfterResolve` SHALL record a successful complete-plan pre-sign check
+  before signing, while `SignBeforeResolve` SHALL NOT label a concrete plan
+  pre-sign verified.
 
 ### Requirement: effective negative controls
 
@@ -130,6 +137,10 @@ incomplete, summary-only, or simulation-only receipts as final evidence.
 - WHEN the validator resolves each declared receipt and output
 - THEN it SHALL reproduce every recorded pin and required evidence field
 - AND a stale, incomplete, missing, or substituted receipt SHALL NOT pass.
+- AND the manifest SHALL identify the two recovery subscenario paths
+  `cancel-wins/recovery-before-any-fill` and
+  `fill-wins/recovery-after-first-fill` for every candidate and both signing
+  profiles, together with their final financial and authority states.
 
 ### Requirement: independently recomputed package gate
 
