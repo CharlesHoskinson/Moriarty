@@ -1,9 +1,11 @@
 # Moriarty Obsidian vault
 
-Open `/home/charl/Moriarty` with **Open folder as vault** in Obsidian. Start at
-[the vault overview](../wiki/overview.md), [research index](../wiki/index.md) or
-[language map](../wiki/canvases/moriarty.canvas). The repository itself is the
-vault, so Git and Obsidian edit the same notes and citations.
+The vault is the project's working knowledge base for agents. It lives at
+`/home/charl/Moriarty`; no desktop interface is needed to query or maintain it.
+Start with [the vault overview](../wiki/overview.md),
+[research index](../wiki/index.md) and [workflow](../wiki/workflow.md).
+Obsidian is an optional viewer of these same files. To use it, choose
+**Open folder as vault** and select the repository.
 
 The Windows path is `\\wsl.localhost\Ubuntu-26.04\home\charl\Moriarty`.
 Agent writes run in WSL. Linux Obsidian is installed on this machine; using the

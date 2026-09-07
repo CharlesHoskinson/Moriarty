@@ -199,7 +199,7 @@ Preview is the public integration target. Existing network transactions establis
 
 ## Research vault
 
-The repository is also an Obsidian vault. Open the repository folder in Obsidian, then start with the [vault overview](wiki/overview.md) or [research index](wiki/index.md). The [vault guide](docs/OBSIDIAN.md) explains the WSL setup, source provenance and agent workflow.
+The repository also serves as the agents’ research vault. The [vault overview](wiki/overview.md) and [research index](wiki/index.md) connect findings to their sources and decisions. The [vault guide](docs/OBSIDIAN.md) explains the WSL setup and agent workflow; Obsidian is an optional viewer.
 
 ## Repository guide
 

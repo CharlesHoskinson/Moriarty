@@ -46,8 +46,10 @@ resource and acceptance gates. Merge status is not product acceptance.
 ## Research vault
 
 The [Obsidian migration instruction](raw/assignments/moriarty-obsidian-vault-2026-09-07.md)
-selects AgriciDaniel/claude-obsidian. The repo root is the vault; the installed tool
-is separate. Follow [wiki/workflow.md](wiki/workflow.md) and
+selects AgriciDaniel/claude-obsidian. The user clarified that this is the agent
+working vault: use it for project research, decisions and recovery; no desktop
+interface demonstration is required. The repo root is the vault; the installed
+tool is separate. Follow [wiki/workflow.md](wiki/workflow.md) and
 [docs/OBSIDIAN.md](docs/OBSIDIAN.md). Use inspected portable transactions for
 canonical wiki changes. Query is read-only; saving is a separately scoped operation.
 Keep legacy source and claim IDs, confidence, contradictions and lifecycle labels.
