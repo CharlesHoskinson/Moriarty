@@ -1,20 +1,22 @@
 //! Fixed-instance R2 first-period loan IVC, not full Moriarty HistoryCompliance.
-//! The circuit specializes to exactly two transitions and three complete public
-//! states. SHA256 preimages/effects are pinned by the independently reviewed
+//! The circuit specializes to exactly two transitions and three complete private
+//! rows with a canonical public phase. All 54 row limbs enter synthesized constraints. SHA256 preimages/effects are pinned by the independently reviewed
 //! fixture; SHA256 and dynamic authority are NOT recomputed in this circuit.
 
 use ff::{Field, PrimeField};
+use group::Group;
 use midnight_aggregation::ivc::{self, IvcCircuit, IvcContext, IvcIO, IvcState, IvcTransition};
 use midnight_circuits::{
     instructions::*,
     types::{AssignedBit, AssignedNative},
-    verifier::{Accumulator, BlstrsEmulation, SelfEmulation},
+    verifier::{Accumulator, BlstrsEmulation, Msm, Point, SelfEmulation},
 };
 use midnight_proofs::{
     circuit::{Layouter, Value},
     dev::MockProver,
-    plonk::Error,
+    plonk::{ConstraintSystem, Error},
     poly::{
+        PolynomialLabel,
         commitment::{Params, PolynomialCommitmentScheme},
         kzg::{KZGCommitmentScheme, params::ParamsKZG},
     },
@@ -41,6 +43,7 @@ const PREDICATE: &str = "R2-fixed-first-period-loan-two-transition-IVC-with-fixe
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct State {
+    phase: u64,
     financial: [u128; episode::NUM_FIELDS],
     digests: [[u64; 4]; episode::NUM_DIGESTS],
 }
@@ -49,7 +52,10 @@ pub struct Context {
     immutable: [[u64; 4]; 4],
 }
 #[derive(Clone, Debug)]
-pub struct AssignedState(Vec<AssignedNative<F>>);
+pub struct AssignedState {
+    phase: AssignedNative<F>,
+    limbs: [AssignedNative<F>; LIMBS],
+}
 #[derive(Clone, Debug)]
 pub struct Loan {
     std_lib: ZkStdLib,
@@ -102,6 +108,7 @@ fn native_financial() -> [[u128; episode::NUM_FIELDS]; 3] {
 }
 fn fixed_state(index: usize) -> State {
     State {
+        phase: index as u64,
         financial: native_financial()[index],
         digests: episode::DIGESTS[index],
     }
@@ -173,17 +180,34 @@ impl IvcState for Loan {
         fixed_state(0)
     }
     fn decider(ctx: &Context, state: &State) -> bool {
-        // State has no hidden full-data fields: every field is in the PI.
-        // All fixed financial/digest values must match the reviewed specialization.
+        // All private full-data fields must match the unique phase-indexed row.
+        // This decider supplements, and never replaces, in-circuit equalities.
         state_index(ctx, state).is_some()
     }
 }
+// Circuit constants come directly from the unchanged generated episode table.
+// Host arithmetic checks are separate controls and are never the VK binding.
+fn table_limbs(index: usize) -> Vec<F> {
+    wire(&State {
+        phase: index as u64,
+        financial: episode::FINANCIAL[index],
+        digests: episode::DIGESTS[index],
+    })
+    .into_iter()
+    .map(F::from)
+    .collect()
+}
 impl Loan {
-    fn assign_limbs(
+    fn assign_full(
         &self,
         layouter: &mut impl Layouter<F>,
+        phase: Value<F>,
         value: Value<Vec<F>>,
     ) -> Result<AssignedState, Error> {
+        let phase: AssignedNative<F> = self.std_lib.assign(layouter, phase)?;
+        // Canonical field value 0, 1 or 2; never low-bit truncation.
+        self.std_lib
+            .assert_lower_than_fixed(layouter, &phase, &3u128.into())?;
         let mut cells = Vec::with_capacity(LIMBS);
         for i in 0..LIMBS {
             let cell: AssignedNative<F> = self
@@ -193,7 +217,10 @@ impl Loan {
                 .assert_lower_than_fixed(layouter, &cell, &(1u128 << 64).into())?;
             cells.push(cell);
         }
-        Ok(AssignedState(cells))
+        Ok(AssignedState {
+            phase,
+            limbs: cells.try_into().expect("exactly 54 limbs"),
+        })
     }
 }
 impl IvcIO for Loan {
@@ -202,27 +229,41 @@ impl IvcIO for Loan {
         layouter: &mut impl Layouter<F>,
         value: Value<State>,
     ) -> Result<AssignedState, Error> {
-        self.assign_limbs(layouter, value.as_ref().map(Self::format_public_input))
+        self.assign_full(
+            layouter,
+            value.as_ref().map(|state| F::from(state.phase)),
+            value
+                .as_ref()
+                .map(|state| wire(state).into_iter().map(F::from).collect()),
+        )
     }
     fn constrain_as_public_input(
         &self,
         layouter: &mut impl Layouter<F>,
         state: &AssignedState,
     ) -> Result<(), Error> {
-        for cell in &state.0 {
-            self.std_lib.constrain_as_public_input(layouter, cell)?;
-        }
-        Ok(())
+        // Only called on the complete constant-selected successor in IvcCircuit.
+        self.std_lib
+            .constrain_as_public_input(layouter, &state.phase)
     }
     fn as_public_input(
         &self,
         _: &mut impl Layouter<F>,
         state: &AssignedState,
     ) -> Result<Vec<AssignedNative<F>>, Error> {
-        Ok(state.0.clone())
+        // IvcCircuit has already constrained all 54 predecessor limbs through
+        // circuit_transition before this feeds the prior-proof/genesis checks.
+        Ok(vec![state.phase.clone()])
     }
     fn format_public_input(state: &State) -> Vec<F> {
-        wire(state).into_iter().map(F::from).collect()
+        // Partial encoding: reject noncanonical full State values. On the three
+        // admitted rows phase is injective. This host guard is NOT the circuit
+        // binding; circuit_transition emits that binding for every private limb.
+        assert!(
+            state_index(&fixed_context(), state).is_some(),
+            "noncanonical full row"
+        );
+        vec![F::from(state.phase)]
     }
 }
 impl IvcTransition for Loan {
@@ -244,14 +285,16 @@ impl IvcTransition for Loan {
         _: Value<()>,
     ) -> Result<AssignedState, Error> {
         assert_eq!(self.ctx, fixed_context());
-        // Boolean selector is revision==0. Every before limb must equal the
-        // corresponding fixed genesis/accrued limb; a closed state cannot fit.
+        // Ordinary predecessors are exactly phase 0 or 1. A phase-2 row must
+        // never bypass the genesis/prior-proof boundary as a fresh input.
+        self.std_lib
+            .assert_lower_than_fixed(layouter, &state.phase, &2u128.into())?;
         let genesis: AssignedBit<F> =
             self.std_lib
-                .is_equal_to_fixed(layouter, &state.0[0], F::ZERO)?;
-        let before0 = Self::format_public_input(&fixed_state(0));
-        let before1 = Self::format_public_input(&fixed_state(1));
-        let after1 = Self::format_public_input(&fixed_state(2));
+                .is_equal_to_fixed(layouter, &state.phase, F::ZERO)?;
+        let before0 = table_limbs(0);
+        let before1 = table_limbs(1);
+        let after1 = table_limbs(2);
         let mut next = Vec::with_capacity(LIMBS);
         for i in 0..LIMBS {
             let a: AssignedNative<F> = self.std_lib.assign_fixed(layouter, before0[i])?;
@@ -259,13 +302,19 @@ impl IvcTransition for Loan {
             let c: AssignedNative<F> = self.std_lib.assign_fixed(layouter, after1[i])?;
             let expected = self.std_lib.select(layouter, &genesis, &a, &b)?;
             self.std_lib
-                .assert_equal(layouter, &state.0[i], &expected)?;
+                .assert_equal(layouter, &state.limbs[i], &expected)?;
             let output = self.std_lib.select(layouter, &genesis, &b, &c)?;
             self.std_lib
                 .assert_lower_than_fixed(layouter, &output, &(1u128 << 64).into())?;
             next.push(output);
         }
-        Ok(AssignedState(next))
+        let next_phase = self.std_lib.add_constant(layouter, &state.phase, F::ONE)?;
+        self.std_lib
+            .assert_lower_than_fixed(layouter, &next_phase, &3u128.into())?;
+        Ok(AssignedState {
+            phase: next_phase,
+            limbs: next.try_into().expect("exactly 54 limbs"),
+        })
     }
 }
 
@@ -297,16 +346,25 @@ fn preflight_native() {
         let s = fixed_state(i);
         assert!(Loan::decider(&fixed_context(), &s));
         assert_eq!(wire(&s).len(), LIMBS);
+        assert_eq!(LIMBS, 54);
+        assert_eq!(Loan::format_public_input(&s), vec![F::from(i as u64)]);
+        for phase in [0, 1, 2, 3, u64::MAX] {
+            let mut wrong_phase = s.clone();
+            wrong_phase.phase = phase;
+            assert_eq!(
+                Loan::decider(&fixed_context(), &wrong_phase),
+                phase == i as u64
+            );
+        }
         for j in 0..episode::NUM_FIELDS {
             for bit in [0, 64] {
                 let mut bad = s.clone();
                 bad.financial[j] ^= 1u128 << bit;
                 assert!(!Loan::decider(&fixed_context(), &bad));
                 assert!(checked_transition(&fixed_context(), &bad).is_err());
-                assert_ne!(
-                    Loan::format_public_input(&s),
-                    Loan::format_public_input(&bad)
-                );
+                // Same phase is intentionally insufficient for an arbitrary
+                // host row; format_public_input rejects this invalid domain.
+                assert_eq!(s.phase, bad.phase);
             }
         }
         for j in 0..episode::NUM_DIGESTS {
@@ -346,12 +404,14 @@ fn preflight_native() {
     );
 }
 
-// Four bounded application-only MockProver runs, not recursive proofs.
-// These check both valid transitions, closed input, and the raw 2^64 limb bound.
+// Exhaustive fixed-size application controls. They are executable preparation,
+// not executed evidence. All cases must finish inside the single runner budget.
 #[derive(Clone)]
 struct LocalRelation {
+    phase: F,
     before: Vec<F>,
-    after: State,
+    after_phase: F,
+    after: Vec<F>,
     range_only: bool,
 }
 impl Relation for LocalRelation {
@@ -372,11 +432,16 @@ impl Relation for LocalRelation {
         _: Value<()>,
     ) -> Result<(), Error> {
         let loan = Loan::new(lib.clone(), &fixed_context());
-        let before = loan.assign_limbs(layouter, Value::known(self.before.clone()))?;
+        let before = loan.assign_full(
+            layouter,
+            Value::known(self.phase),
+            Value::known(self.before.clone()),
+        )?;
         if !self.range_only {
             let after = loan.circuit_transition(layouter, &before, Value::known(()))?;
-            for (cell, constant) in after.0.iter().zip(Loan::format_public_input(&self.after)) {
-                lib.assert_equal_to_fixed(layouter, cell, constant)?;
+            lib.assert_equal_to_fixed(layouter, &after.phase, self.after_phase)?;
+            for (cell, constant) in after.limbs.iter().zip(&self.after) {
+                lib.assert_equal_to_fixed(layouter, cell, *constant)?;
             }
         }
         Ok(())
@@ -388,39 +453,103 @@ impl Relation for LocalRelation {
         Err(io::Error::other("local test relation is not serialized"))
     }
 }
-fn preflight_circuit() {
-    for case in 0..4 {
-        let index = if case < 3 { case } else { 0 };
-        let mut before = Loan::format_public_input(&fixed_state(index));
-        if case == 3 {
-            before[0] = F::from(u64::MAX) + F::ONE;
-        }
-        let relation = LocalRelation {
-            before,
-            after: fixed_state(if case == 0 { 1 } else { 2 }),
-            range_only: case == 3,
-        };
-        let circuit = MidnightCircuit::new(&relation, Value::known(()), Value::known(()), Some(K));
-        let prover =
-            MockProver::run(&circuit, vec![vec![], vec![]]).expect("local synthesis failed");
-        let accepted = prover.verify().is_ok();
-        assert_eq!(
-            accepted,
-            case < 2,
-            "unexpected local circuit outcome in case {case}"
-        );
-        event(
-            ["accrue", "settle", "closed_continuation", "raw_limb_2pow64"][case],
-            "local_circuit",
-            if accepted { "accepted" } else { "rejected" },
-        );
+fn local_case(name: &str, relation: LocalRelation, expected: bool) {
+    let circuit = MidnightCircuit::new(&relation, Value::known(()), Value::known(()), Some(K));
+    // Synthesis errors are not counted as successful rejection controls.
+    let prover = MockProver::run(&circuit, vec![vec![], vec![]]).expect("local synthesis failed");
+    let accepted = prover.verify().is_ok();
+    assert_eq!(accepted, expected, "unexpected local outcome: {name}");
+    event(
+        name,
+        "local_circuit",
+        if accepted { "accepted" } else { "rejected" },
+    );
+}
+fn base_case(phase: usize) -> LocalRelation {
+    LocalRelation {
+        phase: F::from(phase as u64),
+        before: table_limbs(phase),
+        after_phase: F::from((phase + 1) as u64),
+        after: table_limbs(phase + 1),
+        range_only: false,
     }
+}
+fn preflight_circuit() {
+    for phase in 0..2 {
+        let base = base_case(phase);
+        local_case(&format!("valid_phase_{phase}"), base.clone(), true);
+        for limb in 0..LIMBS {
+            let mut before = base.clone();
+            before.before[limb] += F::ONE;
+            local_case(&format!("before_phase_{phase}_limb_{limb}"), before, false);
+            let mut after = base.clone();
+            after.after[limb] += F::ONE;
+            local_case(&format!("after_phase_{phase}_limb_{limb}"), after, false);
+        }
+        for row in 0..3 {
+            let mut wrong_before = base.clone();
+            wrong_before.before = table_limbs(row);
+            local_case(
+                &format!("phase_{phase}_before_row_{row}"),
+                wrong_before,
+                row == phase,
+            );
+            let mut wrong_after = base.clone();
+            wrong_after.after = table_limbs(row);
+            local_case(
+                &format!("phase_{phase}_after_row_{row}"),
+                wrong_after,
+                row == phase + 1,
+            );
+        }
+        for after_phase in [0u64, 1, 2, 3, u64::MAX] {
+            let mut wrong_edge = base.clone();
+            wrong_edge.after_phase = F::from(after_phase);
+            local_case(
+                &format!("edge_{phase}_to_{after_phase}"),
+                wrong_edge,
+                after_phase == phase as u64 + 1,
+            );
+        }
+    }
+    for (name, phase) in [
+        ("closed_phase", F::from(2)),
+        ("phase_three", F::from(3)),
+        ("phase_u64max", F::from(u64::MAX)),
+        ("phase_modular_minus_one", -F::ONE),
+    ] {
+        let mut bad = base_case(0);
+        bad.phase = phase;
+        if name == "closed_phase" {
+            bad.before = table_limbs(2);
+        }
+        local_case(name, bad, false);
+    }
+    // Raw-field tests bypass native u64 construction and exercise every limb.
+    for limb in 0..LIMBS {
+        let mut bad = base_case(0);
+        bad.range_only = true;
+        bad.before[limb] = F::from(u64::MAX) + F::ONE;
+        local_case(&format!("raw_limb_{limb}_2pow64"), bad, false);
+    }
+    let mut boundary = base_case(0);
+    boundary.range_only = true;
+    boundary.before = vec![F::from(u64::MAX); LIMBS];
+    local_case("all_u64_max_range_boundary", boundary, true);
 }
 
 fn main() {
     assert!(
         cfg!(feature = "truncated-challenges"),
         "enable truncated-challenges"
+    );
+    let candidate_sha =
+        std::env::var("MORIARTY_R3_CANDIDATE_SHA256").expect("reviewed candidate hash required");
+    assert!(
+        candidate_sha.len() == 64
+            && candidate_sha
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
     );
     let output = std::env::var("MORIARTY_R3_OUTPUT").expect("MORIARTY_R3_OUTPUT required");
     let srs_path = std::env::var("MORIARTY_R3_SRS").expect("MORIARTY_R3_SRS required");
@@ -449,6 +578,10 @@ fn main() {
         "SRS header must be K17 before decoding"
     );
     let srs_hash = sha(&bytes);
+    assert_eq!(
+        srs_hash, "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74",
+        "unreviewed SRS bytes"
+    );
     let mut cursor = Cursor::new(&bytes);
     // Match the pinned Midnight trusted-setup file encoding. Trust is in the
     // parent's pinned hash receipt; RawBytesUnchecked is not a ceremony audit.
@@ -469,6 +602,7 @@ fn main() {
     drop(bytes);
     let start = Instant::now();
     println!("{{\"event\":\"setup_started\"}}");
+    let srs_verifier_params = srs.verifier_params();
     let (mut prover, verifier) = ivc::setup::<Loan>(srs, K, fixed_context());
     println!(
         "{{\"event\":\"setup_complete\",\"milliseconds\":{}}}",
@@ -488,6 +622,23 @@ fn main() {
         );
         fs::write(output.join(format!("step-{step}.proof")), &proof).unwrap();
         let pi = IvcCircuit::<Loan>::format_instance(&instance).unwrap();
+        assert_eq!(
+            pi[1],
+            F::from(step as u64),
+            "application PI is canonical phase"
+        );
+        if step == 1 {
+            fs::write(
+                output.join("canonical-vk-repr.le.bin"),
+                pi[0].to_repr().as_ref(),
+            )
+            .unwrap();
+        } else {
+            assert_eq!(
+                fs::read(output.join("canonical-vk-repr.le.bin")).unwrap(),
+                pi[0].to_repr().as_ref()
+            );
+        }
         let pi_bytes: Vec<u8> = pi
             .iter()
             .flat_map(|f| f.to_repr().as_ref().to_vec())
@@ -554,7 +705,10 @@ fn main() {
         ("altered_due", Some(4), None),
         ("wrong_domain", None, Some(0)),
         ("wrong_program", None, Some(1)),
+        ("wrong_specification", None, Some(2)),
         ("wrong_intent", None, Some(3)),
+        ("wrong_output", None, Some(5)),
+        ("wrong_effects", None, Some(6)),
         ("mismatched_predecessor", None, Some(4)),
         ("excessive_authority_commitment", None, Some(7)),
         ("forged_genesis", Some(0), None),
@@ -583,10 +737,45 @@ fn main() {
         "not_exercised",
         "gap_private_vk_no_second_setup",
     );
+    // An invalid carried accumulator with the same public shape, built through
+    // public APIs. Direct pairing failure and final-verifier rejection are distinct
+    // controls; this does not claim a newly proved invalid-accumulator chain.
+    let mut cs = ConstraintSystem::default();
+    ZkStdLib::configure(&mut cs, (IvcCircuit::<Loan>::arch(), (K - 1) as u8));
+    let labels = midnight_circuits::verifier::fixed_base_labels::<S>(
+        cs.num_fixed_columns() + cs.num_selectors(),
+        cs.permutation().columns.len(),
+    );
+    let trivial = Accumulator::<S>::trivial(&labels);
+    let invalid_lhs = Msm::<S>::new(
+        &[Point::Variable(<S as SelfEmulation>::C::generator())],
+        &[F::ONE],
+        &[PolynomialLabel::NoLabel],
+    );
+    let invalid_acc = Accumulator::<S>::new(invalid_lhs, trivial.rhs());
+    // All fixed-base coefficients in this RHS are zero; identity bases suffice
+    // for this direct invariant test and are not a substitute VK for verification.
+    let zero_rhs_bases = labels
+        .iter()
+        .cloned()
+        .map(|label| (label, <S as SelfEmulation>::C::identity()))
+        .collect();
+    assert!(
+        !invalid_acc.check(&srs_verifier_params, &zero_rhs_bases),
+        "invalid accumulator passed pairing"
+    );
+    prover.resume_from(fixed_state(2), final_proof.clone(), invalid_acc);
+    assert!(
+        matches!(
+            verifier.verify(&prover.instance(), final_proof),
+            Err(ivc::IvcError::InvalidProof)
+        ),
+        "invalid carried accumulator was not rejected after a valid application decider"
+    );
     event(
-        "unsatisfied_recursive_accumulator",
-        "not_exercised",
-        "gap_private_accumulator_no_injected_dependency",
+        "invalid_accumulator_pairing_and_final_statement",
+        "native_verifier",
+        "rejected",
     );
     event(
         "verifier_serialization",
@@ -594,7 +783,7 @@ fn main() {
         "gap_no_public_serialization_api",
     );
     let receipt = format!(
-        "{{\"status\":\"completed_with_explicit_gaps\",\"predicate\":\"{PREDICATE}\",\"fixed_instance_specialization\":true,\"steps_proved_and_verified\":2,\"final_accumulator_discharged\":true,\"proof_sizes\":[{},{}],\"proof_sha256\":[\"{}\",\"{}\"],\"episode_sha256\":\"{}\",\"srs_sha256\":\"{srs_hash}\",\"gaps\":[\"different_vk_control\",\"unsatisfied_recursive_accumulator_control\",\"verifier_serialization\",\"dynamic_authorization\",\"general_refinement\",\"ledger_acceptance\"]}}\n",
+        "{{\"status\":\"completed_with_explicit_gaps\",\"candidate_sha256\":\"{candidate_sha}\",\"predicate\":\"{PREDICATE}\",\"fixed_instance_specialization\":true,\"steps_proved_and_verified\":2,\"final_accumulator_discharged\":true,\"application_public_elements\":1,\"private_application_elements\":55,\"proof_sizes\":[{},{}],\"proof_sha256\":[\"{}\",\"{}\"],\"episode_sha256\":\"{}\",\"srs_sha256\":\"{srs_hash}\",\"gaps\":[\"different_vk_control\",\"verifier_serialization\",\"dynamic_authorization\",\"general_refinement\",\"ledger_acceptance\"]}}\n",
         sizes[0],
         sizes[1],
         proof_hashes[0],
