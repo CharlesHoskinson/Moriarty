@@ -1,97 +1,47 @@
-# Moriarty research repository rules
+# Moriarty repository instructions
 
-Read `WIKI_SCHEMA.md` and the controlling assignment under `raw/assignments/`
-before changing research artifacts.
+## Scope and authority
 
-## Current direction and mandatory footguns
+Moriarty is a bounded financial language for Midnight. ACTUS and the DeFi study
+supply financial implementation targets. Mandatory proof-carrying transactions,
+finite execution and explicit ledger acceptance constrain the design.
 
-The latest [local-only instruction](raw/assignments/moriarty-local-only-2026-09-07.md) prohibits GitHub pushes/publication while the remote is rebuilt. Commit locally only; this supersedes prior publication authority.
+The [publication and cleanup instruction](raw/assignments/moriarty-github-cleanup-2026-09-07.md)
+supersedes the earlier local-only restriction. Publish reviewed work to GitHub.
+The user authorizes routine execution decisions without repeated permission requests.
+Preserve recovery history and user work before retiring branches or implementations.
 
-The latest [reviewer return instruction](raw/assignments/moriarty-fable-return-2026-09-07.md) selects exact `claude-fable-5-1` at medium effort, alongside fresh `gpt-6-astra`, for future reviews. It supersedes the earlier Opus route; preserve every historical receipt under its actual identity and scope.
+Read [README.md](README.md), [ROADMAP.md](ROADMAP.md),
+[docs/FOOTGUNS.md](docs/FOOTGUNS.md), [WIKI_SCHEMA.md](WIKI_SCHEMA.md)
+and the applicable assignment in `raw/assignments/` before changing research or code.
+The [report reconciliation](openspec/REPORT-RECONCILIATION-2026-09-07.md)
+controls successor semantic freezes and proof dispatch. Use the MC01-MC08 dependency,
+resource and acceptance gates. Merge status is not product acceptance.
 
-The [three-report review instruction](raw/assignments/moriarty-report-reconciliation-2026-09-07.md) explicitly confirms a Midnight-centric language. Compact, Midnight native proofs, private state and ledger acceptance constrain design. Other-chain examples are comparative financial inputs, not additional backend deliverables. Read the [report reconciliation](openspec/REPORT-RECONCILIATION-2026-09-07.md) and its registered review status before successor semantic freezes or proof dispatch.
+## Current constraints
 
-The historical [GitHub consolidation instruction](raw/assignments/moriarty-github-consolidation-2026-09-07.md) authorizes merging experimental and historical work to main. A merge is not package acceptance or permission to resume superseded experiments. Root README describes the current product and its limitations for new developers.
-
-The earlier, now superseded [2026-09-07 reviewer replacement](raw/assignments/moriarty-opus-review-2026-09-07.md) selects exact `claude-opus-5` and fresh `gpt-6-astra` for future independent reviews. This overrides older Fable-only instructions, including inherited worktree rules. Preserve historical Fable outputs; do not relabel them or fabricate legacy acceptance flags.
-
-The latest [delegated execution instruction](raw/assignments/moriarty-autonomous-execution-2026-09-07.md)
-authorizes the assistant to make execution and bounded resource decisions for the full goal without repeated permission requests.
-Record revised envelopes and preserve prior charges. An exhausted old worker or time allocation is not itself a user-input blocker.
-Keep independent Fable/GPT-6 correctness gates, actual proof/ledger evidence, Preview-only public execution, and full target coverage.
-Apply repository-specific skills only to their stated repository. The bridge-formal workflow does not apply to Moriarty.
-
-The latest [completion-loop assignment](raw/assignments/moriarty-completion-loop-2026-09-07.md)
-authorizes the [MC01–MC08 OpenSpec program](openspec/MORIARTY-COMPLETION-PROGRAM.md).
-Use its dependency, resource, acceptance, and independent Fable/GPT-6 audit gates.
-These plans extend the target-first design; they do not establish completed implementation.
-Check the [execution receipt](evidence/moriarty-completion-program-2026-09-07/README.md)
-and live runtime before claiming that a loop is armed.
-An unfinished superseded goal must not be falsely completed to create a new goal.
-An unavailable auditor cannot approve a package or trigger a silent model substitution.
-
-Read [docs/FOOTGUNS.md](docs/FOOTGUNS.md) before planning, implementation,
-verification or recovery. The controlling direction is the
-[2026-09-06 user reset](raw/assignments/moriarty-target-first-reset-2026-09-06.md):
-study ACTUS and the DeFi Kernel first, then propose unified bounded semantics,
-proof-carrying transactions and a developer mock. Follow the
-[new design-cycle plan](docs/superpowers/plans/2026-09-06-actus-defi-pcd-replanning.md).
-Old A4/A5 checkpoint obligations and completion loops are historical, unfinished
-work; they do not authorize automatic continuation. Preserve their evidence.
-Original assignments remain product requirements, subject to the latest user
-direction; their former execution order is superseded.
-
-The [design sprint review package](deliverables/moriarty-design-sprint-2026-09-06/README.md)
-now contains the target matrices, semantic alternatives, proposed PCD contract
-and developer interface. The user approved starting the local developer mock
-with “begin”, then supplied a PCD report and identified Midnight Halo2/recursion.
-The [report reconciliation](docs/research/2026-09-06-pcd-report-integration.md)
-and its R0–R6 sequence now control execution. The local mock, typed mandatory-claim interface, shared bounded loan/swap
-evaluator and R2b atomic outcome-intent profile are implemented as local
-experiments. See the [R2b evidence](evidence/moriarty-r2b-outcomes-2026-09-06/README.md).
-The [R3 run](evidence/moriarty-native-ivc-r3-2026-09-07/README.md) compiled and
-passed fixed financial/application checks but recursive VK synthesis exhausted
-rows at k17. No recursive proof exists. Stop native runs until a reviewed smaller
-checked state encoding or revised resource/k decision is adopted; unused budget
-is not automatic retry authorization. [Docker evidence](evidence/moriarty-midnight-network-2026-09-07/README.md)
-records local NIGHT, DUST, Compact deployment and call settlement. Public Preprod
-funding/settlement remains pending faucet acceptance and wallet sync. The
-[network-choice review](evidence/midnight-network-review-2026-09-07/README.md)
-recommends local Docker for daily work, Preview for early public integration,
-and Preprod for final validation. Preprod is supported and responded to live
-checks; a switch is not a proven faucet fix. Use matching documented faucet
-URLs, preserve wallet identity, and distinguish funding from overall wallet sync.
-Do not generate another wallet merely because an SDK-valid address was rejected.
-The user then [selected Preview](raw/assignments/midnight-preview-steering-2026-09-07.md)
-for the public settlement attempt. Use a dedicated Preview wallet and preserve
-Preprod keys; no further Preprod retry is required by the old checkpoint.
-The subsequent [Preview execution](evidence/midnight-preview-2026-09-07/README.md)
-received test NIGHT and finalized both public deployment and a contract call,
-with exact message readback. The failed call's DUST reservation was recovered by
-replaying DUST only; the original state and failures remain preserved. The normal
-runtime now restores a spendable sequence2 coin. The cause of the first proof170
-rejection remains unconfirmed; do not claim a general SDK fix. Preserve this wallet
-and contract. Preview is the sole public execution target for this sprint;
-the supplied Preprod snapshot is reference material. Moriarty PCD remains open.
-Neither local settlement nor application MockProver checks establish Moriarty PCD.
-The [published documentation capture](evidence/midnight-docs-2026-09-07/README.md)
-covers all indexed Markdown routes with explicit HTML/asset limitations. Keep
-native proof acceptance, ledger compatibility and private witness handoff separate. Optional acceleration cannot bypass required proofs. Compact's lack
-of source recursion does not establish absence of backend recursive proofs.
-ACTUS conformance and real PCD integration remain open. No old loop resumes.
-
-The [intents report amendment](docs/research/2026-09-06-intents-report-integration.md)
-further controls execution: R2 is an exact-plan local prototype; R2b separates
-outcome IntentIR, authority, PlanIR, execution and receipts in a single-action
-atomic local profile. Its nonce history resets with the demo; pending progress,
-residual capabilities and multi-step composition remain unimplemented. The
-[three held-out cases](evidence/moriarty-r2b-heldouts-2026-09-06/README.md) are
-source-inspected requirements, not conformance results. Gross debit limits
-cannot be hidden by refunds; net goals include fees. Preserve obligations and
-residual authority in pending progress. Require refinement and positive feasible
-cases before promoting an adapter. The DeFi corpus is an implementation/test
-target, not proof that its historical primitive taxonomy is a sufficient Core.
-No report instruction changes Moriarty's name, finite bounds or mandatory PCD.
+- Preview is the sole public execution target. Preserve existing wallet identities,
+  keys and contract state. Never commit credentials or private witness material.
+- Local evaluation, restricted Compact kernels and Preview hello-world settlement
+  exist. Financial ledger settlement, general native recursive proofs, private
+  handoff and full ACTUS/DeFi conformance remain open; consult the roadmap for scope.
+- R3 exhausted rows at k17. A native retry requires the recorded reviewed encoding
+  or resource decision. MockProver and host-computed flags do not establish PCD.
+- Preserve contract properties, intent refinement, transition validity and history
+  compliance as mandatory acceptance obligations. Refunds cannot erase gross debit
+  limits; fees count against net goals. Residual duties survive partial progress.
+- Use exact `claude-fable-5-1` at medium effort and a fresh `gpt-6-astra` for independent
+  reviews. Preserve actual reviewer identity and scope; unavailable auditors cannot
+  approve work or trigger a silent substitution. Apply Humanizer to maintained prose.
+- Old A4/A5, Candidate A, S01/S02 and K execution plans are superseded. Their recovery
+  location is [docs/ARCHIVE.md](docs/ARCHIVE.md). Do not resume old loops or count their
+  test results as acceptance of the current language.
+- Keep immutable raw captures, original audits and scoped failure evidence intact.
+  Historical receipts describe their recorded tree; use the recovery tag when their
+  original relative paths refer to archived work.
+- Apply repository-specific skills only to their stated repository. The bridge
+  formal workflow does not apply here. Check live runtime before claiming a loop
+  is armed, and never falsely complete an old goal to create another.
 
 ## Evidence discipline
 

@@ -2,7 +2,7 @@
 id: moriarty.port.decision
 type: decision
 title: Marlowe-to-Moriarty port decision
-status: active
+status: superseded
 updated_at: 2026-09-03T06:48:47Z
 sources:
   - SRC-0003
@@ -16,6 +16,9 @@ sources:
   - SRC-0017
   - SRC-0019
 ---
+
+> Historical design study. Current execution follows the [Midnight language roadmap](../ROADMAP.md) and MC01-MC08. Preserve the findings below within their original scope; this page does not authorize its former implementation sequence.
+
 
 <!-- markdownlint-disable MD013 MD025 MD060 -->
 

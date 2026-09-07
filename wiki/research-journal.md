@@ -604,8 +604,8 @@ re-review and Task 7 completion remain open at this observation.
 normative artifacts at commit `5d3863793660d551b3e30a88e322d5c9a497d33c` with
 no remaining material finding. S01's seven tasks are complete as a bounded
 specification and local experiment package. The correction and provenance
-history are preserved in the [review ledger](../docs/superpowers/reviews/2026-09-04-moriarty-s01-review-ledger.md)
-and [final verification record](../docs/superpowers/reviews/2026-09-04-moriarty-s01-final-verification.md).
+history are preserved in the [review ledger](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/reviews/2026-09-04-moriarty-s01-review-ledger.md)
+and [final verification record](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/reviews/2026-09-04-moriarty-s01-final-verification.md).
 Source: SRC-0034 at the corrected manifest and its committed artifacts;
 observed 2026-09-05; authority experimental repository evidence; scope S01
 completion only; evidence repository observation; reproduction reproduced;
@@ -632,7 +632,7 @@ ancestor of `main` at this observation. They have no Council approval and do
 not complete S02.
 
 User decision: on 2026-09-05 UTC, the user approved the narrow Foreman runtime
-binding fixes in the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md).
+binding fixes in the [runtime binding intake](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md).
 The user also approved GitHub publication and merge for those fixes. The user
 accepted the documented limits of the official requested-versus-observed model
 routes and approved resumption of the Council workflow. The runtime change is
@@ -641,7 +641,7 @@ not yet implemented, and no Council member has received the review bundle.
 Claim metadata:
 
 - Sources: SRC-0031 at XML S02 and W1, and SRC-0033 at the S02 execution-evidence boundary.
-- Local locators: the three full branch commits above, the [runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md), and the [Council review requirements](../docs/COUNCIL_REVIEWS.md).
+- Local locators: the three full branch commits above, the [runtime binding intake](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md), and the [Council review requirements](../docs/COUNCIL_REVIEWS.md).
 - Commit dates: the branch commits were created on 2026-09-04 MDT. The user decision was recorded on 2026-09-05 UTC.
 - Authority: normative task input, local repository observation, and direct user decision.
 - Scope: unreleased S02 preparation under semantic scope `0.0.0-e00.2`.
@@ -780,7 +780,7 @@ coverage table. Frozen Core remains `0.0.0-e00.2`.
 Claim metadata:
 
 - Sources: SRC-0031 at XML workstream W1 and sprint S02, and SRC-0033 at the frozen semantic boundary.
-- Local locators: [reviewed comparison design](../docs/superpowers/specs/2026-09-04-moriarty-s02-model-comparison-design.md), [closed registry](../evidence/s02-model-comparison/requirements.json), and [corrected carrier proposal](../docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
+- Local locators: [reviewed comparison design](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/specs/2026-09-04-moriarty-s02-model-comparison-design.md), [closed registry](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/evidence/s02-model-comparison/requirements.json), and [corrected carrier proposal](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/specs/2026-09-05-moriarty-s02-authorization-recovery-types.md).
 - Repository: local Moriarty repository, branch `s02-model-comparison`, commit `6a60a645c03acad83b7cbc6b85d43996cd40ca65`. Corrected main-branch carrier: commit `14b16f3ccd98c50070f7b18c2a608d38a8b29870`.
 - Observed at: 2026-09-05T04:56:00Z. Controlling design date: 2026-09-04 UTC.
 - Authority: controlling XML and reviewed local design.
@@ -828,7 +828,7 @@ not evidence that any sprint or release gate is complete.
 
 **CLM-0144.** Repository observation and design recommendation: all three requested
 experts returned independent amendments against identical frozen inline sources.
-The [decision](../docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md)
+The [decision](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md)
 adopts a combined foundation by two-to-one preference while preserving Fable's
 split-review dissent. Astra and Fable support consumed-parent authority with
 explicit exact-parent residual applicability; Grok's registered-through-residual

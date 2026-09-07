@@ -206,3 +206,5 @@ Preview is the public integration target. Existing network transactions establis
 - [`wiki/`](wiki/index.md), [`docs/`](docs/) and [`deliverables/`](deliverables/): concepts, design rationale and financial source studies.
 - [`openspec/`](openspec/MORIARTY-COMPLETION-PROGRAM.md): planned capabilities and acceptance requirements.
 - [`evidence/`](evidence/) and [`raw/`](raw/): scoped experimental records and retained source material. Historical results keep their original limitations.
+
+Superseded implementations and execution campaigns are available in the [historical archive](docs/ARCHIVE.md).

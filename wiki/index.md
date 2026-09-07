@@ -1,7 +1,7 @@
 # Moriarty language wiki index
 
-Read this page before searching externally. The wiki is initially sparse and
-will grow by merging evidence into durable topic pages.
+Read this page before searching externally. Merge new evidence into the existing
+topic pages and preserve their source and claim identifiers.
 
 ## Current direction — 2026-09-06 reset
 
@@ -113,7 +113,7 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
   configuration, sorts, rule shape, pin, field representation, parsing route,
   test oracle, and the milestones with their results.
 - [The ZKIR semantics in K, as built](zkir/zkir-k-definition.md) — module
-- [ZKIR K definition documentation](../experiments/zkir-k/docs/01-overview.md) — fifteen chapters, from getting started to the instruction reference, the verdict model, the tooling, the oracles, the known divergences and the design limits; each chapter checked cross-vendor as developer and formal methods reader
+- [ZKIR K definition documentation](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/experiments/zkir-k/docs/01-overview.md) — fifteen chapters, from getting started to the instruction reference, the verdict model, the tooling, the oracles, the known divergences and the design limits; each chapter checked cross-vendor as developer and formal methods reader
   layout, what a run produces, the three layers of checking against the Rust
   crate, the divergences found, and the Agda and k-rust oracles.
 - [K Framework overview](k-framework/k-framework-overview.md) — what K is,
@@ -155,53 +155,10 @@ surface, standalone `midnight-zkir` `2ffe2d17`.
 - [Midnight's K tooling](zkir/midnight-k-tooling.md) — k-rust and
   k-framework-ts: scope, supported K subset, pins, Lean export, maturity.
 
-## Active specification artifacts
+## Development and historical research
 
-- [Candidate A roadmap](../docs/MORIARTY_ROADMAP.md) — A0–A3 locally accepted;
-  A4 checker/producer units, the amended17+97 preliminary gate and final-source
-  parser admitted; case014 export failed with heap exhaustion and no ITF.
-  The compiler diagnostic timed out after entering compile. The no-flatten
-  tiny control completed; its original failed type predicate is preserved and
-  a reviewed correction admits the retained tiny data. The full contrast
-  compiled but exceeded its JSON intake limit. The tiny-evidence package is
-  independently audited and committed, and a bounded retained-output plan is
-  adopted. Seven A4 observer controls are independently admitted; both native
-  pairs and their evidence are independently admitted. The one full diagnostic
-  failed with heap exhaustion after entering `runSimulator`. The bounded
-  retained-output inspection failed an import-order predicate and resource
-  report parsing; both failures are preserved. A separately reviewed correction
-  passed the retained-output structural inspection and has independent/root
-  admission. A4 literal wrappers are being implemented. H1, full A4–A7 and
-  Council stay open.
+Use the [complete roadmap](../ROADMAP.md), [MC01-MC08 program](../openspec/MORIARTY-COMPLETION-PROGRAM.md) and [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) for current execution and acceptance requirements.
 
-- [Execution roadmap](../docs/MORIARTY_ROADMAP.md) — saved overnight results,
-  Candidate A completion dependencies, and the still-open S01–S15 program.
-- [EARS and OpenSpec package index](../openspec/WORK-PACKAGES-EARS.md) — A0–A7
-  completion changes, all sprint contracts, and the complete release-gate mapping.
-- [Candidate A completion XML](../deliverables/moriarty-candidate-a-completion-prompt-2026-09-05.xml) —
-  focused handoff with prior-source references and corrected lifecycle requirements.
+Earlier Candidate A, S01/S02, A4/A5, K and SDK feasibility work is [archived](../docs/ARCHIVE.md). Its original results and unfinished obligations remain historical; they do not authorize an old execution queue. The retained research pages explain the source findings and their limitations.
 
-- [Moriarty restart](../docs/MORIARTY_RESTART.md) — Foreman development closed by user direction; resume S02 from preserved foundations, with type-sketch approval and acceptance reviews distinct from implementation.
-- [Prompt v1.3 execution audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md) — signing, parser, effect-completeness, and validator findings with execution dispositions.
-- [S01 intent-theorem package](../openspec/changes/s01-intent-theorem-freeze/README.md) — completed, independently reviewed specification package whose ten local predicates passed at S3; mechanization, full effect completeness, runtime verification, backend and ledger correspondence, ACTUS, pilots, and all 24 prompt release gates remain open at this boundary.
-- [S01 evidence manifest](../evidence/s01-intent-theorem-freeze/evidence-manifest.json) — reproducible local package-gate evidence for the candidate-unmechanized theorem and exact-transfer falsifier; it grants no signing authority and establishes no proof, backend, ledger, ACTUS, or pilot result.
-- [Council review requirements](../docs/COUNCIL_REVIEWS.md) — requested reviewer identities, binding requirements, and the still-open S01 backfill and S02 review queue.
-- [Council runtime binding intake](../docs/superpowers/reviews/2026-09-05-council-runtime-binding-intake.md) — inspected missing carrier, requested-versus-observed model-route limits, and the pending runtime implementation boundary.
-- [S02 delegated common-design decision](../docs/superpowers/specs/2026-09-05-moriarty-s02-common-design-decision.md) — three completed expert proposals, majority choices and preserved dissent, superseding the earlier carrier sketch; implementation and Council gates remain open.
-- [Foreman PID-namespace research assignment](../deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml) — read-only Fable handoff for the observed launcher degradation and complete Grok 4.6 model-card review; research results remain pending.
-- [Compact DSL feasibility and SDK specification](../deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md) — S3 evidence boundary, footguns, 65 SDK components, and 28 wire contracts.
-- [Work-package Council advisory](../deliverables/moriarty-work-package-council-advisory-2026-09-03.md) — frozen Grok, Sol, and exact Fable 5.1 review plus deterministic remediations.
-- [Earlier OpenSpec work packages](../openspec/WORK-PACKAGES.md) — the preceding twelve-package program, not the controlling XML v1.3 S01–S15 sequence.
-- [Semantics, intent, compiler, proof, SDK, and ACTUS prompt](../deliverables/moriarty-semantics-intent-compiler-sdk-deep-research-prompt-2026-09-03.xml) — version 1.3 assignment with an exact intent-refinement theorem, standards review, and a no-exclusion 277-vector ACTUS completion gate.
-- [ACTUS public-source acquisition manifest](../evidence/actus-public-source-acquisition-2026-09-03.json) — 270 fetched public URLs, one explicit robots failure, 220 documentation host rewrites, 14 repository pins, 32 taxonomy rows, and all 277 reference fixtures.
-- [ACTUS public code survey](../evidence/actus-public-code-survey-2026-09-03.json) — executable contract surface, Haskell harness gaps, private Java boundary, license constraints, and prompt consequences.
-- [Intent standards research source](../deliverables/moriarty-intent-standards-2026-09-03/report-source.md) — complete CAKE and NEAR documentation crawl plus current Ethereum/OIF lifecycle, trust, and SDK findings.
-- [Intent prompt council advisory](../deliverables/moriarty-intent-prompt-council-advisory-2026-09-03.md) — blind Grok, Sol, and Fable review, preserved dissent, and the single correction pass applied to prompt version 1.2.
-
-## Workstream pages
-
-The earlier consolidated decision report maps these pages to its 18 deliverables.
-The controlling XML v1.3 now requires D01–D22 and S01–S15; the old report and
-twelve-package manifest do not establish completion of that larger program.
-Narrower pages for migration, governance, APIs, and user research will be added
-as those workstreams produce independent evidence.
+Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../docs/COUNCIL_REVIEWS.md) links to the superseded Council requirements for historical interpretation.

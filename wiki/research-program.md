@@ -2,7 +2,7 @@
 id: moriarty.research.program
 type: decision
 title: Moriarty DeFi Kernel research program
-status: active
+status: superseded
 updated_at: 2026-09-03T20:06:53Z
 sources:
   - SRC-0016
@@ -19,6 +19,9 @@ sources:
   - SRC-0030
   - SRC-0031
 ---
+
+> Historical design study. Current execution follows the [Midnight language roadmap](../ROADMAP.md) and MC01-MC08. Preserve the findings below within their original scope; this page does not authorize its former implementation sequence.
+
 
 <!-- markdownlint-disable MD025 -->
 

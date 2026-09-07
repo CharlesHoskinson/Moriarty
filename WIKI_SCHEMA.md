@@ -3,7 +3,7 @@
 ## Purpose and layers
 
 This repository implements Andrej Karpathy's LLM Wiki pattern for Moriarty's
-Marlowe-to-Compact/ZKIR design study.
+Midnight financial-language research and design.
 
 - `raw/` is immutable source material, prompt inputs, receipts, and dated
   research notes. Corrections supersede; they do not overwrite.

@@ -33,7 +33,7 @@ the four-way architecture decision and uses Quint with Apalache, not TLA+/TLC.
 ## [2026-09-04] audit | Prompt v1.3 and initial S01 execution
 
 Audited the focused XML assignment, approved S01 design, and implementation plans.
-The [audit](../docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
+The [audit](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/docs/superpowers/reviews/2026-09-04-moriarty-v1.3-execution-audit.md)
 records repository observations, sample-code probes, and unresolved freeze obligations.
 The S01 OpenSpec contract begins implementation. The theorem and aggregate
 evidence gates remain open. The prompt, approved design, and Core snapshot retain their pins.
@@ -220,7 +220,7 @@ incomplete. Historical log entries remain unchanged above this entry.
 
 ## [2026-09-05] assignment | Investigate Foreman PID-namespace degradation
 
-Created the [Fable research assignment](../deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml)
+Created the [Fable research assignment](https://github.com/CharlesHoskinson/Moriarty/blob/archive/pre-cleanup-2026-09-07/deliverables/foreman-grok-4-6-pidns-deep-research-prompt-2026-09-05.xml)
 for the user's separate session. It includes the observed launcher warning,
 source and binary context, protected live work, and the official 42-page Grok
 4.6 card with its preserved PDF digest. The assignment requires read-only
@@ -957,3 +957,7 @@ of the superseded unfinished goal; no product/proof/ledger completion is claimed
 ## 2026-09-07: Reconcile all three reports with Midnight language plans
 
 Captured exact intents, PCD and DeFi report bytes as SRC-0070-SRC-0072; intents and PCD match the earlier source hashes. Reviewed every section and produced a combined provenance graph and MC01-MC08 requirements crosswalk. CLM-0918 through CLM-0921 record Midnight-centric scope, bounded-domain and mandatory-PCD dispositions, early financial challenges and complete native/ledger feasibility. The amendment preserves all financial coverage and actual proof/acceptance obligations. Its audit disposition records plan review only; no implementation, proof or public transaction was performed by this review.
+
+## 2026-09-07: Preserve old work and consolidate current development
+
+SRC-0076 authorizes publication and cleanup. The [historical archive](../docs/ARCHIVE.md) retains superseded implementations and their evidence; the current tree keeps the Midnight packages, financial studies and MC01-MC08 program. Publication authority changes, while product and proof acceptance remain unchanged.

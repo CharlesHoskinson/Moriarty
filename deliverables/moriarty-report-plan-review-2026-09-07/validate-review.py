@@ -34,7 +34,8 @@ try:
 except Exception as e:check('package-dag',False,str(e))
 check('eight-packages',set(by)=={f'MC{i:02}' for i in range(1,9)})
 check('current-reviewer',reg['auditModels']==['claude-fable-5-1','gpt-6-astra'] and reg['auditEfforts']['claude-fable-5-1']=='medium')
-check('local-only-policy',reg['publicationPolicy']['mode']=='local-commits-only')
+# Publication authority changed after the preserved report-review packets.
+check('publication-policy',reg['publicationPolicy']['mode']=='github-publication-authorized' and reg['publicationPolicy']['authority']=='raw/assignments/moriarty-github-cleanup-2026-09-07.md')
 stages={x['id']:x for x in reg['reportReconciliation']['stageAdmission']['stages']}
 check('stage-ids-unique',len(stages)==len(reg['reportReconciliation']['stageAdmission']['stages']))
 def visit_stage(id,trail):

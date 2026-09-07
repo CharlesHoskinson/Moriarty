@@ -1,1 +1,0 @@
-Codex GPT-6 Astra lane unavailable at launch (usage limit reached at 03:24 local on 2026-09-06, events said try again at 8:29 PM); the second reviewer family for this audit is Grok 4.6 through the grok CLI, prompts under reports/grok-*.prompt
