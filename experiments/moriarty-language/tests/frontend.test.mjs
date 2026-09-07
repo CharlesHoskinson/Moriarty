@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseSource, compile, canonicalEncode, canonicalDecode } from '../src/frontend.ts';
+import {checkAndLower} from '../src/checker.ts';
+import {validateSource} from '../src/validate.ts';
+import {normalizeError,throwDiagnostic} from '../src/diagnostics.ts';
+// INTERNAL NONADMITTED configurations isolate limit checks. No public API accepts these.
+function lowerNonAdmittedTestConfiguration(input,boundsInput,validateManifest=true){
+  try{const source=parseSource(input);const configured=JSON.parse(boundsInput);const error=validateSource(source,configured);if(error)throwDiagnostic(error);return {source,...checkAndLower(source,new TextEncoder().encode(boundsInput),validateManifest)};}catch(e){throwDiagnostic(normalizeError(e));}
+}
 const bounds = readFileSync(new URL('../spec/bounds.json', import.meta.url));
 const prefix = 'agreement Generic profile "moriarty-bounded-atomic/1" { lifetime 2; horizon 2000000000;';
 const minimal = body => `${prefix} state closed: UInt128 = uint(0); observation now: UInt128; status episode closed_when closed == uint(1); status agreement no_remaining_notional; action run(actor: Text) { ${body} } }`;
@@ -109,7 +116,7 @@ test('settlements, statuses and exact effect schemas reject malformed records',(
 test('every aggregate encoding and action shape limit is enforced jointly',()=>{
   const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
   for(const [group,key] of [['astEncoding','utf8Bytes'],['astEncoding','decodedNodes'],['typedProgramEncoding','utf8Bytes'],['programManifestEncoding','utf8Bytes'],['programManifestEncoding','decodedDepthRootZero'],['programShape','expressionNodesPerEntrypoint'],['programShape','instructionsPerEntrypoint']]) {
-    const reduced=JSON.parse(bounds);reduced[group][key]=1;assert.throws(()=>compile(loan,JSON.stringify(reduced)),undefined,`${group}.${key}`);
+    const reduced=JSON.parse(bounds);reduced[group][key]=1;assert.throws(()=>lowerNonAdmittedTestConfiguration(loan,JSON.stringify(reduced)),e=>{assert.equal(e.code,group==='astEncoding'?'AST_BOUNDS':group==='programManifestEncoding'?'PROGRAM_ENCODING':'PROGRAM_BOUNDS');return true;},`${group}.${key}`);
   }
   assert.throws(()=>compile(minimal('let huge = uint(340282366920938463463374607431768211456);'),bounds));
   assert.throws(()=>parseSource(minimal(`guard true, "${'é'.repeat(129)}";`)));
@@ -176,8 +183,7 @@ test('semantic depth boundary16 accepts and17 rejects with PROGRAM_BOUNDS',async
   const tooDeep=check(minimal(`let x = ${chain(17)};`),bounds);
   assert.equal(tooDeep.code,'PROGRAM_BOUNDS');assert.equal(tooDeep.stage,'7');
   const reduced=JSON.parse(bounds);reduced.typedProgramEncoding.utf8Bytes=1;
-  const both=check(minimal(`let x = ${chain(17)};`),JSON.stringify(reduced));
-  assert.deepEqual(both.primarySpan,{startByte:'0',endByte:'0'});
+  assert.throws(()=>lowerNonAdmittedTestConfiguration(minimal(`let x = ${chain(17)};`),JSON.stringify(reduced)),e=>{assert.equal(e.code,'PROGRAM_BOUNDS');assert.deepEqual(e.primarySpan,{startByte:'0',endByte:'0'});return true;});
 });
 
 test('both example hashes and canonical full records retain audited materialization bytes',()=>{
@@ -189,10 +195,12 @@ test('both example hashes and canonical full records retain audited materializat
   }
 });
 
-test('check returns TypedProgram before manifest bounds, elaborate checks manifest bounds',async()=>{
+test('internal nonadmitted configuration isolates typed versus manifest bounds; public APIs reject overrides',async()=>{
   const {check,elaborate}=await import('../src/frontend.ts');
   const reduced=JSON.parse(bounds);reduced.programManifestEncoding.utf8Bytes=1;
-  assert.equal(check(minimal(''),JSON.stringify(reduced)).schemaVersion,'moriarty-typed-program/1');
+  assert.equal(lowerNonAdmittedTestConfiguration(minimal(''),JSON.stringify(reduced),false).typed.schemaVersion,'moriarty-typed-program/1');
+  assert.throws(()=>lowerNonAdmittedTestConfiguration(minimal(''),JSON.stringify(reduced)),e=>e.code==='PROGRAM_ENCODING');
+  assert.equal(check(minimal(''),JSON.stringify(reduced)).code,'PROGRAM_ENCODING');
   assert.equal(elaborate(minimal(''),JSON.stringify(reduced)).code,'PROGRAM_ENCODING');
 });
 

@@ -28,6 +28,27 @@ The source-driven APIs in `src/frontend.ts` accept original UTF-8 source bytes
 The public boundaries construct closed records from original source. They do not
 accept caller-provided AST, annotations, Core, or manifests as trusted inputs.
 
+All public bounds-taking APIs admit only the registered 8,861-byte document whose
+`MORIARTY-BOUNDS-bounded-atomic/1` digest is
+`ad0e1d45c9cfb5b1843d73f4d497d7d07f0450caddfcd49f3ef81f07f63d567c`.
+A matching registry name or schema version is insufficient. Unknown fields,
+changed domains or limits, JSON reformatting, missing fields, malformed JSON, and
+invalid byte containers reject with the closed `PROGRAM_ENCODING` stage-8
+Diagnostic. Oversized strings are rejected before UTF-8 encoding; byte views are
+size-checked before copying or hashing. The pinned local registry is verified
+before use and returned only as independent copies.
+
+Source validation uses the admitted registry, so earlier source errors retain
+numeric stage priority. `parse` reaches source stage 4, while `check` and
+`elaborate` reach the applicable stages through 7 before bounds admission at 8.
+Tests with deliberately reduced limits call explicitly nonadmitted internal
+validation/lowering helpers; there is no public bounds-override option.
+
+`derive` recompiles against the registered bounds and uses those registered limits
+for execution. The backend entry point checks the source/program/registry binding
+before authentication or commit callbacks. A forged Core/manifest produced using
+an altered internal test configuration cannot pass this admission boundary.
+
 `canonicalEncode` and `canonicalDecode` are generic canonical JSON value tools,
 not profile record acceptance validators. They reject unsupported scalar values,
 noncanonical bytes, duplicate keys, and sparse/decorated/accessor containers.
@@ -62,9 +83,9 @@ orders, multibyte text before the offending token, declaration errors mixed with
 later syntax errors, and Const/State/Episode/Guard/BareAmount distinctions.
 
 These tests establish the named rejection predicates. They do not prove exhaustive
-parser/checker/lowering correspondence or complete diagnostic coverage. The bounds
-argument is expected to be the trusted exact registry; arbitrary bounds documents
-still do not have a complete closed-schema acceptance validator.
+parser/checker/lowering correspondence or complete diagnostic coverage. Exact
+registered-bounds admission is enforced; arbitrary alternate registry documents
+are rejected rather than treated as configurable profile inputs.
 
 The source specification and original profile-04 materializations remain unchanged.
 Tests compare the complete canonical AST, TypedProgram, and BoundProgram bytes of

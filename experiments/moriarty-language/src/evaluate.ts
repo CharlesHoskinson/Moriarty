@@ -1,4 +1,5 @@
 import {compile} from './frontend.ts';
+import {registeredBounds} from './registered-bounds.ts';
 import {canonicalEncode, canonicalDecode, checkEncoding, measureEncoding, hashDomain, FrontendError, scalarText} from './codec.ts';
 import type {BoundProgram, CoreExpression, EncodingLimits, LocalValue, NamedStoredValue, NamedType, SemanticManifest, Span, StoredValue} from './types.ts';
 import type * as R from './runtime-types.ts';
@@ -194,14 +195,16 @@ function execute(bound:BoundProgram,i:R.EvaluationInput,limits:any,skipExact:boo
 export function derive(bound:BoundProgram,input:R.EvaluationInput,binding:R.SourceBinding,options:{unsignedExactPlan?:boolean}={}):R.Simulation|R.Rejected {
  let verifiedHash=ZERO;
  try {
+  need(binding&&(typeof binding.source==='string'||binding.source instanceof Uint8Array),'PROGRAM_ENCODING',8);
   const compiled=compile(binding.source,binding.bounds).bound;need(same(compiled,bound),'PROGRAM_ENCODING',8);verifiedHash=compiled.programHash;
-  const limits=JSON.parse(typeof binding.bounds==='string'?binding.bounds:new TextDecoder().decode(binding.bounds));
+  const limits=registeredBounds().bounds;
   return execute(compiled,clone(input),limits,options.unsignedExactPlan===true);
  }catch(e){return rejected(e,verifiedHash);}
 }
 export function createSimulator(source:string|Uint8Array,bounds:string|Uint8Array){
+ const admitted=compile(source,bounds).bound;
  const binding={source:typeof source==='string'?source:new Uint8Array(source),bounds:typeof bounds==='string'?bounds:new Uint8Array(bounds)};
- const bound=compile(binding.source,binding.bounds).bound,program=programRef(bound),m=bound.manifest;
+ const bound=admitted,program=programRef(bound),m=bound.manifest;
  return {bound:clone(bound),program:clone(program),
   makeGenesis(options:{domain:R.ExecutionDomain;instanceId:string;principalBindings:R.PrincipalBinding[];observationBindings:R.ObservationBinding[]}):R.Genesis{
    const body:R.GenesisBody={bounds:clone(m.bounds),domain:clone(options.domain),horizon:m.horizon,initialState:clone(m.initialState),instanceId:options.instanceId,lifetime:m.lifetime,observationBindings:clone(options.observationBindings),principalBindings:clone(options.principalBindings),profile:PROFILE,program:clone(program),requiredClaimRoot:hash('CLAIMS',m.requiredClaims),schemaVersion:'moriarty-genesis-body/1'};
@@ -215,7 +218,12 @@ export function createSimulator(source:string|Uint8Array,bounds:string|Uint8Arra
  * discarded and reconstructed for the exact tuple. No such backend is shipped.
  * This function therefore fails closed in this repository's actual deployment. */
 export async function evaluate(bound:BoundProgram,input:R.EvaluationInput,backend?:R.TrustedAcceptanceBackend):Promise<R.Rejected|R.Complete>{
- if(!backend||typeof backend.authenticate!=='function'||typeof backend.verifyAndCommit!=='function'||!backend.source||!backend.bounds)return rejected(new RuntimeError('PROOF_INVALID',13));
+ if(!backend||typeof backend.authenticate!=='function'||typeof backend.verifyAndCommit!=='function')return rejected(new RuntimeError('PROOF_INVALID',13));
+ try {
+  need(backend.source&&(typeof backend.source==='string'||backend.source instanceof Uint8Array),'PROGRAM_ENCODING',8);
+  const admitted=compile(backend.source,backend.bounds).bound;
+  need(same(admitted,bound),'PROGRAM_ENCODING',8);
+ }catch(e){if(e instanceof FrontendError||e instanceof RuntimeError)return rejected(e);throw e;}
  try {
   const copied=clone(input);const {checks:ignored,...tuple}=copied;
   copied.checks=await backend.authenticate(clone(bound),clone(tuple));
