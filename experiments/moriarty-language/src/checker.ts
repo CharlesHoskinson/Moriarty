@@ -1,6 +1,7 @@
 import type { ActionDecl, BoundProgram, Bounds, CoreAction, CoreExpression, CoreInstruction, EffectKind, EffectType, FieldPolicy, FieldPolicyDecl, LocalType, LocalValue, NamedStoredValue, NamedType, Resolution, SemanticManifest, SourceAST, SourceExpression, SourceLiteral, SourceRef, SourceType, Span, StoredType, StoredValue, TypedAnnotation, TypedProgram, UnitVector } from './types.ts';
-import { canonicalEncode, checkEncoding, fail, hashDomain, hashRawDomain, sourceText, utf8 } from './codec.ts';
+import { canonicalEncode, checkEncoding, measureEncoding, fail, hashDomain, hashRawDomain, sourceText, utf8 } from './codec.ts';
 import { PROFILE, checkUInt } from './parser.ts';
+import { diagnostic, firstDiagnostic, throwDiagnostic, type Diagnostic } from './diagnostics.ts';
 const numeric=(t:LocalType)=>t.tag==='UInt128'||t.tag==='Amount'||t.tag==='Quantity';
 const vector=(t:LocalType):UnitVector=>t.tag==='Amount'?[{exponent:'1',unit:t.unit}]:t.tag==='Quantity'?t.unitVector:[];
 const same=(a:LocalType,b:LocalType):boolean=>canonicalEncode(a)===canonicalEncode(b);
@@ -11,10 +12,12 @@ function resolve<T>(map:Map<string,T>,key:string,span:Span):T{const value=map.ge
 function stored(value:LocalValue,where:Span):StoredValue {if(value.tag==='Bool'||value.tag==='Quantity')fail('NON_STORED_VALUE',value.tag,where);return value;}
 type Target={action:string;statementIndex:number;expression:CoreExpression;span:Span;attach:(policy:string)=>void};
 type LocalEntry={type:LocalType;expression:CoreExpression;statementIndex:number};
-export function checkAndLower(source:SourceAST,boundsBytes:Uint8Array):{typed:TypedProgram;bound:BoundProgram;metrics:Record<string,ReturnType<typeof checkEncoding>>} {
+export function checkAndLower(source:SourceAST,boundsBytes:Uint8Array,validateManifest=true):{typed:TypedProgram;bound:BoundProgram;metrics:Record<string,ReturnType<typeof checkEncoding>>} {
   let bounds:Bounds;try{bounds=JSON.parse(sourceText(boundsBytes)) as Bounds;}catch{fail('INVALID_BOUNDS','bounds JSON cannot be decoded');}
   if(bounds.schemaVersion!=='moriarty-bounds/1'||bounds.semanticProfile!==PROFILE)fail('INVALID_BOUNDS','wrong bounds registry/profile');
   const shape=bounds.programShape;
+  const shapeErrors:Diagnostic[]=[];
+  const limit=(count:number,max:number,label:string,span?:Span):void=>{if(!Number.isSafeInteger(max)||max<0)fail('INVALID_BOUNDS',label);if(count>max)shapeErrors.push(diagnostic('PROGRAM_BOUNDS',span));};
   limit(Number(source.sourceUtf8Bytes),bounds.sourceEncoding.sourceUtf8Bytes,'sourceUtf8Bytes',source.span);
   if(checkUInt(source.lifetime.token,source.lifetime.span)==='0')fail('LIFETIME_ZERO','lifetime must be positive',source.lifetime.span);
   checkUInt(source.horizon.token,source.horizon.span);
@@ -156,6 +159,9 @@ export function checkAndLower(source:SourceAST,boundsBytes:Uint8Array):{typed:Ty
   const manifest:SemanticManifest={bounds:{boundsHash:hashRawDomain('MORIARTY-BOUNDS-bounded-atomic/1',boundsBytes),registryId:'moriarty-bounds/1'},constants:constantValues,core:{actions:[...actions.values()],coreVersion:'moriarty-core/1',schemaVersion:'moriarty-core-program/1'},effectSchemas:[...effectSchemas].map(([kind,fields])=>({fields,kind})),horizon:source.horizon.token,initialState,lifetime:source.lifetime.token,name:source.name,observationSchema:namedTypes(observations),policies:manifestPolicies,profile:PROFILE,schemaVersion:'moriarty-semantic-manifest/1',settlementBindings:bindings,sourceHash:source.sourceHash,stateSchema:namedTypes(states),statusRules:{agreement,episode},requiredClaims,units:[...units.keys()],reserveRules:reserves.map(r=>({action:r.action,closure:r.closure}))};
   const typed:TypedProgram={annotations,profile:PROFILE,schemaVersion:'moriarty-typed-program/1',source};
   const bound:BoundProgram={manifest,programHash:hashDomain('MORIARTY-PROGRAM-bounded-atomic/1',manifest),schemaVersion:'moriarty-program/1'};
-  const metrics={sourceAST:astMetrics,typedProgram:checkEncoding(typed,bounds.typedProgramEncoding,'TypedProgram'),boundProgram:checkEncoding(bound,bounds.programManifestEncoding,'BoundProgram')};
+  let typedMetrics:ReturnType<typeof checkEncoding>|undefined;
+  try{typedMetrics=checkEncoding(typed,bounds.typedProgramEncoding,'TypedProgram');}catch{shapeErrors.push(diagnostic('PROGRAM_BOUNDS'));}
+  const shapeError=firstDiagnostic(shapeErrors);if(shapeError)throwDiagnostic(shapeError);
+  const metrics={sourceAST:astMetrics,typedProgram:typedMetrics!,boundProgram:validateManifest?checkEncoding(bound,bounds.programManifestEncoding,'BoundProgram'):measureEncoding(bound)};
   return {typed,bound,metrics};
 }

@@ -69,3 +69,11 @@ export function measureEncoding(value:unknown):EncodingMetrics {
 export function checkEncoding(value:unknown,limits:EncodingLimits,label:string):EncodingMetrics {
   const metrics=measureEncoding(value); for(const key of Object.keys(metrics) as (keyof EncodingMetrics)[]) { if(!Number.isSafeInteger(limits[key])||limits[key]<1&&key!=='decodedDepthRootZero')fail('INVALID_BOUNDS',`${label}.${key}`); if(metrics[key]>limits[key])fail('ENCODING_BOUND',`${label}.${key}: ${metrics[key]} > ${limits[key]}`); } return metrics;
 }
+
+/** Generic canonical JSON decoding alone is not a profile/schema acceptance check.
+ * This entry point requires an explicit closed-schema validator, including bounds.
+ */
+export function decodeCanonicalRecord<T>(bytes:string|Uint8Array,validate:(value:unknown)=>asserts value is T):T {
+  if(typeof validate!=='function')fail('NON_CANONICAL_VALUE','a closed-schema validator is required');
+  const value=canonicalDecode(bytes);validate(value);return value;
+}

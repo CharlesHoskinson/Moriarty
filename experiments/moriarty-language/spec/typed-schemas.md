@@ -91,6 +91,13 @@ set results, effect operands, obligations, or public result state.
 
 ## Source AST: `moriarty-ast/1`
 
+SourceIntegerToken is canonical unsigned decimal text `0|[1-9][0-9]*`, without
+an integer-range restriction at parse time. Source/AST byte and text bounds
+still apply. Stage 6 checks every such token against UInt128 and reports
+UINT_RANGE; values that already exceed source or AST encoding bounds reject
+at the earlier applicable stage. SourceIntegerToken is not an evaluated value.
+
+
 The root is:
 
 ```text
@@ -99,7 +106,7 @@ SourceAST = {declarations:[SourceDeclaration], horizon:SpannedUIntToken,
              profile:"moriarty-bounded-atomic/1",
              schemaVersion:"moriarty-ast/1", sourceHash:Digest,
              sourceUtf8Bytes:UInt128Text, span:Span}
-SpannedUIntToken = {span:Span, token:UInt128Text}
+SpannedUIntToken = {span:Span, token:SourceIntegerToken}
 ```
 
 Source type syntax is represented by `SourceType = {tag:"UInt128",span:Span} |
@@ -108,9 +115,9 @@ Source type syntax is represented by `SourceType = {tag:"UInt128",span:Span} |
 field. Source literals are exactly:
 
 ```text
-UIntLiteral   = {span:Span, tag:"UIntLiteral", token:UInt128Text}
+UIntLiteral   = {span:Span, tag:"UIntLiteral", token:SourceIntegerToken}
 TextLiteral   = {decoded:TextValue, span:Span, tag:"TextLiteral", token:string}
-AmountLiteral = {span:Span, tag:"AmountLiteral", token:UInt128Text,
+AmountLiteral = {span:Span, tag:"AmountLiteral", token:SourceIntegerToken,
                  unit:Identifier}
 BoolLiteral   = {span:Span, tag:"BoolLiteral", value:boolean}
 ```
@@ -138,7 +145,7 @@ StateDecl       = {name:Identifier, span:Span, tag:"StateDecl", type:SourceType,
 ObservationDecl = {name:Identifier, span:Span, tag:"ObservationDecl", type:SourceType}
 SettlementDecl  = {asset:TextLiteral, name:Identifier, quantum:AmountLiteral, span:Span, tag:"SettlementDecl"}
 PolicyWriteTarget  = {action:Identifier, field:Identifier, span:Span, tag:"Write"}
-PolicyEffectTarget = {action:Identifier, field:FieldLabel, ordinal:UInt128Text, span:Span, tag:"Effect"}
+PolicyEffectTarget = {action:Identifier, field:FieldLabel, ordinal:SourceIntegerToken, span:Span, tag:"Effect"}
 PolicyRoundingNone  = {span:Span, tag:"None"}
 PolicyRoundingFloor = {action:Identifier, local:Identifier, span:Span, tag:"Floor"}
 FieldPolicyDecl = {comparison:TextLiteral, derivation:TextLiteral, name:Identifier,
@@ -610,6 +617,21 @@ reject a transition even if its individual count limits fit.
 
 ## Binding and acyclic proof acceptance
 
+Evaluation has a mandatory local ProgramBinding supplied by the deployment, not
+by an untrusted EvaluationInput. This implementation-context value carries the
+original bounded source bytes and the exact registered bounds bytes, in local fields
+`source` and `bounds` respectively. Both fields are UTF-8 byte sequences; source
+obeys sourceEncoding and bounds must be the exact registered byte sequence. It is not
+a public wire record and is never embedded in signed envelopes. Derivation
+re-parses, checks and lowers those bytes, recomputes sourceHash and boundsHash,
+and compares the complete supplied BoundProgram to that deterministic result
+before stage 9. Missing binding bytes or a mismatch rejects PROGRAM_ENCODING
+at stage 8 (a source-map mismatch uses SOURCE_MAP). Implementations may provide
+this binding through a constructor-bound context or an explicit extra parameter;
+`derive(boundProgram,input,programBinding)` names the explicit form. The
+acceptance backend supplies the same local binding before execution. Merely
+checking a supplied programHash without source correspondence is insufficient.
+
 The stage-9 binding equalities in semantics.md are mandatory before execution.
 This single-input atomic profile requires predecessors exactly `[beforeStateHash]`,
 including the checked genesis state at revision zero. Both signed requiredClaims
@@ -676,7 +698,7 @@ The numbered protocol is normative:
 2. Sign the statement bytes using its registered domain, obtaining Authority.
    The wrapper authenticates that Authority and the exact input tuple and builds
    EvaluationInput containing only the prechecks above.
-3. `derive(boundProgram:BoundProgram, input:EvaluationInput)` validates stages
+3. `derive(boundProgram:BoundProgram, input:EvaluationInput, programBinding:ProgramBinding)` validates stages
    9–12 and computes the provisional CompleteBody, stateHash, actionHash,
    traceHash and ProofContext at stage 13. It returns Rejected or an internal
    pair `(candidate:Complete, context:ProofContext)`. This pair is not an accepted
@@ -713,9 +735,19 @@ counts as one node; object key strings do not add nodes. Depth increases by one
 for each contained value. UTF-8 bytes include all canonical punctuation and keys.
 The actual complete wrapper is independently checked against resultEncoding;
 CountBody counts never waive that bound. This avoids self-referential byte counts.
-Other counts record actually evaluated expression nodes, instructions and effects;
-maximumExpressionDepth uses root one; unitComponents is the largest evaluated
-unit vector. Static ActionResourceCounts include all syntax, even short-circuited
+Other counts record actually evaluated expression nodes, instructions and effects.
+maximumExpressionDepth uses root one for a nonempty set of evaluated expression
+roots and is "0" when no expression is evaluated. unitComponents is the maximum
+cardinality (number of nonzero UnitComponent records) of an evaluated unit vector;
+it is "0" when that set is empty, and also for an action evaluating only
+Bool/Text/UInt128 vectors. Static ActionResourceCounts.expressionDepth is likewise
+"0" for no expression nodes, otherwise the maximum root-one expression depth.
+An empty action has exact static counts
+`{effects:"0",expressionDepth:"0",expressionNodes:"0",instructions:"0",locals:"0"}`.
+Its dynamic executedInstructions, expressionNodes, effects,
+maximumExpressionDepth and unitComponents are all "0". Its canonical byte/node/
+depth counts still measure the actual nonempty CountBody, not zero.
+ Static ActionResourceCounts include all syntax, even short-circuited
 branches. A TypedProgram uses typedProgramEncoding jointly with its embedded AST
 bounds. SourceAST.declarations has an effective maximum of 128 total entries,
 even when all per-category maxima fit. TypedProgram.annotations contains exactly
@@ -723,7 +755,14 @@ one annotation per source expression.
 
 Named values, arguments, writes and emitted fields follow their declaration or
 statement order as applicable. Obligations retain creation order including settled
-tombstones. ObligationDelta.created and .settled follow emit order. Principal
+tombstones. ObligationDelta contains immutable event-time snapshots, each in
+its respective emit order: created appends the inserted Outstanding record when
+DueCreated succeeds; settled appends the post-update Settled record when
+DueSettled succeeds. A later effect must not mutate an earlier delta entry.
+If the same action creates and settles one due, both arrays retain that due:
+created has status Outstanding, settled has status Settled, and after.obligations
+has the Settled record. All other fields in these three records are identical.
+Principal
 bindings sort by principal UTF-8 bytes, observation bindings/values follow the
 manifest observation order, and allowedActions follow manifest action order.
 Recipient lists sort by UTF-8 bytes. Duplicate members reject. The signed interval

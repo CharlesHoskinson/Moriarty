@@ -1,0 +1,11 @@
+# MC01 implementation candidate
+
+The source-driven frontend, evaluator and initial restricted Compact mapper implement the approved bounded-atomic first profile. Run the developer example with `npm --prefix experiments/moriarty-language run demo`. It shows exact-plan loan accrual/settlement and outcome-intent swap/closure, complete candidate traces, adverse inputs and rejection when the proof backend is absent.
+
+`commands.json` retains current host commands: strict TypeScript build, 49 combined tests, developer JSON example, source checks and independent canonical/materialization checks. The first EBNF invocation omitted required arguments and failed; the corrected invocation and prior failure are retained. `developer-mock-commands.json` retains the independent historical mock build and 67 regression tests. `verification.json` binds current package files, superseding older evaluator/front-end receipt hashes only for current verification.
+
+The source approval is in ../source-approval-05/. Original source05 normative bytes remain unchanged. Low diagnostic ambiguities are resolved in the implementation and regression cases: genuine lexical faults have stage2 priority, keyword grammar misuse is stage3, AST literal-kind errors are stage4, semantic declaration/type errors follow at stage6. Guard failures use statement spans, arithmetic failures expression spans, and writes retain execution order.
+
+The evaluator returns an explicitly unaccepted Simulation. Acceptance requires a deployment-owned backend for authentication, every mandatory proof claim, and atomic durable state/nonce consumption; no such backend is shipped. Initial Compact kernels compare every numeric state and effect operand for the four sample transitions; settlement conversion, obligation ledger, asset custody, authentication and PCD remain outside those kernels. The initial mapper rejects unsupported Text and short-circuit forms explicitly.
+
+This candidate requests MC01 implementation review only. No native proof, public financial settlement, compiler-to-ledger proof, full ACTUS/DeFi conformance, private handoff, split/join or full completion is claimed. Mandatory extensions and downstream packages remain open.

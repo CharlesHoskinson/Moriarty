@@ -123,3 +123,139 @@ test('canonical codec rejects sparse, decorated and accessor containers',()=>{
   const record={};Object.defineProperty(record,'x',{get(){throw new Error('getter must not execute');},enumerable:true});
   for(const value of [sparse,symbol,hidden,getter,record])assert.throws(()=>canonicalEncode(value),e=>e.code==='NON_CANONICAL_VALUE');
 });
+
+test('profile-valid redundant parentheses exceed128 without consuming semantic depth',()=>{
+  const source=minimal(`let x = ${'('.repeat(12000)}uint(1)${')'.repeat(12000)};`);
+  const output=compile(source,bounds);
+  assert.equal(output.bound.manifest.core.actions[0].resourceCounts.expressionDepth,'1');
+  const expr=output.source.declarations.at(-1).statements[0].expression;
+  assert.equal(Number(expr.span.endByte)-Number(expr.span.startByte),24007);
+  assert.equal(Number(expr.literal.span.endByte)-Number(expr.literal.span.startByte),7);
+  assert.throws(()=>compile(minimal(`let x = ${'floor_div(uint(1),'.repeat(1500)}uint(1)${')'.repeat(1500)};`),bounds),e=>e.name==='FrontendError'&&e.code==='AST_BOUNDS');
+});
+
+test('public frontend returns one closed diagnostic at earliest stage with exact fields',async()=>{
+  const api=await import('../src/frontend.ts');
+  assert.equal(typeof api.parse,'function');assert.equal(typeof api.check,'function');assert.equal(typeof api.elaborate,'function');
+  const lexical=api.parse(minimal('let x = uint(01);'),bounds);
+  assert.deepEqual(Object.keys(lexical).sort(),['code','message','primarySpan','relatedSpans','stage']);
+  assert.equal(lexical.code,'LEXICAL_TOKEN');assert.equal(lexical.stage,'2');assert.equal(lexical.message,lexical.code);assert.deepEqual(lexical.relatedSpans,[]);
+  const duplicate=api.check(minimal('guard uint(1), "bad type"; set closed = uint(0); set closed = uint(1);'),bounds);
+  assert.equal(duplicate.code,'DUPLICATE_NAME');assert.equal(duplicate.stage,'4');
+  const premature=api.check(minimal('guard uint(1), "bad type"; let x = missing;'),bounds);
+  assert.equal(premature.code,'NAME_RESOLUTION');assert.equal(premature.stage,'5');
+  const range=api.check(minimal('let x = uint(340282366920938463463374607431768211456);'),bounds);
+  assert.equal(range.code,'UINT_RANGE');assert.equal(range.stage,'6');
+  const lexicalBeforeRange=api.parse(minimal('let x = uint(340282366920938463463374607431768211456); /'),bounds);
+  assert.equal(lexicalBeforeRange.code,'LEXICAL_TOKEN');
+  const good=api.elaborate(minimal(''),bounds);assert.equal(good.schemaVersion,'moriarty-program/1');
+});
+
+test('independent stage6 errors select smallest source span, including earlier policies',async()=>{
+  const {check}=await import('../src/frontend.ts');
+  assert.equal(typeof check,'function');
+  const loan=readFileSync(new URL('../spec/examples/loan.moriarty',import.meta.url),'utf8');
+  const bad=loan.replace('effect(accrue, 1, amount)','effect(accrue, 99, amount)').replace('action settle(actor: Text,','action settle(actor: UInt128,');
+  const result=check(bad,bounds);assert.equal(result.code,'POLICY_TARGET');
+  const missingStatus=minimal('guard uint(1), "x";').replace('status agreement no_remaining_notional;','');
+  assert.equal(check(missingStatus,bounds).code,'STATUS_RULE');
+});
+
+test('validated canonical record decoding requires a schema validator',async()=>{
+  const {decodeCanonicalRecord}=await import('../src/frontend.ts');
+  assert.throws(()=>decodeCanonicalRecord('{"extra":true}'));
+  const validate=value=>{if(typeof value!=='object'||value===null||Object.keys(value).join(',')!=='accepted'||typeof value.accepted!=='boolean')throw new Error('closed schema');};
+  assert.throws(()=>decodeCanonicalRecord('{"accepted":true,"extra":true}',validate));
+  assert.deepEqual(decodeCanonicalRecord('{"accepted":true}',validate),{accepted:true});
+});
+
+test('semantic depth boundary16 accepts and17 rejects with PROGRAM_BOUNDS',async()=>{
+  const {check}=await import('../src/frontend.ts');
+  const chain=n=>Array.from({length:n},()=> 'uint(1)').join(' + ');
+  assert.equal(compile(minimal(`let x = ${chain(16)};`),bounds).bound.manifest.core.actions[0].resourceCounts.expressionDepth,'16');
+  const tooDeep=check(minimal(`let x = ${chain(17)};`),bounds);
+  assert.equal(tooDeep.code,'PROGRAM_BOUNDS');assert.equal(tooDeep.stage,'7');
+  const reduced=JSON.parse(bounds);reduced.typedProgramEncoding.utf8Bytes=1;
+  const both=check(minimal(`let x = ${chain(17)};`),JSON.stringify(reduced));
+  assert.deepEqual(both.primarySpan,{startByte:'0',endByte:'0'});
+});
+
+test('both example hashes and canonical full records retain audited materialization bytes',()=>{
+  for(const name of ['loan','swap']){
+    const source=readFileSync(new URL(`../spec/examples/${name}.moriarty`,import.meta.url));
+    const result=compile(source,bounds);
+    const root=new URL(`../../../evidence/moriarty-completion-program-2026-09-07/MC01/profile-04/materialized/${name}/`,import.meta.url);
+    for(const [file,value] of [['source-ast',result.source],['typed-program',result.typed],['bound-program',result.bound]])assert.equal(canonicalEncode(value),readFileSync(new URL(`${file}.json`,root),'utf8'));
+  }
+});
+
+test('check returns TypedProgram before manifest bounds, elaborate checks manifest bounds',async()=>{
+  const {check,elaborate}=await import('../src/frontend.ts');
+  const reduced=JSON.parse(bounds);reduced.programManifestEncoding.utf8Bytes=1;
+  assert.equal(check(minimal(''),JSON.stringify(reduced)).schemaVersion,'moriarty-typed-program/1');
+  assert.equal(elaborate(minimal(''),JSON.stringify(reduced)).code,'PROGRAM_ENCODING');
+});
+
+test('malformed settlement literal kinds are stage4 declaration errors after complete syntax',async()=>{
+  const {parse,check,elaborate}=await import('../src/frontend.ts');
+  const source=minimal('').replace('state closed','settlement malformed asset uint(1) quantum text("bad"); state closed');
+  for(const api of [parse,check,elaborate]){
+    const result=api(source,bounds);
+    assert.equal(result.code,'DECLARATION_SCHEMA');assert.equal(result.stage,'4');
+    assert.equal(Buffer.from(source).subarray(Number(result.primarySpan.startByte),Number(result.primarySpan.endByte)).toString(),'settlement malformed asset uint(1) quantum text("bad");');
+    assert.deepEqual(Object.keys(result).sort(),['code','message','primarySpan','relatedSpans','stage']);
+  }
+  assert.throws(()=>parseSource(source),e=>e.code==='DECLARATION_SCHEMA');
+  const trailingSyntax=check(source+' agreement',bounds);
+  assert.equal(trailingSyntax.code,'PARSE_ERROR');assert.equal(trailingSyntax.stage,'3');
+  const earlierDuplicate=source.replace('settlement malformed','unit Duplicate; unit Duplicate; settlement malformed');
+  assert.equal(check(earlierDuplicate,bounds).code,'DUPLICATE_NAME');
+  const laterDuplicate=source.replace(' state closed',' unit Duplicate; unit Duplicate; state closed');
+  assert.equal(check(laterDuplicate,bounds).code,'DECLARATION_SCHEMA');
+});
+
+test('settlement wrong shape wins before semantic errors while valid shapes reach stage6',async()=>{
+  const {check}=await import('../src/frontend.ts');
+  const insert=declaration=>minimal('guard uint(1), "wrong guard type";').replace('state closed',`${declaration} state closed`);
+  for(const declaration of ['settlement malformed asset false quantum amount(0, Missing);','settlement malformed asset text("") quantum uint(0);']){
+    const d=check(insert(declaration),bounds);assert.equal(d.code,'DECLARATION_SCHEMA');assert.equal(d.stage,'4');
+  }
+  const semantic=insert('unit U; settlement bad asset text("") quantum amount(0, U);');
+  const d=check(semantic,bounds);assert.equal(d.code,'SETTLEMENT_DECLARATION');assert.equal(d.stage,'6');
+});
+
+test('keyword misuse is syntax stage3, reserved tokens are lexical stage2, with numeric stage priority',async()=>{
+  const {parse}=await import('../src/frontend.ts');
+  for(const body of ['let state = uint(1);','let x = ;','let x = state.amount;','let x = uint(1); let action = uint(2);']){
+    const d=parse(minimal(body),bounds);assert.equal(d.code,'PARSE_ERROR',body);assert.equal(d.stage,'3',body);
+  }
+  const keywordAndSlash=minimal('let state = uint(1); /');
+  const lexical=parse(keywordAndSlash,bounds);assert.equal(lexical.code,'LEXICAL_TOKEN');assert.equal(lexical.stage,'2');
+  assert.equal(Number(lexical.primarySpan.startByte),Buffer.byteLength(keywordAndSlash.slice(0,keywordAndSlash.lastIndexOf('/'))));
+  const earlyReserved=minimal('guard text("é😀") == text("é😀"), "ok"; let constructor = uint(1); /');
+  const reserved=parse(earlyReserved,bounds);assert.equal(reserved.code,'LEXICAL_TOKEN');
+  assert.equal(Number(reserved.primarySpan.startByte),Buffer.byteLength(earlyReserved.slice(0,earlyReserved.indexOf('constructor'))));
+  const earlySlash=minimal('/ let constructor = uint(1);');
+  assert.equal(Number(parse(earlySlash,bounds).primarySpan.startByte),Buffer.byteLength(earlySlash.slice(0,earlySlash.lastIndexOf('/'))));
+  const twoKeywords=minimal('let state = uint(1); let action = uint(2);');
+  const first=parse(twoKeywords,bounds);assert.equal(first.code,'PARSE_ERROR');
+  assert.equal(Number(first.primarySpan.startByte),Buffer.byteLength(twoKeywords.slice(0,twoKeywords.indexOf('state ='))));
+});
+
+test('Const State Episode and guard literals preserve schema-versus-typing distinctions',async()=>{
+  const {parse,check}=await import('../src/frontend.ts');
+  for(const declaration of ['const wrong: UInt128 = true;','state wrong: UInt128 = text("1");']){
+    const source=minimal('').replace('state closed',`${declaration} state closed`);
+    assert.equal(parse(source,bounds).schemaVersion,'moriarty-ast/1');
+    assert.equal(check(source,bounds).code,'TYPE_MISMATCH');assert.equal(check(source,bounds).stage,'6');
+    assert.equal(check(source.replace('action run','unit Duplicate; unit Duplicate; action run'),bounds).code,'DUPLICATE_NAME');
+  }
+  const status=minimal('').replace('closed == uint(1)','closed == false');
+  assert.equal(parse(status,bounds).schemaVersion,'moriarty-ast/1');assert.equal(check(status,bounds).code,'STATUS_RULE');
+  assert.equal(check(minimal('guard uint(1), "wrong";'),bounds).code,'TYPE_MISMATCH');
+  assert.equal(check(minimal('guard true, "ok";'),bounds).schemaVersion,'moriarty-typed-program/1');
+  assert.equal(parse(minimal('').replace('state closed: UInt128','state closed: Amount'),bounds).code,'PARSE_ERROR');
+  assert.equal(parse(minimal('').replace('state closed: UInt128','state closed: Bool'),bounds).code,'PARSE_ERROR');
+  const wrongEffect=minimal('').replace('action run','unit U; effect Transfer { asset: Text; from: Text; to: Text; amount: Amount<U>; } action run');
+  assert.equal(check(wrongEffect,bounds).code,'DECLARATION_SCHEMA');
+});
