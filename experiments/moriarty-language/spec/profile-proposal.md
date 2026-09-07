@@ -52,10 +52,12 @@ Unsupported operations produce source-located diagnostics before elaboration.
 
 ## Types, units, and numeric behavior
 
-Separate `UInt128`, `Bool`, `Text`, and nominal `Amount<Unit>` in the typed authoring AST.
-The initial Core stores `UInt128` and `String`. Bool is limited to expressions and locals.
-Amounts lower to UInt128 only with a retained checked unit map bound into the semantic manifest.
-Reject Bool state fields until a reviewed Core extension supplies their representation.
+Separate `UInt128`, `Bool`, `Text`, nominal `Amount<Unit>`, and intermediate
+`Quantity<UnitVector>` in the typed authoring AST and Core. Bool and Quantity are
+limited to expressions and lets; neither is persistent state, an input, a set
+result, or an effect operand. Every wire Amount is the closed
+`{tag:"Amount",unit,value}` record. Core retains its checked unit vector and source
+reference; it does not erase Amount to an untyped integer.
 
 Use `uint(123)`, `text("123")`, and `amount(123, USD_micro)` as distinct literals.
 Numeric text never becomes an integer by inspecting its contents.
@@ -77,10 +79,18 @@ Nonnegative integer division rounds down at each explicit division node.
 Loan interest uses one final division after the checked products.
 Swap pricing uses one final division after the checked numerator and denominator calculations.
 There is no hidden floating-point conversion or global financial tolerance.
-Each financial field records unit, derivation, rounding point, remainder disposition, and comparison policy.
+Every Amount-valued set occurrence and Amount-valued effect-field occurrence has
+one explicit policy target. The policy records its unit and the exact action/local
+FloorDiv node or `none`. Same-action value provenance deterministically propagates
+that node through lets, writes, reads, and arithmetic. Documentary derivation,
+remainder, comparison, and proof strings are program-hash-bound but are not parsed
+as executable safety predicates.
 
 `USD_micro` means a millionth of the reference USD denomination.
-It does not identify a ledger token. Settlement requires a separately bound asset and conversion policy.
+It does not identify a ledger token. Settlement requires a unique one-to-one unit/
+asset binding. A positive quantum `q` means `q` nominal subunits per ledger base
+unit; nominal value `v` must divide exactly and produces ledger amount `v/q` with
+checked UInt128 arithmetic. A nonzero remainder rejects rather than rounds.
 Pool asset units remain distinct, even if both tokens use the same display symbol.
 Missing settlement mappings reject settlement construction. Local arithmetic can still display a due.
 
@@ -105,10 +115,12 @@ hold simultaneously:
 
 | Resource | Bound |
 |---|---:|
-| Source, AST, manifest, signing envelope, or result | 65,536 UTF-8 bytes each |
+| Source, signing envelope, evaluation, or result | 65,536 UTF-8 bytes each |
+| Source AST / full manifest / typed program | 262,144 / 524,288 / 1,048,576 UTF-8 bytes |
 | AST and full manifest decoded depth, root at zero | 40 |
 | Compact signing and result decoded depth, root at zero | 16 |
-| Nodes in each decoded object | 8,192 |
+| Public decoded object nodes | 8,192 |
+| AST and manifest / typed program nodes | 32,768 / 65,536 |
 | Keys per record | 64 |
 | Language Text | 256 UTF-8 bytes |
 | Canonical-object text | 4,096 UTF-8 bytes and 4,096 JavaScript code units |
@@ -142,14 +154,15 @@ parse(source) -> Result<AgreementAST, Diagnostic[]>
 check(ast, profile) -> Result<TypedAgreement, Diagnostic[]>
 elaborate(typed) -> CoreProgram
 evaluate(program, state, action, authority, observations)
-  -> Rejected | Complete | Pending
+  -> Rejected | Complete
 ```
 
 `Rejected` returns diagnostics and exposes no committed partial state or effects.
 `Complete` means the selected atomic plan completed under its declared outcome policy.
 It does not mean the entire agreement or all future financial obligations are discharged.
 The result must carry separate agreement status and all residual obligations.
-The first profile never produces `Pending`. Requests requiring Pending reject as unsupported.
+`Pending` is not a result variant in this profile. Requests requiring it reject
+with `UNSUPPORTED_PENDING`; a future version must define residual conservation.
 
 Guards and expressions read the current working state in statement order.
 Effects capture values at the emit position. Locals cannot reference future locals.
@@ -173,7 +186,7 @@ This proposal supplies no native proof, universal correctness theorem, or produc
 
 The loan example is the first LAM period, not a complete LAM contract.
 Initial notional is 5,000,000,000 micro-USD. Principal payment is 500,000,000.
-Interest is `floor(5,000,000,000 * 8 * 31 / (100 * 365)) = 33,972,602`.
+Interest is `floor_div(5,000,000,000 * 8 * 31, 100 * 365) = 33,972,602`.
 Settlement is 533,972,602. Remaining contractual notional is 4,500,000,000 after the sample closes.
 Expose that remainder explicitly. Never display the sample's `closed` flag as debt-free status.
 Retain both PR and IP obligation identities despite their combined sample transition.

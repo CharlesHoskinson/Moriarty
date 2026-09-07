@@ -1,22 +1,14 @@
-# Host recovery of interrupted MC01 correction
+# Host-verified MC01 source profile candidate
 
-Status: incomplete draft, not approved for profile freeze.
-This report is written by the host. Worker 05 timed out without a terminal report.
+The worker produced the source correction and reports, then timed out during final consistency review.
+The host preserved that output and corrected additional architecture issues before freezing this candidate.
+See evidence/moriarty-completion-program-2026-09-07/MC01/profile-03/host-architecture-corrections.md.
+The original worker report is retained in the same directory, with its original unverified readiness claim and old locators.
 
-The worker changed grammar, bounds, numeric rules, proposal prose, and both financial examples.
-It corrected the loan argument spelling and proposed explicit policy targets and status declarations.
-It did not finish the canonical schema or reconcile the semantic rules.
-The host preserved the exact interrupted diff, then restored the deleted schema from d5580f2.
-That restored schema remains the previously rejected version.
+Host checks pass for exact 32/72 source-row preservation, both sources against an independent EBNF recognizer,
+policy target coverage, the independent financial arithmetic, obligation/status trace model, quantum rejection,
+canonical vectors, JSON syntax and git diff whitespace.
+These are source-profile checks. Full frontend, typed example materialization, compiler mapping,
+actual mandatory proof verification and all downstream package predicates remain open.
 
-Host checks: nine artifacts present, three JSON documents parse, exact 32 ACTUS and 72 DeFi rows preserved.
-Independent rational arithmetic retains the original loan and swap values. Git diff whitespace check passed.
-The initial artifact check failed because the worker had deleted typed-schemas.md.
-A second host check failed because its source-family filter used DeFi instead of the actual DEFI tag.
-The host corrected that verification filter and reran the full structural check successfully.
-These checks do not establish grammar acceptance, canonical schemas, obligation/status semantics, conformance, implementation or proofs.
-
-No corrected finding-disposition report, canonical examples, obligation traces or non-unit quantum checks were produced.
-No new substantive Fable or GPT-6 review was launched on this known incomplete draft.
-All prior audit findings remain open pending correction and independent re-review.
-The approved replacement worker allowance is exhausted. No automatic successor is authorized.
+Status: exact candidate pending independent Fable and fresh GPT-6 review. No profile or MC01 completion claim.
