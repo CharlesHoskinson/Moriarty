@@ -5,6 +5,12 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
+**Latest execution plan:** [MC01–MC08 completion program](../openspec/MORIARTY-COMPLETION-PROGRAM.md)
+covers the seven requested language, financial, proof, acceptance, composition,
+conformance, and correspondence gaps. The plans are S2, specified-only.
+See [review and loop receipts](../evidence/moriarty-completion-program-2026-09-07/README.md)
+for actual audit and runtime status. Old A4/A5 work remains superseded.
+
 **Latest review:** [Midnight network choice and faucet diagnosis](../evidence/midnight-network-review-2026-09-07/README.md).
 Local Docker is the daily development default; Preview is preferred for early
 public integration and Preprod remains valid for final validation. Faucet URL

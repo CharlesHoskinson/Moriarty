@@ -922,3 +922,14 @@ DUST-only replay recovered the same wallet, and a fresh call settled with exact
 readback. Verified deployment and call against indexer SUCCESS and canonical
 node finality. Preserved failures, promoted the recovered private snapshot with
 backup, and checked normal-runtime restore. No general SDK fix or PCD is claimed.
+
+
+## 2026-09-07 — Specify complete target-first execution program
+
+Added SRC-0063–0065 and CLM-0206. Created eight linked OpenSpec packages for
+the seven requested gaps, with dependency order, explicit stop limits, and
+independent Fable/GPT-6 audit predicates. Preserved the failed heading-validation
+receipt and its corrected candidate. Fable readiness returned a credit limit;
+new goal creation was refused by the superseded unfinished A4/A5 runtime goal.
+The program evidence records actual review status. No loop or implementation
+completion is inferred from the plans.

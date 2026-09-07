@@ -3,8 +3,11 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T03:49:23.982391+00:00
+updated_at: 2026-09-07T04:14:56.275554+00:00
 sources:
+  - SRC-0063
+  - SRC-0064
+  - SRC-0065
   - SRC-0061
   - SRC-0062
   - SRC-0058
@@ -2902,3 +2905,24 @@ with the ledger source at a8ab82ba2124c36f92795c683e70bd888bc1d1fb. Observed
 for the stated recovery/settlement/readback predicates; high confidence for
 retained results, unknown for recurrence or the initial proof error's root cause.
 The native k17 stop, financial target coverage and mandatory PCD remain unchanged.
+
+
+## CLM-0206: Completion program specified; execution arming refused
+
+The [MC01–MC08 program](../openspec/MORIARTY-COMPLETION-PROGRAM.md) maps the
+seven requested gaps to authoring, financial integration, recursion, ledger
+correspondence, mandatory acceptance, composition, full conformance, and developer
+acceptance. These are S2 plans, not implemented capabilities. The user authorized
+execution with Fable and independent GPT-6 result audits.
+
+The [program evidence](../evidence/moriarty-completion-program-2026-09-07/README.md)
+separates local plan validation, independent plan review, and actual runtime status.
+One exact-route Fable canary returned a usage-credit limit with no verified model
+identity. The runtime refused a new goal because the thread retains an unfinished
+superseded A4/A5 goal. No new loop was armed, old goal falsely completed, native
+proof retried, or public transaction submitted during this planning task.
+
+Metadata: SRC-0063 normative user authority, S2, source fact; SRC-0064–0065 local
+tool observations, S3, experiment observations, reproduced for those attempts.
+Observed 2026-09-07 UTC; high confidence for retained outcomes. Availability can
+change and requires fresh checks. Plan and result audits have separate scopes.

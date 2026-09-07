@@ -5,6 +5,15 @@ before changing research artifacts.
 
 ## Current direction and mandatory footguns
 
+The latest [completion-loop assignment](raw/assignments/moriarty-completion-loop-2026-09-07.md)
+authorizes the [MC01–MC08 OpenSpec program](openspec/MORIARTY-COMPLETION-PROGRAM.md).
+Use its dependency, resource, acceptance, and independent Fable/GPT-6 audit gates.
+These plans extend the target-first design; they do not establish completed implementation.
+Check the [execution receipt](evidence/moriarty-completion-program-2026-09-07/README.md)
+and live runtime before claiming that a loop is armed.
+An unfinished superseded goal must not be falsely completed to create a new goal.
+An unavailable auditor cannot approve a package or trigger a silent model substitution.
+
 Read [docs/FOOTGUNS.md](docs/FOOTGUNS.md) before planning, implementation,
 verification or recovery. The controlling direction is the
 [2026-09-06 user reset](raw/assignments/moriarty-target-first-reset-2026-09-06.md):

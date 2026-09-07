@@ -1,5 +1,15 @@
 # Moriarty roadmap — target semantics and proof-carrying developer workflow
 
+**Current execution order, 2026-09-07:** use the
+[MC01–MC08 completion program](../openspec/MORIARTY-COMPLETION-PROGRAM.md),
+authorized by the latest user request for OpenSpec plans and an audited loop.
+It extends the target-first design with explicit dependencies and terminal limits.
+The [program receipts](../evidence/moriarty-completion-program-2026-09-07/README.md)
+separate plan validation, substantive audits, and actual runtime arming.
+Preview deployment and call are finalized; financial effects and Moriarty PCD remain open.
+R2b is locally implemented; native R3 ran and exhausted rows at k17 without a proof.
+The older roadmap paragraphs below retain their original historical scope.
+
 **Current direction, 2026-09-06:** the R2
 [executable workspace](../experiments/moriarty-developer-mock/README.md)
 adds bounded JSON loan/swap packages, one generic evaluator, independent effect

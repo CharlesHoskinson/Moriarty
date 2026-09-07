@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "program": "moriarty-target-first-completion-2026-09-07",
+  "status": "planned-not-armed",
+  "authority": "raw/assignments/moriarty-completion-loop-2026-09-07.md",
+  "charter": "openspec/MORIARTY-COMPLETION-PROGRAM.md",
+  "runtimeGoalId": null,
+  "auditModels": [
+    "claude-fable-5-1",
+    "gpt-6-astra"
+  ],
+  "packages": [
+    {
+      "id": "MC01",
+      "change": "mc01-bounded-language",
+      "dependencies": [],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc01-bounded-language/specs/mc01-bounded-language/spec.md",
+      "tasks": "openspec/changes/mc01-bounded-language/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC01",
+      "commands": [
+        "npm --prefix experiments/moriarty-language ci",
+        "npm --prefix experiments/moriarty-language run build",
+        "npm --prefix experiments/moriarty-language test",
+        "npm --prefix experiments/moriarty-developer-mock run build",
+        "npm --prefix experiments/moriarty-developer-mock test"
+      ]
+    },
+    {
+      "id": "MC02",
+      "change": "mc02-preview-financial-operation",
+      "dependencies": [
+        "MC01"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc02-preview-financial-operation/specs/mc02-preview-financial-operation/spec.md",
+      "tasks": "openspec/changes/mc02-preview-financial-operation/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC02",
+      "commands": [
+        "npm --prefix experiments/moriarty-midnight-financial ci",
+        "npm --prefix experiments/moriarty-midnight-financial run build",
+        "npm --prefix experiments/moriarty-midnight-financial test",
+        "npm --prefix experiments/moriarty-midnight-financial run preview -- --case loan --max-attempts 2",
+        "npm --prefix experiments/moriarty-midnight-financial run preview -- --case swap --max-attempts 2"
+      ]
+    },
+    {
+      "id": "MC03",
+      "change": "mc03-native-recursive-proof",
+      "dependencies": [
+        "MC01"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc03-native-recursive-proof/specs/mc03-native-recursive-proof/spec.md",
+      "tasks": "openspec/changes/mc03-native-recursive-proof/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC03",
+      "commands": [
+        "python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --preflight-only",
+        "python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --execute",
+        "python3 experiments/moriarty-native-ivc-r3/revision-01/run-reviewed.py --contract experiments/moriarty-native-ivc-r3/revision-01/resource-contract.json --verify-retained"
+      ]
+    },
+    {
+      "id": "MC04",
+      "change": "mc04-ledger-correspondence-and-consumption",
+      "dependencies": [
+        "MC01",
+        "MC02",
+        "MC03"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc04-ledger-correspondence-and-consumption/specs/mc04-ledger-correspondence-and-consumption/spec.md",
+      "tasks": "openspec/changes/mc04-ledger-correspondence-and-consumption/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC04",
+      "commands": [
+        "npm --prefix experiments/moriarty-ledger-adapter ci",
+        "npm --prefix experiments/moriarty-ledger-adapter run build",
+        "npm --prefix experiments/moriarty-ledger-adapter test",
+        "lake -d experiments/moriarty-ledger-adapter/formal build",
+        "npm --prefix experiments/moriarty-ledger-adapter run verify-preview",
+        "python3 experiments/moriarty-ledger-adapter/proof/run-reviewed.py --contract experiments/moriarty-ledger-adapter/proof/resource-contract.json --preflight-only",
+        "python3 experiments/moriarty-ledger-adapter/proof/run-reviewed.py --contract experiments/moriarty-ledger-adapter/proof/resource-contract.json --execute",
+        "python3 experiments/moriarty-ledger-adapter/proof/run-reviewed.py --contract experiments/moriarty-ledger-adapter/proof/resource-contract.json --verify-retained"
+      ]
+    },
+    {
+      "id": "MC05",
+      "change": "mc05-mandatory-claim-acceptance",
+      "dependencies": [
+        "MC03",
+        "MC04"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "tasks": "openspec/changes/mc05-mandatory-claim-acceptance/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC05",
+      "commands": [
+        "npm --prefix experiments/moriarty-acceptance ci",
+        "npm --prefix experiments/moriarty-acceptance run build",
+        "npm --prefix experiments/moriarty-acceptance test",
+        "lake -d experiments/moriarty-acceptance/formal build",
+        "npm --prefix experiments/moriarty-acceptance run verify-preview",
+        "python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --preflight-only",
+        "python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --execute",
+        "python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --verify-retained"
+      ]
+    },
+    {
+      "id": "MC06",
+      "change": "mc06-private-handoff-and-composition",
+      "dependencies": [
+        "MC05"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc06-private-handoff-and-composition/specs/mc06-private-handoff-and-composition/spec.md",
+      "tasks": "openspec/changes/mc06-private-handoff-and-composition/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC06",
+      "commands": [
+        "npm --prefix experiments/moriarty-composition ci",
+        "npm --prefix experiments/moriarty-composition run build",
+        "npm --prefix experiments/moriarty-composition test",
+        "lake -d experiments/moriarty-composition/formal build",
+        "npm --prefix experiments/moriarty-composition run verify-isolated",
+        "npm --prefix experiments/moriarty-composition run verify-preview",
+        "python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experiments/moriarty-composition/proof/resource-contract.json --preflight-only",
+        "python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experiments/moriarty-composition/proof/resource-contract.json --execute",
+        "python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experiments/moriarty-composition/proof/resource-contract.json --verify-retained"
+      ]
+    },
+    {
+      "id": "MC07",
+      "change": "mc07-complete-financial-conformance",
+      "dependencies": [
+        "MC01",
+        "MC04",
+        "MC05",
+        "MC06"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc07-complete-financial-conformance/specs/mc07-complete-financial-conformance/spec.md",
+      "tasks": "openspec/changes/mc07-complete-financial-conformance/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC07",
+      "commands": [
+        "npm --prefix experiments/moriarty-conformance ci",
+        "npm --prefix experiments/moriarty-conformance run build",
+        "npm --prefix experiments/moriarty-conformance test",
+        "npm --prefix experiments/moriarty-conformance run actus -- --all --all-fields",
+        "npm --prefix experiments/moriarty-conformance run defi -- --all-rows",
+        "npm --prefix experiments/moriarty-conformance run verify-coverage",
+        "python3 experiments/moriarty-conformance/proof/run-reviewed.py --contract experiments/moriarty-conformance/proof/resource-contract.json --preflight-only",
+        "python3 experiments/moriarty-conformance/proof/run-reviewed.py --contract experiments/moriarty-conformance/proof/resource-contract.json --execute",
+        "python3 experiments/moriarty-conformance/proof/run-reviewed.py --contract experiments/moriarty-conformance/proof/resource-contract.json --verify-retained"
+      ]
+    },
+    {
+      "id": "MC08",
+      "change": "mc08-release-evidence-and-developer-flow",
+      "dependencies": [
+        "MC01",
+        "MC02",
+        "MC03",
+        "MC04",
+        "MC05",
+        "MC06",
+        "MC07"
+      ],
+      "status": "specified-only",
+      "acceptance": "openspec/changes/mc08-release-evidence-and-developer-flow/specs/mc08-release-evidence-and-developer-flow/spec.md",
+      "tasks": "openspec/changes/mc08-release-evidence-and-developer-flow/tasks.md",
+      "evidenceRoot": "evidence/moriarty-completion-program-2026-09-07/MC08",
+      "commands": [
+        "npm --prefix experiments/moriarty-release-check ci",
+        "npm --prefix experiments/moriarty-release-check run build",
+        "npm --prefix experiments/moriarty-release-check test",
+        "npm --prefix experiments/moriarty-release-check run verify -- --program openspec/moriarty-completion-program.json"
+      ]
+    }
+  ]
+}
