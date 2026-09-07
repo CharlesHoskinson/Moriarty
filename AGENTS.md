@@ -30,7 +30,16 @@ rows at k17. No recursive proof exists. Stop native runs until a reviewed smalle
 checked state encoding or revised resource/k decision is adopted; unused budget
 is not automatic retry authorization. [Docker evidence](evidence/moriarty-midnight-network-2026-09-07/README.md)
 records local NIGHT, DUST, Compact deployment and call settlement. Public Preprod
-funding/settlement remains pending the official faucet CAPTCHA and wallet sync.
+funding/settlement remains pending faucet acceptance and wallet sync. The
+[network-choice review](evidence/midnight-network-review-2026-09-07/README.md)
+recommends local Docker for daily work, Preview for early public integration,
+and Preprod for final validation. Preprod is supported and responded to live
+checks; a switch is not a proven faucet fix. Use matching documented faucet
+URLs, preserve wallet identity, and distinguish funding from overall wallet sync.
+Do not generate another wallet merely because an SDK-valid address was rejected.
+The user then [selected Preview](raw/assignments/midnight-preview-steering-2026-09-07.md)
+for the public settlement attempt. Use a dedicated Preview wallet and preserve
+Preprod keys; no further Preprod retry is required by the old checkpoint.
 Neither local settlement nor application MockProver checks establish Moriarty PCD.
 The [published documentation capture](evidence/midnight-docs-2026-09-07/README.md)
 covers all indexed Markdown routes with explicit HTML/asset limitations. Keep

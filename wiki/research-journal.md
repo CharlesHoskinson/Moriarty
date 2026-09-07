@@ -3,8 +3,11 @@ id: moriarty.research.journal
 type: decision
 title: Moriarty research journal
 status: active
-updated_at: 2026-09-07T02:33:43.401543+00:00
+updated_at: 2026-09-07T03:04:05.743582+00:00
 sources:
+  - SRC-0057
+  - SRC-0055
+  - SRC-0056
   - SRC-0054
   - SRC-0053
   - SRC-0051
@@ -2809,3 +2812,39 @@ adapter. Metadata: SRC-0051 authorized target, SRC-0052 official implementation
 guidance, SRC-0054 pinned development sources; primary pinned implementation plus local experiment, observed
 2026-09-07 UTC, S3; reproduced for named local transactions, not reproduced for
 public settlement; confidence high for preserved local receipts.
+
+
+## CLM-0203: Match public networks to development stage and diagnose funding separately
+
+The [network-choice review](../evidence/midnight-network-review-2026-09-07/README.md)
+refreshes the complete published documentation index with Scrapling, searches
+all captured pages for network terms, and reads the getting-started, network,
+funding, wallet, deployment and compatibility guidance. The quickstart defaults
+to local Docker. Preview serves early public experimentation; Preprod serves
+final mainnet validation and is also a supported direct promotion path from
+local. Prefer Preview for a fresh early public integration experiment, retain
+Preprod for final validation, and keep Docker as the daily development default.
+This is a stage-based recommendation, not evidence that a switch fixes a faucet.
+
+Live read-only RPC checks identified both networks correctly, returned peers and
+non-syncing nodes, and both indexers served blocks. The docs-linked Preview
+Nethermind faucet returned HTTP503, while the docs-linked Preprod faucet and
+both faucet.*.midnight.network health endpoints responded positively. The two
+Preprod frontends use different API contracts. Health does not prove token
+issuance. Documentation also distinguishes receiving funds from completed
+wallet history sync: the existing helper hides balance until its overall sync
+condition and times out after600seconds. That timeout does not show a dead chain.
+Neither valid local address decoding nor a replacement wallet proves that the
+reported faucet rejection was corrected. Stop speculative wallet replacement;
+retain the exact server outcome and use the matching documented UI.
+
+Metadata: SRC-0055 fresh official Markdown corpus; SRC-0056 focused Scrapling
+responses, frontend source and read-only RPC/indexer/health observations;
+observed2026-09-07 UTC. Authority: primary descriptive sources and experimental
+observations, S3 local investigation; acquisition and named live reads reproduced;
+no funding, wallet sync or public transaction reproduced. Confidence high for
+captured source/network identities, unknown for the address rejection cause and
+whether a network switch would improve the user's particular funding path.
+
+SRC-0057 subsequently selects Preview for the actual public test. This changes
+the operational target; it does not establish that Preprod is abandoned.

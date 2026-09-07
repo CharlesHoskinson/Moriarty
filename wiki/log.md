@@ -893,3 +893,13 @@ formal assurance matrix, controlling intents roadmap and AGENTS recovery rules.
 No recursive proof was produced at k17. Local deployment/call settlement does
 not satisfy public Preprod or Moriarty PCD; faucet CAPTCHA and wallet sync remain
 open. No automatic native retry or abandoned A4/A5 continuation is authorized.
+
+
+## 2026-09-07 — Reassess public network choice and funding failures
+
+User requested a fresh Scrapling documentation review and getting-started check.
+Added CLM-0203, refreshed source coverage and live read-only endpoint receipts,
+and recorded faucet URL/API drift plus the distinction between wallet sync and
+node availability. Recommended local development, early Preview integration,
+and Preprod final validation. No public settlement or network-switch success
+is claimed; no additional wallet was generated.

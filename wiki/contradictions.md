@@ -4,8 +4,10 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-06T21:29:23.534731+00:00
+updated_at: 2026-09-07T03:04:05.743582+00:00
 sources:
+  - SRC-0055
+  - SRC-0056
   - SRC-0043
   - SRC-0044
   - SRC-0045
@@ -176,3 +178,22 @@ searches do not prove universal API absence. Do not silently alter the raw repor
 Metadata: observed 2026-09-06; authority secondary report, normative user input,
 primary pinned source and design inference; S2 disposition; no proof deployment
 reproduced; confidence high for scope distinction, unknown for adapter feasibility.
+
+
+## CLM-0203: Faucet endpoints and historical network names
+
+The current quickstart/network/funding guides link Nethermind faucets. The
+previous workflow used faucet.*.midnight.network. At the captured time the
+Nethermind Preview page returned503; the other checked faucet pages and health
+endpoints responded. The two Preprod frontends have different API contracts.
+Disposition: preserve all source/live responses, prefer the matching documented
+UI for the existing Preprod wallet, and do not infer token delivery from health.
+No root cause for the user's invalid-address error is established.
+
+The 1010 troubleshooting page still uses TestNet02 as a network-mismatch example,
+while the network-selection guide explicitly retires testnet-02. Treat the former
+as historical diagnostic context; configure preview/preprod from the current
+network reference. Metadata: SRC-0055/SRC-0056, observed2026-09-07; primary source
+and experiment observation; S3 investigation, acquisition/live reads reproduced,
+public settlement not reproduced. Details and disposition are in the
+[review](../evidence/midnight-network-review-2026-09-07/README.md).

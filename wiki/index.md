@@ -5,7 +5,14 @@ will grow by merging evidence into durable topic pages.
 
 ## Current direction — 2026-09-06 reset
 
-**Latest output:** [Midnight Docker settlement evidence](../evidence/moriarty-midnight-network-2026-09-07/README.md),
+**Latest review:** [Midnight network choice and faucet diagnosis](../evidence/midnight-network-review-2026-09-07/README.md).
+Local Docker is the daily development default; Preview is preferred for early
+public integration and Preprod remains valid for final validation. Faucet URL
+drift and wallet sync are separate from network availability; public settlement
+is still unperformed. The user selected Preview for the next public attempt.
+See CLM-0203 and SRC-0057.
+
+**Latest implementation output:** [Midnight Docker settlement evidence](../evidence/moriarty-midnight-network-2026-09-07/README.md),
 [published documentation capture](../evidence/midnight-docs-2026-09-07/README.md), and
 [R3 native result](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md).
 Local NIGHT/DUST/deploy/call transactions settled; public Preprod still awaits

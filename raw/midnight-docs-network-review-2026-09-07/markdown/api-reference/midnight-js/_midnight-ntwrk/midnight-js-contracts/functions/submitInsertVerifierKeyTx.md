@@ -1,0 +1,88 @@
+# submitInsertVerifierKeyTx
+
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+[**Midnight.js API Reference v4.0.4**](/api-reference/midnight-js.md)
+
+***
+
+[Midnight.js API Reference](/api-reference/midnight-js/packages.md) / [@midnight-ntwrk/midnight-js-contracts](/api-reference/midnight-js/@midnight-ntwrk/midnight-js-contracts.md) / submitInsertVerifierKeyTx
+
+# Function: submitInsertVerifierKeyTx()
+
+> **submitInsertVerifierKeyTx**<`C`>(`providers`, `compiledContract`, `contractAddress`, `circuitId`, `newVk`): `Promise`<`FinalizedTxData`>
+
+Constructs and submits a transaction that adds a new verifier key to the blockchain for the given circuit ID at the given contract address.
+
+## Transaction Execution Phases[​](#transaction-execution-phases "Direct link to Transaction Execution Phases")
+
+Midnight transactions execute in two phases:
+
+1. **Guaranteed phase**: If failure occurs, the transaction is NOT included in the blockchain
+2. **Fallible phase**: If failure occurs, the transaction IS recorded on-chain as a partial success
+
+## Failure Behavior[​](#failure-behavior "Direct link to Failure Behavior")
+
+**Guaranteed Phase Failure:**
+
+* Transaction is rejected and not included in the blockchain
+* `InsertVerifierKeyTxFailedError` is thrown with transaction data
+* Verifier key is NOT added to the contract
+* No on-chain record of the failed transaction
+
+**Fallible Phase Failure:**
+
+* Transaction is recorded on-chain with non-`SucceedEntirely` status
+* `InsertVerifierKeyTxFailedError` is thrown with transaction data
+* Verifier key may be partially added but not usable
+* Transaction appears in blockchain history as partial success
+
+## Type Parameters[​](#type-parameters "Direct link to Type Parameters")
+
+### C[​](#c "Direct link to C")
+
+`C` *extends* `Any`
+
+## Parameters[​](#parameters "Direct link to Parameters")
+
+### providers[​](#providers "Direct link to providers")
+
+[`ContractProviders`](/api-reference/midnight-js/@midnight-ntwrk/midnight-js-contracts/type-aliases/ContractProviders.md)
+
+The providers to use to manage the transaction lifecycle.
+
+### compiledContract[​](#compiledcontract "Direct link to compiledContract")
+
+`CompiledContract`<`C`, `any`>
+
+The compiled contract for which the maintenance authority should be updated.
+
+### contractAddress[​](#contractaddress "Direct link to contractAddress")
+
+`string`
+
+The address of the contract containing the circuit for which the verifier key should be inserted.
+
+### circuitId[​](#circuitid "Direct link to circuitId")
+
+`ProvableCircuitId`<`C`>
+
+The circuit for which the verifier key should be inserted.
+
+### newVk[​](#newvk "Direct link to newVk")
+
+`VerifierKey`
+
+The new verifier key for the circuit.
+
+## Returns[​](#returns "Direct link to Returns")
+
+`Promise`<`FinalizedTxData`>
+
+A promise that resolves with the finalized transaction data, or rejects if an error occurs along the way.
+
+## Throws[​](#throws "Direct link to Throws")
+
+When transaction fails in either guaranteed or fallible phase. The error contains the finalized transaction data for debugging.
+
+TODO: We'll likely want to modify ZKConfigProvider provider so that the verifier keys are automatically rotated in this function. This likely involves storing key versions along with keys in ZKConfigProvider. By default, artifacts for the latest version would be fetched to build transactions.

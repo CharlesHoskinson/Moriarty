@@ -3,8 +3,10 @@ id: midnight.repositories.inventory
 type: component
 title: Midnight and Compact repository inventory
 status: active
-updated_at: 2026-09-07T02:26:15.985321+00:00
+updated_at: 2026-09-07T03:04:05.743582+00:00
 sources:
+  - SRC-0055
+  - SRC-0056
   - SRC-0051
   - SRC-0052
   - SRC-0005
@@ -68,3 +70,12 @@ Metadata: SRC-0051 task input, SRC-0052 primary published docs; source observati
 2026-09-07; S3 local acquisition, reproduced hashes; confidence high for captured
 content, untested for component-level compatibility unless separate execution
 evidence is linked. A published instruction is not a successful network test.
+
+
+## Public network selection review
+
+CLM-0203 and the [fresh documentation/network review](../evidence/midnight-network-review-2026-09-07/README.md)
+replace the assumption that Preprod is the only public development target.
+Preview fits early experiments; Preprod remains supported for final validation.
+The complete indexed Markdown corpus was refreshed, and live endpoint/faucet
+checks remain distinct from SDK compatibility and actual public settlement.

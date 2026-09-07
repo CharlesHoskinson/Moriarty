@@ -150,3 +150,16 @@ settled a local Compact deployment/call; public Preprod still requires faucet
 CAPTCHA funding and wallet synchronization. These transactions do not consume a
 Moriarty history proof. R4 owns private/residual composition, and R5 retains
 certificates and full target coverage. No gate is waived by local SDK success.
+
+
+## Public test-network selection amendment — 2026-09-07
+
+The [official-docs review](../../evidence/midnight-network-review-2026-09-07/README.md)
+places local Docker first for routine development, Preview first for new early
+public integration experiments, and Preprod at final validation. Preprod remains
+a supported direct promotion target if its existing wallet is funded. A faucet
+error and a bounded wallet-sync timeout do not establish network failure. Before
+another public attempt, observe funding independently of full sync, retain wallet
+state, and use the matching documented faucet with its exact server response.
+The actual public settlement test remains open. This amendment does not change
+the native R3 k17 stop or remove mandatory proofs and target-coverage obligations.

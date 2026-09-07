@@ -1,0 +1,96 @@
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+# Set up RPC node for Midnight
+
+Remote Procedure Call (RPC) nodes serve as the primary interface for applications to interact with the Midnight blockchain programmatically. These nodes expose WebSocket and HTTP APIs that enable developers to submit transactions, query blockchain data, subscribe to events, and integrate DApps with the network.
+
+This guide provides step-by-step instructions for setting up an RPC node on the Midnight blockchain.
+
+## Prerequisites[​](#prerequisites "Direct link to Prerequisites")
+
+Before setting up your Midnight RPC node, ensure you have the following:
+
+* [Cardano-db-sync instance set up](/nodes/cardano-db-sync.md) with accessible PostgreSQL port.
+* [Midnight node set up](/nodes/full-node.md#install-midnight-node) with the environment variables set.
+
+## Run the Midnight node in RPC mode[​](#run-the-midnight-node-in-rpc-mode "Direct link to Run the Midnight node in RPC mode")
+
+Use the following command to run Midnight node in RPC mode. Choose the configuration for your target network.
+
+By default, the node binds its RPC interface to `127.0.0.1` (localhost) and exposes only the `Safe` method set. This is the recommended starting point: the endpoint is reachable from the local machine only, so it is not directly exposed to the internet. To make it available to external clients, place a hardened reverse proxy in front of it rather than binding the node itself to a public interface. See [Exposing the RPC endpoint](#exposing-the-rpc-endpoint).
+
+* Preview
+* Preprod
+
+```
+midnight-node \
+
+  --chain /home/midnight/res/preview/chain-spec-raw.json \
+
+  --base-path /home/midnight/data \
+
+  --rpc-port 9944 \
+
+  --rpc-methods Safe
+```
+
+```
+midnight-node \
+
+  --chain /home/midnight/res/preprod/chain-spec-raw.json \
+
+  --base-path /home/midnight/data \
+
+  --rpc-port 9944 \
+
+  --rpc-methods Safe
+```
+
+### Configure RPC methods[​](#configure-rpc-methods "Direct link to Configure RPC methods")
+
+* `--rpc-port 9944`: The TCP port the RPC server listens on.
+* `--rpc-methods Safe`: Exposes only the safe RPC method set. Avoid `Unsafe`/`Auto` on any node that is reachable beyond localhost, as they expose methods that can control the node.
+
+## Exposing the RPC endpoint[​](#exposing-the-rpc-endpoint "Direct link to Exposing the RPC endpoint")
+
+For a public RPC node, the recommended approach is to keep the node bound to localhost (the default above) and front it with a reverse proxy (for example, nginx or Caddy) that terminates TLS, restricts allowed origins, and applies rate limiting. Combine this with a firewall that only permits the P2P port and your proxy's port.
+
+The node can also expose RPC directly with the flags below. These bypass the localhost default, so only use them on a trusted, firewalled network and never point them at the open internet without a proxy in front.
+
+warning
+
+Binding the RPC interface to a public address with permissive CORS exposes your node to abuse, resource exhaustion, and data scraping. Treat the options below as advanced and secure them with a firewall, TLS, and scoped origins.
+
+* `--rpc-external`: Binds the RPC server to all interfaces so it is reachable from external networks. Without this flag, RPC stays on `127.0.0.1`. The unified RPC server handles both HTTP and WebSocket connections on this interface.
+* `--rpc-cors <origins>`: Sets the allowed CORS origins. Prefer an explicit comma-separated list of trusted domains (for example, `--rpc-cors https://app.example.com`) over `all`, which permits requests from any origin.
+* `--no-private-ip`: Disables the safety check that refuses external binding on private IP ranges. Only relevant when intentionally exposing the node.
+
+### Test connectivity[​](#test-connectivity "Direct link to Test connectivity")
+
+Ensure the node's P2P port (default: `30333`) is open and reachable for network communication. Use tools like `telnet`, `netcat`, or `nmap` to verify the port status and ensure the node is properly connected to the network.
+
+Additionally, to preview the available RPC methods, run the following curl command, which lists all endpoints exposed by the node:
+
+```
+curl -H "Content-Type: application/json" \
+
+     -X POST \
+
+     -d '{
+
+           "jsonrpc":"2.0",
+
+           "id":1,
+
+           "method":"rpc_methods",
+
+           "params":[]
+
+         }' \
+
+     http://127.0.0.1:9944
+```
+
+## Next steps[​](#next-steps "Direct link to Next steps")
+
+With the RPC node set up, you can start using the [Node endpoints](/nodes/node-endpoints.md) to interact with the Midnight blockchain.

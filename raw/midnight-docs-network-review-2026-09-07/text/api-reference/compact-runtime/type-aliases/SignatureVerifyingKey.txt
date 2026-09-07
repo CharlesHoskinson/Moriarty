@@ -1,0 +1,39 @@
+# SignatureVerifyingKey
+
+> For the complete documentation index, see [llms.txt](/llms.txt)
+
+[**@midnight-ntwrk/compact-runtime v0.19.0**](/api-reference/compact-runtime.md)
+
+***
+
+[@midnight-ntwrk/compact-runtime](/api-reference/compact-runtime/globals.md) / SignatureVerifyingKey
+
+# Type Alias: SignatureVerifyingKey
+
+```
+type SignatureVerifyingKey = {
+
+  tag: SignatureKind;
+
+  value: string;
+
+};
+```
+
+A hex-encoded signature verifying key annotated with its kind
+
+## Properties[​](#properties "Direct link to Properties")
+
+### tag[​](#tag "Direct link to tag")
+
+```
+tag: SignatureKind;
+```
+
+***
+
+### value[​](#value "Direct link to value")
+
+```
+value: string;
+```
