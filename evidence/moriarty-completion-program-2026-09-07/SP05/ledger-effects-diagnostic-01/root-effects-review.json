@@ -1,0 +1,67 @@
+{
+  "schema": "moriarty.root-effects-review/1",
+  "reviewer": "GPT-6 independent diagnostic reviewer",
+  "disposition": "VALID_WITH_SCOPE_LIMITS",
+  "scope": "Only the new complete-effects diagnostic and the candidate public helper; no source or sprint acceptance.",
+  "sourceSha256": "747109368a969e21c9d46308a5c5e95e0b0bcffbc30dab9f795827f12ca11e2a",
+  "testSha256": "867583c24cc4cdcbf67a7578010ac8f4e3c9f2f303e937bb8bb882a607262d45",
+  "verification": {
+    "hashesMatchRecordedDiagnostic": true,
+    "command": [
+      "node",
+      "--test",
+      "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-effects.test.mjs"
+    ],
+    "exitCode": 1,
+    "pass": 1,
+    "fail": 6,
+    "durationMs": 47.613847,
+    "failureKind": "All six: Missing expected exception."
+  },
+  "findings": [
+    {
+      "cases": [
+        "fallible recipient",
+        "fallible amount"
+      ],
+      "location": "providers.mjs:168-170",
+      "assessment": "Valid helper-level rejection expectations. Only guaranteed outputs are compared; neither changed fallible owner nor value participates. Conditional execution does not authorize changing a recipe-approved conditional output."
+    },
+    {
+      "cases": [
+        "balancing recipient",
+        "missing balancing intent"
+      ],
+      "location": "providers.mjs:159-164",
+      "assessment": "Valid for the explicit two-transaction helper fixture. Only baseTransaction is traversed; balancingTransaction is ignored. Mutation and deletion of its distinct intent escape checking."
+    },
+    {
+      "cases": [
+        "additional intent"
+      ],
+      "location": "providers.mjs:161-162",
+      "assessment": "Valid complete-effects expectation. The loop checks presence of base intents without rejecting extra finalized intents. This added intent contains new financial outputs, not merely proof metadata."
+    },
+    {
+      "cases": [
+        "missing expiration"
+      ],
+      "location": "providers.mjs:171",
+      "assessment": "Valid fail-closed helper expectation. Truthiness of fi.ttl gates the comparison, so removing the approved expiration skips validation. This is an expiration-preservation gap, not evidence of a real transaction with an absent SDK-required property."
+    }
+  ],
+  "testAssessment": {
+    "invalidExpectationsWithinNarrowHelperScope": [],
+    "independence": "Each fixture creates fresh Maps and independently clones both intent Maps. Mutations do not change the recipe; the control establishes this shape is accepted.",
+    "errorConvention": "assert.throws matches existing helper rejection behavior. Its broad form does not prove any future exception has the intended cause.",
+    "rootCauses": "Six cases exercise four omissions: fallible outputs, balancing transaction, extra intents, and missing TTL.",
+    "limitations": [
+      "Plain synthetic objects have empty inputs/signatures, fake owner/type strings, and no signatureData method; they are not signed, proven, deserialized, or balanced transactions.",
+      "validateSignedRecipe would reject these fixtures with no signed inputs before fundUnshielded reaches this helper. The diagnostic does not establish reachability through that path or a submit/ledger exploit.",
+      "The union of disjoint base and balancing Maps is an explicit unit-test model. These files do not establish the exact pinned SDK finalization/merge semantics or that arbitrary added economic intents can arise from it.",
+      "No signature/order association, shielded effect, fee, gross allowance, serialization, proof, or ledger acceptance claim follows from these seven tests."
+    ]
+  },
+  "relationToPriorReview": "Corroborates the complete-effects portion of R6 in gpt6-result-review.json at public-helper scope; does not re-review other findings or strengthen their operational evidence.",
+  "actions": "Read requested files and candidate source excluding pin-map line 2, hashed full source/test bytes, reran only the one permitted Node test, wrote only this JSON and companion Markdown. No provider CLI, wallet, network, compiler, or implementation edits."
+}
