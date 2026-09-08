@@ -1,0 +1,91 @@
+{
+  "scope": "Read-only current atomic syntax and required successor deliverable diagnosis, not acceptance or ISO conformance audit",
+  "head": "cbd80fbf50bd8e545990828586696797426a4fc4",
+  "inputHashes": {
+    "experiments/moriarty-language/spec/grammar.ebnf": "1a1c6274650dd7826121c85ff7e9b2cc7c23a01a1289c795e31e03becdea866d",
+    "experiments/moriarty-language/src/frontend.ts": "a568052e70d3315382059e069f06398c7c7cc3319c7cfc556b518e8e4ddb2fa5",
+    "experiments/moriarty-language/src/parser.ts": "a85f55d80acfafcea05a9b189b14bc504263632bc35e2abd4ef2fcd964c1522e",
+    "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "openspec/sprints/sprints.json": "4aabac54a78585134549cda1a561b5b34a09463157199c26240096edbdc0c10a",
+    "openspec/moriarty-completion-program.json": "5e1ecd7187b8ea76941024d7b62002d539117689ade964dd43ab7314cc4c86a0"
+  },
+  "grammar": {
+    "path": "experiments/moriarty-language/spec/grammar.ebnf",
+    "declaredProfile": "moriarty-bounded-atomic/1",
+    "productionCount": 42,
+    "undefinedNamesInLightweightScan": [],
+    "limitation": "Reference scan does not validate ISO EBNF notation, ambiguity, completeness or parser equivalence."
+  },
+  "parserSmoke": {
+    "command": [
+      "node",
+      "--input-type=module",
+      "-e",
+      "import fs from 'node:fs'; import {parseSource} from './experiments/moriarty-language/src/frontend.ts'; for (const name of ['loan','swap']) { const text=fs.readFileSync('./experiments/moriarty-language/spec/examples/'+name+'.mori','utf8'); try { const ast=parseSource(text); console.log(JSON.stringify({name,parsed:!!ast})); } catch(e) { console.log(JSON.stringify({name,parsed:false,message:String(e.message)}));process.exitCode=1; } }"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"name\":\"loan\",\"parsed\":true}\n{\"name\":\"swap\",\"parsed\":true}\n",
+    "stderr": "",
+    "scope": "Existing atomic loan/swap examples parse only; no successor grammar or semantics evidence."
+  },
+  "requiredDeliverables": {
+    "experiments/moriarty-language/spec/successor/grammar.ebnf": false,
+    "experiments/moriarty-language/spec/successor/lexical.md": false,
+    "experiments/moriarty-language/spec/successor/static-semantics.md": false,
+    "experiments/moriarty-language/src/successor/frontend.ts": false,
+    "experiments/moriarty-language/src/successor/format.ts": false,
+    "experiments/moriarty-language/formal/k/moriarty.k": false,
+    "experiments/moriarty-language/formal/k/claims.k": false,
+    "experiments/moriarty-language/formal/k/run.py": false
+  },
+  "entryStages": [
+    {
+      "id": "rp01-full",
+      "owners": [
+        "MC01",
+        "MC05",
+        "MC06",
+        "MC07"
+      ],
+      "requires": [],
+      "status": "specified-only",
+      "acceptedProfile": null,
+      "candidateHash": null,
+      "campaignRecordId": null,
+      "purpose": "Complete full challenge/operator/theorem/signing design map; no implementation acceptance"
+    },
+    {
+      "id": "successor-frontend",
+      "owners": [
+        "MC01",
+        "MC08"
+      ],
+      "requires": [
+        "rp01-full"
+      ],
+      "status": "specified-only",
+      "acceptedProfile": null,
+      "candidateHash": null,
+      "campaignRecordId": null,
+      "purpose": "Versioned successor lexical/static/frontend and formatter implementation; local checks under a separate preparation campaign"
+    },
+    {
+      "id": "successor-semantics",
+      "owners": [
+        "MC01",
+        "MC04",
+        "MC05"
+      ],
+      "requires": [
+        "successor-frontend"
+      ],
+      "status": "specified-only",
+      "acceptedProfile": null,
+      "candidateHash": null,
+      "campaignRecordId": null,
+      "purpose": "Successor evaluator, local simulation, K definition, scoped K proofs and correspondence preparation under bounded local campaigns"
+    }
+  ],
+  "nextProductDependency": "Complete current RP01-full semantic/signing/composition design evidence before admitting successor frontend; then K kernel with residual-duty trace. Current absence cannot be reported as full BNF/K delivery."
+}

@@ -8,7 +8,7 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** User approved execution. Two Milestone 1 candidates failed independent review; candidate02 still has admission, resource and evidence-identity defects. A focused reader repair starts from retained positive-path failures. No milestone is accepted. Installation and host trust remain open. See [candidate02 evidence](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-m1-result-02/README.md).
+**Status:** User approved execution. Three Milestone 1 candidates failed independent review. Candidate03 still has publication, prerequisite and resource-admission defects. The next pass repairs the two evidence domains; resource correction remains open. No milestone is accepted. Installation and host trust remain open. See [candidate03 evidence](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-m1-result-03/README.md).
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
