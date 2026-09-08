@@ -1,0 +1,35 @@
+You are the user-selected Grok4.6 high author. Produce a concise source-grounded SP01.7 fixed-native-statement design crosswalk. This is a bounded documentation task, NOT new circuit/proof design or a proving campaign. Work now; do not ask questions or run shell/tools other than targeted Read/Edit/Write. Own only the two files below and root FOREMAN_REPORT.md/.json. No other edits, git writes, network, compilation, tests, proofs or subagents. Limit the two outputs together to 24KB; use exact source references instead of copying the70KB fixture. No self-approval. You have900 seconds total; finish a concise result so provider identity is captured.
+
+Goal: expose exactly what the retained fixed native relation commits and what remains to bind it to the currently accepted atomic loan. Preserve episode.json and originalR3 history. The current numerical rows match in projection, but oldR2 hashes are NOT current bounded-atomic hashes. Do NOT relabel them, invent new hashes, imply that hash equality follows from numerical equality, or waive migration. If exact atomic-context export/fixture or mapping is missing, record it as an acceptance blocker with MC03/F0a ownership. Parent will verify and GPT6 review the candidate; do not mark RP01-MC03 complete just because a document exists.
+
+Inputs pinned below. Read episode.json top-level source, encoding, states, transitions and row preimage structures selectively; inspect export-episode.mjs to get exact preimage conventions. Read harness/episode.rs complete constants, relevant fixed relation/encoding functions and encoding-candidate README. Inspect current loan.mori, runtime-types.ts and typed-schemas.md hash preimages. Relevant gates are RP01-MC03/F0/F0a/F1/F2 in reconciliation. Retained original source approvals do not launch new commands.
+
+Output statement.json: schemaVersion, subsetId RP01-MC03, status pending-review, scope, inputs, currentAtomicAcceptance(codec30aaf5c0d091b1efea7e042d0fcbd539ca6cc51,evidenceb296ce95afae722177b5bba482d1d195fa334d1e,candidate2f1fb86407537720174bbf73cb50426499744986e97ce8a5dde9f792577e0b5e), retainedFixtureIdentity, fixedRows, arithmetic, encoding, commitmentBindings, authorityAndObservations, completeTerminalObservationMap, workConservation, controls, acceptanceBlockers, closureTasks, outputs(parent hashes pending), reviews empty. Candidate hash null for parent freeze. Use explicit fields/arrays not vague prose.
+
+Required content:
+- All3 ordered11field financial rows exactly from episode.rs, unit USD_micro mapping/oldUSD distinct, revisions0/1/2 remaining2/1/0, interest floor33,972,602 remainder27,000/36,500, installment500m, settle533,972,602, finalborrower19,466,027,398 lender533,972,602, notional4.5b remains outstanding. Full two-step effects and obligation identities/statuses from old source vs currentsource with explicit renamings. No partial-servicing/generalACTUS claim.
+- UInt128 low64/high64;8digests fourlittle-endianu64,22+32=54limbs. Phasefinite0/1/2,notcryptohash. Current checkedencoding private54+phase onlyphaseapplicationPI; canonicalVK and accumulatorpublic additionally. Domain-restricted binding, currentgadgetconstraints not executedproof. Originalk17rowexhaustion no recursiveproof. Preserve alllimits.
+- All8 digest labels sourcepreimage definitions, retained concretehashes may cite exact fixture path, proposed current counterpart field/ref, equality/discrepancy and closure task. Explicitly distinguish SHA256 R2canonicalJSON inclkind/version from current domain prefix+NUL+canonical typedbytes; cannot reuse oldhashes as currentprogram/state/authority/etc.
+- Fixed authority context must name actual oldintent preimage; current signed commonfields, ExactPlan ActionCall vs Outcome allowedactions/constraints; current observations independentlyauthenticated and action/observations hashes derived. Neitherauthority directly signs currentObservationSet. No dynamic signatures/currentness/history/custody claim from carryingfixedhashes.
+- Map complete terminal state/effects incltypedstructuralidentity/hashfields, remainingnotional and obligations/tombstones to fixedprojection or explicitmissingbinding. elevennumbersalone not wholeatomicStateEnvelope/Complete/ProofContext. Required claims contract/intent/transition/history remain distinct. Exactlyidentify what fixtures/exports must be produced later; no invented API.
+- Workconservation lifetime2, stepcount and phase binding; no reset/debt deletion; closedepisode != agreementdischarged.
+- Controls separate hostsource checks, directassignment constrained positives/invalidlimbs/phase0,1,invalid/genesis/predecessor/effects/authority; terminal proof/VK/accumulator/EOF/finalpairing controls laterF1-F3. Requiredinvalidacceptance stops; tests unrun here. No F2 before currentatomic+reviewedsubset+allF1+campaignadmission. F0 no-go meansblocked, noauto k17 retry.
+
+Output design.md concise explanation of crosswalk and explicit remaining admission work, no product-code proposals. Keep main semantic-challenges.json untouched: parent integrates only an independently reviewed subset record; avoid simultaneous loan/swap writer collision. Cite latest Midnight network milestone assignment; this task supplies no networkacceptance. Reports list no commands run, unresolvedbindings and pending parent/static/GPT6 review.
+
+Owned files:
+["evidence/moriarty-completion-program-2026-09-07/SP01/native-statement-subset-01/statement.json", "evidence/moriarty-completion-program-2026-09-07/SP01/native-statement-subset-01/design.md"]
+Pinned inputs:
+{
+  "experiments/moriarty-native-ivc-r3/episode.json": "2a2ab1d92256d5778044a8e9580c96d37dada1eaa78fbad64e63cea88db0635a",
+  "experiments/moriarty-native-ivc-r3/harness/episode.rs": "80229b7c543f8a39d630fdc9e4e01fc16e57c23970c429fbcf22a9ab0cb05780",
+  "experiments/moriarty-native-ivc-r3/harness/moriarty_loan_r3.rs": "3f22e85ac4fecc60a689813247ada795f7986f922ee50932aa414340f91b2e0c",
+  "experiments/moriarty-native-ivc-r3/export-episode.mjs": "401643e759b7136e5fa121f7f4ef7fc123793afb34bb79601cfb235561ce73d7",
+  "evidence/moriarty-completion-program-2026-09-07/MC03/encoding-candidate/README.md": "2a20e07f09eddb5cb782210b7c8f504a86ca207739f5121cbbd54b07fcfd5c3d",
+  "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+  "experiments/moriarty-language/spec/typed-schemas.md": "6ef3383ad42b7ea2a22822f8116c7e182cbe8b476ef01e9cd3ef899679da4f04",
+  "experiments/moriarty-language/src/runtime-types.ts": "f6ba49cff1900109ac9c8d2e3fdf3e69b8037dd2a6ce5c539dac2b9a081ae7e0",
+  "experiments/moriarty-language/spec/bounds.json": "b548641a1a9d74bab68ba699ffb1e2350fa0889d61b8704e98216f9d4a6c3664",
+  "openspec/REPORT-RECONCILIATION-2026-09-07.md": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+  "evidence/moriarty-completion-program-2026-09-07/SP01/atomic-integration-01/combined-freeze.json": "df888cf7990f6dee4cdc0a19d892bb470bf0a8565ee756d3ead1c6c5f488e511"
+}

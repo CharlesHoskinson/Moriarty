@@ -1,0 +1,73 @@
+--- candidate03/evidence/moriarty-completion-program-2026-09-07/SP01/loan-swap-subset-01/design.md
++++ candidate04/evidence/moriarty-completion-program-2026-09-07/SP01/loan-swap-subset-01/design.md
+@@ -177,9 +177,9 @@
+ 
+ - sourcePreStateReads: `state.epoch_closed`, `state.trader_a`, `state.reserve_a`, `state.reserve_b`, `state.trader_b`
+-- sourceStagedReads: `state.reserve_a` after input credit, expected-reserve-a guard; `state.reserve_b` after output debit, expected-reserve-b guard; `state.trader_a` after input debit; `state.trader_b` after output credit
++- sourceStagedReads: `state.reserve_a` after input credit, expected-reserve-a guard; `state.reserve_b` after output debit, expected-reserve-b guard
+ - sourceConstantsArgumentsObservations: `obs.now`, remaining source guard `remaining > uint(1)`, `arg.actor`, `arg.recipient`, `arg.asset_in`, `arg.asset_out`, `arg.amount_in`, `arg.min_out`, `const.trader`, `const.pool`, fee and expected-output/reserve constants, text `ASSET_A` / `ASSET_B`, horizon literal `2000000000`
+ - sharedDependencyRef: `shared-eval-deps-bounded-atomic-1`
+ 
+-`min_out` is an ActionCall argument. OutcomeStatement does not sign `min_out`. `trader_b` is a source state read on this row.
++`min_out` is an ActionCall argument. OutcomeStatement does not sign `min_out`. `trader_a` and `trader_b` are source pre-state reads on this row. Source never reads trader balances again after writes. The shared whole-state hash dependency still commits them.
+ 
+ Write footprint, source order: `trader_a`, `reserve_a`, `reserve_b`, `trader_b`.
+@@ -244,5 +244,5 @@
+ OutcomeStatement (IntentRefinement) additionally signs `allowedActions`, `permittedRecipients`, `permittedCalls`, principal-scoped `grossDebitCaps`, and `minimumNetCredits`. OutcomeStatement does not contain ActionCall or `min_out`. It does not introduce a nominal-debt cap for DueCreated. DueCreated and DueSettled do not enter debit or credit sums.
+ 
+-ObservationSet is authenticated separately through trusted `ExternalChecks.observationsAuthentic`. After evaluation, CompleteBody and ProofContext bind `actionHash` and `observationsHash` of the evaluated invocation. Neither ExactPlanStatement nor OutcomeStatement directly signs the current ObservationSet.
++ObservationSet is authenticated separately through trusted `ExternalChecks.observationsAuthentic`. After evaluation, CompleteBody binds `actionHash` and `observationsHash` of the evaluated invocation. ProofContext binds observations indirectly through `traceHash`. ProofContext has no `observationsHash` member. Neither ExactPlanStatement nor OutcomeStatement directly signs the current ObservationSet.
+ 
+ Source-authorized constants remain fixture locks. Unresolved nominal-debt and pool/provider custody limitations remain.
+@@ -349,5 +349,5 @@
+ Client booleans: `semantics.test.mjs` passes a malformed third `evaluate` argument `{requiredClaimsValid:true, historyProofValid:true}` as a fake backend. Those booleans are not extra fields on EvaluationInput. Specified diagnostic remains `PROOF_INVALID`.
+ 
+-Direct due mutation starts from after-accrue, reseals, and rebinds unless noted: pop due `OBLIGATION_UNKNOWN`, mark one status Settled then settle `OBLIGATION_ALREADY_SETTLED` (`loan-replayed-due` above), change debtor `OBLIGATION_MISMATCH`, raise retained outstanding above the emit amount `OBLIGATION_PARTIAL_UNSUPPORTED`, lower it `OBLIGATION_EXCESS`, recreate after accrue `OBLIGATION_DUPLICATE`. Conservation failure on an altered Transfer recipient is `OBLIGATION_CONSERVATION` and uses altered source, labeled unexecuted against current `loan.mori`.
++Direct due mutation starts from after-accrue, reseals, and rebinds unless noted. Missing due (`loan-missing-due`) pops a retained record then settle, diagnostic `OBLIGATION_UNKNOWN`. Erased due (`loan-erased-due`) drops a retained record from supplied state then settle, same diagnostic. Replayed due (`loan-replayed-due` above) marks one status Settled then settle, diagnostic `OBLIGATION_ALREADY_SETTLED`. Change debtor is `OBLIGATION_MISMATCH`. Raise retained outstanding above the emit amount is `OBLIGATION_PARTIAL_UNSUPPORTED`. Lower it is `OBLIGATION_EXCESS`. Recreate after accrue (`loan-duplicate-due`) sets `state.body.values[name="cursor"].value` to UInt128 `0`, `state.body.values[name="notional"].value` to Amount `5000000000` USD_micro, and `state.body.remainingNotional.amount` to the same Amount `5000000000` USD_micro. It retains revision `1`, remaining `1`, and existing dues from after-accrue. It then reseals `stateHash` and rebinds `authority.statement.beforeStateHash` and predecessors with a simulated valid signature assumption. Without that derived remainingNotional update, `STATUS_MISMATCH` occurs first, not `OBLIGATION_DUPLICATE`. Citation: `semantics.test.mjs` line 88. Conservation failure on an altered Transfer recipient is `OBLIGATION_CONSERVATION` and uses altered source, labeled unexecuted against current `loan.mori`.
+ 
+ `PROGRAM_BOUNDS` is stage 7. The next source size above admitted instruction, local, node, depth, or effect maxima rejects before execution. Citation: `runtime counts attain the admitted instruction/local/node bounds; the next source size rejects before execution`.
+--- candidate03/evidence/moriarty-completion-program-2026-09-07/SP01/loan-swap-subset-01/traces.json
++++ candidate04/evidence/moriarty-completion-program-2026-09-07/SP01/loan-swap-subset-01/traces.json
+@@ -166,5 +166,5 @@
+       "programHash": {"mapping": "envelope-digest", "symbolicBinding": "SHA256(UTF8('MORIARTY-PROGRAM-bounded-atomic/1') || 00 || canonical(SemanticManifest))", "concreteValue": null, "status": "parent-freeze-pending", "owner": "typed-schemas.md", "rowCrossRef": "examples.loan or examples.swap program"},
+       "actionHash": {"mapping": "envelope-digest", "symbolicBinding": "hash(ACTION, EvaluationInput.action) = SHA256(UTF8('MORIARTY-ACTION-bounded-atomic/1') || 00 || canonical(ActionCall))", "concreteValue": null, "status": "parent-freeze-pending", "owner": "typed-schemas.md", "note": "Binds the evaluated ActionCall afterward. Neither authority statement signs current ObservationSet. ExactPlan signs ActionCall. OutcomeStatement does not."},
+-      "observationsHash": {"mapping": "envelope-digest", "symbolicBinding": "hash(OBSERVATIONS, EvaluationInput.observations) = SHA256(UTF8('MORIARTY-OBSERVATIONS-bounded-atomic/1') || 00 || canonical(ObservationSet))", "concreteValue": null, "status": "parent-freeze-pending", "owner": "typed-schemas.md", "note": "ObservationSet is authenticated separately. Bound into CompleteBody and ProofContext after evaluation."},
++      "observationsHash": {"mapping": "envelope-digest", "symbolicBinding": "hash(OBSERVATIONS, EvaluationInput.observations) = SHA256(UTF8('MORIARTY-OBSERVATIONS-bounded-atomic/1') || 00 || canonical(ObservationSet))", "concreteValue": null, "status": "parent-freeze-pending", "owner": "typed-schemas.md", "note": "ObservationSet is authenticated separately. Bound into CompleteBody after evaluation. ProofContext binds observations indirectly through traceHash. ProofContext has no observationsHash member."},
+       "beforeStateHash": {"mapping": "envelope-digest", "symbolicBinding": "EvaluationInput.state.stateHash = hash(STATE, before StateBody)", "concreteValue": null, "status": "parent-freeze-pending", "owner": "runtime-types.ts"},
+       "predecessors": {"mapping": "authority-copy", "symbolicBinding": "authority.statement.predecessors, required exactly [beforeStateHash]", "concreteValue": null, "status": "parent-freeze-pending", "owner": "typed-schemas.md Binding"},
+@@ -801,8 +801,8 @@
+       "readFootprint": {
+         "sourcePreStateReads": ["state.epoch_closed", "state.trader_a", "state.reserve_a", "state.reserve_b", "state.trader_b"],
+-        "sourceStagedReads": ["state.reserve_a after input credit, expected_reserve_a guard", "state.reserve_b after output debit, expected_reserve_b guard", "state.trader_a after input debit", "state.trader_b after output credit"],
++        "sourceStagedReads": ["state.reserve_a after input credit, expected_reserve_a guard", "state.reserve_b after output debit, expected_reserve_b guard"],
+         "sourceConstantsArgumentsObservations": ["obs.now", "remaining source guard remaining > uint(1)", "arg.actor", "arg.recipient", "arg.asset_in", "arg.asset_out", "arg.amount_in", "arg.min_out", "const.trader", "const.pool", "const.fee_numerator", "const.fee_denominator", "const.expected_output", "const.expected_reserve_a", "const.expected_reserve_b", "text ASSET_A", "text ASSET_B", "horizon literal 2000000000"],
+         "sharedDependencyRef": "shared-eval-deps-bounded-atomic-1",
+-        "note": "Listed source reads do not account for entire evaluator work. min_out is an ActionCall argument. OutcomeStatement does not sign min_out."
++        "note": "Listed source reads do not account for entire evaluator work. min_out is an ActionCall argument. OutcomeStatement does not sign min_out. Trader balances stay in sourcePreStateReads only. Source never reads trader balances again after writes. sharedDependencyRef still covers the whole-state hash."
+       },
+       "writeFootprint": ["trader_a", "reserve_a", "reserve_b", "trader_b"],
+@@ -1260,12 +1260,21 @@
+       "id": "loan-duplicate-due",
+       "host": "loan.mori after accrue",
+-      "mutation": "reset cursor and notional then accrue again while dues remain. Reseal mutated StateBody and rebind beforeStateHash and predecessors.",
++      "mutation": "From after-accrue, set state.body.values[name=\"cursor\"].value to UInt128 0, set state.body.values[name=\"notional\"].value to Amount 5000000000 USD_micro, AND set state.body.remainingNotional.amount to the same Amount 5000000000 USD_micro. Retain revision 1, remaining 1, and existing dues from after-accrue. Then reseal stateHash and rebind authority.statement.beforeStateHash and predecessors with the simulated valid signature assumption. Accrue again while those dues remain.",
+       "expectedDiagnostic": "OBLIGATION_DUPLICATE",
+-      "construction": {"resealRebind": true, "startFrom": "fresh independent valid after-accrue fixture"},
++      "construction": {
++        "resealRebind": true,
++        "startFrom": "fresh independent valid after-accrue fixture",
++        "cursor": {"name": "cursor", "value": {"tag": "UInt128", "value": "0"}},
++        "notional": {"name": "notional", "value": {"tag": "Amount", "unit": "USD_micro", "value": "5000000000"}},
++        "remainingNotional": {"tag": "Amount", "amount": {"tag": "Amount", "unit": "USD_micro", "value": "5000000000"}},
++        "retain": ["revision 1", "remaining 1", "existing dues from after-accrue"],
++        "signature": "simulated valid signature assumption as required by negativeFixtureConvention",
++        "withoutDerivedRemainingNotionalUpdate": "STATUS_MISMATCH occurs first, not OBLIGATION_DUPLICATE"
++      },
+       "constructionRef": "$.negativeFixtureConvention",
+       "unchangedInput": true,
+       "acceptedEffects": [],
+       "whyObligationsCannotVanish": "Tombstones and Outstanding records both occupy identity. Recreate is forbidden in this profile.",
+-      "citation": "semantics.test.mjs accrue after accrued with cursor/notional reset -> OBLIGATION_DUPLICATE",
++      "citation": "semantics.test.mjs line 88 accrue after accrued with cursor/notional reset -> OBLIGATION_DUPLICATE",
+       "executionStatus": "specified-from-source-and-test-observation-unexecuted-by-this-worker"
+     },
