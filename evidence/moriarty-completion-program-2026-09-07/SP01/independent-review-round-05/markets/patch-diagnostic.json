@@ -1,0 +1,282 @@
+{
+  "status": "blocked",
+  "candidateSha256": "89186944596d148b0183ec87638792c7c60b09299fbfd35831ad4dbd0becbf02",
+  "scope": "Only exact declared patch application versus stored complete state. Two documentary recipe keys are explicitly projected out; all other fields compared recursively. No economic/claim/footprint/runtime/ledger acceptance.",
+  "checks": [
+    {
+      "trace": "intent-cases:exact-output-swap:trace",
+      "pass": true,
+      "differences": []
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "pass": false,
+      "differences": [
+        {
+          "path": "/authority/nominalCaps/0/cumulative",
+          "actualMissing": true,
+          "expected": {
+            "amount": "1",
+            "unit": "token0-unit",
+            "asset": "token0",
+            "scale": "0"
+          }
+        },
+        {
+          "path": "/authority/nominalCaps/0/notAGrossDebitCap",
+          "expectedMissing": true,
+          "actual": true
+        },
+        {
+          "path": "/authority/nominalCaps/0/note",
+          "expected": "tokensOwed0=1 pending collect; not a token transfer",
+          "actual": "tokensOwed0=1 pending collect; not a token transfer and not a gross-debit cap"
+        },
+        {
+          "path": "/authority/nominalCaps/0/original",
+          "actualMissing": true,
+          "expected": {
+            "amount": "0",
+            "unit": "token0-unit",
+            "asset": "token0",
+            "scale": "0"
+          }
+        },
+        {
+          "path": "/authority/nominalCaps/0/post",
+          "expectedMissing": true,
+          "actual": {
+            "amount": "1",
+            "unit": "token0-unit",
+            "asset": "token0",
+            "scale": "0"
+          }
+        },
+        {
+          "path": "/authority/nominalCaps/0/pre",
+          "expectedMissing": true,
+          "actual": {
+            "amount": "0",
+            "unit": "token0-unit",
+            "asset": "token0",
+            "scale": "0"
+          }
+        },
+        {
+          "path": "/authority/nominalCaps/0/remaining",
+          "actualMissing": true,
+          "expected": {
+            "amount": "1",
+            "unit": "token0-unit",
+            "asset": "token0",
+            "scale": "0"
+          }
+        },
+        {
+          "path": "/pool/activeLiquidityNote",
+          "expectedMissing": true,
+          "actual": "unchanged 1000000 because tick 100 was touched not crossed; liquidityNet[100] not applied"
+        },
+        {
+          "path": "/pool/initializedTicks/100/feeGrowthOutside0Note",
+          "expectedMissing": true,
+          "actual": "stays 0; flip only on actual cross"
+        },
+        {
+          "path": "/pool/initializedTicks/100/initializedLiquidityBound",
+          "actualMissing": true,
+          "expected": true
+        },
+        {
+          "path": "/pool/initializedTicks/110/initializedLiquidityBound",
+          "actualMissing": true,
+          "expected": true
+        },
+        {
+          "path": "/positions/LP1/inventoryToyPost",
+          "expectedMissing": true,
+          "actual": {
+            "atSqrtP100": {
+              "token0": "909",
+              "token1": "0"
+            },
+            "inRange": true,
+            "reason": "tickLower 100 <= currentTick 100 < tickUpper 110"
+          }
+        },
+        {
+          "path": "/positions/LP1/note",
+          "expectedMissing": true,
+          "actual": "tokensOwed0 is a nominal LP claim, not a token transfer in this swap"
+        }
+      ]
+    },
+    {
+      "trace": "DeFi-regressions:iterative-invariant-AMM:trace",
+      "pass": true,
+      "differences": []
+    },
+    {
+      "trace": "DeFi-regressions:ordered-redemption:trace",
+      "pass": false,
+      "differences": [
+        {
+          "path": "/principal/note",
+          "expectedMissing": true,
+          "actual": "principal equals remaining debt; accrual stays 0; principal+accrual=debt"
+        }
+      ]
+    },
+    {
+      "trace": "DeFi-regressions:shared-vault-accounting-hooks:trace",
+      "pass": true,
+      "differences": []
+    },
+    {
+      "trace": "DeFi-regressions:margin-funding:trace",
+      "pass": false,
+      "differences": [
+        {
+          "path": "/positions/P1/note",
+          "expectedMissing": true,
+          "actual": "withdrawal does not settle pnl, does not erase funding debt, does not copy work/reserve"
+        },
+        {
+          "path": "/positions/P1/principalAccrualNonDoubleCount",
+          "expectedMissing": true,
+          "actual": "fundingDebt principal=5 and accrual.accrued=5 name the same realized 5; they are not summed; debt.fundingDebt=5"
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/cumulative",
+      "actualMissing": true,
+      "expected": {
+        "amount": "1",
+        "unit": "token0-unit",
+        "asset": "token0",
+        "scale": "0"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/notAGrossDebitCap",
+      "expectedMissing": true,
+      "actual": true
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/note",
+      "expected": "tokensOwed0=1 pending collect; not a token transfer",
+      "actual": "tokensOwed0=1 pending collect; not a token transfer and not a gross-debit cap"
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/original",
+      "actualMissing": true,
+      "expected": {
+        "amount": "0",
+        "unit": "token0-unit",
+        "asset": "token0",
+        "scale": "0"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/post",
+      "expectedMissing": true,
+      "actual": {
+        "amount": "1",
+        "unit": "token0-unit",
+        "asset": "token0",
+        "scale": "0"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/pre",
+      "expectedMissing": true,
+      "actual": {
+        "amount": "0",
+        "unit": "token0-unit",
+        "asset": "token0",
+        "scale": "0"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/authority/nominalCaps/0/remaining",
+      "actualMissing": true,
+      "expected": {
+        "amount": "1",
+        "unit": "token0-unit",
+        "asset": "token0",
+        "scale": "0"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/pool/activeLiquidityNote",
+      "expectedMissing": true,
+      "actual": "unchanged 1000000 because tick 100 was touched not crossed; liquidityNet[100] not applied"
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/pool/initializedTicks/100/feeGrowthOutside0Note",
+      "expectedMissing": true,
+      "actual": "stays 0; flip only on actual cross"
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/pool/initializedTicks/100/initializedLiquidityBound",
+      "actualMissing": true,
+      "expected": true
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/pool/initializedTicks/110/initializedLiquidityBound",
+      "actualMissing": true,
+      "expected": true
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/positions/LP1/inventoryToyPost",
+      "expectedMissing": true,
+      "actual": {
+        "atSqrtP100": {
+          "token0": "909",
+          "token1": "0"
+        },
+        "inRange": true,
+        "reason": "tickLower 100 <= currentTick 100 < tickUpper 110"
+      }
+    },
+    {
+      "trace": "DeFi-regressions:concentrated-liquidity:trace",
+      "path": "/positions/LP1/note",
+      "expectedMissing": true,
+      "actual": "tokensOwed0 is a nominal LP claim, not a token transfer in this swap"
+    },
+    {
+      "trace": "DeFi-regressions:ordered-redemption:trace",
+      "path": "/principal/note",
+      "expectedMissing": true,
+      "actual": "principal equals remaining debt; accrual stays 0; principal+accrual=debt"
+    },
+    {
+      "trace": "DeFi-regressions:margin-funding:trace",
+      "path": "/positions/P1/note",
+      "expectedMissing": true,
+      "actual": "withdrawal does not settle pnl, does not erase funding debt, does not copy work/reserve"
+    },
+    {
+      "trace": "DeFi-regressions:margin-funding:trace",
+      "path": "/positions/P1/principalAccrualNonDoubleCount",
+      "expectedMissing": true,
+      "actual": "fundingDebt principal=5 and accrual.accrued=5 name the same realized 5; they are not summed; debt.fundingDebt=5"
+    }
+  ]
+}

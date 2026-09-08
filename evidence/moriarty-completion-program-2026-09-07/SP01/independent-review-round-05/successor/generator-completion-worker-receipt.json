@@ -1,0 +1,27 @@
+{
+  "kind": "generator-completion-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 739.4587180649978,
+  "chargedSeconds": 1800,
+  "beforeHead": "1a9721e5634e9196aadbe7c28a51081e820a9247",
+  "afterHead": "1a9721e5634e9196aadbe7c28a51081e820a9247",
+  "beforeStatusSha256": "031afbe425a5897d4878c5f545510eedc8ad3cf8c309d94264bd162eafc503f3",
+  "afterStatusSha256": "031afbe425a5897d4878c5f545510eedc8ad3cf8c309d94264bd162eafc503f3",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=29min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-successor-contract-generator-completion-worker-1224380.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "SP01.3 proposed successor semantic and signing contract derived from accepted roadmap and existing design proposal. No semantic freeze before full challenge reconciliation and consequential majority decision.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 432518,
+      "outputTokens": 40520,
+      "cacheReadInputTokens": 2632320,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 27,
+      "costUSD": 0.41213372
+    }
+  },
+  "resultText": "I'll start from the existing generator and the targeted diagnostics, then fix the concrete `ProofContext` mismatch before touching tests or owned examples.Next I\u2019ll read the amendment, diagnostic, and the generator files so the first run can target the actual `specVersion` mismatch.The diagnostic pins `ProofContext.specVersion`; I\u2019ll inspect that schema field and the generator\u2019s construction next.The schema is a single line; I\u2019ll extract `ProofContext` and related version fields so the const and generator agree.I'll run the generator to a temp file first, then align `ProofContext.specVersion` with the schema const.The first run matches the diagnostic. I\u2019ll set `ProofContext.specVersion` to the schema const and keep scanning for the next typecheck failures.Display typecheck is past the version mismatch; I\u2019ll fix the `x-display` TypeError and map remaining metadata gaps.Display matching currently ignores `kind`, so I\u2019ll discriminate unions on `tag`/`kind` and fill missing `x-display` metadata.Generator ran cleanly. I\u2019ll update the contract prose and run the independent tests against the new output.Tests are green. I\u2019ll hash the eight owned files and write the concise reports.The generator now matches the schema, and the independent tests are green. Results stay specified-only pending a fresh GPT-6 review. This is not a semantic freeze.\n\n## Diagnostic and fix\n\nFirst run of the existing generator:\n\n```text\npython3 generate-signing-examples.py --output /tmp/sp01-gen-out-1.json\nEXIT 1\nProofContext typecheck: 'moriarty-succ-core/0' was expected path=['specVersion']\n```\n\nThe validator stayed Draft 2020-12. `ProofContext.specVersion` is now `moriarty-succ-core/0` (same const as `ProgramBody.coreVersion` / `SpecBinding.semanticVersion`). Document `schemaVersion` remains `moriarty-succ-sign/0`.\n\n## Generation and tests\n\n| Command | Exit | Result |\n| --- | --- | --- |\n| `generate-signing-examples.py --output /tmp/sp01-gen-a.json` | 0 | 225407 bytes |\n| `generate-signing-examples.py --output /tmp/sp01-gen-b.json` | 0 | identical to A |\n| `signing-contract.test.py` | 0 | **PASS 338 FAIL 0 GREEN** |\n\nBoth clean outputs hash to `56c34ef5104970550bffcd0bb3743d5a62495a25f8783a1851f1a8a5350ececc`. Owned `signing-examples.json` was written from that output only after those two runs. Tests read that owned file and do not import generator helpers.\n\nPrior interrupted-pass **meaningful RED 144** is preserved under `interrupted-generator-correction/`. The earlier wrong test-path failure is not that RED.\n\nAccrual toy: `floor(5000000000 * 1 * 2592000 / (10 * 31536000)) = 41095890`. Cap `6000000000`. The old `533972602` value is absent from examples.\n\n## Eight owned files\n\nOwned total **538023 / 786432** bytes. Contract **5596 / 8000** words.\n\n| Bytes | SHA-256 | File |\n| ---: | --- | --- |\n| 46649 | `89f5cd226b835849d63a3352256d453807dd6ba29590c34a920e0de748496d5d` | `semantic-contract.md` |\n| 124156 | `0d95314ac2345d92a6bf7774414cba0b8712651f733f49b4d0e102575c8c6759` | `signing-display-schema.json` |\n| 28152 | `5b18ffda41e3b3c96dc6838f6c1b1f1eb9dd62b2e860ccea2c80e65f69aef6bc` | `semantic-decisions.json` |\n| 225407 | `56c34ef5104970550bffcd0bb3743d5a62495a25f8783a1851f1a8a5350ececc` | `signing-examples.json` |\n| 2553 | `3260f1e748500fc5081507baf1afe2965de3b0081d6cd47bbfadce94557022a0` | `FOREMAN_REPORT.md` |\n| 4150 | `c0059d29e26ee27259a7c18c79b71c45b11f8b330a51717f8eb67bd58e33dc55` | `FOREMAN_REPORT.json` |\n| 74008 | `52e3b4c77c7ec813bded3fb5562e9fbd803c279b2b86c1d7774058d6bd2b3676` | `generate-signing-examples.py` |\n| 32948 | `664c2a22d0566f789a366bac29aef6f8c02d010164a7de8f5ab680894324d12a` | `signing-contract.test.py` |\n\nOld atomic pins unchanged: `bounds.json`, `types.ts`, `codec.ts`. R2 true-end patterns, numeric domain widths, and four claim kinds are unchanged.\n\n## Limits\n\nLocal Python model tests only. No compiler, proof, wallet, native, or network work. No GPT-6 review in this pass. No RP01/SP01/BNF/K/native/sprint acceptance.",
+  "stopReason": "end_turn",
+  "status": "?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n?? experiments/moriarty-language/spec/successor/\n"
+}

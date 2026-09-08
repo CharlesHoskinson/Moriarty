@@ -1,0 +1,555 @@
+{
+  "status": "proposed",
+  "gate": "RP01/SP01.3",
+  "author": "Grok 4.6 high",
+  "pending": [
+    "SP01.2 challenge-map reconciliation. This proposal does not read or approve that live worktree.",
+    "User-selected cross-provider majority for majorityRequired entries.",
+    "Native hash and domain correspondence. Host SHA-256 is not accepted successor crypto.",
+    "Formative usability evaluation of source sugar. Model opinion is not evidence.",
+    "Formal proofs of named claims. Tests are not proofs.",
+    "Native history correspondence for the four mandatory claims. Capability proof domain remains abstract."
+  ],
+  "classificationNote": "status proposed means a SP01.3 choice. status inherited-constraint means an exact authoritative rule from a pinned source. No entry is a vote or approval. openChecks lists only remaining gaps. Specified equations in semantic-contract.md are not silently treated as implemented.",
+  "narrowCorrectionsThisPass": [
+    {
+      "path": "generate-signing-examples.py proof_context.specVersion",
+      "before": "moriarty-succ-sign/0",
+      "after": "moriarty-succ-core/0 matching ProofContext.const and ProgramBody.coreVersion"
+    },
+    {
+      "path": "semantic-contract.md F.1 raw accrual",
+      "before": "533972602",
+      "after": "41095890 with liabilityCap 6000000000"
+    }
+  ],
+  "entries": [
+    {
+      "id": "SD-SUGAR-CORE",
+      "status": "proposed",
+      "issue": "Whether source sugar and typed Core are distinct.",
+      "proposedChoice": "Yes. Source elaborates to Core. SP02 owns sugar. SP03 executes Core. JSON and S-expressions are diagnostic only. OutcomeIntent.allowedActions are source names. ResidualCapability.allowedEffectSet is CoreOp. ExactEffect.kind is EffectKind.",
+      "alternatives": [
+        "K parses source surface directly.",
+        "Single language with no Core layer."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+        "locator": "Specification layers; Operational semantics in K. User selected .mori, EBNF, K."
+      },
+      "consequences": "SP02 must prove elaboration. SP03 input grammar need not resemble source.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Elaboration preservation proof is SP03, not this file."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP02"
+    },
+    {
+      "id": "SD-NOMINAL-DEBT",
+      "status": "proposed",
+      "issue": "Nominal debt versus token amounts and signed integers.",
+      "proposedChoice": "Amount is nonnegative tokens. Debt is the schema record with controller, debtor, creditor, denomination, principal, accrued, outstanding, dates, allocationRule, negativeRateDisposition, liabilityCap, settlement conversion. outstanding = principal + accrued. SInt is for P&L, funding, and Rate.mantissa only. Transfer authority never creates debt.",
+      "alternatives": [
+        "Signed balance where negative means debt.",
+        "Reuse Amount for dues as in moriarty-bounded-atomic/1 DueCreated."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+        "locator": "Static semantics type families; Obligations and workflows."
+      },
+      "consequences": "DebtCreate is a distinct CoreOp. Accrual/Capitalize/WriteOff/DueSettled are EffectKind images. Atomic DueCreated remains old-profile evidence only.",
+      "challengeFamilies": [
+        "DA06",
+        "DA07",
+        "DA09",
+        "DA10",
+        "DA11"
+      ],
+      "openChecks": [
+        "ACTUS signed-value fixtures need SP07 mapping.",
+        "Majority on record-versus-SInt debt."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-ACTION-VS-EFFECT",
+      "status": "proposed",
+      "issue": "Residual allowedEffectSet listed EffectKind names while schema items are CoreOp.",
+      "proposedChoice": "Keep items as CoreOp. Do not widen the schema to EffectKind. Source action names stay on allowedActions. CoreOp permission is allowedEffectSet. EffectKind is exactEffects[].kind. Closed image: DebtAccrue emits Accrual, DebtCreate emits DueCreated, Exchange emits Transfer and optional Fee. Accrue example mapped Accrual/DueCreated to DebtAccrue/DebtCreate.",
+      "alternatives": [
+        "Widen allowedEffectSet to CoreOp|EffectKind.",
+        "Rename the field to allowedCoreOps in a later schema version."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/signing-display-schema.json",
+        "locator": "$defs/ResidualCapability/properties/allowedEffectSet and $defs/CoreOp versus $defs/EffectKind. interrupted-diagnostic.json positiveAccrualSchemaFailure."
+      },
+      "consequences": "Evaluators check CoreOp membership then effect-image membership. Weakening the schema to accept every string is forbidden.",
+      "challengeFamilies": [
+        "DA21",
+        "DA09"
+      ],
+      "openChecks": [
+        "SP02 elaboration table from every source action name to exactly one CoreOp."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-ROUNDING",
+      "status": "proposed",
+      "issue": "Division, remainders, ceil, and checked intermediates.",
+      "proposedChoice": "No plain division. floor_div and ceil_div require positive denominators. Intermediates use result width unless named checked_wide is admitted. Overflow rejects the action. Remainder is the Remainder record with numerator, denominator, unit, location. One-final-floor for the admitted swap and first-period loan samples. Price direction is the const basePerQuote.",
+      "alternatives": [
+        "Keep only FloorDiv from the atomic profile.",
+        "Silent host rational then round.",
+        "Wider intermediates by default.",
+        "quotePerBase as Price.direction."
+      ],
+      "rationale": {
+        "kind": "repository-observation",
+        "path": "experiments/moriarty-language/spec/numeric-profile.json",
+        "sha256": "6d88f694bf8af8c5b7dd75fce76f58fe0d14fc68c2782dd0d3fb885ca4a7eb15",
+        "locator": "integer.overflow; firstExamples.loanInterest and swapOutput; successor Price.direction const basePerQuote."
+      },
+      "consequences": "ceil_div is a proposed extension. ERC-4626 method-specific rounding needs ShareConvert direction. Worked-examples lam01 rational 2480/73 versus decimal is a numeric gap, not closed. Swap display is AssetB per AssetA at scale 4.",
+      "challengeFamilies": [
+        "DA01",
+        "DA03",
+        "DA06",
+        "DA17"
+      ],
+      "openChecks": [
+        "ACTUS decimal versus exact rational (worked-examples.json numeric_gap).",
+        "Concentrated-liquidity direction-specific rounding (RP01 regression class)."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP03"
+    },
+    {
+      "id": "SD-STAGED",
+      "status": "inherited-constraint",
+      "issue": "pre, next, post, and sequential locals.",
+      "proposedChoice": "pre immutable. let sequential immutable locals. next.field written at most once. RHS cannot read next. post only in ensures suffix. Lexical first error. Atomic financial rollback.",
+      "alternatives": [
+        "Keep atomic set/state later-reads-see-writes."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+        "locator": "Surface choice paragraphs on pre/next/post. openspec/sprints/README.md Shared artifact contract."
+      },
+      "consequences": "Migration from atomic set must rename reads to locals. File extension rename never opts in.",
+      "challengeFamilies": [
+        "DA01",
+        "DA06"
+      ],
+      "openChecks": [
+        "Formatter and parser agreement in SP02."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC01",
+      "sprint": "SP02"
+    },
+    {
+      "id": "SD-NUMERIC",
+      "status": "proposed",
+      "issue": "Successor integer widths and collection bounds.",
+      "proposedChoice": "UInt64/UInt128/SInt128 and Scale 0..18 as schema patterns plus DomainValidation inclusive maxima. ProfileBody sourceUtf8Bytes 65536, signingUtf8Bytes 65536, maxNodes 4096, maxSidecarBytes 16384, maxTotalVerificationWork 65536, predecessorFanIn 8, collectionCapacity 128. Distinct ordinary and recovery work. These are not registered and not a freeze.",
+      "alternatives": [
+        "UInt128 only as atomic numeric-profile.json.",
+        "SInt256 for ACTUS.",
+        "Fan-in 1 forever."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/signing-examples.json",
+        "locator": "preimageRegistry.profileBody. Atomic bounds.json SHA b548641a1a9d74bab68ba699ffb1e2350fa0889d61b8704e98216f9d4a6c3664 is not this table."
+      },
+      "consequences": "SP02 writes a new successor bounds.json. Atomic bounds.json bytes must stay identical. 2^64 and 2^128 may schema-pass and must domain-fail.",
+      "challengeFamilies": [
+        "DA03",
+        "DA24"
+      ],
+      "openChecks": [
+        "Native circuit fit.",
+        "Majority on widths and fan-in."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP02"
+    },
+    {
+      "id": "SD-HASH",
+      "status": "proposed",
+      "issue": "Canonical encoding, domain tags, host SHA-256, display.",
+      "proposedChoice": "Framed SHA256(UTF8(domain)||0x00||canonicalJSON) with domains MORIARTY-SUCC-*/0 including POLICY, EFFECTS, RESIDUAL, ASSUMPTIONS, SUCCESSOR-ID. sourceHash is raw SHA256. Sorted keys, integer strings, no Unicode normalization. Duplicate keys and unknown fields reject before hash. PolicyBody is distinct from PolicyBinding and does not contain policyHash. ProofContext.specVersion is moriarty-succ-core/0; document schemaVersion is moriarty-succ-sign/0. Genesis bootstrap is emptySuccessor zeros then unbornStateBody then GenesisBody.initialStateHash; StateBody has no genesisHash. Inner edges bind successorRecordHash, postStateHash, originalIntentDigest, effectsHash, residualCapabilityHash, originalAssumptionsHash from computed bodies. Display walks schema x-display; missing metadata is an error; values equal parsed leaves. Do not reuse MORIARTY-*-bounded-atomic/1 as accepted successor crypto.",
+      "alternatives": [
+        "Reuse atomic domainRegistry in bounds.json.",
+        "Poseidon or native sponge from first successor freeze.",
+        "NFC normalize strings."
+      ],
+      "rationale": {
+        "kind": "inherited-constraint plus proposal",
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "locator": "RP01 co-define canonical signing/display before freezing authority fields. LANGUAGE-DESIGN Mandatory proof acceptance non-circular construction."
+      },
+      "consequences": "Examples compute host SHA-256 with Python hashlib. Native correspondence is an open check. Old codec.ts is immutable and not the successor evaluator.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Native hash compatibility.",
+        "Majority before freeze."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC05",
+      "sprint": "SP09"
+    },
+    {
+      "id": "SD-PARTIAL",
+      "status": "proposed",
+      "issue": "Partial fill, cancel, cloned work, recovery.",
+      "proposedChoice": "Durable consumption is (network, deployment, principal, nonce). Actor-indexed ledgers persist cumulativeGross, cumulativeFees, cumulativeNet, remainingGross, remainingFee. Refunds do not restore gross. Fees count against net. Net goals: prefix must remain achievable, completion must meet originalNetGoal, cancel leaves a residual Duty. Fill and cancel race on ledger currentness. Cloned residual work rejects. Ordinary and recovery work are separate conserved budgets. Ordinary exhaustion never erases debt.",
+      "alternatives": [
+        "Per-transaction nonce only.",
+        "Reset work on solver reload.",
+        "Closure deletes residual notional as in a naive episode close.",
+        "Net goals checked only at completion."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "locator": "RP01 partial fills; no-debt-erasure; LANGUAGE-DESIGN Mandatory proof acceptance partial fills paragraph. loan-swap design.md loan-settle remaining notional 4500000000 after close."
+      },
+      "consequences": "SuccessorRecord binds originalIntentDigest and every protected dimension. Schema cannot sum caps. Evaluator must. Atomic profile has no Pending.",
+      "challengeFamilies": [
+        "DA18",
+        "DA15",
+        "DA21",
+        "DA09"
+      ],
+      "openChecks": [
+        "MC04/MC05 cumulative tests before multi-transaction outcome intents."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC05",
+      "sprint": "SP08"
+    },
+    {
+      "id": "SD-REQUEST",
+      "status": "proposed",
+      "issue": "Privacy, request states, and private handoff.",
+      "proposedChoice": "Request states Pending, Claimable, Claimed, Cancelled, Expired. Claimed cannot cancel. Expiry does not erase a Claimed payment duty. EventClaim (DA13) and RewardAccount/Slash (DA14) have explicit CoreOp and EffectKind rows. Private fields need authorized declassification. Handoff must include usable witness, predecessor evidence, residual duties/authority/work, recovery.",
+      "alternatives": [
+        "Immediate settlement only.",
+        "Commitment-only handoff.",
+        "Silent omission of DA13/DA14."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+        "locator": "DA18 ERC-7540 Request Lifecycle; DA13 event claims; DA14 rewards/slash; DA12 expiry versus exercised duty."
+      },
+      "consequences": "MC06 demonstration required. Not claimed by this proposal. Slash sets nominalBalanceUnchanged and does not erase Debt.",
+      "challengeFamilies": [
+        "DA18",
+        "DA12",
+        "DA13",
+        "DA14",
+        "DA15",
+        "DA23"
+      ],
+      "openChecks": [
+        "Primary lifecycle sources for DA15, DA16, DA23 still open.",
+        "DA13 evidence encoding beyond evidenceAnchor."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC06",
+      "sprint": "SP10"
+    },
+    {
+      "id": "SD-COMPOSITION",
+      "status": "proposed",
+      "issue": "Five composition operators versus generic and versus proofjoin.",
+      "proposedChoice": "seq, par, interleave, atomic, message. unknownRejects true. interleaveConflict is write_path_or_identity_or_cap_key. parFrame is disjoint_keys_concat_obs. parReads is exclude_cross_branch_read_write. branchKey is lexicographic_branch_id. Boolean and is not composition. Proof split/join is not an operator. Child allowedEffectSet subset parent. Authority/ledger partition on split.",
+      "alternatives": [
+        "Generic and combinator.",
+        "Treat IVC join as financial parallel."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "locator": "All five composition operators receive separate dispositions. LANGUAGE-DESIGN Obligations and workflows. action-targets.csv DA24. schema CompositionPolicy consts."
+      },
+      "consequences": "Spellings seq/par/interleave/atomic/message are proposed. SP02 must produce productions. SP10 owns isolated proofs. Interleave conflict is now specified in prose and schema const.",
+      "challengeFamilies": [
+        "DA24",
+        "DA08",
+        "DA23"
+      ],
+      "openChecks": [
+        "Flash-borrow atomic fixture (DA08) still needs-normative-atomicity-fixture."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC06",
+      "sprint": "SP10"
+    },
+    {
+      "id": "SD-WORK",
+      "status": "proposed",
+      "issue": "Work unit, per-constructor charge, recovery alias versus partition.",
+      "proposedChoice": "One work-unit per charged CoreOp and per B.1 expression node. Default ordinary charge 1, including Exchange, Genesis, DebtAccrue, Migrate. Admission is CoreOp plus expression plus sidecar. After one charge, state, prepared, and successor remainingWork are identical (8 to 7 ordinary). RecoveryRight.alias AliasReserve which=recovery aliases remainingWork.recoveryRemaining. It does not copy Work. PartitionReserve is not in the schema. Unknown tag rejects. charge(split) is on the split event. Join remaining equals sum of children minus join charge. Cancel and migrate conserve. Lifetime fields never increase.",
+      "alternatives": [
+        "Embed a second Work inside RecoveryRight.",
+        "Zero charge until a profiler exists.",
+        "Refresh remainingWork on migrate."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/signing-display-schema.json",
+        "locator": "$defs/Work, RecoveryRight, ReserveAlias. swapSuccessor ordinaryRemaining 7 from 8."
+      },
+      "consequences": "inv-cloned-residual-work is the specified clone reject. Native verification-work budget is ProfileBody.maxTotalVerificationWork 65536, distinct from conserved ordinary/recovery units.",
+      "challengeFamilies": [
+        "DA21",
+        "DA24"
+      ],
+      "openChecks": [
+        "Majority on the uniform charge-1 table versus per-op weights.",
+        "Circuit cost correspondence for maxTotalVerificationWork."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-PINNED-ADMITTED",
+      "status": "proposed",
+      "issue": "Pinned versus AdmittedContext predecessor modes.",
+      "proposedChoice": "Pinned: ExactPlan predecessors is an exact unconsumed list with exact stateHash. AdmittedContext: instanceId plus requiredPolicyHash, minEventOrder, requireUnconsumed. Selected ExactPlan pins the concrete list. GenesisNone: empty predecessors, genesis action only. Four claims remain mandatory in all three modes.",
+      "alternatives": [
+        "One predecessor field with informal comments.",
+        "Optional HistoryCompliance on genesis."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/signing-display-schema.json",
+        "locator": "$defs/PinnedPredecessors, AdmittedContext, PredecessorConstraint, ExactPlanDocument allOf genesis predecessors."
+      },
+      "consequences": "Duplicate consumptionId is schema-legal and HistoryCompliance-illegal. Ledger unique consumption remains contextual.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Ledger currentness evaluator. Specified-only in this file."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC05",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-NEGATIVE-ACCRUAL",
+      "status": "proposed",
+      "issue": "Signed Rate on DebtAccrue, allocation, settlement conversion, cap.",
+      "proposedChoice": "Accrual uses floor(principal * mantissa * period / (10^scale * secondsPerYear)) with secondsPerYear 31536000. Negative rate follows negativeRateDisposition Reject|FloorZero|CreditAccrued. Cap clips outstanding to liabilityCap. Capitalize moves accrued into principal without changing outstanding. Repay allocates AccrualFirst|PrincipalFirst|ProRata then converts denomination to settlementAsset. WriteOff is authorized residual reduction by controller, not a Transfer.",
+      "alternatives": [
+        "ACTUS day-count as the only year fraction.",
+        "Silent negative rate increasing outstanding.",
+        "WriteOff as an Amount burn."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/semantic-contract.md",
+        "locator": "Section F. AccrualEffect, DueSettledEffect, WriteOffEffect, Debt required fields."
+      },
+      "consequences": "First-period sample principal 5000000000, rate 1e-1, period 2592000 yields raw 41095890. Toy liabilityCap 6000000000 leaves cap room. lastAccrualEnd advances to periodEnd; overlapping periods reject. ACTUS day-count remains SP07. Majority still required.",
+      "challengeFamilies": [
+        "DA06",
+        "DA07",
+        "DA09",
+        "DA10"
+      ],
+      "openChecks": [
+        "SP07 ACTUS day-count mapping.",
+        "Majority on secondsPerYear 31536000 versus actual/actual."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-PRECEDENCE",
+      "status": "proposed",
+      "issue": "not versus comparison precedence.",
+      "proposedChoice": "not binds looser than one non-chained comparison. not a == b means not (a == b). Change from the atomic profile.",
+      "alternatives": [
+        "Keep atomic tighter not.",
+        "Require parentheses always."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+        "locator": "Lexical and grammar contract precedence paragraph."
+      },
+      "consequences": "SP02 negative cases must include not a == b.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Usability evaluation."
+      ],
+      "majorityRequired": true,
+      "closureOwner": "MC01",
+      "sprint": "SP02"
+    },
+    {
+      "id": "SD-MIN-EXACT",
+      "status": "proposed",
+      "issue": "Minimum-receive versus exact-output.",
+      "proposedChoice": "AmountPredicate Min or Exact. Atomic swap is Min. Exact over-delivery rejects. Exchange names dust, Price or Rate, remainder. Non-exchange actions forbid those fields.",
+      "alternatives": [
+        "Single min_out field for all swaps.",
+        "Silent over-delivery on exact-output.",
+        "Require dust on every action."
+      ],
+      "rationale": {
+        "kind": "source-fact",
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "locator": "Resolve exact-output versus minimum-receive. schema ExecutionBody allOf. loan-swap design.md swap-exact-input min_out predicate."
+      },
+      "consequences": "Invalid example exact-output overdelivery is specified. Worked-examples.json floor_output 19743 is Min evidence, not Exact. Genesis and accrue have zero dust fields.",
+      "challengeFamilies": [
+        "DA01"
+      ],
+      "openChecks": [
+        "Exact-output AMM fixture still local-fixed-example only."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    },
+    {
+      "id": "SD-FEES-NET",
+      "status": "inherited-constraint",
+      "issue": "Fees versus net goals and gross debit.",
+      "proposedChoice": "Fees count against net goals. Refunds do not restore remainingGross. remainingGross = originalGrossCap - cumulativeGross. cumulativeNet = inflow - cumulativeFees. Schema cannot sum. Evaluator must. Specified in semantic-contract.md G.",
+      "alternatives": [
+        "Net goals ignore fees.",
+        "Refund restores gross cap."
+      ],
+      "rationale": {
+        "kind": "inherited-constraint",
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "locator": "RP01 no-debt-erasure; fees count against net goals; residual duties survive partial progress."
+      },
+      "consequences": "inv-net-after-fees-shortfall context includes Fee 30. Goal 19743 fails at 19713.",
+      "challengeFamilies": [
+        "DA01",
+        "DA09"
+      ],
+      "openChecks": [
+        "Evaluator must sum caps. Specified-only until that evaluator exists."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC01",
+      "sprint": "SP03"
+    },
+    {
+      "id": "SD-FOUR-CLAIMS",
+      "status": "inherited-constraint",
+      "issue": "Mandatory acceptance claims.",
+      "proposedChoice": "ContractInvariant, IntentRefinement, TransitionValidity, HistoryCompliance each exactly once. Schema contains-exactly-once. Never optional. Genesis and admin still require all four. Capability proof domain remains abstract pending native history.",
+      "alternatives": [
+        "Optional HistoryCompliance on genesis.",
+        "Host boolean as a fifth claim."
+      ],
+      "rationale": {
+        "kind": "inherited-constraint",
+        "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+        "locator": "Acceptance requires four claims. No source option disables them."
+      },
+      "consequences": "inv-duplicate-four-contract-invariant fails schema. Native statement correspondence is not this proposal.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Native statement correspondence is SP01.7/SP09, not this proposal."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC03",
+      "sprint": "SP09"
+    },
+    {
+      "id": "SD-OBS",
+      "status": "proposed",
+      "issue": "Observation authenticity versus truth.",
+      "proposedChoice": "Observation carries authenticity and a separate truthAssumption. Assumptions in the signed document name oracle_truth versus custody. obs.now is authenticated, not proven true time.",
+      "alternatives": [
+        "Treat authenticity as truth.",
+        "Omit assumptions from the signed envelope."
+      ],
+      "rationale": {
+        "kind": "proposal",
+        "path": "experiments/moriarty-language/spec/successor/signing-display-schema.json",
+        "locator": "$defs/Observation and Assumption. example assumptionId time_oracle_unproven."
+      },
+      "consequences": "Anchor encoding per kind remains an open check.",
+      "challengeFamilies": [
+        "DA21"
+      ],
+      "openChecks": [
+        "Anchor encoding per observation kind."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC01",
+      "sprint": "SP04"
+    },
+    {
+      "id": "SD-ATOMIC-NOT-SUCCESSOR",
+      "status": "inherited-constraint",
+      "issue": "Old atomic profile versus successor wire.",
+      "proposedChoice": "Old bounds.json, types.ts, codec.ts bytes stay identical. Their SHA domains are not successor crypto. Successor ProfileBody name is moriarty-successor/0.",
+      "alternatives": [
+        "Edit atomic codec in place.",
+        "Reuse MORIARTY-SIGN-bounded-atomic/1."
+      ],
+      "rationale": {
+        "kind": "inherited-constraint",
+        "path": "experiments/moriarty-language/spec/bounds.json",
+        "sha256": "b548641a1a9d74bab68ba699ffb1e2350fa0889d61b8704e98216f9d4a6c3664",
+        "locator": "Old profile immutable. Task forbids edits."
+      },
+      "consequences": "Byte identity after this task for the three old files.",
+      "challengeFamilies": [],
+      "openChecks": [
+        "Byte identity after this task."
+      ],
+      "majorityRequired": false,
+      "closureOwner": "MC01",
+      "sprint": "SP01.3"
+    }
+  ]
+}
