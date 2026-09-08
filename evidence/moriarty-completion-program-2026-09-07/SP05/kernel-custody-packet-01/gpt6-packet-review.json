@@ -1,0 +1,510 @@
+{
+  "schema": "moriarty.gpt6-preimplementation-packet-review/1",
+  "verdict": "APPROVED",
+  "scope": "Approval of this concrete SP05 fixed custody packet as a basis for separately recorded bounded implementation admission. Not implementation/result/ledger/finality/proof/Preview/sprint acceptance; no execution authorization supplied by this report.",
+  "reviewType": "PREIMPLEMENTATION",
+  "reviewer": "independent GPT-6 agent",
+  "createdAt": "2026-09-08T07:04:01.245333+00:00",
+  "packetSha256": "acd2b9caac1eabdb50a64bb82f91dc49eb9a4ac0417eeb335cd77e1a17386265",
+  "sourceManifestBaseCommit": "dd781e174300cc6cd4184ff20c517907cdf1eef6",
+  "baseCommitNote": "Recorded manifest base retained; no git command run. Content hashes establish the inspected bytes. Future worktree base must be recorded by the separate admission.",
+  "parentDecision": "approve-preparation-only",
+  "parentProposalSha256": "5fe9cf1e8531c0599ffb6286d2d3e1558464792038311208aa7db2807f026038",
+  "routeReopened": false,
+  "blockingFindings": [],
+  "observations": [
+    {
+      "id": "P01",
+      "topic": "Protected source and actual kernel invocation",
+      "assessment": "PASS for packet design",
+      "evidence": [
+        "experiments/moriarty-language/compact/generated/loan/kernel.compact:13",
+        "experiments/moriarty-language/compact/generated/loan/kernel.compact:76",
+        "experiments/moriarty-language/compact/generated/swap/kernel.compact:13",
+        "experiments/moriarty-language/compact/generated/swap/kernel.compact:118",
+        "experiments/moriarty-language/compact/generated/loan/metadata.json#/actions",
+        "experiments/moriarty-language/compact/generated/swap/metadata.json#/actions"
+      ],
+      "detail": "Both generated kernels are pure transition functions, with complete after/remaining/revision/effect results and no token ledger effects. Packet explicitly requires invoking these functions from generated wrappers, checking returned identities, materializing returned state/effects, retaining byte-identical kernel/arithmetic inputs and rejecting stale metadata. This is the required division of responsibility; absent wrapper source is expected at preimplementation review."
+    },
+    {
+      "id": "P02",
+      "topic": "Capability role and identity binding",
+      "assessment": "PASS for the approved bounded capability route",
+      "evidence": [
+        "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/proposal.md",
+        "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md:2319",
+        "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md:245",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:294"
+      ],
+      "detail": "Trusted enrollment seals role commitments and32-byte payout addresses; secret material is private, role-domain/network/program-separated and not stored in reports. Public text IDs from metadata are constrained mappings, not authentication. Borrower authorizes loan actions, trader authorizes swap, provider authorizes initialization/close. Lender is a fixed distinct payee, not claimed as a bilateral signer. Current revision, fixed executing contract/token color, network/program envelope and no recipient redirection are explicit requirements. This does not establish general wallet signing or independent institutional custody."
+    },
+    {
+      "id": "P03",
+      "topic": "Contract token custody versus payer attribution",
+      "assessment": "PASS evidence boundary",
+      "evidence": [
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:311",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:320",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:324",
+        "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/proposal.md"
+      ],
+      "detail": "receiveUnshielded only increments a color/amount input counter and has no payer parameter. sendUnshielded increments outputs and records recipient claims. Packet correctly requires actual signed offers and consumed UTXO owner checks later before claiming borrower/trader debit. Third-party funding remains a separate negative and may invalidate a financial comparison despite successful transaction execution."
+    },
+    {
+      "id": "P04",
+      "topic": "Initialization, supply and recipient generation",
+      "assessment": "PASS proposed mechanism",
+      "evidence": [
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:118",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:296",
+        "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md:222",
+        "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md:247",
+        "experiments/moriarty-language/compact/generated/loan/bound-program.json#/manifest/initialState",
+        "experiments/moriarty-language/compact/generated/swap/bound-program.json#/manifest/initialState"
+      ],
+      "detail": "Token colors derive from domain plus kernel.self(). mintUnshieldedToken accepts Uint64, generates recipient spend claims and auto-receives mint-to-self. All proposed mint amounts fit Uint64. One-shot authorized initialization supplies loan borrower20,000,000,000 USD_micro, swap pool1,000,000A/2,000,000B and trader100,000A. Initializer is identified as synthetic issuer, not an external LP deposit. Packet forbids remint/reset and defers real identities/recovery to a separate admission."
+    },
+    {
+      "id": "P05",
+      "topic": "Complete financial sequence and residual duties",
+      "assessment": "PASS independently checked finite arithmetic",
+      "evidence": [
+        "experiments/moriarty-language/compact/generated/loan/metadata.json#/stateFields",
+        "experiments/moriarty-language/compact/generated/loan/metadata.json#/textTable",
+        "experiments/moriarty-language/compact/generated/swap/metadata.json#/stateFields",
+        "experiments/moriarty-language/compact/generated/swap/metadata.json#/textTable",
+        "experiments/moriarty-language/spec/examples/loan.mori:90",
+        "experiments/moriarty-language/spec/examples/swap.mori:65"
+      ],
+      "detail": "Interest floor33,972,602 remainder27,000, settlement533,972,602, borrower19,466,027,398 and residual principal4,500,000,000 match. Loan DueCreated IDs PR4/IP3, debtor2, creditor5, denomination1 and settlement asset0 match metadata. Swap output19,743 remainder162,290,000, fee30 retained, trader90,000A/19,743B and provider closure1,010,000A/1,980,257B match. Loan lifetime/revision2/0->1/1->0/2; swap8/0->7/1->6/2. Episode closure does not discharge residual loan notional or refill/copy allowances."
+    },
+    {
+      "id": "P06",
+      "topic": "Time, entry reserves and local runtime context",
+      "assessment": "PASS feasibility at source/API level; execution not tested",
+      "evidence": [
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:275",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:279",
+        "repos/LFDT-Minokawa/compact/compiler/standard-library.compact:324",
+        "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.d.ts:30",
+        "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.js:46",
+        "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/onchain-runtime-v3/onchain-runtime-v3.d.ts:275"
+      ],
+      "detail": "blockTimeGte/Lt take Uint64 while generated observation is Uint128; the proposed horizon2,000,000,000 and checked now+300 fit Uint64. Runtime0.16.0 createCircuitContext has an explicit time argument and uses ContractState.balance for entry balances; CallContext also records timestamp uncertainty. Packet correctly forbids treating preceding receive/mint as updating queried entry balance. Synthetic context supports tests but is not network time, funding or finality evidence."
+    },
+    {
+      "id": "P07",
+      "topic": "Negative controls, rollback and evidence hierarchy",
+      "assessment": "PASS test obligations specified",
+      "evidence": [
+        "implementation-packet.md#Required local tests and independent oracle",
+        "implementation-packet.md#Purpose and evidence boundary",
+        "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/onchain-runtime-v3/onchain-runtime-v3.d.ts:335",
+        "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md:2465"
+      ],
+      "detail": "Required tests invoke compiled Contract/ledger decoder with real runtime contexts, inspect every state/effect field, isolate prerequisite failures and retain earlier successful calls while rolling back a failed single circuit. Runtime Effects exposes unshieldedMints, inputs, outputs and recipient claims to inspect. Packet retains missing funding, transaction fees, payer attribution and finality as ledger-stage obligations and blocks integration with the currently unaccepted comparison utility."
+    },
+    {
+      "id": "P08",
+      "topic": "Command/resource scope",
+      "assessment": "PASS proposed scope; separate exact execution admission still required",
+      "evidence": [
+        "implementation-packet.md#Protected inputs and owned outputs",
+        "implementation-packet.md#Recovery, resource admission and exit"
+      ],
+      "detail": "Owned source/report set,384KiB limit, explicit output-directory commands, skip-zk, no installs, fresh worktree, one proposed2400-second author dispatch,360-second verification and600-second result review are explicit proposals. Packet requires exact base/hash/version/argv/environment/build/retention/concurrency/closure limits before dispatch. This review authorizes no command execution itself and does not convert proposed allocations into charged ones."
+    }
+  ],
+  "requiredImplementationAndAdmissionChecks": [
+    {
+      "id": "I01",
+      "stage": "before author dispatch",
+      "requirement": "Materialize the already-required admission binding: current base, this packet/source hashes, exact compiler/runtime paths and versions, all owned files, actual argv/cwd/env, author/RED/compile/test/review/closure limits, retained/build bytes and concurrency. Pin supplemental runtime files if used. No missing-path fallback install or network command.",
+      "why": "The packet deliberately leaves actual execution allocation to a separate recorded admission; this is a dispatch precondition, not a packet defect."
+    },
+    {
+      "id": "I02",
+      "stage": "implementation result",
+      "requirement": "Publish fixed nonsecret role-domain/network/program/address encodings in bindings.json; generate the mappings by metadata names and textTable, check all returned effect identities and all kernel state fields. Preserve both nominal due histories and the live residual notional/controller. Never log capability preimages.",
+      "why": "Required source-bound materialization must be reviewable rather than inferred from ordinal positions."
+    },
+    {
+      "id": "I03",
+      "stage": "implementation result",
+      "requirement": "Inspect actual runtime output claims and mint/input/output maps, not only kernel return amounts. Loan settle must have input/output533972602 of derived USD color and lender recipient. Swap must have input10000A, output19743B to trader. Close must have both reserve outputs to provider. Initialization supply and recipients must appear in actual effects.",
+      "why": "Pinned onchain Effects fields make this practical, but no compiled execution has yet been attempted."
+    },
+    {
+      "id": "I04",
+      "stage": "implementation result",
+      "requirement": "Choose an explicit positive min_out fixture independently, e.g.19700, and use19744 for the isolated minimum-output failure with valid secret/revision/time/hints and entry reserves. A lower min_out is valid under the kernel and must not be rejected merely for differing from the positive fixture. Document whether close-before-swap is accepted per protected source; do not invent a kernel phase rule.",
+      "why": "swap.mori uses min_out<=output; close requires provider and open epoch, not revision1 specifically. These are implementation/test clarifications, not contradictions in the packet."
+    },
+    {
+      "id": "I05",
+      "stage": "implementation result",
+      "requirement": "Set explicit synthetic block time and relevant uncertainty/context fields; test both sides of the300-second window and horizon with safe Uint64 conversion. Apply entry-reserve checks to all spending paths, including both close colors, and use explicit in-call deltas after receive/mint. Record exact earlier failure for each negative.",
+      "why": "Runtime defaults to wall-clock time when time is omitted, and queried contract balance is entry balance. These details must not silently become host truth assertions."
+    },
+    {
+      "id": "I06",
+      "stage": "later ledger/Preview admission",
+      "requirement": "Keep actual funding, signed payer/UTXO ownership, exact recipient/change/fees, canonical decoded finalized state, network/deployment identity and recovery evidence separate from runtime transcript success. Do not integrate the blocked comparison utility until its correction passes independent review.",
+      "why": "The accepted capability proposal and current packet explicitly reserve these claims for later evidence."
+    }
+  ],
+  "financialOracle": {
+    "loan": {
+      "programHash": "95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2",
+      "fieldOrder": [
+        "notional",
+        "principal_due",
+        "interest_due",
+        "principal_paid",
+        "interest_paid",
+        "borrower_cash",
+        "lender_cash",
+        "cursor",
+        "episode_closed"
+      ],
+      "initial": {
+        "notional": "5000000000",
+        "principal_due": "0",
+        "interest_due": "0",
+        "principal_paid": "0",
+        "interest_paid": "0",
+        "borrower_cash": "20000000000",
+        "lender_cash": "0",
+        "cursor": "0",
+        "episode_closed": "0"
+      },
+      "afterFirstAction": {
+        "notional": "4500000000",
+        "principal_due": "500000000",
+        "interest_due": "33972602",
+        "principal_paid": "0",
+        "interest_paid": "0",
+        "borrower_cash": "20000000000",
+        "lender_cash": "0",
+        "cursor": "1",
+        "episode_closed": "0"
+      },
+      "afterSecondAction": {
+        "notional": "4500000000",
+        "principal_due": "0",
+        "interest_due": "0",
+        "principal_paid": "500000000",
+        "interest_paid": "33972602",
+        "borrower_cash": "19466027398",
+        "lender_cash": "533972602",
+        "cursor": "2",
+        "episode_closed": "1"
+      },
+      "remainingRevision": [
+        "2/0",
+        "1/1",
+        "0/2"
+      ],
+      "textTable": [
+        {
+          "id": "0",
+          "text": "USD_TEST_ASSET"
+        },
+        {
+          "id": "1",
+          "text": "USD_micro"
+        },
+        {
+          "id": "2",
+          "text": "borrower"
+        },
+        {
+          "id": "3",
+          "text": "lam01:period1:IP"
+        },
+        {
+          "id": "4",
+          "text": "lam01:period1:PR"
+        },
+        {
+          "id": "5",
+          "text": "lender"
+        }
+      ],
+      "settlementBindings": [
+        {
+          "asset": "USD_TEST_ASSET",
+          "name": "USD_micro_asset",
+          "quantum": {
+            "tag": "Amount",
+            "unit": "USD_micro",
+            "value": "1"
+          },
+          "unit": "USD_micro"
+        }
+      ]
+    },
+    "swap": {
+      "programHash": "b00a55b8da611d23c08461a11853151aa50ec7ee8150f9d16afbc66d62e018fa",
+      "fieldOrder": [
+        "reserve_a",
+        "reserve_b",
+        "trader_a",
+        "trader_b",
+        "provider_a",
+        "provider_b",
+        "epoch_closed"
+      ],
+      "initial": {
+        "reserve_a": "1000000",
+        "reserve_b": "2000000",
+        "trader_a": "100000",
+        "trader_b": "0",
+        "provider_a": "0",
+        "provider_b": "0",
+        "epoch_closed": "0"
+      },
+      "afterFirstAction": {
+        "reserve_a": "1010000",
+        "reserve_b": "1980257",
+        "trader_a": "90000",
+        "trader_b": "19743",
+        "provider_a": "0",
+        "provider_b": "0",
+        "epoch_closed": "0"
+      },
+      "afterSecondAction": {
+        "reserve_a": "0",
+        "reserve_b": "0",
+        "trader_a": "90000",
+        "trader_b": "19743",
+        "provider_a": "1010000",
+        "provider_b": "1980257",
+        "epoch_closed": "1"
+      },
+      "remainingRevision": [
+        "8/0",
+        "7/1",
+        "6/2"
+      ],
+      "textTable": [
+        {
+          "id": "0",
+          "text": "ASSET_A"
+        },
+        {
+          "id": "1",
+          "text": "ASSET_B"
+        },
+        {
+          "id": "2",
+          "text": "pool"
+        },
+        {
+          "id": "3",
+          "text": "provider"
+        },
+        {
+          "id": "4",
+          "text": "trader"
+        }
+      ],
+      "settlementBindings": [
+        {
+          "asset": "ASSET_A",
+          "name": "asset_a_binding",
+          "quantum": {
+            "tag": "Amount",
+            "unit": "AssetA_quantum",
+            "value": "1"
+          },
+          "unit": "AssetA_quantum"
+        },
+        {
+          "asset": "ASSET_B",
+          "name": "asset_b_binding",
+          "quantum": {
+            "tag": "Amount",
+            "unit": "AssetB_quantum",
+            "value": "1"
+          },
+          "unit": "AssetB_quantum"
+        }
+      ]
+    }
+  },
+  "independentArithmetic": {
+    "interest": "5000000000*8*31//36500=33972602",
+    "interestRemainder": "27000",
+    "settlement": "500000000+33972602=533972602",
+    "borrowerFinal": "20000000000-533972602=19466027398",
+    "swapOutput": "10000*997*2000000//(1000000*1000+10000*997)=19743",
+    "swapRemainder": "162290000",
+    "feeRetainedA": "10000-9970=30",
+    "supplyLoan": "20000000000",
+    "supplySwapA": "1100000",
+    "supplySwapB": "2000000",
+    "mintAmountsFitUint64": true
+  },
+  "integrity": {
+    "packetInputsBefore": {
+      "implementation-packet.md": "acd2b9caac1eabdb50a64bb82f91dc49eb9a4ac0417eeb335cd77e1a17386265",
+      "sources.json": "f53597dd9fec084f9565c5b0cceb866ad5ba80f080196858b8edb20d3b3d5c85",
+      "source-check.json": "53f0280740d6bd0c1859289fe7441f0278ee7cdabd40f18a806792b0df519de5"
+    },
+    "packetInputsAfter": {
+      "implementation-packet.md": "acd2b9caac1eabdb50a64bb82f91dc49eb9a4ac0417eeb335cd77e1a17386265",
+      "sources.json": "f53597dd9fec084f9565c5b0cceb866ad5ba80f080196858b8edb20d3b3d5c85",
+      "source-check.json": "53f0280740d6bd0c1859289fe7441f0278ee7cdabd40f18a806792b0df519de5"
+    },
+    "protectedSourcesBefore": {
+      "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+      "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+      "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+      "experiments/moriarty-language/compact/materialize-mapping.mjs": "5dac9c40152378490b35c62c1815978eb4d89d4d261f02bb45761a9fe138b856",
+      "experiments/moriarty-language/compact/arithmetic.test.mjs": "81e486c3c630c07c13c66e3937923dcedc2bac57dc689e60aa18e2c3b2961c49",
+      "repos/LFDT-Minokawa/compact/compiler/standard-library.compact": "166487c61232e4058f0a5cb1a2a154d5b926a574ba5bc24f5def905c2a938e52",
+      "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md": "60005ede6545ce13c213a2ab08705486a2c79d341308e15baf4bf35fc70bedf6",
+      "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md": "61a828679c922fce519352c5f184098c8f2f9d0cd02e609a64e8d876fed469ce",
+      "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+      "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804",
+      "experiments/moriarty-language/compact/generated/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+      "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+      "experiments/moriarty-language/compact/generated/loan/bound-program.json": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+      "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+      "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+      "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23"
+    },
+    "protectedSourcesAfter": {
+      "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+      "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+      "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+      "experiments/moriarty-language/compact/materialize-mapping.mjs": "5dac9c40152378490b35c62c1815978eb4d89d4d261f02bb45761a9fe138b856",
+      "experiments/moriarty-language/compact/arithmetic.test.mjs": "81e486c3c630c07c13c66e3937923dcedc2bac57dc689e60aa18e2c3b2961c49",
+      "repos/LFDT-Minokawa/compact/compiler/standard-library.compact": "166487c61232e4058f0a5cb1a2a154d5b926a574ba5bc24f5def905c2a938e52",
+      "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md": "60005ede6545ce13c213a2ab08705486a2c79d341308e15baf4bf35fc70bedf6",
+      "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md": "61a828679c922fce519352c5f184098c8f2f9d0cd02e609a64e8d876fed469ce",
+      "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+      "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804",
+      "experiments/moriarty-language/compact/generated/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+      "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+      "experiments/moriarty-language/compact/generated/loan/bound-program.json": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+      "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+      "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+      "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23"
+    },
+    "sourceByteCountsMatch": true,
+    "allProtectedHashesMatch": true,
+    "parentProposalBefore": "5fe9cf1e8531c0599ffb6286d2d3e1558464792038311208aa7db2807f026038",
+    "parentProposalAfter": "5fe9cf1e8531c0599ffb6286d2d3e1558464792038311208aa7db2807f026038",
+    "supplementalInstalledRuntimeHashes": {
+      "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/package.json": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+      "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.d.ts": "2024083e64d9d08c358d93f02701b6eaaddf0f2432171fafad0f748ca1efe3ce",
+      "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.js": "1d4e04503589ad7bef59a9cc9e5386c6ffe645c9503fbb2cd11ad26aeba95a95",
+      "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/constructor-context.d.ts": "b28ebd976066cae55ce1298494622f5bdaee4586f48d159d4b88c83d02f37487",
+      "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/onchain-runtime-v3/onchain-runtime-v3.d.ts": "31d0d38a81d910c9154599494071b0fd4e99e354b34ebb386399a163cf0c627c"
+    },
+    "supplementalRuntimeNote": "Read-only inspected installed runtime files are supporting API evidence, not substituted for future exact version/tool admission. Hashes recorded at final review preparation; no runtime execution or full compatibility assertion."
+  },
+  "commands": [
+    {
+      "sequence": 1,
+      "commandSummary": "ls -la <SP05-state>",
+      "exitCode": 0,
+      "result": "Inventory only."
+    },
+    {
+      "sequence": 2,
+      "commandSummary": "python3 [read packet/sources/source-check and SHA256]",
+      "exitCode": 0,
+      "result": "Exact three packet-input hashes recorded."
+    },
+    {
+      "sequence": 3,
+      "commandSummary": "python3 [verify16pins and inspect decision/kernels]",
+      "exitCode": 0,
+      "result": "All16 manifest source hashes/bytes match; decision and both kernels inspected."
+    },
+    {
+      "sequence": 4,
+      "commandSummary": "rg [stdlib token/time/hash APIs]",
+      "exitCode": 0,
+      "result": "Pinned API signatures and entry-balance semantics."
+    },
+    {
+      "sequence": 5,
+      "commandSummary": "python3 [parent proposal/hash and metadata]",
+      "exitCode": 0,
+      "result": "Proposal matches decision pin; metadata field/effect/text mappings inspected."
+    },
+    {
+      "sequence": 6,
+      "commandSummary": "rg [loan/swap sources and token docs]",
+      "exitCode": 0,
+      "result": "Primary local source/reference inspection; broad output partly truncated, cited details covered by focused reads."
+    },
+    {
+      "sequence": 7,
+      "commandSummary": "rg --files <financial-path> <compact-path> | head; rg <runtime types>",
+      "exitCode": 1,
+      "result": "Proposed financial directory absent, expected preimplementation; initial runtime search found no matches under default ignore behavior. No implementation absence finding. Subsequent explicit-file and -uu reads succeeded."
+    },
+    {
+      "sequence": 8,
+      "commandSummary": "ls <runtime>; rg <arithmetic tests>; rg <reference> | head",
+      "exitCode": 0,
+      "result": "Existing runtime context usage and privacy rules inspected."
+    },
+    {
+      "sequence": 9,
+      "commandSummary": "rg --files <runtime/dist> | head; cat <runtime/package.json>",
+      "exitCode": 0,
+      "result": "Supplemental installed runtime0.16.0 observed; no import/install."
+    },
+    {
+      "sequence": 10,
+      "commandSummary": "cat <context d.ts>; rg -uu <onchain types> | head",
+      "exitCode": 0,
+      "result": "Explicit time/context and output effect types inspected."
+    },
+    {
+      "sequence": 11,
+      "commandSummary": "python3 [bound-program shape/arithmetic]; sed [runtime context/effects]",
+      "exitCode": 0,
+      "result": "Inspect arithmetic constraints, CallContext and effect maps."
+    },
+    {
+      "sequence": 12,
+      "commandSummary": "python3 [manifest fields/metadata hashes/independent economics]",
+      "exitCode": 0,
+      "result": "Complete expected initial/accrue/settle/swap/close states, amounts, remainders, supplies and mint width checked."
+    },
+    {
+      "sequence": 13,
+      "commandSummary": "python3 [write scoped packet review]",
+      "exitCode": 0,
+      "result": "Recheck packet/source/proposal hashes; write only two review outputs."
+    },
+    {
+      "sequence": 14,
+      "commandSummary": "python3 [final JSON/schema counts and all packet/source/proposal/supplemental hashes]",
+      "exitCode": 0,
+      "result": "All hashes unchanged; APPROVED with0 blocking findings,8 reviewed topics,2 full financial sequences. Only review outputs written."
+    }
+  ],
+  "limitations": [
+    "No wrapper code expected or assessed; missing proposed code is not a finding.",
+    "No compiler/runtime invocation, build, proof, network, wallet, Docker, git mutation, subagent, raw provider stdout or private provider reasoning used.",
+    "Runtime API/source compatibility inspected only. Actual compile and test success requires future admitted execution and independent frozen-result review.",
+    "Network/deployment truth, consumed funding, payer identity, transaction balancing/fees, finalized canonical state and recovery remain explicit later gates.",
+    "Ordinary command summaries are not verbatim inline Python bodies; complete commands remain in the session transcript. One exploratory read exited1 and was resolved by focused reads."
+  ],
+  "transactionsSubmitted": [],
+  "finalVerification": {
+    "status": "PASS",
+    "packetAndSourcesUnchanged": true,
+    "supplementalRuntimeFilesUnchanged": true,
+    "reviewJsonParsed": true
+  }
+}

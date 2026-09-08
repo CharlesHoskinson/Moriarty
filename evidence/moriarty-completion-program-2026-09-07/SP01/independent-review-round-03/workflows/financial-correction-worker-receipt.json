@@ -1,0 +1,27 @@
+{
+  "kind": "financial-correction-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 905.4989885129617,
+  "chargedSeconds": 1800,
+  "beforeHead": "45c42cf95d0e500f8307e99214c8f23ebc701ce6",
+  "afterHead": "45c42cf95d0e500f8307e99214c8f23ebc701ce6",
+  "beforeStatusSha256": "cf74fe28da4df989b61b7bbe4955dbc1058a21a800353c327410d0244b16207e",
+  "afterStatusSha256": "031afbe425a5897d4878c5f545510eedc8ad3cf8c309d94264bd162eafc503f3",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=29min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-map-workflows-financial-correction-worker-1079433.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "Disjoint workflows specified-only financial correction fragment, not a successor semantic freeze.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 356658,
+      "outputTokens": 54696,
+      "cacheReadInputTokens": 1057024,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 17,
+      "costUSD": 0.26690068
+    }
+  },
+  "resultText": "I'll start by reading the sprint constraints and the GPT-6 blocked report, then inspect only the targeted workflow JSON paths instead of dumping the full corpus.The review report and binding files are next; I'll extract the seven blocked groups and the owned output paths from those.I'll inspect the frozen fragment and owned `workflows.json` at the review pointers only, then patch from those paths.Next I'll dump the seven finding slices to small files so I can patch from exact pointers instead of the full JSON.I have the seven findings and the exact pointers. Next I\u2019ll recompute the 24 positive transfer steps in Python and apply targeted patches only.The owned file is written. I'll re-verify the on-disk JSON independently so the report matches the actual bytes.Specified-only correction is in the owned files. It is not runtime, proof, semantic-freeze, or SP01 acceptance.\n\n**Owned**\n- `experiments/moriarty-language/spec/successor/financial-fragments/workflows.json` \u2014 349331 bytes, SHA-256 `2b7f65d8eef9822d9923ba5044b7d0906fb4a1e87c481767465df74ccfa14a86` (limit 524288, compact JSON, no truncated financial fields)\n- `FOREMAN_REPORT.md` / `FOREMAN_REPORT.json`\n\nIdentities kept: 7 rows, 7 traces, original 19 mutation IDs and source pins. Mutation count is now 25 after split controls plus the 1501 and controller cases.\n\n**Independent Python (all 24 positive steps)**  \nEvery transfer `from`/`to` resolved. Quantity fields `amount`/`asset`/`unit`/`scale` were present. Fees that also appear in `transfers` were applied once. Post-state balances matched the running map. Totals conserved. Work matched: 40/0, 46/0, 20/0, 22/0, 14/8, 24/0, 28/0.\n\n| Check | Result |\n|---|---|\n| Fill1 minReceive | `2*1510=3020 >= 3015` (ceil 1508) pass |\n| Fill2 minReceive | `2*1010=2020 >= 2015` (ceil 1008) pass |\n| 1501 counterexample | `2*1501=3002 < 3015`, maker1 `5000-1501=3499`, reject |\n| Alice signed net | `9970-15000 = -10000+4970 = -(3015+2015) = -5030` |\n| Illegal double refund | `-5030+4970 = -60` |\n| C1 alternate | 9500+100+20400=30000, `100 < 10000` |\n| C9 alternate | 800+0+15200=16000, `0 < 8000` |\n\n**Fixes**\n- **WF-F01:** Custody rewrites removed. Conserved underfunded authorized alternate bases. C1 forbidden payout stays `mut:claim-as-cash`.\n- **WF-F02:** `2*received >= debit+inputFee` in intent, steps, acceptance, verification. Added funded 1501/3499 negative.\n- **WF-F03:** `cumulativeLocked` 0 then 1000 through refund. Async authority 0/400 then 400/0. Escrow 0,400,400,0. Settled 0,0,0,400. No authority refresh.\n- **WF-F04:** Typed `-5030`. Escrow lock and fill-plus-fee gross both enforced. Refund does not reduce 5030.\n- **WF-F05:** Four predicates bind complete intent/plan/pre/steps/post/duties/controllers/authority/history/successors plus genesis/admin. `expectedStateRef` complete equality. Empty rejected effects. No `financialStateUnchanged:true`. Added unauthorized-controller mutation. Split disjunctions.\n- **WF-F06:** Per-trace access convention. RR-N7\u22653, D-cover-C9\u22653, DC-M1\u22652. Missing duty/status/grant/observation/cover writes added. `expected.duties` present (empty lists where post duties are empty). Refs resolved.\n- **WF-F07:** Persistent `C1-cover` through premium/observation/admission. Claim references it. Cover, nominal claim, and paid cash stay distinct.\n\n**Gaps that remain**\n- Design predicates only. No evaluator, native proof, Preview, wallet, or chain run.\n- GPT-6 has not reviewed these corrected bytes.\n- Alternate custody contexts are specified fixtures, not executed ledger states.\n- Toy prices, calendars, registries, custody, and bounds stay disclosed and unproved.",
+  "stopReason": "end_turn",
+  "status": "?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n?? experiments/moriarty-language/spec/successor/\n"
+}
