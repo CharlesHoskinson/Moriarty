@@ -8,7 +8,7 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** User approved execution. Four Milestone 1 candidates failed independent review. Candidate04 still permits stage/profile substitution and unsupported publication/status claims. A scoped evidence correction is underway; resource admission remains separately open. No milestone is accepted. Installation and host trust remain open. See [candidate04 evidence](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-m1-result-04/README.md).
+**Status:** User approved execution. Five Milestone 1 candidates failed independent review. Candidate05 still permits erased closure obligations, unsupported verification/acceptance claims, unrelated review substitution and revoked bindings. Resource admission also remains open. The current primary implementation repairs the financial driver using the retained SDK regression; further plugin work must address the exact retained counterexamples. No milestone is accepted. Installation and host trust remain open. See [candidate05 evidence](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-m1-result-05/README.md).
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
