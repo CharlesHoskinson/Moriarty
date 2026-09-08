@@ -1,0 +1,177 @@
+{
+  "schema": "moriarty.foreman-report/1",
+  "packetSha256": "ec3982a3d3ce85573cd4c058a08595ecc6392d8114b61bf74641f7d45cd3c6fc",
+  "parentCandidate": "86e3f88dafbf48aa750ef6f4a12334eeed027083e676b77ff4f7c18105819e3f",
+  "parentFreezeSha256": "33454ef3da6e6187f7b8cb35fda63dde0902d8aabc42e373e436682c1b74e0c4",
+  "decision": "ADMIT_SOURCE_AUTHOR_ONLY",
+  "baseCommit": "daac83578f105b0a70ce44d88c579018881daae5",
+  "worker": "grok-4.6-high",
+  "scope": "R6 complete approved/finalized effect comparison only, with native SDK offline regression tests. Gross allowance, other ledger findings, plugin M4 end-to-end demonstration and all SP05/PCD/network acceptance remain open.",
+  "claims": {
+    "onchain": false,
+    "pcd": false,
+    "sp05Complete": false,
+    "sprintComplete": false,
+    "ledgerAcceptance": false,
+    "networkAcceptance": false,
+    "r6Complete": false,
+    "r6CompleteEffects": true,
+    "r6GrossAllowance": false
+  },
+  "ownedFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "bytes": 44726,
+      "sha256": "ace3d039c8b3eb7d4f6e503a9b44899fd34c61b40c4dda0e922db35e93a122bc"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs",
+      "bytes": 49534,
+      "sha256": "4cd124c9ebfdfb1fd58fdea9497696dfb1a32be5e9cf4a072b2d6f10f25f3b3b"
+    },
+    {
+      "path": "FOREMAN_REPORT.md",
+      "bytes": 5049,
+      "sha256": "2268aa86accdd4240d78faf7221d58b4c493c2c3cf28e1982761694e918c837a"
+    }
+  ],
+  "reportJsonNote": "FOREMAN_REPORT.json is the fourth owned file. Hash it after freeze. Do not treat this field as a self-digest.",
+  "ownedBytesLimit": 262144,
+  "parentEightFileBytes": 140471,
+  "protectedUnchanged": {
+    "experiments/moriarty-midnight-financial/ledger/README.md": "8dad40c67e53b04c49c0c317bd6da3de4d9b430f473e71051d388aa3a8fc5a2e",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "d0120812b0f46f35c8fce31333288c2876720bdb3bb0e26877104349477010ee",
+    "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs": "fe594c9fab7457fdc3abe228927ee92b38af5873ed2075b9b4048c52d4b5a104",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0c5d5347923d169ffb7c9090060f7846ae0d6449378aade4ca7ec779c64bf433",
+    "generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "differential.mjs": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+    "bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+    "swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374"
+  },
+  "commands": [
+    {
+      "phase": "pre-edit-sdk-diagnostic",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-timeout=30000",
+        "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-sdk-effects.test.mjs"
+      ],
+      "exit": 1,
+      "tests": 3,
+      "pass": 1,
+      "fail": 2,
+      "note": "Control passed. Both mutations failed only at assert.throws on recheckFinalizedAgainstRecipe, line 48, Missing expected exception. Native signature verification already rejected the mutated copy."
+    },
+    {
+      "phase": "first-substantive-red",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-timeout=90000",
+        "--test-name-pattern=native signed|native comparison|native merge|colliding recipe|synthetic complete-effects",
+        "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"
+      ],
+      "exit": 1,
+      "tests": 6,
+      "pass": 2,
+      "fail": 4,
+      "note": "Unchanged native copy and disjoint merge passed. Mutation cases failed because the helper did not throw."
+    },
+    {
+      "phase": "final-green-owned",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-timeout=90000",
+        "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"
+      ],
+      "exit": 0,
+      "tests": 33,
+      "pass": 33,
+      "fail": 0
+    },
+    {
+      "phase": "final-green-root-effects",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-timeout=30000",
+        "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-effects.test.mjs"
+      ],
+      "exit": 0,
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "phase": "final-green-root-sdk-effects",
+      "argv": [
+        "node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-timeout=30000",
+        "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-sdk-effects.test.mjs"
+      ],
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    }
+  ],
+  "supportedProductionPath": {
+    "caller": "fundUnshielded after finalizeRecipe and before submit",
+    "recipeTypes": {
+      "UNBOUND_TRANSACTION": [
+        "baseTransaction",
+        "balancingTransaction?"
+      ],
+      "UNPROVEN_TRANSACTION": [
+        "transaction",
+        "baseTransaction fallback for diagnostic hybrid"
+      ],
+      "FINALIZED_TRANSACTION": [
+        "originalTransaction",
+        "balancingTransaction"
+      ]
+    },
+    "legitimateTransformation": "Transaction.merge unions disjoint intent segments. Same-segment merge collides. bind changes serialize bytes. signatureData and effect identities remain."
+  },
+  "testFixtureProvenance": {
+    "kind": "synthetic-test",
+    "keys": "in-memory sampleSigningKey",
+    "utxo": "synthetic sampleIntentHash references",
+    "sdkObjects": "native Intent, UnshieldedOffer, Transaction constructors, signatures, pre-proof/pre-binding serialize-deserialize",
+    "combination": "Transaction.fromParts plus addIntent({tag:'specific'}) plus Transaction.merge",
+    "notFinalizedOnChain": true,
+    "notProven": true,
+    "notBoundFinalizedBytes": true
+  },
+  "remainingLimitations": [
+    "Offline pre-proof/pre-binding objects do not establish valid finalized bytes or ledger acceptance.",
+    "Native UnshieldedOffer.new canonicalizes input and output order. The helper compares stored SDK order and still rejects swapped synthetic arrays.",
+    "Empty-input synthetic objects fail validateSignedRecipe before the funding path reaches this helper.",
+    "Helper rejection is not a submit exploit.",
+    "Gross spend still scans only base segment 1 and still trusts allowance.grossSpend."
+  ],
+  "excludedFindings": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6-gross-allowance",
+    "R7",
+    "R8"
+  ],
+  "gitWrites": false,
+  "network": false,
+  "compilerInvoked": false,
+  "proofGenerated": false,
+  "diagnosticsEdited": false
+}

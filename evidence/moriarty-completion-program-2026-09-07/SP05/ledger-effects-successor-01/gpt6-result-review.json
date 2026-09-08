@@ -1,0 +1,135 @@
+{
+  "schema": "moriarty.gpt6-result-review/1",
+  "createdAt": "2026-09-08T17:02:58.176332+00:00",
+  "candidateHash": "e10f46574dcb04b07732eebd9f33ec34b1bdaa30af0a483def7ea1deccad0cee",
+  "reviewer": {
+    "requestedModel": "gpt-6-astra",
+    "observedIdentity": "GPT-6 Astra native collaboration reviewer",
+    "task": "/root/ledger_effects_successor01_review",
+    "identityEvidence": "Fresh native collaboration dispatch and session identity. No separate provider API model receipt was available to this reviewer.",
+    "independentOfAuthor": true
+  },
+  "decision": "CHANGES_REQUIRED",
+  "scopedVerdict": {
+    "scope": "Complete approved/finalized effects comparison part of R6 only",
+    "status": "CHANGES_REQUIRED",
+    "unshieldedSubpredicate": "SUPPORTED_BY_OFFLINE_NATIVE_PROBES",
+    "completeEffects": false
+  },
+  "overallSP05": "BLOCKED",
+  "findings": [
+    {
+      "id": "R6-E01",
+      "priority": "P1",
+      "title": "Transaction-level Zswap effects are omitted",
+      "classification": [
+        "repository observation",
+        "experiment observation"
+      ],
+      "locations": [
+        "candidate/experiments/moriarty-midnight-financial/ledger/providers.mjs:225",
+        "candidate/experiments/moriarty-midnight-financial/ledger/providers.mjs:318"
+      ],
+      "sourceLocations": [
+        "@midnight-ntwrk/ledger-v8/ledger-v8.d.ts:2481",
+        "@midnight-ntwrk/ledger-v8/ledger-v8.d.ts:2494",
+        "@midnight-ntwrk/ledger-v8/ledger-v8.d.ts:3173",
+        "@midnight-ntwrk/wallet-sdk-facade/dist/index.js:357"
+      ],
+      "evidence": "The helper only compares intents and their unshielded offers. Native Transaction.guaranteedOffer and fallibleOffer contain separate Zswap effects. Native additions, removals, changed values and changed recipient commitments all pass comparison in both sections. Amount mutation changes the token delta from -5 to -6. Removal changes it from -5 to 0. Every altered transaction has changed serialization but equal intent.signatureData. Unchanged copies pass too.",
+      "impact": "The complete-effects claim is false. The production funding path can include shielded balancing because balanceUnboundTransaction defaults tokenKindsToBalance to all. This comparison does not establish preservation of those approved effects.",
+      "repair": "Compare the complete transaction-level guaranteed and segmented fallible Zswap effects across all recipe transactions. Preserve SDK merge semantics and permit only justified proof/binding transformations. Include inputs, outputs, transients, value deltas and their identities. Alternatively reject an explicitly unsupported effect family before finalization. Do not silently omit it.",
+      "limit": "These are pre-proof/pre-binding native objects with synthetic UTXO references. No valid finalized transaction or submission exploit was demonstrated."
+    },
+    {
+      "id": "R6-E02",
+      "priority": "P2",
+      "title": "Network transaction commitment is omitted",
+      "classification": [
+        "repository observation",
+        "experiment observation"
+      ],
+      "locations": [
+        "candidate/experiments/moriarty-midnight-financial/ledger/providers.mjs:318"
+      ],
+      "sourceLocations": [
+        "@midnight-ntwrk/ledger-v8/ledger-v8.d.ts:2304"
+      ],
+      "evidence": "Constructing Transaction.fromParts with preview and assigning the approved undeployed transaction intents changes serialized transaction bytes. Native intent.signatureData remains equal and the frozen comparator returns ok.",
+      "impact": "Intent equality does not establish transaction network identity. The complete transaction comparison has no check for this commitment.",
+      "repair": "Bind the expected network identity through a native canonical transaction representation or another inspected SDK mechanism. Add unchanged and changed-network controls. Avoid relying on intent.signatureData for fields outside its coverage.",
+      "limit": "No cross-network submission or ledger acceptance was attempted."
+    }
+  ],
+  "verifiedImprovements": [
+    "Both guaranteed and fallible unshielded input identities include intentHash, outputNo, type, value and owner.",
+    "Both sections compare output type, value and owner, positional signatures and native signatureData.",
+    "Changed TTL is rejected.",
+    "Native unchanged transactions and disjoint base/balancing merge controls pass.",
+    "UNPROVEN transaction, UNBOUND base plus balancing, and FINALIZED original plus balancing shapes are represented correctly by the comparison helper.",
+    "Native same-segment merge and comparator both reject collision.",
+    "Production fundUnshielded invokes the helper after finalizeRecipe and before submit."
+  ],
+  "verification": {
+    "pins": {
+      "candidateHash": "e10f46574dcb04b07732eebd9f33ec34b1bdaa30af0a483def7ea1deccad0cee",
+      "candidateFiles": {
+        "experiments/moriarty-midnight-financial/ledger/README.md": true,
+        "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/run-local.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs": true,
+        "FOREMAN_REPORT.json": true,
+        "FOREMAN_REPORT.md": true
+      },
+      "worktreeMatchesFrozen": {
+        "experiments/moriarty-midnight-financial/ledger/README.md": true,
+        "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/run-local.mjs": true,
+        "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs": true,
+        "FOREMAN_REPORT.json": true,
+        "FOREMAN_REPORT.md": true
+      },
+      "sourcePinsCount": 201,
+      "sourcePinMismatches": []
+    },
+    "ownership": "Provider diff against candidate-01 has one hunk at line 155 containing the comparator and private helpers. Unowned frozen files remain identical. Candidate and live worktree hashes match.",
+    "suppliedSuite": {
+      "command": "node --test --test-reporter=tap --test-timeout=90000 experiments/moriarty-midnight-financial/ledger/receipt.test.mjs",
+      "cwd": "/home/charl/Moriarty/.worktrees/sp05-ledger-integration-grok",
+      "exit": 0,
+      "tests": 33,
+      "pass": 33,
+      "fail": 0,
+      "stdout": "gpt6-supplied-tests.stdout",
+      "stderr": "gpt6-supplied-tests.stderr"
+    },
+    "independentProbes": {
+      "command": "node gpt6-independent-probes.mjs",
+      "exit": 0,
+      "cases": 38,
+      "unchangedOrMergeControlsAccepted": 5,
+      "unshieldedMutationsRejected": 22,
+      "ttlMutationsRejected": 1,
+      "collisionRejected": 1,
+      "materialAlterationsIncorrectlyAccepted": 9,
+      "results": "gpt6-independent-results.json",
+      "script": "gpt6-independent-probes.mjs"
+    },
+    "sdkSemantics": "Pinned Wallet facade index.js:414-433 binds the UNBOUND base then merges finalized balancing, merges FINALIZED original plus finalized balancing, and finalizes the single UNPROVEN transaction. Native pre-binding merge was reproduced. No live finalizeRecipe, proof or binding operation was executed.",
+    "claimCheck": "FOREMAN_REPORT.json claims.r6CompleteEffects=true and the Markdown repair assertion overstate the result. The explicit SP05, proof, ledger and gross-allowance exclusions remain appropriately open."
+  },
+  "limits": [
+    "No network, wallet, proof, compiler, binding, finalization or submission.",
+    "No positive proven or bound finalized-byte fixture. Bind/proof transformation compatibility is not empirically established by this review.",
+    "Synthetic UTXO references and in-memory sample keys were used. No private key or witness bytes were retained.",
+    "Zswap inputs, transients, dust registration signatures, rewards and contract-action mutations were not exhaustively probed. No completeness finding is implied for these untested families.",
+    "No source, frozen candidate or prior evidence was edited.",
+    "R1-R5, R7-R8, R6 gross accounting/reservation, PCD, network acceptance and SP05 remain open."
+  ],
+  "separateRootContext": "Root reports separately reproduced gross-allowance failures in root-gross-admission.test.mjs/json. Those results were not independently audited here and do not expand this review scope.",
+  "disposition": "Preserve the demonstrated unshielded repairs. Repair transaction-level commitment coverage using the retained native counterexamples. Obtain fresh independent review before marking complete-effects comparison repaired."
+}
