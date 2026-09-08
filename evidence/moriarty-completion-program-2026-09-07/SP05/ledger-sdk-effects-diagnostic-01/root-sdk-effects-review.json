@@ -1,0 +1,47 @@
+{
+  "schema": "moriarty.root-sdk-effects-review/1",
+  "reviewer": "GPT-6 independent diagnostic reviewer",
+  "disposition": "VALID_WITH_SCOPE_LIMITS",
+  "sourceSha256": "747109368a969e21c9d46308a5c5e95e0b0bcffbc30dab9f795827f12ca11e2a",
+  "testSha256": "8765abff887ec152f203e2eafb5cb94e1409898b19db67cd2a93c814ffaa8e3b",
+  "hashesMatchRecordedDiagnostic": true,
+  "verification": {
+    "command": [
+      "node",
+      "--test",
+      "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-sdk-effects.test.mjs"
+    ],
+    "exitCode": 1,
+    "pass": 1,
+    "fail": 2,
+    "durationMs": 157.557476,
+    "failureLocations": [
+      "root-sdk-effects.test.mjs:48:12"
+    ],
+    "failureKind": "Both mutations: Missing expected exception at the final comparison assertion. No earlier assertion failed."
+  },
+  "evidence": [
+    "The test imports ledger-v8 through candidate importPinned, which checks package/selected entry/WASM hashes before loading.",
+    "Fixtures use native Intent, UnshieldedOffer and Transaction objects, a native signing key and signatureData(segment), and an input with matching native verifying key and token type.",
+    "Each original recipe passes validateSignedRecipe with ledger verification and reports one signed input. This removes the empty-input rejection limitation of the earlier plain-object diagnostic for these two cases.",
+    "The native signature/pre-proof/pre-binding serialize-deserialize round trip preserves bytes, and the unchanged helper comparison returns ok.",
+    "Changing the fallible output owner or value in the deserialized transaction makes validateSignedRecipe throw signature verify failed. Both explicit preceding assertions pass.",
+    "Despite those changes, recheckFinalizedAgainstRecipe returns normally. The source compares guaranteed outputs only at providers.mjs:168-170 and does not re-verify signatures."
+  ],
+  "testAssessment": {
+    "invalidExpectationsWithinHelperScope": [],
+    "finding": "Both cases validly demonstrate omitted fallible-output comparison using native SDK objects and originally signature-valid recipes.",
+    "independence": "Each test creates a fresh recipe and obtains the mutation target through native deserialization. The recipe is not intentionally modified.",
+    "assertionLimit": "The last assertion requires an exception without constraining its reason; a future unrelated exception could satisfy it. Current observed failure is an unambiguous absence of rejection.",
+    "coverage": "Two mutations exercise the same missing comparison. They do not independently corroborate balancing-intent, additional-intent, TTL, order/signature association or other complete-effects cases."
+  },
+  "limits": [
+    "Input UTXO identity is synthetic; existence, availability, conservation and ledger validity were not established.",
+    "Transactions remain pre-proof and pre-binding. The variable copy is not an actual finalized transaction.",
+    "Native local signature validity is not a proof, binding, successful wallet finalization, ledger acceptance, finality or submission result.",
+    "No actual finalizeRecipe call, downstream binding/proof check, wallet/provider launch or submit path was exercised. The diagnostic establishes no accepted ledger exploit or operational reachability of a malicious finalizer result.",
+    "These new tests narrow two earlier fixture limitations; they do not upgrade the entire prior six-case diagnostic to native transaction evidence."
+  ],
+  "acceptance": "No source, ledger, sprint or SP05 acceptance is claimed.",
+  "actions": "Read the new diagnostic and recorded stdout/stderr/verification; checked full source/test hashes; reran only this one Node test; wrote only this JSON and companion Markdown. Earlier reviews and source preserved. No network, provider CLI, wallet, compiler or implementation edits."
+}
