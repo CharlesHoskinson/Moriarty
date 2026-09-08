@@ -1,0 +1,80 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 30.91804753197357,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 9780,
+      "outputTokens": 14,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.009850000000000001,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 2133,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 18585,
+      "webSearchRequests": 0,
+      "costUSD": 0.47837,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 696,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "insufficient_evidence",
+    "candidateId": "cand_0403B2CCC37604BBF9FDFBDBC8",
+    "scope": "Bundle 1a9721e5..1a9721e5 (base == head, diffSha256 e3b0c442... = SHA-256 of empty input). Artifacts inspected: custody-contract (sha256:5fe9cf1e..., 5079 bytes), source-extracts (sha256:f0bbbbe3..., 21718 bytes), review-diff (sha256:e3b0c442..., 0 bytes). Evaluated against the custody-contract acceptance criterion and the council-ace-1 obligations.",
+    "findings": [
+      {
+        "severity": "high",
+        "citation": "bundle.baseSha=1a9721e5634e9196aadbe7c28a51081e820a9247; bundle.headSha=1a9721e5634e9196aadbe7c28a51081e820a9247; review-diff byteLength=0, sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "description": "Required-evidence gap: the candidate contains no diff. Base and head commits are identical and the review-diff artifact is empty (its hash is the SHA-256 of zero bytes). The custody-contract acceptance criterion requires a bounded local implementation/test packet specifying exact source, role commitment and payout encoding, public-state disclosure, secret custody/recovery, one-shot initialization, action/revision binding, entry-balance semantics, complete financial comparisons and all rejection controls. None of these can be evaluated because no packet, source, or test content is present. Either the bundle was assembled from the wrong range or the candidate has not yet been authored."
+      },
+      {
+        "severity": "low",
+        "citation": "custody-contract, paragraph 'Unshielded balance queries describe entry balances...'; source-extracts repos/LFDT-Minokawa/compact/compiler/standard-library.compact lines 323-330",
+        "description": "Consistency note, not a defect: the contract's entry-balance semantics and its prohibition on ownPublicKey-based authorization are corroborated by the supplied standard-library comment ('the balance returned is the balance of the contract at the start of the current execution') and by the unshielded-token tutorial extract (lines 170-230). A future packet must honor both; this cannot be checked against an empty diff."
+      },
+      {
+        "severity": "low",
+        "citation": "source-extracts repos/LFDT-Minokawa/compact/compiler/standard-library.compact extracts 312-342 through 340-370",
+        "description": "The source-extracts artifact contains nine heavily overlapping windows of the same standard-library region. This wastes artifact budget and adds no independent evidence. Not material to the verdict, but the bundler should deduplicate extracts in the resubmission."
+      }
+    ],
+    "rationale": "Bundle identity verified: base equals head and the diff hash matches an empty diff, consistent with the zero-byte review-diff artifact. All three required artifacts were inspected. The custody contract's acceptance criterion requires a concrete bounded implementation/test packet with specified source, role-commitment encoding, one-shot initialization, action/revision binding, entry-balance handling, full financial comparisons and rejection controls. The candidate supplies none of this, so no acceptance criterion can be evaluated as satisfied or violated. Approval is impossible because nothing demonstrates the custody contract is met; changes_requested would imply a defect in authored content that does not exist. The identified required-evidence gap is the absent diff itself. Resubmit with a non-empty bundle whose head commit contains the implementation/test packet."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "token": {
+    "schemaVersion": 1,
+    "providerFamily": "anthropic",
+    "model": "claude-fable-5-1",
+    "cliVersion": "2.1.261 (Claude Code)",
+    "contractHash": "sha256:faa9fe2ccd43d60eeff897d4df30d90e33c778ccb6025000bbd5aa4f463ae4ca",
+    "promptHash": "sha256:8fe70334e5650684f5f308719a4e7a973599e12eafbaf49889aa64453b84872e",
+    "schemaVariantHash": "sha256:59af589b1640a4c230a36dd0ebd2686c40a7fdd195053a81ef03ec173abb8cd3",
+    "nonce": "67f781b4a1ee99cc71b4ff19216265eeeb83b64dfde14d7a398fe54e33dc2058",
+    "issuedAt": "2026-09-08T05:00:02.056Z",
+    "expiresAt": "2026-09-08T05:05:02.056Z"
+  },
+  "promptSha256": "8fe70334e5650684f5f308719a4e7a973599e12eafbaf49889aa64453b84872e",
+  "candidateId": "cand_0403B2CCC37604BBF9FDFBDBC8",
+  "scope": "Consequential local preparation proposal only, no implementation or public acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": false
+}
