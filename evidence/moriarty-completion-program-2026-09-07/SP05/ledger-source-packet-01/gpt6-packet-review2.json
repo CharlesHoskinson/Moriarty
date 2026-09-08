@@ -1,0 +1,79 @@
+{
+  "schema": "moriarty.independent-packet-delta-review/1",
+  "verdict": "BLOCKED",
+  "candidatePacketSha256": "57f370d95c928f123b7e107bb50678322c87d7b6d5eff45398ff4f6b546fb051",
+  "candidatePath": "/home/charl/.local/state/moriarty/sp05-ledger-integration-packet-20260908/revision-03/implementation-packet.md",
+  "sourceManifestSha256": "277b2f4f481227c74e6d3f96a43d2689dc0cec92bea318694cdb8adf7fc8bf65",
+  "scope": "Packet03 source-only delta. No author or operational acceptance. Packet04 was not reviewed.",
+  "reviewer": {
+    "requested": "gpt-6-astra high",
+    "identityLimit": "Native interface does not expose independently verified serving identity or actual effort."
+  },
+  "timing": {
+    "dispatchUtc": "2026-09-08T09:45:47.427649+00:00",
+    "completedUtc": "2026-09-08T09:53:30.418845+00:00",
+    "elapsedSeconds": 462.9911963939667,
+    "allowanceSeconds": 360,
+    "substantiveCutoffSeconds": 280,
+    "overrun": true,
+    "explanation": "Source inspection finished before report drafting. Exact last source-read time was not captured. Initial report writer asserted elapsed<280 and stopped. A second report writer checked the mutable packet03 path after the parent replaced it with04 and stopped. This report binds the preserved revision03. Packaging exceeded the360-second allowance. No substantive packet04 review occurred."
+  },
+  "integrity": {
+    "declaredPins": 61,
+    "matchedBeforeAndAfter": 61,
+    "mismatches": [],
+    "coverageLimit": "Declared61pins do not include all actual runtime entries."
+  },
+  "resolvedFindings": [
+    {
+      "id": "D01",
+      "title": "Pending wallet mutation",
+      "evidence": "Pinned facade finalizeRecipe (dist/index.js:414-438) binds/merges and registers a pending transaction. Packet03 validates signed base/balancing input owners and signatures, checks allowance, and reserves before finalization. Failures retain reservation, preserve known IDs, emit pending/unknown lifecycle state and stop for root reconciliation."
+    },
+    {
+      "id": "D02",
+      "title": "Truthful comparator provenance",
+      "evidence": "Frozen comparator requires synthetic-local and metadataUsedForExpectations=false. Packet03 obtains numeric parameters from .mori constants only, uses metadata for layout/identity, defines expected fixture versus observed oracle projection, and keeps the rich path map outside the closed record. Actual outcomes remain observation-bound and the actual receipt stays separate. networkAcceptance remains false."
+    },
+    {
+      "id": "D03",
+      "title": "Exact signatures and block query",
+      "evidence": "Pinned ledger declarations expose deserialize, verifySignature, addressFromKey and signatureData. Packet03 supplies the tagged BlockHashConfig {type:blockHash,blockHash}."
+    },
+    {
+      "id": "D04",
+      "title": "Remainder independently confirmed",
+      "arithmetic": {
+        "numerator": "1240000000000",
+        "denominator": "36500",
+        "quotient": "33972602",
+        "rawRemainder": "27000",
+        "gcd": "500",
+        "reduced": "54/73"
+      },
+      "evidence": "Independent Python integer arithmetic confirms the example. The earlier concern was unclear wording, not a demonstrated arithmetic defect."
+    }
+  ],
+  "unresolvedMaterialFindings": [
+    {
+      "id": "D05",
+      "severity": "BLOCKING",
+      "title": "Required runtime entry pins absent",
+      "evidence": "I independently inspected actual package exports and the61-pin manifest. It pins midnight-js-contracts package.json and index.d.mts, but not runtime dist/index.mjs. Ledger-v8 advertises node entry midnight_ledger_wasm_fs.js, while declared pins include only package.json and ledger-v8.d.ts. Several providers likewise lack runtime entry hashes.",
+      "impact": "Packet03 mandates runtime entry verification without parent-approved expected digests for all selected imports. A type declaration digest cannot verify executing code. An author-computed runtime hash cannot establish preauthor input authority.",
+      "correction": "Parent must resolve present selected entries and freeze their digests in an expanded candidate-bound manifest before author admission. Reject unsupported/missing exports. Do not install or download.",
+      "judgmentHistory": "I initially treated extra entry digests as an implementation evidence obligation. Parent clarified author self-attestation is inadmissible. The final verdict preserves that correction and blocks03."
+    }
+  ],
+  "implementationNotes": [
+    "Use one reservation identity across pre-finalization and submission, not two allowance debits.",
+    "Compare approved recipe and final transaction semantics while allowing only required bind/prove/merge changes. Raw byte equality is not expected."
+  ],
+  "evidenceLimits": [
+    "Read preserved Fable-safe findings only. Parent later reported03Fable also blocked runtime pins, after my independent export inspection.",
+    "No builds, SDK imports, tests, proof generation, wallet/key/environment access, network calls, submissions, installs, source edits, commits or subagents.",
+    "Only the two assigned review artifacts were written.",
+    "All earlier packet03 source-only/operational boundaries remain preserved. No implementation or future chain feasibility claim."
+  ],
+  "conclusion": "The two earlier material defects are resolved. Packet03 remains BLOCKED for missing parent-approved runtime entry pins."
+}

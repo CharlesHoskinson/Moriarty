@@ -1,0 +1,85 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 121.66073583398247,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 23355,
+      "outputTokens": 15,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.02343,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 9618,
+      "cacheReadInputTokens": 3903,
+      "cacheCreationInputTokens": 31529,
+      "webSearchRequests": 0,
+      "costUSD": 1.11247575,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6604,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "changes_requested",
+    "candidateId": "cand_19MPK7W0YHP6FJW22PD56N28YJ",
+    "scope": "Reviewed the SP05 source-only implementation packet (checker-contract, sha256 8dc1f1ce\u2026), sources.json pins (277b2f4f\u2026), the pinned source excerpts (e79198a5\u2026), and the empty review diff (e3b0c442\u2026). Bundle identity verified: baseSha == headSha == daac8357\u2026, matching sources.json baseCommit and the packet's stated base; diffSha256 equals SHA-256 of the empty string, consistent with the artifact's own statement that the empty diff identifies the baseline only. Evaluated the packet's API and behavioral claims against the facade index.js, ledger-v8.d.ts, midnight-js-types index.d.mts, differential.mjs validator, loan.compact, build.mjs and loan.mori excerpts, and recomputed the loan/swap headline arithmetic. Not verifiable from supplied evidence: generate.mjs exports (validatePinnedInputs/generateWrappers), midnight-js-contracts 4.1.1 API names (CompiledContract.make/pipe, withVacantWitnesses, withCompiledFileAssets, deployContract, submitCallTx, findDeployedContract, CallTxFailedError.finalizedTxData), PublicDataProvider queryContractState/queryUnshieldedBalances config signatures, swap.mori constants, and the Transaction.deserialize marker strings.",
+    "findings": [
+      {
+        "severity": "medium",
+        "citation": "checker-contract \u00a71 (\"The loader must validate the pinned package.json and resolved entry-file hashes at runtime before import\"; \"Verify every pin before authoring\"; \"Parent verified every sources.json hash independently\") vs sources.json sourceSha256",
+        "description": "The packet makes runtime hash validation of every imported package's resolved entry file a hard requirement, but sources.json only pins entry files for wallet-sdk-facade (dist/index.js), unshielded-wallet (TransactionOps.js, Transacting.js), indexer-public-data-provider (dist/index.mjs) and midnight-js-protocol (dist/ledger.mjs). For @midnight-ntwrk/ledger-v8 only ledger-v8.d.ts and package.json are pinned; the actual JS/WASM runtime entry that performs signData/verifySignature/addressFromKey/Transaction.deserialize is unpinned. Likewise midnight-js-contracts (only index.d.mts), compact-runtime, http-client-proof-provider, node-zk-config-provider, level-private-state-provider, wallet-sdk-address-format (only index.d.ts), wallet-sdk-dust-wallet and wallet-sdk-shielded have package.json pins only. The author cannot satisfy the loader requirement from parent-verified pins; any hashes the author embeds would be self-attested at author time, which \u00a71 explicitly calls insufficient. sources.json is not among the eight owned files, so the author cannot extend it. Amend sources.json (parent-verified) with the resolved runtime entry-file hashes for every package the six modules import before the author allocation is charged."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a71 (\"Compact wrapper0.5.2/compiler0.31.1/language0.23/runtime0.16.0\") and \u00a73 build-proven (\"return a hash manifest of actual outputs and actual compiler versions\") vs sources.json versions",
+        "description": "sources.json versions pins compact-runtime 0.16.0 but no compact wrapper/compiler/language version. build.mjs reads toolchain data from custody/bindings.json (pinned by hash but not excerpted), so the compiler pin may live there; the packet should state explicitly which pinned artifact is the authoritative compiler-version source that build-proven's manifest must be compared against."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 financial oracle projection (\"observationKind=synthetic-local ... networkAcceptance=false\") vs differential.mjs lines 607-627",
+        "description": "The projection labels a record derived from a real receipt as observationKind synthetic-local because validateRecord hard-requires that value. The packet mitigates this by mandating an immutable separately-preserved real receipt, a distinct projection label, and networkAcceptance:false, so it is not a truthfulness defect. Downstream consumers should be told in README.md that a passing compareFinancialEffects on a projection is arithmetic agreement only and never network evidence, which \u00a73 already states but which should be echoed in the owned README."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a71 (\"Dependencies are already retained under /home/charl/Moriarty/.worktrees/r3-native/.../node_modules\") and \u00a72 (new worktree /home/charl/Moriarty/.worktrees/candidate-worktree)",
+        "description": "The candidate worktree's modules depend on an untracked node_modules tree inside a different worktree (r3-native). Runtime hash validation (once pins are complete per the medium finding) covers integrity, but the packet should record that the r3-native worktree is a protected dependency of the campaign and must not be pruned or reinstalled between author, root verification and result review."
+      }
+    ],
+    "rationale": "Verified claims: balanceUnboundTransaction(tx,{shieldedSecretKeys,dustSecretKey},{ttl}), signRecipe(recipe,signSegment) and finalizeRecipe(recipe) match facade index.js lines 357-455; finalizeRecipe binds/merges and calls pendingTransactionsService.addPendingTransaction (line 435) without signing, confirming the packet's finalization-mutates-wallet-state and does-not-sign statements; UNBOUND_TRANSACTION recipes expose baseTransaction and balancingTransaction (lines 383-384). UtxoSpend.owner is SignatureVerifyingKey (ledger-v8.d.ts 1826) with addressFromKey (1813), verifySignature(vk,data,sig) (435), Intent.signatureData(segmentId) (2039), Transaction.serialize/deserialize (2420-2428) all present. FinalizedTxData carries tx, status, txId, identifiers, blockHash, protocolVersion, fees, segmentStatusMap, unshielded (index.d.mts 186-245) and BlockHashConfig exists (892-898). differential.mjs validateRecord requires observationKind synthetic-local, networkEvidence incompleteNetworkEvidence, networkAcceptance false and metadataUsedForExpectations false (607-627), matching the packet's projection field settings; compareFinancialEffects always returns networkAcceptance:false (1800-1829). build.mjs line 34 throws unless skipZk, confirming it is not a proven builder. loan.compact constructor/initialize match the packet (mint 20,000,000,000 to borrowerAddress, kernel f0 5,000,000,000). Arithmetic recomputed: 5,000,000,000*8*31=1,240,000,000,000; /36,500 floors to 33,972,602 with remainder 27,000; gcd 500 gives 54/73; total due 533,972,602; residual 4,500,000,000. Swap: 10,000*997/1000 leaves 30A fee, output floor(2,000,000*9,970,000/1,009,970,000)=19,743, reserves 1,010,000A/1,980,257B. Allocation sums (3600+600+1200+600=6000) and file count (6+2=8) are internally consistent. The packet is otherwise sound, but the runtime entry-file pin requirement in \u00a71 cannot be met from the supplied parent-verified sources.json for ledger-v8 and several other imported packages, and the author has no owned file in which to add parent-verified pins. That is a material, actionable defect in the admission packet, so changes are requested rather than approval. The unverifiable midnight-js-contracts and generate.mjs API names are flagged in scope but do not by themselves block admission because the packet already requires author-time pin verification against retained source."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "token": {
+    "schemaVersion": 1,
+    "providerFamily": "anthropic",
+    "model": "claude-fable-5-1",
+    "cliVersion": "2.1.261 (Claude Code)",
+    "contractHash": "sha256:8d4df20da2ac6b370231df4a67cca8c5d43e2d952ec3d2c966c2ac4556dff79c",
+    "promptHash": "sha256:30674e4e544f181588e385da28af544be616766aa977413b7896d5f81e2172cc",
+    "schemaVariantHash": "sha256:59af589b1640a4c230a36dd0ebd2686c40a7fdd195053a81ef03ec173abb8cd3",
+    "nonce": "2602491530f8da049097a96440c9f089bf051ac1691214fca806cef2c263973f",
+    "issuedAt": "2026-09-08T09:45:56.047Z",
+    "expiresAt": "2026-09-08T09:50:56.047Z"
+  },
+  "promptSha256": "30674e4e544f181588e385da28af544be616766aa977413b7896d5f81e2172cc",
+  "candidateId": "cand_19MPK7W0YHP6FJW22PD56N28YJ",
+  "scope": "Ledger integration source packet only; no author or operational acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": true
+}

@@ -1,0 +1,90 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 99.38211195298936,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 51271,
+      "outputTokens": 17,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.051356,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 7771,
+      "cacheReadInputTokens": 3903,
+      "cacheCreationInputTokens": 67528,
+      "webSearchRequests": 0,
+      "costUSD": 1.7401057500000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5454,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "approved",
+    "candidateId": "cand_0NMHNN1BY4Y79KXXXK04RK73GQ",
+    "scope": "Source-only admission packet for SP05 ledger integration at base daac8357 (head identical, empty diff). Reviewed the checker-contract packet, sources.json pins, and pinned SDK/accepted source excerpts for internal consistency, API compatibility, arithmetic correctness, and alignment with the frozen comparator contract. No implementation code exists yet; this verdict admits the packet, not any future ledger result.",
+    "findings": [
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 'queryContractState(address,{type:\"blockHash\",blockHash})' and 'queryUnshieldedBalances(address,{type:\"blockHash\",blockHash})'; source-excerpts midnight-js-types index.d.mts lines 892-905",
+        "description": "The excerpts show the BlockHashConfig shape and an UnshieldedBalance type but not the PublicDataProvider method signatures for queryContractState or queryUnshieldedBalances. The packet's exact-signature requirement for these two calls is asserted, not evidenced here. The author pass must confirm both exist with a config argument in the pinned indexer-public-data-provider before use."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 'Reuse validatePinnedInputs and generateWrappers from accepted generate.mjs'; sources.json custody/generate.mjs pin a0c6b4d6\u2026",
+        "description": "generate.mjs is hash-pinned but no excerpt shows that it exports validatePinnedInputs or generateWrappers under those names. If the exports differ, build-proven.mjs cannot satisfy the reuse requirement without touching a protected file. Confirm the export names at pin verification."
+      },
+      {
+        "severity": "low",
+        "citation": "sources.json runtimeEntryCoverage.entries['@midnight-ntwrk/midnight-js-contracts'] and sibling midnight-js packages",
+        "description": "Several package entry lists repeat the same index.cjs/index.mjs paths twice. Harmless for an allowlist, but a loader that rejects duplicate manifest entries or counts entries would misbehave. The loader should treat the list as a set."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 build-proven.mjs: 'Full compiler invocation remains disabled in this source pass; test validation and invocation construction with an injected process adapter' alongside 'Never label \u2026 a mocked compiler \u2026 as proven'",
+        "description": "The packet does not state how buildProvenCustody distinguishes an injected test adapter from a real admitted compile when labelling output. The implementation should require the separate full-build admission token before emitting any 'proven' label, so adapter-driven test runs can only produce an explicitly unproven manifest."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 'Recheck the finalized bytes against the approved recipe before submission'; source-excerpts wallet-sdk-facade index.js lines 422-428",
+        "description": "finalizeRecipe binds the base transaction and merges the balancing transaction, so serialized bytes necessarily differ from the pre-finalization recipe. The recheck must compare structural content (intents, unshielded offer inputs/outputs, signatures, ttl) rather than raw bytes, otherwise it can never pass. The wording should be read that way by the author."
+      }
+    ],
+    "rationale": "Bundle identity verified: baseSha equals headSha and diffSha256 is the empty-string SHA-256, matching the zero-length review-diff artifact, which the packet declares as the expected baseline for a source-only admission. All four artifacts were inspected. The packet's API claims agree with the pinned facade source (balanceUnboundTransaction, signRecipe, finalizeRecipe registering a pending transaction without signing inputs), the ledger-v8 types (UtxoSpend.owner as verifying key, addressFromKey, verifySignature, signatureData, four-argument Transaction.deserialize) and the FinalizedTxData fields. The declared loan economics reproduce exactly from loan.mori constants (interest 33,972,602, remainder 27,000/36,500 reducing to 54/73, total 533,972,602, residual 4,500,000,000, 20,000,000,000 mint matching loan.compact initialize) and the swap figures (fee 30A, 19,743B out, reserves 1,010,000A/1,980,257B) also reproduce. The projection rules match the frozen comparator validator constants (schemaVersion, synthetic-local, networkAcceptance false, incompleteNetworkEvidence, metadataUsedForExpectations false). Ownership limits, version pins and toolchain statements are internally consistent with sources.json. Remaining findings are evidence gaps or clarifications that the packet already routes to mandatory author-time pin verification; none is a material defect in the packet itself, so approval is warranted. This approval admits the source packet only and establishes nothing about later build, local settlement or Preview results."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "token": {
+    "schemaVersion": 1,
+    "providerFamily": "anthropic",
+    "model": "claude-fable-5-1",
+    "cliVersion": "2.1.261 (Claude Code)",
+    "contractHash": "sha256:0d8ee03ad6df1c400c78adef51fa99492fa73dfdbc08e7d521c5d0e63b901faf",
+    "promptHash": "sha256:6aa8e6d15004b5a9c23314ba0d3441babddad764417df16c20486eb8a6b8e4ca",
+    "schemaVariantHash": "sha256:59af589b1640a4c230a36dd0ebd2686c40a7fdd195053a81ef03ec173abb8cd3",
+    "nonce": "b3c0eaecb0f39745094df9b86b5da98d89338b1e1544c4a1d2e72efed7d200ee",
+    "issuedAt": "2026-09-08T09:53:10.048Z",
+    "expiresAt": "2026-09-08T09:58:10.048Z"
+  },
+  "promptSha256": "6aa8e6d15004b5a9c23314ba0d3441babddad764417df16c20486eb8a6b8e4ca",
+  "candidateId": "cand_0NMHNN1BY4Y79KXXXK04RK73GQ",
+  "scope": "Ledger integration source packet only; no author or operational acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": true
+}

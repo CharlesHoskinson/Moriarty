@@ -1,0 +1,90 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 97.99279299902264,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 19508,
+      "outputTokens": 15,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.019583,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 7470,
+      "cacheReadInputTokens": 3903,
+      "cacheCreationInputTokens": 26662,
+      "webSearchRequests": 0,
+      "costUSD": 0.9077357500000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4873,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "changes_requested",
+    "candidateId": "cand_1C25Z7B7Z3WWXV34JWBH0TSGWQ",
+    "scope": "Bundle identity verified: baseSha and headSha both equal daac83578f105b0a70ce44d88c579018881daae5, which matches the packet's declared base; diffSha256 e3b0c442... is the SHA-256 of empty content and matches the zero-byte review-diff artifact. Inspected all four artifacts: checker-contract (sha256 d2fe021a...), sources (277b2f4f...), source-excerpts (94469986...), review-diff (empty). Evaluated the packet (the candidate is the proposed source-only implementation packet, not code) against the checker-contract's own interface, boundary, and acceptance requirements, cross-checked against the pinned facade, ledger-v8, midnight-js-types, differential.mjs, loan.compact and build.mjs excerpts. No filesystem access to the worktrees was available; hash verification of sources.json entries relies on the parent's statement and could not be independently re-run here.",
+    "findings": [
+      {
+        "severity": "medium",
+        "citation": "checker-contract \u00a73 'Required sequence for token funding: balanceUnboundTransaction ... signRecipe ... finalizeRecipe ... then submitTransaction ... Validate signed input owners before submission' vs source-excerpts wallet-sdk-facade/dist/index.js lines 414-438 (finalizeRecipe -> pendingTransactionsService.addPendingTransaction(finalizedTx))",
+        "description": "The packet asserts, from facade source, that finalization does not sign inputs, but omits that finalizeRecipe also registers the finalized transaction with the wallet's pendingTransactionsService before any submission occurs. The packet orders owner validation and the reserve-before-submit check after finalizeRecipe ('before submission'), so any local rejection at that point leaves an orphaned pending transaction in the live WalletContext that was never submitted, which the packet's 'retain every known identifier' and 'zero implicit retries' clauses do not cover. The sequence should require signed-input-owner validation and allowance reservation on the signed recipe before finalizeRecipe, or explicitly specify how an unsubmitted-but-pending finalized tx is recorded and surfaced to the root."
+      },
+      {
+        "severity": "medium",
+        "citation": "checker-contract \u00a73 'financial oracle projection ... source-derived (exact frozen program/metadata parameter path ...)' and 'Its static vocabulary/source metadata can come from the frozen schema' vs source-excerpts src/differential.mjs lines 610-627 (observationKind must be synthetic-local; sourcePins.metadataUsedForExpectations must be false)",
+        "description": "The packet directs the projection to map observed quantities plus metadata-derived source parameters (rate 8/100, period 31/365) into the synthetic schema and feed them to the unaltered compareFinancialEffects. validateRecord rejects any record whose sourcePins.metadataUsedForExpectations is not false and requires observationKind 'synthetic-local' on both sides. The packet does not state how a projection record whose leaves are declared source-derived from metadata satisfies metadataUsedForExpectations=false without misdeclaring provenance, nor which side (expected fixture vs projected observation) the metadata parameters belong to. As written an author must either falsify the pin flag or fail the comparator; the packet needs to specify the exact sourcePins/observationKind contents of the projected record and confirm they are consistent with the frozen validator."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 'Deserialize real finalized bytes with Transaction.deserialize(\\'signature\\',\\'proof\\',\\'binding\\',raw)' and 'verifySignature(key,intent.signatureData(segment),signature)'; source-excerpts ledger-v8.d.ts lines 1769-1840, 2030-2090",
+        "description": "The excerpts confirm addressFromKey, UtxoSpend.owner as SignatureVerifyingKey, Intent.signatureData(segmentId) and UnshieldedOffer.signatures, but do not include the Transaction.deserialize or verifySignature declarations. The packet names exact signatures for both without supporting evidence in this bundle. Not a defect in the packet itself, but the author pass should be required to cite the exact ledger-v8.d.ts lines for these two APIs in FOREMAN_REPORT before relying on them."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a73 'floor remainders54 and73 are computed from the pinned operation and observed pre-state'",
+        "description": "The stated remainders 54 and 73 are not reproducible from the headline parameters given in the packet (5,000,000,000 principal, 8/100, 31/365 yields interest 33,972,602 with remainder 270 or 72 depending on operation order; the swap 9,970*2,000,000/1,009,970 yields 19,743 remainder 162,290). The example values therefore depend on an unstated operation ordering in the pinned bound-program. Since the packet already mandates deriving them from the pinned kernel/bound-program, the illustrative numbers should be either removed or accompanied by the exact expression so the reviewer can check them rather than treat them as expected constants."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract \u00a72 'Dependencies are already retained under /home/charl/Moriarty/.worktrees/r3-native/.../node_modules' and 'New worktree: /home/charl/Moriarty/.worktrees/candidate-worktree'",
+        "description": "Owned source will live in candidate-worktree but must load ESM/WASM packages from a sibling worktree's node_modules via an explicit path-resolved loader. This is workable but the packet should require the loader to hash-check the pinned package.json and entry files it resolves at import time (the pins exist in sources.json), otherwise 'verify every pin before authoring' is satisfied only at author time and not by the shipped source."
+      }
+    ],
+    "rationale": "The bundle identity is internally consistent and the packet is largely well-grounded: the balance/sign/finalize/submit order, the UtxoSpend owner semantics, addressFromKey, FinalizedTxData fields (txId vs identifiers, fees, segmentStatusMap, blockHash, protocolVersion), the immutable compareFinancialEffects contract, the loan initialize amounts (kernelState f0 5,000,000,000 / f5 20,000,000,000, 20,000,000,000 minted to borrower), and the build.mjs skip-zk limitation all match the pinned excerpts. However two material defects in the packet's required-interface text would drive an author to implement wrong or self-contradictory behavior: (1) the funding sequence ignores that finalizeRecipe mutates wallet pending state before validation and reservation, so the mandated ordering can strand pending transactions in the caller's live wallet; (2) the oracle-projection instructions are incompatible with the frozen validator's metadataUsedForExpectations=false and synthetic-local constraints unless provenance is misdeclared. Because the packet is what the parent will freeze and charge an author allocation against, these must be corrected before admission. The remaining findings are evidence gaps and clarifications that do not block on their own."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "token": {
+    "schemaVersion": 1,
+    "providerFamily": "anthropic",
+    "model": "claude-fable-5-1",
+    "cliVersion": "2.1.261 (Claude Code)",
+    "contractHash": "sha256:228f6528adb66b89b8b81a574d7b94d4a21b3351772d65f09501403c9e981cc2",
+    "promptHash": "sha256:51c85586f5350847be53f82abfb17da9cc56a8f6917fafa0818abffbb7df92e8",
+    "schemaVariantHash": "sha256:59af589b1640a4c230a36dd0ebd2686c40a7fdd195053a81ef03ec173abb8cd3",
+    "nonce": "06a70b11a5a419c5a3820fdfbaf18c920a36ffaeea9b24697a4237a2f960368c",
+    "issuedAt": "2026-09-08T09:39:46.159Z",
+    "expiresAt": "2026-09-08T09:44:46.159Z"
+  },
+  "promptSha256": "51c85586f5350847be53f82abfb17da9cc56a8f6917fafa0818abffbb7df92e8",
+  "candidateId": "cand_1C25Z7B7Z3WWXV34JWBH0TSGWQ",
+  "scope": "Ledger integration source packet only; no author or operational acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": true
+}
