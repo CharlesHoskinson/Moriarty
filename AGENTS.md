@@ -43,6 +43,10 @@ resource and acceptance gates. Merge status is not product acceptance.
   formal workflow does not apply here. Check live runtime before claiming a loop
   is armed, and never falsely complete an old goal to create another.
 
+## Current implementation and review routing
+
+The [Grok/GPT-6 execution instruction](raw/assignments/moriarty-grok-high-gpt6-execution-2026-09-07.md) controls the current twelve-sprint execution. Use Grok 4.6 at high reasoning effort for implementation and fresh independent GPT-6 Astra for result review. This supersedes older Fable result-review requirements in these instructions and sprint packets. Preserve historical identities and all acceptance/resource gates.
+
 ## Autonomous sprint decisions
 
 The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use Fable 5.1 medium, GPT-6 and Grok 4.6 for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
