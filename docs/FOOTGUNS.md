@@ -85,6 +85,17 @@ These are behavioral controls. They do not automatically enforce themselves.
 At each trigger, the lead agent must apply the required action without requesting routine permission again.
 Keep required tests, independent audits, bounded resources, mandatory PCD and financial acceptance intact.
 
+## Development plugin integration
+
+The repository development plugin (`plugins/moriarty-dev`) guards registered dispatches with these stop rules:
+
+```bash
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
+```
+Use guarded CLI execution when host coverage is unverified. Do not infer interception from hook files or installation. Do not create a new runner or campaign merely to inspect files or make an authorized source edit.
+
 ## Existing product and evidence rules
 
 1. **Recover the purpose before the work queue.** Read the latest user directive

@@ -14,8 +14,9 @@
 - [x] Implement and independently check shared reservations, current runner admission, unique debit consumption and bounded observed child completion.
 - [x] Bind and execute a real SP01 static design check through the public CLI; preserve historical acceptance bytes and scoped GPT-6 review.
 - [x] Finish independent review of transaction lifecycle/delivery and the GPT-6 workflow instructions. GPT-6 accepted candidate `d6d66813…`; 151 root tests and 14 independent CLI probes passed. The focused correction uses a dedicated emitted host message with a closed notification format; it does not interpret Markdown or accept caller acknowledgement JSON.
-- [ ] Correct the remaining hook adapter and `doctor` behavior: report observed coverage honestly, handle supported host input, keep bounded output valid JSON, and surface pending public notifications. A file's existence cannot prove interception.
-- [ ] Install reviewed source through the existing personal marketplace and test actual host coverage. Record unsupported paths and retain the guarded CLI; do not repair host internals or add a service.
+- [x] Correct the remaining hook adapter and `doctor` behavior (GPT-6 passed `83876160…`; 161 tests and 14 independent probes): report observed coverage honestly, handle supported host input, keep bounded output valid JSON, and surface pending public notifications. A file's existence cannot prove interception.
+- [x] Install exact reviewed source through the existing personal marketplace (`moriarty-dev@personal`, 24 matching files).
+- [ ] In a new thread, observe host hook trust/interception using the disposable smoke procedure. Record unsupported paths and retain the guarded CLI; do not repair host internals or add a service.
 - [ ] Run one separately admitted real Moriarty repair pilot: deny the repeated broad attempt, reproduce the defect, apply the focused correction and obtain separate GPT-6 review. The retained SP05 R6 safety stop remains in force; this plugin does not authorize its replay.
 - [ ] Publish final coverage and pilot evidence, then return to SP01–SP12 implementation. Full BNF, executable K and financial Preview acceptance remain open.
 

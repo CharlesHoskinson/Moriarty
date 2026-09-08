@@ -1,0 +1,1 @@
+The campaign register fixture preserves the reviewed register from commit 607726e. Tests intentionally exercise this historical admission with its retained bindings. The live register now references the separately verified current SP01 design action. No historical acceptance file is changed.
