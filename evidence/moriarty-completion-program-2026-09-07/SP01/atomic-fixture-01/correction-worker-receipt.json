@@ -1,0 +1,27 @@
+{
+  "kind": "correction-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 412.2220248079975,
+  "chargedSeconds": 600,
+  "beforeHead": "e6b3fcf8752e1f569680b5dfab8b6a79b8ad457e",
+  "afterHead": "e6b3fcf8752e1f569680b5dfab8b6a79b8ad457e",
+  "beforeStatusSha256": "6283f99647661f79809abe46463f0dc287bf084890bde8d8814048a5f85fa5d0",
+  "afterStatusSha256": "6283f99647661f79809abe46463f0dc287bf084890bde8d8814048a5f85fa5d0",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=9min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-atomic-fixture-correction-worker-720180.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "Local current atomic loan fixture and digest evidence only. No native export shim, compiled relation, proof, backend choice or public operation.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 170593,
+      "outputTokens": 27136,
+      "cacheReadInputTokens": 570112,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 11,
+      "costUSD": 0.13413986
+    }
+  },
+  "resultText": "I'll start by reading the sprint contract, the current verifier and tests, and the GPT-6 failure notes so the three regressions and the exact 18-entry check stay in scope.Using STE for reports and TDD for the three GPT-6 regressions before the verifier change. Next I\u2019ll read the current fixture files and the sprint contract.The GPT-6 cases all slip through existence matching on kind/domain. I\u2019ll add those three regressions first, then replace `listed`/`link` with an exact 18-entry label spec.The three regressions are in place. Next I\u2019ll replace the permissive kind/domain matcher with an ordered 18-entry expected spec.The three GPT-6 cases now have regressions, and the verifier binds the exact eighteen generator labels instead of kind/domain existence matching.\n\n**Tests added (15 total, prior 12 kept including T1/T2).** Each new case asserts the altered entry\u2019s canonical bytes and digest still hold, then requires `verifyFixture` to throw:\n\n- `OBSERVATIONS-settle.preimage` set to `{unrelated:'not an observations bundle'}`, then rehashed\n- `ACTION-accrue` / `ACTION-settle` labels swapped\n- every entry relabeled `unrelated0` \u2026 `unrelated17`\n\n**Verifier.** `checkCommitments` builds the eighteen expected rows from the supplied fixture records in generator order: `PROGRAM`, `GENESIS`, `CLAIMS`, `STATE-initial`, `STATE-accrued`, `STATE-settled`, then `ACTION` / `OBSERVATIONS` / `AUTHORITY` / `SIGNED` / `TRACE` / `PROOF-CONTEXT` for accrue and settle. Each listed entry must match once on label, domain, complete preimage, `canonicalHex`, and digest. Reordered commitments are rejected for this deterministic fixture (documented in README). Prefix/suffix/domain existence matching is gone.\n\nIndependent encoder, source pins, `traces.json` economics, and reconstruct replay are unchanged. `generate.mjs` was not edited.\n\n**Not done here.** Tests were authored and not run. No `fixture.json` generation, git writes, native tools, or other providers. Parent still runs the new tests against frozen candidate01, then the corrected candidate, regenerates twice, and rehashes independently. SP01.7 / RP01-MC03 remain specified-only.",
+  "stopReason": "end_turn",
+  "status": "?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n?? experiments/moriarty-atomic-fixture/\n"
+}

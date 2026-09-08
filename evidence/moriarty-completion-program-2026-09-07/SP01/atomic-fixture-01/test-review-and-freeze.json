@@ -1,0 +1,19 @@
+{
+  "testSha256": "f50d22754dacb3a198252dab93cad658ed46ceffc09cc788654379f22b93c8d4",
+  "red": "red-receipt.json",
+  "observed": "12 tests fail with missing buildFixture export assertion; generate.mjs and verify.mjs do not exist.",
+  "testCorrectionsBeforeImplementation": [
+    {
+      "id": "T1",
+      "reason": "ProofContext contains traceHash by runtime-types.ts definition. Only TRACE own preimage must exclude traceHash. Restrict own-digest exclusion to its corresponding domain; positively assert ProofContext.traceHash equals candidate traceHash."
+    },
+    {
+      "id": "T2",
+      "reason": "Current self-consistent mutation leaves stored stateHash and traceHash links stale, so rejection may only establish broken hash links. Recompute terminal State hash, candidate.after stateHash, TRACE hash, ProofContext.traceHash and context commitment, preserving all affected preimage copies. Assert independent rehash and cross-link consistency BEFORE expecting rejection of erased residual debt."
+    }
+  ],
+  "allowedTestChanges": "Only T1/T2 and directly required helper code. Other controls remain unchanged. Parent reruns corrected tests without implementation in isolated scratch to verify substantive red, then full green controls.",
+  "additionalSeconds": 0,
+  "additionalWorkerDispatches": 0,
+  "authority": "Routine test correction within existing implementation and verification allowances"
+}
