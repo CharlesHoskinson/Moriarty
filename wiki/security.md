@@ -5,10 +5,15 @@ title: Moriarty security and trust boundaries
 status: active
 updated_at: 2026-09-02T18:20:00Z
 sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
   - SRC-0005
   - SRC-0007
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - research
@@ -37,3 +42,13 @@ checker/elaborator; Compact backend and translation validator; generated
 circuits and artifact registry; Runtime/client verifier; SDK/UI; and optional
 oracle/composition protocols. A single “Moriarty audit” is not an adequate
 claim for all of these boundaries.
+
+## Taxonomy-driven adversarial requirements — 2026-09-08
+
+**CLM-0928.** Zhou separates network, consensus, smart-contract, protocol-design and auxiliary dependencies from attacker knowledge and capabilities; its incidents are multi-label. Werner's technical/economic distinction concerns atomic exploitation versus non-atomic economic exposure, not simply code versus finance. Sources: SRC-0102 (IEEE SP 2023), PDF pp. 2–6 Fig. 2 and Tables I–III; SRC-0103 (arXiv v6, 2022-09-15), PDF pp. 6–11 §§5–6. Primary descriptive research; reviewed 2026-09-08; source facts, S2 research use; not empirically reproduced; confidence high for source definitions. [Detailed analyses and graph](../deliverables/defi-taxonomy-papers-2026-09-08/README.md).
+
+**CLM-0929.** Derive adversarial fixtures with separate actor capability, vulnerable layer, precondition, ordered effects, violated predicate and loss outcome. ABI shape does not establish semantic compatibility; a valid oracle signature does not establish economic truth. Flash borrowing is a capability with legitimate uses. Sources: SRC-0102, PDF pp. 3–6 and 12 §VI; SRC-0103, PDF pp. 4–9 §§3.2,4–5 and p. 11 §6.4. Primary descriptive research; reviewed 2026-09-08; inference/recommendation, S2, not implemented; confidence medium. [Proposed tests](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) separate compiler/Core checks, proof and ledger correspondence, and external assumptions. No survey result certifies Moriarty security.
+
+## Vault valuation and claim boundaries — 2026-09-08
+
+**CLM-0933.** The [vault report comparison](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md) proposes separate valuation roles, explicit conversion/preview/limit/execution semantics, complete direct-transfer and rounding accounting, persistent request duties and versioned dependency/authority rules. Six proposed tests distinguish local share accounting from downstream collateral and recovery assumptions. Source: SRC-0104, lines 81–100, 125–147, 246–325; report as-of 2026-09-08; secondary synthesis; reviewed 2026-09-08; S2 inference/recommendation, not implemented or reproduced; confidence medium. Existing local ERC-4626/7540 snapshots support a limited method/lifecycle comparison; other external incident, standard-status and theorem assertions remain report claims. The four mandatory proof obligations retain their explicit domains and assumptions.

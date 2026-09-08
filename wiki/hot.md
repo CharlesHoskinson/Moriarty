@@ -4,11 +4,16 @@ title: Current research context
 type: overview
 status: active
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - research
 sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
   - SRC-0097
   - SRC-0077
   - SRC-0078
@@ -28,3 +33,7 @@ Update this note only in an explicitly scoped knowledge operation. Queries are r
 The current [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks, EBNF/static judgments and K. `.mori` is the source extension. Prioritize pinned action fixtures and a small K/evaluator comparison with a surviving obligation; no native proof loop is armed by this research.
 
 The [completion sprints](../openspec/sprints/README.md) are the current delivery schedule. Start with SP01 financial/admission reconciliation, then source/K work alongside the separately admitted native feasibility track. Package acceptance, resource charges and proof blockers remain controlled by the existing program records.
+
+The [four complete DeFi papers](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) now have page-cited taxonomies and a graph. The [design comparison](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) proposes twelve tests for shares, debt, clocks, atomic repayment, liquidation, requests and authority. Keep orthogonal facets and explicit external assumptions. Use the partial-payment/residual-duty case in the next admitted language/K slice; source intake does not close SP01–SP12.
+
+The [vault report supplement](../deliverables/erc4626-vault-report-2026-09-08/README.md) adds four distinct valuation roles and six unexecuted adversarial tests to the four-paper study. Its external citations and linked atlas are unavailable; use its taxonomy as S2 design input and the pinned local standards for method checks. No source count or report assertion closes financial/K/Preview gates.

@@ -6,6 +6,11 @@ title: Contradictions and documentation drift
 status: active
 updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
   - SRC-0085
   - SRC-0087
   - SRC-0070
@@ -41,7 +46,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - research
@@ -220,3 +225,24 @@ Metadata: observed 2026-09-07; secondary report statements versus normative user
 ## DeFi SoK coverage and transaction boundary
 
 SRC-0085: the abstract's greater-than-90-percent coverage differs from section I-A's 85.71 percent dated sample. Preserve both; neither supports exhaustive present-day coverage. SRC-0087, III-B, alternates block and transaction for flash repayment. Treat exact atomic transaction repayment as a target requiring a normative fixture; do not equate a whole block with an atomic action. Source discrepancies observed 2026-09-07, S2 research disposition, not reproduced. See the [dossier](../deliverables/defi-language-design-2026-09-07/README.md).
+
+## Full-PDF taxonomy and metadata discrepancies — 2026-09-08
+
+**CLM-0931.** Preserve the following source defects rather than translating them into language guarantees. All were observed in the supplied PDF versions on 2026-09-08; source-fact/contradiction records, S2 research disposition, not empirical reproduction, confidence high for transcription. Full locators and context appear in the [paper analyses](../deliverables/defi-taxonomy-papers-2026-09-08/README.md).
+
+| Source | Conflict or limitation | Disposition |
+| --- | --- | --- |
+| SRC-0100, June 2023, PDF pp. 7–8,17–18 §§3.1/4.2.1 and Fig. 5 | CLOB appears as DEX, in a pool discussion and on the CeFi branch. | Mechanism and custody/settlement remain separate facets. Do not label every CLOB a pool or CeFi. |
+| SRC-0101, PDF p. 5 §III-B and p. 7 §IV | Single-transaction flash repayment versus block/short-sequence wording. The abstract does not specify this boundary. | Same-transaction repayment is the consistent interpretation; require a pinned atomicity fixture. Same block does not establish shared rollback. |
+| SRC-0101, PDF pp. 12–13 Table VIII/§VII | APY is defined annually but table heading says “% per 30D.” | Keep horizon/reporting-window ambiguity; do not silently annualize the table. |
+| SRC-0102, IEEE SP 2023, PDF p. 1 | Side-banner DOI ends 10179435; footer DOI ends 00180. | Preserve both strings; local hash pins the source, neither DOI resolved online. |
+| SRC-0102, PDF p. 12 Table IX/§VI | 52% is fraction of tools relating to PRO; 6% is average PRO type coverage. Prose blurs them. | Retain denominators and use the table's definitions; no current tool ranking. |
+| SRC-0103, arXiv v6 2022-09-15, PDF p. 8 Table 1 | Caption ends March 2021 but includes an October 2021 Cream incident. | Cite actual rows and PDF locations; no prevalence inference from this illustrative table. |
+
+SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the PDF rendition of SRC-0095's same arXiv version. SRC-0100 is an earlier draft related to SRC-0085. These records do not provide independent corroboration merely because they have additional capture IDs.
+
+## Supplied vault report provenance — 2026-09-08
+
+**CLM-0934.** SRC-0104 contains opaque turn-style citations and sandbox links to an atlas/ZIP/JSON/CSV/BibTeX bundle, but only the Markdown report was supplied. Its line 335 claims 80 source records and 15 projects; the visible table has fourteen grouped project rows (lines 212–225), which does not settle the absent catalog's count. The report's standards matrix omits dedicated previewRedeem/maxWithdraw/maxRedeem rows (lines 81–92). Preserve those limits and its reported incident discrepancies rather than accepting the external claims. Report as-of 2026-09-08; secondary synthesis; reviewed 2026-09-08; source observation, S2 research use, no reproduction; confidence high for supplied-file contents. [Full analysis](../deliverables/erc4626-vault-report-2026-09-08/ANALYSIS.md).
+
+**CLM-0935.** SRC-0084's immutable capsule records ERC-7540 creation as 2023-08-30; the retained [ERC-7540 text](../raw/sources/moriarty-intent-semantics-2026-09-03/erc-7540.md), Created row, and the originally acquired HTML both say 2023-10-18. Corrected the inventory and its portable legacy metadata to 2023-10-18, preserving the capsule bytes and prior date in the ledger correction record. Primary retained standard snapshot; observed 2026-09-08; repository/source metadata correction, S2 research use, not a new standards-status check or implementation claim; confidence high. The supplied report independently of this metadata record also states October 18, but its opaque citation is not accepted as primary proof.

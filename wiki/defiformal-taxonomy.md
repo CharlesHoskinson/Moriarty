@@ -5,6 +5,11 @@ title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
   - SRC-0095
   - SRC-0085
   - SRC-0080
@@ -23,7 +28,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - research
@@ -203,3 +208,13 @@ SRC-0072 proposes typed open transitions, resources, authority, liabilities, eff
 The [DeFi review](../deliverables/moriarty-report-plan-review-2026-09-07/defi.review.md) distinguishes report claims from retained source findings and missing attachments. Early adversarial semantics constrain a successor Core; complete conformance remains MC07. Model-to-contract fidelity and independent expected observations cannot be replaced by theorem-name certificates or primitive counts.
 
 Metadata: SRC-0070/SRC-0072; observed 2026-09-07; secondary descriptive synthesis and planning recommendation; S2, not executed conformance; confidence high for report statements, unverified for its external citations.
+
+## Four complete DeFi papers — 2026-09-08
+
+**CLM-0926.** The supplied Gogol June 2023 draft separately classifies value propositions, tokens, mechanisms and deployment architecture; its pool/aggregator/synthetic partition has overlaps and a conflicting CLOB placement. Kotzer's loan table combines collateral, term and liquidation policy; zero-liquidation can also be overcollateralized. Retain independent facets in Moriarty. Sources: SRC-0100, PDF pp. 2, 16–20, Figs. 1, 4–6; SRC-0101, PDF p. 3 Table II and pp. 5–6 §III-C. Primary descriptive research; source versions June 2023 and supplied undated 2026 PDF; reviewed 2026-09-08; source facts plus recommendation; S2; not empirically reproduced; confidence high for transcription, medium for design inference.
+
+**CLM-0927.** Receipt shares, time-varying redemption, persistent debt, rate/accrual policy and partial liquidation require distinct accounting observations. The [four-paper dossier](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) maps these requirements to the existing families and actions, with [fourteen crosswalk rows](../deliverables/defi-taxonomy-papers-2026-09-08/taxonomy-design-crosswalk.csv) and [twelve proposed distinguishing tests](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md). Sources: SRC-0100, PDF pp. 10–17 §§3.3–4.1; SRC-0101, PDF pp. 3–8 §§III–V and pp. 11–13 §VII; SRC-0103, PDF pp. 4–6 §§3–4. Primary descriptive research, source dates in the dossier; reviewed 2026-09-08; inference/recommendation; S2, not implemented or reproduced; confidence medium. Existing 72 DeFi rows, 277 ACTUS fixtures and 32 dispositions remain required. Survey classification does not prove a primitive basis.
+
+## Collateral-vault report supplement — 2026-09-08
+
+**CLM-0932.** The supplied ERC-4626 collateral-vault report separates eight overlapping architectures A–H and eleven research facets T01–T11. Its four valuation quantities—accounting, redemption, market and stressed liquidation—refine the existing family/facet design. Source: SRC-0104, input lines 38–63 and 311–325; report as-of 2026-09-08, author/publication unverified; secondary descriptive synthesis; reviewed 2026-09-08; source fact plus S2 recommendation, not implemented or reproduced; confidence high for transcription and medium for language inference. [Analysis and graph](../deliverables/erc4626-vault-report-2026-09-08/README.md); [eight-row crosswalk](../deliverables/erc4626-vault-report-2026-09-08/crosswalk.csv). Keep A–H and T01–T11 as descriptors, not new Core constructors or replacement coverage denominators.

@@ -5,6 +5,11 @@ title: Moriarty architecture decision
 status: active
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
   - SRC-0098
   - SRC-0099
   - SRC-0094
@@ -32,7 +37,7 @@ sources:
   - SRC-0031
   - SRC-0033
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - research
@@ -169,3 +174,9 @@ The [user clarification](../raw/assignments/moriarty-report-reconciliation-2026-
 Metadata: SRC-0070, SRC-0071, SRC-0072; observed 2026-09-07; secondary reports plus normative user input and repository observation at `3eb0e0acf5b07a224ad876886e54837c82c84b86`; proposed language/plan scope S2; source review reproduced, implementation/proof acceptance not reproduced; confidence high for the recorded scope, unresolved for backend feasibility.
 
 The ISO catalogue metadata is retained in SRC-0098. The Marlowe paper is reused through SRC-0099 and the original SRC-0040 collection; the original PDF and receipt remain unchanged.
+
+## Source-grounded semantic tests — 2026-09-08
+
+**CLM-0930.** The [four-paper language analysis](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) recommends more precise claim/share, debt, clock, authority and composition semantics within the existing successor direction. Source support: SRC-0100 PDF pp. 10–19 §§3–4; SRC-0101 PDF pp. 3–8 §§III–V; SRC-0102 PDF pp. 3–6,12; SRC-0103 PDF pp. 4–11 §§3–6. Primary descriptive studies, version dates in the [source register](../deliverables/defi-taxonomy-papers-2026-09-08/sources.json); reviewed 2026-09-08; S2 inference, not implementation or proof; confidence medium. SP02 still owns complete lexical/EBNF/static rules; SP03 owns executable bounded Moriarty K semantics. Proposed TX02 makes a partial payment leave an observable obligation across source/Core/K/evaluator; later acceptance must bind complete effects and duties to Midnight. None of the four mandatory proof claims or existing coverage obligations is waived.
+
+The [collateral-vault supplement](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md), CLM-0933 in [[wiki/security|security boundaries]], adds proposed tests for donation, preview authorization, valuation purpose, asynchronous claims and nested exposure. These feed SP02/SP03/SP08–SP11 without creating an Ethereum backend or accepting new syntax. The combined research now specifies eighteen illustrative tests, all unexecuted; complete language/K and actual Midnight evidence remain separate deliverables.

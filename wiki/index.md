@@ -4,11 +4,17 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-08
 tags:
   - moriarty
   - navigation
 updated_at: 2026-09-07T18:01:49Z
+sources:
+  - SRC-0104
+  - SRC-0100
+  - SRC-0101
+  - SRC-0102
+  - SRC-0103
 ---
 
 # Moriarty language wiki index
@@ -185,3 +191,9 @@ Use the [complete roadmap](../ROADMAP.md), [MC01-MC08 program](../openspec/MORIA
 Earlier Candidate A, S01/S02, A4/A5, K and SDK feasibility work is [archived](../docs/ARCHIVE.md). Its original results and unfinished obligations remain historical; they do not authorize an old execution queue. The retained research pages explain the source findings and their limitations.
 
 Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../docs/COUNCIL_REVIEWS.md) links to the superseded Council requirements for historical interpretation.
+
+## Four-paper DeFi taxonomy intake — 2026-09-08
+
+[Library and full PDF captures](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) · [interactive graph](../deliverables/defi-taxonomy-papers-2026-09-08/graph.html) · [language implications and proposed tests](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md). SRC-0100–SRC-0103 preserve 80 pages and source-version relationships; CLM-0926–CLM-0931 connect the findings to [[wiki/defiformal-taxonomy|families/facets]], [[wiki/security|security boundaries]], [[wiki/moriarty-architecture|language semantics]] and [[wiki/contradictions|source discrepancies]]. S2 research; no sprint or proof acceptance.
+
+[ERC-4626 collateral-vault report](../deliverables/erc4626-vault-report-2026-09-08/README.md) · [report graph linked to the four papers](../deliverables/erc4626-vault-report-2026-09-08/graph.html) · [valuation and request design implications](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md). SRC-0104 adds A–H/T01–T11 and six proposed tests. External report citations and missing atlas files remain unverified; CLM-0932–CLM-0935 preserve interpretation and source limitations.
