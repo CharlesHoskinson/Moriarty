@@ -1,0 +1,27 @@
+{
+  "kind": "completion-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 808.9514213410439,
+  "chargedSeconds": 1200,
+  "beforeHead": "564e3fd0817291fa26615c0398cf1c677e51bd10",
+  "afterHead": "564e3fd0817291fa26615c0398cf1c677e51bd10",
+  "beforeStatusSha256": "641efcce9c58cf6f2422835fe94ecee21c9bf857635e0731298c73e3737eeff0",
+  "afterStatusSha256": "5c59eb0e6810da9ce5062027f4a143066dc26b6ae3e9622176e3c72da3aedf12",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=19min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-kernel-custody-completion-worker-1303438.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "Generated fixed loan/swap Compact custody source and compiled-runtime tests only. No real ledger/payer/finality/wallet/proof/Preview or sprint acceptance.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 246539,
+      "outputTokens": 44587,
+      "cacheReadInputTokens": 2622592,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 30,
+      "costUSD": 0.35222232
+    }
+  },
+  "resultText": "I'll start from the completion amendment and runtime diagnostic, then run the existing tests against the compiled artifacts. No rereads of the full packet or kernel.Diagnostic confirms 10 pass / 5 fail on reserve. Next I\u2019ll inspect the test context helper and the failing test output.I'll inspect the test context helper against the documented QueryContext getter/setter, then confirm whether balances are actually written.The helper mutates `block` field-by-field after `createInitialQueryContext` replaces the whole object. I\u2019ll check whether the WASM getter returns a copy.WASM `block` getter returns a copy; piecemeal mutation likely never writes back. I\u2019ll confirm with a readback script, then fix context construction.Loan settle only overflow-checks; swap actually spends pool reserves. I\u2019ll read back getter/setter behavior on the live runtime before changing the helper.Getter returns a copy; whole-block assignment persists balances. I\u2019ll fix the context helper and tighten reserve, minOut, and claim assertions.I'll run the existing compiled artifacts against the updated tests, then generate twice into clean state dirs.All 17 tests passed. Next I\u2019ll generate twice, prove wrapper equality, and capture GREEN plus the two distinct RED provenances.I'll assemble `test-evidence.json` from the captured bytes, then write the two Foreman reports.The JSON report had a placeholder hash for the old red stderr. I\u2019ll replace it with the actual sha256 from the captured file.Compiled-runtime tests are green: **17 passed, 0 failed**, against the existing skip-zk artifacts. Independent GPT-6 Astra result review is still required. This is not SP05, ledger, Preview, proof, or wallet acceptance.\n\n**Cause (checked, not assumed).** The WASM `QueryContext.block` getter returns a copy (`GETTER_SAME_OBJECT false`). Piecemeal writes of `balance` / `lastBlockTime` / `secondsSinceEpochErr` did not persist (empty balance, uncertainty 0). `createCircuitContext` already assigned time via a whole-block write, which is why time tests passed while swap/close hit `INSUFFICIENT_ENTRY_RESERVE_A/B`. Assigning a replacement block object persisted configured balances, time, and uncertainty. Token colors matched ledger `colorA` / `colorB`. Circuit reserve guards were not removed or mocked.\n\n**After the fix.** Funded swap/close paths pass. Missing-reserve cases fail at the intended guards (`INSUFFICIENT_ENTRY_RESERVE_B` at 19742 B, `INSUFFICIENT_ENTRY_RESERVE_A` on close A=0, `INSUFFICIENT_ENTRY_RESERVE_B` on close B=0). `minOut` 19700 and 1 pass. Isolated 19744 fails at `minimum output not met`. Close-before-swap remains allowed. Swap after close fails at `epoch is closed`. Tests inspect unshielded mints, inputs, outputs, and claimed spends for color, recipient tag, address, and amount.\n\n**Distinct failures preserved.** Old red is missing `MORIARTY_CUSTODY_ARTIFACTS` (`raw/red.stdout`). Diagnostic is 10 pass / 5 fail on reserve (`runtime-diagnostic.stdout`, sha256 `17006413\u2026`). GREEN is 17/17 (`test-evidence.json`).\n\n**Unchanged source.** Generator, wrappers, kernel, and arithmetic were not edited. Two generate runs into `state/gen-a` and `state/gen-b` equal owned wrappers. Kernel/arithmetic remain byte-identical with the pinned copies and the existing build stage. Compile invocations this completion: 0.\n\nOwned files are in `experiments/moriarty-midnight-financial/custody/` plus `FOREMAN_REPORT.md` and `FOREMAN_REPORT.json` (116078 bytes, under 384KiB). Role secrets stay in-memory only.",
+  "stopReason": "end_turn",
+  "status": "?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n?? experiments/moriarty-midnight-financial/\n"
+}

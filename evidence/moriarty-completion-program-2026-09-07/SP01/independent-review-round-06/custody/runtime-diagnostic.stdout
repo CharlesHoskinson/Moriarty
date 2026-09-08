@@ -1,0 +1,180 @@
+TAP version 13
+# Subtest: compiled contracts expose constructor, circuits and ledger decoder
+ok 1 - compiled contracts expose constructor, circuits and ledger decoder
+  ---
+  duration_ms: 0.606405
+  type: 'test'
+  ...
+# Subtest: loan init mints 20b USD_micro to synthetic borrower and seals lifetime 2/0
+ok 2 - loan init mints 20b USD_micro to synthetic borrower and seals lifetime 2/0
+  ---
+  duration_ms: 84.119339
+  type: 'test'
+  ...
+# Subtest: loan accrue executes kernel transition0: PR 500m, IP 33972602, residual 4.5b, no token movement
+ok 3 - loan accrue executes kernel transition0: PR 500m, IP 33972602, residual 4.5b, no token movement
+  ---
+  duration_ms: 59.304475
+  type: 'test'
+  ...
+# Subtest: loan settle executes kernel transition1: 533972602 to sealed lender, residual notional survives
+ok 4 - loan settle executes kernel transition1: 533972602 to sealed lender, residual notional survives
+  ---
+  duration_ms: 72.095747
+  type: 'test'
+  ...
+# Subtest: swap init mints pool 1m A / 2m B and trader 100k A, lifetime 8/0
+ok 5 - swap init mints pool 1m A / 2m B and trader 100k A, lifetime 8/0
+  ---
+  duration_ms: 69.818535
+  type: 'test'
+  ...
+# Subtest: swap transition0 minOut 19700 yields 19743 B, fee 30 A retained, lifetime 7/1
+not ok 6 - swap transition0 minOut 19700 yields 19743 B, fee 30 A retained, lifetime 7/1
+  ---
+  duration_ms: 69.604638
+  type: 'test'
+  location: '/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:301:1'
+  failureType: 'testCodeFailure'
+  error: 'failed assert: INSUFFICIENT_ENTRY_RESERVE_B'
+  code: 'ERR_TEST_FAILURE'
+  name: 'CompactError'
+  stack: |-
+    Module.assert (file:///home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/error.js:32:15)
+    Contract._swap_0 (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:2483:22)
+    Object.swap (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:575:31)
+    swapSwap (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:161:34)
+    TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:306:13)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1325:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+    Test.postRun (node:internal/test_runner/test:1465:19)
+    Test.run (node:internal/test_runner/test:1390:12)
+  ...
+# Subtest: swap close sends reserves to sealed provider, lifetime 6/2, remaining is not refreshed to 8
+not ok 7 - swap close sends reserves to sealed provider, lifetime 6/2, remaining is not refreshed to 8
+  ---
+  duration_ms: 66.937507
+  type: 'test'
+  location: '/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:323:1'
+  failureType: 'testCodeFailure'
+  error: 'failed assert: INSUFFICIENT_ENTRY_RESERVE_B'
+  code: 'ERR_TEST_FAILURE'
+  name: 'CompactError'
+  stack: |-
+    Module.assert (file:///home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/error.js:32:15)
+    Contract._swap_0 (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:2483:22)
+    Object.swap (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:575:31)
+    swapSwap (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:161:34)
+    TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:326:3)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1325:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+    Test.postRun (node:internal/test_runner/test:1465:19)
+    Test.run (node:internal/test_runner/test:1390:12)
+  ...
+# Subtest: pinned source permits provider close-before-swap; swap after close fails; remaining is not 8
+not ok 8 - pinned source permits provider close-before-swap; swap after close fails; remaining is not 8
+  ---
+  duration_ms: 67.461233
+  type: 'test'
+  location: '/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:345:1'
+  failureType: 'testCodeFailure'
+  error: 'failed assert: INSUFFICIENT_ENTRY_RESERVE_A'
+  code: 'ERR_TEST_FAILURE'
+  name: 'CompactError'
+  stack: |-
+    Module.assert (file:///home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/error.js:32:15)
+    Contract._close_0 (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:2820:22)
+    Object.close (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:670:31)
+    swapClose (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:172:34)
+    TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:349:3)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1325:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+    Test.postRun (node:internal/test_runner/test:1465:19)
+    Test.run (node:internal/test_runner/test:1390:12)
+  ...
+# Subtest: a lower minOut is valid; 19744 is an isolated minimum failure
+not ok 9 - a lower minOut is valid; 19744 is an isolated minimum failure
+  ---
+  duration_ms: 67.745043
+  type: 'test'
+  location: '/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:364:1'
+  failureType: 'testCodeFailure'
+  error: 'failed assert: INSUFFICIENT_ENTRY_RESERVE_B'
+  code: 'ERR_TEST_FAILURE'
+  name: 'CompactError'
+  stack: |-
+    Module.assert (file:///home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/error.js:32:15)
+    Contract._swap_0 (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:2483:22)
+    Object.swap (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:575:31)
+    swapSwap (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:161:34)
+    TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:367:3)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1325:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+    Test.postRun (node:internal/test_runner/test:1465:19)
+    Test.run (node:internal/test_runner/test:1390:12)
+  ...
+# Subtest: wrong secret and other-role secret fail with correct actor mapping
+ok 10 - wrong secret and other-role secret fail with correct actor mapping
+  ---
+  duration_ms: 119.851975
+  type: 'test'
+  ...
+# Subtest: program, network, actor, recipient, asset and revision controls fail first
+ok 11 - program, network, actor, recipient, asset and revision controls fail first
+  ---
+  duration_ms: 166.139792
+  type: 'test'
+  ...
+# Subtest: repeat init, accrue replay, settle-before-accrue and invalid hints fail
+ok 12 - repeat init, accrue replay, settle-before-accrue and invalid hints fail
+  ---
+  duration_ms: 138.370705
+  type: 'test'
+  ...
+# Subtest: time window boundaries and horizon use explicit synthetic block time
+ok 13 - time window boundaries and horizon use explicit synthetic block time
+  ---
+  duration_ms: 240.709361
+  type: 'test'
+  ...
+# Subtest: insufficient entry reserve fails on swap B and both close colors; failed call rolls back
+not ok 14 - insufficient entry reserve fails on swap B and both close colors; failed call rolls back
+  ---
+  duration_ms: 117.951086
+  type: 'test'
+  location: '/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:456:1'
+  failureType: 'testCodeFailure'
+  error: 'failed assert: INSUFFICIENT_ENTRY_RESERVE_B'
+  code: 'ERR_TEST_FAILURE'
+  name: 'CompactError'
+  stack: |-
+    Module.assert (file:///home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/error.js:32:15)
+    Contract._swap_0 (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:2483:22)
+    Object.swap (file:///home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/swap/contract/index.js:575:31)
+    swapSwap (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:161:34)
+    TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs:472:3)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1325:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+    Test.postRun (node:internal/test_runner/test:1465:19)
+    Test.run (node:internal/test_runner/test:1390:12)
+  ...
+# Subtest: runtime transcripts are not ledger funding, payer attribution, fees or finality
+ok 15 - runtime transcripts are not ledger funding, payer attribution, fees or finality
+  ---
+  duration_ms: 0.121832
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 10
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1458.261148

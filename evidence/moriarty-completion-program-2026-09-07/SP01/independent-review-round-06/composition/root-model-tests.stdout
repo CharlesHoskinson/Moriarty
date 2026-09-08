@@ -1,0 +1,153 @@
+candidate_sha256 c5801af2a4fd14e5968c4ecc00963e515ba19fdb38c052cf0fb3f94de42a054e
+old_fixture_sha256 2c44dcd0b364afae95213568aa74dd0e75dbc4264b4164772ba0593efbc1a560
+PASS retain.traces :: ids=heldouts:NAM19-capitalization:trace,composition:sequential:trace,composition:disjoint-parallel:trace,composition:shared-state-interleaving:trace,composition:atomic-synchronization:trace,composition:asynchronous-messaging:trace
+PASS retain.mutations :: n=10
+PASS retain.theorems :: ids=type-preservation,asset-indexed-accounting,authority-safety,frame-noninterference,assume-guarantee-composition,structural-associativity,obligation-preservation,conservative-extension
+PASS retain.rows :: ids=NAM19-capitalization,sequential,disjoint-parallel,shared-state-interleaving,atomic-synchronization,asynchronous-messaging
+PASS retain.no-abs-private-path :: scanned generated artifact
+PASS hist.internal-vs-external.NAM19-capitalization :: internal=['H_nam19_ied', 'H_nam19_rr1', 'H_nam19_ipci', 'H_nam19_rr2'] external=['H_nam19_rr2']
+PASS hist.internal-vs-external.sequential :: internal=['A', 'B'] external=['H_seq_B']
+PASS hist.internal-vs-external.disjoint-parallel :: internal=['A', 'B'] external=['H_par_join']
+PASS hist.internal-vs-external.shared-state-interleaving :: internal=['H_shared_A', 'H_shared_AB'] external=['H_shared_AB']
+PASS hist.internal-vs-external.atomic-synchronization :: internal=['H_atomic'] external=['H_atomic']
+PASS hist.internal-vs-external.asynchronous-messaging :: internal=['H_async_created', 'H_async_refundable', 'H_async_refund'] external=['H_async_refund']
+PASS fee.ctor-not-second-transfer :: AccrueFee ctor equals='' annotation=True
+PASS fee.once.shared-state-interleaving.plan :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_shared_fee')]
+PASS fee.once.shared-state-interleaving.expected :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_shared_fee')]
+PASS fee.balance.shared-state-interleaving :: Alice=29 Treasury=1 want 29/1
+PASS fee.once.atomic-synchronization.plan :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_atomic_fee')]
+PASS fee.once.atomic-synchronization.expected :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_atomic_fee')]
+PASS fee.balance.atomic-synchronization :: Alice=0 Treasury=1 want 0/1
+PASS fee.once.asynchronous-messaging.plan :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_async_fee')]
+PASS fee.once.asynchronous-messaging.expected :: cashMoves=[('Transfer', 'Alice', 'Treasury', 'USDC', '1', 'T_async_fee')]
+PASS fee.balance.asynchronous-messaging :: Alice=39 Treasury=1 want 39/1
+PASS fee.atomic-gross-101 :: cumulativeGross=101
+PASS cap.predicate-cumulative :: authority-safety mentions cumulative+binding
+PASS cap.twoTransfer60-reject :: discriminator={"asset": "USDC", "cumulativeGross": "120", "effects": [{"amount": "60", "asset": "USDC", "ctor": "Transfer", "from": "Alice", "id": "T_cap_60a", "scale": "0", "to": "PoolQ", "unit": "USDC"}, {"amount": "60", "asset": "USDC", "ctor": "Trans
+PASS cap.alice-101-retained :: Alice Transfer USDC bound=101
+PASS cap.independent-120gt101 :: per-effect 60<=101 and 120>101
+PASS cap.membership-not-per-effect-only :: membership/authority text carries cumulative remaining
+PASS schema.complete-state-workPartition-frame :: fields=['accounts', 'debts', 'shares', 'positions', 'claims', 'fees', 'duties', 'requests', 'messages', 'orders', 'work', 'workPartition', 'authority', 'historyIds', 'observations', 'contract', 'observedTick', 'unrelatedRecord', 'frame', 'consumedNonces', 'allocations', 'metadata']
+PASS schema.closed-records :: have=['AllowanceRecord', 'AllowedEffect', 'AuthorityRecord', 'ClaimRecord', 'CompleteState', 'ContractRecord', 'DebtRecord', 'DutyRecord', 'FeeRecord', 'Frame', 'MessageRecord', 'ObservationRecord', 'OrderRecord', 'PositionRecord', 'Quantity', 'QuantityNat', 'QuantitySourceDecimal', 'RequestRecord', 'SourceDecimal', 'WorkPartition', 'WorkRecord', 'completeStateFields', 'documentaryMetadataProjection', 'notRegisteredRuntime', 'primitiveFields', 'products', 'runtimeNat', 'status', 'sums']
+PASS schema.source-decimal-grammar :: grammar={"arithmetic": "exact Decimal/Fraction add/mul/div; not IEEE; JSON pins may truncate", "grammar": "[ '-' ]? DIGIT+ ( '.' DIGIT+ )? ; DIGIT = '0'..'9'", "length": "canonical decimal character length <=
+PASS schema.runtimeNat-separate :: runtime nat distinct from source-decimal
+PASS schema.CreateDebt-fields :: CreateDebt=[{'ctor': 'CreateDebt', 'id': 'nam19', 'principal': '5000', 'asset': 'USD', 'unit': 'USD', 'scale': 'source-decimal', 'debtor': 'borrower', 'creditor': 'lender'}, {'ctor': 'CreateDebt', 'id': 'nam19', 'principal': '5000', 'asset': 'USD', 'unit': 'USD', 'scale': 'source-decimal', 'debtor': 'borrower', 'creditor': 'lender'}]
+PASS schema.AccrueNominal-observationRef :: AccrueNominal=[{'accrued': '98.63013698630137', 'observationRef': 'O_NAM_contract_rate_0_08', 'debtId': 'nam19'}, {'accrued': '137.83121934720108082191780821917808219178082191780821917808219178082191780821918', 'observationRef': 'O_LIBOR_2013-04-01', 'debtId': 'nam19'}, {'accrued': '98.63013698630137', 'observationRef': 'O_NAM_contract_rate_0_08', 'debtId': 'nam19'}, {'accrued': '137.83121934720108082191780821917808219178082191780821917808219178082191780821918', 'observationRef': 'O_LIBOR_2013-04-01', 'debtId': 'nam19'}]
+PASS schema.Mint-unit-scale :: Mint=[{'ctor': 'Mint', 'asset': 'LP-USDC-WETH', 'to': 'Bob', 'amount': '9', 'unit': 'LP-USDC-WETH', 'scale': '0'}, {'ctor': 'Mint', 'asset': 'LP-USDC-WETH', 'to': 'Bob', 'amount': '9', 'unit': 'LP-USDC-WETH', 'scale': '0'}]
+PASS schema.AssignDuty-debtId-or-variant :: AssignDuty=[{'ctor': 'AssignDuty', 'id': 'DutyLock_M3', 'kind': 'locked-funds', 'asset': 'USDC', 'amount': '25', 'controller': 'Alice', 'payee': 'Alice', 'residual': True, 'dutyVariant': 'lock-entitlement', 'lockId': 'M3'}, {'ctor': 'AssignDuty', 'id': 'DutyLock_M3', 'kind': 'locked-funds', 'asset': 'USDC', 'amount': '25', 'controller': 'Alice', 'payee': 'Alice', 'residual': True, 'dutyVariant': 'lock-entitlement', 'lockId': 'M3'}]
+PASS schema.parallel-post-workPartition-frame :: post keys=['accounts', 'debts', 'duties', 'shares', 'positions', 'requests', 'messages', 'claims', 'orders', 'fees', 'work', 'authority', 'historyIds', 'observations', 'contract', 'observedTick', 'unrelatedRecord', 'workPartition', 'frame', 'consumedNonces', 'allocations', 'metadata']
+PASS schema.documentary-metadata-projection :: projection={"projects": ["unit", "scale", "quantityDomain", "notNat", "independentPrincipal", "independentAmount", "principalDomain", "accruedDomain", "amountDomain"], "rule": "explicit", "si
+PASS schema.authority-variants.atomic :: missing=[]
+PASS schema.authority-variants.shared :: missing=[]
+PASS schema.authority-variants.async :: missing=[]
+PASS schema.authority-variants.par :: missing=[]
+PASS apply.equations-present :: apply type=dict keys=['Transfer', 'AccrueFee', 'Mint', 'CreateDebt', 'ReduceDebt', 'AssignDuty', 'SettleDuty', 'AccrueNominal', 'Capitalize', 'SetNominalRate', 'UpdatePositionReserves', 'UpdateAuthorityCounters']
+PASS nam.independent-intervening :: cap1=98.630136986301369863013698630136986301369863013698630136986301369863013698630137 cap2=137.83121934720108082191780821917808219178082191780821917808219178082191780821918 post=5236.4613563335024506849315068493150684931506849315068493150684931506849315068493
+PASS nam.intervening-AccrueNominal :: AccrueNominal=[{'accrued': '98.63013698630137', 'observationRef': 'O_NAM_contract_rate_0_08', 'period': 'IED->RR'}, {'accrued': '137.83121934720108082191780821917808219178082191780821917808219178082191780821918', 'observationRef': 'O_LIBOR_2013-04-01', 'period': 'RR->IPCI'}]
+PASS nam.source-event-sequence :: seq=['IED', 'RR', 'IPCI', 'RR']
+PASS nam.H3-full-prefix :: H3={'id': 'H3', 'text': 'IPCI payoff 0 and notional rises by capitalized accrued interest', 'predicate': 'IPCI transfers=[] and post.principal = IED.principal + AccrueNominal(IED->RR) + AccrueNominal(RR->IPCI) with intervening RR->IPCI accrual required; payoff 0. Independent sum is 5000 + 7200/73 + 5000*(0.010567901234567900+0.10)*91/365. Immediate 5000+98.63013698630137 is not the IPCI principal.', 'interveningAccrual': '137.83121934720108082191780821917808219178082191780821917808219178082191780821918', 'postPrincipalIndependent': '5236.4613563335024506849315068493150684931506849315068493150684931506849315068493'}
+PASS genesis.payer-payee :: genesisRule={"fixture": "commonAcceptance.fixtures.genesisUnfundedDebt", "matching": ["asset", "amount=principal", "payer", "payee"], "payee": "debtor", "payer": "creditor", "text": "CreateDebt at genesis requires a matching Transfer of the same asset 
+PASS apply.position-reserves :: position-related effects=['Mint', 'UpdatePositionReserves']
+PASS apply.nam-rate-observation :: rate/obs/accrual ctors=['AccrueNominal', 'SetNominalRate', 'AccrueNominal', 'Capitalize', 'AccrueNominal', 'SetNominalRate', 'AccrueNominal', 'Capitalize']
+PASS frame.max-64 :: frame blob has 64
+PASS frame.declared-toy-max-64 :: toyFootprintMaximum recorded as design bound 64
+PASS frame.total-projection :: projection keys=['total', 'parentChild', 'outsideWrites', 'noPostProjectionErase', 'toyFootprintMaximum', 'notRegisteredRuntime']
+PASS frame.positions-in-grammar :: grammar=accounts.{AccountId}.{AssetId} | debts.{DebtId}.{field} | duties.{DutyId} | shares.{ShareId}.{field} | fees.{FeeId} | work | work.{field} | workPartition.{side}.{field} | authority.{PrincipalId} | aut
+PASS frame.size.NAM19-capitalization :: n=32 reads=15 writes=17
+PASS frame.size.sequential :: n=14 reads=7 writes=7
+PASS frame.size.disjoint-parallel :: n=28 reads=14 writes=14
+PASS frame.size.shared-state-interleaving :: n=48 reads=25 writes=23
+PASS frame.positions-writes.shared-state-interleaving :: writes=['accounts.PoolP.USDC', 'accounts.PoolP.WETH', 'accounts.Alice.USDC', 'accounts.Alice.WETH', 'accounts.Bob.USDC', 'accounts.Bob.WETH', 'accounts.Bob.LP-USDC-WETH', 'accounts.Treasury.USDC', 'shares.Bob.quantity', 'fees.swapFee', 'work.spent', 'work.remainingOrdinary', 'authority.Alice.Transfer.USDC', 'authority.Bob.Transfer.USDC', 'authority.Bob.Transfer.WETH', 'authority.PoolP', 'history.H_pool_pre', 'history.H_shared_A', 'history.H_shared_AB', 'positions.PoolP.reserveUSDC', 'positions.PoolP.reserveWETH', 'positions.PoolP.lpSupply', 'allocations.A_shared_fee']
+PASS frame.size.atomic-synchronization :: n=39 reads=19 writes=20
+PASS frame.positions-writes.atomic-synchronization :: writes=['accounts.Alice.USDC', 'accounts.Alice.WETH', 'accounts.Lender.USDC', 'accounts.PoolQ.USDC', 'accounts.PoolQ.WETH', 'accounts.Treasury.USDC', 'debts.D_flash', 'fees.repayFee', 'work.spent', 'work.remainingOrdinary', 'authority.joint', 'authority.Alice.Transfer.USDC', 'authority.Lender.Transfer.USDC', 'authority.PoolQ.Transfer.WETH', 'history.H_lender_pre', 'history.H_poolq_pre', 'history.H_atomic', 'positions.PoolQ.reserveUSDC', 'positions.PoolQ.reserveWETH', 'allocations.A_repay_D_flash']
+PASS frame.size.asynchronous-messaging :: n=32 reads=17 writes=15
+PASS frame.unrelated-preserved :: unrelated pre/post equal
+PASS duty.amount-aware-not-contradictory-set :: DutyConserv mentions amount-aware residual update
+PASS duty.50-to-30-same-id :: disc={"allocationId": "A_partial_20", "id": "D_partial", "notDischargedAndRecreated": true, "payment": {"allocationId": "A_partial_20", "amount": "20", "ctor": "SettleDuty", "fundingTransferId": "T_partial_20", "id": "D_partial", "payee": "Lender"}, "post": {"amount": "30", "asset": "USDC", "id": "D_part
+PASS duty.unique-allocation-transfer-id :: allocation/transfer present
+PASS async.independent-99vs100 :: now=100 finality=99 receive xor refund
+PASS async.independent-missing-obs-refunds :: missing dest obs => refund
+PASS async.predicate-not-assertion :: deadlineRule={"atNow100Finality99": {"admitted": "receive", "receive": true, "refund": false}, "deadline": "100", "destFinalityTick": "99", "exactlyOneSameBaseBranch": true, "exclusive": true, "note": "exactly one same-base branch by predicate; not an assertion", "now": "100", "receiveAdmitted": "Pending AND des
+PASS async.receive-complete-post :: receive keys=['id', 'fromBase', 'baseTick', 'requires', 'effects', 'postAccounts', 'postDuties', 'messageStatus', 'excludes', 'feeAlreadyCharged', 'nonceConsumed', 'notTakenInPositiveTrace', 'postState', 'entitlementTransform', 'dutyPayee']
+PASS async.refund-complete-post :: refund keys=['id', 'fromBase', 'via', 'takenInPositiveTrace', 'excludes', 'postState', 'effects']
+PASS async.receive-O_dest_M3 :: receive effects/obs include O_dest_M3
+PASS async.destination-assumption :: destination truth remains assumption
+PASS async.receive-entitlement :: settle=[{'ctor': 'SettleDuty', 'id': 'DutyLock_M3', 'allocationId': 'A_receive_M3', 'fundingTransferId': 'T_escrow_bob_25', 'payee': 'Bob', 'amount': '25', 'asset': 'USDC', 'authorizedTransform': True}] transform={'from': 'Alice', 'to': 'Bob', 'fromRight': 'refund-right', 'toRight': 'recipient-right', 'authorizedBy': 'Lock.M3 destination Bob', 'dutyId': 'DutyLock_M3'}
+PASS neg.ten-ids :: n=10
+PASS neg.full-candidate.erase-nominal-on-ipci :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.erase-nominal-on-ipci :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'H3 intervening accrual and capitalization prefix', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.erase-nominal-on-ipci :: stage=IntentRefinement
+PASS neg.transfer-fields.erase-nominal-on-ipci :: transfers=[{'from': 'lender', 'to': 'borrower', 'asset': 'USD', 'amount': '5000', 'unit': 'USD', 'scale': 'source-decimal', 'ctor': 'Transfer'}, {'from': 'lender', 'to': 'borrower', 'asset': 'USD', 'amount': '5000', 'unit': 'USD', 'scale': 'source-decimal', 'ctor': 'Transfer'}]
+PASS neg.full-candidate.reorder-ipci-rr :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.reorder-ipci-rr :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'H4 same-timestamp order IPCI then RR', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.reorder-ipci-rr :: stage=IntentRefinement
+PASS neg.transfer-fields.reorder-ipci-rr :: transfers=[{'from': 'lender', 'to': 'borrower', 'asset': 'USD', 'amount': '5000', 'unit': 'USD', 'scale': 'source-decimal', 'ctor': 'Transfer'}, {'from': 'lender', 'to': 'borrower', 'asset': 'USD', 'amount': '5000', 'unit': 'USD', 'scale': 'source-decimal', 'ctor': 'Transfer'}]
+PASS neg.full-candidate.skip-predecessor :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan', 'effects']
+PASS neg.derived-first-failure.skip-predecessor :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'predecessor history required', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.skip-predecessor :: stage=IntentRefinement
+PASS neg.transfer-fields.skip-predecessor :: transfers=[{'ctor': 'Transfer', 'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '20', 'scale': '0', 'unit': 'USDC'}, {'ctor': 'Transfer', 'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '20', 'scale': '0', 'unit': 'USDC'}, {'ctor': 'Transfer', 'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '20', 'unit': 'USDC', 'scale': '0', 'id': 'T_seq_skip'}]
+PASS neg.full-candidate.refresh-work-on-join :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.refresh-work-on-join :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'no-refresh of remainingOrdinary', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.refresh-work-on-join :: stage=IntentRefinement
+PASS neg.transfer-fields.refresh-work-on-join :: transfers=[{'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '10', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '20', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'Bob', 'asset': 'USDC', 'amount': '10', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}]
+PASS neg.full-candidate.alias-overlap :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan', 'effects']
+PASS neg.derived-first-failure.alias-overlap :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'disjoint footprints/no hidden alias', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.alias-overlap :: stage=IntentRefinement
+PASS neg.transfer-fields.alias-overlap :: transfers=[{'ctor': 'Transfer', 'from': 'Alice', 'to': 'VaultX', 'asset': 'WETH', 'amount': '7', 'scale': '0', 'unit': 'WETH'}, {'ctor': 'Transfer', 'from': 'Alice', 'to': 'VaultX', 'asset': 'WETH', 'amount': '3', 'unit': 'WETH', 'scale': '0'}, {'ctor': 'Transfer', 'asset': 'WETH', 'bound': '3', 'unit': 'WETH', 'scale': '0', 'from': 'BobAlias', 'to': 'VaultX', 'amount': '3'}]
+PASS neg.full-candidate.commute-without-condition :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.commute-without-condition :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'Ord-conditioned commutation; AB!=BA', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.commute-without-condition :: stage=IntentRefinement
+PASS neg.transfer-fields.commute-without-condition :: transfers=[{'from': 'Alice', 'to': 'PoolP', 'asset': 'USDC', 'amount': '20', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'PoolP', 'to': 'Alice', 'asset': 'WETH', 'amount': '16', 'unit': 'WETH', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'Treasury', 'asset': 'USDC', 'amount': '1', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer', 'id': 'T_shared_fee'}]
+PASS neg.full-candidate.partial-commit :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.partial-commit :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'all-or-nothing joint envelope', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.partial-commit :: stage=IntentRefinement
+PASS neg.transfer-fields.partial-commit :: transfers=[{'from': 'Lender', 'to': 'Alice', 'asset': 'USDC', 'amount': '50', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'PoolQ', 'asset': 'USDC', 'amount': '50', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'PoolQ', 'to': 'Alice', 'asset': 'WETH', 'amount': '47', 'unit': 'WETH', 'scale': '0', 'ctor': 'Transfer'}]
+PASS neg.full-candidate.repay-with-weth :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan', 'effects']
+PASS neg.derived-first-failure.repay-with-weth :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'repay asset equals debt asset USDC', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.repay-with-weth :: stage=IntentRefinement
+PASS neg.transfer-fields.repay-with-weth :: transfers=[{'from': 'Lender', 'to': 'Alice', 'asset': 'USDC', 'amount': '50', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'PoolQ', 'asset': 'USDC', 'amount': '50', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'PoolQ', 'to': 'Alice', 'asset': 'WETH', 'amount': '47', 'unit': 'WETH', 'scale': '0', 'ctor': 'Transfer'}]
+PASS neg.full-candidate.treat-as-atomic-sync :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan']
+PASS neg.derived-first-failure.treat-as-atomic-sync :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'operator is asynchronous-messaging not atomic-synchronization', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.treat-as-atomic-sync :: stage=IntentRefinement
+PASS neg.transfer-fields.treat-as-atomic-sync :: transfers=[{'from': 'Alice', 'to': 'Escrow', 'asset': 'USDC', 'amount': '25', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'Treasury', 'asset': 'USDC', 'amount': '1', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer', 'id': 'T_async_fee'}, {'from': 'Escrow', 'to': 'Alice', 'asset': 'USDC', 'amount': '25', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer', 'id': 'T_escrow_alice_25', 'allocationId': 'A_refund_M3'}]
+PASS neg.full-candidate.late-receive-after-refund :: candidate keys=['mutatedInput', 'mutatedContext', 'note', 'legalReference', 'patch', 'expandedEffects', 'expandedPlan', 'effects']
+PASS neg.derived-first-failure.late-receive-after-refund :: first={'stage': 'IntentRefinement', 'firstFailingStage': 'IntentRefinement', 'relation': 'IntentRefinement', 'failedPredicate': 'Refunded excludes Received', 'claimRelation': 'IntentRefinement', 'holds': False, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'} earlier=[{'stage': 'ContractInvariant', 'holds': True, 'evaluated': True, 'evaluatedUnder': 'commonAcceptance.validationOrder+schemas'}]
+PASS neg.stage-in-order.late-receive-after-refund :: stage=IntentRefinement
+PASS neg.transfer-fields.late-receive-after-refund :: transfers=[{'from': 'Alice', 'to': 'Escrow', 'asset': 'USDC', 'amount': '25', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer'}, {'from': 'Alice', 'to': 'Treasury', 'asset': 'USDC', 'amount': '1', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer', 'id': 'T_async_fee'}, {'from': 'Escrow', 'to': 'Alice', 'asset': 'USDC', 'amount': '25', 'unit': 'USDC', 'scale': '0', 'ctor': 'Transfer', 'id': 'T_escrow_alice_25', 'allocationId': 'A_refund_M3'}]
+PASS neg.receive-fields.late-receive-after-refund :: receive=[{'ctor': 'ReceiveMessage', 'id': 'M3', 'to': 'Bob', 'tick': '100', 'nonce': 'N3', 'escrowSource': 'Escrow', 'destFinalityObservationId': 'O_dest_M3'}, {'ctor': 'ReceiveMessage', 'id': 'M3', 'to': 'Bob', 'tick': '100', 'nonce': 'N3', 'escrowSource': 'Escrow', 'destFinalityObservationId': 'O_dest_M3'}, {'ctor': 'ReceiveMessage', 'id': 'M3', 'to': 'Bob', 'tick': '100', 'nonce': 'N3', 'escrowSource': 'Escrow', 'destFinalityObservationId': 'O_dest_M3'}, {'ctor': 'ReceiveMessage', 'id': 'M3', 'to': 'Bob', 'tick': '100', 'nonce': 'N3', 'escrowSource': 'Escrow', 'destFinalityObservationId': 'O_dest_M3'}]
+PASS neg.nam-prefix-duty-creating-effect :: prefixEffects=[{'from': 'lender', 'to': 'borrower', 'asset': 'USD', 'amount': '5000', 'unit': 'USD', 'scale': 'source-decimal', 'ctor': 'Transfer'}, {'ctor': 'CreateDebt', 'id': 'nam19', 'principal': '5000', 'asset': 'USD', 'unit': 'USD', 'scale': 'source-decimal', 'debtor': 'borrower', 'creditor': 'lender'}, {'ctor': 'AccrueNominal', 'accrued': '98.63013698630137', 'debtId': 'nam19', 'accruedDomain': 'source-decimal', 'observationRef': 'O_NAM_contract_rate_0_08', 'period': 'IED->RR', 'accruedIndependent': '98.630136986301369863013698630136986301369863013698630136986301369863013698630137'}, {'ctor': 'AccrueNominal', 'debtId': 'nam19', 'accrued': '137.83121934720108082191780821917808219178082191780821917808219178082191780821918', 'accruedDomain': 'source-decimal', 'observationRef': 'O_LIBOR_2013-04-01', 'period': 'RR->IPCI', 'days': '91', 'rate': '0.110567901234567900'}, {'ctor': 'AssignDuty', 'id': 'nam19-debt', 'kind': 'repay-notional', 'asset': 'USD', 'amount': '5236.461356333502', 'controller': 'borrower', 'payee': 'lender', 'residual': True, 'debtId': 'nam19', 'amountDomain': 'source-decimal'}]
+PASS neg.seq-refresh-rollback-cash :: rollback/prefix retains post-A cash
+PASS old.eight-theorem-ids :: kept
+PASS old.kind-Simulation-not-Prepared :: retention text pins Simulation
+PASS old.witness-present :: witness keys=['kind', 'notProductionPrepared', 'notProductionAccepted', 'notPrepared', 'notAccepted', 'deriveCreateSimulator', 'syntheticAuth', 'authorityAlgorithm', 'checks', 'programHash', 'sourceHash', 'boundsHash', 'boundsFileSha256', 'grammarSha256', 'numericProfileSha256', 'evaluatorSha256', 'genesisHash', 'traceHash0', 'traceHash1', 'stateHashes']
+PASS old.witness-kind :: kind=Simulation
+PASS old.witness-not-relabeled :: not Prepared/Accepted
+PASS old.synthetic-auth-checks :: synthetic auth recorded
+PASS old.programHash :: programHash
+PASS old.registry-boundsHash :: boundsHash
+PASS old.not-borrow-swap-repay-witness :: toy Borrow/Swap/Repay is not old-syntax witness
+PASS old.grammar-hash :: grammar
+PASS old.bounds-file-hash :: bounds.json
+PASS old.numeric-profile-hash :: numeric-profile
+PASS old.evaluator-hash :: evaluate.ts
+PASS old.source-loan-hash :: loan.mori
+PASS old.D0obs-complete :: full D0 observation mapping
+PASS old.mc04-mc05-transport-separate :: separate accepted-ledger transport obligation
+PASS old.theorems-proposed-no-mechanized :: theorems remain proposed
+PASS old.fixture-kind-Simulation :: fixture step0 kind
+PASS old.fixture-no-Prepared-Accepted :: fixture has no Prepared/Accepted labels
+PASS old.fixture-sha-pinned :: fixture digest
+PASS old.pins-file-matches :: pins file
+PASS ag.set-difference :: discharged via set difference
+PASS ag.not-and-not-set :: no predicate AND NOT set
+PASS ag.entailment :: explicit entailment
+PASS ag.no-ordered-composition-placeholder :: G_shared defined
+PASS ag.typed-domains :: typed I/O/trace
+PASS assoc.lockConsumed :: CompleteObs includes lock/envelope
+PASS assoc.sort-preserving-rho :: sort-preserving rho
+PASS assoc.payment-vs-work-alloc :: separate allocations
+PASS assoc.bag-vs-sequence :: par bag vs seq explicit
+PASS assoc.first-error :: first-error relation
+PASS assoc.not-arbitrary-welltyped-reject :: restricted admissibility
+PASS pin.nam19-source :: NAM19 source sha retained
+SUMMARY total=150 fail=0 pass=150
