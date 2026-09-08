@@ -1,0 +1,55 @@
+{
+  "schema": "moriarty-dev.scoped-code-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewRole": "independent non-author checkpoint reviewer",
+  "reviewedAt": "2026-09-08T21:00:53.749700+00:00",
+  "chargeId": "plugin-gpt6-reservation01-review",
+  "candidateHash": "35233655723d5098da2e72a2d3b5a70893a5fa2630039eba258bdf6632726f01",
+  "verdict": "PASS",
+  "scopedVerdict": "PASS",
+  "scope": "store.py get_history primaryActive and reserve primary exclusion; frozen test_execution.py dead-parent, linked-worktree, and ordinary-finish regressions only.",
+  "findings": [],
+  "reason": "An unresolved active implement/repair reservation remains blocking after its recorded parent exits. The primary check covers the shared Git-common-directory database and executes with the insert under BEGIN IMMEDIATE. Explicit finish still releases the slot for a subsequent reservation.",
+  "checksActuallyRun": [
+    {
+      "check": "Frozen regression tests",
+      "result": "4 tests passed; 0 failures; 0 errors",
+      "artifact": "review-regressions.log"
+    },
+    {
+      "check": "Independent multiprocessing race using real Git main and linked worktrees",
+      "result": "12 simultaneous implement/repair reserve calls, one reservation and 11 ReservationConflictError outcomes; all processes exited normally"
+    },
+    {
+      "check": "Actual dead-parent retention",
+      "result": "Successful reservation process exited; both worktrees reported primaryActive true and implement/repair retries with a stale inactive snapshot conflicted"
+    },
+    {
+      "check": "Read-only history and failed retry preservation",
+      "result": "Repeated get_history calls preserved SQL dump and database SHA-256; rejected retries preserved SQL dump"
+    },
+    {
+      "check": "Normal release and nonprimary behavior",
+      "result": "Report reservation did not release primary; finish cleared primaryActive and admitted linked-worktree repair successor"
+    },
+    {
+      "check": "Immutable candidate verification",
+      "result": "All 17 pinned file hashes matched before and after review"
+    }
+  ],
+  "limitations": [
+    "This is a narrow lifecycle correction, not whole-plugin completion or execution admission.",
+    "Authenticated runner integration and durable charging remain missing; current CLI denies every execution. No live runner, product, network, wallet, proof, R6, install, or trust probes were run.",
+    "Active reservations can remain blocked indefinitely after parent death until explicit completion or separately designed reconciliation; this preserves ambiguity and does not infer that any child or charge stopped.",
+    "get_history retains its existing None result when queried repository history is absent. Cross-worktree primaryActive assertions used recorded history for each worktree; direct reserve exclusion applies regardless of history.",
+    "finish is an explicit local store release operation; this review does not establish receipt authentication or resilience against arbitrary same-user database rewriting.",
+    "The reported 127-test full-suite result was supplied by the parent and was not independently rerun in this bounded review."
+  ],
+  "evidence": [
+    "review_probe.py",
+    "review-probe-results.json",
+    "review-regressions.log"
+  ],
+  "sourceModified": false,
+  "wholePluginAccepted": false
+}
