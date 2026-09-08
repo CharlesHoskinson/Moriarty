@@ -1,6 +1,6 @@
 # Moriarty Development Plugin Implementation Plan
 
-> **For agentic workers:** Use `superpowers:executing-plans` for this plan. Preserve Grok 4.6 high implementation and fresh independent GPT-6 Astra result review. Steps use checkboxes. Do not add recursive planning or review rounds.
+> **For agentic workers:** Use `superpowers:executing-plans` for this plan. Use AGY Gemini 3.8 Flash high implementation, Grok 4.6 high first review, then fresh GPT-6 Astra review after Grok passes the same candidate. Steps use checkboxes. Do not add recursive planning or review rounds.
 
 **Goal:** Block repeated ineffective Moriarty work and direct execution to a demonstrable, authorized product capability.
 
@@ -8,14 +8,14 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** User approved execution. Five Milestone 1 candidates failed independent review. Candidate05 still permits erased closure obligations, unsupported verification/acceptance claims, unrelated review substitution and revoked bindings. Resource admission also remains open. The current primary implementation repairs the financial driver using the retained SDK regression; further plugin work must address the exact retained counterexamples. No milestone is accepted. Installation and host trust remain open. See [candidate05 evidence](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-m1-result-05/README.md).
+**Status:** User approved execution. The first complete AGY source candidate received terminal Grok BLOCKED for all four milestones. Its 113 supplied tests and packaging checks passed, but independent review found source identity, history, launch, review, notification and fake-pilot defects. GPT-6 code review has not run. One bounded AGY correction is admitted against those concrete findings. Source code approval precedes installation; actual trust, host interception and a real admitted product repair pilot remain required for final acceptance. No milestone is accepted. The [latest routing instruction](../../../raw/assignments/moriarty-plugin-agy-grok-gpt6-2026-09-08.md) controls AGY implementation, Grok first review and then fresh GPT-6 after Grok passes identical bytes. See the [retained candidate and terminal review](../../../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-agy-result-01/README.md).
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
 ## Global constraints
 
 - Preserve every SP01–SP12 requirement, mandatory PCD, bounded execution and Preview financial acceptance.
-- Use Grok 4.6 high for implementation and a fresh independent GPT-6 Astra for result review.
+- Use AGY Gemini 3.8 Flash high for implementation, Grok 4.6 high for the first check, then a fresh GPT-6 Astra check after Grok passes the same candidate.
 - Use existing task entry gates, not whole-sprint completion, to determine eligibility.
 - Keep program/campaign acceptance and resource records authoritative. The plugin cannot grant admission.
 - Use one primary implementation and at most one independent review, subject to stricter existing limits.
