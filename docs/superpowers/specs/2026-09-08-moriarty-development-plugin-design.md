@@ -1,6 +1,6 @@
 # Moriarty development plugin design
 
-Date: 2026-09-08. Status: proposed design, not implemented or installed.
+Date: 2026-09-08. Status: approved for implementation; plugin acceptance and installation remain open.
 User request: use Superpowers to plan a development plugin that prevents orchestration displacement and advances Moriarty's goals.
 
 ## Purpose and success
@@ -14,9 +14,9 @@ The [footguns](../../FOOTGUNS.md#orchestration-stop-rules) supply the stop rules
 The [sprint register](../../../openspec/sprints/sprints.json) supplies task identities.
 The [program register](../../../openspec/moriarty-completion-program.json) and its referenced campaign records remain acceptance and admission authorities.
 
-Planning this plugin is explicitly authorized by the latest request.
-That authorization permits this focused design despite the earlier instruction against unsolicited orchestration infrastructure.
-It does not authorize implementation, installation, resource expansion or changes to product acceptance through this planning document.
+The user approved this design and resumed implementation after reviewing the plan.
+The [execution instruction](../../../raw/assignments/moriarty-development-plugin-execution-2026-09-08.md) records that authority.
+This focused plugin is explicitly requested. Resource limits, host trust and product acceptance remain separate requirements.
 
 ### Superpowers planning checklist
 
@@ -25,7 +25,7 @@ It does not authorize implementation, installation, resource expansion or change
 - [x] Compare three approaches and recommend one.
 - [x] Write the proposed design and a concrete implementation plan.
 - [x] Self-review scope, interfaces, failure behavior and requirement coverage.
-- [ ] Obtain review of this proposed design before implementation.
+- [x] Obtain user approval of the proposed design before implementation.
 
 No visual companion is needed for this command-line workflow.
 Working assumptions: Codex is the host, Grok implements, fresh GPT-6 reviews, and existing authority covers routine repairs.

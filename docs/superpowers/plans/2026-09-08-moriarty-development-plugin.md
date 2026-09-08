@@ -8,7 +8,7 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** Proposed implementation plan. No plugin code, installation, host trust or actionful campaign is established by this document.
+**Status:** User approved execution. Milestone 1 candidate exists but failed independent admission and concurrency checks; no milestone is accepted. Installation and host trust remain open.
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
@@ -27,7 +27,7 @@
 - Do not collect private reasoning, credentials, seeds, wallet state or witness data.
 - Finish four milestones. Prove usefulness on a Moriarty defect before adding plugin features.
 
-The user requested planning. Review the proposed design before execution.
+The [user execution instruction](../../../raw/assignments/moriarty-development-plugin-execution-2026-09-08.md) records approval of this plan.
 Execution must use an existing applicable budget or a recorded bounded allocation under the standing authority.
 This plan neither creates that allocation nor requires a new planning campaign to obtain it.
 

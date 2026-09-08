@@ -1,0 +1,119 @@
+{
+  "schema": "moriarty-dev.independent-m1-result-review/1",
+  "decision": "BLOCKED",
+  "candidateHash": "0561ec0fc223a69a3b03404429e4f0cf09a99738dac573a2817624d9f1c48d5f",
+  "scope": "M1 policy, exact-source readers and tests only. No plugin installation, host trust, sprint or financial/proof acceptance.",
+  "reviewerRequested": "gpt-6-astra",
+  "reviewerTask": "/root/plugin_m1_result_review",
+  "reviewerIdentityNote": "Fresh independent task; no backend serving identity inferred.",
+  "authorRequested": "grok-4.6 high",
+  "authorObservedModelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 391597,
+      "outputTokens": 45865,
+      "cacheReadInputTokens": 1214464,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 18,
+      "costUSD": 0.28315472
+    }
+  },
+  "candidateFilesSha256": {
+    "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": "f39f3bfc8060c098f28f8595d295ee282396a8a3f1c233e2295108e2fc128c06",
+    "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": "3b84b5addb60180f9e2eb16bef9dc4dd35e5eb4c121663280aaff1fcf6260595",
+    "plugins/moriarty-dev/scripts/moriarty_dev/records.py": "8bea57ade62f7991611d21cd7712ea58132588f32b18bae12ac4e0e412cc9276",
+    "plugins/moriarty-dev/tests/test_policy.py": "656c38b8c45a9fd9f3f718b0a67280ee55d101911aba3f610ca299a1842f7c1c",
+    "plugins/moriarty-dev/tests/test_records.py": "2e238b3cf9b2084b3783d55e0018693ee569980c2fcd3110329efac128465010",
+    "FOREMAN_REPORT.json": "daf20efbee046248caf83fdcac628c8d26aff60b2021eca5002ba6d3043f4770",
+    "FOREMAN_REPORT.md": "78dbbf720b8c51639de9600ea9284df458c60ffa74db5ef3c972889289b40d76"
+  },
+  "requirementSourcesSha256": {
+    "AGENTS.md": "19cc6c8afa0065afb6a5298237e0958f9792644c2c8e59503375d2a7293c7199",
+    "docs/FOOTGUNS.md": "e89eb4086331772d112cb93b07670ac1f9815cf995295b37638efb9b3fc51afa",
+    "docs/superpowers/specs/2026-09-08-moriarty-development-plugin-design.md": "f623d5be1c06e3a645ce9d246339734cca47a449919d5e50166d750d19a7d3d2",
+    "docs/superpowers/plans/2026-09-08-moriarty-development-plugin.md": "b3a0fd15dff09220446d50b492900761c7b610efde955020abb3f7f1eb9936e2",
+    "openspec/sprints/sprints.json": "4aabac54a78585134549cda1a561b5b34a09463157199c26240096edbdc0c10a",
+    "openspec/moriarty-completion-program.json": "5e1ecd7187b8ea76941024d7b62002d539117689ade964dd43ab7314cc4c86a0",
+    "evidence/moriarty-completion-program-2026-09-07/report-reconciliation/campaign-admission.json": "f4cd155c4e719cedde7df0795c7cde79f6e639c95f6f943000addb9896b107e3"
+  },
+  "verification": {
+    "allFrozenAndWorktreeFilesMatch": true,
+    "allRequirementSourcesMatch": true,
+    "suppliedTests": "Independently rerun: 61/61, exit 0",
+    "rootPolicyProbes": "Independently rerun: 46/48, exit 1",
+    "rootRecordProbes": "Independently rerun: 0/4, exit 1",
+    "reviewProbes": "Executed retained review-probes.py: 2/33 pass, exit 1; the two passing cases are pure policy controls. Remaining cases are denials not enforced, a wrong-type exception and worktree/history defects.",
+    "reviewProbeSha256": "782a646c11cc15426339b242c052f3e2539c9a48b7bae60bad49c3711a01ac6e",
+    "reviewProbeCommand": "PYTHONDONTWRITEBYTECODE=1 python3 /home/charl/.local/state/moriarty/moriarty-dev-plugin-20260908/review-probes.py /home/charl/Moriarty/.worktrees/moriarty-dev-plugin-grok",
+    "fixtureLimitation": "Synthetic positive fixture is not production authority. Negative mutations show contradictions accepted under the author fixture contract; genuine historical campaign reuse separately demonstrates actual adapter ownership failure. Corrections need a supported real-record positive case with independent one-field contradictions, not merely an always-deny fixture remedy.",
+    "limits": "Offline Python/Git temporary fixtures only; no model CLI, network, wallet, compiler, proof, source edits or worker raw stdout/reasoning."
+  },
+  "findings": [
+    {
+      "id": "M1-R1",
+      "priority": "P1",
+      "title": "Campaign ownership and current authority are unchecked",
+      "locations": "records.py:500,588",
+      "evidence": "Genuine campaign:sp01-loan-swap-grok-01 admits SP05 implementation with no missing evidence although its scope is RP01-MC02 specified design consistency only. Wrong stage/owner, null i2 campaignRecordId and complete-but-revoked also admit.",
+      "fix": "Resolve task gate stage/campaignOwner to its exact current campaign, scope/profile and authority/review bindings. Reject unrelated, historical-only, unsupported or conflicting admission. Do not grant source implementation from prerequisite acceptance."
+    },
+    {
+      "id": "M1-R2",
+      "priority": "P1",
+      "title": "Binding-file digest substitutes for candidate and prerequisite currentness",
+      "locations": "records.py:500,605,628",
+      "evidence": "Changing/deleting candidate bytes still returns candidateCurrent=true. No candidateManifest, source map or acceptance/review is read. Null candidateHash/profile/campaign on a complete prerequisite and blocked atomic-prepare beneath atomic-accept still admit.",
+      "fix": "Verify actual supported manifest/source and acceptance/profile/review references, including prerequisite consistency. Missing candidate mapping is unresolved, including in the synthetic positive fixture. Keep current byte identity separate from stable failure lineage."
+    },
+    {
+      "id": "M1-R3",
+      "priority": "P1",
+      "title": "Any resource JSON object becomes admitted resources",
+      "locations": "records.py:658",
+      "evidence": "Empty object, negative/zero/bool allocation, missing authority and unrelated scope all admit. Current charges, applicable successor amendments and action caps are unread.",
+      "fix": "Adapt real resource/allocation and explicit current budget/charge references; require matching authority/scope and sufficient valid remaining allowance. If current state cannot be resolved, name it as unavailable and deny only dependent work. Existing runner owns charging; do not add a second ledger."
+    },
+    {
+      "id": "M1-R4",
+      "priority": "P1",
+      "title": "Unsupported and malformed file schemas admit or throw",
+      "locations": "records.py:312,371,435,483,538,652,690,779",
+      "evidence": "Unknown binding schema is named but ALLOWED; empty binding admits; list schema raises TypeError. Unknown catalog/nested-stage/command/history keys, version 999, conflicting duplicate action IDs, omitted gate requires, empty implementation commandRef and empty argv pass.",
+      "fix": "Validate exact supported versions and recursive closed shapes before deriving booleans. Reject duplicate identifiers and unsupported/missing required fields structurally. Require a nonempty registered actionful command. Return named unresolved evidence for wrong types, not exceptions; do not rely on incomplete string-prefix filters."
+    },
+    {
+      "id": "M1-R5",
+      "priority": "P1",
+      "title": "Linked worktrees change the history lineage key",
+      "locations": "records.py:153,697",
+      "evidence": "In an actual temporary Git linked worktree, main repository history reports two failures and denies; linked repository identity differs, receives zero and allows. There is no Git common-dir lookup.",
+      "fix": "Use resolved git-common-dir for stable repository identity and selected worktree for source reads. Add a real linked-worktree regression. M2 still owns persistence and transactional recovery."
+    },
+    {
+      "id": "M1-R6",
+      "priority": "P1",
+      "title": "Repair bypasses occupied primary implementation slot",
+      "locations": "policy.py:65,98",
+      "evidence": "Both occupied-primary repair probes allow, including two failures with verified reproducer and changed approach. PRIMARY_BLOCKED_KINDS omits repair.",
+      "fix": "Include source repair in primary implementation policy. Preserve admitted reproducer/read-only paths. M2 must additionally reserve atomically."
+    },
+    {
+      "id": "M1-R7",
+      "priority": "P1",
+      "title": "Fixed reads and resolved secret paths bypass containment",
+      "locations": "records.py:268,729",
+      "evidence": "A fixed program register symlink to an outside temporary file admits. A nonsecret resource path symlinked to an in-repository credentials.json is opened and admitted. All probe content was artificial JSON.",
+      "fix": "Apply contained reads to fixed program/sprint files as well as references. Check resolved path components for forbidden targets before opening. Keep the 8 MiB bound and duplicate-key rejection."
+    },
+    {
+      "id": "M1-R8",
+      "priority": "P2",
+      "title": "Next-action selection is an unchecked history string",
+      "locations": "records.py:219,722; policy.py:77",
+      "evidence": "Source inspection: nextActionId is None without history and otherwise only string-checked and copied. No catalogue existence, own admission, eligibility or reproducer/repair/review preference is evaluated. Tests inject a fixed ID.",
+      "fix": "Select an already admitted next action from normalized current records in the specified order; return named absence when none qualifies. This does not require building the M2 event store."
+    }
+  ],
+  "realRecordGuidance": "Use the existing sprint entryGates stage/requires/campaignOwner, program stageAdmission stages and campaignRecordStore, then the selected campaigns record binding/bindingSha256, candidateManifest, review/acceptance, acceptedProfile, resourceAmendment and successor amendment references. Actual loan-swap candidate-04-freeze.json uses candidateSha256, digestAlgorithm, ownedFiles, inputs and baseCommit; its acceptance.json bridges sourceCandidate, candidateHash and publishedControlSha256 to unchanged payload hashes. Its review uses candidateSha256 and scope. Do not invent a universal candidateHash binding shape. Binding inputs/ownedFiles and authority are real references, not self-authenticating permission. Program resourceRuntimeSnapshot.path points to loan-swap-subset-01/current-runtime-budget.json and explicitly says historical reservations are not available credit. Resolve applicable current runner charges/caps and superseding amendments from explicit refs; a published snapshot alone cannot prove live remaining allowance. Current published RP01/atomic records do not prove a new SP05 implementation admission. Unavailable external live state must remain unavailable. No signed approval system or new design packet is needed.",
+  "m2Boundary": "SQLite persistence, atomic reservation and launch revalidation, actual resource charging, runner-observed reproducer/review ingestion and interval accounting remain M2. Their absence alone is not the basis for rejection. Existing M1 policy/reader/lineage/selection defects must be fixed now.",
+  "disposition": "One focused correction within approved M1 scope and limits, retain executable regressions, freeze exact new bytes and obtain required independent result review. No new design packet."
+}
