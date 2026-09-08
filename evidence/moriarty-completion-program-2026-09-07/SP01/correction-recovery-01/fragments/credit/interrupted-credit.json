@@ -1,0 +1,5953 @@
+{
+  "schemaVersion": 1,
+  "status": "specified-only",
+  "group": "credit",
+  "notSemanticFreeze": true,
+  "notImplementation": true,
+  "notMechanizedProof": true,
+  "notConformance": true,
+  "notExecutedByLanguageRuntime": true,
+  "pendingReview": "independent GPT-6 Astra",
+  "refConvention": {
+    "rule": "An object whose keys are exactly ['ref'] is an RFC 6901 JSON pointer from this document root. Replace that object with the referenced value before reading numeric state.",
+    "example": {
+      "ref": "/library/oracles/refinance/preState"
+    }
+  },
+  "library": {
+    "oracles": {
+      "refinance": {
+        "canonicalIntent": {
+          "hardConstraints": [
+            "Always: collateralValueUSDC >= (3/2)*debtValueUSDC on every observable prefix.",
+            "Repay oldCreditor exactly 50000 USDC by token transfer (equality).",
+            "Create new nominal debt 50050 USDC under cap 50500 (exact created amount; cap is inequality).",
+            "Pay feeRecipient exactly 50 USDC by unconditional token transfer T-fee.",
+            "Move exactly 20 WETH custody vaultA to vaultB once.",
+            "Fund 50050 USDC from newLender. Do not debit alice.transferDebit.USDC.",
+            "Discharge old debt only by T-repay-old plus matching nominal write.",
+            "Residual controller is loan-B-controller exactly once."
+          ],
+          "softRankingExcludedFromAcceptance": [
+            "Prefer a named market if a rate is lower."
+          ],
+          "exactOutputVsMinimum": {
+            "repayOld": "equality-50000",
+            "fee": "equality-50",
+            "collateralMove": "equality-20-WETH",
+            "newDebtCreated": "equality-50050",
+            "newDebtCap": "inequality-<=50500",
+            "overdeliveryOnEquality": "reject"
+          },
+          "actors": {
+            "borrower": "alice",
+            "oldCreditor": "oldCreditor",
+            "newLender": "newLender",
+            "feeRecipient": "feeRecipient",
+            "bridge": "bridge",
+            "oldCustody": "vaultA",
+            "newCustody": "vaultB",
+            "oldMarketAliases": [
+              "loan-A",
+              "Aave.USDC_Debt"
+            ],
+            "newMarketAliases": [
+              "loan-B",
+              "Morpho.USDC_Debt"
+            ]
+          }
+        },
+        "concretePlan": {
+          "atomicBoundary": "single-domain successor; listed prefixes are the observable states",
+          "orderedSteps": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "fundingOrigin": "newLender USDC 100000",
+          "disbursement": "50050 USDC to bridge",
+          "oldRepayment": "50000 USDC bridge to oldCreditor",
+          "financedFeeTransfer": "50 USDC bridge to feeRecipient",
+          "newDebt": "50050 USDC nominal under alice.newNominalDebt.USDC",
+          "collateral": "20 WETH vaultA to vaultB"
+        },
+        "preState": {
+          "accounts": [
+            {
+              "id": "alice",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "borrower"
+            },
+            {
+              "id": "newLender",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "100000",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "new-market-funder"
+            },
+            {
+              "id": "oldCreditor",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "200000",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "old-market-creditor"
+            },
+            {
+              "id": "feeRecipient",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "refinance-fee-recipient"
+            },
+            {
+              "id": "bridge",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "atomic-settlement-bridge"
+            },
+            {
+              "id": "vaultA",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "20",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "old-collateral-custody",
+              "controller": "loan-A-controller",
+              "beneficiary": "alice"
+            },
+            {
+              "id": "vaultB",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "new-collateral-custody",
+              "controller": "loan-B-controller",
+              "beneficiary": "alice"
+            }
+          ],
+          "debts": [
+            {
+              "id": "debt-old-alice",
+              "borrower": "alice",
+              "creditor": "oldCreditor",
+              "marketAliases": [
+                "loan-A",
+                "Aave.USDC_Debt"
+              ],
+              "principal": {
+                "amount": "50000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "total": {
+                "amount": "50000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "status": "open"
+            }
+          ],
+          "positions": [
+            {
+              "id": "pos-collateral-alice",
+              "owner": "alice",
+              "custodian": "vaultA",
+              "marketAliases": [
+                "loan-A",
+                "Aave.USDC_Debt"
+              ],
+              "asset": "WETH",
+              "amount": "20",
+              "unit": "WETH",
+              "scale": "1"
+            }
+          ],
+          "shares": [],
+          "requests": [],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "alice.transferDebit.USDC",
+              "actor": "alice",
+              "domain": "token-transfer-debit",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "1000",
+              "cumulativeGross": "0",
+              "remaining": "1000",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.collateralMove.WETH",
+              "actor": "alice",
+              "domain": "collateral-custody-move",
+              "asset": "WETH",
+              "unit": "WETH",
+              "scale": "1",
+              "original": "20",
+              "cumulativeGross": "0",
+              "remaining": "20",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.oldDebtRepay.USDC",
+              "actor": "alice",
+              "domain": "nominal-debt-repay",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50000",
+              "cumulativeGross": "0",
+              "remaining": "50000",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.newNominalDebt.USDC",
+              "actor": "alice",
+              "domain": "nominal-debt-create",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50500",
+              "cumulativeGross": "0",
+              "remaining": "50500",
+              "refundsReplenish": false
+            },
+            {
+              "id": "newLender.disbursement.USDC",
+              "actor": "newLender",
+              "domain": "token-disbursement",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50500",
+              "cumulativeGross": "0",
+              "remaining": "50500",
+              "refundsReplenish": false
+            },
+            {
+              "id": "fee.unconditional.USDC",
+              "actor": "feeRecipient",
+              "domain": "fee-receipt",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50",
+              "cumulativeGross": "0",
+              "remaining": "50",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryRemaining": "1024",
+            "recoveryReserveRemaining": "16"
+          },
+          "historyHead": "hist:genesis-loan-A",
+          "observations": {
+            "WETH.priceUSDC": {
+              "base": "WETH",
+              "quote": "USDC",
+              "amount": "4000",
+              "unit": "USDC_per_WETH",
+              "scale": "1",
+              "kind": "external-truth-observation",
+              "notProvenFact": true,
+              "toyChoice": true
+            },
+            "maintenance": {
+              "numerator": "3",
+              "denominator": "2",
+              "asRatio": "3/2",
+              "toyChoice": true,
+              "notProtocolParameter": true
+            }
+          }
+        },
+        "steps": [
+          {
+            "index": "0",
+            "action": "recordAuthorizations",
+            "transfers": [],
+            "nominalChanges": [],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "12",
+              "reserve": "0"
+            },
+            "prefix": {
+              "observable": true,
+              "collateral": {
+                "amount": "20",
+                "asset": "WETH",
+                "unit": "WETH",
+                "scale": "1"
+              },
+              "custodian": "vaultA",
+              "price": {
+                "base": "WETH",
+                "quote": "USDC",
+                "amount": "4000",
+                "unit": "USDC_per_WETH",
+                "scale": "1",
+                "kind": "external-truth-observation",
+                "notProvenFact": true,
+                "toyChoice": true
+              },
+              "collateralValueUSDC": "80000",
+              "debtValueUSDC": "50000",
+              "requiredUSDC": "75000",
+              "holds": true,
+              "note": "debt unchanged; collateral unchanged"
+            },
+            "notes": "Nominal-debt authority is separate from Alice USDC transfer-debit cap 1000."
+          },
+          {
+            "index": "1",
+            "action": "newLenderDisburse",
+            "transfers": [
+              {
+                "from": "newLender",
+                "to": "bridge",
+                "asset": "USDC",
+                "amount": "50050",
+                "unit": "USDC",
+                "scale": "1",
+                "kind": "token-transfer"
+              }
+            ],
+            "nominalChanges": [],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "20",
+              "reserve": "0"
+            },
+            "prefix": {
+              "observable": true,
+              "collateral": {
+                "amount": "20",
+                "asset": "WETH",
+                "unit": "WETH",
+                "scale": "1"
+              },
+              "custodian": "vaultA",
+              "price": {
+                "base": "WETH",
+                "quote": "USDC",
+                "amount": "4000",
+                "unit": "USDC_per_WETH",
+                "scale": "1",
+                "kind": "external-truth-observation",
+                "notProvenFact": true,
+                "toyChoice": true
+              },
+              "collateralValueUSDC": "80000",
+              "debtValueUSDC": "50000",
+              "requiredUSDC": "75000",
+              "holds": true,
+              "note": "funding sits in bridge; old debt still 50000"
+            },
+            "fundedSource": "newLender preState USDC 100000 >= 50050"
+          },
+          {
+            "index": "2",
+            "action": "repayOldAndPayFee",
+            "transfers": [
+              {
+                "from": "bridge",
+                "to": "oldCreditor",
+                "asset": "USDC",
+                "amount": "50000",
+                "unit": "USDC",
+                "scale": "1",
+                "kind": "token-transfer",
+                "id": "T-repay-old"
+              },
+              {
+                "from": "bridge",
+                "to": "feeRecipient",
+                "asset": "USDC",
+                "amount": "50",
+                "unit": "USDC",
+                "scale": "1",
+                "kind": "token-transfer",
+                "id": "T-fee"
+              }
+            ],
+            "nominalChanges": [
+              {
+                "object": "debt-old-alice",
+                "field": "principal",
+                "from": "50000",
+                "to": "0",
+                "kind": "debt-discharge-by-settlement",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "debt-old-alice",
+                "field": "total",
+                "from": "50000",
+                "to": "0",
+                "kind": "debt-discharge-by-settlement",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [
+              {
+                "id": "refinance-fee",
+                "amount": "50",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1",
+                "from": "bridge",
+                "to": "feeRecipient",
+                "transferId": "T-fee",
+                "conditional": false,
+                "financedIntoNewDebt": true,
+                "chargedAgainstAliceTransferDebit": false
+              }
+            ],
+            "workCharge": {
+              "ordinary": "16",
+              "reserve": "0"
+            },
+            "prefix": {
+              "observable": true,
+              "collateral": {
+                "amount": "20",
+                "asset": "WETH",
+                "unit": "WETH",
+                "scale": "1"
+              },
+              "custodian": "vaultA",
+              "price": {
+                "base": "WETH",
+                "quote": "USDC",
+                "amount": "4000",
+                "unit": "USDC_per_WETH",
+                "scale": "1",
+                "kind": "external-truth-observation",
+                "notProvenFact": true,
+                "toyChoice": true
+              },
+              "collateralValueUSDC": "80000",
+              "debtValueUSDC": "0",
+              "requiredUSDC": "0",
+              "holds": true,
+              "note": "old debt 0 after settlement; new debt not yet created"
+            }
+          },
+          {
+            "index": "3",
+            "action": "createNewDebtAndMoveCollateral",
+            "transfers": [
+              {
+                "from": "vaultA",
+                "to": "vaultB",
+                "asset": "WETH",
+                "amount": "20",
+                "unit": "WETH",
+                "scale": "1",
+                "kind": "token-transfer",
+                "id": "T-collateral-move",
+                "custodyMove": true,
+                "aliceWalletDebit": false
+              }
+            ],
+            "nominalChanges": [
+              {
+                "object": "debt-new-alice",
+                "field": "principal",
+                "from": "0",
+                "to": "50050",
+                "kind": "debt-create",
+                "notTokenTransfer": true,
+                "authorizedBy": "alice.newNominalDebt.USDC",
+                "includesFinancedFee": "50"
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "12",
+              "reserve": "0"
+            },
+            "prefix": {
+              "observable": true,
+              "collateral": {
+                "amount": "20",
+                "asset": "WETH",
+                "unit": "WETH",
+                "scale": "1"
+              },
+              "custodian": "vaultB",
+              "price": {
+                "base": "WETH",
+                "quote": "USDC",
+                "amount": "4000",
+                "unit": "USDC_per_WETH",
+                "scale": "1",
+                "kind": "external-truth-observation",
+                "notProvenFact": true,
+                "toyChoice": true
+              },
+              "collateralValueUSDC": "80000",
+              "debtValueUSDC": "50050",
+              "requiredUSDC": "75075",
+              "holds": true,
+              "note": "new debt and collateral become live in the same observable prefix"
+            },
+            "residualController": "loan-B-controller",
+            "controllerCopied": false
+          }
+        ],
+        "postState": {
+          "accounts": [
+            {
+              "id": "alice",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "borrower"
+            },
+            {
+              "id": "newLender",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "49950",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "new-market-funder"
+            },
+            {
+              "id": "oldCreditor",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "250000",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "old-market-creditor"
+            },
+            {
+              "id": "feeRecipient",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "50",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "refinance-fee-recipient"
+            },
+            {
+              "id": "bridge",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "atomic-settlement-bridge"
+            },
+            {
+              "id": "vaultA",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "old-collateral-custody",
+              "controller": "loan-A-controller",
+              "beneficiary": "alice"
+            },
+            {
+              "id": "vaultB",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "20",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "new-collateral-custody",
+              "controller": "loan-B-controller",
+              "beneficiary": "alice"
+            }
+          ],
+          "debts": [
+            {
+              "id": "debt-old-alice",
+              "borrower": "alice",
+              "creditor": "oldCreditor",
+              "marketAliases": [
+                "loan-A",
+                "Aave.USDC_Debt"
+              ],
+              "principal": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "total": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "status": "discharged-by-settlement",
+              "dischargedByTransfer": "T-repay-old",
+              "erasureLabelInsufficient": true
+            },
+            {
+              "id": "debt-new-alice",
+              "borrower": "alice",
+              "creditor": "newLender",
+              "marketAliases": [
+                "loan-B",
+                "Morpho.USDC_Debt"
+              ],
+              "principal": {
+                "amount": "50050",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "total": {
+                "amount": "50050",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "status": "open",
+              "financedFeeIncluded": {
+                "amount": "50",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "authorizedBy": "alice.newNominalDebt.USDC"
+            }
+          ],
+          "positions": [
+            {
+              "id": "pos-collateral-alice",
+              "owner": "alice",
+              "custodian": "vaultB",
+              "marketAliases": [
+                "loan-B",
+                "Morpho.USDC_Debt"
+              ],
+              "asset": "WETH",
+              "amount": "20",
+              "unit": "WETH",
+              "scale": "1",
+              "residualController": "loan-B-controller",
+              "copied": false
+            }
+          ],
+          "shares": [],
+          "requests": [],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "alice.transferDebit.USDC",
+              "actor": "alice",
+              "domain": "token-transfer-debit",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "1000",
+              "cumulativeGross": "0",
+              "remaining": "1000",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.collateralMove.WETH",
+              "actor": "alice",
+              "domain": "collateral-custody-move",
+              "asset": "WETH",
+              "unit": "WETH",
+              "scale": "1",
+              "original": "20",
+              "cumulativeGross": "20",
+              "remaining": "0",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.oldDebtRepay.USDC",
+              "actor": "alice",
+              "domain": "nominal-debt-repay",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50000",
+              "cumulativeGross": "50000",
+              "remaining": "0",
+              "refundsReplenish": false
+            },
+            {
+              "id": "alice.newNominalDebt.USDC",
+              "actor": "alice",
+              "domain": "nominal-debt-create",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50500",
+              "cumulativeGross": "50050",
+              "remaining": "450",
+              "refundsReplenish": false
+            },
+            {
+              "id": "newLender.disbursement.USDC",
+              "actor": "newLender",
+              "domain": "token-disbursement",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50500",
+              "cumulativeGross": "50050",
+              "remaining": "450",
+              "refundsReplenish": false
+            },
+            {
+              "id": "fee.unconditional.USDC",
+              "actor": "feeRecipient",
+              "domain": "fee-receipt",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "50",
+              "cumulativeGross": "50",
+              "remaining": "0",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "60",
+            "ordinaryRemaining": "964",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "20",
+            "conservationOrdinary": "60+964=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "12",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "20",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "16",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "12",
+                "reserve": "0"
+              }
+            ]
+          },
+          "historyHead": "hist:refinance-1",
+          "observations": {
+            "WETH.priceUSDC": {
+              "base": "WETH",
+              "quote": "USDC",
+              "amount": "4000",
+              "unit": "USDC_per_WETH",
+              "scale": "1",
+              "kind": "external-truth-observation",
+              "notProvenFact": true,
+              "toyChoice": true
+            },
+            "maintenance": {
+              "numerator": "3",
+              "denominator": "2",
+              "asRatio": "3/2",
+              "toyChoice": true,
+              "notProtocolParameter": true
+            }
+          }
+        },
+        "effects": {
+          "tokenTransfers": [
+            {
+              "from": "newLender",
+              "to": "bridge",
+              "asset": "USDC",
+              "amount": "50050",
+              "unit": "USDC",
+              "scale": "1",
+              "kind": "token-transfer"
+            },
+            {
+              "from": "bridge",
+              "to": "oldCreditor",
+              "asset": "USDC",
+              "amount": "50000",
+              "unit": "USDC",
+              "scale": "1",
+              "kind": "token-transfer",
+              "id": "T-repay-old"
+            },
+            {
+              "from": "bridge",
+              "to": "feeRecipient",
+              "asset": "USDC",
+              "amount": "50",
+              "unit": "USDC",
+              "scale": "1",
+              "kind": "token-transfer",
+              "id": "T-fee"
+            },
+            {
+              "from": "vaultA",
+              "to": "vaultB",
+              "asset": "WETH",
+              "amount": "20",
+              "unit": "WETH",
+              "scale": "1",
+              "kind": "token-transfer",
+              "id": "T-collateral-move"
+            }
+          ],
+          "nominal": [
+            {
+              "object": "debt-old-alice",
+              "field": "total",
+              "from": "50000",
+              "to": "0",
+              "kind": "debt-discharge-by-settlement",
+              "notTokenTransfer": true
+            },
+            {
+              "object": "debt-new-alice",
+              "field": "total",
+              "from": "0",
+              "to": "50050",
+              "kind": "debt-create",
+              "notTokenTransfer": true
+            }
+          ],
+          "fees": [
+            {
+              "to": "feeRecipient",
+              "amount": "50",
+              "asset": "USDC",
+              "conditional": false
+            }
+          ],
+          "dutiesConsumed": [
+            "alice.serviceDebt.old.50000"
+          ],
+          "dutiesProduced": [
+            "alice.serviceDebt.new.50050"
+          ],
+          "historyConsumed": [
+            "hist:genesis-loan-A"
+          ],
+          "historyProduced": [
+            "hist:refinance-1"
+          ]
+        },
+        "duties": {
+          "pre": [
+            {
+              "id": "alice.serviceDebt.old.50000",
+              "principal": {
+                "amount": "50000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              }
+            }
+          ],
+          "post": [
+            {
+              "id": "alice.serviceDebt.new.50050",
+              "obligor": "alice",
+              "obligee": "newLender",
+              "kind": "service-debt",
+              "principal": {
+                "amount": "50050",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "survivesPartialProgress": true
+            }
+          ]
+        },
+        "assumptions": [
+          {
+            "id": "price-WETH-USDC-4000",
+            "kind": "external-truth",
+            "statement": "WETH price is 4000 USDC per WETH for this oracle.",
+            "notProvenFact": true,
+            "toyChoice": true
+          },
+          {
+            "id": "custody-vaults",
+            "kind": "custody",
+            "statement": "vaultA then vaultB hold alice WETH. This is assumed custody, not a proven lock.",
+            "notProvenFact": true
+          },
+          {
+            "id": "single-domain-atomic",
+            "kind": "finality-boundary",
+            "statement": "Observable prefixes are the four listed steps inside one Midnight-model domain.",
+            "notForeignAdapter": true,
+            "notAave": true,
+            "notMorpho": true
+          },
+          {
+            "id": "accrual-zero",
+            "kind": "toy-interest",
+            "statement": "Accrual is 0 during this atomic successor. Not a protocol rate.",
+            "toyChoice": true
+          }
+        ],
+        "successor": {
+          "current": "hist:refinance-1",
+          "continuationOwner": "loan-B-controller",
+          "exactOnce": true,
+          "workPartitionedNotRefreshed": true,
+          "authorityPartitionedNotRefreshed": true,
+          "aliases": [
+            "new-market controller",
+            "Morpho controller exactly once"
+          ]
+        },
+        "acceptance": {
+          "ContractInvariant": {
+            "appliesTo": "complete postState, effects, duties, residual authority, work, history",
+            "genesis": "hist:genesis-loan-A admitted debt 50000, 20 WETH in vaultA, work 1024, reserve 16, alice.transferDebit.USDC 1000, admin loan-A-controller",
+            "admin": "loan-A-controller is genesis admin of the old position. This successor moves residual control exactly once to loan-B-controller. Control is not copied.",
+            "predicate": "USDC token sum 300000 conserved. WETH sum 20 conserved. Old debt 0 only with T-repay-old. New debt 50050 only with alice.newNominalDebt.USDC. Fee 50 transferred unconditionally. Observable prefixes keep collateralization. Work 60+964=1024. Reserve 16 unused and not copied."
+          },
+          "IntentRefinement": {
+            "appliesTo": "canonicalIntent to concretePlan",
+            "genesis": "intent may not rewrite genesis caps",
+            "admin": "admin change is the exact-once controller move in step 3",
+            "predicate": "Plan meets every hard constraint. Soft ranking is excluded. Exact outputs use equality. New-debt cap uses inequality <=50500."
+          },
+          "TransitionValidity": {
+            "appliesTo": "preState to postState via ordered steps",
+            "genesis": "step 0 reads genesis authorities and balances",
+            "admin": "no extra admin key is used",
+            "predicate": "Each token transfer has a funded source. Each nominal write has listed authority. No observable prefix has debt without covering collateral. Alice USDC transfer debit stays 0."
+          },
+          "HistoryCompliance": {
+            "appliesTo": "consumed and produced history including genesis/admin",
+            "consumed": [
+              "hist:genesis-loan-A"
+            ],
+            "produced": [
+              "hist:refinance-1"
+            ],
+            "genesisIncluded": true,
+            "adminIncluded": true,
+            "predicate": "Successor consumes genesis loan history once. It does not refresh work or copy residual authority."
+          },
+          "notExecutedByLanguageRuntime": true
+        },
+        "expected": {
+          "status": "accepted-successor",
+          "oldDebt": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "newDebt": {
+            "amount": "50050",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "feeTransferred": {
+            "amount": "50",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "feeRecipient": "feeRecipient",
+          "feeConditional": false,
+          "newLenderUSDC": {
+            "amount": "49950",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "oldCreditorUSDC": {
+            "amount": "250000",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "bridgeUSDC": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "collateralCustodian": "vaultB",
+          "collateral": {
+            "amount": "20",
+            "asset": "WETH",
+            "unit": "WETH",
+            "scale": "1"
+          },
+          "aliceTransferDebitRemainingUSDC": "1000",
+          "newNominalDebtRemainingUSDC": "450",
+          "disbursementRemainingUSDC": "450",
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "60",
+            "ordinaryRemaining": "964",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "20",
+            "conservationOrdinary": "60+964=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "12",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "20",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "16",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "12",
+                "reserve": "0"
+              }
+            ]
+          },
+          "residualController": "loan-B-controller",
+          "residualDuties": [
+            {
+              "id": "alice.serviceDebt.new.50050",
+              "obligor": "alice",
+              "obligee": "newLender",
+              "kind": "service-debt",
+              "principal": {
+                "amount": "50050",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "survivesPartialProgress": true
+            }
+          ],
+          "historyConsumed": [
+            "hist:genesis-loan-A"
+          ],
+          "historyProduced": [
+            "hist:refinance-1"
+          ],
+          "usdcConservation": "300000",
+          "wethConservation": "20",
+          "AaveDebt": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "MorphoDebt": {
+            "amount": "50050",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "netCollateralLoss": {
+            "amount": "0",
+            "asset": "WETH",
+            "unit": "WETH",
+            "scale": "1"
+          },
+          "sharedFactIds": [
+            "oldDebt50000",
+            "newDebt50050",
+            "fee50unconditional",
+            "disburse50050fromNewLender",
+            "repay50000toOldCreditor",
+            "weth20move",
+            "price4000",
+            "maint3over2",
+            "work60remain964reserve16"
+          ]
+        },
+        "environmentObservations": {
+          "WETH.priceUSDC": {
+            "base": "WETH",
+            "quote": "USDC",
+            "amount": "4000",
+            "unit": "USDC_per_WETH",
+            "scale": "1",
+            "kind": "external-truth-observation",
+            "notProvenFact": true,
+            "toyChoice": true
+          },
+          "maintenance": {
+            "numerator": "3",
+            "denominator": "2",
+            "asRatio": "3/2",
+            "toyChoice": true,
+            "notProtocolParameter": true
+          },
+          "availableNewLenderUSDC": "100000",
+          "availableOldCreditorUSDC": "200000"
+        },
+        "toyAssumptionChanges": [
+          "Independently funded newLender 100000 USDC and oldCreditor 200000 USDC. Input packet had no payer balances.",
+          "Fee 50 USDC is an unconditional token transfer T-fee to feeRecipient and is financed into new debt 50050. It is not charged against alice.transferDebit.USDC.",
+          "alice.transferDebit.USDC 1000 is bound to Alice token-transfer domain only.",
+          "alice.newNominalDebt.USDC 50500 is a separate nominal-debt domain. newLender.disbursement.USDC 50500 is the funding domain.",
+          "WETH price 4000 USDC and maintenance 3/2 are toy observations. They are not Aave or Morpho parameters.",
+          "Work charges 12+20+16+12=60 replace the underived workRemaining 1008.",
+          "Market names loan-A/loan-B and Aave.USDC_Debt/Morpho.USDC_Debt are aliases for the same accounts. Shared numeric facts are identical in both refinance traces."
+        ],
+        "limitations": [
+          "No pinned Aave or Morpho primary source.",
+          "Design oracle. Not protocol conformance.",
+          "Design predicates are not executed by a language runtime."
+        ],
+        "provenance": {
+          "path": "raw/reports/unified-2026-09-07/intents.md",
+          "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+          "pointer": "Atomic lending refinance",
+          "scope": "design-oracle numbers independently chosen; not Aave or Morpho deployment traces"
+        }
+      },
+      "redemption": {
+        "canonicalIntent": {
+          "hardConstraints": [
+            "Exact full-redemption output is 9500 USDC for 100 FundShares (equality). This retains the 9500-style total goal.",
+            "Conversion is 1 share = 95 USDC exact. Partial fill assets = sharesFilled * 95 (equality).",
+            "Partial-fill net: assetsClaimed + remainingExact = 9500.",
+            "Request R1 controller is alice and survives partial progress.",
+            "Locked shares move to requestEscrow. Filled shares burn. Residual shares stay locked.",
+            "After claim, claimable is 0. Status is Pending for the residual. It is not left Claimable with 40 still posted.",
+            "Insufficient liquidity cannot erase residual 60 shares or 5700 USDC exact remaining.",
+            "Replay claim when claimable is 0 is rejected.",
+            "minReceive inequality is not this intent. Overdelivery on equality is rejected."
+          ],
+          "softRankingExcludedFromAcceptance": [
+            "Prefer faster claim routing."
+          ],
+          "exactOutputVsMinimum": {
+            "fullGoal": "equality-9500",
+            "thisFill": "equality-3800-for-40-shares",
+            "minReceive": "not-used",
+            "overdeliveryOnEquality": "reject"
+          }
+        },
+        "concretePlan": {
+          "orderedSteps": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "requestId": "R1",
+          "controller": "alice",
+          "conversion": {
+            "sharesIn": "1",
+            "assetsOut": "95",
+            "asset": "USDC",
+            "shareAsset": "FundShares",
+            "unit": "USDC_per_share",
+            "scale": "1",
+            "kind": "toy-exact-conversion",
+            "notERC7540Function": true,
+            "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+          },
+          "liquidityUsed": "3800",
+          "sharesBurned": "40",
+          "residualShares": "60",
+          "residualExact": "5700"
+        },
+        "preState": {
+          "accounts": [
+            {
+              "id": "alice",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "FundShares",
+                  "asset": "100",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "shareholder-controller"
+            },
+            {
+              "id": "vaultLiquid",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "3800",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "vault-liquid-assets"
+            },
+            {
+              "id": "vaultDeployed",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "5700",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "vault-illiquid-assets"
+            },
+            {
+              "id": "requestEscrow",
+              "balances": [
+                {
+                  "amount": "FundShares",
+                  "asset": "0",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "request-share-lock"
+            }
+          ],
+          "debts": [],
+          "positions": [],
+          "shares": [
+            {
+              "holder": "alice",
+              "asset": "FundShares",
+              "amount": "100",
+              "unit": "shares",
+              "scale": "1",
+              "supply": "100"
+            }
+          ],
+          "requests": [],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "alice.redeem.R1.shares",
+              "actor": "alice",
+              "domain": "redeem-request",
+              "asset": "FundShares",
+              "unit": "shares",
+              "scale": "1",
+              "original": "100",
+              "cumulativeGross": "0",
+              "remaining": "100",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryRemaining": "1024",
+            "recoveryReserveRemaining": "16"
+          },
+          "historyHead": "hist:genesis-vault",
+          "observations": {
+            "conversion": {
+              "sharesIn": "1",
+              "assetsOut": "95",
+              "asset": "USDC",
+              "shareAsset": "FundShares",
+              "unit": "USDC_per_share",
+              "scale": "1",
+              "kind": "toy-exact-conversion",
+              "notERC7540Function": true,
+              "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+            },
+            "availableLiquidityUSDC": "3800",
+            "exactOutputGoalUSDC": "9500"
+          }
+        },
+        "steps": [
+          {
+            "index": "0",
+            "action": "requestRedeem",
+            "transfers": [
+              {
+                "from": "alice",
+                "to": "requestEscrow",
+                "asset": "FundShares",
+                "amount": "100",
+                "unit": "shares",
+                "scale": "1",
+                "kind": "token-transfer"
+              }
+            ],
+            "nominalChanges": [
+              {
+                "object": "request-R1",
+                "field": "status",
+                "from": "absent",
+                "to": "Pending",
+                "kind": "request-open",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "10",
+              "reserve": "0"
+            },
+            "request": {
+              "requestId": "R1",
+              "controller": "alice",
+              "status": "Pending",
+              "sharesLocked": "100",
+              "exactOutputGoalUSDC": "9500",
+              "claimableUSDC": "0"
+            }
+          },
+          {
+            "index": "1",
+            "action": "processPartialAgainstLiquidity",
+            "transfers": [],
+            "nominalChanges": [
+              {
+                "object": "request-R1",
+                "field": "status",
+                "from": "Pending",
+                "to": "Claimable",
+                "kind": "partial-fill-ready",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "request-R1",
+                "field": "claimableUSDC",
+                "from": "0",
+                "to": "3800",
+                "kind": "claimable-set",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "request-R1",
+                "field": "sharesClaimable",
+                "from": "0",
+                "to": "40",
+                "kind": "shares-marked-claimable",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "14",
+              "reserve": "0"
+            },
+            "liquidity": {
+              "amount": "3800",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1"
+            },
+            "fill": {
+              "shares": "40",
+              "assets": "3800",
+              "conversion": "40*95=3800",
+              "exact": true,
+              "minReceiveNotUsed": true
+            },
+            "residualUnfilled": {
+              "shares": "60",
+              "assetsExact": "5700"
+            },
+            "insufficientLiquidityForRemainder": true,
+            "doesNotEraseResidual": true
+          },
+          {
+            "index": "2",
+            "action": "claimPartial",
+            "transfers": [
+              {
+                "from": "vaultLiquid",
+                "to": "alice",
+                "asset": "USDC",
+                "amount": "3800",
+                "unit": "USDC",
+                "scale": "1",
+                "kind": "token-transfer"
+              }
+            ],
+            "nominalChanges": [
+              {
+                "object": "FundShares.supply",
+                "field": "supply",
+                "from": "100",
+                "to": "60",
+                "kind": "share-burn",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "requestEscrow.FundShares",
+                "field": "amount",
+                "from": "100",
+                "to": "60",
+                "kind": "burn-from-lock",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "request-R1",
+                "field": "claimableUSDC",
+                "from": "3800",
+                "to": "0",
+                "kind": "claimable-cleared",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "request-R1",
+                "field": "status",
+                "from": "Claimable",
+                "to": "Pending",
+                "kind": "residual-pending",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "request-R1",
+                "field": "assetsClaimedUSDC",
+                "from": "0",
+                "to": "3800",
+                "kind": "claimed",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "18",
+              "reserve": "0"
+            },
+            "burnedShares": "40",
+            "postClaimClaimable": "0",
+            "postClaimStatus": "Pending",
+            "controllerUnchanged": "alice",
+            "requestIdUnchanged": "R1"
+          },
+          {
+            "index": "3",
+            "action": "recordResidualDuty",
+            "transfers": [],
+            "nominalChanges": [],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "8",
+              "reserve": "0"
+            },
+            "residual": {
+              "requestId": "R1",
+              "controller": "alice",
+              "sharesLocked": "60",
+              "exactRemainingUSDC": "5700",
+              "status": "Pending",
+              "claimableUSDC": "0",
+              "floorDropped": false,
+              "totalGoalStill": "9500"
+            }
+          }
+        ],
+        "postState": {
+          "accounts": [
+            {
+              "id": "alice",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "3800",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "FundShares",
+                  "asset": "0",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "shareholder-controller"
+            },
+            {
+              "id": "vaultLiquid",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "vault-liquid-assets"
+            },
+            {
+              "id": "vaultDeployed",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "5700",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "vault-illiquid-assets"
+            },
+            {
+              "id": "requestEscrow",
+              "balances": [
+                {
+                  "amount": "FundShares",
+                  "asset": "60",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "request-share-lock"
+            }
+          ],
+          "debts": [],
+          "positions": [],
+          "shares": [
+            {
+              "holder": "requestEscrow",
+              "asset": "FundShares",
+              "amount": "60",
+              "unit": "shares",
+              "scale": "1",
+              "supply": "60",
+              "burnedThisSuccessor": "40",
+              "lockedResidual": "60"
+            }
+          ],
+          "requests": [
+            {
+              "requestId": "R1",
+              "controller": "alice",
+              "kind": "redeem",
+              "orderKey": "R1",
+              "order": "fifo-request-id",
+              "status": "Pending",
+              "sharesRequested": "100",
+              "sharesLocked": "60",
+              "sharesBurned": "40",
+              "exactOutputGoalUSDC": "9500",
+              "assetsClaimedUSDC": "3800",
+              "assetsRemainingExactUSDC": "5700",
+              "claimableUSDC": "0",
+              "claimableClearedAfterClaim": true,
+              "residualClaim": "live",
+              "partialFillNet": "3800+5700=9500",
+              "conversion": {
+                "sharesIn": "1",
+                "assetsOut": "95",
+                "asset": "USDC",
+                "shareAsset": "FundShares",
+                "unit": "USDC_per_share",
+                "scale": "1",
+                "kind": "toy-exact-conversion",
+                "notERC7540Function": true,
+                "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+              }
+            }
+          ],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "alice.redeem.R1.shares",
+              "actor": "alice",
+              "domain": "redeem-request",
+              "asset": "FundShares",
+              "unit": "shares",
+              "scale": "1",
+              "original": "100",
+              "cumulativeGross": "40",
+              "remaining": "60",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "50",
+            "ordinaryRemaining": "974",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "18",
+            "conservationOrdinary": "50+974=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "10",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "14",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "18",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "8",
+                "reserve": "0"
+              }
+            ]
+          },
+          "historyHead": "hist:redeem-R1-partial-1",
+          "observations": {
+            "conversion": {
+              "sharesIn": "1",
+              "assetsOut": "95",
+              "asset": "USDC",
+              "shareAsset": "FundShares",
+              "unit": "USDC_per_share",
+              "scale": "1",
+              "kind": "toy-exact-conversion",
+              "notERC7540Function": true,
+              "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+            },
+            "availableLiquidityUSDC": "0",
+            "exactOutputGoalUSDC": "9500",
+            "remainingExactUSDC": "5700"
+          }
+        },
+        "effects": {
+          "tokenTransfers": [
+            {
+              "from": "alice",
+              "to": "requestEscrow",
+              "asset": "FundShares",
+              "amount": "100",
+              "unit": "shares",
+              "scale": "1",
+              "kind": "token-transfer"
+            },
+            {
+              "from": "vaultLiquid",
+              "to": "alice",
+              "asset": "USDC",
+              "amount": "3800",
+              "unit": "USDC",
+              "scale": "1",
+              "kind": "token-transfer"
+            }
+          ],
+          "nominal": [
+            {
+              "object": "FundShares.supply",
+              "field": "supply",
+              "from": "100",
+              "to": "60",
+              "kind": "share-burn",
+              "notTokenTransfer": true
+            },
+            {
+              "object": "request-R1",
+              "field": "claimableUSDC",
+              "from": "3800",
+              "to": "0",
+              "kind": "claimable-cleared",
+              "notTokenTransfer": true
+            }
+          ],
+          "fees": [
+            {
+              "amount": "0",
+              "asset": "USDC",
+              "reason": "this bounded oracle charges no fee"
+            }
+          ],
+          "dutiesProduced": [
+            "alice.R1.redeem-remaining-60-shares-for-5700-USDC-exact"
+          ],
+          "historyConsumed": [
+            "hist:genesis-vault"
+          ],
+          "historyProduced": [
+            "hist:redeem-R1-partial-1"
+          ],
+          "sharesBurned": "40",
+          "sharesLockedResidual": "60"
+        },
+        "duties": {
+          "pre": [],
+          "post": [
+            {
+              "id": "alice.R1.redeem-remaining-60-shares-for-5700-USDC-exact",
+              "obligor": "vault-controller",
+              "obligee": "alice",
+              "controller": "alice",
+              "requestId": "R1",
+              "kind": "complete-redeem",
+              "sharesLocked": "60",
+              "exactRemaining": {
+                "amount": "5700",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "survivesPartialProgress": true
+            }
+          ]
+        },
+        "assumptions": [
+          {
+            "id": "conversion-95",
+            "kind": "toy-exchange-rate",
+            "statement": "1 FundShare converts to 95 USDC exact. ERC-7540 primary text is not re-acquired. This rate is a toy choice so 100*95=9500 retains the report floor as an exact total goal.",
+            "notProvenFact": true,
+            "toyChoice": true
+          },
+          {
+            "id": "liquidity-split",
+            "kind": "custody",
+            "statement": "vaultLiquid 3800 USDC is immediately available. vaultDeployed 5700 USDC is not available in this successor. That split is assumed custody, not a proven strategy adapter.",
+            "notProvenFact": true
+          },
+          {
+            "id": "single-domain",
+            "kind": "finality-boundary",
+            "statement": "Vault processing is a bounded Midnight-model environment step. It is not a foreign ERC-7540 adapter.",
+            "notForeignAdapter": true
+          },
+          {
+            "id": "liquidity-toy-change",
+            "kind": "toy-change",
+            "statement": "Input packet used 40 USDC available liquidity. 40 is not divisible as an integer share at 95 USDC per share. This oracle uses 3800 USDC = 40 shares * 95 so conversion, burn, and residual are integers. 40 USDC is not treated as source-defined protocol liquidity.",
+            "toyChoice": true
+          }
+        ],
+        "successor": {
+          "current": "hist:redeem-R1-partial-1",
+          "continuationOwner": "request controller",
+          "controller": "alice",
+          "requestId": "R1",
+          "exactOnce": true,
+          "workPartitionedNotRefreshed": true,
+          "authorityPartitionedNotRefreshed": true
+        },
+        "acceptance": {
+          "ContractInvariant": {
+            "appliesTo": "complete postState, effects, duties, residual request, work, history",
+            "genesis": "hist:genesis-vault admitted 100 FundShares, NAV 9500 as 3800 liquid + 5700 deployed, alice holder, work 1024, reserve 16, admin vault-controller",
+            "admin": "vault-controller remains vault admin. Request controller alice is exact-once for R1 and is not copied.",
+            "predicate": "USDC sum 9500 conserved. FundShares supply 60 after burning 40. Residual request R1 live. claimable 0. exact remaining 5700. 3800+5700=9500. Work 50+974=1024. Reserve 16 unused and not copied."
+          },
+          "IntentRefinement": {
+            "appliesTo": "canonicalIntent to concretePlan",
+            "genesis": "intent may not drop the 9500 exact goal inherited as the full-redemption equality",
+            "admin": "no admin skip of Pending or Claimable",
+            "predicate": "Plan keeps exact 9500 goal, 95 conversion, R1/alice identity, burn/lock split, post-claim claimable 0, residual Pending."
+          },
+          "TransitionValidity": {
+            "appliesTo": "preState to postState via ordered steps",
+            "genesis": "step 0 reads genesis share balances",
+            "admin": "no extra admin key",
+            "predicate": "Each transfer has a funded source. Claim burns 40 shares and clears claimable. Residual 60 shares stay locked. Replay is not part of the positive steps."
+          },
+          "HistoryCompliance": {
+            "appliesTo": "consumed and produced history including genesis/admin",
+            "consumed": [
+              "hist:genesis-vault"
+            ],
+            "produced": [
+              "hist:redeem-R1-partial-1"
+            ],
+            "genesisIncluded": true,
+            "adminIncluded": true,
+            "predicate": "Successor consumes genesis vault history once. Residual request authority is not refreshed."
+          },
+          "notExecutedByLanguageRuntime": true
+        },
+        "expected": {
+          "requestId": "R1",
+          "controller": "alice",
+          "status": "Pending",
+          "claimable": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "assetsLocked": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "sharesLocked": {
+            "amount": "60",
+            "unit": "shares",
+            "asset": "FundShares",
+            "scale": "1"
+          },
+          "sharesBurned": {
+            "amount": "40",
+            "unit": "shares",
+            "asset": "FundShares",
+            "scale": "1"
+          },
+          "residualShares": {
+            "amount": "60",
+            "unit": "shares",
+            "asset": "FundShares",
+            "scale": "1"
+          },
+          "residualClaim": "live",
+          "claimedFloorRetainedUSDC": "9500",
+          "assetsClaimed": {
+            "amount": "3800",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "remainingExact": {
+            "amount": "5700",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "conversion": {
+            "sharesIn": "1",
+            "assetsOut": "95",
+            "asset": "USDC",
+            "shareAsset": "FundShares",
+            "unit": "USDC_per_share",
+            "scale": "1",
+            "kind": "toy-exact-conversion",
+            "notERC7540Function": true,
+            "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+          },
+          "order": "fifo-request-id",
+          "fees": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "aliceUSDC": {
+            "amount": "3800",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "vaultLiquidUSDC": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "vaultDeployedUSDC": {
+            "amount": "5700",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "supply": "60",
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "50",
+            "ordinaryRemaining": "974",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "18",
+            "conservationOrdinary": "50+974=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "10",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "14",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "18",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "8",
+                "reserve": "0"
+              }
+            ]
+          },
+          "historyConsumed": [
+            "hist:genesis-vault"
+          ],
+          "historyProduced": [
+            "hist:redeem-R1-partial-1"
+          ],
+          "sharedFactIds": [
+            "goal9500",
+            "rate95",
+            "fill40shares3800",
+            "residual60shares5700",
+            "postClaimClaimable0",
+            "statusPendingResidual",
+            "controllerAliceR1",
+            "work50remain974reserve16"
+          ]
+        },
+        "environmentObservations": {
+          "availableLiquidityUSDC": "3800",
+          "deployedUSDC": "5700",
+          "conversion": {
+            "sharesIn": "1",
+            "assetsOut": "95",
+            "asset": "USDC",
+            "shareAsset": "FundShares",
+            "unit": "USDC_per_share",
+            "scale": "1",
+            "kind": "toy-exact-conversion",
+            "notERC7540Function": true,
+            "derivation": "100 shares * 95 = 9500 exact-output goal retained from the 9500-style floor"
+          }
+        },
+        "toyAssumptionChanges": [
+          "Retained 9500 as exact full-redemption equality (100*95).",
+          "Replaced incoherent 40 USDC liquidity with 3800 USDC = 40 shares * 95 so share burn is an integer.",
+          "Positive expected status after claim is Pending with claimable 0, not Claimable with 40 still posted.",
+          "intent-cases token observation is applicable because 3800 USDC is transferred to alice."
+        ],
+        "limitations": [
+          "ERC-7540 primary text is not re-acquired this pass.",
+          "Exchange-rate function is a toy 95, not a frozen protocol function.",
+          "Design oracle. Not protocol conformance.",
+          "Design predicates are not executed by a language runtime."
+        ],
+        "provenance": {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA18",
+          "scope": "ERC-7540 named as source-defined target in action row; this numeric trace is an independent design oracle",
+          "also": {
+            "path": "raw/reports/unified-2026-09-07/intents.md",
+            "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+            "pointer": "Asynchronous vault redemption"
+          }
+        }
+      },
+      "badDebt": {
+        "canonicalIntent": {
+          "hardConstraints": [
+            "Recover 400 USDC by funded collateral sale (token transfers T-seize-weth and T-recovery-usdc).",
+            "Apply 400 to bob principal (nominal). Remaining borrower duty is 600.",
+            "Recognize 600 allocated loss on share NAV. Do not omit the loss record.",
+            "Do not discharge the remaining 600. Loss allocation is not discharge.",
+            "Share token quantity stays 100. Share value becomes 4 because NAV 400 / 100 = 4.",
+            "No fee in this bounded oracle."
+          ],
+          "softRankingExcludedFromAcceptance": [
+            "Prefer a named liquidator."
+          ],
+          "exactOutputVsMinimum": {
+            "recoverySale": "equality-400-USDC-for-1-WETH",
+            "minReceive": "not-used"
+          }
+        },
+        "concretePlan": {
+          "orderedSteps": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "recovery": "400 USDC funded from buyer against 1 WETH",
+          "remainingLiability": "600",
+          "lossAllocation": "600 to NAV, not a write-off of bob"
+        },
+        "preState": {
+          "accounts": [
+            {
+              "id": "bob",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "borrower"
+            },
+            {
+              "id": "collateralVault",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "1",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "bob-collateral-custody",
+              "controller": "market-controller",
+              "beneficiary": "bob"
+            },
+            {
+              "id": "vault",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "lender-vault-cash"
+            },
+            {
+              "id": "buyer",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "400",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "collateral-buyer"
+            },
+            {
+              "id": "shareholders",
+              "balances": [
+                {
+                  "amount": "FundShares",
+                  "asset": "100",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "loss-bearing-shares"
+            }
+          ],
+          "debts": [
+            {
+              "id": "debt-bob",
+              "borrower": "bob",
+              "creditor": "vault",
+              "principal": {
+                "amount": "1000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "total": {
+                "amount": "1000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "status": "open"
+            }
+          ],
+          "positions": [
+            {
+              "id": "pos-collateral-bob",
+              "owner": "bob",
+              "custodian": "collateralVault",
+              "asset": "WETH",
+              "amount": "1",
+              "unit": "WETH",
+              "scale": "1"
+            }
+          ],
+          "shares": [
+            {
+              "holder": "shareholders",
+              "asset": "FundShares",
+              "amount": "100",
+              "unit": "shares",
+              "scale": "1",
+              "shareAssetNAV": {
+                "amount": "1000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "shareValue": {
+                "amount": "10",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "includesReceivable": "1000"
+            }
+          ],
+          "requests": [],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "market.seize.WETH",
+              "actor": "market-controller",
+              "domain": "collateral-seize",
+              "asset": "WETH",
+              "unit": "WETH",
+              "scale": "1",
+              "original": "1",
+              "cumulativeGross": "0",
+              "remaining": "1",
+              "refundsReplenish": false
+            },
+            {
+              "id": "bob.debt.nominal",
+              "actor": "market-controller",
+              "domain": "nominal-debt-reduce-by-recovery",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "1000",
+              "cumulativeGross": "0",
+              "remaining": "1000",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryRemaining": "1024",
+            "recoveryReserveRemaining": "16"
+          },
+          "historyHead": "hist:genesis-loan-bob",
+          "observations": {
+            "WETH.priceUSDC": {
+              "base": "WETH",
+              "quote": "USDC",
+              "amount": "400",
+              "unit": "USDC_per_WETH",
+              "scale": "1",
+              "kind": "external-truth-observation",
+              "notProvenFact": true,
+              "toyChoice": true,
+              "note": "Crashed price. Distinct from refinance toy price 4000."
+            }
+          }
+        },
+        "steps": [
+          {
+            "index": "0",
+            "action": "observeCrashedPrice",
+            "transfers": [],
+            "nominalChanges": [],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "8",
+              "reserve": "0"
+            },
+            "observation": {
+              "base": "WETH",
+              "quote": "USDC",
+              "amount": "400",
+              "unit": "USDC_per_WETH",
+              "scale": "1",
+              "kind": "external-truth-observation",
+              "notProvenFact": true,
+              "toyChoice": true,
+              "note": "Crashed price. Distinct from refinance toy price 4000."
+            },
+            "collateralValueUSDC": "400",
+            "debtUSDC": "1000",
+            "shortfallUSDC": "600"
+          },
+          {
+            "index": "1",
+            "action": "seizeAndSellCollateral",
+            "transfers": [
+              {
+                "from": "collateralVault",
+                "to": "buyer",
+                "asset": "WETH",
+                "amount": "1",
+                "unit": "WETH",
+                "scale": "1",
+                "kind": "token-transfer",
+                "id": "T-seize-weth"
+              },
+              {
+                "from": "buyer",
+                "to": "vault",
+                "asset": "USDC",
+                "amount": "400",
+                "unit": "USDC",
+                "scale": "1",
+                "kind": "token-transfer",
+                "id": "T-recovery-usdc"
+              }
+            ],
+            "nominalChanges": [],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "20",
+              "reserve": "0"
+            },
+            "fundedSource": "buyer preState USDC 400 >= 400",
+            "recoveryFunded": {
+              "amount": "400",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1"
+            },
+            "note": "Recovery cash is a token transfer. It is not a loss label."
+          },
+          {
+            "index": "2",
+            "action": "applyRecoveryToDebt",
+            "transfers": [],
+            "nominalChanges": [
+              {
+                "object": "debt-bob",
+                "field": "principal",
+                "from": "1000",
+                "to": "600",
+                "kind": "debt-reduce-by-recovery",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "debt-bob",
+                "field": "total",
+                "from": "1000",
+                "to": "600",
+                "kind": "debt-reduce-by-recovery",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "12",
+              "reserve": "0"
+            },
+            "recoveryApplied": "400",
+            "remainingLiability": "600",
+            "notDischarge": true
+          },
+          {
+            "index": "3",
+            "action": "allocateSocializedLossWithoutDischarge",
+            "transfers": [],
+            "nominalChanges": [
+              {
+                "object": "shareholders.NAV",
+                "field": "shareAssetNAV",
+                "from": "1000",
+                "to": "400",
+                "kind": "loss-allocation",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "shareholders.NAV",
+                "field": "shareValue",
+                "from": "10",
+                "to": "4",
+                "kind": "loss-allocation",
+                "notTokenTransfer": true
+              },
+              {
+                "object": "loss-record",
+                "field": "allocatedLoss",
+                "from": "0",
+                "to": "600",
+                "kind": "loss-recognition",
+                "notTokenTransfer": true
+              }
+            ],
+            "fees": [],
+            "workCharge": {
+              "ordinary": "16",
+              "reserve": "0"
+            },
+            "lossAllocated": {
+              "amount": "600",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1"
+            },
+            "borrowerDutyRemains": {
+              "amount": "600",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1"
+            },
+            "dischargeAuthorized": false,
+            "socializedLossOmitted": false,
+            "erasure": false,
+            "note": "NAV write-down of 600 is distinct from borrower discharge. Remaining 600 is retained."
+          }
+        ],
+        "postState": {
+          "accounts": [
+            {
+              "id": "bob",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "borrower"
+            },
+            {
+              "id": "collateralVault",
+              "balances": [
+                {
+                  "amount": "WETH",
+                  "asset": "0",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "bob-collateral-custody",
+              "controller": "market-controller",
+              "beneficiary": "bob"
+            },
+            {
+              "id": "vault",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "400",
+                  "unit": "USDC",
+                  "scale": "1"
+                }
+              ],
+              "role": "lender-vault-cash"
+            },
+            {
+              "id": "buyer",
+              "balances": [
+                {
+                  "amount": "USDC",
+                  "asset": "0",
+                  "unit": "USDC",
+                  "scale": "1"
+                },
+                {
+                  "amount": "WETH",
+                  "asset": "1",
+                  "unit": "WETH",
+                  "scale": "1"
+                }
+              ],
+              "role": "collateral-buyer"
+            },
+            {
+              "id": "shareholders",
+              "balances": [
+                {
+                  "amount": "FundShares",
+                  "asset": "100",
+                  "unit": "shares",
+                  "scale": "1"
+                }
+              ],
+              "role": "loss-bearing-shares"
+            }
+          ],
+          "debts": [
+            {
+              "id": "debt-bob",
+              "borrower": "bob",
+              "creditor": "vault",
+              "principal": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "total": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "status": "open-impaired",
+              "recoveryApplied": {
+                "amount": "400",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "lossAllocatedToShares": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "discharged": false,
+              "writeOffAuthorization": null,
+              "erasure": false
+            }
+          ],
+          "positions": [],
+          "shares": [
+            {
+              "holder": "shareholders",
+              "asset": "FundShares",
+              "amount": "100",
+              "unit": "shares",
+              "scale": "1",
+              "tokenQuantityUnchanged": true,
+              "shareAssetNAV": {
+                "amount": "400",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "shareValue": {
+                "amount": "4",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "navExcludesImpairedReceivable": true,
+              "impairedReceivableMemo": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "allocatedLoss": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              }
+            }
+          ],
+          "requests": [],
+          "messages": [],
+          "authorities": [
+            {
+              "id": "market.seize.WETH",
+              "actor": "market-controller",
+              "domain": "collateral-seize",
+              "asset": "WETH",
+              "unit": "WETH",
+              "scale": "1",
+              "original": "1",
+              "cumulativeGross": "1",
+              "remaining": "0",
+              "refundsReplenish": false
+            },
+            {
+              "id": "bob.debt.nominal",
+              "actor": "market-controller",
+              "domain": "nominal-debt-reduce-by-recovery",
+              "asset": "USDC",
+              "unit": "USDC",
+              "scale": "1",
+              "original": "1000",
+              "cumulativeGross": "400",
+              "remaining": "600",
+              "refundsReplenish": false
+            }
+          ],
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "56",
+            "ordinaryRemaining": "968",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "20",
+            "conservationOrdinary": "56+968=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "8",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "20",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "12",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "16",
+                "reserve": "0"
+              }
+            ]
+          },
+          "historyHead": "hist:bad-debt-1",
+          "observations": {
+            "WETH.priceUSDC": {
+              "base": "WETH",
+              "quote": "USDC",
+              "amount": "400",
+              "unit": "USDC_per_WETH",
+              "scale": "1",
+              "kind": "external-truth-observation",
+              "notProvenFact": true,
+              "toyChoice": true,
+              "note": "Crashed price. Distinct from refinance toy price 4000."
+            },
+            "allocatedLossUSDC": "600"
+          },
+          "writeOffAuthorization": null
+        },
+        "effects": {
+          "tokenTransfers": [
+            {
+              "from": "collateralVault",
+              "to": "buyer",
+              "asset": "WETH",
+              "amount": "1",
+              "unit": "WETH",
+              "scale": "1",
+              "kind": "token-transfer",
+              "id": "T-seize-weth"
+            },
+            {
+              "from": "buyer",
+              "to": "vault",
+              "asset": "USDC",
+              "amount": "400",
+              "unit": "USDC",
+              "scale": "1",
+              "kind": "token-transfer",
+              "id": "T-recovery-usdc"
+            }
+          ],
+          "nominal": [
+            {
+              "object": "debt-bob",
+              "field": "total",
+              "from": "1000",
+              "to": "600",
+              "kind": "debt-reduce-by-recovery",
+              "notTokenTransfer": true
+            },
+            {
+              "object": "shareholders.NAV",
+              "field": "shareAssetNAV",
+              "from": "1000",
+              "to": "400",
+              "kind": "loss-allocation",
+              "notTokenTransfer": true
+            }
+          ],
+          "fees": [],
+          "dutiesProduced": [
+            "bob.serviceDebt.remaining.600"
+          ],
+          "historyConsumed": [
+            "hist:genesis-loan-bob"
+          ],
+          "historyProduced": [
+            "hist:bad-debt-1"
+          ],
+          "lossAllocated": {
+            "amount": "600",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "debtDischarged": false
+        },
+        "duties": {
+          "pre": [
+            {
+              "id": "bob.serviceDebt.1000",
+              "principal": {
+                "amount": "1000",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              }
+            }
+          ],
+          "post": [
+            {
+              "id": "bob.serviceDebt.remaining.600",
+              "obligor": "bob",
+              "obligee": "vault",
+              "kind": "service-debt",
+              "principal": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "impaired": true,
+              "discharged": false,
+              "survivesPartialProgress": true
+            }
+          ]
+        },
+        "assumptions": [
+          {
+            "id": "price-WETH-USDC-400",
+            "kind": "external-truth",
+            "statement": "WETH price is 400 USDC per WETH for this oracle. Not a proven market fact. Not the refinance 4000 observation.",
+            "notProvenFact": true,
+            "toyChoice": true
+          },
+          {
+            "id": "buyer-funding",
+            "kind": "custody",
+            "statement": "buyer holds 400 USDC at preState and takes 1 WETH. Assumed counterparty, not a proven liquidator adapter.",
+            "notProvenFact": true
+          },
+          {
+            "id": "single-domain",
+            "kind": "finality-boundary",
+            "statement": "Seizure, sale, recovery apply, and loss allocation are Midnight-model steps. They are not a Morpho adapter.",
+            "notForeignAdapter": true,
+            "notMorpho": true
+          },
+          {
+            "id": "no-writeoff",
+            "kind": "authority",
+            "statement": "No write-off authorization is present. Remaining 600 is retained. A later authorized resolution would be a different successor.",
+            "toyChoice": true
+          }
+        ],
+        "successor": {
+          "current": "hist:bad-debt-1",
+          "continuationOwner": "MC07",
+          "exactOnce": true,
+          "workPartitionedNotRefreshed": true,
+          "authorityPartitionedNotRefreshed": true,
+          "noRefreshOnMigrate": true
+        },
+        "acceptance": {
+          "ContractInvariant": {
+            "appliesTo": "complete postState, effects, duties, residual debt, shares, work, history",
+            "genesis": "hist:genesis-loan-bob admitted debt 1000, 1 WETH collateral, 100 shares NAV 1000, work 1024, reserve 16, admin market-controller",
+            "admin": "market-controller remains admin. This successor does not copy work or erase bob residual duty.",
+            "predicate": "USDC tokens 400 conserved (buyer to vault). WETH 1 conserved (vault to buyer). Debt remaining 600. NAV 400. Loss record 600. Share count 100. Work 56+968=1024. Reserve 16 unused and not copied. Debt is not 0."
+          },
+          "IntentRefinement": {
+            "appliesTo": "canonicalIntent to concretePlan",
+            "genesis": "intent may not delete genesis 1000 debt without recovery or authorized write-off",
+            "admin": "admin cannot hide the 600 by a loss label",
+            "predicate": "Plan funds recovery 400, applies 400 to debt, allocates 600 loss, retains 600 liability."
+          },
+          "TransitionValidity": {
+            "appliesTo": "preState to postState via ordered steps",
+            "genesis": "step 0 reads genesis debt and collateral",
+            "admin": "no write-off admin signature is supplied",
+            "predicate": "Sale is funded. Recovery and loss allocation are separate writes. Remaining debt 600 has no matching discharge transfer or write-off."
+          },
+          "HistoryCompliance": {
+            "appliesTo": "consumed and produced history including genesis/admin",
+            "consumed": [
+              "hist:genesis-loan-bob"
+            ],
+            "produced": [
+              "hist:bad-debt-1"
+            ],
+            "genesisIncluded": true,
+            "adminIncluded": true,
+            "predicate": "Successor consumes genesis loan history once. Residual 600 duty continues. Work is not refreshed on this recognition."
+          },
+          "notExecutedByLanguageRuntime": true
+        },
+        "expected": {
+          "status": "loss-recognized-with-residual-liability",
+          "debt": {
+            "amount": "600",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "recovery": {
+            "amount": "400",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "loss": {
+            "amount": "600",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "shareAsset": "400",
+          "shareValue": "4",
+          "tokenQuantitySharesUnchanged": "100",
+          "erasure": false,
+          "socializedLossOmitted": false,
+          "discharged": false,
+          "vaultUSDC": {
+            "amount": "400",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "buyerWETH": {
+            "amount": "1",
+            "asset": "WETH",
+            "unit": "WETH",
+            "scale": "1"
+          },
+          "buyerUSDC": {
+            "amount": "0",
+            "asset": "USDC",
+            "unit": "USDC",
+            "scale": "1"
+          },
+          "work": {
+            "lifetimeOriginal": "1024",
+            "ordinaryCharged": "56",
+            "ordinaryRemaining": "968",
+            "recoveryReserveOriginal": "16",
+            "recoveryReserveCharged": "0",
+            "recoveryReserveRemaining": "16",
+            "perActionBound": "64",
+            "perActionMaxObserved": "20",
+            "conservationOrdinary": "56+968=1024",
+            "reserveNotCopied": true,
+            "ordinaryNotCopiedOnSplitJoinCancelMigrate": true,
+            "charges": [
+              {
+                "step": "0",
+                "ordinary": "8",
+                "reserve": "0"
+              },
+              {
+                "step": "1",
+                "ordinary": "20",
+                "reserve": "0"
+              },
+              {
+                "step": "2",
+                "ordinary": "12",
+                "reserve": "0"
+              },
+              {
+                "step": "3",
+                "ordinary": "16",
+                "reserve": "0"
+              }
+            ]
+          },
+          "residualDuties": [
+            {
+              "id": "bob.serviceDebt.remaining.600",
+              "obligor": "bob",
+              "obligee": "vault",
+              "kind": "service-debt",
+              "principal": {
+                "amount": "600",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "accrual": {
+                "amount": "0",
+                "asset": "USDC",
+                "unit": "USDC",
+                "scale": "1"
+              },
+              "impaired": true,
+              "discharged": false,
+              "survivesPartialProgress": true
+            }
+          ],
+          "historyConsumed": [
+            "hist:genesis-loan-bob"
+          ],
+          "historyProduced": [
+            "hist:bad-debt-1"
+          ]
+        },
+        "environmentObservations": {
+          "WETH.priceUSDC": {
+            "base": "WETH",
+            "quote": "USDC",
+            "amount": "400",
+            "unit": "USDC_per_WETH",
+            "scale": "1",
+            "kind": "external-truth-observation",
+            "notProvenFact": true,
+            "toyChoice": true,
+            "note": "Crashed price. Distinct from refinance toy price 4000."
+          },
+          "buyerUSDC": "400"
+        },
+        "toyAssumptionChanges": [
+          "Input expected debt 0 after a 600 loss label. This oracle keeps debt 600.",
+          "Recovery 400 is funded by buyer USDC 400 against 1 WETH. Remaining 600 is recognized as allocated NAV loss and as retained borrower liability.",
+          "Share token quantity 100 is unchanged. NAV 400 and share value 4 are the socialized-loss view, not a discharge."
+        ],
+        "limitations": [
+          "No pinned Morpho vault-loss primary beyond the report.",
+          "Design oracle. Not Morpho vault conformance.",
+          "Design predicates are not executed by a language runtime."
+        ],
+        "provenance": {
+          "path": "raw/reports/unified-2026-09-07/defi.md",
+          "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+          "pointer": "Morpho bad debt",
+          "scope": "design oracle"
+        }
+      }
+    }
+  },
+  "rows": [
+    {
+      "implementationStatus": "specified-only",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true,
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "boundsAreToyProfile": true,
+      "id": "accepted-refinance",
+      "family": "heldouts",
+      "qualifiedId": "heldouts:accepted-refinance",
+      "source": [
+        {
+          "path": "raw/reports/unified-2026-09-07/intents.md",
+          "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+          "pointer": "Atomic lending refinance",
+          "scope": "report mechanism; not a pinned protocol"
+        }
+      ],
+      "sourceGap": "No pinned Aave/Morpho primary definition. Missing primary blocks source-defined refinance behavior.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/provenance",
+          "also": [
+            "/traces/0/sourceGap"
+          ],
+          "note": "pin inspected bytes and honest primary-source gaps",
+          "libraryAlso": "/library/oracles/refinance"
+        },
+        {
+          "stage": "canonical-intent",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/canonicalIntent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/concretePlan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/preState",
+          "also": [
+            "/traces/0/postState",
+            "/traces/0/effects",
+            "/traces/0/duties"
+          ],
+          "note": "debt/shares/fees distinct from tokens; full accounts"
+        },
+        {
+          "stage": "assumptions",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/assumptions",
+          "also": [
+            "/traces/0/environmentObservations"
+          ],
+          "note": "external truth, custody, finality named and not proven"
+        },
+        {
+          "stage": "successor",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "traceId": "heldouts:accepted-refinance:trace",
+          "pointer": "/traces/0/acceptance",
+          "includesGenesisAndAdmin": true,
+          "claims": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "note": "four mandatory claims apply to complete state/effects/history including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": true,
+          "fields": [
+            "debt-old-alice.principal",
+            "debt-old-alice.accrual",
+            "debt-new-alice.principal",
+            "debt-new-alice.accrual",
+            "financedFeeIncluded"
+          ]
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": true,
+          "fields": [
+            "refinance-fee 50 USDC to feeRecipient via T-fee"
+          ]
+        },
+        "ordering": {
+          "applicable": false,
+          "reason": "single successor, no ordering key"
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "accepted-successor"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "newLender to bridge 50050 USDC",
+            "bridge to oldCreditor 50000 USDC",
+            "bridge to feeRecipient 50 USDC",
+            "vaultA to vaultB 20 WETH"
+          ]
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "alice.debt.old",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.collateral.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "oldCreditor.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "bridge.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "feeRecipient.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultA.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultB.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "observation.WETH.priceUSDC",
+            "bound": "1"
+          },
+          {
+            "resource": "observation.maintenance",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.transferDebit.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.newNominalDebt.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.oldDebtRepay.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.collateralMove.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.auth.disbursement.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "work.reserve",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:genesis-loan-A",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "alice.debt.old",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.debt.new",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "oldCreditor.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "bridge.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "feeRecipient.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultA.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultB.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.*remaining",
+            "bound": "4"
+          },
+          {
+            "resource": "newLender.auth.disbursement.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "fee.unconditional.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:refinance-1",
+            "bound": "1"
+          },
+          {
+            "resource": "controller.residual",
+            "bound": "1"
+          },
+          {
+            "resource": "duty.alice.serviceDebt.new",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true,
+          "profile": "finite-explicit-toy",
+          "notRegisteredProductionLimits": true
+        },
+        "resourceCountReads": "18",
+        "resourceCountWrites": "15"
+      },
+      "environmentAssumptions": [
+        "single-domain atomicity assumed for the always collateralization prefix",
+        "WETH price 4000 USDC is an external-truth observation, not a proven fact",
+        "vaultA/vaultB custody is assumed, not proven",
+        "Aave/Morpho names are labels, never a foreign adapter"
+      ],
+      "positiveTraceId": "heldouts:accepted-refinance:trace",
+      "invalidMutationIds": [
+        "heldouts:accepted-refinance:mut:discharge-without-settlement",
+        "heldouts:accepted-refinance:mut:fee-untransferred"
+      ],
+      "ownerPackages": [
+        "MC05",
+        "MC07"
+      ],
+      "closureSprint": "SP08",
+      "closureTask": "SP08 refinance workflow after DA09 primary fixture",
+      "residualAuthority": {
+        "exactOnce": true,
+        "noCopyOnSplit": true,
+        "alice.transferDebit.USDC.remaining": "1000",
+        "alice.newNominalDebt.USDC.remaining": "450",
+        "newLender.disbursement.USDC.remaining": "450",
+        "controller": "loan-B-controller"
+      },
+      "continuationOwner": "new-market controller",
+      "explicitError": "Reject.UnauthorizedDebtDischarge"
+    },
+    {
+      "implementationStatus": "specified-only",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true,
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "boundsAreToyProfile": true,
+      "id": "pending-redemption",
+      "family": "heldouts",
+      "qualifiedId": "heldouts:pending-redemption",
+      "source": [
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA18",
+          "scope": "action target"
+        },
+        {
+          "path": "raw/reports/unified-2026-09-07/intents.md",
+          "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+          "pointer": "Asynchronous vault redemption",
+          "scope": "report lifecycle names"
+        }
+      ],
+      "sourceGap": "ERC-7540 primary text is not re-acquired this pass. Exchange-rate function unknown.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/provenance",
+          "also": [
+            "/traces/1/sourceGap"
+          ],
+          "note": "pin inspected bytes and honest primary-source gaps",
+          "libraryAlso": "/library/oracles/redemption"
+        },
+        {
+          "stage": "canonical-intent",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/canonicalIntent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/concretePlan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/preState",
+          "also": [
+            "/traces/1/postState",
+            "/traces/1/effects",
+            "/traces/1/duties"
+          ],
+          "note": "debt/shares/fees distinct from tokens; full accounts"
+        },
+        {
+          "stage": "assumptions",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/assumptions",
+          "also": [
+            "/traces/1/environmentObservations"
+          ],
+          "note": "external truth, custody, finality named and not proven"
+        },
+        {
+          "stage": "successor",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "traceId": "heldouts:pending-redemption:trace",
+          "pointer": "/traces/1/acceptance",
+          "includesGenesisAndAdmin": true,
+          "claims": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "note": "four mandatory claims apply to complete state/effects/history including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": true,
+          "fields": [
+            "sharesLocked",
+            "sharesBurned",
+            "residualShares",
+            "supply"
+          ]
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "request order fifo-request-id",
+            "orderKey R1"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "requestId R1",
+            "controller alice",
+            "Pending",
+            "Claimable",
+            "Claimed-not-this-successor"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": true,
+          "fields": [
+            "claimable cleared to 0",
+            "residualClaim live 5700"
+          ]
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "claim 3800 USDC vaultLiquid to alice",
+            "lock 100 FundShares"
+          ]
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "alice.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultLiquid.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultDeployed.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "requestEscrow.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "FundShares.supply",
+            "bound": "1"
+          },
+          {
+            "resource": "conversion.95",
+            "bound": "1"
+          },
+          {
+            "resource": "exactOutputGoal.9500",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "work.reserve",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:genesis-vault",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "alice.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultLiquid.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "requestEscrow.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "FundShares.supply",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.status",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.claimable",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.sharesLocked",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.controller",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:redeem-R1-partial-1",
+            "bound": "1"
+          },
+          {
+            "resource": "duty.residual-redeem",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true,
+          "profile": "finite-explicit-toy",
+          "notRegisteredProductionLimits": true
+        },
+        "resourceCountReads": "11",
+        "resourceCountWrites": "12"
+      },
+      "environmentAssumptions": [
+        "vault processing is an assumed bounded environment step",
+        "conversion 95 is a toy exact function, not ERC-7540 primary text",
+        "vaultDeployed 5700 USDC is assumed illiquid custody, not a proven strategy adapter"
+      ],
+      "positiveTraceId": "heldouts:pending-redemption:trace",
+      "invalidMutationIds": [
+        "heldouts:pending-redemption:mut:erase-claim-on-illiquidity",
+        "heldouts:pending-redemption:mut:replay-claim"
+      ],
+      "ownerPackages": [
+        "MC07",
+        "MC05"
+      ],
+      "closureSprint": "SP08",
+      "closureTask": "SP08 DA18 pending redemption after primary ERC-7540 pin",
+      "residualAuthority": {
+        "controller": "alice",
+        "requestId": "R1",
+        "sharesLockedRemaining": "60",
+        "exactRemainingUSDC": "5700"
+      },
+      "continuationOwner": "request controller",
+      "explicitError": "Reject.ClaimErasure"
+    },
+    {
+      "implementationStatus": "specified-only",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true,
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "boundsAreToyProfile": true,
+      "id": "refinance",
+      "family": "intent-cases",
+      "qualifiedId": "intent-cases:refinance",
+      "source": [
+        {
+          "path": "raw/reports/unified-2026-09-07/intents.md",
+          "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+          "pointer": "Atomic lending refinance",
+          "scope": "report"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA09",
+          "scope": "action"
+        }
+      ],
+      "sourceGap": "Aave/Morpho primary sources missing. Names are labels.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/provenance",
+          "also": [
+            "/traces/2/sourceGap"
+          ],
+          "note": "pin inspected bytes and honest primary-source gaps",
+          "libraryAlso": "/library/oracles/refinance"
+        },
+        {
+          "stage": "canonical-intent",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/canonicalIntent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/concretePlan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/preState",
+          "also": [
+            "/traces/2/postState",
+            "/traces/2/effects",
+            "/traces/2/duties"
+          ],
+          "note": "debt/shares/fees distinct from tokens; full accounts"
+        },
+        {
+          "stage": "assumptions",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/assumptions",
+          "also": [
+            "/traces/2/environmentObservations"
+          ],
+          "note": "external truth, custody, finality named and not proven"
+        },
+        {
+          "stage": "successor",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "traceId": "intent-cases:refinance:trace",
+          "pointer": "/traces/2/acceptance",
+          "includesGenesisAndAdmin": true,
+          "claims": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "note": "four mandatory claims apply to complete state/effects/history including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": true,
+          "fields": [
+            "old debt-old-alice",
+            "new debt-new-alice"
+          ]
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": true,
+          "fields": [
+            "50 USDC unconditional T-fee"
+          ]
+        },
+        "ordering": {
+          "applicable": false,
+          "reason": "single successor, no ordering key"
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "accepted-successor",
+            "always prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "repay settlement 50000",
+            "fee 50",
+            "lender disbursement 50050",
+            "collateral move 20 WETH"
+          ]
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "alice.debt.old",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.collateral.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "oldCreditor.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "bridge.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "feeRecipient.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultA.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultB.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "observation.WETH.priceUSDC",
+            "bound": "1"
+          },
+          {
+            "resource": "observation.maintenance",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.transferDebit.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.newNominalDebt.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.oldDebtRepay.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.collateralMove.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.auth.disbursement.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "work.reserve",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:genesis-loan-A",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "alice.debt.old",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.debt.new",
+            "bound": "1"
+          },
+          {
+            "resource": "newLender.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "oldCreditor.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "bridge.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "feeRecipient.balance.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultA.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultB.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.auth.*remaining",
+            "bound": "4"
+          },
+          {
+            "resource": "newLender.auth.disbursement.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "fee.unconditional.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:refinance-1",
+            "bound": "1"
+          },
+          {
+            "resource": "controller.residual",
+            "bound": "1"
+          },
+          {
+            "resource": "duty.alice.serviceDebt.new",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true,
+          "profile": "finite-explicit-toy",
+          "notRegisteredProductionLimits": true
+        },
+        "resourceCountReads": "18",
+        "resourceCountWrites": "15"
+      },
+      "environmentAssumptions": [
+        "design-oracle environment; not a deployed adapter",
+        "Aave.USDC_Debt and Morpho.USDC_Debt are aliases for loan-A and loan-B on the shared refinance oracle"
+      ],
+      "positiveTraceId": "intent-cases:refinance:trace",
+      "invalidMutationIds": [
+        "intent-cases:refinance:mut:temp-uncollateralized",
+        "intent-cases:refinance:mut:new-debt-without-authority"
+      ],
+      "ownerPackages": [
+        "MC05",
+        "MC07"
+      ],
+      "closureSprint": "SP08",
+      "closureTask": "SP08 DA09 refinance after primary fixture",
+      "residualAuthority": {
+        "noRefreshOnCancel": true,
+        "exactOnce": true,
+        "controller": "loan-B-controller",
+        "alice.newNominalDebt.USDC.remaining": "450"
+      },
+      "continuationOwner": "Morpho controller exactly once",
+      "explicitError": "Reject.AlwaysCollateral"
+    },
+    {
+      "implementationStatus": "specified-only",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true,
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "boundsAreToyProfile": true,
+      "id": "pending-redemption",
+      "family": "intent-cases",
+      "qualifiedId": "intent-cases:pending-redemption",
+      "source": [
+        {
+          "path": "raw/reports/unified-2026-09-07/intents.md",
+          "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+          "pointer": "Asynchronous vault redemption",
+          "scope": "report"
+        }
+      ],
+      "sourceGap": "Same ERC-7540 primary gap as heldouts:pending-redemption. Distinct family:id row required.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/provenance",
+          "also": [
+            "/traces/3/sourceGap"
+          ],
+          "note": "pin inspected bytes and honest primary-source gaps",
+          "libraryAlso": "/library/oracles/redemption"
+        },
+        {
+          "stage": "canonical-intent",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/canonicalIntent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/concretePlan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/preState",
+          "also": [
+            "/traces/3/postState",
+            "/traces/3/effects",
+            "/traces/3/duties"
+          ],
+          "note": "debt/shares/fees distinct from tokens; full accounts"
+        },
+        {
+          "stage": "assumptions",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/assumptions",
+          "also": [
+            "/traces/3/environmentObservations"
+          ],
+          "note": "external truth, custody, finality named and not proven"
+        },
+        {
+          "stage": "successor",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "traceId": "intent-cases:pending-redemption:trace",
+          "pointer": "/traces/3/acceptance",
+          "includesGenesisAndAdmin": true,
+          "claims": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "note": "four mandatory claims apply to complete state/effects/history including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": true,
+          "fields": [
+            "locked shares",
+            "burned shares",
+            "residual shares"
+          ]
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "request order fifo-request-id",
+            "orderKey R1"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "request lifecycle Pending/Claimable/Pending-residual"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": true,
+          "fields": [
+            "claimable residual 5700",
+            "claimable posted 0 after claim"
+          ]
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "claim 3800 USDC to alice",
+            "share lock to requestEscrow"
+          ],
+          "reasonIfPriorMapSaidNo": "prior map marked tokens inapplicable; claim payment is a token transfer so this map marks tokens applicable"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "alice.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultLiquid.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultDeployed.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "requestEscrow.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "FundShares.supply",
+            "bound": "1"
+          },
+          {
+            "resource": "conversion.95",
+            "bound": "1"
+          },
+          {
+            "resource": "exactOutputGoal.9500",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "work.reserve",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:genesis-vault",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "alice.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "alice.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "vaultLiquid.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "requestEscrow.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "FundShares.supply",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.status",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.claimable",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.sharesLocked",
+            "bound": "1"
+          },
+          {
+            "resource": "request-R1.controller",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:redeem-R1-partial-1",
+            "bound": "1"
+          },
+          {
+            "resource": "duty.residual-redeem",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true,
+          "profile": "finite-explicit-toy",
+          "notRegisteredProductionLimits": true
+        },
+        "resourceCountReads": "11",
+        "resourceCountWrites": "12"
+      },
+      "environmentAssumptions": [
+        "design-oracle environment; not a deployed adapter",
+        "9500 exact full-redemption goal is retained and is not dropped"
+      ],
+      "positiveTraceId": "intent-cases:pending-redemption:trace",
+      "invalidMutationIds": [
+        "intent-cases:pending-redemption:mut:skip-to-settled",
+        "intent-cases:pending-redemption:mut:drop-exact-floor"
+      ],
+      "ownerPackages": [
+        "MC07",
+        "MC05"
+      ],
+      "closureSprint": "SP08",
+      "closureTask": "SP08 intent pending-redemption shares held-out facts without merging IDs",
+      "residualAuthority": {
+        "noRefreshOnCancel": true,
+        "controller": "alice",
+        "requestId": "R1",
+        "exactRemainingUSDC": "5700"
+      },
+      "continuationOwner": "request controller",
+      "explicitError": "Reject.LifecycleSkip"
+    },
+    {
+      "implementationStatus": "specified-only",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true,
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "boundsAreToyProfile": true,
+      "id": "bad-debt",
+      "family": "DeFi-regressions",
+      "qualifiedId": "DeFi-regressions:bad-debt",
+      "source": [
+        {
+          "path": "raw/reports/unified-2026-09-07/defi.md",
+          "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+          "pointer": "Morpho bad debt",
+          "scope": "report regression class"
+        }
+      ],
+      "sourceGap": "No pinned Morpho vault loss primary beyond the report.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/provenance",
+          "also": [
+            "/traces/4/sourceGap"
+          ],
+          "note": "pin inspected bytes and honest primary-source gaps",
+          "libraryAlso": "/library/oracles/badDebt"
+        },
+        {
+          "stage": "canonical-intent",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/canonicalIntent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/concretePlan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/preState",
+          "also": [
+            "/traces/4/postState",
+            "/traces/4/effects",
+            "/traces/4/duties"
+          ],
+          "note": "debt/shares/fees distinct from tokens; full accounts"
+        },
+        {
+          "stage": "assumptions",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/assumptions",
+          "also": [
+            "/traces/4/environmentObservations"
+          ],
+          "note": "external truth, custody, finality named and not proven"
+        },
+        {
+          "stage": "successor",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "traceId": "DeFi-regressions:bad-debt:trace",
+          "pointer": "/traces/4/acceptance",
+          "includesGenesisAndAdmin": true,
+          "claims": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "note": "four mandatory claims apply to complete state/effects/history including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": true,
+          "fields": [
+            "debt remaining 600",
+            "recovery applied 400",
+            "loss allocated 600"
+          ]
+        },
+        "shares": {
+          "applicable": true,
+          "fields": [
+            "share quantity 100",
+            "shareAsset NAV 400",
+            "shareValue 4"
+          ]
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": false,
+          "reason": "single successor, no ordering key"
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "loss-recognized-with-residual-liability",
+            "debt open-impaired"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim; residual 600 is a debt duty"
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "T-recovery-usdc 400",
+            "T-seize-weth 1"
+          ],
+          "note": "share token quantity stays 100; quantity conservation is not value conservation"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "bob.debt",
+            "bound": "1"
+          },
+          {
+            "resource": "collateralVault.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vault.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "buyer.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "buyer.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "shareholders.FundShares",
+            "bound": "1"
+          },
+          {
+            "resource": "shareholders.NAV",
+            "bound": "1"
+          },
+          {
+            "resource": "observation.WETH.priceUSDC",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "work.reserve",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:genesis-loan-bob",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "bob.debt",
+            "bound": "1"
+          },
+          {
+            "resource": "collateralVault.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "vault.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "buyer.USDC",
+            "bound": "1"
+          },
+          {
+            "resource": "buyer.WETH",
+            "bound": "1"
+          },
+          {
+            "resource": "shareholders.NAV",
+            "bound": "1"
+          },
+          {
+            "resource": "loss-record.allocatedLoss",
+            "bound": "1"
+          },
+          {
+            "resource": "work.lifetime",
+            "bound": "1"
+          },
+          {
+            "resource": "history.hist:bad-debt-1",
+            "bound": "1"
+          },
+          {
+            "resource": "duty.bob.remaining.600",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true,
+          "profile": "finite-explicit-toy",
+          "notRegisteredProductionLimits": true
+        },
+        "resourceCountReads": "11",
+        "resourceCountWrites": "10"
+      },
+      "environmentAssumptions": [
+        "design-oracle; comparative report is not a deployed protocol fact",
+        "WETH price 400 USDC is an external-truth observation, not a proven fact",
+        "buyer is an assumed counterparty, never a Morpho adapter"
+      ],
+      "positiveTraceId": "DeFi-regressions:bad-debt:trace",
+      "invalidMutationIds": [
+        "DeFi-regressions:bad-debt:mut:erase-or-omit-socialized-loss",
+        "DeFi-regressions:bad-debt:mut:discharge-residual-without-auth"
+      ],
+      "ownerPackages": [
+        "MC05",
+        "MC07"
+      ],
+      "closureSprint": "SP08",
+      "closureTask": "SP08 bad-debt socialization",
+      "residualAuthority": {
+        "noRefreshOnMigrate": true,
+        "bob.debt.remaining": "600",
+        "writeOffAuthorization": null
+      },
+      "continuationOwner": "MC07",
+      "explicitError": "Reject.HiddenBadDebt"
+    }
+  ],
+  "traces": [
+    {
+      "id": "heldouts:accepted-refinance:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:accepted-refinance",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "intent-cases:refinance:trace"
+      ],
+      "oracleRef": "/library/oracles/refinance",
+      "sourceGap": "No pinned Aave/Morpho primary definition. Missing primary blocks source-defined refinance behavior.",
+      "canonicalIntent": {
+        "ref": "/library/oracles/refinance/canonicalIntent"
+      },
+      "concretePlan": {
+        "ref": "/library/oracles/refinance/concretePlan"
+      },
+      "preState": {
+        "ref": "/library/oracles/refinance/preState"
+      },
+      "steps": {
+        "ref": "/library/oracles/refinance/steps"
+      },
+      "postState": {
+        "ref": "/library/oracles/refinance/postState"
+      },
+      "effects": {
+        "ref": "/library/oracles/refinance/effects"
+      },
+      "duties": {
+        "ref": "/library/oracles/refinance/duties"
+      },
+      "assumptions": {
+        "ref": "/library/oracles/refinance/assumptions"
+      },
+      "successor": {
+        "ref": "/library/oracles/refinance/successor"
+      },
+      "acceptance": {
+        "ref": "/library/oracles/refinance/acceptance"
+      },
+      "expected": {
+        "ref": "/library/oracles/refinance/expected"
+      },
+      "environmentObservations": {
+        "ref": "/library/oracles/refinance/environmentObservations"
+      },
+      "work": {
+        "ref": "/library/oracles/refinance/postState/work"
+      },
+      "residualAuthority": {
+        "ref": "/library/oracles/refinance/postState/authorities"
+      },
+      "provenance": {
+        "ref": "/library/oracles/refinance/provenance"
+      },
+      "toyAssumptionChanges": {
+        "ref": "/library/oracles/refinance/toyAssumptionChanges"
+      },
+      "limitations": {
+        "ref": "/library/oracles/refinance/limitations"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "heldouts:pending-redemption:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:pending-redemption",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "intent-cases:pending-redemption:trace"
+      ],
+      "oracleRef": "/library/oracles/redemption",
+      "sourceGap": "ERC-7540 primary text is not re-acquired this pass. Exchange-rate function unknown. Toy conversion 95 is documented and is not source-defined.",
+      "canonicalIntent": {
+        "ref": "/library/oracles/redemption/canonicalIntent"
+      },
+      "concretePlan": {
+        "ref": "/library/oracles/redemption/concretePlan"
+      },
+      "preState": {
+        "ref": "/library/oracles/redemption/preState"
+      },
+      "steps": {
+        "ref": "/library/oracles/redemption/steps"
+      },
+      "postState": {
+        "ref": "/library/oracles/redemption/postState"
+      },
+      "effects": {
+        "ref": "/library/oracles/redemption/effects"
+      },
+      "duties": {
+        "ref": "/library/oracles/redemption/duties"
+      },
+      "assumptions": {
+        "ref": "/library/oracles/redemption/assumptions"
+      },
+      "successor": {
+        "ref": "/library/oracles/redemption/successor"
+      },
+      "acceptance": {
+        "ref": "/library/oracles/redemption/acceptance"
+      },
+      "expected": {
+        "ref": "/library/oracles/redemption/expected"
+      },
+      "environmentObservations": {
+        "ref": "/library/oracles/redemption/environmentObservations"
+      },
+      "work": {
+        "ref": "/library/oracles/redemption/postState/work"
+      },
+      "residualAuthority": {
+        "ref": "/library/oracles/redemption/postState/authorities"
+      },
+      "provenance": {
+        "ref": "/library/oracles/redemption/provenance"
+      },
+      "toyAssumptionChanges": {
+        "ref": "/library/oracles/redemption/toyAssumptionChanges"
+      },
+      "limitations": {
+        "ref": "/library/oracles/redemption/limitations"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:refinance:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:refinance",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "heldouts:accepted-refinance:trace"
+      ],
+      "oracleRef": "/library/oracles/refinance",
+      "sourceGap": "Aave/Morpho primary sources missing. Names are labels. Shared numeric facts are identical with heldouts:accepted-refinance:trace.",
+      "canonicalIntent": {
+        "ref": "/library/oracles/refinance/canonicalIntent"
+      },
+      "concretePlan": {
+        "ref": "/library/oracles/refinance/concretePlan"
+      },
+      "preState": {
+        "ref": "/library/oracles/refinance/preState"
+      },
+      "steps": {
+        "ref": "/library/oracles/refinance/steps"
+      },
+      "postState": {
+        "ref": "/library/oracles/refinance/postState"
+      },
+      "effects": {
+        "ref": "/library/oracles/refinance/effects"
+      },
+      "duties": {
+        "ref": "/library/oracles/refinance/duties"
+      },
+      "assumptions": {
+        "ref": "/library/oracles/refinance/assumptions"
+      },
+      "successor": {
+        "ref": "/library/oracles/refinance/successor"
+      },
+      "acceptance": {
+        "ref": "/library/oracles/refinance/acceptance"
+      },
+      "expected": {
+        "ref": "/library/oracles/refinance/expected"
+      },
+      "environmentObservations": {
+        "ref": "/library/oracles/refinance/environmentObservations"
+      },
+      "work": {
+        "ref": "/library/oracles/refinance/postState/work"
+      },
+      "residualAuthority": {
+        "ref": "/library/oracles/refinance/postState/authorities"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Atomic lending refinance",
+        "scope": "design oracle; Aave/Morpho names are labels, not pinned deployments",
+        "also": {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA09"
+        }
+      },
+      "toyAssumptionChanges": {
+        "ref": "/library/oracles/refinance/toyAssumptionChanges"
+      },
+      "limitations": {
+        "ref": "/library/oracles/refinance/limitations"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:pending-redemption:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:pending-redemption",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "heldouts:pending-redemption:trace"
+      ],
+      "oracleRef": "/library/oracles/redemption",
+      "sourceGap": "Same ERC-7540 primary gap as heldouts:pending-redemption. Distinct family:id row required. 9500 exact goal is retained, not dropped.",
+      "canonicalIntent": {
+        "ref": "/library/oracles/redemption/canonicalIntent"
+      },
+      "concretePlan": {
+        "ref": "/library/oracles/redemption/concretePlan"
+      },
+      "preState": {
+        "ref": "/library/oracles/redemption/preState"
+      },
+      "steps": {
+        "ref": "/library/oracles/redemption/steps"
+      },
+      "postState": {
+        "ref": "/library/oracles/redemption/postState"
+      },
+      "effects": {
+        "ref": "/library/oracles/redemption/effects"
+      },
+      "duties": {
+        "ref": "/library/oracles/redemption/duties"
+      },
+      "assumptions": {
+        "ref": "/library/oracles/redemption/assumptions"
+      },
+      "successor": {
+        "ref": "/library/oracles/redemption/successor"
+      },
+      "acceptance": {
+        "ref": "/library/oracles/redemption/acceptance"
+      },
+      "expected": {
+        "ref": "/library/oracles/redemption/expected"
+      },
+      "environmentObservations": {
+        "ref": "/library/oracles/redemption/environmentObservations"
+      },
+      "work": {
+        "ref": "/library/oracles/redemption/postState/work"
+      },
+      "residualAuthority": {
+        "ref": "/library/oracles/redemption/postState/authorities"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Asynchronous vault redemption",
+        "scope": "design oracle wrapping ERC-7540 lifecycle names; 9500 exact goal retained"
+      },
+      "toyAssumptionChanges": {
+        "ref": "/library/oracles/redemption/toyAssumptionChanges"
+      },
+      "limitations": {
+        "ref": "/library/oracles/redemption/limitations"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "DeFi-regressions:bad-debt:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:bad-debt",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [],
+      "oracleRef": "/library/oracles/badDebt",
+      "sourceGap": "No pinned Morpho vault loss primary beyond the report.",
+      "canonicalIntent": {
+        "ref": "/library/oracles/badDebt/canonicalIntent"
+      },
+      "concretePlan": {
+        "ref": "/library/oracles/badDebt/concretePlan"
+      },
+      "preState": {
+        "ref": "/library/oracles/badDebt/preState"
+      },
+      "steps": {
+        "ref": "/library/oracles/badDebt/steps"
+      },
+      "postState": {
+        "ref": "/library/oracles/badDebt/postState"
+      },
+      "effects": {
+        "ref": "/library/oracles/badDebt/effects"
+      },
+      "duties": {
+        "ref": "/library/oracles/badDebt/duties"
+      },
+      "assumptions": {
+        "ref": "/library/oracles/badDebt/assumptions"
+      },
+      "successor": {
+        "ref": "/library/oracles/badDebt/successor"
+      },
+      "acceptance": {
+        "ref": "/library/oracles/badDebt/acceptance"
+      },
+      "expected": {
+        "ref": "/library/oracles/badDebt/expected"
+      },
+      "environmentObservations": {
+        "ref": "/library/oracles/badDebt/environmentObservations"
+      },
+      "work": {
+        "ref": "/library/oracles/badDebt/postState/work"
+      },
+      "residualAuthority": {
+        "ref": "/library/oracles/badDebt/postState/authorities"
+      },
+      "provenance": {
+        "ref": "/library/oracles/badDebt/provenance"
+      },
+      "toyAssumptionChanges": {
+        "ref": "/library/oracles/badDebt/toyAssumptionChanges"
+      },
+      "limitations": {
+        "ref": "/library/oracles/badDebt/limitations"
+      },
+      "notExecutedByLanguageRuntime": true
+    }
+  ],
+  "mutations": [
+    {
+      "id": "heldouts:accepted-refinance:mut:discharge-without-settlement",
+      "boundRow": "heldouts:accepted-refinance",
+      "traceId": "heldouts:accepted-refinance:trace",
+      "validPrefix": {
+        "throughStep": "1",
+        "satisfies": [
+          "authorizations from step 0",
+          "newLender to bridge 50050 USDC has occurred",
+          "old debt still 50000",
+          "no T-repay-old yet",
+          "WETH still 20 in vaultA",
+          "hash/id assumptions of hist:genesis-loan-A unchanged"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedNominal": [
+          {
+            "object": "debt-old-alice",
+            "field": "principal",
+            "from": "50000",
+            "to": "0",
+            "kind": "debt-discharge-without-settlement",
+            "notTokenTransfer": true
+          }
+        ],
+        "missingTransfers": [
+          "T-repay-old 50000 USDC bridge to oldCreditor"
+        ],
+        "authorizationsPresent": [
+          "alice.oldDebtRepay.USDC original 50000"
+        ],
+        "settlementEffectPresent": false
+      },
+      "rejectionPredicate": {
+        "code": "Reject.UnauthorizedDebtDischarge",
+        "stage": "TransitionValidity",
+        "rule": "old debt discharges only when authorized token transfer of 50000 USDC reaches oldCreditor and the matching nominal write is applied",
+        "checks": [
+          "no USDC transfer of amount 50000 to oldCreditor in the mutated step",
+          "nominal principal write to 0 therefore has no settlement effect"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "preState of the atomic successor",
+        "reason": "whole successor rejects; step 1 funding also reverts with the atomic boundary",
+        "accounts": "alice USDC 0, newLender USDC 100000, oldCreditor USDC 200000, feeRecipient USDC 0, bridge USDC 0, vaultA WETH 20",
+        "debts": "debt-old-alice total 50000",
+        "exceptFees": "no fee charged"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "heldouts:accepted-refinance:mut:fee-untransferred",
+      "boundRow": "heldouts:accepted-refinance",
+      "traceId": "heldouts:accepted-refinance:trace",
+      "validPrefix": {
+        "throughStep": "1",
+        "satisfies": [
+          "funding 50050 in bridge",
+          "old debt 50000",
+          "same authorities as positive trace"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedTransfers": [
+          {
+            "from": "bridge",
+            "to": "oldCreditor",
+            "asset": "USDC",
+            "amount": "50000",
+            "unit": "USDC",
+            "scale": "1",
+            "kind": "token-transfer"
+          }
+        ],
+        "attemptedNominal": [
+          {
+            "object": "debt-old-alice",
+            "field": "total",
+            "from": "50000",
+            "to": "0",
+            "kind": "debt-discharge-by-settlement",
+            "notTokenTransfer": true
+          },
+          {
+            "object": "debt-new-alice",
+            "field": "total",
+            "from": "0",
+            "to": "50050",
+            "kind": "debt-create",
+            "notTokenTransfer": true
+          }
+        ],
+        "missingTransfers": [
+          "T-fee 50 USDC bridge to feeRecipient"
+        ],
+        "feeConditional": true
+      },
+      "rejectionPredicate": {
+        "code": "Reject.UnconditionalFeeUnpaid",
+        "stage": "TransitionValidity",
+        "rule": "financed fee 50 USDC must be an unconditional token transfer to feeRecipient; new debt 50050 may not be created while T-fee is omitted",
+        "checks": [
+          "bridge receives 50050",
+          "only 50000 leaves to oldCreditor in the mutated context",
+          "feeRecipient remains 0",
+          "new debt 50050 would include a financed fee that was not transferred"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "preState of the atomic successor",
+        "accounts": "feeRecipient USDC 0, newLender USDC 100000, old debt 50000",
+        "exceptFees": "no fee charged"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:refinance:mut:temp-uncollateralized",
+      "boundRow": "intent-cases:refinance",
+      "traceId": "intent-cases:refinance:trace",
+      "validPrefix": {
+        "throughStep": "1",
+        "satisfies": [
+          "old debt still 50000",
+          "collateral 20 WETH in vaultA",
+          "price 4000",
+          "required 75000",
+          "funding in bridge"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedTransfers": [
+          {
+            "from": "vaultA",
+            "to": "alice",
+            "asset": "WETH",
+            "amount": "20",
+            "unit": "WETH",
+            "scale": "1",
+            "kind": "token-transfer"
+          }
+        ],
+        "note": "release all collateral while old debt is still outstanding, then a later recollateralize is proposed",
+        "laterRecollateralize": {
+          "from": "alice",
+          "to": "vaultB",
+          "asset": "WETH",
+          "amount": "20",
+          "unit": "WETH",
+          "scale": "1",
+          "kind": "token-transfer"
+        },
+        "observablePrefixAfterRelease": {
+          "debtValueUSDC": "50000",
+          "collateralValueUSDC": "0",
+          "requiredUSDC": "75000",
+          "holds": false
+        }
+      },
+      "rejectionPredicate": {
+        "code": "Reject.AlwaysCollateral",
+        "stage": "TransitionValidity",
+        "rule": "observable prefixes must keep collateralValueUSDC >= (3/2)*debtValueUSDC",
+        "checks": [
+          "after the mutated release, debt 50000 and collateral 0",
+          "0 >= 75000 is false",
+          "later recollateralize does not repair an already observable violation"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "preState of the atomic successor",
+        "accounts": "vaultA WETH 20, alice WETH 0, debt-old-alice 50000",
+        "exceptFees": "no fee charged"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:refinance:mut:new-debt-without-authority",
+      "boundRow": "intent-cases:refinance",
+      "traceId": "intent-cases:refinance:trace",
+      "validPrefix": {
+        "throughStep": "2",
+        "satisfies": [
+          "T-repay-old 50000 occurred in the positive prefix arithmetic",
+          "T-fee 50 occurred",
+          "old debt 0",
+          "collateral still vaultA",
+          "alice.newNominalDebt.USDC is present in the positive trace but this mutation deletes it"
+        ],
+        "note": "prefix uses the same transfers and amounts as the positive oracle through step 2"
+      },
+      "mutatedContext": {
+        "removedAuthorization": "alice.newNominalDebt.USDC",
+        "attemptedNominal": [
+          {
+            "object": "debt-new-alice",
+            "field": "total",
+            "from": "0",
+            "to": "50050",
+            "kind": "debt-create",
+            "notTokenTransfer": true
+          }
+        ],
+        "phantomAuthorization": false
+      },
+      "rejectionPredicate": {
+        "code": "Reject.UnauthorizedNewDebt",
+        "stage": "TransitionValidity",
+        "rule": "new nominal debt 50050 requires alice.newNominalDebt.USDC; transfer funding is not debt-create authority",
+        "checks": [
+          "disbursement 50050 is token-transfer authority of newLender",
+          "alice.transferDebit.USDC remaining 1000 is a different domain and is not 50050",
+          "no remaining newNominalDebt authorization in the mutated context"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "preState of the atomic successor",
+        "reason": "atomic reject rolls back prefix transfers including fee",
+        "exceptFees": "no fee charged"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "heldouts:pending-redemption:mut:erase-claim-on-illiquidity",
+      "boundRow": "heldouts:pending-redemption",
+      "traceId": "heldouts:pending-redemption:trace",
+      "validPrefix": {
+        "throughStep": "0",
+        "satisfies": [
+          "R1 exists",
+          "controller alice",
+          "100 FundShares locked in requestEscrow",
+          "exactOutputGoal 9500",
+          "vaultLiquid 3800",
+          "vaultDeployed 5700"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedNominal": [
+          {
+            "object": "requestEscrow.FundShares",
+            "field": "amount",
+            "from": "100",
+            "to": "0",
+            "kind": "burn-all",
+            "notTokenTransfer": true
+          },
+          {
+            "object": "FundShares.supply",
+            "field": "supply",
+            "from": "100",
+            "to": "0",
+            "kind": "burn-all",
+            "notTokenTransfer": true
+          },
+          {
+            "object": "request-R1",
+            "field": "status",
+            "from": "Pending",
+            "to": "absent",
+            "kind": "erase-request",
+            "notTokenTransfer": true
+          }
+        ],
+        "missingTransfers": [
+          "any USDC to alice"
+        ],
+        "missingResidualRequest": true,
+        "liquidity": "3800 USDC covers 40 shares not 100"
+      },
+      "rejectionPredicate": {
+        "code": "Reject.ClaimErasure",
+        "stage": "TransitionValidity",
+        "rule": "insufficient liquidity cannot erase the redeem claim; residual shares and exact remaining must remain",
+        "checks": [
+          "mutated context burns 100 shares",
+          "records neither 3800 USDC nor residual 60 shares / 5700 USDC",
+          "request R1 deleted"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "state after step 0",
+        "accounts": "requestEscrow FundShares 100, alice FundShares 0, alice USDC 0, vaultLiquid 3800",
+        "request": "R1 Pending controller alice exactOutputGoal 9500",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "heldouts:pending-redemption:mut:replay-claim",
+      "boundRow": "heldouts:pending-redemption",
+      "traceId": "heldouts:pending-redemption:trace",
+      "validPrefix": {
+        "throughStep": "3",
+        "laterContext": true,
+        "satisfies": [
+          "positive postState",
+          "claimable 0",
+          "sharesLocked 60",
+          "assetsClaimed 3800",
+          "remainingExact 5700",
+          "controller alice",
+          "requestId R1",
+          "conversion 95"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedTransfers": [
+          {
+            "from": "vaultLiquid",
+            "to": "alice",
+            "asset": "USDC",
+            "amount": "3800",
+            "unit": "USDC",
+            "scale": "1",
+            "kind": "token-transfer"
+          }
+        ],
+        "attemptedNominal": [
+          {
+            "object": "request-R1",
+            "field": "assetsClaimedUSDC",
+            "from": "3800",
+            "to": "7600",
+            "kind": "second-claim",
+            "notTokenTransfer": true
+          }
+        ],
+        "claimableAtContext": "0",
+        "vaultLiquidAtContext": "0",
+        "unfunded": true
+      },
+      "rejectionPredicate": {
+        "code": "Reject.ReplayClaim",
+        "stage": "TransitionValidity",
+        "rule": "a second claim against R1 is rejected when claimable is 0; prior claim arithmetic remains",
+        "checks": [
+          "claimable 0",
+          "vaultLiquid 0 cannot fund 3800",
+          "no new claimable-set step after the first claim"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "positive postState unchanged",
+        "accounts": "alice USDC 3800, vaultLiquid 0, requestEscrow FundShares 60",
+        "request": "R1 Pending claimable 0 remainingExact 5700",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:pending-redemption:mut:skip-to-settled",
+      "boundRow": "intent-cases:pending-redemption",
+      "traceId": "intent-cases:pending-redemption:trace",
+      "validPrefix": {
+        "throughStep": "0",
+        "satisfies": [
+          "R1 Pending",
+          "100 shares locked",
+          "exactOutputGoal 9500",
+          "no Claimable prefix yet"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedStatusJump": {
+          "from": "Pending",
+          "to": "Settled",
+          "skipped": [
+            "Claimable",
+            "Claimed"
+          ]
+        },
+        "attemptedNominal": [
+          {
+            "object": "request-R1",
+            "field": "status",
+            "from": "Pending",
+            "to": "Settled",
+            "kind": "lifecycle-skip",
+            "notTokenTransfer": true
+          }
+        ],
+        "sharesStill100": true,
+        "noBurn": true,
+        "noUSDCTransfer": true
+      },
+      "rejectionPredicate": {
+        "code": "Reject.LifecycleSkip",
+        "stage": "TransitionValidity",
+        "rule": "request status must follow Pending then Claimable then Claimed; Settled is not a skip target from Pending",
+        "checks": [
+          "mutated status Settled",
+          "Claimable prefix absent",
+          "no 40-share conversion or 3800 transfer",
+          "100 shares remain locked so arithmetic of the open request still holds"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "state after step 0",
+        "request": "R1 Pending controller alice sharesLocked 100 exactOutputGoal 9500",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "intent-cases:pending-redemption:mut:drop-exact-floor",
+      "boundRow": "intent-cases:pending-redemption",
+      "traceId": "intent-cases:pending-redemption:trace",
+      "validPrefix": {
+        "throughStep": "2",
+        "satisfies": [
+          "40 shares burned",
+          "3800 USDC paid",
+          "claimable 0",
+          "60 shares locked",
+          "exact remaining must be 5700",
+          "full goal 9500"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedNominal": [
+          {
+            "object": "request-R1",
+            "field": "exactOutputGoalUSDC",
+            "from": "9500",
+            "to": "3800",
+            "kind": "drop-floor",
+            "notTokenTransfer": true
+          },
+          {
+            "object": "request-R1",
+            "field": "assetsRemainingExactUSDC",
+            "from": "5700",
+            "to": "0",
+            "kind": "drop-residual-exact",
+            "notTokenTransfer": true
+          },
+          {
+            "object": "request-R1",
+            "field": "status",
+            "from": "Pending",
+            "to": "Claimed",
+            "kind": "treat-partial-as-full",
+            "notTokenTransfer": true
+          }
+        ],
+        "droppedFloor": "9500",
+        "treatedPartialAsFull": true
+      },
+      "rejectionPredicate": {
+        "code": "Reject.ExactOutputDropped",
+        "stage": "IntentRefinement",
+        "rule": "partial fill 3800 does not satisfy exact full-redemption equality 9500; residual exact 5700 must remain",
+        "checks": [
+          "3800 == 9500 is false",
+          "60*95=5700 remaining would be deleted",
+          "minReceive inequality is not this intent"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "positive postState / prefix through step 2-3",
+        "request": "R1 Pending remainingExact 5700 goal 9500",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "DeFi-regressions:bad-debt:mut:erase-or-omit-socialized-loss",
+      "boundRow": "DeFi-regressions:bad-debt",
+      "traceId": "DeFi-regressions:bad-debt:trace",
+      "validPrefix": {
+        "throughStep": "0",
+        "satisfies": [
+          "debt 1000",
+          "collateral 1 WETH value 400",
+          "shareAsset 1000",
+          "shares 100",
+          "price observation 400"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedPostState": {
+          "debt": "0",
+          "shareAsset": "1000",
+          "allocatedLoss": null,
+          "recoveryTransfers": []
+        },
+        "omittedLossRecord": true,
+        "omittedRecoverySale": true,
+        "erasedDebtWithoutSettlement": true
+      },
+      "rejectionPredicate": {
+        "code": "Reject.HiddenBadDebt",
+        "stage": "ContractInvariant",
+        "rule": "residual loss must be explicit; no erasure of 1000 to 0 without recovery plus authorized write-off; no omitted 600 loss record; shareAsset may not stay 1000 after an unrecoverable 600",
+        "checks": [
+          "mutated debt 0 with no T-recovery-usdc and no write-off authorization",
+          "mutated shareAsset 1000 omits 600 loss",
+          "positive oracle requires recovery 400 funded, remaining debt 600, allocated loss 600, NAV 400"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "preState",
+        "debts": "bob 1000",
+        "shares": "NAV 1000 quantity 100",
+        "tokens": "buyer USDC 400, collateralVault WETH 1",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    },
+    {
+      "id": "DeFi-regressions:bad-debt:mut:discharge-residual-without-auth",
+      "boundRow": "DeFi-regressions:bad-debt",
+      "traceId": "DeFi-regressions:bad-debt:trace",
+      "validPrefix": {
+        "throughStep": "3",
+        "laterContext": true,
+        "satisfies": [
+          "recovery 400 funded",
+          "NAV 400",
+          "allocatedLoss 600",
+          "debt remaining 600",
+          "share quantity 100",
+          "no writeOffAuthorization"
+        ]
+      },
+      "mutatedContext": {
+        "attemptedNominal": [
+          {
+            "object": "debt-bob",
+            "field": "total",
+            "from": "600",
+            "to": "0",
+            "kind": "write-off",
+            "notTokenTransfer": true
+          }
+        ],
+        "writeOffAuthorizationPresent": false,
+        "lossAlreadyAllocated": true,
+        "note": "loss allocation already recorded is not discharge authority"
+      },
+      "rejectionPredicate": {
+        "code": "Reject.UnauthorizedDebtDischarge",
+        "stage": "TransitionValidity",
+        "rule": "remaining 600 discharges only with explicit write-off authorization or settlement; allocated loss is a distinct NAV write",
+        "checks": [
+          "no write-off authorization in postState",
+          "no additional 600 USDC settlement to vault from bob",
+          "allocatedLoss 600 already present and must stay distinct"
+        ],
+        "notRuntimeExecuted": true
+      },
+      "expectedStatus": "reject",
+      "unchangedFinancialState": {
+        "result": "positive postState unchanged",
+        "debts": "bob 600 open-impaired",
+        "shares": "NAV 400 shareValue 4 quantity 100",
+        "exceptFees": "no fee in this oracle"
+      },
+      "fees": {
+        "charged": false,
+        "reason": "atomic successor rejects before fee transfer"
+      },
+      "notExecutedByLanguageRuntime": true
+    }
+  ],
+  "verification": [
+    {
+      "id": "ver:rf:newDebt",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "oldDebt": "50000",
+        "fee": "50"
+      },
+      "expression": "int(oldDebt)+int(fee)",
+      "expected": "50050",
+      "command": "python3 -c 'print(50000+50)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "50050",
+      "match": true
+    },
+    {
+      "id": "ver:rf:newDebtLeCap",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "newDebt": "50050",
+        "cap": "50500"
+      },
+      "expression": "int(newDebt)<=int(cap)",
+      "expected": "True",
+      "command": "python3 -c 'print(50050<=50500)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:rf:collatValue",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "weth": "20",
+        "price": "4000"
+      },
+      "expression": "int(weth)*int(price)",
+      "expected": "80000",
+      "command": "python3 -c 'print(20*4000)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "80000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:reqOld",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "debt": "50000"
+      },
+      "expression": "int(debt)*3//2",
+      "expected": "75000",
+      "command": "python3 -c 'print(50000*3//2)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "75000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:reqNew",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "debt": "50050"
+      },
+      "expression": "int(debt)*3//2",
+      "expected": "75075",
+      "command": "python3 -c 'print(50050*3//2)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "75075",
+      "match": true
+    },
+    {
+      "id": "ver:rf:prefixOld",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "collat": "80000",
+        "req": "75000"
+      },
+      "expression": "int(collat)>=int(req)",
+      "expected": "True",
+      "command": "python3 -c 'print(80000>=75000)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:rf:prefixNew",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "collat": "80000",
+        "req": "75075"
+      },
+      "expression": "int(collat)>=int(req)",
+      "expected": "True",
+      "command": "python3 -c 'print(80000>=75075)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:rf:lenderPost",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "pre": "100000",
+        "disburse": "50050"
+      },
+      "expression": "int(pre)-int(disburse)",
+      "expected": "49950",
+      "command": "python3 -c 'print(100000-50050)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "49950",
+      "match": true
+    },
+    {
+      "id": "ver:rf:creditorPost",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "pre": "200000",
+        "repay": "50000"
+      },
+      "expression": "int(pre)+int(repay)",
+      "expected": "250000",
+      "command": "python3 -c 'print(200000+50000)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "250000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:bridgePost",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "disburse": "50050",
+        "repay": "50000",
+        "fee": "50"
+      },
+      "expression": "int(disburse)-int(repay)-int(fee)",
+      "expected": "0",
+      "command": "python3 -c 'print(50050-50000-50)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "0",
+      "match": true
+    },
+    {
+      "id": "ver:rf:usdcCons",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "0+100000+200000+0+0",
+      "expected": "300000",
+      "command": "python3 -c 'print(0+100000+200000+0+0)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "300000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:usdcConsPost",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "0+49950+250000+50+0",
+      "expected": "300000",
+      "command": "python3 -c 'print(0+49950+250000+50+0)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "300000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:work",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "12+20+16+12",
+      "expected": "60",
+      "command": "python3 -c 'print(12+20+16+12)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "60",
+      "match": true
+    },
+    {
+      "id": "ver:rf:workRemain",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "1024-60",
+      "expected": "964",
+      "command": "python3 -c 'print(1024-60)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "964",
+      "match": true
+    },
+    {
+      "id": "ver:rf:workCons",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "60+964",
+      "expected": "1024",
+      "command": "python3 -c 'print(60+964)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "1024",
+      "match": true
+    },
+    {
+      "id": "ver:rf:debtIncIndependent",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "newDebt": "50050",
+        "oldDebt": "50000"
+      },
+      "expression": "int(newDebt)-int(oldDebt)",
+      "expected": "50",
+      "command": "python3 -c 'print(50050-50000)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "50",
+      "match": true
+    },
+    {
+      "id": "ver:rf:authRemain",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "cap": "50500",
+        "used": "50050"
+      },
+      "expression": "int(cap)-int(used)",
+      "expected": "450",
+      "command": "python3 -c 'print(50500-50050)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "450",
+      "match": true
+    },
+    {
+      "id": "ver:rd:goal",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "shares": "100",
+        "rate": "95"
+      },
+      "expression": "int(shares)*int(rate)",
+      "expected": "9500",
+      "command": "python3 -c 'print(100*95)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "9500",
+      "match": true
+    },
+    {
+      "id": "ver:rd:fill",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "filledShares": "40",
+        "rate": "95"
+      },
+      "expression": "int(filledShares)*int(rate)",
+      "expected": "3800",
+      "command": "python3 -c 'print(40*95)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "3800",
+      "match": true
+    },
+    {
+      "id": "ver:rd:resid",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "residShares": "60",
+        "rate": "95"
+      },
+      "expression": "int(residShares)*int(rate)",
+      "expected": "5700",
+      "command": "python3 -c 'print(60*95)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "5700",
+      "match": true
+    },
+    {
+      "id": "ver:rd:net",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "claimed": "3800",
+        "remaining": "5700",
+        "goal": "9500"
+      },
+      "expression": "int(claimed)+int(remaining)==int(goal)",
+      "expected": "True",
+      "command": "python3 -c 'print(3800+5700==9500)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:rd:nav",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "3800+5700",
+      "expected": "9500",
+      "command": "python3 -c 'print(3800+5700)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "9500",
+      "match": true
+    },
+    {
+      "id": "ver:rd:work",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "10+14+18+8",
+      "expected": "50",
+      "command": "python3 -c 'print(10+14+18+8)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "50",
+      "match": true
+    },
+    {
+      "id": "ver:rd:workRemain",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "1024-50",
+      "expected": "974",
+      "command": "python3 -c 'print(1024-50)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "974",
+      "match": true
+    },
+    {
+      "id": "ver:rd:supply",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "100-40",
+      "expected": "60",
+      "command": "python3 -c 'print(100-40)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "60",
+      "match": true
+    },
+    {
+      "id": "ver:bd:remain",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "debt": "1000",
+        "recovery": "400"
+      },
+      "expression": "int(debt)-int(recovery)",
+      "expected": "600",
+      "command": "python3 -c 'print(1000-400)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "600",
+      "match": true
+    },
+    {
+      "id": "ver:bd:shareValPre",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "nav": "1000",
+        "shares": "100"
+      },
+      "expression": "int(nav)//int(shares)",
+      "expected": "10",
+      "command": "python3 -c 'print(1000//100)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "10",
+      "match": true
+    },
+    {
+      "id": "ver:bd:shareValPost",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "nav": "400",
+        "shares": "100"
+      },
+      "expression": "int(nav)//int(shares)",
+      "expected": "4",
+      "command": "python3 -c 'print(400//100)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "4",
+      "match": true
+    },
+    {
+      "id": "ver:bd:work",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "8+20+12+16",
+      "expected": "56",
+      "command": "python3 -c 'print(8+20+12+16)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "56",
+      "match": true
+    },
+    {
+      "id": "ver:bd:workRemain",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "1024-56",
+      "expected": "968",
+      "command": "python3 -c 'print(1024-56)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "968",
+      "match": true
+    },
+    {
+      "id": "ver:bd:notZero",
+      "method": "python-stdlib-int",
+      "inputs": {
+        "remaining": "600"
+      },
+      "expression": "int(remaining)!=0",
+      "expected": "True",
+      "command": "python3 -c 'print(600!=0)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:bd:split",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "400+600",
+      "expected": "1000",
+      "command": "python3 -c 'print(400+600)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "1000",
+      "match": true
+    },
+    {
+      "id": "ver:rf:perAction",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "max(12,20,16,12)<=64",
+      "expected": "True",
+      "command": "python3 -c 'print(max(12,20,16,12)<=64)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "True",
+      "match": true
+    },
+    {
+      "id": "ver:mut:uncollat",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "0>=75000",
+      "expected": "False",
+      "command": "python3 -c 'print(0>=75000)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "False",
+      "match": true
+    },
+    {
+      "id": "ver:mut:partialNeFull",
+      "method": "python-stdlib-int",
+      "inputs": {},
+      "expression": "3800==9500",
+      "expected": "False",
+      "command": "python3 -c 'print(3800==9500)'",
+      "evaluator": "python3 stdlib; not Moriarty evaluator",
+      "observed": "False",
+      "match": true
+    }
+  ],
+  "remainingGaps": [
+    {
+      "id": "gap:aave-morpho-primary",
+      "statement": "Aave and Morpho primary texts are not pinned. Refinance numbers are a toy oracle."
+    },
+    {
+      "id": "gap:erc7540-primary",
+      "statement": "ERC-7540 primary text is not re-acquired. Conversion 95 is a toy choice that retains a 9500 exact total goal."
+    },
+    {
+      "id": "gap:morpho-bad-debt-primary",
+      "statement": "No pinned Morpho vault-loss primary beyond the comparative report."
+    },
+    {
+      "id": "gap:runtime",
+      "statement": "These design predicates are not executed by a Moriarty language runtime."
+    },
+    {
+      "id": "gap:review",
+      "statement": "Status stays specified-only pending independent GPT-6 Astra review. No RP01, sprint-complete, implementation, or proof claim."
+    }
+  ],
+  "findingsAddressed": [
+    "R01",
+    "R02",
+    "R03",
+    "R06",
+    "R10"
+  ],
+  "ownedPackages": [
+    "MC05",
+    "MC07"
+  ],
+  "closureSprint": "SP08"
+}

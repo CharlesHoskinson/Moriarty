@@ -1,0 +1,1830 @@
+{
+  "scope": "Specified-only bounded financial oracle correction. Full corpus inventory remains protected outside owned fragment.",
+  "group": "composition",
+  "rows": [
+    {
+      "id": "NAM19-capitalization",
+      "family": "heldouts",
+      "qualifiedId": "heldouts:NAM19-capitalization",
+      "source": [
+        {
+          "path": "repos/actusfrf/actus-tests/tests/actus-tests-nam.json",
+          "sha256": "bfc39c7a344b1243ce15accb9800837b3d87a050ffa435395595e4bf559e4a9b",
+          "pointer": "nam19",
+          "scope": "upstream NAM19 capitalization vector"
+        }
+      ],
+      "sourceGap": "Normalization/rounding from upstream decimals to bounded micro-units is not frozen. Remaining NAM events after IPCI are pinned but not independently re-derived.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "pin inspected bytes and gaps"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "hard constraints only; soft ranking excluded from acceptance"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "exact effects, duties, observations"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "debt/shares/fees distinct from tokens"
+        },
+        {
+          "stage": "assumptions",
+          "note": "external truth, custody, finality named"
+        },
+        {
+          "stage": "successor",
+          "note": "one current successor; work and authority partitioned not refreshed"
+        },
+        {
+          "stage": "acceptance",
+          "note": "ContractInvariant, IntentRefinement, TransitionValidity, HistoryCompliance including genesis/admin"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": true,
+          "fields": [
+            "notionalPrincipal",
+            "accruedInterest",
+            "nominalInterestRate"
+          ]
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "NAM19 capitalization prefix has no fee event"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "same-timestamp IPCI then RR"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "eventType",
+            "eventDate"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "no cross-domain message"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": true,
+          "fields": [
+            "payoff"
+          ],
+          "note": "IPCI payoff is 0 while debt rises"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "NAM19-state",
+            "bound": "1"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "NAM19-state",
+            "bound": "1"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "A365 day count as named in terms",
+        "LIBOR_USD observations as fixture dataObserved",
+        "no micro-unit normalization"
+      ],
+      "positiveTraceId": "heldouts:NAM19-capitalization:trace",
+      "invalidMutationIds": [
+        "heldouts:NAM19-capitalization:mut:erase-nominal-on-ipci",
+        "heldouts:NAM19-capitalization:mut:reorder-ipci-rr"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC07",
+        "MC01"
+      ],
+      "closureSprint": "SP07",
+      "closureTask": "SP07 ACTUS vector execution for NAM after SP01.3 rounding decision",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "partition": "no copy on split",
+        "debt": "survives work exhaustion"
+      },
+      "continuationOwner": "MC07",
+      "explicitError": "Reject.NominalDebtErasure",
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ],
+      "signingDisplayObligationOwner": "SP01.3",
+      "semanticFreezeOwner": "SP01.3",
+      "notSemanticFreeze": true,
+      "notImplementation": true,
+      "notMechanizedProof": true,
+      "notConformance": true
+    },
+    {
+      "id": "sequential",
+      "family": "composition",
+      "qualifiedId": "composition:sequential",
+      "source": [
+        {
+          "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+          "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+          "pointer": "RP01 five composition operators",
+          "scope": "required operator set"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+          "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+          "pointer": "Obligations and workflows",
+          "scope": "proposal only"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA24",
+          "scope": "action target specified-only"
+        }
+      ],
+      "sourceGap": "Exact surface spellings remain SP01.3. A proof split/join does not establish this operator.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "RP01 operator name"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "operator-specific authority and history contract"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "consumed and produced histories"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "conflict and obligation rules"
+        },
+        {
+          "stage": "assumptions",
+          "note": "single domain, finite steps"
+        },
+        {
+          "stage": "successor",
+          "note": "operator-specific unique successor"
+        },
+        {
+          "stage": "acceptance",
+          "note": "four mandatory claims still required"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "history order"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "operator prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "only async messaging uses messages"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": false,
+          "reason": "no token transfer"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "op-sequential",
+            "bound": "2"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "op-sequential",
+            "bound": "2"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "single domain, finite steps"
+      ],
+      "positiveTraceId": "composition:sequential:trace",
+      "invalidMutationIds": [
+        "composition:sequential:mut:skip-predecessor"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC06",
+        "MC07"
+      ],
+      "closureSprint": "SP10",
+      "closureTask": "SP10 implement sequential independently of proof split/join",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "noRefreshOnSplit": true
+      },
+      "continuationOwner": "MC06",
+      "explicitError": "Reject.OperatorContractViolation",
+      "consumedHistories": "predecessor produced history of the left component",
+      "producedHistories": "history of the right component after left completion",
+      "readWriteConflicts": "right may read left outputs; no concurrent writes",
+      "authorityPartition": "work and authority flow left to right without refresh",
+      "observablePrefixes": "left-complete is an observable prefix",
+      "failureCancellation": "right does not start if left rejects; left duties persist",
+      "obligations": "residual duties of left are inputs to right or remain outstanding",
+      "proofSplitJoinDoesNotEstablishOtherOperators": true,
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ]
+    },
+    {
+      "id": "disjoint-parallel",
+      "family": "composition",
+      "qualifiedId": "composition:disjoint-parallel",
+      "source": [
+        {
+          "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+          "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+          "pointer": "RP01 five composition operators",
+          "scope": "required operator set"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+          "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+          "pointer": "Obligations and workflows",
+          "scope": "proposal only"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA24",
+          "scope": "action target specified-only"
+        }
+      ],
+      "sourceGap": "Exact surface spellings remain SP01.3. A proof split/join does not establish this operator.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "RP01 operator name"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "operator-specific authority and history contract"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "consumed and produced histories"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "conflict and obligation rules"
+        },
+        {
+          "stage": "assumptions",
+          "note": "static disjointness; no aliasing"
+        },
+        {
+          "stage": "successor",
+          "note": "operator-specific unique successor"
+        },
+        {
+          "stage": "acceptance",
+          "note": "four mandatory claims still required"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "history order"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "operator prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "only async messaging uses messages"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": false,
+          "reason": "no token transfer"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "op-disjoint-parallel",
+            "bound": "2"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "op-disjoint-parallel",
+            "bound": "2"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "static disjointness; no aliasing"
+      ],
+      "positiveTraceId": "composition:disjoint-parallel:trace",
+      "invalidMutationIds": [
+        "composition:disjoint-parallel:mut:alias-overlap"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC06",
+        "MC07"
+      ],
+      "closureSprint": "SP10",
+      "closureTask": "SP10 implement disjoint-parallel independently of proof split/join",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "noRefreshOnSplit": true
+      },
+      "continuationOwner": "MC06",
+      "explicitError": "Reject.OperatorContractViolation",
+      "consumedHistories": "two disjoint predecessor sets",
+      "producedHistories": "pair of histories joinable only after both complete",
+      "readWriteConflicts": "empty by disjointness proof on resources and authority",
+      "authorityPartition": "partition of capabilities, no union amplification",
+      "observablePrefixes": "each side's internal prefixes, not a total order across sides",
+      "failureCancellation": "failure on one side does not silently commit the other if a join obligation exists",
+      "obligations": "each side keeps its own duties",
+      "proofSplitJoinDoesNotEstablishOtherOperators": true,
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ]
+    },
+    {
+      "id": "shared-state-interleaving",
+      "family": "composition",
+      "qualifiedId": "composition:shared-state-interleaving",
+      "source": [
+        {
+          "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+          "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+          "pointer": "RP01 five composition operators",
+          "scope": "required operator set"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+          "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+          "pointer": "Obligations and workflows",
+          "scope": "proposal only"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA24",
+          "scope": "action target specified-only"
+        }
+      ],
+      "sourceGap": "Exact surface spellings remain SP01.3. A proof split/join does not establish this operator.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "RP01 operator name"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "operator-specific authority and history contract"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "consumed and produced histories"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "conflict and obligation rules"
+        },
+        {
+          "stage": "assumptions",
+          "note": "finite interleavings, no callbacks, no unbounded wait"
+        },
+        {
+          "stage": "successor",
+          "note": "operator-specific unique successor"
+        },
+        {
+          "stage": "acceptance",
+          "note": "four mandatory claims still required"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "history order"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "operator prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "only async messaging uses messages"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": false,
+          "reason": "no token transfer"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "op-shared-state-interleaving",
+            "bound": "2"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "op-shared-state-interleaving",
+            "bound": "2"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "finite interleavings, no callbacks, no unbounded wait"
+      ],
+      "positiveTraceId": "composition:shared-state-interleaving:trace",
+      "invalidMutationIds": [
+        "composition:shared-state-interleaving:mut:commute-without-condition"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC06",
+        "MC07"
+      ],
+      "closureSprint": "SP10",
+      "closureTask": "SP10 implement shared-state-interleaving independently of proof split/join",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "noRefreshOnSplit": true
+      },
+      "continuationOwner": "MC06",
+      "explicitError": "Reject.OperatorContractViolation",
+      "consumedHistories": "shared resource history plus participant histories",
+      "producedHistories": "a single ordered shared history",
+      "readWriteConflicts": "must be serialized by an explicit conflict order",
+      "authorityPartition": "shared resource authority is not copied",
+      "observablePrefixes": "every committed prefix on the shared resource",
+      "failureCancellation": "a failed action rolls back only its tentative writes; prior committed prefixes remain",
+      "obligations": "fees and duties created in a prefix persist",
+      "proofSplitJoinDoesNotEstablishOtherOperators": true,
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ]
+    },
+    {
+      "id": "atomic-synchronization",
+      "family": "composition",
+      "qualifiedId": "composition:atomic-synchronization",
+      "source": [
+        {
+          "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+          "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+          "pointer": "RP01 five composition operators",
+          "scope": "required operator set"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+          "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+          "pointer": "Obligations and workflows",
+          "scope": "proposal only"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA24",
+          "scope": "action target specified-only"
+        }
+      ],
+      "sourceGap": "Exact surface spellings remain SP01.3. A proof split/join does not establish this operator.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "RP01 operator name"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "operator-specific authority and history contract"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "consumed and produced histories"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "conflict and obligation rules"
+        },
+        {
+          "stage": "assumptions",
+          "note": "single atomic domain; not a cross-domain promise"
+        },
+        {
+          "stage": "successor",
+          "note": "operator-specific unique successor"
+        },
+        {
+          "stage": "acceptance",
+          "note": "four mandatory claims still required"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "history order"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "operator prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": false,
+          "reason": "only async messaging uses messages"
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": false,
+          "reason": "no token transfer"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "op-atomic-synchronization",
+            "bound": "2"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "op-atomic-synchronization",
+            "bound": "2"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "single atomic domain; not a cross-domain promise"
+      ],
+      "positiveTraceId": "composition:atomic-synchronization:trace",
+      "invalidMutationIds": [
+        "composition:atomic-synchronization:mut:partial-commit"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC06",
+        "MC07"
+      ],
+      "closureSprint": "SP10",
+      "closureTask": "SP10 implement atomic-synchronization independently of proof split/join",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "noRefreshOnSplit": true
+      },
+      "continuationOwner": "MC06",
+      "explicitError": "Reject.OperatorContractViolation",
+      "consumedHistories": "simultaneous consumption of all named predecessors",
+      "producedHistories": "one joint history or none",
+      "readWriteConflicts": "internal conflicts are not observable; external sees all-or-nothing",
+      "authorityPartition": "joint envelope, no leftover split authority on success",
+      "observablePrefixes": "no external financial prefix of a partial commit",
+      "failureCancellation": "any failed leg discards all tentative financial changes",
+      "obligations": "no half-created debt",
+      "proofSplitJoinDoesNotEstablishOtherOperators": true,
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ]
+    },
+    {
+      "id": "asynchronous-messaging",
+      "family": "composition",
+      "qualifiedId": "composition:asynchronous-messaging",
+      "source": [
+        {
+          "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+          "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+          "pointer": "RP01 five composition operators",
+          "scope": "required operator set"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+          "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+          "pointer": "Obligations and workflows",
+          "scope": "proposal only"
+        },
+        {
+          "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+          "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+          "pointer": "DA24",
+          "scope": "action target specified-only"
+        }
+      ],
+      "sourceGap": "Exact surface spellings remain SP01.3. A proof split/join does not establish this operator.",
+      "representationPath": [
+        {
+          "stage": "source",
+          "note": "RP01 operator name"
+        },
+        {
+          "stage": "canonical-intent",
+          "note": "operator-specific authority and history contract"
+        },
+        {
+          "stage": "concrete-plan",
+          "note": "consumed and produced histories"
+        },
+        {
+          "stage": "typed-state-effects-liabilities",
+          "note": "conflict and obligation rules"
+        },
+        {
+          "stage": "assumptions",
+          "note": "authenticated message, freshness, no foreign adapter, assumed destination finality"
+        },
+        {
+          "stage": "successor",
+          "note": "operator-specific unique successor"
+        },
+        {
+          "stage": "acceptance",
+          "note": "four mandatory claims still required"
+        }
+      ],
+      "observationMap": {
+        "debt": {
+          "applicable": false,
+          "reason": "not a debt instrument in this row"
+        },
+        "shares": {
+          "applicable": false,
+          "reason": "no share claim in this row"
+        },
+        "fees": {
+          "applicable": false,
+          "reason": "no fee in this bounded oracle"
+        },
+        "ordering": {
+          "applicable": true,
+          "fields": [
+            "history order"
+          ]
+        },
+        "status": {
+          "applicable": true,
+          "fields": [
+            "operator prefixes"
+          ]
+        },
+        "messages": {
+          "applicable": true,
+          "fields": [
+            "message status"
+          ]
+        },
+        "claims": {
+          "applicable": false,
+          "reason": "no contingent claim"
+        },
+        "tokens": {
+          "applicable": false,
+          "reason": "no token transfer"
+        },
+        "pnl": {
+          "applicable": false,
+          "reason": "no derivative pnl"
+        }
+      },
+      "boundedFootprint": {
+        "reads": [
+          {
+            "resource": "op-asynchronous-messaging",
+            "bound": "2"
+          }
+        ],
+        "writes": [
+          {
+            "resource": "op-asynchronous-messaging",
+            "bound": "2"
+          }
+        ],
+        "bounds": {
+          "perActionWork": "64",
+          "lifetimeWork": "1024",
+          "closureReserve": "16",
+          "maxCollectionSize": "32",
+          "maxScheduleEvents": "32",
+          "maxObservations": "16",
+          "maxMessages": "8",
+          "maxClaims": "8",
+          "maxTicksOrPositions": "16",
+          "maxNewtonIterations": "8",
+          "sidecarBytes": "4096",
+          "predecessorFanIn": "4",
+          "checkBudgetsBeforeExpensiveVerification": true
+        }
+      },
+      "environmentAssumptions": [
+        "authenticated message, freshness, no foreign adapter, assumed destination finality"
+      ],
+      "positiveTraceId": "composition:asynchronous-messaging:trace",
+      "invalidMutationIds": [
+        "composition:asynchronous-messaging:mut:treat-as-atomic-sync"
+      ],
+      "implementationStatus": "specified-only",
+      "ownerPackages": [
+        "MC06",
+        "MC07"
+      ],
+      "closureSprint": "SP10",
+      "closureTask": "SP10 implement asynchronous-messaging independently of proof split/join",
+      "perActionBound": "64",
+      "lifetimeBound": "1024",
+      "closureReserve": "16",
+      "residualAuthority": {
+        "noRefreshOnSplit": true
+      },
+      "continuationOwner": "MC06",
+      "explicitError": "Reject.OperatorContractViolation",
+      "consumedHistories": "source send history",
+      "producedHistories": "message object with status plus optional destination receive history",
+      "readWriteConflicts": "no shared-state write across domains",
+      "authorityPartition": "lock/refund authority stays on source until named recovery",
+      "observablePrefixes": "Created, Pending, Finalized, Refundable, Refunded, Received",
+      "failureCancellation": "timeout opens refund; race with late receive needs an explicit unique successor",
+      "obligations": "locked funds remain a duty until refund or settle",
+      "proofSplitJoinDoesNotEstablishOtherOperators": true,
+      "mandatoryClaims": [
+        "ContractInvariant",
+        "IntentRefinement",
+        "TransitionValidity",
+        "HistoryCompliance"
+      ]
+    }
+  ],
+  "traces": [
+    {
+      "id": "heldouts:NAM19-capitalization:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "kind": "source-pinned-capitalization-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": false,
+      "sourceConformanceClaim": false,
+      "input": {
+        "fixture": "repos/actusfrf/actus-tests/tests/actus-tests-nam.json#nam19",
+        "terms": {
+          "contractType": "NAM",
+          "contractID": "nam19",
+          "contractRole": "RPA",
+          "contractDealDate": "2012-12-28T00:00:00",
+          "initialExchangeDate": "2013-01-01T00:00:00",
+          "statusDate": "2012-12-30T00:00:00",
+          "notionalPrincipal": " 5000",
+          "cycleAnchorDateOfPrincipalRedemption": "2013-10-01T00:00:00",
+          "cycleOfPrincipalRedemption": "P1ML1",
+          "nextPrincipalRedemptionPayment": " 500",
+          "dayCountConvention": "A365",
+          "nominalInterestRate": "0.08",
+          "currency": "USD",
+          "cycleAnchorDateOfRateReset": "2013-04-01T00:00:00",
+          "cycleOfRateReset": "P3ML1",
+          "marketObjectCodeOfRateReset": "LIBOR_USD",
+          "rateSpread": " 0.10",
+          "fixingDays": "P0D",
+          "cycleAnchorDateOfInterestPayment": "2013-10-01T00:00:00",
+          "cycleOfInterestPayment": "P1ML1",
+          "capitalizationEndDate": "2013-07-01T00:00:00",
+          "interestCalculationBase": "NT"
+        },
+        "horizonTo": "2014-09-01T00:00",
+        "observedRates": [
+          {
+            "timestamp": "2013-04-01T00:00:00",
+            "value": "0.010567901234567900"
+          },
+          {
+            "timestamp": "2013-07-01T00:00:00",
+            "value": "0.011679012345679000"
+          },
+          {
+            "timestamp": "2013-10-01T00:00:00",
+            "value": "0.012790123456790100"
+          },
+          {
+            "timestamp": "2014-01-01T00:00:00",
+            "value": "0.013901234567901200"
+          },
+          {
+            "timestamp": "2014-04-01T00:00:00",
+            "value": "0.015012345679012300"
+          },
+          {
+            "timestamp": "2014-07-01T00:00:00",
+            "value": "0.016123456790123400"
+          },
+          {
+            "timestamp": "2014-10-01T00:00:00",
+            "value": "0.017234567901234500"
+          }
+        ],
+        "units": {
+          "currency": "USD",
+          "rate": "decimal-per-year",
+          "dayCount": "A365"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "time": "2013-01-01T00:00",
+          "eventType": "IED",
+          "action": "initial exchange of notionalPrincipal 5000 USD"
+        },
+        {
+          "index": "1",
+          "time": "2013-04-01T00:00",
+          "eventType": "RR",
+          "action": "rate reset to LIBOR+spread; accrue 90/365 of 0.08 on 5000 USD"
+        },
+        {
+          "index": "2",
+          "time": "2013-07-01T00:00",
+          "eventType": "IPCI",
+          "action": "capitalize accrued interest into notionalPrincipal; cash payoff remains 0; accruedInterest resets to 0"
+        },
+        {
+          "index": "3",
+          "time": "2013-07-01T00:00",
+          "eventType": "RR",
+          "action": "same-timestamp rate event after IPCI; principal unchanged"
+        }
+      ],
+      "expected": {
+        "capitalizationPrefix": [
+          {
+            "eventDate": "2013-01-01T00:00",
+            "eventType": "IED",
+            "payoff": "-5000",
+            "currency": "USD",
+            "notionalPrincipal": "5000",
+            "nominalInterestRate": "0.08",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-04-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5000",
+            "nominalInterestRate": "0.1105679012345679",
+            "accruedInterest": "98.63013698630137"
+          },
+          {
+            "eventDate": "2013-07-01T00:00",
+            "eventType": "IPCI",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5236.461356333502",
+            "nominalInterestRate": "0.1105679012345679",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-07-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5236.461356333502",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "0"
+          }
+        ],
+        "remainingUpstreamResults": [
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "PR",
+            "payoff": "352.59764222884684",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "147.40235777115316"
+          },
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "IP",
+            "payoff": "147.40235777115316",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-11-01T00:00",
+            "eventType": "PR",
+            "payoff": "453.2153443039451",
+            "currency": "USD",
+            "notionalPrincipal": "4430.6483698007105",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "46.78465569605493"
+          },
+          {
+            "eventDate": "2013-11-01T00:00",
+            "eventType": "IP",
+            "payoff": "46.78465569605493",
+            "currency": "USD",
+            "notionalPrincipal": "4430.6483698007105",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-12-01T00:00",
+            "eventType": "PR",
+            "payoff": "458.9260238391687",
+            "currency": "USD",
+            "notionalPrincipal": "3971.7223459615416",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "41.073976160831336"
+          },
+          {
+            "eventDate": "2013-12-01T00:00",
+            "eventType": "IP",
+            "payoff": "41.073976160831336",
+            "currency": "USD",
+            "notionalPrincipal": "3971.7223459615416",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "PR",
+            "payoff": "461.9531433812331",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "38.04685661876691"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "IP",
+            "payoff": "38.04685661876691",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-02-01T00:00",
+            "eventType": "PR",
+            "payoff": "466.0471824605722",
+            "currency": "USD",
+            "notionalPrincipal": "3043.7220201197365",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "33.95281753942782"
+          },
+          {
+            "eventDate": "2014-02-01T00:00",
+            "eventType": "IP",
+            "payoff": "33.95281753942782",
+            "currency": "USD",
+            "notionalPrincipal": "3043.7220201197365",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-03-01T00:00",
+            "eventType": "PR",
+            "payoff": "473.40508635164923",
+            "currency": "USD",
+            "notionalPrincipal": "2570.3169337680874",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "26.59491364835079"
+          },
+          {
+            "eventDate": "2014-03-01T00:00",
+            "eventType": "IP",
+            "payoff": "26.59491364835079",
+            "currency": "USD",
+            "notionalPrincipal": "2570.3169337680874",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "PR",
+            "payoff": "475.1352590915178",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "24.864740908482172"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "IP",
+            "payoff": "24.864740908482172",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-05-01T00:00",
+            "eventType": "PR",
+            "payoff": "480.1941019976794",
+            "currency": "USD",
+            "notionalPrincipal": "1614.9875726788905",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "19.805898002320564"
+          },
+          {
+            "eventDate": "2014-05-01T00:00",
+            "eventType": "IP",
+            "payoff": "19.805898002320564",
+            "currency": "USD",
+            "notionalPrincipal": "1614.9875726788905",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-06-01T00:00",
+            "eventType": "PR",
+            "payoff": "484.2245238951675",
+            "currency": "USD",
+            "notionalPrincipal": "1130.763048783723",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "15.775476104832494"
+          },
+          {
+            "eventDate": "2014-06-01T00:00",
+            "eventType": "IP",
+            "payoff": "15.775476104832494",
+            "currency": "USD",
+            "notionalPrincipal": "1130.763048783723",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "PR",
+            "payoff": "489.3108183029232",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "10.689181697076773"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "IP",
+            "payoff": "10.689181697076773",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-08-01T00:00",
+            "eventType": "IP",
+            "payoff": "6.326348387518158",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-08-01T00:00",
+            "eventType": "MD",
+            "payoff": "641.4522304807997",
+            "currency": "USD",
+            "notionalPrincipal": "0",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          }
+        ],
+        "discriminator": {
+          "preIpciPrincipal": "5000",
+          "postIpciPrincipalUpstream": "5236.461356333502",
+          "ipciPayoff": "0",
+          "accrualReset": "0",
+          "sameTimestampOrder": [
+            "IPCI",
+            "RR"
+          ],
+          "nominalDebtIncreaseWithoutTokenTransfer": true
+        },
+        "status": "specified-only-observation",
+        "messages": [],
+        "claims": [],
+        "fees": {
+          "amount": "0",
+          "unit": "USD",
+          "asset": "USD"
+        }
+      },
+      "arithmeticDerivation": {
+        "dayCount": "A365",
+        "iedToRrDays": "90",
+        "rrToIpciDays": "91",
+        "notLeapYear2013": true,
+        "accrualToRrRational": "7200/73",
+        "accrualToRrDecimal": "98.630136986301369863013698630136986301369863013698630136986301369863013698630137",
+        "upstreamRrAccruedInterest": "98.63013698630137",
+        "rateAfterFirstRrIndependent": "0.110567901234567900",
+        "upstreamRateAfterFirstRr": "0.1105679012345679",
+        "capitalizedInterestIndependent": "236.46135633350245068493150684931506849315068493150684931506849315068493150684932",
+        "postIpciPrincipalIndependent": "5236.4613563335024506849315068493150684931506849315068493150684931506849315068493",
+        "upstreamPostIpciPrincipal": "5236.461356333502",
+        "upstreamIpciPayoff": "0",
+        "upstreamIpciAccruedAfter": "0",
+        "rateAfterSecondRrIndependent": "0.111679012345679000",
+        "upstreamRateAfterSecondRr": "0.11167901234567901",
+        "sameTimestampOrder": [
+          "IPCI",
+          "RR"
+        ],
+        "nominalDebtRoseWithoutTokenTransfer": true,
+        "jsonFloatGapVsIndependentDecimal": "upstream results are JSON numbers; independent values use Decimal/Fraction and are not claimed equal to IEEE captures"
+      },
+      "provenance": {
+        "path": "repos/actusfrf/actus-tests/tests/actus-tests-nam.json",
+        "sha256": "bfc39c7a344b1243ce15accb9800837b3d87a050ffa435395595e4bf559e4a9b",
+        "pointer": "nam19/results[0..3]",
+        "sourceCommit": "f7a8064872b69db1f0beabac771c99dc3ce0c397",
+        "independentTool": "Python Decimal and Fraction stdlib, not Moriarty"
+      },
+      "limitations": [
+        "Upstream JSON numbers remain IEEE-captured fixture values.",
+        "Independent Decimal/Fraction values are not a rounding-policy freeze.",
+        "Do not treat these decimals as current micro-unit Moriarty traces.",
+        "Remaining 26 events are pinned upstream observations, not fully re-derived here.",
+        "Not generated by a Moriarty evaluator."
+      ]
+    },
+    {
+      "id": "composition:sequential:trace",
+      "family": "composition",
+      "boundRow": "composition:sequential",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "A": "pay 10 USDC",
+        "B": "pay 20 USDC"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "run A then B"
+        },
+        {
+          "index": "1",
+          "action": "consume history of A as predecessor of B"
+        }
+      ],
+      "expected": {
+        "consumedHistories": [
+          "H_A"
+        ],
+        "producedHistories": [
+          "H_B"
+        ],
+        "observablePrefix": [
+          "A-complete"
+        ],
+        "status": "B-complete",
+        "fees": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "totalPaid": "10+20=30"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:disjoint-parallel:trace",
+      "family": "composition",
+      "boundRow": "composition:disjoint-parallel",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "A": "move asset X",
+        "B": "move asset Y",
+        "disjoint": true
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "run A and B on disjoint state"
+        }
+      ],
+      "expected": {
+        "readWriteConflicts": [],
+        "authorityPartition": [
+          "auth-A",
+          "auth-B"
+        ],
+        "producedHistories": [
+          "H_A",
+          "H_B"
+        ],
+        "status": "both-complete"
+      },
+      "arithmeticDerivation": {
+        "note": "no shared token conservation across X and Y beyond per-asset rules"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:shared-state-interleaving:trace",
+      "family": "composition",
+      "boundRow": "composition:shared-state-interleaving",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "resource": "poolP",
+        "A": "swap",
+        "B": "add-liquidity"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "interleave A then B on poolP with explicit conflict order"
+        }
+      ],
+      "expected": {
+        "readWriteConflicts": [
+          "poolP"
+        ],
+        "observablePrefixes": [
+          "A-on-P",
+          "B-on-P-after-A"
+        ],
+        "status": "ordered-interleaving",
+        "fees": {
+          "amount": "1",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "note": "fee after A is visible to B"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:atomic-synchronization:trace",
+      "family": "composition",
+      "boundRow": "composition:atomic-synchronization",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "legs": [
+          "borrow 50",
+          "swap 50",
+          "repay 50+1 fee"
+        ]
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "execute all legs or reject all tentative writes"
+        }
+      ],
+      "expected": {
+        "atomic": true,
+        "debt": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "fees": {
+          "amount": "1",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "status": "all-or-nothing"
+      },
+      "arithmeticDerivation": {
+        "repay": "51 = 50 principal + 1 fee"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:asynchronous-messaging:trace",
+      "family": "composition",
+      "boundRow": "composition:asynchronous-messaging",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "message": "M3",
+        "timeout": "bounded"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "send M3 Created"
+        },
+        {
+          "index": "1",
+          "action": "timeout path Refundable then Refunded"
+        }
+      ],
+      "expected": {
+        "messages": [
+          {
+            "id": "M3",
+            "status": "Refunded"
+          }
+        ],
+        "recovery": "refund_origin",
+        "status": "Refunded",
+        "proofSplitJoinDoesNotEstablishThisOperator": true
+      },
+      "arithmeticDerivation": {
+        "note": "refund equals locked principal minus explicit fee if signed"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    }
+  ],
+  "mutations": [
+    {
+      "id": "heldouts:NAM19-capitalization:mut:erase-nominal-on-ipci",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "traceId": "heldouts:NAM19-capitalization:trace",
+      "mutation": "Keep IPCI payoff 0 and reset accruedInterest, but leave notionalPrincipal at 5000.",
+      "rejectionPredicate": "Reject.NominalDebtErasure: IPCI with cash payoff 0 must add capitalized accrued interest to notionalPrincipal; debt must rise without token transfer.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "heldouts:NAM19-capitalization:mut:reorder-ipci-rr",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "traceId": "heldouts:NAM19-capitalization:trace",
+      "mutation": "On 2013-07-01T00:00 emit RR before IPCI.",
+      "rejectionPredicate": "Reject.EventOrder: pinned NAM19 same-timestamp order is IPCI then RR.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:sequential:mut:skip-predecessor",
+      "boundRow": "composition:sequential",
+      "traceId": "composition:sequential:trace",
+      "mutation": "Run B without consuming A history.",
+      "rejectionPredicate": "Reject.MissingPredecessor: sequential B requires A's produced history.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:disjoint-parallel:mut:alias-overlap",
+      "boundRow": "composition:disjoint-parallel",
+      "traceId": "composition:disjoint-parallel:trace",
+      "mutation": "Alias X and Y to the same resource.",
+      "rejectionPredicate": "Reject.HiddenOverlap: disjoint-parallel forbids write/write or authority overlap.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:shared-state-interleaving:mut:commute-without-condition",
+      "boundRow": "composition:shared-state-interleaving",
+      "traceId": "composition:shared-state-interleaving:trace",
+      "mutation": "Treat A;B as equal to B;A on shared poolP.",
+      "rejectionPredicate": "Reject.UnconditionalCommutation: shared-state interleaving is not blanket-associative with sequential or async.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:atomic-synchronization:mut:partial-commit",
+      "boundRow": "composition:atomic-synchronization",
+      "traceId": "composition:atomic-synchronization:trace",
+      "mutation": "Commit the swap and drop the repay.",
+      "rejectionPredicate": "Reject.PartialAtomicCommit: atomic-synchronization discards all tentative financial changes on any failed leg.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:asynchronous-messaging:mut:treat-as-atomic-sync",
+      "boundRow": "composition:asynchronous-messaging",
+      "traceId": "composition:asynchronous-messaging:trace",
+      "mutation": "Treat message send/receive as atomic-synchronization because a proof split/join exists.",
+      "rejectionPredicate": "Reject.OperatorConfusion: a proof split/join does not establish asynchronous-messaging.",
+      "expectedStatus": "reject"
+    }
+  ],
+  "sharedProfiles": {
+    "representationPath": [
+      "source",
+      "canonical-intent",
+      "concrete-plan",
+      "typed-state-effects-liabilities",
+      "assumptions",
+      "successor",
+      "acceptance"
+    ],
+    "mandatoryAcceptanceClaims": [
+      "ContractInvariant",
+      "IntentRefinement",
+      "TransitionValidity",
+      "HistoryCompliance"
+    ],
+    "acceptanceIncludesGenesisAndAdmin": true,
+    "noHostBooleanBackendAcceptance": true,
+    "debtSurvivesWorkExhaustion": true,
+    "noRefreshedWorkOrAuthorityOnSplitCancelMigrate": true,
+    "unknownOrRevokedSemanticsReject": true,
+    "hardConstraintsSeparateFromSoftRouteRanking": true,
+    "preVerificationBudgets": [
+      "claim-count",
+      "dependencies",
+      "sidecar-bytes",
+      "total-verification-work"
+    ],
+    "signingDisplayFreezeOwner": "SP01.3",
+    "atomicLoanSwapRetention": "existing atomic loan/swap acceptance is retained and is not changed by this map",
+    "defaultBounds": {
+      "perActionWork": "64",
+      "lifetimeWork": "1024",
+      "closureReserve": "16",
+      "maxCollectionSize": "32",
+      "maxScheduleEvents": "32",
+      "maxObservations": "16",
+      "maxMessages": "8",
+      "maxClaims": "8",
+      "maxTicksOrPositions": "16",
+      "maxNewtonIterations": "8",
+      "sidecarBytes": "4096",
+      "predecessorFanIn": "4",
+      "checkBudgetsBeforeExpensiveVerification": true
+    },
+    "defaultErrors": {
+      "unknownSemantics": "Reject.UnknownSemantics",
+      "revokedKey": "Reject.RevokedKeyOrSpec",
+      "workExhaustedWithDebt": "Reject.ShutdownWithoutDischargeOrSuccessor",
+      "unboundedDomain": "Reject.UnboundedDomain",
+      "hostLoopFallback": "Reject.HostLoopFallback"
+    },
+    "debtDischargeRule": "old-debt-discharged-only-by-actual-authorized-settlement-and-explicit-new-debt-authority",
+    "pendingClaimRule": "insufficient-liquidity-cannot-erase-claim",
+    "equalityVsInequality": {
+      "exactOutput": "equality",
+      "minReceive": "inequality",
+      "overdeliveryOnEquality": "reject"
+    }
+  },
+  "findings": [
+    {
+      "id": "R05",
+      "severity": "blocking",
+      "title": "Composition examples omit complete economics and contradict their observation maps",
+      "locations": [
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/19",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/20",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/21",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/22",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/23",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/compositionOperators"
+      ],
+      "evidence": "Sequential pays 10 and 20 without account states or funding. Disjoint parallel says move X and Y without quantities. Shared-state interleaving names a swap and liquidity addition without pool states that distinguish the orders. Atomic synchronization borrows 50, swaps 50, and repays 51 without proceeds or fee funding. Asynchronous messaging uses timeout=bounded and refund prose without a numeric lock, deadline, or fee. All five maps mark tokens inapplicable. The atomic map also marks debt and fees inapplicable, although its trace has both. The shared-state map excludes its trace fee.",
+      "materiallyMissingObligation": "Five concrete positive and negative compositions with consumed/produced states and histories, account effects, conflict observations, exact authority/work partitions, and failure residuals. Operator-contract prose alone does not establish these finite traces."
+    },
+    {
+      "id": "R06",
+      "severity": "blocking",
+      "title": "Work and residual preservation are asserted without complete finite accounting",
+      "locations": [
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/4",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/7/expected/workRemaining",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/sharedProfiles/defaultBounds",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/compositionOperators/0/residualAuthority",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/challenges/7/boundedFootprint"
+      ],
+      "evidence": "Recurring workRemaining is the string not reset. No work costs or remaining closure reserve are derived. Partial fill has zero fees, no actual refund, no account balances, and no outstanding duty beyond a consumed-authority record. Its map says residual fill rights persist while the trace gives no surviving rights state after cancellation. Composition carries no numeric work split or join accounting. Default bounds are repeated without connecting trace operations to consumed resources.",
+      "materiallyMissingObligation": "Concrete lifetime/work/closure arithmetic and surviving duties for partial progress, cancellation, exhaustion, split, and continuation. The no-refresh and no-erasure requirements need discriminating observations, not only boolean declarations."
+    },
+    {
+      "id": "R10",
+      "severity": "blocking",
+      "title": "Representation paths and footprints do not identify the concrete state/effects under review",
+      "locations": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/challenges/1/representationPath",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/challenges/1/boundedFootprint",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/challenges/11/boundedFootprint",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/compositionOperators/3/boundedFootprint",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/sharedProfiles/acceptanceIncludesGenesisAndAdmin"
+      ],
+      "evidence": "Most representation paths repeat generic stage notes. Many read/write footprints name only the challenge itself with bound 1, or op-name with bound 2. Refinance omits funding accounts and fee recipients. The concentrated footprint does not enumerate its three ticks and position records. Four mandatory claims and genesis/admin inclusion are preserved as names and flags, but no concrete acceptance statement or genesis/admin case binds the complete proposed state/effects.",
+      "materiallyMissingObligation": "A reviewable source-to-intent-to-plan-to-state/effect/assumption/successor mapping and real bounded resources. Future implementation may remain open, but placeholders cannot support full design-map acceptance."
+    },
+    {
+      "id": "R11",
+      "severity": "blocking",
+      "title": "The theorem ledger lacks the required exact proposed definitions",
+      "locations": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/0/predicate",
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/4",
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/5",
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/7"
+      ],
+      "evidence": "Definitions mostly list nouns. Assume-guarantee refers to an unspecified derived guarantee and compatibility predicate. Associativity refers to stated observation-order conditions without stating those conditions or the observation equivalence. Type preservation gives expression e type tau and then assigns the complete successor state sigma-prime the same tau without defining a state-typing relation. Conservative extension names D0 but does not define its admission predicate or translation. Evidence refs identify entire files rather than exact definitions.",
+      "materiallyMissingObligation": "Exact proposed predicates, definitions, bounded domains, compatibility and observation conditions. All eight entries correctly remain proposed with empty axioms and mechanizedEvidence. No mechanized proof is required for this review."
+    }
+  ]
+}
