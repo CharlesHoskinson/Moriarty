@@ -8,7 +8,16 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** The user switched both implementation and independent checkpoint review to GPT-6. Continue from the preserved working tree. The independent review of frozen checkpoint `cafaa3b1a8637474f1f1f8f6b53ed8eddc41ed194a25135aba455e1216957cdf` rejected forged runner receipts and missing charge enforcement. Subsequent blanket execution denial has not been accepted as a functioning fix. Next deliverable: an authentic bounded runner integration and genuine positive CLI evidence, followed by fresh independent review. Installation, actual host interception and a product repair pilot remain open. No final plugin milestone is accepted. The [latest routing instruction](../../../raw/assignments/moriarty-gpt6-implementation-review-2026-09-08.md) supersedes Terra and earlier provider routing.
+**Status:** GPT-6 implemented the runner adapter and a separate GPT-6 reviewer passed corrected candidate `9341fbcf9873bf2ea80329b47252aab512bcb1c4a8e2d46b613ffcac90c21ad3`. Public CLI fixtures execute through Foreman, verify an existing debit, prevent charge reuse, retain bounded output and preserve ambiguous completion. Root ran 138 tests; independent review ran 24 focused checks. Source commit `607726e` is on `feat/moriarty-dev-plugin`. This is a scoped runner checkpoint, not whole-plugin acceptance. Production bindings, transaction delivery, host integration and a real Moriarty repair pilot remain open.
+
+**Remaining implementation path:**
+1. Bind one real, currently authorized Moriarty action to the runner and demonstrate its public CLI execution.
+2. Finish transaction reporting/delivery and update the development skill to the latest user-selected model routing.
+3. Complete independent code review of the remaining plugin behavior; install and verify actual host hooks.
+4. Use the installed plugin for one real Moriarty repair: demonstrate denial, reproduction, focused correction and independent result review.
+
+Use the existing campaign records, budget, SQLite store and Foreman launcher. Add no scheduler, service, provider client or further orchestration layer.
+
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
