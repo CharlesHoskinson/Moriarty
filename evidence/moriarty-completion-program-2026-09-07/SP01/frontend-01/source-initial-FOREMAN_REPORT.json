@@ -1,0 +1,56 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "sp01-frontend-grok",
+  "role": "implement",
+  "slug": "sp01-frontend-validate",
+  "status": "complete",
+  "summary": "Applied two reviewed validate.ts diagnostic-priority edits. Premature existing status fields now report NAME_RESOLUTION at stage 5. Invalid policy effect ordinals report UINT_RANGE and defer only matching Amount emit coverage. Language, interfaces, and frozen tests are unchanged. This worker did not run tests.",
+  "findings": [
+    {
+      "id": "status-name-resolution",
+      "severity": "info",
+      "summary": "Stage 5 declaredStates marks EpisodeStatusDecl and NotionalStatusDecl NAME_RESOLUTION when the field exists later. Globally absent fields still use stage 6 STATUS_RULE."
+    },
+    {
+      "id": "ordinal-uint-range",
+      "severity": "info",
+      "summary": "Invalid Effect ordinals call the existing uint helper before key construction. UINT_RANGE is recorded. Matching same-action same-label same-unit Amount emit coverage is deferred. No global invalid-ordinal shortcut."
+    },
+    {
+      "id": "independent-checks-retained",
+      "severity": "info",
+      "summary": "Uncovered writes, other actions, other units, valid POLICY_TARGET, rounding, and expression diagnostics still run. Policy may occur before or after its action."
+    },
+    {
+      "id": "tests-not-run",
+      "severity": "info",
+      "summary": "This worker did not execute the suite. Parent runs frozen focused tests, full frontend tests, typecheck, Compact --skip-zk, then independent GPT-6 review."
+    }
+  ],
+  "evidence": [
+    {
+      "path": "experiments/moriarty-language/src/validate.ts",
+      "note": "Added declaredStates plus status NAME_RESOLUTION in stage 5. Added deferredCoverage and Effect ordinal uint check in stage 6 policy-target loop."
+    }
+  ],
+  "open_questions": [],
+  "owned_files": [
+    "experiments/moriarty-language/src/validate.ts",
+    "FOREMAN_REPORT.md",
+    "FOREMAN_REPORT.json"
+  ],
+  "verification": {
+    "ran_by_worker": false,
+    "reason": "Spec forbade shell and test execution in this phase. Parent executes frozen tests and independent GPT-6 review."
+  },
+  "parent_red_receipt": {
+    "testFile": "experiments/moriarty-language/tests/frontend.test.mjs",
+    "sha256": "7c9a287454352fb0c35dc9f76c9760c6187a9bedf48ca9d56713dbec4c93da54",
+    "sourceSha256": "350e137853c043b7fdd9f4501e86b087f0668ce7f0e8b826ded43b8dc5f10d4c",
+    "substantiveFailures": [
+      "episode status: TYPE_MISMATCH instead of NAME_RESOLUTION",
+      "notional status: TYPE_MISMATCH instead of NAME_RESOLUTION",
+      "ordinal overflow: POLICY_TARGET instead of UINT_RANGE"
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "kind": "source-correction-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 57.99352897302015,
+  "chargedSeconds": 300,
+  "beforeHead": "93850833d23b5769249435ff2d1c7816e310882c",
+  "afterHead": "93850833d23b5769249435ff2d1c7816e310882c",
+  "beforeStatusSha256": "13ab21499ea681b791c4df3a487921280d0d212674548997e50bb64ffea51b51",
+  "afterStatusSha256": "13ab21499ea681b791c4df3a487921280d0d212674548997e50bb64ffea51b51",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=4min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-frontend-source-correction-worker-411020.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "SP01 frontend diagnostic correction only. No proof or ledger acceptance.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 31687,
+      "outputTokens": 3668,
+      "cacheReadInputTokens": 133504,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 5,
+      "costUSD": 0.02586278
+    }
+  },
+  "resultText": "I'll apply the one specified `validate.ts` correction and update only the Foreman reports. No tests, shell, Git, or other files.Using the exact `flatMap` replacement in `validate.ts`, then updating only the two Foreman reports with the parent typecheck failure.Applying the `flatMap` narrowing fix and rewriting the two reports to record the parent `tsc` failure only.Replaced only the `declaredStates` construction in `experiments/moriarty-language/src/validate.ts`:\n\n```ts\nconst declaredStates=new Set(ast.declarations.flatMap(d=>d.tag==='StateDecl'?[d.name]:[]));\n```\n\nThe in-callback `tag==='StateDecl'` guard narrows `d` so `d.name` is valid. The collected names stay the same.\n\nParent evidence recorded in `FOREMAN_REPORT.md` and `FOREMAN_REPORT.json`:\n- All 33 frontend tests passed.\n- Actual `tsc` 7.0.2 failed at `validate.ts(44,89)` with `TS2339`: `Property 'name' does not exist on type 'SourceDeclaration'`.\n- Cause: `StateDecl` shares a union member with `ConstDecl`, so `filter` does not narrow the array element type.\n\nThis worker did not run tests or typecheck and does not claim new passing checks. Parent reruns verification.",
+  "stopReason": "end_turn",
+  "status": " M experiments/moriarty-language/src/validate.ts\n M experiments/moriarty-language/tests/frontend.test.mjs\n?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n"
+}

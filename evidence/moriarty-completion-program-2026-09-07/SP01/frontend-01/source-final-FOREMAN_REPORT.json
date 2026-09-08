@@ -1,0 +1,75 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "sp01-frontend-grok",
+  "role": "implement",
+  "slug": "sp01-frontend-validate",
+  "status": "complete",
+  "summary": "Replaced declaredStates filter-map with flatMap so StateDecl name access narrows under tsc 7.0.2. Parent recorded all 33 frontend tests passing then TS2339 at validate.ts(44,89). This worker did not run checks. Parent reruns verification.",
+  "findings": [
+    {
+      "id": "parent-tsc-ts2339",
+      "severity": "error",
+      "summary": "Parent tsc 7.0.2 failed: experiments/moriarty-language/src/validate.ts(44,89) TS2339 Property name does not exist on type SourceDeclaration. StateDecl shares a union member with ConstDecl. Array filter does not narrow the element type."
+    },
+    {
+      "id": "declared-states-flatmap",
+      "severity": "info",
+      "summary": "Replaced only const declaredStates=new Set(ast.declarations.filter(d=>d.tag==='StateDecl').map(d=>d.name)) with const declaredStates=new Set(ast.declarations.flatMap(d=>d.tag==='StateDecl'?[d.name]:[])). The conditional narrows inside the callback and collects the same StateDecl names."
+    },
+    {
+      "id": "status-name-resolution",
+      "severity": "info",
+      "summary": "Stage 5 declaredStates marks EpisodeStatusDecl and NotionalStatusDecl NAME_RESOLUTION when the field exists later. Globally absent fields still use stage 6 STATUS_RULE."
+    },
+    {
+      "id": "ordinal-uint-range",
+      "severity": "info",
+      "summary": "Invalid Effect ordinals call the existing uint helper before key construction. UINT_RANGE is recorded. Matching same-action same-label same-unit Amount emit coverage is deferred. No global invalid-ordinal shortcut."
+    },
+    {
+      "id": "independent-checks-retained",
+      "severity": "info",
+      "summary": "Uncovered writes, other actions, other units, valid POLICY_TARGET, rounding, and expression diagnostics still run. Policy may occur before or after its action."
+    },
+    {
+      "id": "tests-not-run",
+      "severity": "info",
+      "summary": "This worker did not run tests or typecheck and does not claim new passing checks. Parent reruns verification. Independent GPT-6 review follows."
+    }
+  ],
+  "evidence": [
+    {
+      "path": "experiments/moriarty-language/src/validate.ts",
+      "note": "Line 44 declaredStates now uses flatMap with an in-callback StateDecl tag guard. Prior stage 5 NAME_RESOLUTION and stage 6 deferredCoverage edits remain. No other source bytes changed."
+    }
+  ],
+  "open_questions": [],
+  "owned_files": [
+    "experiments/moriarty-language/src/validate.ts",
+    "FOREMAN_REPORT.md",
+    "FOREMAN_REPORT.json"
+  ],
+  "verification": {
+    "ran_by_worker": false,
+    "reason": "Spec forbade shell and test execution in this phase. Worker does not claim new passing checks. Parent reruns verification after this correction."
+  },
+  "parent_red_receipt": {
+    "testFile": "experiments/moriarty-language/tests/frontend.test.mjs",
+    "sha256": "7c9a287454352fb0c35dc9f76c9760c6187a9bedf48ca9d56713dbec4c93da54",
+    "sourceSha256": "350e137853c043b7fdd9f4501e86b087f0668ce7f0e8b826ded43b8dc5f10d4c",
+    "substantiveFailures": [
+      "episode status: TYPE_MISMATCH instead of NAME_RESOLUTION",
+      "notional status: TYPE_MISMATCH instead of NAME_RESOLUTION",
+      "ordinal overflow: POLICY_TARGET instead of UINT_RANGE"
+    ]
+  },
+  "parent_typecheck_failure": {
+    "compiler": "tsc 7.0.2",
+    "tests": "parent ran all 33 frontend tests, all passed",
+    "error": "experiments/moriarty-language/src/validate.ts(44,89): error TS2339: Property name does not exist on type SourceDeclaration",
+    "cause": "StateDecl shares a union member with ConstDecl, so array filter does not produce a narrowed array element type",
+    "correction": "flatMap with in-callback tag==='StateDecl' ? [d.name] : []",
+    "worker_reran_checks": false,
+    "parent_reruns_verification": true
+  }
+}

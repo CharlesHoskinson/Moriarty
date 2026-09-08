@@ -1,0 +1,27 @@
+{
+  "kind": "tests-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 445.31778273097007,
+  "chargedSeconds": 600,
+  "beforeHead": "93850833d23b5769249435ff2d1c7816e310882c",
+  "afterHead": "93850833d23b5769249435ff2d1c7816e310882c",
+  "beforeStatusSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "afterStatusSha256": "ae7c77953d4662affa2cb4e89789d6e87469e67ce6a21f8e898d899f434eb124",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=9min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-frontend-tests-worker-373856.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "SP01 frontend diagnostic correction only. No proof or ledger acceptance.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 225351,
+      "outputTokens": 24826,
+      "cacheReadInputTokens": 657664,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 12,
+      "costUSD": 0.1578433
+    }
+  },
+  "resultText": "I'll add the SP01 regression tests only, using the existing compile API and independently derived ASCII spans. First I need the current test file, grammar for the notional-status spelling, and the Foreman report format.I\u2019ll inspect the current tests, diagnostic shape, and the notional-status grammar so the new assertions can lock the exact spans.I\u2019ll check how `compile` reports diagnostics, how status and policy spans are defined, and the Foreman report shape.I have the grammar and diagnostic shape. Next I\u2019ll append the SP01 tests with independent ASCII spans and write the Foreman reports. No implementation edits, and I will not run the suite.I\u2019ll cover the parent\u2019s before-action overflow case and keep a covering zero-target only when the policy follows the action.Tests-only work is in place. Implementation was not touched, and this worker did not run the suite.\n\n**Owned files**\n- `experiments/moriarty-language/tests/frontend.test.mjs` (appended only)\n- `FOREMAN_REPORT.md`\n- `FOREMAN_REPORT.json`\n\n**What was added**\n\nSeven tests whose names start with `SP01 frontend`. They use `compile` and `error.diagnostic` for `code`, `stage`, and required `primarySpan`. Spans are unique ASCII substring offsets, not parser helpers. Existing tests stay as they were.\n\n| Test | Expected diagnostic |\n|---|---|\n| Premature episode status, bad or valid later guard | `NAME_RESOLUTION` stage `5` on the full `status episode` declaration |\n| State before episode status, bad guard | `TYPE_MISMATCH` stage `6` |\n| Missing episode field, valid guard | `STATUS_RULE` stage `6` |\n| Same four controls for `status agreement remaining_notional principal` | Unchanged expected codes |\n| Policy before/after action: ordinal `0` | compiles |\n| Ordinal `1` and `2^128-1` | `POLICY_TARGET` stage `6` |\n| Ordinal `2^128` | `UINT_RANGE` stage `6` on `effect(run,ORDINAL,amount)` |\n| Earlier `guard uint(1)` vs overflowing ordinal | `TYPE_MISMATCH` stage `6` |\n| Earlier uncovered `set principal` vs overflowing ordinal | `POLICY_TARGET` stage `6` |\n| Uncovered emit in `other` or unit `V` vs overflowing run ordinal | earlier `POLICY_TARGET` |\n| `write(run,missing)` before overflowing effect target | earlier `POLICY_TARGET` |\n\n**Fixture notes**\n- Notional spelling matches `grammar.ebnf`: `status agreement remaining_notional` plus identifier.\n- Policy-after overflow adds covering `effect(run,0,amount)` so an earlier uncovered emit cannot hide `UINT_RANGE`. Policy-before overflow stays the parent single-target source.\n\nParent next step: focused RED against unchanged source, then freeze the test digest and dispatch the source-only phase.",
+  "stopReason": "end_turn",
+  "status": " M experiments/moriarty-language/tests/frontend.test.mjs\n?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n"
+}
