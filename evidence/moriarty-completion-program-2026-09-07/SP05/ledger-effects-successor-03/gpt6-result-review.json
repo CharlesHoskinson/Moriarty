@@ -1,0 +1,130 @@
+{
+  "schema": "moriarty.independent-source-result-review/1",
+  "candidateHash": "6774e0479c37bb95b3fd1dd6371d1fdd1729e8e40f34c770b1acadbbf3268fdc",
+  "reviewer": {
+    "provider": "OpenAI",
+    "model": "gpt-6-astra",
+    "role": "fresh independent source result reviewer",
+    "agent": "/root/ledger_effects_successor03_review"
+  },
+  "recordedAt": "2026-09-08T17:56:55.841048+00:00",
+  "reviewExecution": "INCOMPLETE_AUTOMATED_SAFETY_STOP",
+  "candidate": "NOT_ACCEPTED",
+  "overallSP05": "BLOCKED",
+  "stopDisposition": "Parent reported an automated safety flag and directed documentation-only handoff. No probing or testing was resumed after that direction. This record preserves prior observations; it is not a completed audit.",
+  "scopedVerdict": {
+    "status": "SUPPORTED_SUBPREDICATES_OBSERVED_WITH_BLOCKING_FINDINGS",
+    "supportedCapabilities": [
+      {
+        "kind": "source observation",
+        "predicate": "Native recipe parts are composed with Transaction.merge, then compared using eraseProofs().serialize() equality; signatures and material native serialization are not replaced by a manually selected projection in this branch.",
+        "limitations": "isNativeTransaction is a method-shape check. Genuine proof generation compatibility was not exercised."
+      },
+      {
+        "kind": "experiment observation",
+        "predicate": "A native synthetic signed unshielded transaction passed public fundUnshielded with unchanged native bind, reserved gross100 and one submission, and reached the inert submit adapter.",
+        "evidence": "gpt6-independent-results.json: native no-dust public path unchanged bind inert submit"
+      },
+      {
+        "kind": "experiment observation",
+        "predicate": "Malformed negative reservedGross rejected before finalize and counter updates, but after balance/sign adapter calls. Failed inert finalization retained existing gross/submission reservations.",
+        "evidence": "gpt6-independent-results.json: malformed budget side effects precede validation; persistent scalar counters accept different native token units"
+      },
+      {
+        "kind": "source observation",
+        "predicate": "Unshielded gross sums inputs across recipe parts and guaranteed/fallible offers without subtracting refunds. DUST vFee has separate nonnegative bigint accounting and reservation fields.",
+        "limitations": "Native DUST spend public-path operation was not demonstrated; mixed assets and shielded/transient gross remain unsupported."
+      }
+    ],
+    "blockingFindings": [
+      {
+        "id": "R6-UNIT-BINDING",
+        "kind": "experiment observation",
+        "severity": "blocking",
+        "finding": "One persistent counter object admitted separate signed native recipes in distinct token types: first100 then200, reservedGross became300. Neither the counters nor provider bind the gross cap to a persistent asset identity.",
+        "evidence": "gpt6-independent-results.json: persistent scalar counters accept different native token units",
+        "limits": "Both calls reached an inert finalize boundary; no ledger execution occurred."
+      },
+      {
+        "id": "R6-DIAGNOSTIC-ADMISSION",
+        "kind": "experiment observation",
+        "severity": "blocking",
+        "finding": "A plain object containing native intent Maps passed fundUnshielded and reached inert submit. The claimed diagnostic-only boundary is not enforced by the public source path.",
+        "evidence": "gpt6-independent-results.json: plain diagnostic Maps authorize public funding and inert submit",
+        "limits": "Controlled facade adapters supplied the plain objects. No claim that the real pinned facade ordinarily emits these objects or that the ledger accepts them."
+      },
+      {
+        "id": "R6-RECIPE-TYPE",
+        "kind": "experiment observation",
+        "severity": "blocking",
+        "finding": "UNKNOWN_TYPE with a native baseTransaction passed public funding and reached inert submit; recipeTransactions does not reject unknown recipe discriminators.",
+        "evidence": "gpt6-independent-results.json: unknown recipe type admitted public native funding"
+      },
+      {
+        "id": "R6-REGISTRATION-SIGNATURE",
+        "kind": "experiment observation",
+        "severity": "blocking",
+        "finding": "A native registration constructed with a signature of an unrelated one-byte payload had an undefined exposed signature getter and passed funding with a DUST cap through inert submit. The source skips verification when that getter is absent.",
+        "evidence": "gpt6-independent-results.json: native registration invalid signature accepted with cap",
+        "limits": "This is failure to establish registration authorization before submission; no assertion of ledger acceptance."
+      },
+      {
+        "id": "R6-ACCOUNTING-COVERAGE",
+        "kind": "source observation",
+        "severity": "blocking",
+        "finding": "Required shielded-input/transient gross and multi-asset accounting remain unsupported. The candidate report explicitly retains these limitations."
+      }
+    ]
+  },
+  "additionalObservations": [
+    {
+      "kind": "experiment observation",
+      "finding": "A registration with allowFeePayment900 reached inert finalize while dustFee cap1000 already had reservedDustFee999. Authorization is checked against total cap rather than remaining capacity; no authorization reservation is stored.",
+      "evidence": "gpt6-independent-results.json: native registration exceeds remaining fee authority",
+      "disposition": "Unresolved fee-authority policy/accounting obligation. This does not establish900 paid DUST or a valid registration signature."
+    },
+    {
+      "kind": "experiment observation",
+      "finding": "Malformed counter detection followed controlled balance/sign calls.",
+      "disposition": "Pre-side-effect validation requirement remains unresolved. No real wallet side effect was executed."
+    }
+  ],
+  "sourceAndHashChecks": {
+    "beforeReviewEvidence": "gpt6-independent-hashes-before.json",
+    "candidateHashRecomputed": true,
+    "candidateFilesChecked": 8,
+    "candidateFilesMatched": true,
+    "worktreeFilesChecked": 8,
+    "worktreeFilesMatched": true,
+    "bindingSourcePinsChecked": 201,
+    "bindingSourcePinsMatched": true,
+    "afterReviewCheck": "NOT_PERFORMED_AFTER_AUTOMATED_SAFETY_STOP",
+    "sourceEditsByReviewer": false,
+    "existingRootAndRetainedEvidenceModified": false
+  },
+  "existingEvidence": {
+    "independentProbeSource": "gpt6-independent-probes.mjs",
+    "independentResults": "gpt6-independent-results.json",
+    "rootVerification": "root-verification.json",
+    "rootEvidenceScope": "Previously reported root checks:40 supplied tests,7 helper,3 native,3 recipe shape,3 gross tests;38 predecessor expectations and11 decisive action/counter expectations passed. These were not independently rerun in this review and do not establish complete R6."
+  },
+  "nativeDust": {
+    "status": "NOT_DEMONSTRATED",
+    "existingAttempts": "A synthetic DustLocalState construction attempt first failed because its UTXO was not in wallet state. The updated retained probe failed with: for seq=0 we use DustPublicKey instead of DustSecretKey.",
+    "result": "No native DustSpend fixture or successful DUST public-path probe was obtained. No further construction or tests after stop.",
+    "scope": "Synthetic local-state operations only; no wallet restore, real proof, native facade finalization, network or ledger submission."
+  },
+  "unresolvedRequirements": [
+    "Persistent asset identity and unit binding for gross caps/reservations across calls.",
+    "Native transaction admission and exact supported recipe shape enforcement before funding.",
+    "Verified native DustRegistration authorization or explicit fail-closed handling when signature evidence is unreadable.",
+    "Fee-authorization scope and capacity accounting distinct from actual DUST debit.",
+    "Counter-state validation before any relevant production side effects.",
+    "Native DUST spend construction and fee accounting/normalization controls.",
+    "Shielded-input/transient and required multi-asset gross accounting.",
+    "Genuine proof-generation/bind/merge compatibility and complete transaction-family coverage.",
+    "Full independent audit and post-review hash verification.",
+    "Original R1-R5/R7-R8 and SP05 financial Preview settlement, PCD and all remaining sprint acceptance obligations."
+  ],
+  "acceptance": "No acceptance, source completion, operational admission, ledger settlement or full audit success is granted."
+}

@@ -1,0 +1,172 @@
+{
+  "schema": "moriarty.foreman-report/1",
+  "packetSha256": "ec3982a3d3ce85573cd4c058a08595ecc6392d8114b61bf74641f7d45cd3c6fc",
+  "parentCandidate": "c6249e14c06907946ff47f0815b1540abf4bb65409a234ce3a94ddb611a87f52",
+  "parentFreezeSha256": "ad2a2fcc2a02915aa133590d864b49ad6bcdc3720209db4d27537e479425b298",
+  "decision": "ADMIT_SOURCE_AUTHOR_ONLY",
+  "baseCommit": "daac83578f105b0a70ce44d88c579018881daae5",
+  "worker": "grok-4.6-high",
+  "pass": "successor-effects-03",
+  "scope": "R6 native eraseProofs comparison plus typed unshielded gross and DUST fee/authorization accounting. Offline source/tests only. Predecessor freeze and GPT-6 REJECT remain intact. All original R1-R5/R7-R8 and SP05/PCD/Preview gates remain open.",
+  "claims": {
+    "onchain": false,
+    "pcd": false,
+    "sp05Complete": false,
+    "sprintComplete": false,
+    "ledgerAcceptance": false,
+    "networkAcceptance": false,
+    "r6Complete": false,
+    "r6CompleteEffects": false,
+    "r6GrossAllowance": false,
+    "proofCompatibilityTested": false,
+    "nativePcd": false
+  },
+  "predecessorDisposition": {
+    "candidateHash": "c6249e14c06907946ff47f0815b1540abf4bb65409a234ce3a94ddb611a87f52",
+    "review": "REJECT",
+    "preserve": "stopped ledger, failed receipt, frozen source, stale predecessor reports",
+    "thisPass": "new charged successor, not a retry or refund"
+  },
+  "ownedFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "bytes": 62857,
+      "sha256": "200b7ecebc56eeeba98c9d3f1d2b10f9dd2db0741a9aa3f649531aa250105e6a"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs",
+      "bytes": 71636,
+      "sha256": "92d89ce4621abd57d63f97660c1952a348d55206ff57748c2be6a1a12a540073"
+    },
+    {
+      "path": "FOREMAN_REPORT.md",
+      "bytes": 7760,
+      "sha256": "3dbe0b091265792c388e6366696d111b62efe36856fda794ba8f16353bba0154"
+    }
+  ],
+  "reportJsonNote": "FOREMAN_REPORT.json is the fourth owned file. Hash it after freeze. Do not treat this field as a self-digest.",
+  "ownedBytesLimit": 262144,
+  "protectedUnchanged": {
+    "experiments/moriarty-midnight-financial/ledger/README.md": "8dad40c67e53b04c49c0c317bd6da3de4d9b430f473e71051d388aa3a8fc5a2e",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "d0120812b0f46f35c8fce31333288c2876720bdb3bb0e26877104349477010ee",
+    "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs": "fe594c9fab7457fdc3abe228927ee92b38af5873ed2075b9b4048c52d4b5a104",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0c5d5347923d169ffb7c9090060f7846ae0d6449378aade4ca7ec779c64bf433",
+    "generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "differential.mjs": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+    "bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+    "swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374"
+  },
+  "commands": [
+    {
+      "phase": "pre-edit-predecessor-14",
+      "argv": ["node", "/tmp/r6-reproduce-predecessor-14.mjs"],
+      "exit": 0,
+      "rows": 14,
+      "note": "Four altered native actions rejected same-phase and accepted across bind. Negative reservedGross and missing grossSpend reached inert finalize. Dust registration allowFeePayment=900 counted only unshielded 100."
+    },
+    {
+      "phase": "first-substantive-red",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "--test-name-pattern=native contract and maintenance|malformed counters|structural dust fee|native dust registration", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 1,
+      "tests": 4,
+      "pass": 0,
+      "fail": 4,
+      "note": "Bind mutations accepted. Negative reservation reached finalize. Dust spends rejected as unsupported. Registration inspect omitted dustFee."
+    },
+    {
+      "phase": "final-green-owned",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 0,
+      "tests": 40,
+      "pass": 40,
+      "fail": 0
+    },
+    {
+      "phase": "final-green-root-effects",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=30000", "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-effects.test.mjs"],
+      "exit": 0,
+      "tests": 7,
+      "pass": 7,
+      "fail": 0
+    },
+    {
+      "phase": "final-green-root-sdk-effects",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=30000", "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/root-sdk-effects.test.mjs"],
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    {
+      "phase": "adapted-root-sdk-recipe-shape",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=30000", "/tmp/r6-adapted/root-sdk-recipe-shape.test.mjs"],
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "note": "Import retargeted to live providers. Predecessor files not modified."
+    },
+    {
+      "phase": "adapted-root-gross-admission",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=30000", "/tmp/r6-adapted/root-gross-admission.test.mjs"],
+      "exit": 0,
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "note": "Import retargeted to live providers. Predecessor files not modified."
+    },
+    {
+      "phase": "adapted-38-case-predecessor-probes",
+      "argv": ["node", "/tmp/r6-adapted/gpt6-replayed-predecessor-probes.mjs"],
+      "exit": 0,
+      "rows": 38,
+      "positive": 5,
+      "negative": 33,
+      "constructionErrors": 0,
+      "note": "Import and output path adapted only. Predecessor retained-gpt6 evidence not overwritten."
+    },
+    {
+      "phase": "new-independent-14",
+      "argv": ["node", "/tmp/r6-adapted/gpt6-independent-probes.mjs"],
+      "exit": 0,
+      "rows": 14,
+      "constructionErrors": 0,
+      "nativeUnchangedActionControlsAccepted": 2,
+      "samePhaseAlteredActionsRejected": 4,
+      "crossBindingAlteredActionsRejected": 4,
+      "negativeReservationRejected": true,
+      "missingGrossSpendRejected": true,
+      "dustRegistrationAuthorizationNotDebited": true,
+      "dustRegistrationMissingFeeCapRejected": true,
+      "eraseProofsUnchangedMergeBindEqual": true
+    }
+  ],
+  "supportedProductionPath": {
+    "caller": "fundUnshielded after signed inspect and before finalizeRecipe, then recheck before submit",
+    "recipeTypes": {
+      "UNBOUND_TRANSACTION": ["baseTransaction", "balancingTransaction?"],
+      "UNPROVEN_TRANSACTION": ["transaction"],
+      "FINALIZED_TRANSACTION": ["originalTransaction", "balancingTransaction"]
+    },
+    "nativeComparison": "Transaction.merge of recipe parts, then eraseProofs().serialize() byte equality. Binding and proofs are the only permitted differences.",
+    "accounting": "Unshielded input values by permitted asset. DustSpend.vFee as separate DUST duty. DustRegistration.allowFeePayment constrained as authorization, not debit."
+  },
+  "testFixtureProvenance": {
+    "kind": "synthetic-test",
+    "keys": "in-memory sampleSigningKey",
+    "utxo": "synthetic sampleIntentHash references",
+    "sdkObjects": "native Intent, UnshieldedOffer, Transaction, MaintenanceUpdate, ContractCallPrototype, DustActions, DustRegistration, bind, merge, eraseProofs",
+    "structuralDustSpend": "labeled structural vFee object because native DustSpend needs a backing Night UTXO not constructed here",
+    "combination": "Transaction.fromParts plus addIntent({tag:'specific'}) plus Transaction.merge",
+    "notLedgerAcceptance": true
+  },
+  "remaining": [
+    "R1-R5/R7-R8 remain open.",
+    "Shielded Zswap input and transient values are not exposed. Those families stay unsupported accounting.",
+    "Native DustSpend construction was not achieved. Fee-spend tests used a labeled structural fixture.",
+    "Pinned DustRegistration.signature getter returns undefined. Native registration signatures were not verified.",
+    "Genuine proof generation, facade native finalizeRecipe, wallet, network, and submission were not exercised.",
+    "Financial Preview settlement, full BNF/K, native PCD, SP05, and twelve-sprint acceptance remain open."
+  ]
+}

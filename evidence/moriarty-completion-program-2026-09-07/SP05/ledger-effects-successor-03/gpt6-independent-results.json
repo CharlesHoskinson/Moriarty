@@ -1,0 +1,221 @@
+{
+  "scope": "Independent GPT-6 Astra review. Pure native objects, synthetic signatures/UTXO/Merkle state, bind/merge/erase only. All finalize/submit calls are inert adapters.",
+  "rows": [
+    {
+      "name": "native no-dust public path unchanged bind inert submit",
+      "calls": [
+        "balance",
+        "sign",
+        "inert-finalize",
+        "inert-submit"
+      ],
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "1",
+        "reservedGross": "100",
+        "dustFee": "1000",
+        "reservedDustFee": "0"
+      },
+      "events": [
+        {
+          "kind": "submitted",
+          "id": "LOCAL_SYNTHETIC_ID",
+          "identifiers": [
+            "003aa118ac033f60ed02e0d8d9eaca6fe9100a9748e2313f7d11efabd584e110ae",
+            "LOCAL_SYNTHETIC_ID"
+          ]
+        }
+      ],
+      "result": "LOCAL_SYNTHETIC_ID"
+    },
+    {
+      "name": "persistent scalar counters accept different native token units",
+      "distinctTokenTypes": true,
+      "first": {
+        "calls": [
+          "balance",
+          "sign",
+          "inert-finalize"
+        ],
+        "error": "LOCAL_FINALIZE_BOUNDARY",
+        "counters": {
+          "submission": "10",
+          "grossSpend": "1000",
+          "reservedSubmission": "1",
+          "reservedGross": "100",
+          "dustFee": "1000",
+          "reservedDustFee": "0"
+        },
+        "events": [
+          {
+            "kind": "unsubmitted-but-pending",
+            "identifiers": [],
+            "pendingState": "pending-state-unknown",
+            "reservationRetained": true,
+            "retried": false,
+            "errorClass": "Error"
+          }
+        ]
+      },
+      "second": {
+        "calls": [
+          "balance",
+          "sign",
+          "inert-finalize"
+        ],
+        "error": "LOCAL_FINALIZE_BOUNDARY",
+        "counters": {
+          "submission": "10",
+          "grossSpend": "1000",
+          "reservedSubmission": "2",
+          "reservedGross": "300",
+          "dustFee": "1000",
+          "reservedDustFee": "0"
+        },
+        "events": [
+          {
+            "kind": "unsubmitted-but-pending",
+            "identifiers": [],
+            "pendingState": "pending-state-unknown",
+            "reservationRetained": true,
+            "retried": false,
+            "errorClass": "Error"
+          }
+        ]
+      }
+    },
+    {
+      "name": "plain diagnostic Maps authorize public funding and inert submit",
+      "calls": [
+        "balance",
+        "sign",
+        "inert-finalize",
+        "inert-submit"
+      ],
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "1",
+        "reservedGross": "100",
+        "dustFee": "1000",
+        "reservedDustFee": "0"
+      },
+      "events": [
+        {
+          "kind": "submitted",
+          "id": "LOCAL_SYNTHETIC_ID",
+          "identifiers": [
+            "LOCAL_SYNTHETIC_ID"
+          ]
+        }
+      ],
+      "result": "LOCAL_SYNTHETIC_ID"
+    },
+    {
+      "name": "unknown recipe type admitted public native funding",
+      "calls": [
+        "balance",
+        "sign",
+        "inert-finalize",
+        "inert-submit"
+      ],
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "1",
+        "reservedGross": "100",
+        "dustFee": "1000",
+        "reservedDustFee": "0"
+      },
+      "events": [
+        {
+          "kind": "submitted",
+          "id": "LOCAL_SYNTHETIC_ID",
+          "identifiers": [
+            "0042ed0f6b45a01c2c08d28f68bc77a0d9fdb0315722287118d4d875b4941717c4",
+            "LOCAL_SYNTHETIC_ID"
+          ]
+        }
+      ],
+      "result": "LOCAL_SYNTHETIC_ID"
+    },
+    {
+      "name": "malformed budget side effects precede validation",
+      "calls": [
+        "balance",
+        "sign"
+      ],
+      "error": "malformed budget: reservedGross",
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "0",
+        "reservedGross": "-1",
+        "dustFee": "1000",
+        "reservedDustFee": "0"
+      },
+      "events": []
+    },
+    {
+      "name": "native registration invalid signature accepted with cap",
+      "signatureGetter": null,
+      "calls": [
+        "balance",
+        "sign",
+        "inert-finalize",
+        "inert-submit"
+      ],
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "1",
+        "reservedGross": "100",
+        "dustFee": "1000",
+        "reservedDustFee": "0"
+      },
+      "events": [
+        {
+          "kind": "submitted",
+          "id": "LOCAL_SYNTHETIC_ID",
+          "identifiers": [
+            "00787c74e6153cad1a0afaa27360f8ae4ff3688733778c525f89a4d8cb7ac7ce87",
+            "LOCAL_SYNTHETIC_ID"
+          ]
+        }
+      ],
+      "result": "LOCAL_SYNTHETIC_ID"
+    },
+    {
+      "name": "native registration exceeds remaining fee authority",
+      "calls": [
+        "balance",
+        "sign",
+        "inert-finalize"
+      ],
+      "error": "LOCAL_FINALIZE_BOUNDARY",
+      "counters": {
+        "submission": "10",
+        "grossSpend": "1000",
+        "reservedSubmission": "1",
+        "reservedGross": "100",
+        "dustFee": "1000",
+        "reservedDustFee": "999"
+      },
+      "events": [
+        {
+          "kind": "unsubmitted-but-pending",
+          "identifiers": [],
+          "pendingState": "pending-state-unknown",
+          "reservationRetained": true,
+          "retried": false,
+          "errorClass": "Error"
+        }
+      ]
+    },
+    {
+      "name": "construct native DustSpend synthetic ledger state",
+      "constructionError": "for seq=0 we use DustPublicKey instead of DustSecretKey"
+    }
+  ]
+}
