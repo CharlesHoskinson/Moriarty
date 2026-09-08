@@ -1,0 +1,211 @@
+✖ SP01 decoder accepts canonical string, Buffer and Uint8Array as frozen inputs (34.846703ms)
+✖ SP01 decoder ignores hostile shadow properties on genuine byte views (18.080445ms)
+✖ SP01 decoder rejects proxies and non-byte impostors without caller code (0.854599ms)
+✖ SP01 decoder rejects detached and oversized byte views by intrinsic size (0.608341ms)
+✖ SP01 decoder snapshots precisely the byte view before downstream decoding (21.893566ms)
+✖ SP01 decoder bounds primitive strings before any UTF8 encoding allocation (0.31037ms)
+✖ SP01 decoder accepts 4096 hex signature characters and rejects 4098 (19.149846ms)
+✖ SP01 decoder applies array length 128 and 129 to a schema-valid statement (15.532243ms)
+✔ SP01 decoder admits exact 65536 input bytes and rejects the next byte (37.284877ms)
+✖ SP01 decoder enforces depth, node, record-key and UTF8 text admission before schema (27.820066ms)
+✔ SP01 decoder rejects noncanonical UTF8, JSON, schema and Unicode inputs (21.287048ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 2
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 297.731931
+
+✖ failing tests:
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:309:1
+✖ SP01 decoder accepts canonical string, Buffer and Uint8Array as frozen inputs (34.846703ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(Object.isFrozen(decoded))
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:314:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:321:1
+✖ SP01 decoder ignores hostile shadow properties on genuine byte views (18.080445ms)
+  Error: caller getter
+      at Buffer.get (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:326:78)
+      at decodeEvaluation (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/src/evaluate.ts:126:77)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:328:22)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:333:1
+✖ SP01 decoder rejects proxies and non-byte impostors without caller code (0.854599ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'INPUT_SCHEMA'
+  
+      at Object.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:268:12)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.throws (node:assert:759:3)
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:345:5)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'INPUT_SCHEMA',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:350:1
+✖ SP01 decoder rejects detached and oversized byte views by intrinsic size (0.608341ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'INPUT_SCHEMA'
+  - 'INPUT_BOUNDS'
+           ^
+  
+      at Object.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:268:12)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.throws (node:assert:759:3)
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:356:3)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'INPUT_SCHEMA',
+    expected: 'INPUT_BOUNDS',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:361:1
+✖ SP01 decoder snapshots precisely the byte view before downstream decoding (21.893566ms)
+  Error: INPUT_SCHEMA
+      at decodeEvaluation (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/src/evaluate.ts:127:122)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:375:24)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'INPUT_SCHEMA',
+    stage: 9,
+    span: { startByte: '0', endByte: '0' }
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:379:1
+✖ SP01 decoder bounds primitive strings before any UTF8 encoding allocation (0.31037ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'INPUT_BOUNDS'
+  
+      at Object.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:268:12)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.throws (node:assert:759:3)
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:397:5)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'INPUT_BOUNDS',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:407:1
+✖ SP01 decoder accepts 4096 hex signature characters and rejects 4098 (19.149846ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:412:3)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:419:1
+✖ SP01 decoder applies array length 128 and 129 to a schema-valid statement (15.532243ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:423:3)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/semantics.test.mjs:436:1
+✖ SP01 decoder enforces depth, node, record-key and UTF8 text admission before schema (27.820066ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'INPUT_SCHEMA'
+  - 'INPUT_BOUNDS'
+           ^
+  
+      at Object.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:268:12)
+      at expectedException (node:assert:578:17)
+      at expectsError (node:assert:703:21)
+      at strict.throws (node:assert:759:3)
+      at decoderReject (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:267:10)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp01-grok-high/experiments/moriarty-language/tests/semantics.test.mjs:442:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'INPUT_SCHEMA',
+    expected: 'INPUT_BOUNDS',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

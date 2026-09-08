@@ -1,0 +1,27 @@
+{
+  "kind": "source-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 85.17963818402495,
+  "chargedSeconds": 1200,
+  "beforeHead": "fd241f897001f74dac23a4ddf18729ed63270e81",
+  "afterHead": "fd241f897001f74dac23a4ddf18729ed63270e81",
+  "beforeStatusSha256": "bd3a56165fc1a43618fd29864a002f15b0cac5a775777cef4659bda6460b266a",
+  "afterStatusSha256": "d9ab0ff8fb7c7d10a22e4463b19b8cd6744d37d26665846f3e5c4992309ba642",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=19min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp01-source-worker-356012.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "SP01 decoder only. No proof or ledger acceptance.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 42398,
+      "outputTokens": 4824,
+      "cacheReadInputTokens": 202240,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 6,
+      "costUSD": 0.0365262
+    }
+  },
+  "resultText": "I'll apply the reviewed decoder correction in the owned source files now, then update the Foreman reports from the actual edits.I'll read the current Foreman reports and confirm `canonicalDecode` matches the replacement.I'll apply the three source replacements, then write the Foreman reports from those edits.Source replacements landed. I'll confirm the edited sections, then write the Foreman reports.Source matches the reviewed replacement. I'll write the Foreman reports from those edits only.The reviewed decoder correction is in place in this worktree. Parent can freeze source and run tests.\n\n**`decodeEvaluation`** still has signature `decodeEvaluation(string|Uint8Array): EvaluationInput` and still throws `RuntimeError`. It now:\n\n- Reads encoding limits from `registeredBounds()`\n- Bounds primitive strings by code units, then scalar UTF-8 length, without allocating an encoded copy\n- Rejects byte proxies and impostors with native brand tests, without reading caller `.length`, `.buffer`, `.constructor`, or `Symbol.iterator`\n- Copies admitted bytes into a private `Uint8Array` via captured `byteLength` / `set` intrinsics\n- Decodes with `canonicalDecode` and admits with `admitEvaluation`\n\n**Also changed**\n\n- `evaluate.ts`: captured `evaluationByteLength` and `evaluationByteSet` after `UNKNOWN`\n- `node-shims.d.ts`: added `isUint8Array` on `node:util` types\n- `FOREMAN_REPORT.md` / `FOREMAN_REPORT.json`: actual edits, no self-run tests, no deviations\n\nThe frozen test file was not edited. Registered bounds and unrelated functions were not changed. Decoder admission does not establish semantic, signature, proof, or ledger validity. The private copy does not promise shared-writer atomicity.\n\nI did not run tests, typecheck, Git, or review. Parent verified RED (11 focused tests: 9 decoder failures, 2 controls; frozen test SHA256 `3eac34c2\u2026adcef`) and owns the remaining regressions, typecheck, language suite, source freeze, and GPT-6 review.",
+  "stopReason": "end_turn",
+  "status": " M experiments/moriarty-language/src/evaluate.ts\n M experiments/moriarty-language/src/node-shims.d.ts\n M experiments/moriarty-language/tests/semantics.test.mjs\n?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n"
+}
