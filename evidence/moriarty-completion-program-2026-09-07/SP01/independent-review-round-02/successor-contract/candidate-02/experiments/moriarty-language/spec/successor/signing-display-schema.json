@@ -1,0 +1,5544 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://moriarty.local/spec/successor/signing-display-schema/0.2.0-proposal",
+  "title": "Moriarty successor ExactPlan and OutcomeIntent signing documents",
+  "description": "PROPOSAL draft-2020-12 schema. Not frozen. Not registered. Host SHA-256 domains require majority and native compatibility before freeze. JSON Schema does not enforce hash preimages, cap sums, unique compound identities, or relational deadlines. Integer inclusive ranges are DomainValidation (pre-hash). Patterns use ECMA-262 (?![\\s\\S]) so a final newline, CR, or Unicode newline cannot match.",
+  "x-proposalStatus": "proposed",
+  "x-schemaVersion": "moriarty-succ-sign/0",
+  "x-validationStages": {
+    "structural": "Draft 2020-12 schema including true-end patterns, closed objects, tagged unions, required-claims contains-exactly-once, action-specific if/then.",
+    "domain": "Pre-hash parse of every UInt64/UInt128/SInt128/Scale field against inclusive bounds; recovery alias; quantity vector; genesis predecessor emptiness.",
+    "hash": "Recompute SHA256(UTF8(domain)||0x00||canonical(object)) for every advertised digest from retained preimages.",
+    "contextual": "Cap sums, history, currentness, net-after-fees, clone, races. Specified-only until an evaluator exists."
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ExactPlanDocument"
+    },
+    {
+      "$ref": "#/$defs/OutcomeIntentDocument"
+    }
+  ],
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "Party": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 64,
+      "x-display": {
+        "label": "Party",
+        "path": "party",
+        "unit": "Party",
+        "role": "actor"
+      }
+    },
+    "AssetId": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 64,
+      "x-display": {
+        "label": "Asset",
+        "path": "asset",
+        "unit": "AssetId",
+        "role": "token-identity"
+      }
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])",
+      "minLength": 64,
+      "maxLength": 64
+    },
+    "UInt64Text": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 20,
+      "x-domain": "UInt64",
+      "x-inclusiveMin": "0",
+      "x-inclusiveMax": "18446744073709551615"
+    },
+    "UInt128Text": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 39,
+      "x-domain": "UInt128",
+      "x-inclusiveMin": "0",
+      "x-inclusiveMax": "340282366920938463463374607431768211455"
+    },
+    "SInt128Text": {
+      "type": "string",
+      "pattern": "^(0|-?[1-9][0-9]{0,38})(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 40,
+      "x-domain": "SInt128",
+      "x-inclusiveMin": "-170141183460469231731687303715884105728",
+      "x-inclusiveMax": "170141183460469231731687303715884105727"
+    },
+    "ScaleText": {
+      "type": "string",
+      "pattern": "^(0|[1-9]|1[0-8])(?![\\s\\S])",
+      "x-domain": "Scale",
+      "x-inclusiveMin": "0",
+      "x-inclusiveMax": "18"
+    },
+    "AsciiLabel": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 _./:-]{0,127}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "NetworkId": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 64,
+      "x-display": {
+        "label": "Network",
+        "path": "network",
+        "unit": "network-id",
+        "role": "authorization-domain"
+      }
+    },
+    "DeploymentId": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+      "minLength": 1,
+      "maxLength": 64,
+      "x-display": {
+        "label": "Deployment",
+        "path": "deployment",
+        "unit": "deployment-id",
+        "role": "authorization-domain"
+      }
+    },
+    "Bool": {
+      "type": "boolean",
+      "x-display": {
+        "label": "Boolean",
+        "path": "value",
+        "unit": "Bool",
+        "role": "flag"
+      }
+    },
+    "UnitTerm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "exponent"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}(?![\\s\\S])",
+          "minLength": 1,
+          "maxLength": 64,
+          "x-display": {
+            "label": "Unit symbol",
+            "path": "symbol",
+            "unit": "unit-id",
+            "role": "quantity-unit"
+          }
+        },
+        "exponent": {
+          "type": "integer",
+          "minimum": -16,
+          "maximum": 16,
+          "x-display": {
+            "label": "Unit exponent",
+            "path": "exponent",
+            "unit": "exponent",
+            "role": "quantity-unit"
+          }
+        }
+      }
+    },
+    "Quantity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "mantissa",
+        "scale",
+        "units"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Quantity"
+        },
+        "mantissa": {
+          "$ref": "#/$defs/SInt128Text",
+          "x-display": {
+            "label": "Quantity mantissa",
+            "path": "mantissa",
+            "unit": "scaled-integer",
+            "role": "quantity"
+          }
+        },
+        "scale": {
+          "$ref": "#/$defs/ScaleText",
+          "x-display": {
+            "label": "Quantity scale",
+            "path": "scale",
+            "unit": "decimal-places",
+            "role": "quantity-scale"
+          }
+        },
+        "units": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/UnitTerm"
+          },
+          "x-display": {
+            "label": "Unit vector",
+            "path": "units",
+            "unit": "unit-vector",
+            "role": "quantity-unit"
+          }
+        }
+      }
+    },
+    "Amount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "asset",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Amount"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "value": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Amount value",
+            "path": "value",
+            "unit": "asset-quantum",
+            "role": "quantity"
+          }
+        }
+      }
+    },
+    "Shares": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "vault",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Shares"
+        },
+        "vault": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Vault",
+            "path": "vault",
+            "unit": "VaultId",
+            "role": "share-vault"
+          }
+        },
+        "value": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Share units",
+            "path": "value",
+            "unit": "share-quantum",
+            "role": "shares"
+          }
+        }
+      }
+    },
+    "DebtStatus": {
+      "type": "string",
+      "enum": [
+        "Outstanding",
+        "Settled",
+        "WrittenOff",
+        "Capitalized"
+      ]
+    },
+    "AllocationRule": {
+      "type": "string",
+      "enum": [
+        "AccrualFirst",
+        "PrincipalFirst",
+        "ProRata"
+      ]
+    },
+    "NegativeRateDisposition": {
+      "type": "string",
+      "enum": [
+        "Reject",
+        "FloorZero",
+        "CreditAccrued"
+      ]
+    },
+    "Rounding": {
+      "type": "string",
+      "enum": [
+        "floor",
+        "ceil",
+        "none"
+      ]
+    },
+    "Debt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "debtId",
+        "controller",
+        "debtor",
+        "creditor",
+        "denomination",
+        "principal",
+        "accrued",
+        "outstanding",
+        "startDate",
+        "nextPaymentDate",
+        "accrualPeriodSeconds",
+        "allocationRule",
+        "negativeRateDisposition",
+        "liabilityCap",
+        "settlementAsset",
+        "conversionMantissa",
+        "conversionScale",
+        "conversionRounding",
+        "status"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Debt"
+        },
+        "debtId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Debt identity",
+            "path": "debtId",
+            "unit": "ObligationId",
+            "role": "liability-identity"
+          }
+        },
+        "controller": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Debt controller",
+            "path": "controller",
+            "unit": "Party",
+            "role": "controller"
+          }
+        },
+        "debtor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Debtor",
+            "path": "debtor",
+            "unit": "Party",
+            "role": "obligor"
+          }
+        },
+        "creditor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Creditor",
+            "path": "creditor",
+            "unit": "Party",
+            "role": "obligee"
+          }
+        },
+        "denomination": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Debt denomination",
+            "path": "denomination",
+            "unit": "Denomination",
+            "role": "nominal-unit"
+          }
+        },
+        "principal": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Principal",
+            "path": "principal",
+            "unit": "denomination-quantum",
+            "role": "nominal-principal"
+          }
+        },
+        "accrued": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Accrued",
+            "path": "accrued",
+            "unit": "denomination-quantum",
+            "role": "nominal-accrual"
+          }
+        },
+        "outstanding": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Outstanding nominal",
+            "path": "outstanding",
+            "unit": "denomination-quantum",
+            "role": "nominal-debt"
+          }
+        },
+        "startDate": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Start date",
+            "path": "startDate",
+            "unit": "UTC-epoch-second",
+            "role": "schedule"
+          }
+        },
+        "nextPaymentDate": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Next payment date",
+            "path": "nextPaymentDate",
+            "unit": "UTC-epoch-second",
+            "role": "schedule"
+          }
+        },
+        "accrualPeriodSeconds": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Accrual period",
+            "path": "accrualPeriodSeconds",
+            "unit": "second",
+            "role": "schedule"
+          }
+        },
+        "allocationRule": {
+          "$ref": "#/$defs/AllocationRule",
+          "x-display": {
+            "label": "Allocation rule",
+            "path": "allocationRule",
+            "unit": "rule",
+            "role": "repay-allocation"
+          }
+        },
+        "negativeRateDisposition": {
+          "$ref": "#/$defs/NegativeRateDisposition",
+          "x-display": {
+            "label": "Negative rate disposition",
+            "path": "negativeRateDisposition",
+            "unit": "rule",
+            "role": "accrual-policy"
+          }
+        },
+        "liabilityCap": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Liability cap",
+            "path": "liabilityCap",
+            "unit": "denomination-quantum",
+            "role": "debt-cap-not-transfer"
+          }
+        },
+        "settlementAsset": {
+          "$ref": "#/$defs/AssetId",
+          "x-display": {
+            "label": "Settlement asset",
+            "path": "settlementAsset",
+            "unit": "AssetId",
+            "role": "settlement"
+          }
+        },
+        "conversionMantissa": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Denomination to asset mantissa",
+            "path": "conversionMantissa",
+            "unit": "scaled-integer",
+            "role": "settlement-conversion"
+          }
+        },
+        "conversionScale": {
+          "$ref": "#/$defs/ScaleText",
+          "x-display": {
+            "label": "Conversion scale",
+            "path": "conversionScale",
+            "unit": "decimal-places",
+            "role": "settlement-conversion"
+          }
+        },
+        "conversionRounding": {
+          "$ref": "#/$defs/Rounding",
+          "x-display": {
+            "label": "Conversion rounding",
+            "path": "conversionRounding",
+            "unit": "rounding",
+            "role": "settlement-conversion"
+          }
+        },
+        "status": {
+          "$ref": "#/$defs/DebtStatus",
+          "x-display": {
+            "label": "Debt status",
+            "path": "status",
+            "unit": "DebtStatus",
+            "role": "liability-status"
+          }
+        }
+      }
+    },
+    "Rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "mantissa",
+        "scale"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Rate"
+        },
+        "mantissa": {
+          "$ref": "#/$defs/SInt128Text",
+          "x-display": {
+            "label": "Rate mantissa",
+            "path": "mantissa",
+            "unit": "scaled-integer",
+            "role": "rate"
+          }
+        },
+        "scale": {
+          "$ref": "#/$defs/ScaleText",
+          "x-display": {
+            "label": "Rate scale",
+            "path": "scale",
+            "unit": "decimal-places",
+            "role": "rate-scale"
+          }
+        }
+      }
+    },
+    "Price": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "base",
+        "quote",
+        "mantissa",
+        "scale",
+        "direction"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Price"
+        },
+        "base": {
+          "$ref": "#/$defs/AssetId",
+          "x-display": {
+            "label": "Price base",
+            "path": "base",
+            "unit": "AssetId",
+            "role": "price-base"
+          }
+        },
+        "quote": {
+          "$ref": "#/$defs/AssetId",
+          "x-display": {
+            "label": "Price quote",
+            "path": "quote",
+            "unit": "AssetId",
+            "role": "price-quote"
+          }
+        },
+        "mantissa": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Price mantissa",
+            "path": "mantissa",
+            "unit": "scaled-integer",
+            "role": "exchange-rate"
+          }
+        },
+        "scale": {
+          "$ref": "#/$defs/ScaleText",
+          "x-display": {
+            "label": "Price scale",
+            "path": "scale",
+            "unit": "decimal-places",
+            "role": "price-scale"
+          }
+        },
+        "direction": {
+          "type": "string",
+          "const": "basePerQuote",
+          "x-display": {
+            "label": "Price direction",
+            "path": "direction",
+            "unit": "base-per-quote",
+            "role": "price-direction"
+          }
+        }
+      }
+    },
+    "AmountPredicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "amount"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "enum": [
+            "Min",
+            "Exact"
+          ]
+        },
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        }
+      },
+      "x-display": {
+        "label": "Amount predicate",
+        "path": "amountPredicate",
+        "unit": "from amount.asset",
+        "role": "min-or-exact"
+      }
+    },
+    "Remainder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "numerator",
+        "denominator",
+        "unit",
+        "location"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Remainder"
+        },
+        "numerator": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Remainder numerator",
+            "path": "numerator",
+            "unit": "from unit",
+            "role": "rounding-remainder"
+          }
+        },
+        "denominator": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Remainder denominator",
+            "path": "denominator",
+            "unit": "scale-denominator",
+            "role": "rounding-remainder"
+          }
+        },
+        "unit": {
+          "$ref": "#/$defs/AssetId",
+          "x-display": {
+            "label": "Remainder unit",
+            "path": "unit",
+            "unit": "AssetId",
+            "role": "rounding-remainder"
+          }
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "SourceReserve",
+            "NamedParty",
+            "DiscardRecorded"
+          ],
+          "x-display": {
+            "label": "Remainder location",
+            "path": "location",
+            "unit": "location",
+            "role": "rounding-remainder"
+          }
+        }
+      }
+    },
+    "Dust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "asset",
+        "value"
+      ],
+      "properties": {
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "value": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Dust threshold",
+            "path": "value",
+            "unit": "asset-quantum",
+            "role": "exchange-dust"
+          }
+        }
+      }
+    },
+    "Recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "party",
+        "role"
+      ],
+      "properties": {
+        "party": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Recipient party",
+            "path": "party",
+            "unit": "Party",
+            "role": "recipient"
+          }
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "principal",
+            "counterparty",
+            "pool",
+            "fee_recipient",
+            "controller",
+            "creditor"
+          ],
+          "x-display": {
+            "label": "Recipient role",
+            "path": "role",
+            "unit": "role",
+            "role": "recipient"
+          }
+        }
+      }
+    },
+    "DebitCap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor",
+        "asset",
+        "maximum"
+      ],
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Debit actor",
+            "path": "actor",
+            "unit": "Party",
+            "role": "gross-debit-limit"
+          }
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "maximum": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Gross debit cap",
+            "path": "maximum",
+            "unit": "asset-quantum",
+            "role": "gross-debit-limit"
+          }
+        }
+      }
+    },
+    "FeeCap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor",
+        "asset",
+        "maximum"
+      ],
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Fee actor",
+            "path": "actor",
+            "unit": "Party",
+            "role": "fee-limit"
+          }
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "maximum": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Fee cap",
+            "path": "maximum",
+            "unit": "asset-quantum",
+            "role": "fee-limit"
+          }
+        }
+      }
+    },
+    "NetGoal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor",
+        "asset",
+        "minimumAfterFees"
+      ],
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Net-goal actor",
+            "path": "actor",
+            "unit": "Party",
+            "role": "net-goal-fees-included"
+          }
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "minimumAfterFees": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Net goal after fees",
+            "path": "minimumAfterFees",
+            "unit": "asset-quantum",
+            "role": "net-goal-fees-included"
+          }
+        }
+      }
+    },
+    "DebtCap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "debtor",
+        "creditor",
+        "denomination",
+        "maximumOutstanding"
+      ],
+      "properties": {
+        "debtor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Cap debtor",
+            "path": "debtor",
+            "unit": "Party",
+            "role": "debt-cap-not-transfer"
+          }
+        },
+        "creditor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Cap creditor",
+            "path": "creditor",
+            "unit": "Party",
+            "role": "debt-cap-not-transfer"
+          }
+        },
+        "denomination": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Cap denomination",
+            "path": "denomination",
+            "unit": "Denomination",
+            "role": "debt-cap-not-transfer"
+          }
+        },
+        "maximumOutstanding": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Nominal debt cap",
+            "path": "maximumOutstanding",
+            "unit": "denomination-quantum",
+            "role": "debt-cap-not-transfer"
+          }
+        }
+      }
+    },
+    "Work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinaryRemaining",
+        "recoveryRemaining",
+        "lifetimeOrdinary",
+        "lifetimeRecovery"
+      ],
+      "properties": {
+        "ordinaryRemaining": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Ordinary work remaining",
+            "path": "ordinaryRemaining",
+            "unit": "work-unit",
+            "role": "conserved-ordinary-work"
+          }
+        },
+        "recoveryRemaining": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Recovery work remaining",
+            "path": "recoveryRemaining",
+            "unit": "work-unit",
+            "role": "conserved-recovery-work"
+          }
+        },
+        "lifetimeOrdinary": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Lifetime ordinary work",
+            "path": "lifetimeOrdinary",
+            "unit": "work-unit",
+            "role": "lifetime-ordinary-work"
+          }
+        },
+        "lifetimeRecovery": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Lifetime recovery work",
+            "path": "lifetimeRecovery",
+            "unit": "work-unit",
+            "role": "lifetime-recovery-work"
+          }
+        }
+      }
+    },
+    "Assumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assumptionId",
+        "kind",
+        "statement",
+        "evidenceRole"
+      ],
+      "properties": {
+        "assumptionId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Assumption id",
+            "path": "assumptionId",
+            "unit": "named-assumption",
+            "role": "truth-or-custody-assumption"
+          }
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "oracle_truth",
+            "custody",
+            "finality",
+            "witness_availability",
+            "key_trust",
+            "proof_soundness"
+          ],
+          "x-display": {
+            "label": "Assumption kind",
+            "path": "kind",
+            "unit": "assumption-kind",
+            "role": "truth-or-custody-assumption"
+          }
+        },
+        "statement": {
+          "$ref": "#/$defs/AsciiLabel",
+          "x-display": {
+            "label": "Assumption statement",
+            "path": "statement",
+            "unit": "text",
+            "role": "truth-or-custody-assumption"
+          }
+        },
+        "evidenceRole": {
+          "type": "string",
+          "enum": [
+            "required_observation",
+            "external_unproven",
+            "ledger_predicate"
+          ],
+          "x-display": {
+            "label": "Evidence role",
+            "path": "evidenceRole",
+            "unit": "role",
+            "role": "truth-or-custody-assumption"
+          }
+        }
+      }
+    },
+    "Predecessor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stateHash",
+        "instanceId",
+        "consumptionId"
+      ],
+      "properties": {
+        "stateHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Predecessor state",
+            "path": "stateHash",
+            "unit": "Digest",
+            "role": "history-predecessor"
+          }
+        },
+        "instanceId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Predecessor instance",
+            "path": "instanceId",
+            "unit": "InstanceId",
+            "role": "history-predecessor"
+          }
+        },
+        "consumptionId": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Consumption id",
+            "path": "consumptionId",
+            "unit": "Digest",
+            "role": "history-predecessor"
+          }
+        }
+      }
+    },
+    "ActorLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor",
+        "asset",
+        "originalGrossCap",
+        "originalFeeCap",
+        "originalNetGoal",
+        "cumulativeGross",
+        "cumulativeFees",
+        "cumulativeNet",
+        "remainingGross",
+        "remainingFee"
+      ],
+      "properties": {
+        "actor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Ledger actor",
+            "path": "actor",
+            "unit": "Party",
+            "role": "actor-ledger"
+          }
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "originalGrossCap": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Original gross cap",
+            "path": "originalGrossCap",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "originalFeeCap": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Original fee cap",
+            "path": "originalFeeCap",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "originalNetGoal": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Original net goal",
+            "path": "originalNetGoal",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "cumulativeGross": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Cumulative gross",
+            "path": "cumulativeGross",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "cumulativeFees": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Cumulative fees",
+            "path": "cumulativeFees",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "cumulativeNet": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Cumulative net",
+            "path": "cumulativeNet",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "remainingGross": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Remaining gross",
+            "path": "remainingGross",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        },
+        "remainingFee": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Remaining fee",
+            "path": "remainingFee",
+            "unit": "asset-quantum",
+            "role": "actor-ledger"
+          }
+        }
+      }
+    },
+    "DebtLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "debtor",
+        "creditor",
+        "denomination",
+        "originalDebtCap",
+        "cumulativeCreated",
+        "cumulativeRepaid",
+        "cumulativeWrittenOff",
+        "outstanding"
+      ],
+      "properties": {
+        "debtor": {
+          "$ref": "#/$defs/Party"
+        },
+        "creditor": {
+          "$ref": "#/$defs/Party"
+        },
+        "denomination": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "originalDebtCap": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Original debt cap",
+            "path": "originalDebtCap",
+            "unit": "denomination-quantum",
+            "role": "debt-ledger"
+          }
+        },
+        "cumulativeCreated": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "cumulativeRepaid": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "cumulativeWrittenOff": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "outstanding": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Ledger outstanding",
+            "path": "outstanding",
+            "unit": "denomination-quantum",
+            "role": "debt-ledger"
+          }
+        }
+      }
+    },
+    "CallPermission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "callee",
+        "selector"
+      ],
+      "properties": {
+        "callee": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Call target",
+            "path": "callee",
+            "unit": "Identifier",
+            "role": "permitted-call"
+          }
+        },
+        "selector": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Call selector",
+            "path": "selector",
+            "unit": "Identifier",
+            "role": "permitted-call"
+          }
+        }
+      }
+    },
+    "PartialFill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "minFill",
+        "cumulativeCap"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "enum": [
+            "FillOrKill",
+            "Partial"
+          ],
+          "x-display": {
+            "label": "Partial-fill rule",
+            "path": "tag",
+            "unit": "rule",
+            "role": "partial-fill-rule"
+          }
+        },
+        "minFill": {
+          "$ref": "#/$defs/Amount"
+        },
+        "cumulativeCap": {
+          "$ref": "#/$defs/Amount",
+          "x-display": {
+            "label": "Cumulative fill cap",
+            "path": "cumulativeCap",
+            "unit": "from asset",
+            "role": "partial-fill-cap"
+          }
+        }
+      }
+    },
+    "Validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "notBefore",
+        "notAfterExclusive"
+      ],
+      "properties": {
+        "notBefore": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Valid not before",
+            "path": "notBefore",
+            "unit": "UTC-epoch-second",
+            "role": "validity-window"
+          }
+        },
+        "notAfterExclusive": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Valid not after exclusive",
+            "path": "notAfterExclusive",
+            "unit": "UTC-epoch-second",
+            "role": "validity-window"
+          }
+        }
+      }
+    },
+    "EffectKind": {
+      "type": "string",
+      "enum": [
+        "Transfer",
+        "Fee",
+        "Mint",
+        "Burn",
+        "Lock",
+        "Unlock",
+        "Accrual",
+        "Capitalize",
+        "WriteOff",
+        "DueCreated",
+        "DueSettled",
+        "ShareMint",
+        "ShareBurn",
+        "ShareConvert",
+        "PositionOpen",
+        "PositionAdjust",
+        "PositionClose",
+        "RequestOpen",
+        "RequestFulfill",
+        "RequestClaim",
+        "RequestCancel",
+        "MessageSend",
+        "MessageReceive",
+        "MessageRefund",
+        "EventClaimOpened",
+        "EventClaimResolved",
+        "EventClaimSettled",
+        "RewardAccrued",
+        "RewardClaimed",
+        "Slashed",
+        "Rebased",
+        "Genesis",
+        "Activate",
+        "Pause",
+        "Revoke",
+        "Migrate",
+        "Observe"
+      ]
+    },
+    "CoreOp": {
+      "type": "string",
+      "enum": [
+        "Transfer",
+        "Fee",
+        "Exchange",
+        "Mint",
+        "Burn",
+        "Lock",
+        "Unlock",
+        "DebtCreate",
+        "DebtAccrue",
+        "DebtRepay",
+        "DebtWriteOff",
+        "DebtCapitalize",
+        "ShareMint",
+        "ShareBurn",
+        "ShareConvert",
+        "PositionOpen",
+        "PositionAdjust",
+        "PositionClose",
+        "RequestOpen",
+        "RequestFulfill",
+        "RequestClaim",
+        "RequestCancel",
+        "MessageSend",
+        "MessageReceive",
+        "MessageRefund",
+        "EventClaimOpen",
+        "EventClaimResolve",
+        "EventClaimSettle",
+        "RewardAccrue",
+        "RewardClaim",
+        "Slash",
+        "Rebase",
+        "Observe",
+        "Genesis",
+        "Activate",
+        "Pause",
+        "Revoke",
+        "Migrate"
+      ]
+    },
+    "ResidualCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller",
+        "allowedEffectSet",
+        "allowedAssets",
+        "grossDebitCaps",
+        "feeCaps",
+        "netGoals",
+        "debtCaps",
+        "permittedRecipients",
+        "permittedCalls",
+        "validity",
+        "partialRule",
+        "continuation"
+      ],
+      "properties": {
+        "controller": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Controller",
+            "path": "controller",
+            "unit": "Party",
+            "role": "continuation-owner"
+          }
+        },
+        "allowedEffectSet": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/CoreOp"
+          },
+          "x-display": {
+            "label": "Allowed Core operations",
+            "path": "allowedEffectSet",
+            "unit": "CoreOp",
+            "role": "authority-attenuation"
+          },
+          "description": "CoreOp constructors this residual may still invoke. Items are CoreOp names, not EffectKind names. DebtAccrue emits Accrual. DebtCreate emits DueCreated. Source action names live on OutcomeIntent.allowedActions. An ExactPlan action is authorized only if its CoreOp is in this set. Produced exactEffects must be in the closed image of those CoreOps.",
+          "x-itemDomain": "CoreOp",
+          "x-notDomain": "EffectKind"
+        },
+        "allowedAssets": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/AssetId"
+          },
+          "x-display": {
+            "label": "Allowed assets",
+            "path": "allowedAssets",
+            "unit": "AssetId",
+            "role": "authority-attenuation"
+          }
+        },
+        "grossDebitCaps": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/DebitCap"
+          }
+        },
+        "feeCaps": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/FeeCap"
+          }
+        },
+        "netGoals": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/NetGoal"
+          }
+        },
+        "debtCaps": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/DebtCap"
+          }
+        },
+        "permittedRecipients": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Recipient"
+          }
+        },
+        "permittedCalls": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/CallPermission"
+          }
+        },
+        "validity": {
+          "$ref": "#/$defs/Validity"
+        },
+        "partialRule": {
+          "$ref": "#/$defs/PartialFill"
+        },
+        "continuation": {
+          "type": "string",
+          "enum": [
+            "principal",
+            "named_controller",
+            "none"
+          ],
+          "x-display": {
+            "label": "Continuation",
+            "path": "continuation",
+            "unit": "rule",
+            "role": "continuation-owner"
+          }
+        }
+      }
+    },
+    "AuthorityWrapper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "intentDigest",
+        "signingDomain",
+        "principal",
+        "nonce",
+        "signatureAbsent"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "AuthorityWrapper"
+        },
+        "intentDigest": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Intent digest",
+            "path": "intentDigest",
+            "unit": "Digest",
+            "role": "authorization-wrapper"
+          }
+        },
+        "signingDomain": {
+          "$ref": "#/$defs/AsciiLabel",
+          "x-display": {
+            "label": "Signing domain",
+            "path": "signingDomain",
+            "unit": "domain-tag",
+            "role": "authorization-wrapper"
+          }
+        },
+        "principal": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Wrapper principal",
+            "path": "principal",
+            "unit": "Party",
+            "role": "authorization-wrapper"
+          }
+        },
+        "nonce": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Wrapper nonce",
+            "path": "nonce",
+            "unit": "authorization-nonce",
+            "role": "authorization-wrapper"
+          }
+        },
+        "signatureAbsent": {
+          "type": "boolean",
+          "const": true,
+          "x-display": {
+            "label": "Signature absent",
+            "path": "signatureAbsent",
+            "unit": "Bool",
+            "role": "unsigned-design-example"
+          }
+        }
+      }
+    },
+    "LockRight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "locker",
+        "asset",
+        "amount"
+      ],
+      "properties": {
+        "locker": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Locker",
+            "path": "locker",
+            "unit": "Party",
+            "role": "lock"
+          }
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Locked amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "lock"
+          }
+        }
+      }
+    },
+    "ReserveAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "which"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "AliasReserve"
+        },
+        "which": {
+          "type": "string",
+          "const": "recovery",
+          "x-display": {
+            "label": "Aliased reserve",
+            "path": "which",
+            "unit": "reserve-id",
+            "role": "recovery-alias"
+          }
+        }
+      }
+    },
+    "RecoveryRight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controller",
+        "allowedEffectSet",
+        "alias"
+      ],
+      "properties": {
+        "controller": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Recovery controller",
+            "path": "controller",
+            "unit": "Party",
+            "role": "recovery-right"
+          }
+        },
+        "allowedEffectSet": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "enum": [
+              "RequestCancel",
+              "MessageRefund",
+              "Unlock",
+              "DebtRepay",
+              "Migrate"
+            ]
+          },
+          "x-display": {
+            "label": "Recovery allowed effects",
+            "path": "allowedEffectSet",
+            "unit": "CoreOp",
+            "role": "recovery-right"
+          },
+          "description": "Recovery CoreOp subset. Aliases remainingWork.recoveryRemaining. Does not copy a second Work budget."
+        },
+        "alias": {
+          "$ref": "#/$defs/ReserveAlias"
+        }
+      }
+    },
+    "ObservationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "maxStalenessSeconds",
+        "requiredRole"
+      ],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "x-display": {
+            "label": "Required observation fields",
+            "path": "requiredFields",
+            "unit": "field",
+            "role": "observation-policy"
+          }
+        },
+        "maxStalenessSeconds": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Max staleness",
+            "path": "maxStalenessSeconds",
+            "unit": "second",
+            "role": "observation-policy"
+          }
+        },
+        "requiredRole": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Required observation role",
+            "path": "requiredRole",
+            "unit": "role",
+            "role": "observation-policy"
+          }
+        }
+      }
+    },
+    "PinnedPredecessors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "predecessors"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Pinned"
+        },
+        "predecessors": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Predecessor"
+          }
+        }
+      }
+    },
+    "AdmittedContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "instanceId",
+        "requiredPolicyHash",
+        "minEventOrder",
+        "requireUnconsumed"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "AdmittedContext"
+        },
+        "instanceId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Admitted instance",
+            "path": "instanceId",
+            "unit": "InstanceId",
+            "role": "admitted-context"
+          }
+        },
+        "requiredPolicyHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Required policy hash",
+            "path": "requiredPolicyHash",
+            "unit": "Digest",
+            "role": "admitted-context"
+          }
+        },
+        "minEventOrder": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Min event order",
+            "path": "minEventOrder",
+            "unit": "EventOrder",
+            "role": "admitted-context"
+          }
+        },
+        "requireUnconsumed": {
+          "type": "boolean",
+          "const": true,
+          "x-display": {
+            "label": "Require unconsumed",
+            "path": "requireUnconsumed",
+            "unit": "Bool",
+            "role": "admitted-context"
+          }
+        }
+      }
+    },
+    "PredecessorConstraint": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/PinnedPredecessors"
+        },
+        {
+          "$ref": "#/$defs/AdmittedContext"
+        }
+      ]
+    },
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "positionId",
+        "owner",
+        "vault",
+        "lowerTick",
+        "upperTick",
+        "liquidity",
+        "direction",
+        "status"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Position"
+        },
+        "positionId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Position id",
+            "path": "positionId",
+            "unit": "PositionId",
+            "role": "position"
+          }
+        },
+        "owner": {
+          "$ref": "#/$defs/Party"
+        },
+        "vault": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "lowerTick": {
+          "$ref": "#/$defs/SInt128Text",
+          "x-display": {
+            "label": "Lower tick",
+            "path": "lowerTick",
+            "unit": "tick",
+            "role": "position"
+          }
+        },
+        "upperTick": {
+          "$ref": "#/$defs/SInt128Text",
+          "x-display": {
+            "label": "Upper tick",
+            "path": "upperTick",
+            "unit": "tick",
+            "role": "position"
+          }
+        },
+        "liquidity": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Liquidity",
+            "path": "liquidity",
+            "unit": "liquidity-unit",
+            "role": "position"
+          }
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "in_range",
+            "below",
+            "above"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Open",
+            "Closed"
+          ]
+        }
+      }
+    },
+    "Request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "requestId",
+        "controller",
+        "asset",
+        "committed",
+        "filled",
+        "claimed",
+        "status"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Request"
+        },
+        "requestId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Request id",
+            "path": "requestId",
+            "unit": "RequestId",
+            "role": "request"
+          }
+        },
+        "controller": {
+          "$ref": "#/$defs/Party"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "committed": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Committed",
+            "path": "committed",
+            "unit": "asset-quantum",
+            "role": "request"
+          }
+        },
+        "filled": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Filled",
+            "path": "filled",
+            "unit": "asset-quantum",
+            "role": "request"
+          }
+        },
+        "claimed": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Claimed",
+            "path": "claimed",
+            "unit": "asset-quantum",
+            "role": "request"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Pending",
+            "Claimable",
+            "Claimed",
+            "Cancelled",
+            "Expired"
+          ]
+        }
+      }
+    },
+    "Message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "messageId",
+        "sender",
+        "recipient",
+        "payloadBound",
+        "status",
+        "finalityAssumption"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Message"
+        },
+        "messageId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Message id",
+            "path": "messageId",
+            "unit": "MessageId",
+            "role": "message"
+          }
+        },
+        "sender": {
+          "$ref": "#/$defs/Party"
+        },
+        "recipient": {
+          "$ref": "#/$defs/Party"
+        },
+        "payloadBound": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Payload bound",
+            "path": "payloadBound",
+            "unit": "byte",
+            "role": "message"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Sent",
+            "Received",
+            "Refunded"
+          ]
+        },
+        "finalityAssumption": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "EventClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "claimId",
+        "eventId",
+        "outcomeIndex",
+        "claimant",
+        "stake",
+        "status",
+        "evidenceAnchor",
+        "resolutionRule"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "EventClaim"
+        },
+        "claimId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Event-claim id",
+            "path": "claimId",
+            "unit": "EventClaimId",
+            "role": "event-claim"
+          }
+        },
+        "eventId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "outcomeIndex": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Outcome index",
+            "path": "outcomeIndex",
+            "unit": "index",
+            "role": "event-claim"
+          }
+        },
+        "claimant": {
+          "$ref": "#/$defs/Party"
+        },
+        "stake": {
+          "$ref": "#/$defs/Amount"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Open",
+            "ResolvedWon",
+            "ResolvedLost",
+            "Cancelled",
+            "Settled"
+          ]
+        },
+        "evidenceAnchor": {
+          "$ref": "#/$defs/Digest"
+        },
+        "resolutionRule": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "RewardAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "accountId",
+        "holder",
+        "vault",
+        "shareUnits",
+        "entitlementRate",
+        "lastAccrual",
+        "nominalBalance",
+        "pendingEntitlement"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "RewardAccount"
+        },
+        "accountId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Reward account",
+            "path": "accountId",
+            "unit": "AccountId",
+            "role": "reward-account"
+          }
+        },
+        "holder": {
+          "$ref": "#/$defs/Party"
+        },
+        "vault": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "shareUnits": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Share units",
+            "path": "shareUnits",
+            "unit": "share-quantum",
+            "role": "reward-account"
+          }
+        },
+        "entitlementRate": {
+          "$ref": "#/$defs/Rate"
+        },
+        "lastAccrual": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Last accrual",
+            "path": "lastAccrual",
+            "unit": "UTC-epoch-second",
+            "role": "reward-account"
+          }
+        },
+        "nominalBalance": {
+          "$ref": "#/$defs/Amount"
+        },
+        "pendingEntitlement": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "Duty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "dutyId",
+        "kind",
+        "creditor",
+        "debtor",
+        "status",
+        "nominalOrAsset"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "const": "Duty"
+        },
+        "dutyId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Duty id",
+            "path": "dutyId",
+            "unit": "DutyId",
+            "role": "duty"
+          }
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "Payment",
+            "RequestClaim",
+            "MessageRefund",
+            "LockRelease",
+            "EventSettle"
+          ]
+        },
+        "creditor": {
+          "$ref": "#/$defs/Party"
+        },
+        "debtor": {
+          "$ref": "#/$defs/Party"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Open",
+            "Discharged",
+            "Cancelled"
+          ]
+        },
+        "nominalOrAsset": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Amount"
+            },
+            {
+              "$ref": "#/$defs/Debt"
+            }
+          ]
+        }
+      }
+    },
+    "SuccessorRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "originalIntentDigest",
+        "consumptionId",
+        "partialRule",
+        "originalValidity",
+        "originalRecipients",
+        "originalCalls",
+        "originalAssumptionsHash",
+        "originalWork",
+        "actorLedgers",
+        "debtLedgers",
+        "residualCapability",
+        "remainingWork",
+        "predecessorMode"
+      ],
+      "properties": {
+        "tag": {
+          "type": "string",
+          "enum": [
+            "GenesisInitial",
+            "ActiveSuccessor"
+          ]
+        },
+        "originalIntentDigest": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Original intent digest",
+            "path": "originalIntentDigest",
+            "unit": "Digest",
+            "role": "successor-binding"
+          }
+        },
+        "consumptionId": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Successor consumption id",
+            "path": "consumptionId",
+            "unit": "Digest",
+            "role": "successor-binding"
+          }
+        },
+        "partialRule": {
+          "$ref": "#/$defs/PartialFill"
+        },
+        "originalValidity": {
+          "$ref": "#/$defs/Validity"
+        },
+        "originalRecipients": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Recipient"
+          }
+        },
+        "originalCalls": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/CallPermission"
+          }
+        },
+        "originalAssumptionsHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "originalWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "actorLedgers": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ActorLedger"
+          }
+        },
+        "debtLedgers": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/DebtLedger"
+          }
+        },
+        "residualCapability": {
+          "$ref": "#/$defs/ResidualCapability"
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "predecessorMode": {
+          "type": "string",
+          "enum": [
+            "Pinned",
+            "AdmittedContext",
+            "GenesisNone"
+          ]
+        }
+      }
+    },
+    "StoredUInt128": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "const": "UInt128",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/UInt128Text"
+        }
+      }
+    },
+    "StoredSInt128": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "const": "SInt128",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/SInt128Text"
+        }
+      }
+    },
+    "StoredBool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "const": "Bool",
+          "type": "string"
+        },
+        "value": {
+          "type": "boolean"
+        }
+      }
+    },
+    "StoredText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "const": "Text",
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,256}(?![\\s\\S])",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "StoredEnum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "typeName",
+        "variant"
+      ],
+      "properties": {
+        "tag": {
+          "const": "Enum",
+          "type": "string"
+        },
+        "typeName": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "variant": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "StoredOptionNone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag"
+      ],
+      "properties": {
+        "tag": {
+          "const": "OptionNone",
+          "type": "string"
+        }
+      }
+    },
+    "StoredOptionSome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "value"
+      ],
+      "properties": {
+        "tag": {
+          "const": "OptionSome",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/StoredValue"
+        }
+      }
+    },
+    "FieldBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "value": {
+          "$ref": "#/$defs/StoredValue"
+        }
+      }
+    },
+    "StoredRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "fields"
+      ],
+      "properties": {
+        "tag": {
+          "const": "Record",
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/FieldBinding"
+          }
+        }
+      }
+    },
+    "StoredCollection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tag",
+        "capacity",
+        "items"
+      ],
+      "properties": {
+        "tag": {
+          "const": "BoundedCollection",
+          "type": "string"
+        },
+        "capacity": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/StoredValue"
+          }
+        }
+      }
+    },
+    "StoredValue": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/StoredUInt128"
+        },
+        {
+          "$ref": "#/$defs/StoredSInt128"
+        },
+        {
+          "$ref": "#/$defs/StoredBool"
+        },
+        {
+          "$ref": "#/$defs/StoredText"
+        },
+        {
+          "$ref": "#/$defs/Amount"
+        },
+        {
+          "$ref": "#/$defs/Debt"
+        },
+        {
+          "$ref": "#/$defs/Shares"
+        },
+        {
+          "$ref": "#/$defs/Quantity"
+        },
+        {
+          "$ref": "#/$defs/StoredEnum"
+        },
+        {
+          "$ref": "#/$defs/StoredOptionNone"
+        },
+        {
+          "$ref": "#/$defs/StoredOptionSome"
+        },
+        {
+          "$ref": "#/$defs/StoredRecord"
+        },
+        {
+          "$ref": "#/$defs/StoredCollection"
+        },
+        {
+          "$ref": "#/$defs/Position"
+        },
+        {
+          "$ref": "#/$defs/Request"
+        },
+        {
+          "$ref": "#/$defs/Message"
+        },
+        {
+          "$ref": "#/$defs/EventClaim"
+        },
+        {
+          "$ref": "#/$defs/RewardAccount"
+        }
+      ]
+    },
+    "ExactWrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "value"
+      ],
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Write field",
+            "path": "field",
+            "unit": "field",
+            "role": "state-write"
+          }
+        },
+        "value": {
+          "$ref": "#/$defs/StoredValue"
+        }
+      }
+    },
+    "TransferEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "asset",
+        "from",
+        "to",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Transfer"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "from": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Transfer from",
+            "path": "from",
+            "unit": "Party",
+            "role": "transfer"
+          }
+        },
+        "to": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Transfer to",
+            "path": "to",
+            "unit": "Party",
+            "role": "transfer"
+          }
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Transfer amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "transfer"
+          }
+        }
+      }
+    },
+    "FeeEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "asset",
+        "from",
+        "to",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Fee"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "from": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Fee from",
+            "path": "from",
+            "unit": "Party",
+            "role": "fee"
+          }
+        },
+        "to": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Fee to",
+            "path": "to",
+            "unit": "Party",
+            "role": "fee"
+          }
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Fee amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "fee"
+          }
+        }
+      }
+    },
+    "MintEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "asset",
+        "to",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Mint"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "to": {
+          "$ref": "#/$defs/Party"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Mint amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "mint"
+          }
+        }
+      }
+    },
+    "BurnEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "asset",
+        "from",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Burn"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "from": {
+          "$ref": "#/$defs/Party"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Burn amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "burn"
+          }
+        }
+      }
+    },
+    "LockEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "locker",
+        "asset",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Lock"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "locker": {
+          "$ref": "#/$defs/Party"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Lock amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "lock"
+          }
+        }
+      }
+    },
+    "UnlockEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "locker",
+        "asset",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Unlock"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "locker": {
+          "$ref": "#/$defs/Party"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Unlock amount",
+            "path": "amount",
+            "unit": "asset-quantum",
+            "role": "lock"
+          }
+        }
+      }
+    },
+    "AccrualEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "debtId",
+        "rate",
+        "periodStart",
+        "periodEnd",
+        "principalBefore",
+        "accruedDelta",
+        "outstandingAfter",
+        "capApplied"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Accrual"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "debtId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Accrual debt",
+            "path": "debtId",
+            "unit": "ObligationId",
+            "role": "accrual"
+          }
+        },
+        "rate": {
+          "$ref": "#/$defs/Rate"
+        },
+        "periodStart": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "periodEnd": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "principalBefore": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Principal before",
+            "path": "principalBefore",
+            "unit": "denomination-quantum",
+            "role": "accrual"
+          }
+        },
+        "accruedDelta": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Accrued delta",
+            "path": "accruedDelta",
+            "unit": "denomination-quantum",
+            "role": "accrual"
+          }
+        },
+        "outstandingAfter": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Outstanding after",
+            "path": "outstandingAfter",
+            "unit": "denomination-quantum",
+            "role": "accrual"
+          }
+        },
+        "capApplied": {
+          "type": "boolean",
+          "x-display": {
+            "label": "Cap applied",
+            "path": "capApplied",
+            "unit": "Bool",
+            "role": "accrual"
+          }
+        }
+      }
+    },
+    "CapitalizeEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "debtId",
+        "amountMovedToPrincipal",
+        "principalAfter",
+        "accruedAfter"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Capitalize"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "debtId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "amountMovedToPrincipal": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Capitalized amount",
+            "path": "amountMovedToPrincipal",
+            "unit": "denomination-quantum",
+            "role": "capitalize"
+          }
+        },
+        "principalAfter": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "accruedAfter": {
+          "$ref": "#/$defs/UInt128Text"
+        }
+      }
+    },
+    "WriteOffEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "debtId",
+        "amount",
+        "authority",
+        "residualOutstanding"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "WriteOff"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "debtId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "amount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Write-off amount",
+            "path": "amount",
+            "unit": "denomination-quantum",
+            "role": "writeoff"
+          }
+        },
+        "authority": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Write-off authority",
+            "path": "authority",
+            "unit": "Party",
+            "role": "writeoff"
+          }
+        },
+        "residualOutstanding": {
+          "$ref": "#/$defs/UInt128Text"
+        }
+      }
+    },
+    "DueCreatedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "debt"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "DueCreated"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "debt": {
+          "$ref": "#/$defs/Debt"
+        }
+      }
+    },
+    "DueSettledEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "debtId",
+        "nominalDischarged",
+        "settlementAsset",
+        "settlementAmount",
+        "conversionMantissa",
+        "conversionScale"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "DueSettled"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "debtId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "nominalDischarged": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Nominal discharged",
+            "path": "nominalDischarged",
+            "unit": "denomination-quantum",
+            "role": "due-settled"
+          }
+        },
+        "settlementAsset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "settlementAmount": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Settlement amount",
+            "path": "settlementAmount",
+            "unit": "asset-quantum",
+            "role": "due-settled"
+          }
+        },
+        "conversionMantissa": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "conversionScale": {
+          "$ref": "#/$defs/ScaleText"
+        }
+      }
+    },
+    "ShareMintEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "shares",
+        "assetsIn",
+        "rounding"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "ShareMint"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "shares": {
+          "$ref": "#/$defs/Shares"
+        },
+        "assetsIn": {
+          "$ref": "#/$defs/Amount"
+        },
+        "rounding": {
+          "$ref": "#/$defs/Rounding"
+        }
+      }
+    },
+    "ShareBurnEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "shares",
+        "assetsOut",
+        "rounding"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "ShareBurn"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "shares": {
+          "$ref": "#/$defs/Shares"
+        },
+        "assetsOut": {
+          "$ref": "#/$defs/Amount"
+        },
+        "rounding": {
+          "$ref": "#/$defs/Rounding"
+        }
+      }
+    },
+    "ShareConvertEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "inAmount",
+        "outAmount",
+        "method",
+        "rounding"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "ShareConvert"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "inAmount": {
+          "$ref": "#/$defs/Amount"
+        },
+        "outAmount": {
+          "$ref": "#/$defs/Amount"
+        },
+        "method": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "rounding": {
+          "$ref": "#/$defs/Rounding"
+        }
+      }
+    },
+    "PositionOpenEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "position"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "PositionOpen"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        }
+      }
+    },
+    "PositionAdjustEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "positionId",
+        "liquidityDelta"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "PositionAdjust"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "positionId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "liquidityDelta": {
+          "$ref": "#/$defs/SInt128Text"
+        }
+      }
+    },
+    "PositionCloseEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "positionId"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "PositionClose"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "positionId": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "RequestOpenEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "request"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RequestOpen"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "request": {
+          "$ref": "#/$defs/Request"
+        }
+      }
+    },
+    "RequestFulfillEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "requestId",
+        "fill"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RequestFulfill"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "requestId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "fill": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "RequestClaimEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "requestId",
+        "claimed"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RequestClaim"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "requestId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "claimed": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "RequestCancelEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "requestId"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RequestCancel"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "requestId": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "MessageSendEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "message"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "MessageSend"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "message": {
+          "$ref": "#/$defs/Message"
+        }
+      }
+    },
+    "MessageReceiveEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "messageId"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "MessageReceive"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "messageId": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "MessageRefundEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "messageId"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "MessageRefund"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "messageId": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "EventClaimOpenedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "claim"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "EventClaimOpened"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "claim": {
+          "$ref": "#/$defs/EventClaim"
+        }
+      }
+    },
+    "EventClaimResolvedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "claimId",
+        "winningOutcomeIndex",
+        "evidenceAnchor"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "EventClaimResolved"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "claimId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "winningOutcomeIndex": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Winning outcome",
+            "path": "winningOutcomeIndex",
+            "unit": "index",
+            "role": "event-claim"
+          }
+        },
+        "evidenceAnchor": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "EventClaimSettledEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "claimId",
+        "payout"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "EventClaimSettled"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "claimId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "payout": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "RewardAccruedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "accountId",
+        "delta"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RewardAccrued"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "accountId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "delta": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "RewardClaimedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "accountId",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "RewardClaimed"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "accountId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        }
+      }
+    },
+    "SlashedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "accountId",
+        "shareUnitsRemoved",
+        "entitlementRemoved",
+        "nominalBalanceUnchanged"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Slashed"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "accountId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "shareUnitsRemoved": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Share units slashed",
+            "path": "shareUnitsRemoved",
+            "unit": "share-quantum",
+            "role": "slash"
+          }
+        },
+        "entitlementRemoved": {
+          "$ref": "#/$defs/Amount"
+        },
+        "nominalBalanceUnchanged": {
+          "type": "boolean",
+          "x-display": {
+            "label": "Nominal balance unchanged",
+            "path": "nominalBalanceUnchanged",
+            "unit": "Bool",
+            "role": "slash"
+          }
+        }
+      }
+    },
+    "RebasedEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "vault",
+        "newRate"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Rebased"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "vault": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "newRate": {
+          "$ref": "#/$defs/Rate"
+        }
+      }
+    },
+    "GenesisEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "instanceId",
+        "initialWork",
+        "claimRoot"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Genesis"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "instanceId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Genesis instance",
+            "path": "instanceId",
+            "unit": "InstanceId",
+            "role": "genesis"
+          }
+        },
+        "initialWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "claimRoot": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ActivateEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "specHash"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Activate"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "specHash": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "PauseEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "reason"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Pause"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "reason": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "RevokeEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "keyOrSpec"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Revoke"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "keyOrSpec": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "MigrateEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "fromStateHash",
+        "toProgramHash"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Migrate"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "fromStateHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "toProgramHash": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ObserveEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ordinal",
+        "field",
+        "anchor"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "Observe"
+        },
+        "ordinal": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "field": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "anchor": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ExactEffect": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/TransferEffect"
+        },
+        {
+          "$ref": "#/$defs/FeeEffect"
+        },
+        {
+          "$ref": "#/$defs/MintEffect"
+        },
+        {
+          "$ref": "#/$defs/BurnEffect"
+        },
+        {
+          "$ref": "#/$defs/LockEffect"
+        },
+        {
+          "$ref": "#/$defs/UnlockEffect"
+        },
+        {
+          "$ref": "#/$defs/AccrualEffect"
+        },
+        {
+          "$ref": "#/$defs/CapitalizeEffect"
+        },
+        {
+          "$ref": "#/$defs/WriteOffEffect"
+        },
+        {
+          "$ref": "#/$defs/DueCreatedEffect"
+        },
+        {
+          "$ref": "#/$defs/DueSettledEffect"
+        },
+        {
+          "$ref": "#/$defs/ShareMintEffect"
+        },
+        {
+          "$ref": "#/$defs/ShareBurnEffect"
+        },
+        {
+          "$ref": "#/$defs/ShareConvertEffect"
+        },
+        {
+          "$ref": "#/$defs/PositionOpenEffect"
+        },
+        {
+          "$ref": "#/$defs/PositionAdjustEffect"
+        },
+        {
+          "$ref": "#/$defs/PositionCloseEffect"
+        },
+        {
+          "$ref": "#/$defs/RequestOpenEffect"
+        },
+        {
+          "$ref": "#/$defs/RequestFulfillEffect"
+        },
+        {
+          "$ref": "#/$defs/RequestClaimEffect"
+        },
+        {
+          "$ref": "#/$defs/RequestCancelEffect"
+        },
+        {
+          "$ref": "#/$defs/MessageSendEffect"
+        },
+        {
+          "$ref": "#/$defs/MessageReceiveEffect"
+        },
+        {
+          "$ref": "#/$defs/MessageRefundEffect"
+        },
+        {
+          "$ref": "#/$defs/EventClaimOpenedEffect"
+        },
+        {
+          "$ref": "#/$defs/EventClaimResolvedEffect"
+        },
+        {
+          "$ref": "#/$defs/EventClaimSettledEffect"
+        },
+        {
+          "$ref": "#/$defs/RewardAccruedEffect"
+        },
+        {
+          "$ref": "#/$defs/RewardClaimedEffect"
+        },
+        {
+          "$ref": "#/$defs/SlashedEffect"
+        },
+        {
+          "$ref": "#/$defs/RebasedEffect"
+        },
+        {
+          "$ref": "#/$defs/GenesisEffect"
+        },
+        {
+          "$ref": "#/$defs/ActivateEffect"
+        },
+        {
+          "$ref": "#/$defs/PauseEffect"
+        },
+        {
+          "$ref": "#/$defs/RevokeEffect"
+        },
+        {
+          "$ref": "#/$defs/MigrateEffect"
+        },
+        {
+          "$ref": "#/$defs/ObserveEffect"
+        }
+      ]
+    },
+    "ActionCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "actor",
+        "arguments"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Action name",
+            "path": "name",
+            "unit": "action-name",
+            "role": "call-target"
+          }
+        },
+        "actor": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Action actor",
+            "path": "actor",
+            "unit": "Party",
+            "role": "call-target"
+          }
+        },
+        "arguments": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/FieldBinding"
+          },
+          "x-display": {
+            "label": "Action arguments",
+            "path": "arguments",
+            "unit": "argument",
+            "role": "call-target"
+          }
+        }
+      }
+    },
+    "ExecutionBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "exactWrites",
+        "exactEffects"
+      ],
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/ActionCall"
+        },
+        "exactWrites": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/ExactWrite"
+          }
+        },
+        "exactEffects": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ExactEffect"
+          }
+        },
+        "dust": {
+          "$ref": "#/$defs/Dust"
+        },
+        "rateOrPrice": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Rate"
+            },
+            {
+              "$ref": "#/$defs/Price"
+            }
+          ]
+        },
+        "outPredicate": {
+          "$ref": "#/$defs/AmountPredicate"
+        },
+        "remainder": {
+          "$ref": "#/$defs/Remainder"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "properties": {
+                  "name": {
+                    "enum": [
+                      "swap",
+                      "exchange"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ]
+          },
+          "then": {
+            "required": [
+              "dust",
+              "rateOrPrice",
+              "outPredicate",
+              "remainder"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "dust"
+                  ]
+                },
+                {
+                  "required": [
+                    "rateOrPrice"
+                  ]
+                },
+                {
+                  "required": [
+                    "outPredicate"
+                  ]
+                },
+                {
+                  "required": [
+                    "remainder"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ClaimRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claimId",
+        "kind"
+      ],
+      "properties": {
+        "claimId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Claim id",
+            "path": "claimId",
+            "unit": "ClaimId",
+            "role": "mandatory-claims"
+          }
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ContractInvariant",
+            "IntentRefinement",
+            "TransitionValidity",
+            "HistoryCompliance"
+          ],
+          "x-display": {
+            "label": "Claim kind",
+            "path": "kind",
+            "unit": "claim-kind",
+            "role": "mandatory-claims"
+          }
+        }
+      }
+    },
+    "SpecBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semanticVersion",
+        "profileHash",
+        "programHash",
+        "claimRoot",
+        "activationNotBefore",
+        "revoked"
+      ],
+      "properties": {
+        "semanticVersion": {
+          "type": "string",
+          "const": "moriarty-succ-core/0",
+          "x-display": {
+            "label": "Semantic version",
+            "path": "semanticVersion",
+            "unit": "version",
+            "role": "spec-binding"
+          }
+        },
+        "profileHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Profile hash",
+            "path": "profileHash",
+            "unit": "Digest",
+            "role": "spec-binding"
+          }
+        },
+        "programHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Program hash",
+            "path": "programHash",
+            "unit": "Digest",
+            "role": "spec-binding"
+          }
+        },
+        "claimRoot": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Claim root",
+            "path": "claimRoot",
+            "unit": "Digest",
+            "role": "mandatory-claims"
+          }
+        },
+        "activationNotBefore": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Activation not before",
+            "path": "activationNotBefore",
+            "unit": "UTC-epoch-second",
+            "role": "spec-binding"
+          }
+        },
+        "revoked": {
+          "type": "boolean",
+          "x-display": {
+            "label": "Spec revoked",
+            "path": "revoked",
+            "unit": "boolean",
+            "role": "revocation"
+          }
+        }
+      }
+    },
+    "CompositionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operator",
+        "unknownRejects"
+      ],
+      "properties": {
+        "operator": {
+          "type": "string",
+          "enum": [
+            "seq",
+            "par",
+            "interleave",
+            "atomic",
+            "message"
+          ],
+          "x-display": {
+            "label": "Composition operator",
+            "path": "operator",
+            "unit": "operator",
+            "role": "composition-policy"
+          }
+        },
+        "interleaveConflict": {
+          "type": "string",
+          "const": "write_path_or_identity_or_cap_key",
+          "x-display": {
+            "label": "Interleave conflict",
+            "path": "interleaveConflict",
+            "unit": "rule",
+            "role": "composition-policy"
+          }
+        },
+        "parFrame": {
+          "type": "string",
+          "const": "disjoint_keys_concat_obs",
+          "x-display": {
+            "label": "Par frame",
+            "path": "parFrame",
+            "unit": "rule",
+            "role": "composition-policy"
+          }
+        },
+        "unknownRejects": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "PolicyBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyId",
+        "policyHash",
+        "composition"
+      ],
+      "properties": {
+        "policyId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Policy id",
+            "path": "policyId",
+            "unit": "PolicyId",
+            "role": "policy"
+          }
+        },
+        "policyHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Policy hash",
+            "path": "policyHash",
+            "unit": "Digest",
+            "role": "policy"
+          }
+        },
+        "composition": {
+          "$ref": "#/$defs/CompositionPolicy"
+        }
+      }
+    },
+    "ProfileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileName",
+        "profileHash"
+      ],
+      "properties": {
+        "profileName": {
+          "type": "string",
+          "const": "moriarty-successor/0",
+          "x-display": {
+            "label": "Profile name",
+            "path": "profileName",
+            "unit": "profile",
+            "role": "profile"
+          }
+        },
+        "profileHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Profile hash",
+            "path": "profileHash",
+            "unit": "Digest",
+            "role": "profile"
+          }
+        }
+      }
+    },
+    "Balance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "party",
+        "asset",
+        "value"
+      ],
+      "properties": {
+        "party": {
+          "$ref": "#/$defs/Party"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId"
+        },
+        "value": {
+          "$ref": "#/$defs/UInt128Text",
+          "x-display": {
+            "label": "Balance",
+            "path": "value",
+            "unit": "asset-quantum",
+            "role": "balance"
+          }
+        }
+      }
+    },
+    "EpisodeStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episode",
+        "agreement"
+      ],
+      "properties": {
+        "episode": {
+          "type": "string",
+          "enum": [
+            "Live",
+            "Paused",
+            "Closed"
+          ]
+        },
+        "agreement": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Revoked",
+            "Migrated"
+          ]
+        }
+      }
+    },
+    "Observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "value",
+        "anchor",
+        "freshness",
+        "role",
+        "authenticity",
+        "truthAssumption"
+      ],
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Observation field",
+            "path": "field",
+            "unit": "field",
+            "role": "observation"
+          }
+        },
+        "value": {
+          "$ref": "#/$defs/StoredValue"
+        },
+        "anchor": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Observation anchor",
+            "path": "anchor",
+            "unit": "Digest",
+            "role": "observation"
+          }
+        },
+        "freshness": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Freshness not after",
+            "path": "freshness",
+            "unit": "UTC-epoch-second",
+            "role": "observation"
+          }
+        },
+        "role": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Observation role",
+            "path": "role",
+            "unit": "role",
+            "role": "observation"
+          }
+        },
+        "authenticity": {
+          "type": "string",
+          "enum": [
+            "wrapper_ok",
+            "ledger_predicate"
+          ]
+        },
+        "truthAssumption": {
+          "type": "string",
+          "enum": [
+            "required_observation",
+            "external_unproven",
+            "ledger_predicate"
+          ]
+        }
+      }
+    },
+    "GenesisBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instanceId",
+        "profileHash",
+        "programHash",
+        "claimRoot",
+        "lifetime",
+        "horizon",
+        "ordinaryWork",
+        "recoveryWork",
+        "initialStateHash",
+        "network",
+        "deployment",
+        "principalBindings",
+        "observationBindings"
+      ],
+      "properties": {
+        "instanceId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "profileHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "programHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "claimRoot": {
+          "$ref": "#/$defs/Digest"
+        },
+        "lifetime": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "horizon": {
+          "$ref": "#/$defs/UInt64Text"
+        },
+        "ordinaryWork": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "recoveryWork": {
+          "$ref": "#/$defs/UInt128Text"
+        },
+        "initialStateHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "network": {
+          "$ref": "#/$defs/NetworkId"
+        },
+        "deployment": {
+          "$ref": "#/$defs/DeploymentId"
+        },
+        "principalBindings": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Party"
+          }
+        },
+        "observationBindings": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        }
+      }
+    },
+    "StateBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instanceId",
+        "eventOrder",
+        "balances",
+        "debts",
+        "shares",
+        "positions",
+        "requests",
+        "messages",
+        "eventClaims",
+        "rewardAccounts",
+        "locks",
+        "duties",
+        "status",
+        "residualCapability",
+        "remainingWork",
+        "successorRecordHash"
+      ],
+      "properties": {
+        "instanceId": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "eventOrder": {
+          "$ref": "#/$defs/UInt64Text",
+          "x-display": {
+            "label": "Event order",
+            "path": "eventOrder",
+            "unit": "EventOrder",
+            "role": "state"
+          }
+        },
+        "balances": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Balance"
+          }
+        },
+        "debts": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Debt"
+          }
+        },
+        "shares": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Shares"
+          }
+        },
+        "positions": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Position"
+          }
+        },
+        "requests": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Request"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Message"
+          }
+        },
+        "eventClaims": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/EventClaim"
+          }
+        },
+        "rewardAccounts": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/RewardAccount"
+          }
+        },
+        "locks": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/LockRight"
+          }
+        },
+        "duties": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Duty"
+          }
+        },
+        "status": {
+          "$ref": "#/$defs/EpisodeStatus"
+        },
+        "residualCapability": {
+          "$ref": "#/$defs/ResidualCapability"
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "successorRecordHash": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ObservationSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observations"
+      ],
+      "properties": {
+        "observations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/Observation"
+          }
+        }
+      }
+    },
+    "PreparedBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "postStateHash",
+        "effects",
+        "duties",
+        "residualCapability",
+        "successors",
+        "remainingWork",
+        "claims"
+      ],
+      "properties": {
+        "postStateHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "effects": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ExactEffect"
+          }
+        },
+        "duties": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/Duty"
+          }
+        },
+        "residualCapability": {
+          "$ref": "#/$defs/ResidualCapability"
+        },
+        "successors": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/SuccessorRecord"
+          }
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "claims": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ClaimRequirement"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "ContractInvariant"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "IntentRefinement"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "TransitionValidity"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "HistoryCompliance"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ],
+          "x-display": {
+            "label": "Required claims",
+            "path": "requiredClaims",
+            "unit": "claim-kind",
+            "role": "mandatory-claims"
+          }
+        }
+      }
+    },
+    "ProofContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "programHash",
+        "specVersion",
+        "policyHash",
+        "authorizationDigest",
+        "selectedPlanHash",
+        "predecessorIds",
+        "observationsHash",
+        "postStateHash",
+        "effectsHash",
+        "residualCapabilityHash",
+        "remainingWork",
+        "claims"
+      ],
+      "properties": {
+        "programHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "specVersion": {
+          "type": "string",
+          "const": "moriarty-succ-core/0"
+        },
+        "policyHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "authorizationDigest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "selectedPlanHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "predecessorIds": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Digest"
+          }
+        },
+        "observationsHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "postStateHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "effectsHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "residualCapabilityHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "claims": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ClaimRequirement"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "ContractInvariant"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "IntentRefinement"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "TransitionValidity"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "HistoryCompliance"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ],
+          "x-display": {
+            "label": "Required claims",
+            "path": "requiredClaims",
+            "unit": "claim-kind",
+            "role": "mandatory-claims"
+          }
+        }
+      }
+    },
+    "AcceptanceBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intentDigest",
+        "selectedPlanHash",
+        "observationsHash",
+        "effects",
+        "liabilities",
+        "remainingWork",
+        "predecessorIds",
+        "successorRecord",
+        "preparedHash"
+      ],
+      "properties": {
+        "intentDigest": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Bound intent digest",
+            "path": "intentDigest",
+            "unit": "Digest",
+            "role": "acceptance"
+          }
+        },
+        "selectedPlanHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "observationsHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "effects": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ExactEffect"
+          }
+        },
+        "liabilities": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Debt"
+          }
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "predecessorIds": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Digest"
+          }
+        },
+        "successorRecord": {
+          "$ref": "#/$defs/SuccessorRecord"
+        },
+        "preparedHash": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ProfileBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileName",
+        "sourceUtf8Bytes",
+        "signingUtf8Bytes",
+        "maxNodes",
+        "maxSidecarBytes",
+        "maxTotalVerificationWork",
+        "predecessorFanIn",
+        "collectionCapacity"
+      ],
+      "properties": {
+        "profileName": {
+          "type": "string",
+          "const": "moriarty-successor/0"
+        },
+        "sourceUtf8Bytes": {
+          "type": "integer",
+          "const": 65536
+        },
+        "signingUtf8Bytes": {
+          "type": "integer",
+          "const": 65536
+        },
+        "maxNodes": {
+          "type": "integer",
+          "const": 4096
+        },
+        "maxSidecarBytes": {
+          "type": "integer",
+          "const": 16384
+        },
+        "maxTotalVerificationWork": {
+          "type": "integer",
+          "const": 65536
+        },
+        "predecessorFanIn": {
+          "type": "integer",
+          "const": 8
+        },
+        "collectionCapacity": {
+          "type": "integer",
+          "const": 128
+        }
+      }
+    },
+    "ProgramBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceHash",
+        "entryActions",
+        "coreVersion"
+      ],
+      "properties": {
+        "sourceHash": {
+          "$ref": "#/$defs/Digest"
+        },
+        "entryActions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          }
+        },
+        "coreVersion": {
+          "type": "string",
+          "const": "moriarty-succ-core/0"
+        }
+      }
+    },
+    "ConsumptionIdBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network",
+        "deployment",
+        "principal",
+        "nonce"
+      ],
+      "properties": {
+        "network": {
+          "$ref": "#/$defs/NetworkId"
+        },
+        "deployment": {
+          "$ref": "#/$defs/DeploymentId"
+        },
+        "principal": {
+          "$ref": "#/$defs/Party"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Identifier"
+        }
+      }
+    },
+    "ExactPlanDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "signingDomain",
+        "schemaVersion",
+        "network",
+        "deployment",
+        "principal",
+        "nonce",
+        "validity",
+        "spec",
+        "policy",
+        "profileBinding",
+        "instanceId",
+        "genesisHash",
+        "requiredClaims",
+        "requiredClaimRoot",
+        "observationPolicy",
+        "residualAuthority",
+        "remainingWork",
+        "recoveryRights",
+        "locks",
+        "assumptions",
+        "beforeStateHash",
+        "predecessors",
+        "executionBody",
+        "executionBodyHash"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "moriarty-succ-sign/0",
+          "x-display": {
+            "label": "Schema version",
+            "path": "schemaVersion",
+            "unit": "version",
+            "role": "signed-envelope"
+          }
+        },
+        "network": {
+          "$ref": "#/$defs/NetworkId"
+        },
+        "deployment": {
+          "$ref": "#/$defs/DeploymentId"
+        },
+        "principal": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Principal",
+            "path": "principal",
+            "unit": "Party",
+            "role": "signer"
+          }
+        },
+        "nonce": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Nonce",
+            "path": "nonce",
+            "unit": "authorization-nonce",
+            "role": "durable-consumption-id"
+          }
+        },
+        "validity": {
+          "$ref": "#/$defs/Validity"
+        },
+        "spec": {
+          "$ref": "#/$defs/SpecBinding"
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicyBinding"
+        },
+        "profileBinding": {
+          "$ref": "#/$defs/ProfileBinding"
+        },
+        "instanceId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Instance",
+            "path": "instanceId",
+            "unit": "InstanceId",
+            "role": "authorization-domain"
+          }
+        },
+        "genesisHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Genesis hash",
+            "path": "genesisHash",
+            "unit": "Digest",
+            "role": "genesis"
+          }
+        },
+        "requiredClaims": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ClaimRequirement"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "ContractInvariant"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "IntentRefinement"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "TransitionValidity"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "HistoryCompliance"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ],
+          "x-display": {
+            "label": "Required claims",
+            "path": "requiredClaims",
+            "unit": "claim-kind",
+            "role": "mandatory-claims"
+          }
+        },
+        "requiredClaimRoot": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Required claim root",
+            "path": "requiredClaimRoot",
+            "unit": "Digest",
+            "role": "mandatory-claims"
+          }
+        },
+        "observationPolicy": {
+          "$ref": "#/$defs/ObservationPolicy"
+        },
+        "residualAuthority": {
+          "$ref": "#/$defs/ResidualCapability"
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "recoveryRights": {
+          "$ref": "#/$defs/RecoveryRight"
+        },
+        "locks": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/LockRight"
+          },
+          "x-display": {
+            "label": "Locks",
+            "path": "locks",
+            "unit": "asset-quantum",
+            "role": "lock"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Assumption"
+          }
+        },
+        "kind": {
+          "type": "string",
+          "const": "ExactPlan",
+          "x-display": {
+            "label": "Kind",
+            "path": "kind",
+            "unit": "document-kind",
+            "role": "signed-envelope"
+          }
+        },
+        "signingDomain": {
+          "type": "string",
+          "const": "MORIARTY-SUCC-EXACT-PLAN/0",
+          "x-display": {
+            "label": "Signing domain",
+            "path": "signingDomain",
+            "unit": "domain-tag",
+            "role": "signed-envelope"
+          }
+        },
+        "beforeStateHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Before state",
+            "path": "beforeStateHash",
+            "unit": "Digest",
+            "role": "pinned-pre-state"
+          }
+        },
+        "predecessors": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Predecessor"
+          },
+          "x-display": {
+            "label": "Predecessors",
+            "path": "predecessors",
+            "unit": "Predecessor",
+            "role": "history-predecessor"
+          }
+        },
+        "executionBody": {
+          "$ref": "#/$defs/ExecutionBody"
+        },
+        "executionBodyHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Execution body hash",
+            "path": "executionBodyHash",
+            "unit": "Digest",
+            "role": "exact-plan-body"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "executionBody": {
+                "properties": {
+                  "action": {
+                    "properties": {
+                      "name": {
+                        "const": "genesis"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  }
+                },
+                "required": [
+                  "action"
+                ]
+              }
+            },
+            "required": [
+              "executionBody"
+            ]
+          },
+          "then": {
+            "properties": {
+              "predecessors": {
+                "maxItems": 0,
+                "minItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "predecessors": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "OutcomeIntentDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "signingDomain",
+        "schemaVersion",
+        "network",
+        "deployment",
+        "principal",
+        "nonce",
+        "validity",
+        "spec",
+        "policy",
+        "profileBinding",
+        "instanceId",
+        "genesisHash",
+        "requiredClaims",
+        "requiredClaimRoot",
+        "observationPolicy",
+        "residualAuthority",
+        "remainingWork",
+        "recoveryRights",
+        "locks",
+        "assumptions",
+        "allowedActions",
+        "grossDebitCaps",
+        "feeCaps",
+        "netGoals",
+        "debtCaps",
+        "permittedRecipients",
+        "permittedCalls",
+        "partialFill",
+        "predecessorConstraint"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "moriarty-succ-sign/0",
+          "x-display": {
+            "label": "Schema version",
+            "path": "schemaVersion",
+            "unit": "version",
+            "role": "signed-envelope"
+          }
+        },
+        "network": {
+          "$ref": "#/$defs/NetworkId"
+        },
+        "deployment": {
+          "$ref": "#/$defs/DeploymentId"
+        },
+        "principal": {
+          "$ref": "#/$defs/Party",
+          "x-display": {
+            "label": "Principal",
+            "path": "principal",
+            "unit": "Party",
+            "role": "signer"
+          }
+        },
+        "nonce": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Nonce",
+            "path": "nonce",
+            "unit": "authorization-nonce",
+            "role": "durable-consumption-id"
+          }
+        },
+        "validity": {
+          "$ref": "#/$defs/Validity"
+        },
+        "spec": {
+          "$ref": "#/$defs/SpecBinding"
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicyBinding"
+        },
+        "profileBinding": {
+          "$ref": "#/$defs/ProfileBinding"
+        },
+        "instanceId": {
+          "$ref": "#/$defs/Identifier",
+          "x-display": {
+            "label": "Instance",
+            "path": "instanceId",
+            "unit": "InstanceId",
+            "role": "authorization-domain"
+          }
+        },
+        "genesisHash": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Genesis hash",
+            "path": "genesisHash",
+            "unit": "Digest",
+            "role": "genesis"
+          }
+        },
+        "requiredClaims": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ClaimRequirement"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "ContractInvariant"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "IntentRefinement"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "TransitionValidity"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            },
+            {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "HistoryCompliance"
+                  }
+                }
+              },
+              "minContains": 1,
+              "maxContains": 1
+            }
+          ],
+          "x-display": {
+            "label": "Required claims",
+            "path": "requiredClaims",
+            "unit": "claim-kind",
+            "role": "mandatory-claims"
+          }
+        },
+        "requiredClaimRoot": {
+          "$ref": "#/$defs/Digest",
+          "x-display": {
+            "label": "Required claim root",
+            "path": "requiredClaimRoot",
+            "unit": "Digest",
+            "role": "mandatory-claims"
+          }
+        },
+        "observationPolicy": {
+          "$ref": "#/$defs/ObservationPolicy"
+        },
+        "residualAuthority": {
+          "$ref": "#/$defs/ResidualCapability"
+        },
+        "remainingWork": {
+          "$ref": "#/$defs/Work"
+        },
+        "recoveryRights": {
+          "$ref": "#/$defs/RecoveryRight"
+        },
+        "locks": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/LockRight"
+          },
+          "x-display": {
+            "label": "Locks",
+            "path": "locks",
+            "unit": "asset-quantum",
+            "role": "lock"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Assumption"
+          }
+        },
+        "kind": {
+          "type": "string",
+          "const": "OutcomeIntent",
+          "x-display": {
+            "label": "Kind",
+            "path": "kind",
+            "unit": "document-kind",
+            "role": "signed-envelope"
+          }
+        },
+        "signingDomain": {
+          "type": "string",
+          "const": "MORIARTY-SUCC-OUTCOME-INTENT/0",
+          "x-display": {
+            "label": "Signing domain",
+            "path": "signingDomain",
+            "unit": "domain-tag",
+            "role": "signed-envelope"
+          }
+        },
+        "allowedActions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/Identifier"
+          },
+          "x-display": {
+            "label": "Allowed actions",
+            "path": "allowedActions",
+            "unit": "action-name",
+            "role": "intent-constraint"
+          }
+        },
+        "grossDebitCaps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/DebitCap"
+          }
+        },
+        "feeCaps": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/FeeCap"
+          }
+        },
+        "netGoals": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/NetGoal"
+          }
+        },
+        "debtCaps": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/DebtCap"
+          }
+        },
+        "permittedRecipients": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/Recipient"
+          }
+        },
+        "permittedCalls": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/CallPermission"
+          }
+        },
+        "partialFill": {
+          "$ref": "#/$defs/PartialFill"
+        },
+        "predecessorConstraint": {
+          "$ref": "#/$defs/PredecessorConstraint"
+        },
+        "outPredicate": {
+          "$ref": "#/$defs/AmountPredicate"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "allowedActions": {
+                "contains": {
+                  "enum": [
+                    "swap",
+                    "exchange"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "allowedActions"
+            ]
+          },
+          "then": {
+            "required": [
+              "outPredicate"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

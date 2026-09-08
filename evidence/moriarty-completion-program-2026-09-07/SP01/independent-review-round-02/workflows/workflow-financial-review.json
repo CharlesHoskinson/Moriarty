@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 1,
+  "verdict": "BLOCKED",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "high",
+    "independent": true,
+    "agent": "/root/sp01_workflow_fragment_review"
+  },
+  "completedAtUTC": "2026-09-08T06:11:59.022880+00:00",
+  "artifact": "/home/charl/.local/state/moriarty/sp01-map-fragments-20260908/workflows/interrupted-workflows.json",
+  "scope": "Independent financial-content review of frozen specified-only interrupted workflow draft; no acceptance of future changed bytes.",
+  "hashesBefore": {
+    "interrupted-workflows.json": "2f4f45e6d693eeec72fb621a5853c4f4c7a6bc9e1acfc9cee577f796f48e79c1",
+    "input-packet.json": "f6f186ca7c3cb91b54cc18882baf4c88a83f203f18eb115a640a8149e9de5a84"
+  },
+  "hashesAfter": {
+    "interrupted-workflows.json": "2f4f45e6d693eeec72fb621a5853c4f4c7a6bc9e1acfc9cee577f796f48e79c1",
+    "input-packet.json": "f6f186ca7c3cb91b54cc18882baf4c88a83f203f18eb115a640a8149e9de5a84"
+  },
+  "frozenBytes": 395882,
+  "identities": {
+    "rowsPreserved": 7,
+    "tracesPreserved": 7,
+    "originalMutationsPreserved": 9,
+    "currentMutations": 19,
+    "duplicates": 0,
+    "rowSourceObjectsExactAgainstPacket": true,
+    "localSourceHashesAndPointerTextChecked": true,
+    "mutationBaseReferencesResolved": 19,
+    "missingRepresentationTargets": [
+      "rows[2].representationPath[3]: expected.duties",
+      "rows[4].representationPath[3]: expected.duties",
+      "rows[5].representationPath[3]: expected.duties"
+    ]
+  },
+  "method": {
+    "implementation": "Fresh reviewer Python integer and fractions.Fraction arithmetic written inline; supplied verification commands/evaluator not executed.",
+    "checks": "24 steps, 24 actual transfers, each funding balance and final account record; cumulative ordinary/reserve charges, per-action <=64, observations age differences, history chain adjacency, source hashes and identity membership.",
+    "authorVerificationClaims": "Not accepted wholesale; independent calculations cover stated checks only."
+  },
+  "positiveArithmetic": [
+    {
+      "traceIndex": 0,
+      "id": "intent-cases:partial-fill-batch:trace",
+      "steps": 4,
+      "transfers": 8,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 40,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 1,
+      "id": "intent-cases:recurring-payments:trace",
+      "steps": 6,
+      "transfers": 5,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 46,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 2,
+      "id": "intent-cases:delegated-rebalancing:trace",
+      "steps": 2,
+      "transfers": 3,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 20,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 3,
+      "id": "intent-cases:contingent-claim:trace",
+      "steps": 3,
+      "transfers": 1,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 22,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 4,
+      "id": "intent-cases:cross-domain-recovery:trace",
+      "steps": 3,
+      "transfers": 3,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 14,
+      "reserveWork": 8,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 5,
+      "id": "DeFi-regressions:asynchronous-settlement:trace",
+      "steps": 3,
+      "transfers": 2,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 24,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    },
+    {
+      "traceIndex": 6,
+      "id": "DeFi-regressions:conditional-payoff-insurance:trace",
+      "steps": 3,
+      "transfers": 2,
+      "fundedTransferBalances": "independently-reconciled",
+      "ordinaryWork": 28,
+      "reserveWork": 0,
+      "financialContentApproved": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "WF-F01",
+      "severity": "blocking",
+      "title": "Custody negatives do not start from an admissible underfunded state",
+      "pointers": [
+        "/mutations/10/base",
+        "/mutations/10/mutatedInput/rewriteInsurerBalanceTo",
+        "/mutations/10/unchangedState",
+        "/mutations/18/base",
+        "/mutations/18/mutatedInput/rewriteInsurerBalanceTo",
+        "/mutations/18/unchangedState"
+      ],
+      "evidence": "The selected contingent base holds insurer 20500; 10000 payout is funded and leaves 10500. The insurance base holds insurer 15200; 8000 payout is funded and leaves 7200. The proposed balance rewrites destroy 20400 and 15200 respectively without transfers. Conditional text if rewrite rejected explicitly leaves the targeted custody check unisolated. Contingent C1 also lacks payout authorization in this trace.",
+      "computedCounterexamples": {
+        "contingent": {
+          "actualAvailable": 20500,
+          "requested": 10000,
+          "actualRemainder": 10500,
+          "rewrittenTotal": 9600,
+          "originalTotal": 30000,
+          "unexplainedDestruction": 20400
+        },
+        "insurance": {
+          "actualAvailable": 15200,
+          "requested": 8000,
+          "actualRemainder": 7200,
+          "rewrittenTotal": 800,
+          "originalTotal": 16000,
+          "unexplainedDestruction": 15200
+        }
+      },
+      "requiredFix": "Use a complete alternate admitted context with insufficient actual custody, conserved funding provenance, valid prior premium/adjudication and authorized payout, and all earlier admission predicates satisfied. Reject solely on balance<payout and bind the entire rejected result to that alternate base. For C1 either supply an explicit toy authorized payout context or retain forbidden-payout coverage separately; do not call the existing rewrite a custody test."
+    },
+    {
+      "id": "WF-F02",
+      "severity": "blocking",
+      "title": "Partial-fill receipt checks exclude fees from the net goal",
+      "pointers": [
+        "/traces/0/canonicalIntent/hardConstraints/minReceive",
+        "/traces/0/steps/1/minReceiveCheck",
+        "/traces/0/steps/2/minReceiveCheck",
+        "/traces/0/acceptance/IntentRefinement",
+        "/verification/7",
+        "/verification/8"
+      ],
+      "evidence": "Checks use 3000/2=1500 and 2000/2=1000 while the financially charged debits are 3015 and 2015. Fee-aware thresholds are 3015/2 and 2015/2 milliWETH, equivalently integer cross multiplication; the positive 1510 and 1010 still pass.",
+      "computedCounterexample": {
+        "context": "Keep funded post-lock base, all fees, recipients, authority, history and work. Change maker1 receipt to 1501 and its post-WETH balance to 3499; Alice receives 1501. All asset totals remain unchanged.",
+        "oldPredicate": "1501 >= 1500: true",
+        "requiredPredicate": "2*1501 >= 3015: false",
+        "combinedReceiptIfFill2Unchanged": 2511,
+        "combinedRequiredReceipt": 2515
+      },
+      "requiredFix": "Specify minReceive over total economic debit including input-denominated fees. Use 2*received>=debit+fee, or ceilings 1508 and 1008 at the integer unit. Update acceptance and verification entries and add a fee-sensitive negative with a fully balanced proposed result."
+    },
+    {
+      "id": "WF-F03",
+      "severity": "blocking",
+      "title": "Cumulative authority and unsettled custody are inconsistent or conflated",
+      "pointers": [
+        "/traces/4/preState/allowances/lock/cumulativeLocked/amount",
+        "/traces/5/steps/0/postState/allowances/messageAmount",
+        "/traces/5/steps/1/postState/allowances/messageAmount"
+      ],
+      "evidence": "Cross-domain pre-lock state reports cumulativeLocked=1000 even though no lock has occurred, the vault has 0, messages are empty and status is pre-lock. Async states report original=400,cumulative=400,remaining=400; as an allowance this sums to 800 against 400. If remaining means unpaid escrow rather than unspent authority, that distinction is not declared.",
+      "requiredFix": "Set cross-domain cumulativeLocked to 0 before locking and 1000 after locking; retain 1000 after refund. Define async cumulative as consumed send authority and remaining as unspent authority, giving 0/400 before send and 400/0 thereafter. Track unsettled escrow separately as 0,400,400,0 across pre/send/final/receive. Alternatively explicitly define and name a different coherent ledger equation. Do not restore send authority at settlement or refund.",
+      "equations": [
+        "cross-domain cumulativeLocked: 0 -> 1000 -> 1000 -> 1000",
+        "async originalAuthority = cumulativeSent + remainingSendAuthority = 400",
+        "async cumulativeSent = cumulativeSettled + unsettledEscrow; send/final: 400=0+400; receive: 400=400+0"
+      ]
+    },
+    {
+      "id": "WF-F04",
+      "severity": "blocking",
+      "title": "Expected financial effects contain an unfinished contradictory net value",
+      "pointers": [
+        "/traces/0/expected/effects/tokenTransfersNet/alice.USDC",
+        "/traces/0/expected/effects/aliceNetUSDC"
+      ],
+      "evidence": "The first value is the string -5030+4970-wait while aliceNetUSDC correctly says -5030. This is a financial expectation, not whitespace packaging. Reapplying refund to net spend would give -60 rather than -5030.",
+      "computedCounterexample": {
+        "actualDelta": -5030,
+        "formula": "-10000 + 4970 = -5030",
+        "doubleRefundDelta": -60
+      },
+      "requiredFix": "Replace the unfinished field with a typed -5030 net amount or remove the duplicate expectation and bind its reference to aliceNetUSDC. State the economic boundary for escrow gross debits explicitly; refunds must not reduce cumulative fill-plus-fee debit 5030."
+    },
+    {
+      "id": "WF-F05",
+      "severity": "blocking",
+      "title": "Four mandatory claims and rejection outcomes do not bind the complete financial record",
+      "pointers": [
+        "/traces/0/acceptance",
+        "/traces/1/acceptance",
+        "/traces/2/acceptance",
+        "/traces/3/acceptance",
+        "/traces/4/acceptance",
+        "/traces/5/acceptance",
+        "/traces/6/acceptance",
+        "/mutations/0/unchangedState",
+        "/mutations/18/unchangedState"
+      ],
+      "evidence": "All four claim names are preserved but their prose summaries lack an explicit universal binding to complete pre/post states, effects, request/controllers, empty debt/share records, allowances, observations, duties and successor/history records. Genesis/admin are two history labels and a profile name, without complete admitted financial records or an explicit boundary treating the entire preState as their fixed result. All 19 unchangedState values are partial strings; financialStateUnchanged=true does not specify full result equality or admission-stage preconditions.",
+      "computedCounterexample": {
+        "context": "Starting with the funded delegated trade, keep all transfers, totals, allowed trade, fees, caps, work and named history IDs; change only postState.request.controller from alice to agent42.",
+        "gap": "The four existing summaries do not explicitly compare the request/controller record or authorize its transfer; naming one successor and valid recipients does not bind the controller."
+      },
+      "requiredFix": "For each trace define specified-only predicates over complete canonicalIntent, concretePlan, preState, each step transfer/nominal change, observations, entire postState, and complete genesis/admin admission context. Include frame conditions for untouched financial fields and controller/authority lineage. For each negative supply explicit expectedStateRef equality to the complete selected base (or a complete alternate fixture), rejected effects/fees, and satisfied earlier-stage predicates. Split disjunctive proposed inputs when claiming coverage of each alternative. These are design predicates, not proof claims."
+    },
+    {
+      "id": "WF-F06",
+      "severity": "blocking",
+      "title": "Concrete financial footprint bounds and state references remain incomplete",
+      "pointers": [
+        "/rows/0/boundedFootprint/writes/9",
+        "/rows/1/boundedFootprint/writes",
+        "/rows/2/boundedFootprint/writes",
+        "/rows/3/boundedFootprint/writes",
+        "/rows/4/boundedFootprint/writes/4",
+        "/rows/6/boundedFootprint/writes/3",
+        "/rows/2/representationPath/3/pointer",
+        "/rows/4/representationPath/3/pointer",
+        "/rows/5/representationPath/3/pointer"
+      ],
+      "evidence": "RR-N7 changes on fill1, fill2 and cancel (3 writes, bound 2). D-cover-C9 changes at premium, adjudication and payout (3 writes, bound 2). DC-M1 is materialized then expired (2 writes, bound 1). Recurring duty/status/aggregate updates, delegated allowed-effect grant, and stored contingent observations are absent from write footprints. expected.duties does not exist in traces 2,4,5 although representation paths point there.",
+      "requiredFix": "Define whether bounds count accesses per trace or unique records, then enumerate every changed financial resource consistently. For the currently implied per-trace access convention use at least 3 writes for RR-N7 and D-cover-C9 and 2 for DC-M1; include allowance, duty, status, observation and authority writes. Replace missing expected.duties references with complete postState duties paths or explicit expected empty lists. Reconcile bounds with actual finite steps."
+    },
+    {
+      "id": "WF-F07",
+      "severity": "blocking",
+      "title": "Contingent premium declares creation of a cover absent from complete post-state",
+      "pointers": [
+        "/traces/3/steps/0/nominalChanges/0",
+        "/traces/3/steps/0/postState",
+        "/traces/3/steps/1/postState",
+        "/traces/3/steps/2/postState"
+      ],
+      "evidence": "The premium step declares field cover, id C1-cover, premium-creates-cover-not-cash. No cover record exists in any complete postState. Later C1 admission has premiumPaid and observation but no persistent C1-cover identity or policy binding to consume or preserve.",
+      "requiredFix": "Represent C1-cover explicitly with principal, insurer, premium status, conditions, controller and lifecycle, carry it through observation/admission, and bind the claim to it; or define an explicit alternate cover representation and make the nominal effect point to that real record. Keep cover, nominal claim and actual payout distinct."
+    }
+  ],
+  "mutationCoverage": [
+    {
+      "index": 0,
+      "id": "intent-cases:partial-fill-batch:mut:refund-resets-gross",
+      "assessment": "Concrete reset proposed, but complete rejection frame missing (WF-F05).",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 1,
+      "id": "intent-cases:partial-fill-batch:mut:concurrent-two-successors",
+      "assessment": "Only two successor labels; concrete fill/cancel candidate states, funding and effects absent.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 2,
+      "id": "intent-cases:partial-fill-batch:mut:erase-duty-on-cancel",
+      "assessment": "Concrete duty deletion; full unchanged frame missing.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 3,
+      "id": "intent-cases:recurring-payments:mut:lifetime-reset",
+      "assessment": "Concrete periods/aggregate/work reset; full unchanged frame missing.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 4,
+      "id": "intent-cases:recurring-payments:mut:concurrent-period-ticket",
+      "assessment": "Concrete five T5 presentations; explicit admission time and candidate effects/stages need binding.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 5,
+      "id": "intent-cases:delegated-rebalancing:mut:overbroad-delegate",
+      "assessment": "Concrete external transfer is funded; CreateDebt alternative is only an op/amount, not a separate complete candidate.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 6,
+      "id": "intent-cases:contingent-claim:mut:claim-as-cash",
+      "assessment": "Concrete unbacked 10000 credit; total would rise 30000 to 40000.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 7,
+      "id": "intent-cases:contingent-claim:mut:stale-observation",
+      "assessment": "Age independently computed 7200>3600; signer/payload retained.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 8,
+      "id": "intent-cases:contingent-claim:mut:substituted-provenance",
+      "assessment": "Signer and anchor both substituted; does not independently isolate anchor binding from unauthorized signer.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 9,
+      "id": "intent-cases:contingent-claim:mut:unauthorized-oracle",
+      "assessment": "Fresh payload with principal alice replacing authorized oracle.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 10,
+      "id": "intent-cases:contingent-claim:mut:custody-underfund",
+      "assessment": "Blocked custody isolation: WF-F01.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 11,
+      "id": "intent-cases:cross-domain-recovery:mut:replay-message",
+      "assessment": "Refunded base and replay amount specified; alternate destinations not separate funded candidates.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 12,
+      "id": "intent-cases:cross-domain-recovery:mut:late-receive-after-refund",
+      "assessment": "Fresh late observation age 10 and Refunded base specified; destination credit lacks a complete funded candidate and earlier admission bindings.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 13,
+      "id": "DeFi-regressions:asynchronous-settlement:mut:premature-finality-or-replay",
+      "assessment": "Funded escrow 400; finality observation explicitly absent.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 14,
+      "id": "DeFi-regressions:asynchronous-settlement:mut:double-consume",
+      "assessment": "Received/consumed base specified; escrow 0 also creates a custody failure. Explicit stage order needed to isolate replay.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 15,
+      "id": "DeFi-regressions:conditional-payoff-insurance:mut:unauthorized-or-truth-proof",
+      "assessment": "Unauthorized signer concrete; truth-proof alternative is not a separate complete proposed observation/context.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 16,
+      "id": "DeFi-regressions:conditional-payoff-insurance:mut:stale-adjudication",
+      "assessment": "Age independently computed 7200>3600 with authorized signer retained.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 17,
+      "id": "DeFi-regressions:conditional-payoff-insurance:mut:substituted-adjudication",
+      "assessment": "Payout and anchor both changed; payout-cap failure does not independently establish anchor binding.",
+      "completeFinancialRejectionFrameAccepted": false
+    },
+    {
+      "index": 18,
+      "id": "DeFi-regressions:conditional-payoff-insurance:mut:custody-underfund",
+      "assessment": "Blocked custody isolation: WF-F01.",
+      "completeFinancialRejectionFrameAccepted": false
+    }
+  ],
+  "uncoveredScope": [
+    "No deployed oracle authentication, real custody, foreign finality, financial runtime, native proofs, chain or wallet operations inspected. No network used.",
+    "No primary protocol conformance asserted; disclosed toy prices/calendars/units/registries/custody/bounds accepted only as assumptions for internal review.",
+    "No complete exhaustion or closure execution fixture, split/join work partition fixture, recurring revocation execution, or funded late-receive alternate branch validated. Remaining recurring ordinary capacity is 978 versus 56 for seven payments at existing 8-unit toy cost; this is arithmetic feasibility only.",
+    "All four claims remain specified-only and are not proved. Complete genesis/admin financial acceptance remains unestablished.",
+    "Graph construction and broad repository analysis excluded by the bounded frozen-artifact task. Only local pinned source identities and reference text checked."
+  ],
+  "separateAcceptanceLimits": [
+    "Grok author timeout and incomplete packaging are preserved acceptance limits, not counted as financial-content findings.",
+    "No approval of full SP01, semantic freeze, runtime, native/chain execution, public release, or all twelve sprints.",
+    "A later artifact with economic fixes requires fresh content review. Byte-format-only rebinding cannot cure these findings."
+  ]
+}

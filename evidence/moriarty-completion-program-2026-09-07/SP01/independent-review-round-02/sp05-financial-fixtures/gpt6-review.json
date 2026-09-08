@@ -1,0 +1,251 @@
+{
+  "schema": "moriarty.gpt6-financial-fixture-review/1",
+  "verdict": "BLOCKED",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "high",
+    "transport": "native subagent",
+    "task": "/root/sp05_financial_fixture_review",
+    "independent": true
+  },
+  "reviewedAt": "2026-09-08T06:32:16.567673+00:00",
+  "candidateSha256": "9d2ef635d8473d6dc2e274a4796bd306eadd51705862fc3a49ed48607139cc83",
+  "candidateRoot": "/home/charl/.local/state/moriarty/sp05-financial-fixtures-20260908/candidate-01",
+  "baseCommit": "c9f0741122ee82ed53065b23609bf8a59bd2b778",
+  "scope": "SP05.1 independent fixed financial fixtures and full normalized-effect comparison utility. No raw receipt authentication, local ledger execution or public admission.",
+  "okFinancialComparisonUtility": false,
+  "networkAcceptance": false,
+  "networkEvidence": "incompleteNetworkEvidence",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "blocking",
+      "title": "Changed role bindings pass comparison",
+      "location": "experiments/moriarty-midnight-financial/src/differential.mjs:548",
+      "pointers": [
+        "/deploymentBinding/roles/lender/logicalId",
+        "/deploymentBinding/roles/setup-mint/status",
+        "/sourcePins/acceptedSourceSha256"
+      ],
+      "reproduction": "Set observed.deploymentBinding.roles.lender.logicalId = 'attacker' on a clone of loan.json. Compare the unchanged loan fixture against observed.",
+      "observed": "ok:true, errors:[], networkAcceptance:false",
+      "reason": "compareRecords compares role names only. It never compares role logicalId or status values. Source pin values are also ignored. The fixed expected fixture therefore cannot detect a changed counterparty binding.",
+      "requiredChanges": [
+        "Compare every role record field and enforce consistency with stage role references.",
+        "Bind source pins to the admitted expected record or explicitly separate unauthenticated annotations from the checked record.",
+        "Add changed logicalId and setup-mint status controls on either input."
+      ]
+    },
+    {
+      "id": "R2",
+      "severity": "blocking",
+      "title": "Malformed nested JSON crashes the API",
+      "location": "experiments/moriarty-midnight-financial/src/differential.mjs:368",
+      "relatedLocations": [
+        "experiments/moriarty-midnight-financial/src/differential.mjs:482",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:548",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:562",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:586"
+      ],
+      "reproduction": "For separate loan clones: delete stages[2].economicFee, set stages[2]=null, or set deploymentBinding.roles=null. Compare each clone against the intact fixture.",
+      "observed": [
+        "TypeError: Cannot read properties of undefined (reading 'actor')",
+        "TypeError: Cannot read properties of null (reading 'stage')",
+        "TypeError: Cannot convert undefined or null to object"
+      ],
+      "reason": "validateRecord returns shallow container success despite nested validation errors. compareRecords and compareStage then dereference malformed fields.",
+      "requiredChanges": [
+        "Gate replay and comparison on complete structural validation.",
+        "Return deterministic structured errors for nested missing, null, primitive and malformed array items.",
+        "Test malformed expected inputs as well as observed inputs."
+      ]
+    },
+    {
+      "id": "R3",
+      "severity": "blocking",
+      "title": "Equal contradictory financial records pass",
+      "location": "experiments/moriarty-midnight-financial/src/differential.mjs:380",
+      "relatedLocations": [
+        "experiments/moriarty-midnight-financial/src/differential.mjs:210",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:417",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:435",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:584"
+      ],
+      "reproduction": "Apply each mutation to a fixture clone. Compare that clone against an identical clone.",
+      "observed": "Every listed mutation returned ok:true with no errors.",
+      "counterexamples": [
+        {
+          "fixture": "loan",
+          "mutation": "At settle set nominalRemaining and outstandingNotional to 0 and residualDuties to [].",
+          "lostObligation": "4500000000 USD_micro remaining agreement debt"
+        },
+        {
+          "fixture": "loan",
+          "mutation": "At accrue set interestCalculated to 1, keeping interestDue and the emitted interest due at 33972602."
+        },
+        {
+          "fixture": "loan",
+          "mutation": "At accrue set principal due outstanding to 1, keeping created and principal.due at 500000000."
+        },
+        {
+          "fixture": "loan",
+          "mutation": "At accrue set borrower pre and post cash to 1, keeping setup post and settle pre cash at 20000000000."
+        },
+        {
+          "fixture": "swap",
+          "mutation": "At swap set economicFee.amount to 31, keeping trader fee at 30 and all transfers unchanged."
+        },
+        {
+          "fixture": "swap",
+          "mutation": "At swap set trader ASSET_A actor effect fee to 0, keeping economicFee.amount at 30."
+        },
+        {
+          "fixture": "swap",
+          "mutation": "At close set work=100 and revision=77, keeping remaining=6 and lifetime=8."
+        }
+      ],
+      "reason": "Replay covers only stage-local balances and gross/incoming amounts. It does not validate inter-stage continuity, liability allocation, source arithmetic, lifecycle rules, residual duties or fee reconciliation.",
+      "requiredChanges": [
+        "Validate both records against the admitted fixed source-derived economic trace.",
+        "Reconcile due creation, settlement, paid amounts and retained notional across stages.",
+        "Check revision plus remaining against lifetime and enforce one decrement per action.",
+        "Reconcile economic fee fields with actor fee effects and the fixed swap calculation.",
+        "Preserve the separate unresolved network fee accounting."
+      ]
+    },
+    {
+      "id": "R4",
+      "severity": "blocking",
+      "title": "Missing financial coverage can bypass replay",
+      "location": "experiments/moriarty-midnight-financial/src/differential.mjs:396",
+      "relatedLocations": [
+        "experiments/moriarty-midnight-financial/src/differential.mjs:417",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:245",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:275"
+      ],
+      "reproduction": "At loan settle set actorEffects=[] on both inputs. Alternatively set balances={pre:[],post:[]} and actorEffects=[] on both inputs while preserving the transfer.",
+      "observed": "ok:true, errors:[] for both variants",
+      "reason": "Replay checks only rows that exist. It does not require balances and effects for transfer participants. Only explicit setup minting can justify an external source without a balance row.",
+      "additionalObservedCases": [
+        "Equal swap clones accept duplicate transfer ordinal 0 at close.",
+        "Equal loan clones accept a duplicate borrower in bindings.roles.",
+        "Equal loan clones accept quantum 0 across deployment and stage bindings."
+      ],
+      "requiredChanges": [
+        "Require complete participant/asset balance and actor-effect coverage for each fixed stage.",
+        "Limit the synthetic mint source exception to the declared setup transfers.",
+        "Reject duplicate role identities and duplicate or invalid transfer ordinals.",
+        "Require positive quantum and consistent bindings."
+      ]
+    },
+    {
+      "id": "R5",
+      "severity": "medium",
+      "title": "Embedded test output does not match declared digests",
+      "location": "experiments/moriarty-midnight-financial/test-evidence.json:58",
+      "relatedLocations": [
+        "experiments/moriarty-midnight-financial/test-evidence.json:68"
+      ],
+      "pointers": [
+        "/red/outputSha256",
+        "/red/output",
+        "/green/outputSha256",
+        "/green/output"
+      ],
+      "observed": {
+        "redEmbeddedOutputSha256": "4e3e9603e879c06c017b30e1d3780db55e06d201a9735ee2e16e7b97fe1ab88a",
+        "redDeclaredSha256": "b21afcfc74d208ac925bdd4f123f2d93a00b26b279d61717e9e414a2c46d5902",
+        "greenEmbeddedOutputSha256": "e9b60e4f55cd6a32c3a357b466543c79e9cd7af1c22a7b0d61e5d104b52c65cb",
+        "greenDeclaredSha256": "f8d82d1794450dadcb83df675801579cb6db5e4b6d6c636b35fe29d3e35236e1"
+      },
+      "reason": "The GREEN output includes an explicit omitted-header summary. Neither embedded UTF-8 output hashes to its declared outputSha256. Independent rerun still confirms 29 passes.",
+      "requiredChanges": [
+        "Preserve existing evidence.",
+        "Add an amendment identifying exact raw captures and their verifiable digests.",
+        "Label summaries as summaries and give their own digest."
+      ]
+    }
+  ],
+  "verification": {
+    "existingTests": {
+      "command": "node --test --test-reporter=tap /home/charl/.local/state/moriarty/sp05-financial-fixtures-20260908/candidate-01/experiments/moriarty-midnight-financial/tests/differential.test.mjs",
+      "exitCode": 0,
+      "tests": 29,
+      "passCount": 29,
+      "failCount": 0
+    },
+    "independentAdversarial": {
+      "loanScalarLeafMutations": 315,
+      "swapScalarLeafMutations": 556,
+      "invalidCanonicalIntegerCases": 17,
+      "invalidIntegerCasesRejected": 17,
+      "u128MaximumAccepted": true,
+      "observedInputMutation": false
+    },
+    "fixtureInspection": {
+      "status": "Source-derived fixed fixture values reconciled. This does not approve the comparison implementation.",
+      "method": "Manual comparison to pinned .mori sources plus independent Python integer and field assertions. No evaluator or kernel output used.",
+      "checkedGroups": [
+        "loan: source pins, agreement, role records, network labels, economic fee, every liability/accrual/due/residual field, and every ordered transfer checked against independent source-derived values",
+        "swap: source pins, agreement, role records, network labels, economic fee, every liability/accrual/due/residual field, and every ordered transfer checked against independent source-derived values"
+      ],
+      "additionalChecks": "516 field assertions checked all stage balance rows, actor effects, asset bindings and lifecycle values. Both complete fixture JSONs were read. Descriptive notes and synthetic IDs were inspected as annotations.",
+      "loan": {
+        "interest": "33972602",
+        "remainder": "27000/36500 = 54/73",
+        "total": "533972602",
+        "remainingNotional": "4500000000",
+        "borrowerAfter": "19466027398",
+        "dueSemantics": "created and settled are stage effect amounts. Outstanding is post-stage state.",
+        "work": "2,1,0",
+        "revisions": "0,1,2",
+        "remaining": "2,1,0"
+      },
+      "swap": {
+        "output": "19743",
+        "economicFee": "30 ASSET_A",
+        "reservesAfterTrade": "1010000 ASSET_A / 1980257 ASSET_B",
+        "traderAfter": "90000 ASSET_A / 19743 ASSET_B",
+        "providerAfterClose": "1010000 ASSET_A / 1980257 ASSET_B",
+        "work": "8,7,6",
+        "revisions": "0,1,2",
+        "remaining": "8,7,6",
+        "reservation": "One action allowance, discharged at close. No extra decrement."
+      },
+      "schemaLimit": "No signed delta fields exist. UInt128 bounds are applicable. No SInt128 implementation is claimed."
+    },
+    "hashes": {
+      "beforeAllMatched": true,
+      "afterAllMatched": true,
+      "ownedFiles": {
+        "experiments/moriarty-midnight-financial/package.json": "fbb2a657c2b7c8ef9c5242ffc430257f85d639a5bf30f82234dc5e23b14ad367",
+        "experiments/moriarty-midnight-financial/README.md": "429987a2f936e0b2ce20b68556a19ad79df93a36c86874b3f3f647f52414ef39",
+        "experiments/moriarty-midnight-financial/fixtures/loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+        "experiments/moriarty-midnight-financial/fixtures/swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374",
+        "experiments/moriarty-midnight-financial/src/differential.mjs": "fcc77f1368528ec71fb763cef9634a86ef330ad5daa8f1b545e44725e25676a4",
+        "experiments/moriarty-midnight-financial/tests/differential.test.mjs": "24e5fa1d3232c66fce11832bd02499e211ddd57e86b8db0ab5c5fff2516686cf",
+        "experiments/moriarty-midnight-financial/test-evidence.json": "4644bdcfcc926837da59b3e5ab3aca7f072b955a20b2f224e3dd4376fe191e78",
+        "FOREMAN_REPORT.md": "028f8a2fe3836d66d27dd7a57af66f8894473126433bf236a5c9c80f0b8b7e66",
+        "FOREMAN_REPORT.json": "39cfc5ea585bd7ea9dbf93d117b025e71d5af91f93c7d0825d52e22dbeb17a39"
+      },
+      "pinnedInputs": {
+        "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+        "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+        "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+        "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+        "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+        "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804"
+      },
+      "ownedBytes": 95899
+    }
+  },
+  "limitations": [
+    "This is a pure synthetic normalized economic utility audit. It does not require a ledger SDK at this stage.",
+    "Actual deployment bindings, network fees, payer UTXO authentication and canonical finality remain unresolved.",
+    "No network predicate, Docker settlement, proof, wallet or transaction was run or accepted.",
+    "No full SP05.1 network binding acceptance, SP05 I2 settlement, native/history/full-syntax/K or SP01-SP12 acceptance.",
+    "No build, network, commit, subagent dispatch or live worktree mutation occurred. Only these two report files were written.",
+    "The original RED capture was inspected but not rerun by deleting the implementation. Root retained the first verification-format failure and subsequent TAP verification."
+  ],
+  "requiredDisposition": "Do not accept okFinancialComparisonUtility or mark this packet complete. Preserve candidate-01 and issue a bounded repair candidate with new independent review."
+}

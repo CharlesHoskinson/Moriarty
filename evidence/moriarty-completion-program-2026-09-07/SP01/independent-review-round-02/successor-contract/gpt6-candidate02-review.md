@@ -1,0 +1,133 @@
+# SP01.3 candidate02 independent design-content review
+
+Verdict: **BLOCKED**. Candidate `5f07f0a988d3da60312da2b1953dd68b48c4e6fd57132a947b23edab6dd9e6c5` (481,896 owned bytes).
+
+Reviewer: fresh independent GPT-6 Astra, high effort. Frozen six-file review. This grants no semantic freeze, RP01/SP01, runtime, native, chain or twelve-sprint acceptance. Full BNF and K remain later gated work.
+
+All six frozen owned hashes and all 30 pinned input hashes matched before and after the audit; the aggregate candidate digest matched. The three recorded old-profile files also match. Only these two review reports were written.
+
+Independent checks: four signed documents pass schema; six LF/CR/U+2028 scalar mutations reject; UInt64/UInt128 max/max+1 behave correctly across schema and explicit domain validation; duplicate mandatory claims reject. All 46 advertised outer hashes reproduce. Their inner dependency bindings do not all match. No context evaluator or signature verification ran.
+
+The candidate has strong improvements: expanded closed financial records and effect constructors, DA13/DA14 dispositions, genesis/non-exchange schemas, repaired scalar validation, complete leaf path enumeration, retained preimages, debt components, actor ledgers and explicit reserve/profile parameters. R2 is resolved at design level. Seven groups remain blocked for concrete content defects below.
+
+## R1: Finite names and records improved; the typed Core/state contract remains incomplete
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:150-178`; `semantic-contract.md:202-249`; `signing-display-schema.json#/$defs/StoredValue`; `signing-display-schema.json#/$defs/StateBody`; `signing-display-schema.json#/$defs/Shares`; `signing-display-schema.json#/$defs/Message`; `semantic-decisions.json#/entries/0/openChecks`; `semantic-decisions.json#/entries/2/openChecks`.
+
+- The 38 CoreOp names and expanded closed ExactEffect/StoredValue unions resolve most original omissions. Bool, Quantity, structured values, positions, requests, EventClaim (DA13), RewardAccount and Slash (DA14) now have explicit wire dispositions. Genesis and non-exchange documents schema-pass.
+- B.1 lists expression names but no operand/result signatures or typing rules for reads, construction, projections, arithmetic and staging. B says every source action elaborates to exactly one CoreOp, while the full mapping is explicitly left to SP02. This is not a complete typed Core interface even allowing later BNF and K implementation.
+- Rate/Price cannot inhabit StoredValue directly or recursively through its records/options: neither is in the union. Independently validating {tag:Rate,mantissa:1,scale:1}, with integer strings, against StoredValue rejects. The claim at lines 155-156 that tagged records permit them is false for a generic field binding; only specifically typed nested fields such as RewardAccount.entitlementRate can hold Rate.
+- StateBody has only fixed financial arrays, no finite map of declared state fields. ExactWrite admits arbitrary Identifier fields such as reserve_a/trader_a and a Bool write in the genesis example, but no complete mapping to StateBody is defined. Two different user-defined Bool states cannot be distinguished by the declared StateBody unless a mapping is added.
+- StateBody.shares stores Shares={vault,value} with no owner/account key; ShareMint/ShareBurn likewise lack a holder field. Alice and Bob holding equal quantities in the same vault cannot be distinguished in that state representation. Message records contain a payloadBound but no payload or commitment; two different messages with the same identifiers/bound have the same represented content. Names/bounds alone do not bind the economic or message state.
+
+Required disposition: Specify finite typed signatures and explicit state/write/holder/payload bindings. Resolve Rate/Price storage consistently. Preserve the expanded domain and later BNF/K gates; do not narrow required DA coverage to obtain closure.
+
+## R2: Original lexical, numeric-domain and mandatory-claim defects resolved at design level
+
+Disposition: **RESOLVED_DESIGN_CONTENT**.
+
+References: `semantic-contract.md:85-100`; `semantic-contract.md:303-308`; `semantic-contract.md:679-685`; `signing-display-schema.json#/$defs/UInt64Text`; `signing-display-schema.json#/$defs/UInt128Text`; `signing-display-schema.json#/$defs/ExactPlanDocument/properties/requiredClaims`.
+
+- Independent Draft202012 checks reject principal and gross-cap strings ending LF, CR or U+2028. The true-end pattern fixes the original dollar-anchor defect.
+- UInt64/UInt128 max and max+1 are structurally accepted as canonical decimal strings; an independently supplied validator using the declared inclusive domain annotations accepts max and rejects max+1 before hashing. This is a correctly explicit separate domain stage, not a missing JSON Schema maximum.
+- Four duplicate ContractInvariant claims independently fail schema; each of the four mandatory kinds must occur exactly once. All four positive signed documents pass structural schema. These checks establish the requested scalar/domain proposal repairs only.
+
+Required disposition: Retain these corrections. Do not equate schema/domain validity with contextual, native or ledger acceptance.
+
+## R3: Every leaf is listed, but display values and metadata are still inconsistent
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:403-432`; `signing-examples.json#/displayProjectionRule`; `signing-examples.json#/valid/0/displayProjection/65`; `signing-examples.json#/valid/1/displayProjection/31`; `signing-examples.json#/valid/2/displayProjection/29`; `signing-examples.json#/valid/3/displayProjection/18`.
+
+- Independent traversal finds exactly 142,154,107,136 signed leaves respectively, in the same path order as the four displays. This is a major completeness improvement.
+- The displays stringify typed leaves. Exact swap locks is the string "[]" instead of []; policy.composition.unknownRejects is "true" instead of true. Genesis exactWrites.2.value.value is "true" instead of true; accrue qty unit exponent is "1" instead of number 1. There are 5,5,8,6 type/value mismatches respectively. E.425 requires equality to the parsed leaf, so all four purported positive projections reject.
+- Lines 429-432 expressly defer FIELD_META formatting and acknowledge diagnostic fallback. In the swap example locks, observationPolicy.requiredFields.0, recoveryRights.allowedEffectSet.0 and residualAuthority.allowedAssets.0 have unit/role signed-field. A suffix lookup plus nearest asset/denomination is not a complete schema-context resolution algorithm for every union/array/empty prohibition. It does not specify missing metadata as an error, tie breaking, or full identity/unit context. The human display contract requested for this phase remains unfinished.
+- The example rule refers to FIELD_META in semantic-contract F.3, but F.3 is exchange arithmetic; the actual display section is E.
+
+Required disposition: Make each concrete projection satisfy the chosen typed-value contract, and provide exhaustive deterministic metadata resolution and complete labels/identity/unit contexts now. A later formatter may implement the contract; diagnostic fallback cannot stand in for a complete positive display.
+
+## R4: Outer hashes reproduce, but typed preimages and inner dependency bindings do not
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:328-399`; `signing-examples.json#/preimageRegistry/policyBody`; `signing-display-schema.json#/$defs/PolicyBinding`; `signing-examples.json#/preimageRegistry/accruePostStateBody/successorRecordHash`; `signing-examples.json#/preimageRegistry/preparedAccrue/postStateHash`; `signing-examples.json#/preimageRegistry/preparedAccrue/successors/0/originalIntentDigest`; `signing-examples.json#/preimageRegistry/proofContextSwap`; `signing-examples.json#/preimageRegistry/preparedOutcome/postStateHash`.
+
+- I independently reproduced all 46 advertised hashDag hashes from retained objects or signed bytes. This confirms the byte preimages exist for those outer nodes, not that their inner commitments are correct.
+- accruePostStateBody.successorRecordHash is 0680bc1c8e7c8abdfde364895c88cc3b094500bee9465ebc8679bebd8f7e273b, but hashing retained accrueSuccessor under MORIARTY-SUCC-SUCCESSOR/0 yields c0aa72549ab00cbb92e8de15e88bd2ca82119ec3b02173ed990866bdd13a26c7.
+- preparedAccrue.postStateHash is 8ad322120acf56deaaf612f4de61a0efe93a6aafa9500ef8ecb2e1eb878f8065, while retained accruePostStateBody hashes to 984eb22455d3ce77163c3ee01cfd2837dbabe6410f8bbd74cf9690cba6f6b4a1. Its embedded successor still has originalIntentDigest 338d593aa19608e926510541c1a3f4599b0aa202b216982e027c2904d2380bf3, whereas the current signed accrue digest is 67649e18ca59c07474cca39b43c233a91071fc29872e751ae1165c4c9314cd0f. Hashing the stale prepared object successfully does not repair these links.
+- preparedOutcome points to swapStateBody, whose successorRecordHash and residualCapability refer to the exact-plan swap successor, not outcomeSuccessor and its borrower/lender obligations. The two prepared routes cannot share this post-state commitment as currently represented.
+- policyBody has rules and lacks policyHash, so it fails the nominated PolicyBinding schema (additional rules property and missing policyHash). Hashing PolicyBinding itself would include its own policyHash. No closed distinct PolicyBody or exact policy domain is supplied in the DAG table. ProofContext.effectsHash and residualCapabilityHash also lack specified domains in the domain table/catalog. originalAssumptionsHash likewise needs an exact domain/body rule.
+- The declared DAG says stateHash depends on genesis, but GenesisBody.initialStateHash commits back to state. Actual StateBody has no genesis field. Therefore the declared dependency column is not an acyclicity proof of the actual record graph. GenesisInitial zero origin/consumption/assumptions digests need a precise bootstrap exception and transition; they cannot silently serve as genuine origin bindings.
+- valid[*].selectedPlanRef is the string preimageRegistry, not a reference to a particular selected body, and preimageRefs is a list of names without explicit object references. Hash matching recovers many intended bodies but does not define a typed reference contract.
+
+Required disposition: Rebuild the complete typed dependency graph from actual fields, define policy/effects/residual/assumption domains, and check every inner edge against its retained typed body. Recompute downstream copies after changes and explicitly specify the acyclic genesis bootstrap.
+
+## R5: Accrual positive contradicts its own formula/cap; debt and dimensions remain underdefined
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:121-124`; `semantic-contract.md:436-476`; `semantic-contract.md:480-520`; `semantic-contract.md:524-538`; `signing-examples.json#/valid/3/canonicalUtf8`; `signing-examples.json#/preimageRegistry/loanStateBody/debts/0`; `signing-examples.json#/preimageRegistry/accruePostStateBody/debts/0`; `signing-display-schema.json#/$defs/Remainder`.
+
+- Debt now explicitly carries principal, accrued, controller, dates, allocation, negative-rate choice, cap and settlement conversion; Price.basePerQuote is unambiguous. These are substantial repairs.
+- Independent integer arithmetic on the actual accrue effect gives floor(5,000,000,000 * 1 * 2,592,000 / (10 * 31,536,000)) = 41,095,890, not 533,972,602. The argument and effect use the latter. Further, pre-state principal already equals liabilityCap=5,000,000,000. F.1 therefore clips the positive delta to zero with capApplied=true, but the example emits capApplied=false and post outstanding=5,533,972,602. It violates both the exact formula and the cap invariant.
+- Accrual only requires periodEnd>periodStart. It does not relate periodStart/end to the debt schedule, update a last-accrual cursor, or prohibit repeating/overlapping an already accrued interval. Two different nonce events can accrue the same interval while satisfying the stated period rule. This is a missing transition predicate, not a request to implement K now.
+- WriteOff reduces outstanding but does not specify how principal and accrued decrease; for P=100,A=10,writeoff=5 there are multiple different valid component states. CreditAccrued changes debt without a corresponding history-ledger delta rule. Capitalized status escapes the explicitly Outstanding-only invariant unless its preserved obligations are separately defined.
+- DueSettledEffect supplies conversion fields, but F.2 only explicitly equates settlementAsset to the Debt record, not the conversion mantissa/scale. It needs a precise authorized conversion binding and actual asset-debit/recipient accounting relation; otherwise a zero conversion mantissa can describe nominal discharge for zero asset amount.
+- F.3 uses undefined in_scale. Remainder.location allows NamedParty without identifying that party and DiscardRecorded without a complete reserve/economic disposition. A remainder 5/10 base quanta with dust 1 has no fully defined comparison/accounting rule because in_scale is unbound.
+- Quantity defines exponent addition/subtraction but not scale alignment, multiplication result scale, division rescaling, or rounding at the Scale<=18 boundary. UnitTerm exponent is a JSON integer in [-16,16], while prose calls it SInt. For scale-18 quantities multiplied together, the required result representation or rejection rule is absent.
+
+Required disposition: Correct the numeric positive, bind non-overlapping accrual periods and dates, give component/history updates for every debt operation, bind settlement conversion to authority and actual movements, and close remainder/Quantity arithmetic rules.
+
+## R6: Successor records preserve more fields but violate their own cumulative rules
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:545-605`; `signing-examples.json#/preimageRegistry/swapSuccessor/actorLedgers/0`; `signing-examples.json#/preimageRegistry/swapSuccessor/residualCapability/grossDebitCaps/0`; `signing-examples.json#/preimageRegistry/outcomeSuccessor`; `signing-examples.json#/preimageRegistry/accrueSuccessor/debtLedgers/0`; `signing-display-schema.json#/$defs/ActorLedger`; `signing-display-schema.json#/$defs/SuccessorRecord`.
+
+- Actor-indexed ledgers, origin digest, validity/recipient/call/assumption bindings and distinct predecessor modes are improvements. However the update relation is still incomplete and the positive records contradict it.
+- swapSuccessor.actorLedgers[0] is keyed by (trader,AssetA) but records originalNetGoal=cumulativeNet=19743, the amount delivered in AssetB. There is no (trader,AssetB) ledger. outcomeSuccessor repeats this unit error. A unit-indexed ledger cannot move an AssetB goal into AssetA.
+- The same swap ledger says remainingGross=0 after cumulativeGross=10000, but residualCapability.grossDebitCaps[0].maximum remains 10000. preparedSwap and post-state copy that unspent-looking cap. This directly contradicts child caps <= parent remaining; a continuation must not treat this residual as a fresh 10000 allowance.
+- accrueSuccessor.debtLedgers[0] has cumulativeCreated=5000000000, cumulativeRepaid=cumulativeWrittenOff=0, but outstanding=5533972602. It fails the stated G.575 equation. DebtLedger has no accrued/negative-credit components, so the specified relation cannot represent otherwise valid accrual histories.
+- Partial prefix checking says cumulativeNet + remainingGross_of_counterparties must still be able to reach a goal. It neither defines counterparties, same-asset aggregation, fee/recipient/call feasibility, nor a bounded reachability predicate. A gross cap belonging to a party forbidden to pay the goal recipient is not deliverable net value. This is a named possibility test, not a complete contract.
+- Cancellation says an unsatisfied goal becomes Duty, but does not define which actor owes it, amount/assets and backing authority, how multiple counterparties allocate it, or how that duty is reconciled to partial completion. Duty also admits Cancelled, without a rule preventing cancellation from erasing an unpaid obligation.
+- The successor update has no explicit attenuation equations for all validity, recipients, calls, assumptions, partial rules and recovery rights; preserving the origin digest is necessary but does not define checking them. SuccessorRecord does not carry recoveryRights. Split/join also lack a complete unique child/currentness identity relation. The ledger currentness check can remain abstract, but its typed transition inputs and invariant cannot remain implicit.
+
+Required disposition: Define and populate same-actor/same-asset cumulative updates, residual caps after consumption, full debt-history deltas, bounded prefix feasibility and cancellation duties. Add explicit preservation/attenuation and successor identity rules for every protected dimension.
+
+## R7: Work constants and reserve alias improved; composition and conservation still incomplete
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:613-647`; `semantic-contract.md:649-673`; `signing-examples.json#/preimageRegistry/swapStateBody/remainingWork`; `signing-examples.json#/preimageRegistry/preparedSwap/remainingWork`; `signing-examples.json#/preimageRegistry/preparedGenesis/remainingWork`; `semantic-decisions.json#/entries/10/proposedChoice`.
+
+- Numeric profile maxima, a proposed CoreOp charge of one, and an explicit recovery-reserve alias replace the original vague rules. PartitionReserve correctly remains unadmitted.
+- The swap post-state records ordinaryRemaining=8 while preparedSwap and swapSuccessor record 7. The accrue post-state likewise records 8 while its successor/prepared work is 7. Genesis is explicitly charged one, but preparedGenesis, its successor and its post-state all retain 8 from an initial 8. These are contradictory positive work balances.
+- B.1 expression constructors such as Mul, Require, NextWrite and Emit are not CoreOp enum members, so the advertised per-CoreOp table does not specify their charge or how maxTotalVerificationWork is computed from expression nodes, proof nodes and sidecar data. Naming a maximum is not a complete admission calculation.
+- join is only sum(children remaining)<=parent remaining with no exact result/work charge or lifetime/identity reconciliation; its parent/children direction is unclear. split uses charge/rec_charge without specifying which event is charged. The at-most-one-recovery-child rule helps but does not define ordinary authority/fee/debt/goal partition alongside work.
+- par/interleave conflict checking covers writes, identities and cap keys but not cross-branch reads. For a branch reading field y and writing x, and another writing y, declared write sets are disjoint. The proposal does not specify whether the first sees pre-y or updated-y, and par combined prefix is only described as concatenation in increasing key order without a total branch key. atomic and message remain one-line descriptions with no bounded composition/checking rule.
+
+Required disposition: Make state/prepared/successor work identical after charges, define exact work/admission functions including expressions and split/join, and specify read/write framing, total ordering, and authority/obligation partition for all five composition policies.
+
+## R8: Contextual fixtures now have substance, but do not isolate the stated failures
+
+Disposition: **BLOCKED**.
+
+References: `semantic-contract.md:705-723`; `signing-examples.json#/invalid/9/context`; `signing-examples.json#/invalid/10/context`; `signing-examples.json#/invalid/11`; `signing-examples.json#/invalid/14/context`.
+
+- The fee negative now includes a real Fee effect, the clone has two children, and the race/migration have explicit consumed identifiers. All are correctly labelled specified-only. No context evaluator or signature verification ran in this review.
+- Migration recomputes the execution/document hashes, but the context still references authorityWrapperExact for the old swap digest 6664de64...; the mutated document digest independently computes 29074ab5656ccdbd89644ee90e525386375c4570ee1db0e3ec7507127fd195ec. recomputeDependentHashes lists only executionBodyHash and exactPlanDigest, not wrapper/prepared/successor/acceptance. Both its signed residual and genesis prestate also exclude Migrate. Thus earlier hash/authorization failures remain before the advertised history failure.
+- The cancel context uses requestId=SwapFill01, but referenced genesisStateBody.requests is empty. It mutates signed allowedActions without regenerating the referenced authority wrapper. The winningFill is a short untyped summary, not the complete valid acceptance/prestate transition needed to show cancellation would otherwise be valid. A missing request or mismatched authorization precedes the intended ledger-currentness rejection.
+- The Fee-30 plan retains trader_b=19743 and reserve_b=1980257 exactWrites from the zero-fee swap. Its actual Fee transfer would require trader_b=19713 and reserve_b=1980287. The signed residual fee cap also remains zero while only top-level feeCaps[0] becomes 30. The old authorityWrapperOutcome remains referenced. Therefore financial write consistency, residual fee authority and hash bindings fail independently of the net goal.
+- The clone children are {controller,ordinaryRemaining,recoveryRemaining} summaries, not typed SuccessorRecords with complete rights, aliases and unique IDs. Their prestate genesis authority lacks Exchange, while selectedPlan is swap. Existing contradictory outcomeSuccessor history is reused. The excessive 16+4 versus 8+2 arithmetic is real, but earlier stages are not concretely valid.
+- The four positive contexts already have R4-R7 contradictions, so using them as bases cannot establish isolated contextual rejection. Display missing/extra/value fixtures are meaningful at their own projection layer, but positives must first satisfy the display contract.
+
+Required disposition: Supply complete typed otherwise-valid contexts, reconstruct every dependent hash/wrapper and authorization field, and mutate exactly the intended predicate. Keep them specified-only until an evaluator exists; fixing design fixtures does not require runtime implementation in this phase.
+
+## Evidence limits
+
+Host schema and integer/hash computations are reproduced observations. Missing semantic predicates and the counterexamples derived from them are design inferences. No complete contextual acceptance pipeline, proof or native cryptography was executed. Specified-only fixtures remain specified-only.
+
+The completion report and semantic-decisions entries should preserve the unresolved content obligations above instead of describing R1–R8 as fully specified. SP01.2 reconciliation, consequential majority, native correspondence, usability and formal acceptance gates remain separate.
