@@ -1,0 +1,464 @@
+{
+  "status": "proposed",
+  "schemaId": "https://moriarty.local/spec/successor/signing-display-schema/0.1.0-proposal",
+  "hashFunction": "SHA-256 Python hashlib host proposal. Majority and native compatibility required before freeze. Not Moriarty evaluator. Unsigned. No signature verification claimed.",
+  "canonicalEncoding": "json.dumps(sort_keys=True, separators=(',', ':'), ensure_ascii=False)",
+  "reconstructInvalid": "Start from valid[id=base].document parsed from canonicalUtf8. Apply sets in order. If recomputeExecutionBodyHash, set executionBodyHash to SHA256(UTF8(MORIARTY-SUCC-EXEC-BODY/0)||0x00||canonical(executionBody)).",
+  "domainTagsProposed": {
+    "execBody": "MORIARTY-SUCC-EXEC-BODY/0",
+    "exactPlan": "MORIARTY-SUCC-EXACT-PLAN/0",
+    "outcomeIntent": "MORIARTY-SUCC-OUTCOME-INTENT/0",
+    "acceptance": "MORIARTY-SUCC-ACCEPTANCE/0",
+    "notReused": [
+      "MORIARTY-SIGN-bounded-atomic/1",
+      "MORIARTY-OUTCOME-bounded-atomic/1"
+    ]
+  },
+  "preimages": {
+    "sourceUtf8": "successor-proposal-fixture:swap-exact-input-v0",
+    "sourceHash": "943e254799a6e1364d2fe4f7a73ae905972fdd893cf673fe6b37e791b370639f",
+    "profileHash": "eaa460a6b0f404bae3ee9c25ebdf1835e4a0b3f42eaabfe749c5d863568ca01d",
+    "programHash": "27916e7ae72ef4730971593796d79e78feba39e95d0158fe1e8e88fdc5284ef9",
+    "genesisHash": "9be83ca635835cc40b7e81a1e972869245f93a5fad1e0183f2092c985189afb3",
+    "stateHash": "3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e",
+    "obsHash": "4f6023f56a618c2fda48d0dd68da1729680cc0292d61f746da114aa8bfbe9e9d",
+    "claimRoot": "4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335",
+    "consumptionId": "f59d1e35359f7f73ea53ec841f597d4325c923d7cc51de45c8c63d5b7c573875"
+  },
+  "valid": [
+    {
+      "id": "exact-plan-swap-min-receive",
+      "kind": "ExactPlan",
+      "note": "worked-examples.json floor_output 19743. Min not Exact. Unsigned.",
+      "canonicalUtf8": "{\"assumptions\":[{\"assumptionId\":\"time_oracle_unproven\",\"evidenceRole\":\"required_observation\",\"kind\":\"oracle_truth\",\"statement\":\"obs.now is authenticated not proven true time\"},{\"assumptionId\":\"pool_custody\",\"evidenceRole\":\"external_unproven\",\"kind\":\"custody\",\"statement\":\"pool outgoing AssetB is authorized by provider custody\"}],\"beforeStateHash\":\"3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e\",\"deployment\":\"preview_deployment_1\",\"executionBody\":{\"action\":{\"actor\":\"trader\",\"arguments\":[{\"name\":\"amount_in\",\"value\":{\"asset\":\"AssetA\",\"tag\":\"Amount\",\"value\":\"10000\"}},{\"name\":\"min_out\",\"value\":{\"asset\":\"AssetB\",\"tag\":\"Amount\",\"value\":\"19743\"}}],\"name\":\"swap\"},\"dust\":{\"asset\":\"AssetB\",\"value\":\"1\"},\"exactEffects\":[{\"amount\":\"10000\",\"asset\":\"AssetA\",\"from\":\"trader\",\"kind\":\"Transfer\",\"ordinal\":\"0\",\"to\":\"pool\"},{\"amount\":\"19743\",\"asset\":\"AssetB\",\"from\":\"pool\",\"kind\":\"Transfer\",\"ordinal\":\"1\",\"to\":\"trader\"}],\"exactWrites\":[{\"field\":\"reserve_a\",\"value\":{\"tag\":\"UInt128\",\"value\":\"1010000\"}},{\"field\":\"reserve_b\",\"value\":{\"tag\":\"UInt128\",\"value\":\"1980257\"}},{\"field\":\"trader_a\",\"value\":{\"tag\":\"UInt128\",\"value\":\"90000\"}},{\"field\":\"trader_b\",\"value\":{\"tag\":\"UInt128\",\"value\":\"19743\"}}],\"outPredicate\":{\"amount\":{\"asset\":\"AssetB\",\"tag\":\"Amount\",\"value\":\"19743\"},\"tag\":\"Min\"},\"rateOrPrice\":{\"base\":\"AssetB\",\"mantissa\":\"19743\",\"quote\":\"AssetA\",\"scale\":\"4\",\"tag\":\"Price\"}},\"executionBodyHash\":\"057c28d07ba16c0162aaf7072cc155a1ce1c498d3d8f4e51f01a086459cc65f2\",\"genesisHash\":\"9be83ca635835cc40b7e81a1e972869245f93a5fad1e0183f2092c985189afb3\",\"instanceId\":\"swap_loan_demo\",\"kind\":\"ExactPlan\",\"locks\":[],\"network\":\"midnight_preview\",\"nonce\":\"NonceSwap01\",\"observationPolicy\":{\"maxStalenessSeconds\":\"3600\",\"requiredFields\":[\"now\"],\"requiredRole\":\"time_oracle\"},\"policy\":{\"policyHash\":\"3d7e7494dd67eb455a176aae0abcaf619e5f3dcdc8f2cedeba1b5e16064ae945\",\"policyId\":\"constant_product_v0\"},\"predecessors\":[{\"consumptionId\":\"f59d1e35359f7f73ea53ec841f597d4325c923d7cc51de45c8c63d5b7c573875\",\"instanceId\":\"swap_loan_demo\",\"stateHash\":\"3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e\"}],\"principal\":\"trader\",\"profileBinding\":{\"profileHash\":\"eaa460a6b0f404bae3ee9c25ebdf1835e4a0b3f42eaabfe749c5d863568ca01d\",\"profileName\":\"moriarty-successor/0\"},\"recoveryRights\":{\"allowedEffectSet\":[\"RequestCancel\"],\"controller\":\"trader\",\"work\":{\"lifetimeOrdinary\":\"8\",\"lifetimeRecovery\":\"2\",\"ordinaryRemaining\":\"0\",\"recoveryRemaining\":\"2\"}},\"remainingWork\":{\"lifetimeOrdinary\":\"8\",\"lifetimeRecovery\":\"2\",\"ordinaryRemaining\":\"8\",\"recoveryRemaining\":\"2\"},\"requiredClaimRoot\":\"4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335\",\"requiredClaims\":[{\"claimId\":\"bounded_profile_safety_v0\",\"kind\":\"ContractInvariant\"},{\"claimId\":\"atomic_intent_refinement_v0\",\"kind\":\"IntentRefinement\"},{\"claimId\":\"bounded_atomic_transition_v0\",\"kind\":\"TransitionValidity\"},{\"claimId\":\"bounded_history_compliance_v0\",\"kind\":\"HistoryCompliance\"}],\"residualAuthority\":{\"allowedAssets\":[\"AssetA\",\"AssetB\"],\"allowedEffectSet\":[\"Exchange\",\"Fee\",\"RequestCancel\",\"Transfer\"],\"continuation\":\"principal\",\"controller\":\"trader\",\"debtCaps\":[],\"grossDebitCaps\":[{\"actor\":\"trader\",\"asset\":\"AssetA\",\"maximum\":\"10000\"}]},\"schemaVersion\":\"moriarty-succ-sign/0\",\"signingDomain\":\"MORIARTY-SUCC-EXACT-PLAN/0\",\"spec\":{\"activationNotBefore\":\"1690000000\",\"claimRoot\":\"4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335\",\"profileHash\":\"eaa460a6b0f404bae3ee9c25ebdf1835e4a0b3f42eaabfe749c5d863568ca01d\",\"programHash\":\"27916e7ae72ef4730971593796d79e78feba39e95d0158fe1e8e88fdc5284ef9\",\"revoked\":false,\"semanticVersion\":\"moriarty-succ-core/0\"},\"validity\":{\"notAfterExclusive\":\"1800000000\",\"notBefore\":\"1690000000\"}}",
+      "hashes": {
+        "executionBodyHash": "057c28d07ba16c0162aaf7072cc155a1ce1c498d3d8f4e51f01a086459cc65f2",
+        "exactPlanDigest": "40d8a0c5f2365226cdf010204643b78131757441b3c5ccc411b85f414d0d4261",
+        "acceptanceBind": "c7797af5ba2ffb53526ebdc2c2c2bcacb59c691e9373daf0f10b39c22d7039fd",
+        "observationsHash": "4f6023f56a618c2fda48d0dd68da1729680cc0292d61f746da114aa8bfbe9e9d"
+      },
+      "displayProjection": [
+        {
+          "path": "network",
+          "label": "Network",
+          "unit": "network-id",
+          "role": "authorization-domain",
+          "value": "midnight_preview"
+        },
+        {
+          "path": "principal",
+          "label": "Principal",
+          "unit": "Party",
+          "role": "signer",
+          "value": "trader"
+        },
+        {
+          "path": "nonce",
+          "label": "Nonce",
+          "unit": "authorization-nonce",
+          "role": "durable-consumption-id",
+          "value": "NonceSwap01"
+        },
+        {
+          "path": "residualAuthority.grossDebitCaps.0.maximum",
+          "label": "Gross debit cap",
+          "unit": "AssetA-quantum",
+          "role": "gross-debit-limit",
+          "value": "10000"
+        },
+        {
+          "path": "executionBody.exactEffects.0.amount",
+          "label": "Transfer amount",
+          "unit": "AssetA-quantum",
+          "role": "transfer",
+          "value": "10000"
+        },
+        {
+          "path": "executionBody.exactEffects.1.amount",
+          "label": "Transfer amount",
+          "unit": "AssetB-quantum",
+          "role": "transfer",
+          "value": "19743"
+        },
+        {
+          "path": "executionBody.outPredicate",
+          "label": "Amount predicate",
+          "unit": "AssetB",
+          "role": "min-or-exact",
+          "value": "Min 19743"
+        },
+        {
+          "path": "executionBody.dust.value",
+          "label": "Dust threshold",
+          "unit": "AssetB-quantum",
+          "role": "exchange-dust",
+          "value": "1"
+        },
+        {
+          "path": "executionBody.rateOrPrice.mantissa",
+          "label": "Executed price mantissa",
+          "unit": "AssetB per AssetA scale 4",
+          "role": "exchange-rate",
+          "value": "19743"
+        },
+        {
+          "path": "remainingWork.ordinaryRemaining",
+          "label": "Ordinary work remaining",
+          "unit": "work-unit",
+          "role": "conserved-ordinary-work",
+          "value": "8"
+        },
+        {
+          "path": "recoveryRights.controller",
+          "label": "Recovery controller",
+          "unit": "Party",
+          "role": "recovery-right",
+          "value": "trader"
+        },
+        {
+          "path": "assumptions.0.assumptionId",
+          "label": "Assumption",
+          "unit": "named-assumption",
+          "role": "truth-or-custody-assumption",
+          "value": "time_oracle_unproven"
+        }
+      ],
+      "hashDag": [
+        {
+          "name": "sourceHash",
+          "domain": "",
+          "dependsOn": [],
+          "digest": "943e254799a6e1364d2fe4f7a73ae905972fdd893cf673fe6b37e791b370639f"
+        },
+        {
+          "name": "programHash",
+          "domain": "MORIARTY-SUCC-PROGRAM/0",
+          "dependsOn": [
+            "sourceHash"
+          ],
+          "digest": "27916e7ae72ef4730971593796d79e78feba39e95d0158fe1e8e88fdc5284ef9"
+        },
+        {
+          "name": "claimRoot",
+          "domain": "MORIARTY-SUCC-CLAIMS/0",
+          "dependsOn": [],
+          "digest": "4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335"
+        },
+        {
+          "name": "executionBodyHash",
+          "domain": "MORIARTY-SUCC-EXEC-BODY/0",
+          "dependsOn": [],
+          "digest": "057c28d07ba16c0162aaf7072cc155a1ce1c498d3d8f4e51f01a086459cc65f2"
+        },
+        {
+          "name": "exactPlanDigest",
+          "domain": "MORIARTY-SUCC-EXACT-PLAN/0",
+          "dependsOn": [
+            "executionBodyHash",
+            "claimRoot",
+            "programHash"
+          ],
+          "digest": "40d8a0c5f2365226cdf010204643b78131757441b3c5ccc411b85f414d0d4261"
+        },
+        {
+          "name": "acceptanceBind",
+          "domain": "MORIARTY-SUCC-ACCEPTANCE/0",
+          "dependsOn": [
+            "exactPlanDigest",
+            "executionBodyHash",
+            "observationsHash"
+          ],
+          "digest": "c7797af5ba2ffb53526ebdc2c2c2bcacb59c691e9373daf0f10b39c22d7039fd"
+        }
+      ],
+      "signatureClaim": "none-unsigned-design-example"
+    },
+    {
+      "id": "outcome-intent-swap-and-loan-caps",
+      "kind": "OutcomeIntent",
+      "note": "Intent independent of selected route. Gross, fee, net, debt caps separated.",
+      "canonicalUtf8": "{\"allowedActions\":[\"accrue\",\"settle\",\"swap\"],\"assumptions\":[{\"assumptionId\":\"time_oracle_unproven\",\"evidenceRole\":\"required_observation\",\"kind\":\"oracle_truth\",\"statement\":\"obs.now is authenticated not proven true time\"},{\"assumptionId\":\"pool_custody\",\"evidenceRole\":\"external_unproven\",\"kind\":\"custody\",\"statement\":\"pool outgoing AssetB is authorized by provider custody\"}],\"debtCaps\":[{\"creditor\":\"lender\",\"debtor\":\"borrower\",\"denomination\":\"USD_micro\",\"maximumOutstanding\":\"5000000000\"}],\"deployment\":\"preview_deployment_1\",\"feeCaps\":[{\"actor\":\"trader\",\"asset\":\"AssetB\",\"maximum\":\"0\"},{\"actor\":\"borrower\",\"asset\":\"USD_TEST_ASSET\",\"maximum\":\"0\"}],\"genesisHash\":\"9be83ca635835cc40b7e81a1e972869245f93a5fad1e0183f2092c985189afb3\",\"grossDebitCaps\":[{\"actor\":\"trader\",\"asset\":\"AssetA\",\"maximum\":\"10000\"},{\"actor\":\"borrower\",\"asset\":\"USD_TEST_ASSET\",\"maximum\":\"533972602\"}],\"instanceId\":\"swap_loan_demo\",\"kind\":\"OutcomeIntent\",\"locks\":[],\"netGoals\":[{\"actor\":\"trader\",\"asset\":\"AssetB\",\"minimumAfterFees\":\"19743\"},{\"actor\":\"lender\",\"asset\":\"USD_TEST_ASSET\",\"minimumAfterFees\":\"533972602\"}],\"network\":\"midnight_preview\",\"nonce\":\"NonceIntent01\",\"observationPolicy\":{\"maxStalenessSeconds\":\"3600\",\"requiredFields\":[\"now\"],\"requiredRole\":\"time_oracle\"},\"outPredicate\":{\"amount\":{\"asset\":\"AssetB\",\"tag\":\"Amount\",\"value\":\"19743\"},\"tag\":\"Min\"},\"partialFill\":{\"cumulativeCap\":{\"asset\":\"AssetA\",\"tag\":\"Amount\",\"value\":\"10000\"},\"minFill\":{\"asset\":\"AssetA\",\"tag\":\"Amount\",\"value\":\"1\"},\"tag\":\"Partial\"},\"permittedCalls\":[],\"permittedRecipients\":[{\"party\":\"borrower\",\"role\":\"counterparty\"},{\"party\":\"lender\",\"role\":\"creditor\"},{\"party\":\"pool\",\"role\":\"pool\"},{\"party\":\"trader\",\"role\":\"principal\"}],\"policy\":{\"policyHash\":\"3d7e7494dd67eb455a176aae0abcaf619e5f3dcdc8f2cedeba1b5e16064ae945\",\"policyId\":\"constant_product_v0\"},\"predecessorConstraint\":{\"predecessors\":[{\"consumptionId\":\"f59d1e35359f7f73ea53ec841f597d4325c923d7cc51de45c8c63d5b7c573875\",\"instanceId\":\"swap_loan_demo\",\"stateHash\":\"3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e\"}],\"tag\":\"Pinned\"},\"principal\":\"trader\",\"profileBinding\":{\"profileHash\":\"eaa460a6b0f404bae3ee9c25ebdf1835e4a0b3f42eaabfe749c5d863568ca01d\",\"profileName\":\"moriarty-successor/0\"},\"recoveryRights\":{\"allowedEffectSet\":[\"RequestCancel\"],\"controller\":\"trader\",\"work\":{\"lifetimeOrdinary\":\"8\",\"lifetimeRecovery\":\"2\",\"ordinaryRemaining\":\"0\",\"recoveryRemaining\":\"2\"}},\"remainingWork\":{\"lifetimeOrdinary\":\"8\",\"lifetimeRecovery\":\"2\",\"ordinaryRemaining\":\"8\",\"recoveryRemaining\":\"2\"},\"requiredClaimRoot\":\"4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335\",\"requiredClaims\":[{\"claimId\":\"bounded_profile_safety_v0\",\"kind\":\"ContractInvariant\"},{\"claimId\":\"atomic_intent_refinement_v0\",\"kind\":\"IntentRefinement\"},{\"claimId\":\"bounded_atomic_transition_v0\",\"kind\":\"TransitionValidity\"},{\"claimId\":\"bounded_history_compliance_v0\",\"kind\":\"HistoryCompliance\"}],\"residualAuthority\":{\"allowedAssets\":[\"AssetA\",\"AssetB\",\"USD_TEST_ASSET\"],\"allowedEffectSet\":[\"DebtCreate\",\"DebtRepay\",\"Exchange\",\"Fee\",\"RequestCancel\",\"Transfer\"],\"continuation\":\"principal\",\"controller\":\"trader\",\"debtCaps\":[{\"creditor\":\"lender\",\"debtor\":\"borrower\",\"denomination\":\"USD_micro\",\"maximumOutstanding\":\"5000000000\"}],\"grossDebitCaps\":[{\"actor\":\"trader\",\"asset\":\"AssetA\",\"maximum\":\"10000\"},{\"actor\":\"borrower\",\"asset\":\"USD_TEST_ASSET\",\"maximum\":\"533972602\"}]},\"schemaVersion\":\"moriarty-succ-sign/0\",\"signingDomain\":\"MORIARTY-SUCC-OUTCOME-INTENT/0\",\"spec\":{\"activationNotBefore\":\"1690000000\",\"claimRoot\":\"4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335\",\"profileHash\":\"eaa460a6b0f404bae3ee9c25ebdf1835e4a0b3f42eaabfe749c5d863568ca01d\",\"programHash\":\"27916e7ae72ef4730971593796d79e78feba39e95d0158fe1e8e88fdc5284ef9\",\"revoked\":false,\"semanticVersion\":\"moriarty-succ-core/0\"},\"validity\":{\"notAfterExclusive\":\"1800000000\",\"notBefore\":\"1690000000\"}}",
+      "hashes": {
+        "outcomeIntentDigest": "875cefef0592f403dda3168e1364737e56cd3a273bbcca7cf4f55dacccb803eb",
+        "claimRoot": "4cb60c991d04ad5e59a6f807a83d1baac2c8cba209a08111bf926f0f97161335"
+      },
+      "displayProjection": [
+        {
+          "path": "grossDebitCaps.0.maximum",
+          "label": "Gross debit cap",
+          "unit": "AssetA-quantum",
+          "role": "gross-debit-limit",
+          "value": "10000"
+        },
+        {
+          "path": "feeCaps.0.maximum",
+          "label": "Fee cap",
+          "unit": "AssetB-quantum",
+          "role": "fee-limit",
+          "value": "0"
+        },
+        {
+          "path": "netGoals.0.minimumAfterFees",
+          "label": "Net goal after fees",
+          "unit": "AssetB-quantum",
+          "role": "net-goal-fees-included",
+          "value": "19743"
+        },
+        {
+          "path": "debtCaps.0.maximumOutstanding",
+          "label": "Nominal debt cap",
+          "unit": "USD_micro",
+          "role": "debt-cap-not-transfer",
+          "value": "5000000000"
+        },
+        {
+          "path": "permittedRecipients",
+          "label": "Recipients",
+          "unit": "Party",
+          "role": "recipient",
+          "value": "borrower,lender,pool,trader"
+        },
+        {
+          "path": "locks",
+          "label": "Locks",
+          "unit": "asset-quantum",
+          "role": "lock",
+          "value": []
+        },
+        {
+          "path": "recoveryRights.controller",
+          "label": "Recovery controller",
+          "unit": "Party",
+          "role": "recovery-right",
+          "value": "trader"
+        }
+      ],
+      "hashDag": [
+        {
+          "name": "outcomeIntentDigest",
+          "domain": "MORIARTY-SUCC-OUTCOME-INTENT/0",
+          "dependsOn": [
+            "programHash",
+            "claimRoot"
+          ],
+          "digest": "875cefef0592f403dda3168e1364737e56cd3a273bbcca7cf4f55dacccb803eb"
+        }
+      ],
+      "signatureClaim": "none-unsigned-design-example"
+    }
+  ],
+  "invalid": [
+    {
+      "id": "inv-extra-property",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "schema",
+      "schemaExpected": "fail",
+      "sets": {
+        "unknownExtra": "wildcard"
+      },
+      "reason": "additionalProperties false rejects extra property before hashing.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "fail"
+    },
+    {
+      "id": "inv-noncanonical-integer",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "schema",
+      "schemaExpected": "fail",
+      "sets": {
+        "executionBody.exactEffects.0.amount": "01000"
+      },
+      "reason": "Leading zero is noncanonical UIntText.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "fail"
+    },
+    {
+      "id": "inv-wrong-network",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "authorization",
+      "schemaExpected": "pass",
+      "sets": {
+        "network": "midnight_mainnet"
+      },
+      "reason": "Schema-valid identifier. Expected midnight_preview is contextual authorization.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-wrong-deployment",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "authorization",
+      "schemaExpected": "pass",
+      "sets": {
+        "deployment": "other_deployment"
+      },
+      "reason": "Schema-valid deployment. Durable consumption binding rejects mismatch.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-display-mismatch-gross-fee-debt",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "display",
+      "schemaExpected": "pass",
+      "sets": {},
+      "badDisplay": {
+        "feeCaps.0.maximum": "30",
+        "debtCaps.0.maximumOutstanding": "0",
+        "grossDebitCaps.0.maximum": "1"
+      },
+      "reason": "Display disagrees with parsed canonical signed bytes for fee, debt, and gross.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-duplicate-predecessor",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "history",
+      "schemaExpected": "pass",
+      "sets": {
+        "predecessors": [
+          {
+            "consumptionId": "f59d1e35359f7f73ea53ec841f597d4325c923d7cc51de45c8c63d5b7c573875",
+            "instanceId": "swap_loan_demo",
+            "stateHash": "3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e"
+          },
+          {
+            "consumptionId": "f59d1e35359f7f73ea53ec841f597d4325c923d7cc51de45c8c63d5b7c573875",
+            "instanceId": "swap_loan_demo",
+            "stateHash": "3d36a1b8723ecb5df86cb400d712366d45ef728374397cde59ccb334a8c12a7e"
+          }
+        ]
+      },
+      "reason": "Duplicate consumptionId. Schema allows the array. HistoryCompliance rejects.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-revoked-spec",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "authorization",
+      "schemaExpected": "pass",
+      "sets": {
+        "spec.revoked": true
+      },
+      "reason": "revoked true is schema-valid. SPEC rejects even with a later valid proof.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-expired-spec-window",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "authorization",
+      "schemaExpected": "pass",
+      "sets": {
+        "validity.notAfterExclusive": "1600000000"
+      },
+      "reason": "Window ends before documented obs.now 1700000000. Relational, not schema.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-partial-fill-exceeds-cap",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "evaluation",
+      "schemaExpected": "pass",
+      "sets": {
+        "partialFill.minFill.value": "20000"
+      },
+      "reason": "minFill 20000 exceeds cumulativeCap 10000. Relational.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-cloned-residual-work",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "evaluation",
+      "schemaExpected": "pass",
+      "sets": {
+        "residualAuthority.controller": "delegate",
+        "remainingWork.ordinaryRemaining": "8"
+      },
+      "reason": "Child controller inherits full parent ordinary remaining 8 instead of a partitioned remainder.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-cancellation-race",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "ledger-currentness",
+      "schemaExpected": "pass",
+      "sets": {
+        "allowedActions": [
+          "RequestCancel"
+        ]
+      },
+      "reason": "Cancel uses same network/deployment/principal/nonce NonceIntent01 as the fill intent.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-replay-migration",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "history",
+      "schemaExpected": "pass",
+      "sets": {
+        "executionBody.action.name": "migrate"
+      },
+      "reason": "Migrate reuses consumed predecessor. Cannot revive consumed history.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-unknown-extension",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "schema",
+      "schemaExpected": "fail",
+      "sets": {
+        "x_extension": {
+          "hook": "unbounded"
+        }
+      },
+      "reason": "Unknown extension. Reject before hash and proof.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "fail"
+    },
+    {
+      "id": "inv-exact-output-overdelivery",
+      "base": "exact-plan-swap-min-receive",
+      "intendedFailureStage": "evaluation",
+      "schemaExpected": "pass",
+      "sets": {
+        "executionBody.outPredicate.tag": "Exact",
+        "executionBody.exactEffects.1.amount": "19744",
+        "executionBody.exactWrites.3.value.value": "19744",
+        "executionBody.exactWrites.1.value.value": "1980256"
+      },
+      "recomputeExecutionBodyHash": true,
+      "reason": "Exact 19743 with delivered 19744. Over-delivery rejects.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    },
+    {
+      "id": "inv-net-after-fees-shortfall",
+      "base": "outcome-intent-swap-and-loan-caps",
+      "intendedFailureStage": "evaluation",
+      "schemaExpected": "pass",
+      "sets": {
+        "feeCaps.0.maximum": "30"
+      },
+      "reason": "Fee 30 AssetB with net goal 19743. Delivery 19743 minus fee fails net-after-fees. Schema does not sum.",
+      "signatureClaim": "none-unsigned-design-example",
+      "schemaObserved": "pass"
+    }
+  ],
+  "schemaInexpressible": [
+    "cap sums versus movements",
+    "unique (network,deployment,principal,nonce)",
+    "executionBodyHash preimage equality",
+    "validity versus obs.now",
+    "allowedEffectSet subset",
+    "cumulative fill versus cap",
+    "conservation equalities"
+  ]
+}

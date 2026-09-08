@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "scope": "SP01.2 proposed theorem obligations, not proofs",
+  "status": "proposed",
+  "theorems": [
+    {
+      "id": "type-preservation",
+      "type": "type-preservation",
+      "status": "proposed",
+      "predicate": "If Gamma |- e : tau and Eval(profile,e,sigma) = Prepared(sigma', ...), then Gamma |- sigma' : tau. Reject does not yield a typed post-state.",
+      "definitions": [
+        "Gamma typing context",
+        "tau type",
+        "Eval from LANGUAGE-DESIGN.md proposal"
+      ],
+      "boundedDomain": "finite source, finite collections, registered arithmetic bounds",
+      "assumptions": [
+        "proposed successor profile after SP01.3 freeze",
+        "no host-boolean acceptance"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP03",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "asset-indexed-accounting",
+      "type": "asset-indexed-accounting",
+      "status": "proposed",
+      "predicate": "For each AssetId a, token_delta(a) = minted(a) - burned(a) + inflows(a) - outflows(a). Fees are explicit token movements. Nominal debt, share-value, and unsettled pnl are not token conservation terms.",
+      "definitions": [
+        "AssetId",
+        "mint",
+        "burn",
+        "fee",
+        "nominalDebt",
+        "shareValue"
+      ],
+      "boundedDomain": "finite asset index, finite positions",
+      "assumptions": [
+        "no hidden sidecar balances",
+        "bad-debt loss may change share value without token mint"
+      ],
+      "owner": "MC01,MC07",
+      "closureSprint": "SP07",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "authority-safety",
+      "type": "authority-safety",
+      "status": "proposed",
+      "predicate": "Every accepted effect is in the signed capability envelope. Delegation yields a subset of allowed effects. Split, cancel, and migrate do not refresh work or residual authority. Revoked or unknown semantics reject.",
+      "definitions": [
+        "capability envelope",
+        "allowed-effect subset",
+        "revocation"
+      ],
+      "boundedDomain": "finite effect list, finite delegates",
+      "assumptions": [
+        "canonical signing schema from SP01.3",
+        "no LLM in the authority path"
+      ],
+      "owner": "MC05",
+      "closureSprint": "SP09",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "frame-noninterference",
+      "type": "frame-noninterference",
+      "status": "proposed",
+      "predicate": "Resources not named in the action's read/write footprint remain unchanged. There is no ambient mutation. Unmentioned liabilities are untouched.",
+      "definitions": [
+        "footprint",
+        "frame"
+      ],
+      "boundedDomain": "finite named resources",
+      "assumptions": [
+        "no callbacks",
+        "no host heap"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP03",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "assume-guarantee-composition",
+      "type": "assume-guarantee-composition",
+      "status": "proposed",
+      "predicate": "If component A satisfies guarantee GA under assumptions AsmA, and B satisfies GB under AsmB, the composition satisfies a derived guarantee only when compatibility(Asm, footprints, authority partitions) holds for the chosen operator.",
+      "definitions": [
+        "assumption",
+        "guarantee",
+        "operator compatibility"
+      ],
+      "boundedDomain": "finite components, registered operators",
+      "assumptions": [
+        "operator-specific contracts",
+        "no blanket composition"
+      ],
+      "owner": "MC06",
+      "closureSprint": "SP10",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "structural-associativity",
+      "type": "structural-associativity",
+      "status": "proposed",
+      "predicate": "For sequential and disjoint-parallel, (A op B) op C equals A op (B op C) up to alpha-renaming of bound history names and stated observation-order conditions. Shared-state-interleaving requires an explicit order condition. Asynchronous-messaging is not blanket-associative. Atomic-synchronization associativity is only for compatible atomic envelopes.",
+      "definitions": [
+        "alpha-renaming",
+        "compatible operator",
+        "observation order"
+      ],
+      "boundedDomain": "finite operator trees of sequential or disjoint-parallel, or other operators with stated conditions",
+      "assumptions": [
+        "not async/shared-state equivalence",
+        "not proof-split/join substitution"
+      ],
+      "owner": "MC06",
+      "closureSprint": "SP10",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "obligation-preservation",
+      "type": "obligation-preservation",
+      "status": "proposed",
+      "predicate": "Outstanding duties persist through work exhaustion, cancel, and migrate unless discharged by authorized settlement or assigned exactly once to an identified successor that includes a closure work reserve. Expiry does not delete debt.",
+      "definitions": [
+        "duty",
+        "closure reserve",
+        "exact-once assignment"
+      ],
+      "boundedDomain": "finite duty set",
+      "assumptions": [
+        "shutdown without discharge rejects"
+      ],
+      "owner": "MC05,MC06",
+      "closureSprint": "SP09",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "conservative-extension",
+      "type": "conservative-extension",
+      "status": "proposed",
+      "predicate": "On the already admitted atomic domain D0, successor evaluation agrees with the admitted loan/swap observations and effects. Redesigned syntax (pre/next versus set/state) is not assumed conservative until an explicit translation is reviewed.",
+      "definitions": [
+        "D0 atomic admitted domain",
+        "profile version"
+      ],
+      "boundedDomain": "current atomic loan/swap programs only",
+      "assumptions": [
+        "existing atomic acceptance is retained and not changed by this map"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP01.3",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/challenge-map.json",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+        "openspec/REPORT-RECONCILIATION-2026-09-07.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    }
+  ],
+  "note": "No test is promoted to a proof. axioms and mechanizedEvidence stay empty."
+}

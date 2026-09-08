@@ -1,0 +1,2238 @@
+{
+  "schemaVersion": 1,
+  "scope": "specified-only-independent-design-oracles",
+  "generatedByMoriartyEvaluator": false,
+  "traces": [
+    {
+      "id": "heldouts:NAM19-capitalization:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "kind": "source-pinned-capitalization-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": false,
+      "sourceConformanceClaim": false,
+      "input": {
+        "fixture": "repos/actusfrf/actus-tests/tests/actus-tests-nam.json#nam19",
+        "terms": {
+          "contractType": "NAM",
+          "contractID": "nam19",
+          "contractRole": "RPA",
+          "contractDealDate": "2012-12-28T00:00:00",
+          "initialExchangeDate": "2013-01-01T00:00:00",
+          "statusDate": "2012-12-30T00:00:00",
+          "notionalPrincipal": " 5000",
+          "cycleAnchorDateOfPrincipalRedemption": "2013-10-01T00:00:00",
+          "cycleOfPrincipalRedemption": "P1ML1",
+          "nextPrincipalRedemptionPayment": " 500",
+          "dayCountConvention": "A365",
+          "nominalInterestRate": "0.08",
+          "currency": "USD",
+          "cycleAnchorDateOfRateReset": "2013-04-01T00:00:00",
+          "cycleOfRateReset": "P3ML1",
+          "marketObjectCodeOfRateReset": "LIBOR_USD",
+          "rateSpread": " 0.10",
+          "fixingDays": "P0D",
+          "cycleAnchorDateOfInterestPayment": "2013-10-01T00:00:00",
+          "cycleOfInterestPayment": "P1ML1",
+          "capitalizationEndDate": "2013-07-01T00:00:00",
+          "interestCalculationBase": "NT"
+        },
+        "horizonTo": "2014-09-01T00:00",
+        "observedRates": [
+          {
+            "timestamp": "2013-04-01T00:00:00",
+            "value": "0.010567901234567900"
+          },
+          {
+            "timestamp": "2013-07-01T00:00:00",
+            "value": "0.011679012345679000"
+          },
+          {
+            "timestamp": "2013-10-01T00:00:00",
+            "value": "0.012790123456790100"
+          },
+          {
+            "timestamp": "2014-01-01T00:00:00",
+            "value": "0.013901234567901200"
+          },
+          {
+            "timestamp": "2014-04-01T00:00:00",
+            "value": "0.015012345679012300"
+          },
+          {
+            "timestamp": "2014-07-01T00:00:00",
+            "value": "0.016123456790123400"
+          },
+          {
+            "timestamp": "2014-10-01T00:00:00",
+            "value": "0.017234567901234500"
+          }
+        ],
+        "units": {
+          "currency": "USD",
+          "rate": "decimal-per-year",
+          "dayCount": "A365"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "time": "2013-01-01T00:00",
+          "eventType": "IED",
+          "action": "initial exchange of notionalPrincipal 5000 USD"
+        },
+        {
+          "index": "1",
+          "time": "2013-04-01T00:00",
+          "eventType": "RR",
+          "action": "rate reset to LIBOR+spread; accrue 90/365 of 0.08 on 5000 USD"
+        },
+        {
+          "index": "2",
+          "time": "2013-07-01T00:00",
+          "eventType": "IPCI",
+          "action": "capitalize accrued interest into notionalPrincipal; cash payoff remains 0; accruedInterest resets to 0"
+        },
+        {
+          "index": "3",
+          "time": "2013-07-01T00:00",
+          "eventType": "RR",
+          "action": "same-timestamp rate event after IPCI; principal unchanged"
+        }
+      ],
+      "expected": {
+        "capitalizationPrefix": [
+          {
+            "eventDate": "2013-01-01T00:00",
+            "eventType": "IED",
+            "payoff": "-5000",
+            "currency": "USD",
+            "notionalPrincipal": "5000",
+            "nominalInterestRate": "0.08",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-04-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5000",
+            "nominalInterestRate": "0.1105679012345679",
+            "accruedInterest": "98.63013698630137"
+          },
+          {
+            "eventDate": "2013-07-01T00:00",
+            "eventType": "IPCI",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5236.461356333502",
+            "nominalInterestRate": "0.1105679012345679",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-07-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "5236.461356333502",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "0"
+          }
+        ],
+        "remainingUpstreamResults": [
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "PR",
+            "payoff": "352.59764222884684",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "147.40235777115316"
+          },
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "IP",
+            "payoff": "147.40235777115316",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.11167901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-10-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "4883.863714104656",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-11-01T00:00",
+            "eventType": "PR",
+            "payoff": "453.2153443039451",
+            "currency": "USD",
+            "notionalPrincipal": "4430.6483698007105",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "46.78465569605493"
+          },
+          {
+            "eventDate": "2013-11-01T00:00",
+            "eventType": "IP",
+            "payoff": "46.78465569605493",
+            "currency": "USD",
+            "notionalPrincipal": "4430.6483698007105",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2013-12-01T00:00",
+            "eventType": "PR",
+            "payoff": "458.9260238391687",
+            "currency": "USD",
+            "notionalPrincipal": "3971.7223459615416",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "41.073976160831336"
+          },
+          {
+            "eventDate": "2013-12-01T00:00",
+            "eventType": "IP",
+            "payoff": "41.073976160831336",
+            "currency": "USD",
+            "notionalPrincipal": "3971.7223459615416",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "PR",
+            "payoff": "461.9531433812331",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "38.04685661876691"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "IP",
+            "payoff": "38.04685661876691",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1127901234567901",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-01-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "3509.7692025803085",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-02-01T00:00",
+            "eventType": "PR",
+            "payoff": "466.0471824605722",
+            "currency": "USD",
+            "notionalPrincipal": "3043.7220201197365",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "33.95281753942782"
+          },
+          {
+            "eventDate": "2014-02-01T00:00",
+            "eventType": "IP",
+            "payoff": "33.95281753942782",
+            "currency": "USD",
+            "notionalPrincipal": "3043.7220201197365",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-03-01T00:00",
+            "eventType": "PR",
+            "payoff": "473.40508635164923",
+            "currency": "USD",
+            "notionalPrincipal": "2570.3169337680874",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "26.59491364835079"
+          },
+          {
+            "eventDate": "2014-03-01T00:00",
+            "eventType": "IP",
+            "payoff": "26.59491364835079",
+            "currency": "USD",
+            "notionalPrincipal": "2570.3169337680874",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "PR",
+            "payoff": "475.1352590915178",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "24.864740908482172"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "IP",
+            "payoff": "24.864740908482172",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1139012345679012",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-04-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "2095.18167467657",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-05-01T00:00",
+            "eventType": "PR",
+            "payoff": "480.1941019976794",
+            "currency": "USD",
+            "notionalPrincipal": "1614.9875726788905",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "19.805898002320564"
+          },
+          {
+            "eventDate": "2014-05-01T00:00",
+            "eventType": "IP",
+            "payoff": "19.805898002320564",
+            "currency": "USD",
+            "notionalPrincipal": "1614.9875726788905",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-06-01T00:00",
+            "eventType": "PR",
+            "payoff": "484.2245238951675",
+            "currency": "USD",
+            "notionalPrincipal": "1130.763048783723",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "15.775476104832494"
+          },
+          {
+            "eventDate": "2014-06-01T00:00",
+            "eventType": "IP",
+            "payoff": "15.775476104832494",
+            "currency": "USD",
+            "notionalPrincipal": "1130.763048783723",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "PR",
+            "payoff": "489.3108183029232",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "10.689181697076773"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "IP",
+            "payoff": "10.689181697076773",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1150123456790123",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-07-01T00:00",
+            "eventType": "RR",
+            "payoff": "0",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-08-01T00:00",
+            "eventType": "IP",
+            "payoff": "6.326348387518158",
+            "currency": "USD",
+            "notionalPrincipal": "641.4522304807997",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          },
+          {
+            "eventDate": "2014-08-01T00:00",
+            "eventType": "MD",
+            "payoff": "641.4522304807997",
+            "currency": "USD",
+            "notionalPrincipal": "0",
+            "nominalInterestRate": "0.1161234567901234",
+            "accruedInterest": "0"
+          }
+        ],
+        "discriminator": {
+          "preIpciPrincipal": "5000",
+          "postIpciPrincipalUpstream": "5236.461356333502",
+          "ipciPayoff": "0",
+          "accrualReset": "0",
+          "sameTimestampOrder": [
+            "IPCI",
+            "RR"
+          ],
+          "nominalDebtIncreaseWithoutTokenTransfer": true
+        },
+        "status": "specified-only-observation",
+        "messages": [],
+        "claims": [],
+        "fees": {
+          "amount": "0",
+          "unit": "USD",
+          "asset": "USD"
+        }
+      },
+      "arithmeticDerivation": {
+        "dayCount": "A365",
+        "iedToRrDays": "90",
+        "rrToIpciDays": "91",
+        "notLeapYear2013": true,
+        "accrualToRrRational": "7200/73",
+        "accrualToRrDecimal": "98.630136986301369863013698630136986301369863013698630136986301369863013698630137",
+        "upstreamRrAccruedInterest": "98.63013698630137",
+        "rateAfterFirstRrIndependent": "0.110567901234567900",
+        "upstreamRateAfterFirstRr": "0.1105679012345679",
+        "capitalizedInterestIndependent": "236.46135633350245068493150684931506849315068493150684931506849315068493150684932",
+        "postIpciPrincipalIndependent": "5236.4613563335024506849315068493150684931506849315068493150684931506849315068493",
+        "upstreamPostIpciPrincipal": "5236.461356333502",
+        "upstreamIpciPayoff": "0",
+        "upstreamIpciAccruedAfter": "0",
+        "rateAfterSecondRrIndependent": "0.111679012345679000",
+        "upstreamRateAfterSecondRr": "0.11167901234567901",
+        "sameTimestampOrder": [
+          "IPCI",
+          "RR"
+        ],
+        "nominalDebtRoseWithoutTokenTransfer": true,
+        "jsonFloatGapVsIndependentDecimal": "upstream results are JSON numbers; independent values use Decimal/Fraction and are not claimed equal to IEEE captures"
+      },
+      "provenance": {
+        "path": "repos/actusfrf/actus-tests/tests/actus-tests-nam.json",
+        "sha256": "bfc39c7a344b1243ce15accb9800837b3d87a050ffa435395595e4bf559e4a9b",
+        "pointer": "nam19/results[0..3]",
+        "sourceCommit": "f7a8064872b69db1f0beabac771c99dc3ce0c397",
+        "independentTool": "Python Decimal and Fraction stdlib, not Moriarty"
+      },
+      "limitations": [
+        "Upstream JSON numbers remain IEEE-captured fixture values.",
+        "Independent Decimal/Fraction values are not a rounding-policy freeze.",
+        "Do not treat these decimals as current micro-unit Moriarty traces.",
+        "Remaining 26 events are pinned upstream observations, not fully re-derived here.",
+        "Not generated by a Moriarty evaluator."
+      ]
+    },
+    {
+      "id": "heldouts:accepted-refinance:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:accepted-refinance",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "intent-cases:refinance:trace"
+      ],
+      "input": {
+        "borrower": "alice",
+        "oldMarket": "loan-A",
+        "newMarket": "loan-B",
+        "oldDebt": {
+          "amount": "50000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "newDebtCap": {
+          "amount": "50500",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "collateral": {
+          "amount": "20",
+          "unit": "WETH",
+          "asset": "WETH"
+        },
+        "fee": {
+          "amount": "50",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "transferDebitCap": {
+          "amount": "1000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "rule": "old debt discharges only by actual authorized settlement plus explicit new debt authority; debt increase is independent of transfer debit caps; residual ownership is exact once",
+        "always": "collateral_value >= maintenance_ratio * debt_value on every observable prefix"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "authorize repay old USDC debt up to 50000 and create new USDC debt up to 50500; transfer debit cap remains 1000 USDC"
+        },
+        {
+          "index": "1",
+          "action": "settle 50000 USDC to old creditor; emit DebtDischarge old=0"
+        },
+        {
+          "index": "2",
+          "action": "create new debt 50050 USDC under explicit authority; fee 50 USDC counts against net"
+        },
+        {
+          "index": "3",
+          "action": "move 20 WETH collateral once to new market; residual owner is new-market controller exactly once"
+        }
+      ],
+      "expected": {
+        "oldDebt": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "newDebt": {
+          "amount": "50050",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "collateralOwner": "loan-B",
+        "collateralAmount": {
+          "amount": "20",
+          "unit": "WETH",
+          "asset": "WETH"
+        },
+        "fees": {
+          "amount": "50",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "tokensMoved": [
+          {
+            "amount": "50000",
+            "unit": "USDC",
+            "asset": "USDC"
+          },
+          {
+            "amount": "20",
+            "unit": "WETH",
+            "asset": "WETH"
+          }
+        ],
+        "status": "accepted-successor",
+        "residualDuties": [
+          "service new debt 50050 USDC"
+        ],
+        "workRemaining": "1008",
+        "authorityRemaining": "new-debt-cap residual 450 USDC, transfer debit cap unchanged except fees if they are transfer-like"
+      },
+      "arithmeticDerivation": {
+        "newDebt": "50000 + 50 fee financed = 50050",
+        "newDebtLeCap": "50050 <= 50500",
+        "debtIncreaseIndependentOfTransferCap": "50050 - 50000 = 50, while transfer debit cap is 1000 and is not the debt-authority bound"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Atomic lending refinance",
+        "scope": "design-oracle numbers independently chosen; not Aave or Morpho deployment traces"
+      },
+      "limitations": [
+        "No pinned Aave/Morpho primary source this pass.",
+        "Maintenance ratio numeric value is not frozen.",
+        "Design oracle, not protocol conformance."
+      ]
+    },
+    {
+      "id": "heldouts:pending-redemption:trace",
+      "family": "heldouts",
+      "boundRow": "heldouts:pending-redemption",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "intent-cases:pending-redemption:trace"
+      ],
+      "input": {
+        "shares": {
+          "amount": "100",
+          "unit": "shares",
+          "asset": "FundShares"
+        },
+        "claimedFloor": {
+          "amount": "9500",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "availableLiquidity": {
+          "amount": "40",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "lifecycle": [
+          "Open",
+          "Pending",
+          "Claimable",
+          "Claimed"
+        ]
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "requestRedeem 100 shares; lock shares; create request R1"
+        },
+        {
+          "index": "1",
+          "action": "vault has only 40 USDC liquidity; mark R1 pending; do not erase claim"
+        },
+        {
+          "index": "2",
+          "action": "later liquidity arrives; R1 becomes claimable for 40 USDC; residual 60 shares remain"
+        },
+        {
+          "index": "3",
+          "action": "claim 40 USDC; residual request remains until remaining shares are claimable or cancelled under residual rules"
+        }
+      ],
+      "expected": {
+        "requestId": "R1",
+        "controller": "alice",
+        "assetsLocked": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "sharesLocked": {
+          "amount": "100",
+          "unit": "shares",
+          "asset": "FundShares"
+        },
+        "order": "fifo-request-id",
+        "status": "Claimable",
+        "claimable": {
+          "amount": "40",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "residualShares": {
+          "amount": "60",
+          "unit": "shares",
+          "asset": "FundShares"
+        },
+        "residualClaim": "live",
+        "fees": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "partialClaim": "min(requestedAssetEquivalent, availableLiquidity)=40",
+        "residual": "100 shares locked minus claimed portion remains as residual request, not deleted"
+      },
+      "provenance": {
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "sha256": "7b9b245b97a4d63f6cc946c9dd7e7f6c3773df4cf47b2540d82b5ffc6cfe3d2f",
+        "pointer": "DA18",
+        "scope": "ERC-7540 named as source-defined target in action row; this numeric trace is an independent design oracle"
+      },
+      "limitations": [
+        "ERC-7540 primary text is not re-acquired this pass.",
+        "Exchange-rate function is not frozen.",
+        "Insufficient-liquidity numbers are toy."
+      ]
+    },
+    {
+      "id": "intent-cases:exact-output-swap:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:exact-output-swap",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "reserveIn": {
+          "amount": "1000000",
+          "unit": "micro-A",
+          "asset": "assetA"
+        },
+        "reserveOut": {
+          "amount": "2000000",
+          "unit": "micro-B",
+          "asset": "assetB"
+        },
+        "amountIn": {
+          "amount": "10000",
+          "unit": "micro-A",
+          "asset": "assetA"
+        },
+        "feeNumerator": "997",
+        "feeDenominator": "1000",
+        "exactOutputPredicate": "output == 19743 micro-B",
+        "minReceivePredicate": "output >= 19700 micro-B",
+        "grossDebitCap": {
+          "amount": "10000",
+          "unit": "micro-A",
+          "asset": "assetA"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "bind exact-output equality 19743 distinct from min-receive inequality 19700"
+        },
+        {
+          "index": "1",
+          "action": "compute floor_div constant-product with fee 997/1000"
+        },
+        {
+          "index": "2",
+          "action": "transfer 10000 A in and 19743 B out; update reserves"
+        }
+      ],
+      "expected": {
+        "output": {
+          "amount": "19743",
+          "unit": "micro-B",
+          "asset": "assetB"
+        },
+        "newReserveIn": {
+          "amount": "1010000",
+          "unit": "micro-A",
+          "asset": "assetA"
+        },
+        "newReserveOut": {
+          "amount": "1980257",
+          "unit": "micro-B",
+          "asset": "assetB"
+        },
+        "fees": {
+          "inputFeeUnits": "30",
+          "note": "10000 - 9970 = 30 input units charged by 997/1000"
+        },
+        "equalityHolds": true,
+        "minReceiveAlsoHolds": true,
+        "overdelivery19744": "reject-under-equality-accept-under-inequality-only-if-authority-and-reserve-allow",
+        "status": "prepared",
+        "ordering": "single atomic swap"
+      },
+      "arithmeticDerivation": {
+        "adjusted": "9970000",
+        "numerator": "19940000000000",
+        "denominator": "1009970000",
+        "floorOutput": "19743",
+        "remainder": "162290000",
+        "feeInputUnits": "30",
+        "intentsMdNote": "intents.md ExactOutput example uses credit >= 0.48, which is min-receive inequality; this row uses equality for the named exact-output-swap discriminator"
+      },
+      "provenance": {
+        "path": "evidence/moriarty-design-sprint-2026-09-06/worked-examples.json",
+        "sha256": "46aee15de568ce1bab7372588866aac5f3e62ca7ecac73ee1ee23de0610ecf2b",
+        "pointer": "swap",
+        "scope": "independent integer oracle aligned with retained atomic swap arithmetic; existing loan/swap acceptance is not changed"
+      },
+      "limitations": [
+        "Exact-output equality is the required discriminator, not the intents.md >= example.",
+        "No Uniswap deployment version is pinned.",
+        "Rounding policy beyond floor_div remains SP01.3."
+      ]
+    },
+    {
+      "id": "intent-cases:partial-fill-batch:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:partial-fill-batch",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "nonce": "N7",
+        "principal": "alice",
+        "grossDebitCap": {
+          "amount": "10000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "minReceiveRatio": "1 WETH per 2000 USDC",
+        "partialFill": true
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "fill1 debit 3000 USDC credit 1.51 WETH; consume nonce identity N7"
+        },
+        {
+          "index": "1",
+          "action": "fill2 debit 2000 USDC credit 1.01 WETH under same nonce"
+        },
+        {
+          "index": "2",
+          "action": "cancel residual; one current successor only"
+        }
+      ],
+      "expected": {
+        "cumulativeGrossDebit": {
+          "amount": "5000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "cumulativeFees": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "nonceIdentity": "N7",
+        "grossCapRemaining": {
+          "amount": "5000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "netWeth": {
+          "amount": "2.52",
+          "unit": "WETH",
+          "asset": "WETH"
+        },
+        "refundDoesNotResetBudget": true,
+        "currentSuccessorCount": "1",
+        "residualDuties": [
+          "none beyond consumed-authority record"
+        ],
+        "status": "cancelled-with-consumed-gross",
+        "race": "cancel/fill race admits only one current successor"
+      },
+      "arithmeticDerivation": {
+        "B0": "10000",
+        "d1": "3000",
+        "B1": "7000",
+        "d2": "2000",
+        "B2": "5000",
+        "batchBalanceNote": "a matched counterparty batch still requires affine nonce consumption, not two fresh 10000 caps"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Partial fills and a matched batch",
+        "scope": "independent design oracle"
+      },
+      "limitations": [
+        "WETH amounts are toy. No NEAR deployment pin."
+      ]
+    },
+    {
+      "id": "intent-cases:refinance:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:refinance",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "heldouts:accepted-refinance:trace"
+      ],
+      "input": {
+        "from": "Aave.USDC_Debt",
+        "to": "Morpho.USDC_Debt",
+        "oldDebt": {
+          "amount": "50000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "newDebtCap": {
+          "amount": "50500",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "collateral": {
+          "amount": "20",
+          "unit": "WETH",
+          "asset": "WETH"
+        },
+        "fee": {
+          "amount": "50",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "transferDebitCap": {
+          "amount": "1000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "rule": "old debt discharges only by actual authorized settlement plus explicit new debt authority; debt increase is independent of transfer debit caps; residual ownership is exact once"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "sign repay <=50000, move collateral <=20 WETH, create new debt <=50500"
+        },
+        {
+          "index": "1",
+          "action": "atomic prefix keeps collateralization on every observable step"
+        },
+        {
+          "index": "2",
+          "action": "settle old debt 50000; create new debt 50050; residual owner once"
+        }
+      ],
+      "expected": {
+        "AaveDebt": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "MorphoDebt": {
+          "amount": "50050",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "netCollateralLoss": {
+          "amount": "0",
+          "unit": "WETH",
+          "asset": "WETH"
+        },
+        "fees": {
+          "amount": "50",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "status": "accepted-successor",
+        "residualOwnership": "exact-once Morpho controller"
+      },
+      "arithmeticDerivation": {
+        "sharedWith": "heldouts:accepted-refinance:trace",
+        "newDebt": "50000+50=50050<=50500"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Atomic lending refinance",
+        "scope": "design oracle; Aave/Morpho names are labels, not pinned deployments"
+      },
+      "limitations": [
+        "Protocol versions unknown. Cross-domain refinance always-condition is not assumed possible."
+      ]
+    },
+    {
+      "id": "intent-cases:pending-redemption:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:pending-redemption",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "sharedFactsWith": [
+        "heldouts:pending-redemption:trace"
+      ],
+      "input": {
+        "intent": "RedeemFund",
+        "shares": {
+          "amount": "100",
+          "unit": "shares",
+          "asset": "FundShares"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "requestRedeem 100 shares; lock shares; create request R1"
+        },
+        {
+          "index": "1",
+          "action": "vault has only 40 USDC liquidity; mark R1 pending; do not erase claim"
+        },
+        {
+          "index": "2",
+          "action": "later liquidity arrives; R1 becomes claimable for 40 USDC; residual 60 shares remain"
+        },
+        {
+          "index": "3",
+          "action": "claim 40 USDC; residual request remains until remaining shares are claimable or cancelled under residual rules"
+        }
+      ],
+      "expected": {
+        "requestId": "R1",
+        "controller": "alice",
+        "assetsLocked": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "sharesLocked": {
+          "amount": "100",
+          "unit": "shares",
+          "asset": "FundShares"
+        },
+        "order": "fifo-request-id",
+        "status": "Claimable",
+        "claimable": {
+          "amount": "40",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "residualShares": {
+          "amount": "60",
+          "unit": "shares",
+          "asset": "FundShares"
+        },
+        "residualClaim": "live",
+        "fees": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "sharedWith": "heldouts:pending-redemption:trace"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Asynchronous vault redemption",
+        "scope": "design oracle wrapping ERC-7540 lifecycle names"
+      },
+      "limitations": [
+        "Claim floor 9500 USDC from the report example is not used in the illiquidity toy."
+      ]
+    },
+    {
+      "id": "intent-cases:recurring-payments:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:recurring-payments",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "perPeriod": {
+          "amount": "100",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "periods": "12",
+        "aggregate": {
+          "amount": "1200",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "periodLength": "30-days",
+        "closureReserve": "16"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "admit finite schedule of 12 periods with closure reserve"
+        },
+        {
+          "index": "1",
+          "action": "execute four payments of 100 USDC"
+        },
+        {
+          "index": "2",
+          "action": "fifth payment 100 USDC consumes period ticket 5"
+        }
+      ],
+      "expected": {
+        "paymentsMade": "5",
+        "remainingPeriods": "7",
+        "remainingAggregate": {
+          "amount": "700",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "workRemaining": "not reset",
+        "status": "active",
+        "finiteSchedule": true,
+        "lifetimeReset": false
+      },
+      "arithmeticDerivation": {
+        "spent": "5*100=500",
+        "remainingAggregate": "1200-500=700",
+        "remainingPeriods": "12-5=7"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Recurring payments",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Calendar/business-day policy not frozen."
+      ]
+    },
+    {
+      "id": "intent-cases:delegated-rebalancing:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:delegated-rebalancing",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "agent": "agent42",
+        "maxNotionalPerDay": {
+          "amount": "25000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "maxFeePerDay": {
+          "amount": "50",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "allowedEffects": [
+          "TradePortfolioAsset",
+          "PayFee<=50"
+        ],
+        "forbiddenEffects": [
+          "ExternalRecipient",
+          "CreateDebt",
+          "GrantAuthority"
+        ]
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "delegate allowed-effect subset, not every risk metric"
+        },
+        {
+          "index": "1",
+          "action": "agent trades 10000 USDC notional, fee 10 USDC, recipients in whitelist"
+        }
+      ],
+      "expected": {
+        "effects": [
+          "TradePortfolioAsset 10000",
+          "PayFee 10"
+        ],
+        "authoritySubset": true,
+        "riskMetricsPreserved": false,
+        "fees": {
+          "amount": "10",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "status": "accepted-within-attenuation"
+      },
+      "arithmeticDerivation": {
+        "notional": "10000<=25000",
+        "fee": "10<=50"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Portfolio rebalancing with delegated agent",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Weight-band satisfaction is a hard constraint if signed; route ranking is soft."
+      ]
+    },
+    {
+      "id": "intent-cases:contingent-claim:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:contingent-claim",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "premium": {
+          "amount": "500",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "claimAmount": {
+          "amount": "10000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "oracle": "OracleRegistry.rainfall",
+        "freshness": "<=1h",
+        "anchor": "block-or-observation-id O9"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "pay premium 500 USDC; create claim C1, not cash"
+        },
+        {
+          "index": "1",
+          "action": "authenticated observation rainfall=2 with freshness and anchor"
+        },
+        {
+          "index": "2",
+          "action": "if 2 < threshold 5 then claim 10000 USDC remains a claim against insurer"
+        }
+      ],
+      "expected": {
+        "claims": [
+          {
+            "id": "C1",
+            "amount": {
+              "amount": "10000",
+              "unit": "USDC",
+              "asset": "USDC"
+            },
+            "status": "admissible-claim"
+          }
+        ],
+        "tokens": [
+          {
+            "amount": "500",
+            "unit": "USDC",
+            "asset": "USDC"
+          }
+        ],
+        "externalTruthProved": false,
+        "status": "claim-open",
+        "assumptions": [
+          "external-truth",
+          "custody-of-insurer-payoff"
+        ]
+      },
+      "arithmeticDerivation": {
+        "thresholdTest": "2<5 so claim 10000, not 0"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Contingent claim",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Threshold and rainfall units are toy. No proof of weather truth."
+      ]
+    },
+    {
+      "id": "intent-cases:cross-domain-recovery:trace",
+      "family": "intent-cases",
+      "boundRow": "intent-cases:cross-domain-recovery",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "lock": {
+          "amount": "1000",
+          "unit": "USDC",
+          "asset": "Midnight.USDC"
+        },
+        "destinationCredit": {
+          "amount": "995",
+          "unit": "USDC",
+          "asset": "Assumed.ForeignUSDC"
+        },
+        "timeout": "10 min",
+        "recovery": "refund_origin"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "lock 1000 on Midnight; message M1 status=Created"
+        },
+        {
+          "index": "1",
+          "action": "observe assumed destination pending; M1 status=Pending"
+        },
+        {
+          "index": "2",
+          "action": "finality evidence; M1 status=Finalized; credit 995 assumed asset"
+        },
+        {
+          "index": "3",
+          "action": "source settles; residual 0 lock"
+        }
+      ],
+      "expected": {
+        "messages": [
+          {
+            "id": "M1",
+            "status": "Finalized",
+            "provenance": "authenticated-assumption"
+          }
+        ],
+        "pending": false,
+        "final": true,
+        "recovery": "unused",
+        "replayAllowed": false,
+        "foreignAdapter": false,
+        "fees": {
+          "amount": "5",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "status": "Settled"
+      },
+      "arithmeticDerivation": {
+        "lock": "1000",
+        "dst": "995",
+        "feeOrSpread": "5"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "sha256": "680f646e244fdd59e72de3718a3a16566f643f599ae30c899f7b82fed6deef87",
+        "pointer": "Cross-domain payment with recovery",
+        "scope": "bounded assumed Midnight messages; no foreign adapter"
+      },
+      "limitations": [
+        "Destination domain is an assumed observation, not an implemented adapter."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:concentrated-liquidity:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:concentrated-liquidity",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "ticks": [
+          "100",
+          "105",
+          "110"
+        ],
+        "currentTick": "105",
+        "positionLiquidity": "1000000",
+        "maxTicksTraversed": "3",
+        "zeroForOneFloor": true,
+        "oneForZeroCeil": true
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "swap zeroForOne across one tick using floor"
+        },
+        {
+          "index": "1",
+          "action": "update position fee growth on finite tick data"
+        }
+      ],
+      "expected": {
+        "ticksVisited": [
+          "105",
+          "100"
+        ],
+        "directionRounding": "floor-on-zeroForOne",
+        "fees": {
+          "amount": "1",
+          "unit": "token0",
+          "asset": "token0"
+        },
+        "hiddenUnlimitedTraversal": false,
+        "status": "within-tick-bound"
+      },
+      "arithmeticDerivation": {
+        "finiteTicks": "3",
+        "traversalCap": "3",
+        "note": "no Uniswap V3 Q64.96 library is executed; rounding direction is the discriminator"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Uniswap-style concentrated liquidity",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Not Uniswap V3 conformance. Tick math library is an open MC07 task."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:iterative-invariant-AMM:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:iterative-invariant-AMM",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "iterationCap": "8",
+        "D0": "1000",
+        "targetTol": "1"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "Newton step 1: D=1008"
+        },
+        {
+          "index": "1",
+          "action": "Newton step 2: D=1004"
+        },
+        {
+          "index": "2",
+          "action": "Newton step 3: D=1004; stop within cap"
+        }
+      ],
+      "expected": {
+        "iterations": "3",
+        "D": "1004",
+        "converged": true,
+        "hostLoopFallback": false,
+        "status": "converged"
+      },
+      "arithmeticDerivation": {
+        "cap": "8",
+        "used": "3",
+        "note": "toy sequence, not Curve newton_D"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Curve-style iterative invariant",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Not Curve source conformance."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:ordered-redemption:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:ordered-redemption",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "troves": [
+          {
+            "id": "T1",
+            "rate": "0.05",
+            "debt": "100"
+          },
+          {
+            "id": "T2",
+            "rate": "0.07",
+            "debt": "100"
+          },
+          {
+            "id": "T3",
+            "rate": "0.10",
+            "debt": "100"
+          }
+        ],
+        "redeem": {
+          "amount": "150",
+          "unit": "stable",
+          "asset": "stable"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "redeem 100 from T1 (lowest rate)"
+        },
+        {
+          "index": "1",
+          "action": "redeem 50 from T2; residual T2 debt 50"
+        }
+      ],
+      "expected": {
+        "orderingKey": "annual-rate-ascending",
+        "redeemed": [
+          "T1-100",
+          "T2-50"
+        ],
+        "residual": {
+          "T2": {
+            "amount": "50",
+            "unit": "stable",
+            "asset": "stable"
+          },
+          "T3": {
+            "amount": "100",
+            "unit": "stable",
+            "asset": "stable"
+          }
+        },
+        "status": "partial-redemption"
+      },
+      "arithmeticDerivation": {
+        "redeemed": "150=100+50",
+        "t2Residual": "100-50=50"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Liquity ordered redemption",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Not Liquity V2 conformance."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:bad-debt:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:bad-debt",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "debt": {
+          "amount": "1000",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "collateralValue": {
+          "amount": "400",
+          "unit": "USDC-eq",
+          "asset": "WETH"
+        },
+        "shares": "100",
+        "shareAsset": "1000"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "realize 600 loss; socialize through share-price depreciation"
+        }
+      ],
+      "expected": {
+        "debt": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "loss": {
+          "amount": "600",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "shareAsset": "400",
+        "shareValue": "4",
+        "tokenQuantitySharesUnchanged": "100",
+        "erasure": false,
+        "socializedLossOmitted": false,
+        "status": "loss-recognized"
+      },
+      "arithmeticDerivation": {
+        "loss": "1000-400=600",
+        "newSharePrice": "400/100=4",
+        "tokenConservationDoesNotImplyValueConservation": true
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Morpho bad debt",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Not Morpho vault conformance."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:shared-vault-accounting-hooks:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:shared-vault-accounting-hooks",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "vault": "V",
+        "hook": "H",
+        "hookPermission": [
+          "observe",
+          "adjustFee<=1"
+        ],
+        "preDelta": {
+          "token0": "10",
+          "token1": "-9"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "pre delta +10/-9"
+        },
+        {
+          "index": "1",
+          "action": "hook temporary delta +0/-1 fee within permission"
+        },
+        {
+          "index": "2",
+          "action": "final delta settles to 0 before completion"
+        }
+      ],
+      "expected": {
+        "preDelta": {
+          "token0": "10",
+          "token1": "-9"
+        },
+        "temporaryDelta": {
+          "token0": "10",
+          "token1": "-10"
+        },
+        "finalDelta": {
+          "token0": "0",
+          "token1": "0"
+        },
+        "hookPermissionBound": true,
+        "status": "settled"
+      },
+      "arithmeticDerivation": {
+        "token1": "-9 + -1 = -10 then settle against vault inventory"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Balancer-style shared accounting",
+        "scope": "design oracle; Balancer V3 remains a candidate without behavior id"
+      },
+      "limitations": [
+        "Not Balancer V3 source conformance."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:asynchronous-settlement:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:asynchronous-settlement",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "message": "M2",
+        "statuses": [
+          "Created",
+          "Finalized",
+          "Received"
+        ]
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "Send M2 status=Created"
+        },
+        {
+          "index": "1",
+          "action": "observe finality status=Finalized"
+        },
+        {
+          "index": "2",
+          "action": "Receive M2 creates destination claim"
+        }
+      ],
+      "expected": {
+        "messages": [
+          {
+            "id": "M2",
+            "status": "Received",
+            "replay": false
+          }
+        ],
+        "prematureFinality": false,
+        "status": "Received"
+      },
+      "arithmeticDerivation": {
+        "note": "no amount conservation claimed across domains"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Asynchronous cross-domain settlement",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "No THORChain or Lightning primary acquisition."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:margin-funding:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:margin-funding",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "collateral": {
+          "amount": "100",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "unsettledPnl": {
+          "amount": "40",
+          "unit": "USDC-eq",
+          "asset": "USDC"
+        },
+        "fundingDebt": {
+          "amount": "5",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "spendableCash": {
+          "amount": "100",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "mark unsettled pnl 40; funding debt 5"
+        },
+        {
+          "index": "1",
+          "action": "attempt withdraw 120 cash rejects; withdraw 95 after funding hold may proceed only from spendable cash"
+        }
+      ],
+      "expected": {
+        "unsettledPnl": {
+          "amount": "40",
+          "unit": "USDC-eq",
+          "asset": "USDC"
+        },
+        "fundingDebt": {
+          "amount": "5",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "spendableCash": {
+          "amount": "95",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "cannotSpendContingentProfit": true,
+        "status": "open-position"
+      },
+      "arithmeticDerivation": {
+        "spendable": "collateral 100 - fundingDebt 5 = 95",
+        "notSpendable": "95+40=135 is invalid because 40 is contingent"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Margin and funding",
+        "scope": "design oracle; Velocity is a candidate name only"
+      },
+      "limitations": [
+        "No Velocity primary source."
+      ]
+    },
+    {
+      "id": "DeFi-regressions:conditional-payoff-insurance:trace",
+      "family": "DeFi-regressions",
+      "boundRow": "DeFi-regressions:conditional-payoff-insurance",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "cover": "C9",
+        "adjudicator": "authorized-assessor-A",
+        "payout": {
+          "amount": "8000",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "authorized adjudication result exists for C9"
+        },
+        {
+          "index": "1",
+          "action": "pay 8000 USDC; record external-truth assumption, not a proof of loss"
+        }
+      ],
+      "expected": {
+        "claims": [
+          {
+            "id": "C9",
+            "status": "paid",
+            "amount": {
+              "amount": "8000",
+              "unit": "USDC",
+              "asset": "USDC"
+            }
+          }
+        ],
+        "authorizedAdjudication": true,
+        "externalTruthProved": false,
+        "status": "paid-under-assumption"
+      },
+      "arithmeticDerivation": {
+        "payout": "8000 under authorized result"
+      },
+      "provenance": {
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "sha256": "c458c6c9e32675afe6a6aa44e6f1a6767d3963accb6d291ec24e6212ecac9975",
+        "pointer": "Conditional payoff / insurance",
+        "scope": "design oracle; Nexus Mutual is a candidate name only"
+      },
+      "limitations": [
+        "No Nexus primary source. Discretionary cover wording is an assumption."
+      ]
+    },
+    {
+      "id": "composition:sequential:trace",
+      "family": "composition",
+      "boundRow": "composition:sequential",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "A": "pay 10 USDC",
+        "B": "pay 20 USDC"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "run A then B"
+        },
+        {
+          "index": "1",
+          "action": "consume history of A as predecessor of B"
+        }
+      ],
+      "expected": {
+        "consumedHistories": [
+          "H_A"
+        ],
+        "producedHistories": [
+          "H_B"
+        ],
+        "observablePrefix": [
+          "A-complete"
+        ],
+        "status": "B-complete",
+        "fees": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "totalPaid": "10+20=30"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:disjoint-parallel:trace",
+      "family": "composition",
+      "boundRow": "composition:disjoint-parallel",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "A": "move asset X",
+        "B": "move asset Y",
+        "disjoint": true
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "run A and B on disjoint state"
+        }
+      ],
+      "expected": {
+        "readWriteConflicts": [],
+        "authorityPartition": [
+          "auth-A",
+          "auth-B"
+        ],
+        "producedHistories": [
+          "H_A",
+          "H_B"
+        ],
+        "status": "both-complete"
+      },
+      "arithmeticDerivation": {
+        "note": "no shared token conservation across X and Y beyond per-asset rules"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:shared-state-interleaving:trace",
+      "family": "composition",
+      "boundRow": "composition:shared-state-interleaving",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "resource": "poolP",
+        "A": "swap",
+        "B": "add-liquidity"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "interleave A then B on poolP with explicit conflict order"
+        }
+      ],
+      "expected": {
+        "readWriteConflicts": [
+          "poolP"
+        ],
+        "observablePrefixes": [
+          "A-on-P",
+          "B-on-P-after-A"
+        ],
+        "status": "ordered-interleaving",
+        "fees": {
+          "amount": "1",
+          "unit": "USDC",
+          "asset": "USDC"
+        }
+      },
+      "arithmeticDerivation": {
+        "note": "fee after A is visible to B"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:atomic-synchronization:trace",
+      "family": "composition",
+      "boundRow": "composition:atomic-synchronization",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "legs": [
+          "borrow 50",
+          "swap 50",
+          "repay 50+1 fee"
+        ]
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "execute all legs or reject all tentative writes"
+        }
+      ],
+      "expected": {
+        "atomic": true,
+        "debt": {
+          "amount": "0",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "fees": {
+          "amount": "1",
+          "unit": "USDC",
+          "asset": "USDC"
+        },
+        "status": "all-or-nothing"
+      },
+      "arithmeticDerivation": {
+        "repay": "51 = 50 principal + 1 fee"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    },
+    {
+      "id": "composition:asynchronous-messaging:trace",
+      "family": "composition",
+      "boundRow": "composition:asynchronous-messaging",
+      "kind": "design-oracle",
+      "generatedByMoriartyEvaluator": false,
+      "designOracle": true,
+      "sourceConformanceClaim": false,
+      "input": {
+        "message": "M3",
+        "timeout": "bounded"
+      },
+      "steps": [
+        {
+          "index": "0",
+          "action": "send M3 Created"
+        },
+        {
+          "index": "1",
+          "action": "timeout path Refundable then Refunded"
+        }
+      ],
+      "expected": {
+        "messages": [
+          {
+            "id": "M3",
+            "status": "Refunded"
+          }
+        ],
+        "recovery": "refund_origin",
+        "status": "Refunded",
+        "proofSplitJoinDoesNotEstablishThisOperator": true
+      },
+      "arithmeticDerivation": {
+        "note": "refund equals locked principal minus explicit fee if signed"
+      },
+      "provenance": {
+        "path": "openspec/REPORT-RECONCILIATION-2026-09-07.md",
+        "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da",
+        "pointer": "RP01 five composition operators",
+        "scope": "design oracle"
+      },
+      "limitations": [
+        "Operator contracts are specified-only. MC06 owns implementation."
+      ]
+    }
+  ],
+  "mutations": [
+    {
+      "id": "heldouts:NAM19-capitalization:mut:erase-nominal-on-ipci",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "traceId": "heldouts:NAM19-capitalization:trace",
+      "mutation": "Keep IPCI payoff 0 and reset accruedInterest, but leave notionalPrincipal at 5000.",
+      "rejectionPredicate": "Reject.NominalDebtErasure: IPCI with cash payoff 0 must add capitalized accrued interest to notionalPrincipal; debt must rise without token transfer.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "heldouts:NAM19-capitalization:mut:reorder-ipci-rr",
+      "boundRow": "heldouts:NAM19-capitalization",
+      "traceId": "heldouts:NAM19-capitalization:trace",
+      "mutation": "On 2013-07-01T00:00 emit RR before IPCI.",
+      "rejectionPredicate": "Reject.EventOrder: pinned NAM19 same-timestamp order is IPCI then RR.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "heldouts:accepted-refinance:mut:discharge-without-settlement",
+      "boundRow": "heldouts:accepted-refinance",
+      "traceId": "heldouts:accepted-refinance:trace",
+      "mutation": "Set old debt to 0 without a 50000 USDC settlement effect.",
+      "rejectionPredicate": "Reject.UnauthorizedDebtDischarge: old debt is discharged only by actual authorized settlement.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "heldouts:pending-redemption:mut:erase-claim-on-illiquidity",
+      "boundRow": "heldouts:pending-redemption",
+      "traceId": "heldouts:pending-redemption:trace",
+      "mutation": "On insufficient liquidity, burn 100 shares and record neither USDC nor residual request.",
+      "rejectionPredicate": "Reject.ClaimErasure: insufficient liquidity cannot erase the redeem claim.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:exact-output-swap:mut:overdelivery-equality",
+      "boundRow": "intent-cases:exact-output-swap",
+      "traceId": "intent-cases:exact-output-swap:trace",
+      "mutation": "Deliver 19744 micro-B under exact-output equality 19743.",
+      "rejectionPredicate": "Reject.OverdeliveryEquality: exact-output uses equality; overdelivery rejects. Min-receive inequality is a different predicate.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:partial-fill-batch:mut:refund-resets-gross",
+      "boundRow": "intent-cases:partial-fill-batch",
+      "traceId": "intent-cases:partial-fill-batch:trace",
+      "mutation": "After fills totaling 5000 USDC, cancel and restore gross cap to 10000.",
+      "rejectionPredicate": "Reject.GrossDebitReset: refunds cannot erase gross debit limits; fees count against net goals; nonce identity persists.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:partial-fill-batch:mut:concurrent-two-successors",
+      "boundRow": "intent-cases:partial-fill-batch",
+      "traceId": "intent-cases:partial-fill-batch:trace",
+      "mutation": "Accept both a fill successor and a cancel successor as current.",
+      "rejectionPredicate": "Reject.SuccessorRace: cancellation/fill race admits only one current successor.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:refinance:mut:temp-uncollateralized",
+      "boundRow": "intent-cases:refinance",
+      "traceId": "intent-cases:refinance:trace",
+      "mutation": "Release all collateral while old debt is still outstanding, then recollateralize.",
+      "rejectionPredicate": "Reject.AlwaysCollateral: observable prefixes must keep the signed always collateralization constraint.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:pending-redemption:mut:skip-to-settled",
+      "boundRow": "intent-cases:pending-redemption",
+      "traceId": "intent-cases:pending-redemption:trace",
+      "mutation": "Jump from Open to Settled without Pending/Claimable.",
+      "rejectionPredicate": "Reject.LifecycleSkip: request status must follow Pending then Claimable then Claimed.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:recurring-payments:mut:lifetime-reset",
+      "boundRow": "intent-cases:recurring-payments",
+      "traceId": "intent-cases:recurring-payments:trace",
+      "mutation": "After 5 payments, reset remaining_periods to 12 and aggregate to 1200.",
+      "rejectionPredicate": "Reject.LifetimeReset: recurring schedule is finite; no lifetime work or budget reset.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:recurring-payments:mut:concurrent-period-ticket",
+      "boundRow": "intent-cases:recurring-payments",
+      "traceId": "intent-cases:recurring-payments:trace",
+      "mutation": "Five concurrent month-five executions each pay 100 USDC.",
+      "rejectionPredicate": "Reject.PeriodTicketDuplication: a period ticket is consumed atomically once.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:delegated-rebalancing:mut:overbroad-delegate",
+      "boundRow": "intent-cases:delegated-rebalancing",
+      "traceId": "intent-cases:delegated-rebalancing:trace",
+      "mutation": "Agent creates new debt or pays an external recipient not on the whitelist.",
+      "rejectionPredicate": "Reject.OverbroadDelegate: attenuation is an allowed-effect subset, not preservation of every risk metric and not unbounded authority.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:contingent-claim:mut:claim-as-cash",
+      "boundRow": "intent-cases:contingent-claim",
+      "traceId": "intent-cases:contingent-claim:trace",
+      "mutation": "Rewrite the 10000 USDC claim as spendable cash without adjudication.",
+      "rejectionPredicate": "Reject.UnbackedCashFromClaim: a contingent claim is not proven external truth and is not spendable cash.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "intent-cases:cross-domain-recovery:mut:replay-message",
+      "boundRow": "intent-cases:cross-domain-recovery",
+      "traceId": "intent-cases:cross-domain-recovery:trace",
+      "mutation": "Replay M1 to mint a second 995 credit after Finalized.",
+      "rejectionPredicate": "Reject.MessageReplay: finalized message provenance is one-time; no foreign adapter.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:concentrated-liquidity:mut:reversed-rounding-or-unbounded-walk",
+      "boundRow": "DeFi-regressions:concentrated-liquidity",
+      "traceId": "DeFi-regressions:concentrated-liquidity:trace",
+      "mutation": "Use ceil on zeroForOne or traverse ticks without the finite cap.",
+      "rejectionPredicate": "Reject.TickBoundOrRounding: direction-specific floor/ceil required; hidden unlimited tick traversal rejects.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:iterative-invariant-AMM:mut:host-loop-or-over-cap",
+      "boundRow": "DeFi-regressions:iterative-invariant-AMM",
+      "traceId": "DeFi-regressions:iterative-invariant-AMM:trace",
+      "mutation": "Continue Newton iteration on the host after cap 8, or accept a non-converged D.",
+      "rejectionPredicate": "Reject.IterationCap: reject-at-cap; no host-loop fallback.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:ordered-redemption:mut:out-of-order",
+      "boundRow": "DeFi-regressions:ordered-redemption",
+      "traceId": "DeFi-regressions:ordered-redemption:trace",
+      "mutation": "Redeem T3 before T1 while T1 remains redeemable.",
+      "rejectionPredicate": "Reject.OutOfOrderRedemption: compare ordering key and preserve residual.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:bad-debt:mut:erase-or-omit-socialized-loss",
+      "boundRow": "DeFi-regressions:bad-debt",
+      "traceId": "DeFi-regressions:bad-debt:trace",
+      "mutation": "Set debt 0 and keep shareAsset 1000, or omit the 600 loss record.",
+      "rejectionPredicate": "Reject.HiddenBadDebt: residual loss must be explicit; no erasure and no omitted socialized loss.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:shared-vault-accounting-hooks:mut:unsettled-or-escalated-hook",
+      "boundRow": "DeFi-regressions:shared-vault-accounting-hooks",
+      "traceId": "DeFi-regressions:shared-vault-accounting-hooks:trace",
+      "mutation": "Complete with nonzero transient delta, or hook mints authority.",
+      "rejectionPredicate": "Reject.UnsettledDeltaOrHookEscalation: unsettled delta rejects; hook permission is bound.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:asynchronous-settlement:mut:premature-finality-or-replay",
+      "boundRow": "DeFi-regressions:asynchronous-settlement",
+      "traceId": "DeFi-regressions:asynchronous-settlement:trace",
+      "mutation": "Treat Created as Finalized, or receive M2 twice.",
+      "rejectionPredicate": "Reject.PrematureFinalityOrReplay: no premature finality and no message replay.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:margin-funding:mut:spend-contingent-profit",
+      "boundRow": "DeFi-regressions:margin-funding",
+      "traceId": "DeFi-regressions:margin-funding:trace",
+      "mutation": "Withdraw 130 USDC by treating unsettled pnl as cash.",
+      "rejectionPredicate": "Reject.ContingentProfitSpend: cannot spend contingent profit as cash.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "DeFi-regressions:conditional-payoff-insurance:mut:unauthorized-or-truth-proof",
+      "boundRow": "DeFi-regressions:conditional-payoff-insurance",
+      "traceId": "DeFi-regressions:conditional-payoff-insurance:trace",
+      "mutation": "Pay from an unauthorized observation, or mark external truth as proved.",
+      "rejectionPredicate": "Reject.UnauthorizedOrTruthProof: authorized adjudication required; no proof-of-external-truth claim.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:sequential:mut:skip-predecessor",
+      "boundRow": "composition:sequential",
+      "traceId": "composition:sequential:trace",
+      "mutation": "Run B without consuming A history.",
+      "rejectionPredicate": "Reject.MissingPredecessor: sequential B requires A's produced history.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:disjoint-parallel:mut:alias-overlap",
+      "boundRow": "composition:disjoint-parallel",
+      "traceId": "composition:disjoint-parallel:trace",
+      "mutation": "Alias X and Y to the same resource.",
+      "rejectionPredicate": "Reject.HiddenOverlap: disjoint-parallel forbids write/write or authority overlap.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:shared-state-interleaving:mut:commute-without-condition",
+      "boundRow": "composition:shared-state-interleaving",
+      "traceId": "composition:shared-state-interleaving:trace",
+      "mutation": "Treat A;B as equal to B;A on shared poolP.",
+      "rejectionPredicate": "Reject.UnconditionalCommutation: shared-state interleaving is not blanket-associative with sequential or async.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:atomic-synchronization:mut:partial-commit",
+      "boundRow": "composition:atomic-synchronization",
+      "traceId": "composition:atomic-synchronization:trace",
+      "mutation": "Commit the swap and drop the repay.",
+      "rejectionPredicate": "Reject.PartialAtomicCommit: atomic-synchronization discards all tentative financial changes on any failed leg.",
+      "expectedStatus": "reject"
+    },
+    {
+      "id": "composition:asynchronous-messaging:mut:treat-as-atomic-sync",
+      "boundRow": "composition:asynchronous-messaging",
+      "traceId": "composition:asynchronous-messaging:trace",
+      "mutation": "Treat message send/receive as atomic-synchronization because a proof split/join exists.",
+      "rejectionPredicate": "Reject.OperatorConfusion: a proof split/join does not establish asynchronous-messaging.",
+      "expectedStatus": "reject"
+    }
+  ]
+}
