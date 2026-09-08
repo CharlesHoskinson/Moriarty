@@ -8,13 +8,16 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** GPT-6 implemented the runner adapter and a separate GPT-6 reviewer passed corrected candidate `9341fbcf9873bf2ea80329b47252aab512bcb1c4a8e2d46b613ffcac90c21ad3`. Public CLI fixtures execute through Foreman, verify an existing debit, prevent charge reuse, retain bounded output and preserve ambiguous completion. Root ran 138 tests; independent review ran 24 focused checks. Source commit `607726e` is on `feat/moriarty-dev-plugin`. This is a scoped runner checkpoint, not whole-plugin acceptance. Production bindings, transaction delivery, host integration and a real Moriarty repair pilot remain open.
+**Status:** The guarded runner passed independent GPT-6 review at candidate `9341fbcf9873bf2ea80329b47252aab512bcb1c4a8e2d46b613ffcac90c21ad3` and source commit `607726e`. Commit `fe82396` then demonstrated actual public CLI execution of the retained SP01 design verifier, independently reviewed as a static trace/reference/arithmetic check. It did not execute an evaluator, proof or network transaction and does not satisfy the repair pilot.
 
-**Remaining implementation path:**
-1. Bind one real, currently authorized Moriarty action to the runner and demonstrate its public CLI execution.
-2. Finish transaction reporting/delivery and update the development skill to the latest user-selected model routing.
-3. Complete independent code review of the remaining plugin behavior; install and verify actual host hooks.
-4. Use the installed plugin for one real Moriarty repair: demonstrate denial, reproduction, focused correction and independent result review.
+**Completion checklist:**
+- [x] Implement and independently check shared reservations, current runner admission, unique debit consumption and bounded observed child completion.
+- [x] Bind and execute a real SP01 static design check through the public CLI; preserve historical acceptance bytes and scoped GPT-6 review.
+- [x] Finish independent review of transaction lifecycle/delivery and the GPT-6 workflow instructions. GPT-6 accepted candidate `d6d66813…`; 151 root tests and 14 independent CLI probes passed. The focused correction uses a dedicated emitted host message with a closed notification format; it does not interpret Markdown or accept caller acknowledgement JSON.
+- [ ] Correct the remaining hook adapter and `doctor` behavior: report observed coverage honestly, handle supported host input, keep bounded output valid JSON, and surface pending public notifications. A file's existence cannot prove interception.
+- [ ] Install reviewed source through the existing personal marketplace and test actual host coverage. Record unsupported paths and retain the guarded CLI; do not repair host internals or add a service.
+- [ ] Run one separately admitted real Moriarty repair pilot: deny the repeated broad attempt, reproduce the defect, apply the focused correction and obtain separate GPT-6 review. The retained SP05 R6 safety stop remains in force; this plugin does not authorize its replay.
+- [ ] Publish final coverage and pilot evidence, then return to SP01–SP12 implementation. Full BNF, executable K and financial Preview acceptance remain open.
 
 Use the existing campaign records, budget, SQLite store and Foreman launcher. Add no scheduler, service, provider client or further orchestration layer.
 
@@ -328,7 +331,7 @@ Extend plugin tests with historical regressions. Keep product repairs in their s
   The current unconditional `admitted-not-executed` response must fail this test.
   Supply no wallets, credentials or network endpoints to this test.
 - [ ] Demonstrate that another broad correction is denied after the historical failure threshold, while this reproducer and a focused repair remain eligible.
-  Give Grok the failing test and the exact approved implementation scope.
+  Use the latest user-selected implementer for the failing test and exact approved scope.
   Run the corrected production-path test and obtain fresh GPT-6 result review on the same candidate bytes.
   This is the first product-progress acceptance condition for the plugin pilot.
 - [ ] Preserve the decoder's unconditional real-byte failure as a separate open requirement until a valid production implementation and sufficient fixture exist.
