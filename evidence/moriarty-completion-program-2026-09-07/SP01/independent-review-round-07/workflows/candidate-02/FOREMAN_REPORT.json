@@ -1,0 +1,78 @@
+{
+  "schema": "moriarty.foreman-report/sp01-workflows-admission-correction",
+  "verdict": "corrected-specified-only",
+  "notAccepted": ["financial runtime", "semantic freeze", "full SP01", "proof", "wallet", "transaction", "twelve-sprint completion"],
+  "worker": "Grok 4.6 high",
+  "reviewAgainst": "0247c48e97e0893df46059e835c0d4cd7076e3fef94995d7a2b658d72b010fb6",
+  "immutableCandidate01Sha256": "2b7f65d8eef9822d9923ba5044b7d0906fb4a1e87c481767465df74ccfa14a86",
+  "ownedPath": "/home/charl/Moriarty/.worktrees/sp01-map-workflows-grok/experiments/moriarty-language/spec/successor/financial-fragments/workflows.json",
+  "ownedBytes": 442746,
+  "ownedSha256": "10af14f28c1710954003ad076b56a93331ae628dd7243c2fc67b17b0a3ca623d",
+  "ownedLimit": 524288,
+  "identities": {
+    "rows": 7,
+    "traces": 7,
+    "mutations": 25,
+    "sourcePins": 9,
+    "verificationItems": 88,
+    "positiveSteps": 24,
+    "transfers": 24,
+    "completeRollbackRefs": 25,
+    "structuralRefsResolved": 1192,
+    "quantityMismatches": 0
+  },
+  "commands": [
+    {"command": "python3 inspect packet/review/binding/owned fragment", "exitCode": 0},
+    {"command": "python3 /tmp/patch_wf_r.py", "exitCode": 0},
+    {"command": "python3 shrink duplicated conjunctions and fix remaining alias/read", "exitCode": 0},
+    {"command": "python3 replay 24 steps/24 transfers, units, refs, footprints, rollback", "exitCode": 0}
+  ],
+  "independentCalculations": {
+    "feeAware": {
+      "fill1": {"got": 1510, "lhs": 3020, "rhs": 3015, "pass": true, "ceil": 1508},
+      "fill2": {"got": 1010, "lhs": 2020, "rhs": 2015, "pass": true, "ceil": 1008},
+      "neg1501": {"got": 1501, "lhs": 3002, "rhs": 3015, "pass": false, "makerAfter": 3499}
+    },
+    "aliceNet": {"final": 9970, "start": 15000, "net": -5030, "lockRefund": -5030},
+    "C1alt": {"alice": 9500, "insurer": 100, "treasury": 20400, "total": 30000, "payout": 10000, "custodyFail": true, "ordinaryCharge": 0},
+    "C9alt": {"insured": 800, "insurer": 0, "treasury": 15200, "total": 16000, "payout": 8000, "custodyFail": true, "ordinaryCharge": 0},
+    "lockEquation": [
+      {"state": "pre", "original": 1000, "remainingLockAuthority": 1000, "cumulativeLocked": 0, "unit": "USDC", "ok": true},
+      {"state": "postLock", "original": 1000, "remainingLockAuthority": 0, "cumulativeLocked": 1000, "unit": "USDC", "ok": true},
+      {"state": "pending", "original": 1000, "remainingLockAuthority": 0, "cumulativeLocked": 1000, "unit": "USDC", "ok": true},
+      {"state": "refund", "original": 1000, "remainingLockAuthority": 0, "cumulativeLocked": 1000, "unit": "USDC", "ok": true}
+    ],
+    "positiveReplay": [
+      {"id": "intent-cases:partial-fill-batch:trace", "steps": 4, "transfers": 8, "ordinary": "40", "reserve": "0", "totals": {"WETH": "8000", "USDC": "15200"}, "ok": true},
+      {"id": "intent-cases:recurring-payments:trace", "steps": 6, "transfers": 5, "ordinary": "46", "reserve": "0", "totals": {"WETH": "0", "USDC": "2000"}, "ok": true},
+      {"id": "intent-cases:delegated-rebalancing:trace", "steps": 2, "transfers": 3, "ordinary": "20", "reserve": "0", "totals": {"WETH": "52000", "USDC": "140000"}, "ok": true},
+      {"id": "intent-cases:contingent-claim:trace", "steps": 3, "transfers": 1, "ordinary": "22", "reserve": "0", "totals": {"WETH": "0", "USDC": "30000"}, "ok": true},
+      {"id": "intent-cases:cross-domain-recovery:trace", "steps": 3, "transfers": 3, "ordinary": "14", "reserve": "8", "totals": {"Midnight.USDC": "2000"}, "ok": true},
+      {"id": "DeFi-regressions:asynchronous-settlement:trace", "steps": 3, "transfers": 2, "ordinary": "24", "reserve": "0", "totals": {"WETH": "0", "USDC": "1000"}, "ok": true},
+      {"id": "DeFi-regressions:conditional-payoff-insurance:trace", "steps": 3, "transfers": 2, "ordinary": "28", "reserve": "0", "totals": {"WETH": "0", "USDC": "16000"}, "ok": true}
+    ]
+  },
+  "footprintDiffWrites": [
+    {"row": 0, "writes": {"allowances:fee": 2, "allowances:grossDebit": 2}},
+    {"row": 1, "writes": {"allowances:aggregate": 5, "totals:remaining_aggregate": 5, "status:REC-12": 5}},
+    {"row": 2, "writes": {"allowances:notionalPerDay": 1, "allowances:feePerDay": 1}},
+    {"row": 3, "writes": {"allowances:premiumPaid": 1, "allowances:claimNominal": 1, "custody:insurerAssumption": 1, "cover:C1-cover": 3}},
+    {"row": 4, "writes": {"allowances:fee": 1, "allowances:lock": 2, "status:M1": 3}},
+    {"row": 5, "writes": {"allowances:messageAmount": 2, "status:M2": 3}},
+    {"row": 6, "writes": {"allowances:coverPayout": 1, "custody:insurerAssumption": 2}}
+  ],
+  "footprintCoverageMissing": [],
+  "fixes": [
+    "WF-R01 distinct whole-alternate starting boundaries for mutations 10 and 18. No original preState pointers. Custody only fails.",
+    "WF-R02 finite conjunctions for four claims with currentness registry, assumption registry, pre-verification budgets, update relation, frame, authorization, current-head uniqueness.",
+    "WF-R03 complete proposed records via legalStepRef or typed input boundary. T5 now. M2 replay before custody. Fill 1501 inherits legal fill1.",
+    "WF-R04 canonical footprint reconciliation against 24 complete-state diffs. Alias formulas. No singular/plural duplicates.",
+    "WF-R05 remainingLockAuthority and mutation 22 units match assetUnitScaleRegistry. All quantity records checked."
+  ],
+  "preserved": ["fee-aware floors 1508/1008", "alice net -5030", "integer counters", "C1-cover", "25 mutation ids", "9 source pins", "88 verification items"],
+  "gaps": [
+    "Design predicates only. No Moriarty evaluator, native proof, Preview settlement, or wallet run.",
+    "Independent GPT-6 review of these corrected bytes is not in this worker.",
+    "Toy prices, calendars, registries, custody assumptions and bounds stay disclosed and unproved."
+  ]
+}

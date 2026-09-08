@@ -1,0 +1,80 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 82.88431331398897,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 10203,
+      "outputTokens": 14,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.010273000000000001,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 6171,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 19320,
+      "webSearchRequests": 0,
+      "costUSD": 0.6949700000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3868,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "approved",
+    "candidateId": "cand_2FK9PVWR1GK09C11ZEB1XQR7ZV",
+    "scope": "Design-gate review of the corrective finite composition model packet (checker-contract) against the CM01-CM10 findings and source-pins. Bundle identity verified: baseSha == headSha (b7989f94...), diffSha256 e3b0c442... is the SHA-256 of the empty string and equals the review-diff artifact hash (0 bytes), so no source or pin changed. All four artifacts inspected (checker-contract, findings, source-pins, review-diff). Not in scope: any result, semantic freeze, language/K/proof, ledger acceptance, or granting of the proposed implementation allocation. Source-pin file contents were not supplied, so hashes could not be recomputed; this is not required for a packet-only decision because the empty diff shows no pin was touched.",
+    "findings": [
+      {
+        "severity": "medium",
+        "citation": "checker-contract: 'Proposed separate implementation allocation... author3600seconds/64toolcalls... 1MiBowned source... stop at the first exhausted bound. No implicit retry'",
+        "description": "The mechanism requires a typed decoder, ~20+ per-primitive step relations with frames, full-state replay, four-claim checker, bounded-rational NAM arithmetic with second RR, typed negative materialization for eleven mutations, a total async phase relation, total resource projection with footprints, old-Simulation transport maps, a new funded partial-payment trace, black-box test extension, and regeneration of a ~709 KB JSON. 64 author tool calls and 3600 seconds with no retry is tight for that scope, and the 1 MiB owned-source cap may be approached once expansions are replay-derived. The packet explicitly defers granting this allocation to a separate bound decision, so this does not block the mechanism approval, but the allocation decision should size these bounds against the enumerated deliverables rather than adopt them as written."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract: 'A single total async phase relation consumes authenticated observation input and selects receive or refund exclusively' vs findings CM07: 'RefundLock apply precondition is refundAdmitted=Pending... The phase relation must distinguish opening refund eligibility from consuming a Refundable lock'",
+        "description": "The packet mandates one total phase relation and reconciliation of contradictory governing records, which resolves the deadlineRule/legalTicks conflict, but it does not name the two-stage distinction (Pending -> Refundable eligibility opening, then RefundLock consuming a Refundable lock) that CM07 calls out. The blanket 'repair all exact findings' clause covers it; making it explicit in the implementation brief would avoid a rediscovery cycle."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract: 'Define actual typed ContractInput/Output/Trace, restrictions, entailment/interference, operator admissibility, complete observation and sort-preserving renaming' vs findings CM09: 'A bag plus a join history does not choose a canonical serialized sequence'",
+        "description": "The packet lists the CM09 relations but omits the canonical serialization choice for the Ord-serialized shared trace used by G_shared. Without it, the entailment/interference relations have an underdetermined input. Again covered by the blanket repair clause; recommend naming the serialization rule as a required output."
+      },
+      {
+        "severity": "low",
+        "citation": "checker-contract: 'The existing --seed/--output generator CLI remains, and must call the same checker before emitting success' and 'A check may not obtain its expected output from generator output or a supplied desired poststate'",
+        "description": "These two requirements are compatible only if the checker's expected values come from the declared candidate plus independent replay, not from generator state. The packet intends this (tests 'independently derive expected math'), but the implementation brief should state that the generator-internal checker call is a self-consistency gate and that the black-box test expectations remain the acceptance authority."
+      }
+    ],
+    "rationale": "Bundle identity verified: base equals head, and the declared diff hash is the empty-string SHA-256 matching the 0-byte review-diff, so no source, pin, or immutable candidate was altered. The packet correctly scopes itself as a design-gate proposal with no implementation, result, freeze, proof, or ledger claim, and keeps ownership to the five pinned files. Evaluated against each finding: CM01 (executable decoder/apply/replay/check_claims, check CLI, black-box tests rejecting the four probes), CM02 (closed sum/product schemas, total metadata projection, unknown material fields reject), CM03 (descriptor/effect separation, asset-indexed authority with payee scope, counters derived once, Alice101 and no-refund-refresh preserved), CM04 (every constructor with preconditions/writes/frame, Transfer sole cash mover with link identities, replay-derived fees/shares/work/allocations/deletions), CM05 (pinned IED/RR/IPCI/RR order, bounded rational arithmetic with explicit rounding relation, second RR, 5000 duty before capitalization), CM06 (single typed materialization path, first-failure from earlier-true predicates, ten mutations plus duplicate-allocation, rollback at admitted prefix), CM07 (one total phase relation from the committed Pending base, reconciled governing records), CM08 (total canonical projection, complete read/write sets, 64 bound with explicit escalation), CM09 (typed contracts/restrictions/entailment/renaming, funded 50->30 trace, allocation equations), CM10 (total maps over the exact two-step Simulation fixture including all nine fields, residual 4.5b, Settled duties, USD_micro). Each is addressed with a concrete, checkable requirement. Verification-first constraints prevent the recurrence of the test-adequacy failure. The findings recorded are clarifications and a sizing caution on the explicitly deferred allocation; none is a defect in the mechanism's sufficiency or scope, so approval of preparation for this exact implementation is warranted. The allocation itself is not approved here, per the packet's own terms."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "promptSha256": "37458d86f74c7848bfc42ae195eeddd5f18b14eafd9dc5b0515c6b92081b2609",
+  "candidateId": "cand_2FK9PVWR1GK09C11ZEB1XQR7ZV",
+  "scope": "Finite checker corrective packet only; no implementation, semantic freeze or public acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": true,
+  "publicProjection": {
+    "sourceSha256": "ba96f47ab0a7da0f1d42947d4b273021c5b2efa0938ee5bc70490ec126d975d1",
+    "omitted": [
+      "token"
+    ],
+    "reason": "Do not publish local ready capability token; preserve exact source locally."
+  }
+}
