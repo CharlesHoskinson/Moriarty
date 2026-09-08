@@ -337,3 +337,130 @@ test('unexpected astral source characters have exact complete-scalar UTF8 lexica
   }
   assert.equal(parse(minimal('\ud800'),bounds).code,'SOURCE_ENCODING');
 });
+
+// SP01 frontend diagnostics. Spans are unique ASCII substring offsets, not parser spans.
+const sp01Uint128Max='340282366920938463463374607431768211455';
+const sp01Uint128Overflow='340282366920938463463374607431768211456';
+function sp01AsciiPrimarySpan(source,snippet){
+  const start=source.indexOf(snippet);
+  assert.notEqual(start,-1,snippet);
+  assert.equal(source.indexOf(snippet,start+1),-1,snippet);
+  return {startByte:String(start),endByte:String(start+snippet.length)};
+}
+function sp01RejectsCompile(source,code,stage,snippet){
+  assert.throws(()=>compile(source,bounds),err=>{
+    assert.ok(err.diagnostic);
+    assert.equal(err.diagnostic.code,code);
+    assert.equal(err.diagnostic.stage,stage);
+    if(snippet!==undefined)assert.deepEqual(err.diagnostic.primarySpan,sp01AsciiPrimarySpan(source,snippet));
+    return true;
+  },`${code}@${stage}${snippet?` ${snippet}`:''}`);
+}
+function sp01AcceptsCompile(source){
+  const output=compile(source,bounds);
+  assert.equal(output.bound.schemaVersion,'moriarty-program/1');
+  return output;
+}
+function sp01EpisodeStatusSource({closedBeforeStatus,includeClosed,guard}){
+  const closed=' state closed: UInt128 = uint(0);';
+  const status=' status episode closed_when closed == uint(1);';
+  const rest=' observation now: UInt128; status agreement no_remaining_notional;';
+  const action=` action run(actor: Text) { ${guard} }`;
+  const ordered=includeClosed===false?status:closedBeforeStatus?closed+status:status+closed;
+  return `agreement Generic profile "moriarty-bounded-atomic/1" {\n lifetime 2; horizon 100;${ordered}${rest}${action} }`;
+}
+function sp01NotionalStatusSource({principalBeforeStatus,includePrincipal,guard}){
+  const unit=' unit U;';
+  const closed=' state closed: UInt128 = uint(0); observation now: UInt128; status episode closed_when closed == uint(1);';
+  const principal=' state principal: Amount<U> = amount(1,U);';
+  const status=' status agreement remaining_notional principal;';
+  const action=` action run(actor: Text) { ${guard} }`;
+  const ordered=includePrincipal===false?closed+status:principalBeforeStatus?closed+principal+status:closed+status+principal;
+  return `agreement Generic profile "moriarty-bounded-atomic/1" {\n lifetime 2; horizon 100;${unit}${ordered}${action} }`;
+}
+function sp01TransferEffect(){return ' effect Transfer { asset: Text; from: Text; to: Text; amount: Amount; }';}
+function sp01RoundingNonePolicy(targets,unit='U'){return ` policy p targets ${targets} { unit ${unit}; derivation ""; rounding none; remainder ""; comparison ""; proof "p"; }`;}
+function sp01EmitTransfer(unit='U',asset='U'){return `emit Transfer { asset: text("${asset}"), from: arg.actor, to: text("recipient"), amount: amount(1,${unit}) };`;}
+function sp01PolicyOrdinalSource(ordinal,policyAfterAction){
+  const header=`agreement Generic profile "moriarty-bounded-atomic/1" {\n lifetime 2; horizon 100; unit U;\n state closed: UInt128 = uint(0); observation now: UInt128;\n status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}`;
+  const targets=`effect(run,${ordinal},amount)`;
+  const policy=sp01RoundingNonePolicy(targets);
+  const action=` action run(actor: Text) { ${sp01EmitTransfer()} }`;
+  return header+(policyAfterAction?action+policy:policy+action)+' }';
+}
+
+test('SP01 frontend premature episode status keeps NAME_RESOLUTION before later guard mismatch',()=>{
+  const episode='status episode closed_when closed == uint(1);';
+  const prematureBad=sp01EpisodeStatusSource({closedBeforeStatus:false,includeClosed:true,guard:'guard uint(1), "bad";'});
+  const prematureValid=sp01EpisodeStatusSource({closedBeforeStatus:false,includeClosed:true,guard:'guard true, "bad";'});
+  const declaredBad=sp01EpisodeStatusSource({closedBeforeStatus:true,includeClosed:true,guard:'guard uint(1), "bad";'});
+  const missingValid=sp01EpisodeStatusSource({closedBeforeStatus:false,includeClosed:false,guard:'guard true, "bad";'});
+  sp01RejectsCompile(prematureBad,'NAME_RESOLUTION','5',episode);
+  sp01RejectsCompile(prematureValid,'NAME_RESOLUTION','5',episode);
+  sp01RejectsCompile(declaredBad,'TYPE_MISMATCH','6');
+  sp01RejectsCompile(missingValid,'STATUS_RULE','6');
+});
+
+test('SP01 frontend premature notional status keeps NAME_RESOLUTION before later guard mismatch',()=>{
+  const notional='status agreement remaining_notional principal;';
+  const prematureBad=sp01NotionalStatusSource({principalBeforeStatus:false,includePrincipal:true,guard:'guard uint(1), "bad";'});
+  const prematureValid=sp01NotionalStatusSource({principalBeforeStatus:false,includePrincipal:true,guard:'guard true, "bad";'});
+  const declaredBad=sp01NotionalStatusSource({principalBeforeStatus:true,includePrincipal:true,guard:'guard uint(1), "bad";'});
+  const missingValid=sp01NotionalStatusSource({principalBeforeStatus:false,includePrincipal:false,guard:'guard true, "bad";'});
+  sp01RejectsCompile(prematureBad,'NAME_RESOLUTION','5',notional);
+  sp01RejectsCompile(prematureValid,'NAME_RESOLUTION','5',notional);
+  sp01RejectsCompile(declaredBad,'TYPE_MISMATCH','6');
+  sp01RejectsCompile(missingValid,'STATUS_RULE','6');
+});
+
+test('SP01 frontend policy effect ordinal overflow is UINT_RANGE at the target span',()=>{
+  for(const policyAfterAction of [false,true]){
+    sp01AcceptsCompile(sp01PolicyOrdinalSource('0',policyAfterAction));
+    for(const ordinal of ['1',sp01Uint128Max])sp01RejectsCompile(sp01PolicyOrdinalSource(ordinal,policyAfterAction),'POLICY_TARGET','6');
+    const overflow=sp01PolicyOrdinalSource(sp01Uint128Overflow,policyAfterAction);
+    sp01RejectsCompile(overflow,'UINT_RANGE','6',`effect(run,${sp01Uint128Overflow},amount)`);
+  }
+});
+
+test('SP01 frontend earlier guard TYPE_MISMATCH beats later overflowing policy ordinal',()=>{
+  const source=`agreement Generic profile "moriarty-bounded-atomic/1" {
+ lifetime 2; horizon 100; unit U;
+ state closed: UInt128 = uint(0); observation now: UInt128;
+ status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}
+ action run(actor: Text) { guard uint(1), "bad"; ${sp01EmitTransfer()} }${sp01RoundingNonePolicy(`effect(run,${sp01Uint128Overflow},amount)`)} }`;
+  sp01RejectsCompile(source,'TYPE_MISMATCH','6');
+});
+
+test('SP01 frontend earlier uncovered Amount write beats later overflowing policy ordinal',()=>{
+  const source=`agreement Generic profile "moriarty-bounded-atomic/1" {
+ lifetime 2; horizon 100; unit U;
+ state closed: UInt128 = uint(0); state principal: Amount<U> = amount(1,U); observation now: UInt128;
+ status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}
+ action run(actor: Text) { set principal = amount(1,U); ${sp01EmitTransfer()} }${sp01RoundingNonePolicy(`effect(run,${sp01Uint128Overflow},amount)`)} }`;
+  sp01RejectsCompile(source,'POLICY_TARGET','6');
+});
+
+test('SP01 frontend earlier uncovered emit in another action or unit beats overflowing run ordinal',()=>{
+  const otherAction=`agreement Generic profile "moriarty-bounded-atomic/1" {
+ lifetime 2; horizon 100; unit U;
+ state closed: UInt128 = uint(0); observation now: UInt128;
+ status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}
+ action other(actor: Text) { ${sp01EmitTransfer()} }
+ action run(actor: Text) { }${sp01RoundingNonePolicy(`effect(run,${sp01Uint128Overflow},amount)`)} }`;
+  const otherUnit=`agreement Generic profile "moriarty-bounded-atomic/1" {
+ lifetime 2; horizon 100; unit U; unit V;
+ state closed: UInt128 = uint(0); observation now: UInt128;
+ status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}
+ action run(actor: Text) { ${sp01EmitTransfer('V','V')} }${sp01RoundingNonePolicy(`effect(run,${sp01Uint128Overflow},amount)`)} }`;
+  sp01RejectsCompile(otherAction,'POLICY_TARGET','6');
+  sp01RejectsCompile(otherUnit,'POLICY_TARGET','6');
+});
+
+test('SP01 frontend earlier invalid write target beats overflowing effect target in the same policy',()=>{
+  const source=`agreement Generic profile "moriarty-bounded-atomic/1" {
+ lifetime 2; horizon 100; unit U;
+ state closed: UInt128 = uint(0); observation now: UInt128;
+ status episode closed_when closed == uint(1); status agreement no_remaining_notional;${sp01TransferEffect()}
+ action run(actor: Text) { }${sp01RoundingNonePolicy(`write(run,missing), effect(run,${sp01Uint128Overflow},amount)`)} }`;
+  sp01RejectsCompile(source,'POLICY_TARGET','6');
+});

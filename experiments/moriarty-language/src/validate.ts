@@ -41,6 +41,7 @@ export function validateSource(ast:ParsedSource,bounds:Bounds,through:4|5|6=6):D
   assertSourceShape(ast);
   // Stage 5: declaration-before-use over the complete source, before any type error.
   const units=new Set<string>(),constants=new Map<string,LocalType>(),states=new Map<string,LocalType>(),observations=new Map<string,LocalType>(),effects=new Set<string>();
+  const declaredStates=new Set(ast.declarations.flatMap(d=>d.tag==='StateDecl'?[d.name]:[]));
   const unit=(name:string,span:Span)=>{if(!units.has(name))add('NAME_RESOLUTION',span);};
   const typeUse=(t:SourceType)=>{if(t.tag==='Amount')unit(t.unit,t.span);};
   const literalUse=(l:SourceLiteral)=>{if(l.tag==='AmountLiteral')unit(l.unit,l.span);};
@@ -51,7 +52,10 @@ export function validateSource(ast:ParsedSource,bounds:Bounds,through:4|5|6=6):D
     else if(d.tag==='SettlementDecl')literalUse(d.quantum);
     else if(d.tag==='FieldPolicyDecl')unit(d.unit,d.span);
     else if(d.tag==='EffectDecl'){d.fields.forEach(f=>typeUse(f.type));effects.add(d.kind);}
-    else if(d.tag==='EpisodeStatusDecl')literalUse(d.literal);
+    else if(d.tag==='EpisodeStatusDecl'||d.tag==='NotionalStatusDecl'){
+      if(!states.has(d.field)&&declaredStates.has(d.field))add('NAME_RESOLUTION',d.span);
+      if(d.tag==='EpisodeStatusDecl')literalUse(d.literal);
+    }
     else if(d.tag==='ActionDecl'){
       const args=new Set<string>(),locals=new Set<string>();for(const p of d.parameters){typeUse(p.type);args.add(p.name);}
       for(const s of d.statements){const roots=s.tag==='Emit'?s.fields.map(f=>f.expression):s.tag==='Guard'?[s.condition]:[s.expression];for(const root of roots)walk(root,e=>{if(e.tag==='Literal')literalUse(e.literal);else if('name'in e){const table=e.tag==='StateRef'?states:e.tag==='ConstRef'?constants:e.tag==='ObservationRef'?observations:e.tag==='ArgRef'?args:locals;if(!table.has(e.name))add('NAME_RESOLUTION',e.span);}});if(s.tag==='Let')locals.add(s.name);if(s.tag==='Set'&&!states.has(s.field))add('NAME_RESOLUTION',s.span);if(s.tag==='Emit'&&!effects.has(s.kind))add('NAME_RESOLUTION',s.span);}
@@ -91,12 +95,26 @@ export function validateSource(ast:ParsedSource,bounds:Bounds,through:4|5|6=6):D
   // Policy metadata resolves only after all actions and their locals/targets exist.
   // Policy declaration order does not constrain the action it covers.
   const covered=new Set<string>();
+  const deferredCoverage=new Set<string>();
   for(const d of ast.declarations)if(d.tag==='FieldPolicyDecl'){
     let floor:{type:LocalType|undefined;expression:SourceExpression;statement:number}|undefined;
     if(d.rounding.tag==='Floor'){floor=localTables.get(d.rounding.action)?.get(d.rounding.local);if(!floor||floor.expression.tag!=='FloorDiv')add('POLICY_ROUNDING',d.rounding.span);}
-    for(const t of d.targets){const key=t.tag==='Write'?`W:${t.action}:${t.field}`:`E:${t.action}:${t.ordinal}:${t.field}`,actual=targets.get(key);if(!actual||covered.has(key)||actual.type&&(actual.type.tag!=='Amount'||actual.type.unit!==d.unit))add('POLICY_TARGET',t.span);covered.add(key);if(actual&&floor&&d.rounding.tag==='Floor'&&(d.rounding.action!==t.action||floor.statement>=actual.statement))add('POLICY_ROUNDING',t.span);}
+    for(const t of d.targets){
+      if(t.tag==='Effect'&&!uint(t.ordinal,t.span)){
+        for(const [candidateKey,candidate] of targets){
+          const parts=candidateKey.split(':');
+          if(parts[0]==='E'&&candidate.action===t.action&&parts[3]===t.field&&candidate.type?.tag==='Amount'&&candidate.type.unit===d.unit)deferredCoverage.add(candidateKey);
+        }
+        continue;
+      }
+      const key=t.tag==='Write'?`W:${t.action}:${t.field}`:`E:${t.action}:${t.ordinal}:${t.field}`;
+      const actual=targets.get(key);
+      if(!actual||covered.has(key)||actual.type&&(actual.type.tag!=='Amount'||actual.type.unit!==d.unit))add('POLICY_TARGET',t.span);
+      covered.add(key);
+      if(actual&&floor&&d.rounding.tag==='Floor'&&(d.rounding.action!==t.action||floor.statement>=actual.statement))add('POLICY_ROUNDING',t.span);
+    }
   }
-  for(const [key,t] of targets)if(t.type?.tag==='Amount'&&!covered.has(key))add('POLICY_TARGET',t.span);
+  for(const [key,t] of targets)if(t.type?.tag==='Amount'&&!covered.has(key)&&!deferredCoverage.has(key))add('POLICY_TARGET',t.span);
   const reserves=ast.declarations.filter(d=>d.tag==='ReserveDecl'),reserved=new Set<string>();
   for(const r of reserves){const a=actionMap.get(r.action);if(!a||!actionMap.has(r.closure)||r.action===r.closure||reserved.has(r.action)||!a.statements.some(s=>s.tag==='Guard'&&s.condition.tag==='Gt'&&s.condition.left.tag==='Remaining'&&s.condition.right.tag==='Literal'&&s.condition.right.literal.tag==='UIntLiteral'&&s.condition.right.literal.token==='1'))add('RESERVE_RULE',r.span);reserved.add(r.action);}
   for(const r of reserves)if(reserved.has(r.closure))add('RESERVE_RULE',r.span);
