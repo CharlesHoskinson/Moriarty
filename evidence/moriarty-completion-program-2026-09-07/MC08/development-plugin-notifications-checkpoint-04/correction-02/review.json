@@ -1,0 +1,77 @@
+{
+  "schema": "moriarty.independent-notification-review/1",
+  "reviewer": "fresh independent GPT-6 Astra native reviewer",
+  "reviewedAt": "2026-09-08T21:57:28.423339+00:00",
+  "candidateHash": "d6d668130030aefe2df87c7242463a10ab9083d744f7f1d3edcd207e88817df4",
+  "verdict": "accept-scoped",
+  "scope": "Public notification lifecycle, current Codex emitted-message observation, public-field privacy, GPT-6 workflow routing, and historical campaign fixture adaptation",
+  "allocationId": "plugin-notifications01-gpt6-review",
+  "allocatedSeconds": 600,
+  "refundSeconds": 0,
+  "sourceModifiedByReviewer": false,
+  "pins": {
+    "before": {
+      "files": 23,
+      "mismatches": []
+    },
+    "after": {
+      "files": 23,
+      "mismatches": []
+    }
+  },
+  "openFindings": [],
+  "resolvedFindings": [
+    {
+      "id": "N1",
+      "originalCandidate": "e2492f55bc92a11957e5c692eb04a00490b57d5cf9387c9442fa114e93eb104f",
+      "finding": "Shorter fences and HTML comments could count as emitted notification",
+      "resolution": "Dedicated closed notification message grammar rejects all other nonempty lines; independently verified through CLI."
+    },
+    {
+      "id": "N2",
+      "originalCandidate": "5a26de526d6fe4ff507c8ad6936aa8ecb9d74a50dd5aae29efcb627243a08415",
+      "finding": "Indented fence closers could still clear a notification inside a code example",
+      "resolution": "Markdown parsing removed. Four-space and tab fence counterexamples now fail closed through public CLI."
+    }
+  ],
+  "independentValidation": {
+    "notificationUnitTests": {
+      "passed": 14,
+      "failed": 0,
+      "command": "python3 -m unittest discover -s plugins/moriarty-dev/tests -p 'test_notifications.py' -v"
+    },
+    "recordUnitTests": {
+      "passed": 60,
+      "failed": 0,
+      "command": "PYTHONPATH=plugins/moriarty-dev/scripts python3 -m unittest discover -s plugins/moriarty-dev/tests -p 'test_records.py'",
+      "note": "Run on correction-01; these test/source files are unchanged in correction-02. Initial invocation without PYTHONPATH failed import, corrected invocation passed."
+    },
+    "independentCLIProbes": {
+      "passed": 14,
+      "failed": 0,
+      "evidence": "independent-probes.json"
+    },
+    "historicalCampaignFixture": {
+      "matches607726eExactly": true,
+      "sha256": "f4cd155c4e719cedde7df0795c7cde79f6e639c95f6f943000addb9896b107e3"
+    }
+  },
+  "assessedBehavior": [
+    "Duplicate submissions preserve chain status, delivery timestamp and pending generation; no rollback.",
+    "Delivery updates delivered_at separately from chain status; later status transitions clear delivered_at and require a fresh message.",
+    "SQLite immediate transactions and status/generation matching reject stale delivery after a concurrent status change; disposable concurrent CLI probe finishes confirmed and pending.",
+    "CLI notify accepts only public ID and status arguments; caller JSON acknowledgements are rejected even when a matching host message exists. No ledger query occurs on this path.",
+    "Host adapter requires current session filename and matching session_meta identity, assistant commentary/final_answer message, bounded-tail timestamp at or after current notification generation, and dedicated exact public notification message.",
+    "Malformed recent records are skipped; missing, ambiguous, stale, or out-of-tail messages leave notification pending.",
+    "Persisted delivery event contains only public identifiers, status/generation, host message identity/timestamp and digest; unrelated transcript canary is absent from disposable database bytes.",
+    "README and skill require a dedicated notification message before a separate status summary; current user-selected implementation and independent review routing is preserved."
+  ],
+  "limitations": [
+    "This is not whole-plugin acceptance. Existing host-hook and doctor defects remain outside scope.",
+    "Positive host observations use disposable local session fixtures. No live host delivery was performed by this reviewer; actual session schema inspection was supplied by the implementing root.",
+    "Local same-user file/environment tampering is outside the declared boundary. Delivery means local host emission, not human receipt or network finality.",
+    "No financial drivers, wallets, network, provider calls or reproduce_driver.py were run. Root-reported broader 151-test result is not claimed as an independent reviewer run.",
+    "Unavailability and bounded-tail truncation can leave real notifications pending; behavior intentionally fails closed."
+  ],
+  "probeScriptSha256": "10ee63a58b3ff2140e059a72c763ef18f21c9bb932cf06f858a89ea8b1928023"
+}

@@ -10,6 +10,7 @@ import time
 
 from moriarty_dev.policy import assess
 from moriarty_dev.runner import load_runner, execute
+from moriarty_dev.notifications import observe_delivery, notification_line
 from moriarty_dev.store import has_other_primary
 from moriarty_dev.records import load_snapshot, read_actions
 from moriarty_dev.store import (
@@ -22,6 +23,9 @@ from moriarty_dev.store import (
     record_event,
     record_admin_interval,
     get_undelivered_txs,
+    enqueue_tx,
+    update_tx_status,
+    VALID_TX_STATUSES,
     mark_delivered,
     bootstrap_store,
     ReservationConflictError,
@@ -118,7 +122,10 @@ def main():
 
     deliver_parser = subparsers.add_parser("deliver", parents=[json_parent])
     deliver_parser.add_argument("--tx-id", required=True, help="Transaction ID to mark delivered")
-    deliver_parser.add_argument("--acknowledgement", required=True, help="Actual delivery acknowledgement JSON")
+    deliver_parser.add_argument("--acknowledgement", help="Unsupported legacy caller receipt; delivery requires host observation")
+    notify_parser = subparsers.add_parser("notify", parents=[json_parent])
+    notify_parser.add_argument("--tx-id", required=True, help="Selected public Preview transaction ID")
+    notify_parser.add_argument("--status", required=True, choices=sorted(VALID_TX_STATUSES), help="Reported observation, not product acceptance")
 
     args = parser.parse_args()
     if not args.command:
@@ -153,6 +160,8 @@ def main():
         cmd_bootstrap(repo, db_path, args.json)
     elif args.command == "deliver":
         cmd_deliver(repo, db_path, args.tx_id, args.acknowledgement, args.json)
+    elif args.command == "notify":
+        cmd_notify(repo, db_path, args.tx_id, args.status, args.json)
 
 
 def cmd_bootstrap(repo: Path, db_path: Path, as_json: bool):
@@ -170,12 +179,33 @@ def cmd_bootstrap(repo: Path, db_path: Path, as_json: bool):
         sys.exit(3)
 
 
-def cmd_deliver(repo: Path, db_path: Path, tx_id: str, acknowledgement_path: str, as_json: bool):
+def cmd_notify(repo: Path, db_path: Path, tx_id: str, status: str, as_json: bool):
     try:
-        # A local JSON file is caller-controlled and is not proof that a public
-        # notification was delivered. No authenticated delivery transport is
-        # registered by this plugin, so pending IDs remain pending.
-        raise StoreError("delivery unavailable: no authenticated delivery transport is registered")
+        if status == "submitted":
+            enqueue_tx(db_path, str(repo), tx_id, status, {"network": "preview"})
+        else:
+            update_tx_status(db_path, tx_id, status)
+        pending = get_undelivered_txs(db_path, str(repo))
+        if as_json:
+            print(json.dumps({"observationRecorded": True, "pendingTransactions": pending,
+                              "scope": "Reported public observation; no network query or acceptance verdict"}))
+        else:
+            for tx in pending:
+                print(notification_line(tx))
+        sys.exit(0)
+    except Exception as exc:
+        sys.stderr.write(f"Notification error: {exc}\n")
+        sys.exit(3)
+
+
+def cmd_deliver(repo: Path, db_path: Path, tx_id: str, acknowledgement_path: str | None, as_json: bool):
+    try:
+        if acknowledgement_path:
+            raise StoreError("Caller JSON is not delivery evidence; post the notification in this conversation")
+        tx = next((tx for tx in get_undelivered_txs(db_path, str(repo)) if tx["txId"] == tx_id), None)
+        if tx is None:
+            raise StoreError("No pending notification for this transaction")
+        mark_delivered(db_path, tx_id, observe_delivery(tx))
         if as_json:
             print(json.dumps({"success": True, "delivered": tx_id}))
         else:

@@ -17,13 +17,7 @@ from moriarty_dev.records import load_snapshot, read_actions
 SOURCE_ROOT = Path(__file__).resolve().parents[3]
 PROGRAM_SRC = SOURCE_ROOT / "openspec" / "moriarty-completion-program.json"
 SPRINTS_SRC = SOURCE_ROOT / "openspec" / "sprints" / "sprints.json"
-CAMPAIGN_SRC = (
-    SOURCE_ROOT
-    / "evidence"
-    / "moriarty-completion-program-2026-09-07"
-    / "report-reconciliation"
-    / "campaign-admission.json"
-)
+CAMPAIGN_SRC = Path(__file__).resolve().parent / "fixtures" / "campaign-admission.json"
 LOAN_DIR = (
     SOURCE_ROOT
     / "evidence"

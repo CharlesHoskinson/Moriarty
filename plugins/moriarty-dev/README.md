@@ -19,8 +19,8 @@ Repository-scoped development plugin that enforces stop rules, prevents orchestr
    - Corrupt or unverified empty operational history remains explicitly unknown (`None`), preventing crashes and preventing false assertion of clean operational zeros.
    - Admin intervals are union-merged, excluding `test`, `testing`, `afk`, and `idle` durations.
 5. **Transaction Outbox**:
-   - Forwards public transaction IDs to conversation output.
-   - Rejects private witness data, private keys, seeds, or spending keys from persistence or outbox.
+   - Lists selected public Preview observations for posting in the conversation. `deliver` verifies an emitted assistant message in the current Codex session; it does not send a message itself.
+   - Accepts only typed public fields. No arbitrary receipt, witness object or free-form status note is persisted. Transaction IDs and addresses must be deliberately selected public identifiers.
 6. **No Synthetic Progress**:
    - Reports all 12 sprints honestly without marking open gates as complete.
 
@@ -54,3 +54,11 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . report --json
 # Diagnostic doctor
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor --json
 ```
+
+## Public transaction reporting
+
+`notify --tx-id <ID> --status submitted` records a selected public Preview submission. Later observations use the same command with `unknown-finality`, `failed` or `confirmed`; a status update requires a known submission. Duplicate submissions preserve the latest chain status. These commands report observations and do not query the ledger, submit transactions or grant product acceptance.
+
+`report --json` returns pending IDs and statuses. Post a dedicated conversation message containing only one or more lines of this form: `Midnight Preview transaction <ID>: <STATUS>.` Then run `deliver --tx-id <ID>`. Delivery reads only the current host session's metadata and bounded 2 MiB tail, selects a dedicated emitted assistant notification message after that status became pending, and persists message identity, timestamp and digest. User/tool/analysis messages, any message containing prose, Markdown, HTML or indentation, stale messages and caller JSON acknowledgements do not count. The accepted message has a closed format, so delivery does not need to interpret Markdown. No transcript text is persisted.
+
+Delivery and chain status are separate: a later confirmation requires another notification. Unavailable host records leave delivery pending. The adapter supports the locally inspected Codex session format; it proves local host emission, not human receipt or network finality. Local same-user tampering remains outside this plugin's security boundary.

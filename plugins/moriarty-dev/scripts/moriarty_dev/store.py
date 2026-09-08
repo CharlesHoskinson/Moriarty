@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 import uuid
@@ -712,7 +713,7 @@ def record_admin_interval(db_path: Path, repo: str, start_time: float, end_time:
 def enqueue_tx(db_path: Path, repo: str, tx_id: str, status: str, details: dict):
     if status != "submitted":
         raise StoreError("Only a selected public submitted transaction may enter the outbox")
-    if not isinstance(tx_id, str) or not tx_id.strip() or not isinstance(details, dict):
+    if not isinstance(tx_id, str) or not re.fullmatch(r"[A-Za-z0-9:_-]{1,256}", tx_id) or not isinstance(details, dict):
         raise StoreError("Transaction id and public details are required")
     forbidden_subs = ("seed", "sk", "secret", "private", "witness", "password", "token", "auth", "spending_key", "signing_key")
     def _check_forbidden(d):
@@ -728,17 +729,32 @@ def enqueue_tx(db_path: Path, repo: str, tx_id: str, status: str, details: dict)
                 _check_forbidden(item)
 
     _check_forbidden(details)
+    # Closed public fields: arbitrary notes/objects can contain witness data
+    # even when their keys do not look private. The CLI supplies only network.
+    if set(details) - {"network", "blockNumber", "contractAddress"}:
+        raise ValueError("Only network, blockNumber and contractAddress are public outbox fields")
+    if "network" in details and details["network"] != "preview":
+        raise ValueError("Only Preview public observations are supported")
+    if "blockNumber" in details and (type(details["blockNumber"]) is not int or details["blockNumber"] < 0):
+        raise ValueError("Public blockNumber must be a nonnegative integer")
+    if "contractAddress" in details and (not isinstance(details["contractAddress"], str)
+            or not re.fullmatch(r"[A-Za-z0-9:_-]{1,256}", details["contractAddress"])):
+        raise ValueError("Invalid public contractAddress")
 
     conn = init_db(db_path)
     try:
-        with conn:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            existing = conn.execute("SELECT repository FROM outbox WHERE tx_id = ?", (tx_id,)).fetchone()
+            if existing:
+                if get_db_path(existing[0]).resolve() != get_db_path(repo).resolve():
+                    raise StoreError("Transaction belongs to another repository")
+                conn.commit()
+                return
             conn.execute(
                 """
                 INSERT INTO outbox (repository, tx_id, status, enqueued_at, details_json)
                 VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(tx_id) DO UPDATE SET
-                    status = excluded.status,
-                    details_json = excluded.details_json
                 """,
                 (repo, tx_id, status, _now_iso(), json.dumps(details)),
             )
@@ -755,11 +771,15 @@ def enqueue_tx(db_path: Path, repo: str, tx_id: str, status: str, details: dict)
                     json.dumps({"txId": tx_id, "status": status, "details": details}),
                 ),
             )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
     finally:
         conn.close()
 
 
-VALID_TX_STATUSES = {"submitted", "unknown-finality", "failed", "confirmed", "delivered"}
+VALID_TX_STATUSES = {"submitted", "unknown-finality", "failed", "confirmed"}
 TX_TRANSITIONS = {
     "submitted": {"unknown-finality", "failed", "confirmed"},
     "unknown-finality": {"failed", "confirmed"},
@@ -772,25 +792,29 @@ TX_TRANSITIONS = {
 def update_tx_status(db_path: Path, tx_id: str, new_status: str, note: str | None = None):
     if new_status not in VALID_TX_STATUSES:
         raise StoreError(f"Invalid transaction status: {new_status}")
+    if note is not None:
+        raise StoreError("Free-form notes are not public transaction fields")
     conn = init_db(db_path)
     try:
-        with conn:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
             cur = conn.execute("SELECT repository, status, details_json FROM outbox WHERE tx_id = ?", (tx_id,))
             row = cur.fetchone()
             if not row:
                 raise StoreError(f"Transaction not found in outbox: {tx_id}")
             repo, old_status, details_str = row
+            if new_status == old_status:
+                conn.commit()
+                return
             if new_status not in TX_TRANSITIONS.get(old_status, set()):
                 raise StoreError(f"Invalid transaction transition: {old_status} -> {new_status}")
             try:
                 details = json.loads(details_str)
             except Exception:
                 details = {}
-            if note:
-                details["statusNote"] = note
             conn.execute(
-                "UPDATE outbox SET status = ?, details_json = ? WHERE tx_id = ?",
-                (new_status, json.dumps(details), tx_id),
+                "UPDATE outbox SET status = ?, details_json = ?, delivered_at = NULL, enqueued_at = ? WHERE tx_id = ?",
+                (new_status, json.dumps(details), _now_iso(), tx_id),
             )
             conn.execute(
                 """
@@ -801,6 +825,10 @@ def update_tx_status(db_path: Path, tx_id: str, new_status: str, note: str | Non
                 """,
                 (repo, _now_iso(), json.dumps({"txId": tx_id, "newStatus": new_status, "note": note})),
             )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
     finally:
         conn.close()
 
@@ -810,18 +838,14 @@ def get_undelivered_txs(db_path: Path, repo: str | None = None) -> list[dict]:
         return []
     conn = sqlite3.connect(str(db_path))
     try:
-        if repo:
-            cur = conn.execute(
-                "SELECT tx_id, status, details_json, enqueued_at FROM outbox WHERE repository = ? AND delivered_at IS NULL ORDER BY id ASC",
-                (repo,),
-            )
-        else:
-            cur = conn.execute(
-                "SELECT tx_id, status, details_json, enqueued_at FROM outbox WHERE delivered_at IS NULL ORDER BY id ASC"
-            )
+        cur = conn.execute(
+            "SELECT tx_id, status, details_json, enqueued_at, repository FROM outbox WHERE delivered_at IS NULL ORDER BY id ASC"
+        )
         rows = cur.fetchall()
         result = []
-        for tx_id, status, details_str, enq in rows:
+        for tx_id, status, details_str, enq, owner in rows:
+            if repo and get_db_path(owner).resolve() != get_db_path(repo).resolve():
+                continue
             try:
                 details = json.loads(details_str)
             except Exception:
@@ -843,18 +867,23 @@ def mark_delivered(db_path: Path, tx_id: str, acknowledgement: dict | None = Non
     delivery_id = acknowledgement.get("deliveryId")
     if not isinstance(delivery_id, str) or not delivery_id:
         raise StoreError("Delivery acknowledgement id is required")
+    if acknowledgement.get("source") != "codex-session-message" or not acknowledgement.get("contentSha256"):
+        raise StoreError("Host-observed message acknowledgement required")
     conn = init_db(db_path)
     now = _now_iso()
     try:
-        with conn:
-            row = conn.execute("SELECT repository, status FROM outbox WHERE tx_id = ?", (tx_id,)).fetchone()
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            row = conn.execute("SELECT repository, status, enqueued_at, delivered_at FROM outbox WHERE tx_id = ?", (tx_id,)).fetchone()
             if not row:
                 raise StoreError("Transaction not found in outbox")
-            repo, status = row
-            if status not in ("submitted", "unknown-finality", "failed", "confirmed"):
+            repo, status, enqueued_at, delivered_at = row
+            if delivered_at is not None:
                 raise StoreError("Transaction is already delivered")
+            if acknowledgement.get("status") != status or acknowledgement.get("enqueuedAt") != enqueued_at:
+                raise StoreError("Delivery observation is stale for current transaction status")
             conn.execute(
-                "UPDATE outbox SET delivered_at = ?, status = 'delivered' WHERE tx_id = ?",
+                "UPDATE outbox SET delivered_at = ? WHERE tx_id = ?",
                 (now, tx_id),
             )
             conn.execute(
@@ -864,7 +893,11 @@ def mark_delivered(db_path: Path, tx_id: str, acknowledgement: dict | None = Non
                     action_id, event_kind, observed_at, payload_json
                 ) VALUES (?, '', '', '', 'tx', 'tx_delivered', ?, ?)
                 """,
-                (repo, now, json.dumps({"txId": tx_id, "deliveredAt": now, "deliveryId": delivery_id})),
+                (repo, now, json.dumps({**acknowledgement, "deliveredAt": now})),
             )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
     finally:
         conn.close()

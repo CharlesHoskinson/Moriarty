@@ -1,6 +1,6 @@
 # Moriarty Development Plugin Implementation Plan
 
-> **For agentic workers:** Use `superpowers:executing-plans` for this plan. Preserve Grok 4.6 high implementation and fresh independent GPT-6 Astra result review. Steps use checkboxes. Do not add recursive planning or review rounds.
+> **For agentic workers:** Use `superpowers:executing-plans` for this plan. Use GPT-6 implementation with a separate, fresh GPT-6 Astra reviewer at concrete code checkpoints. Steps use checkboxes. Do not add recursive planning or review rounds.
 
 **Goal:** Block repeated ineffective Moriarty work and direct execution to a demonstrable, authorized product capability.
 
@@ -8,14 +8,26 @@
 
 **Tech stack:** Python 3.11+, standard library, SQLite, unittest, Git, existing Foreman/Grok execution and Codex plugin packaging.
 
-**Status:** Proposed implementation plan. No plugin code, installation, host trust or actionful campaign is established by this document.
+**Status:** The guarded runner passed independent GPT-6 review at candidate `9341fbcf9873bf2ea80329b47252aab512bcb1c4a8e2d46b613ffcac90c21ad3` and source commit `607726e`. Commit `fe82396` then demonstrated actual public CLI execution of the retained SP01 design verifier, independently reviewed as a static trace/reference/arithmetic check. It did not execute an evaluator, proof or network transaction and does not satisfy the repair pilot.
+
+**Completion checklist:**
+- [x] Implement and independently check shared reservations, current runner admission, unique debit consumption and bounded observed child completion.
+- [x] Bind and execute a real SP01 static design check through the public CLI; preserve historical acceptance bytes and scoped GPT-6 review.
+- [x] Finish independent review of transaction lifecycle/delivery and the GPT-6 workflow instructions. GPT-6 accepted candidate `d6d66813…`; 151 root tests and 14 independent CLI probes passed. The focused correction uses a dedicated emitted host message with a closed notification format; it does not interpret Markdown or accept caller acknowledgement JSON.
+- [ ] Correct the remaining hook adapter and `doctor` behavior: report observed coverage honestly, handle supported host input, keep bounded output valid JSON, and surface pending public notifications. A file's existence cannot prove interception.
+- [ ] Install reviewed source through the existing personal marketplace and test actual host coverage. Record unsupported paths and retain the guarded CLI; do not repair host internals or add a service.
+- [ ] Run one separately admitted real Moriarty repair pilot: deny the repeated broad attempt, reproduce the defect, apply the focused correction and obtain separate GPT-6 review. The retained SP05 R6 safety stop remains in force; this plugin does not authorize its replay.
+- [ ] Publish final coverage and pilot evidence, then return to SP01–SP12 implementation. Full BNF, executable K and financial Preview acceptance remain open.
+
+Use the existing campaign records, budget, SQLite store and Foreman launcher. Add no scheduler, service, provider client or further orchestration layer.
+
 
 **Design:** [Moriarty development plugin](../specs/2026-09-08-moriarty-development-plugin-design.md).
 
 ## Global constraints
 
 - Preserve every SP01–SP12 requirement, mandatory PCD, bounded execution and Preview financial acceptance.
-- Use Grok 4.6 high for implementation and a fresh independent GPT-6 Astra for result review.
+- Use GPT-6 for implementation and a separate, fresh GPT-6 Astra reviewer at concrete code checkpoints. The latest user instruction supersedes the Grok-first gate.
 - Use existing task entry gates, not whole-sprint completion, to determine eligibility.
 - Keep program/campaign acceptance and resource records authoritative. The plugin cannot grant admission.
 - Use one primary implementation and at most one independent review, subject to stricter existing limits.
@@ -27,7 +39,7 @@
 - Do not collect private reasoning, credentials, seeds, wallet state or witness data.
 - Finish four milestones. Prove usefulness on a Moriarty defect before adding plugin features.
 
-The user requested planning. Review the proposed design before execution.
+The [user execution instruction](../../../raw/assignments/moriarty-development-plugin-execution-2026-09-08.md) records approval of this plan.
 Execution must use an existing applicable budget or a recorded bounded allocation under the standing authority.
 This plan neither creates that allocation nor requires a new planning campaign to obtain it.
 
@@ -281,7 +293,7 @@ The denied call uses this output contract:
 - [ ] Package hooks at the conventional path and omit the manifest `hooks` field for compatibility with the inspected local validator.
   Use these manifest fields with version `0.1.0`: `name=moriarty-dev`, real description, `author.name=Moriarty contributors`, `skills=./skills/` and required interface metadata.
   Do not add apps or MCP fields.
-- [ ] Write the skill workflow: current user intent → status → next eligible action → Grok implementation → actual checks → fresh GPT-6 review → scoped report.
+- [ ] Write the skill workflow: current user intent → status → next eligible action → GPT-6 implementation → actual checks → separate fresh GPT-6 review → scoped report.
   Tell the agent to post pending transaction IDs before a network status summary.
   Design/planning requests follow Superpowers without becoming automatic implementation permission.
 - [ ] Run the package validator:
@@ -319,7 +331,7 @@ Extend plugin tests with historical regressions. Keep product repairs in their s
   The current unconditional `admitted-not-executed` response must fail this test.
   Supply no wallets, credentials or network endpoints to this test.
 - [ ] Demonstrate that another broad correction is denied after the historical failure threshold, while this reproducer and a focused repair remain eligible.
-  Give Grok the failing test and the exact approved implementation scope.
+  Use the latest user-selected implementer for the failing test and exact approved scope.
   Run the corrected production-path test and obtain fresh GPT-6 result review on the same candidate bytes.
   This is the first product-progress acceptance condition for the plugin pilot.
 - [ ] Preserve the decoder's unconditional real-byte failure as a separate open requirement until a valid production implementation and sufficient fixture exist.
