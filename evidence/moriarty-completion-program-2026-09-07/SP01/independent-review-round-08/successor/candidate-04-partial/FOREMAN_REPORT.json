@@ -1,0 +1,81 @@
+{
+  "schema": "moriarty.foreman-report/1",
+  "status": "proposed",
+  "gate": "SP01.3 semantic-replay-completion",
+  "author": "Grok 4.6 high",
+  "worktree": "/home/charl/Moriarty/.worktrees/sp01-successor-contract-grok",
+  "acceptanceGranted": [],
+  "gatesNotGranted": [
+    "semantic freeze",
+    "RP01 acceptance",
+    "SP01 acceptance",
+    "runtime acceptance",
+    "native cryptographic/proof acceptance",
+    "chain acceptance",
+    "full BNF completion",
+    "full K completion",
+    "GPT-6 result review"
+  ],
+  "executionStatus": "specified-only",
+  "preserved": {
+    "interruptedSemanticReplay": "interrupted-semantic-replay/",
+    "interruptedSemanticReplayManifest": "interrupted-semantic-replay-manifest.json",
+    "rootDiagnosticGeneratedBytes": 290553,
+    "rootDiagnosticFailChecks": 69,
+    "priorMeaningfulRedFailures": 144,
+    "frozenCandidates": ["candidate-01", "candidate-02", "candidate-03"],
+    "note": "Root rebound only EXAMPLES_PATH against the partial generator. That 69-fail run is not author completion. Old failure receipts are unchanged."
+  },
+  "commands": [
+    {
+      "argv": ["python3", "experiments/moriarty-language/spec/successor/generate-signing-examples.py", "--output", "/tmp/sp01-sem-replay-a.json"],
+      "exit": 0,
+      "bytes": 312975,
+      "sha256": "18ccb7814863b07bc11ce11ce22969a415ab10eb2a12e70fd22ef9b04f5429af"
+    },
+    {
+      "argv": ["python3", "experiments/moriarty-language/spec/successor/generate-signing-examples.py", "--output", "/tmp/sp01-sem-replay-b.json"],
+      "exit": 0,
+      "bytes": 312975,
+      "sha256": "18ccb7814863b07bc11ce11ce22969a415ab10eb2a12e70fd22ef9b04f5429af",
+      "identicalToA": true
+    },
+    {
+      "argv": ["python3", "experiments/moriarty-language/spec/successor/signing-contract.test.py"],
+      "exit": 0,
+      "pass": 965,
+      "fail": 0,
+      "result": "GREEN"
+    }
+  ],
+  "artifact": {
+    "valid": 4,
+    "invalid": 29,
+    "preservedOriginalInvalidIds": 27,
+    "addedF4Discriminators": ["inv-input-asset-fee-only", "inv-unfunded-cancellation"],
+    "catalogEntries": 84,
+    "priceMantissaUnit": "AssetB per AssetA at scale 4",
+    "genesisPostOrdinary": 7,
+    "swapSignedOrdinary": 7,
+    "swapPostOrdinary": 6,
+    "testsImportGenerator": false
+  },
+  "corrections": {
+    "F2": "Price mantissa unit resolved from ancestor Price at display emit time",
+    "F4": "Signed net -30 input-asset fee ledger, funded shortfall duty, unfunded cancellation reject",
+    "F5": "Inherited work from actual predecessor minus declared costCertificate. r7 reconciled 7->6. +1 refresh rejects",
+    "F6": "Rebuilt wrappers, admitted fee prestate cap 30, cancel winner consumes stale id, clone parent 7"
+  },
+  "contractWordsUnchangedFromInterruptedReplay": true,
+  "schemaUnchangedFromInterruptedReplay": true,
+  "ownedBytesLimit": 786432,
+  "ownedBytesUsed": 704866,
+  "contentFileSha256": {
+    "experiments/moriarty-language/spec/successor/semantic-contract.md": "922b0a83f47e9765a8490b89fab60b0fa36a9a54ddc59033b6602d435dd1d78d",
+    "experiments/moriarty-language/spec/successor/signing-display-schema.json": "c21dee059310f2e39f53aee095da4ce6235b005e01cf23226ba244d6e05a8080",
+    "experiments/moriarty-language/spec/successor/semantic-decisions.json": "9a5d7974e7fa828b1ffbff77fc02586ea7951d68b6b408ca2880c265216481c0",
+    "experiments/moriarty-language/spec/successor/signing-examples.json": "18ccb7814863b07bc11ce11ce22969a415ab10eb2a12e70fd22ef9b04f5429af",
+    "experiments/moriarty-language/spec/successor/generate-signing-examples.py": "66f91429f5a29ffb645e71ad590054b8c743b68bf57eded4616e02faef7b96bf",
+    "experiments/moriarty-language/spec/successor/signing-contract.test.py": "5486a7f44b457519e940f60f1d3568b263c65b4723ab017ccf814e3fe8389cd9"
+  }
+}
