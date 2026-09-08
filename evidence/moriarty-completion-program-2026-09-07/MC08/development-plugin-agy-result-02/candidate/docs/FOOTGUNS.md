@@ -85,6 +85,16 @@ These are behavioral controls. They do not automatically enforce themselves.
 At each trigger, the lead agent must apply the required action without requesting routine permission again.
 Keep required tests, independent audits, bounded resources, mandatory PCD and financial acceptance intact.
 
+## Development plugin integration
+
+The repository development plugin (`plugins/moriarty-dev`) implements automated enforcement of these stop rules:
+```bash
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
+```
+If host hook integration is unverified or degraded, use direct CLI execution as the verified fallback procedure.
+
 ## Existing product and evidence rules
 
 1. **Recover the purpose before the work queue.** Read the latest user directive
@@ -210,23 +220,3 @@ effect on target coverage, not adding another layer of approval machinery.
 ## Three-report planning guard
 
 The [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) applies to successor profiles and campaigns. Keep Moriarty Midnight-centric: other-chain examples supply financial requirements, not new backend deliverables. Review nominal liabilities, pending workflows and private successor artifacts before committing an expanded proof relation. A fixed linear proof, an atlas row count or an optional-proof report roadmap cannot close mandatory general-history or financial-coverage obligations.
-
-## Headless implementation and review permissions
-
-Process exit zero does not establish a completed model run. Require AGY JSON
-`status: SUCCESS` or Grok `stopReason: end_turn`, then inspect the substantive
-result and verify the candidate. A cancellation, timeout or progress narration
-cannot approve source.
-
-For the authorized plugin work, AGY `accept-edits` did not approve shell test
-commands. The successful invocation also used its per-process
-`--dangerously-skip-permissions` option. Grok `plan` mode still cancelled a local
-fixture command with `--allow Bash` and again with `--always-approve`.
-A harmless write/read check succeeded with `--no-plan --always-approve`.
-See the [retained invocation and review evidence](../evidence/moriarty-completion-program-2026-09-07/MC08/development-plugin-agy-result-02/README.md).
-
-Before repeating a failed launch, inspect its terminal permission metadata and
-verify the intended invocation with one harmless command under the same flags.
-Preserve the failed receipt and charge. Do not change global settings, treat a
-resource vote as source approval, or use this procedure to override a safety
-denial. Resume the same review only when its candidate remains unchanged.

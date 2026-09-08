@@ -1,0 +1,13 @@
+# AGY source correction: M2 and M4 still block code
+
+Candidate `a0f26914149558a945ae46ec119c42c0ae91f2cce40ab54e823badccec537d1a` was authored by AGY Gemini 3.8 Flash high. Root verified 114 supplied tests, Python syntax, package/skill validators and tracked whitespace. The [terminal Grok review](grok-result-review.json) returned CODE BLOCKED. GPT-6 code review was not dispatched. Every final plugin milestone remains unaccepted.
+
+Grok verified progress: the genuine funded loan-review admission still works; a substitute static receipt, wrong resource authority and borrowed plugin pass are rejected; missing history does not create a DB on status; self-reviews are rejected; status preserves pending transaction IDs. The reviewer marked M1 and M3 source readiness PASS, while retaining narrower M3 reporting/host limitations. This does not accept their final milestones.
+
+M2 and M4 still block code: corrupt/schema-only history, nonexact review candidate/scope checks, direct argv launch without the existing bounded runner and delegated charge, a clean child exit treated as a verified reproducer, incomplete notification handling, catch-all fake driver outcomes and hardcoded reporting predicates. Read the complete review for exact findings and tested scope.
+
+The first review and its continuation cancelled at a headless tool-permission prompt under plan mode. A harmless write/read canary returned end_turn and the expected marker with `--no-plan --always-approve`. The next review continuation performed local checks but reached its time limit; a final no-tools report from the same session retained its observed findings and limitations. Each attempt and full charge remains recorded. None of the cancellations or timeout was a pass. The invocation evidence supports this authorized local review, not a waiver of source ownership or tool safety restrictions.
+
+The next AGY pass is restricted to the reproduced public CLI/history failures. Root observed wrong-candidate review ingestion returning success, corrupt history raising DatabaseError and a schema-only DB returning clean zeros. Existing M1 reader regions are protected. All other source findings remain open for subsequent work.
+
+A separate bounded resource decision received substantive Grok and GPT-6 approvals; Fable returned an error without a vote or observed model identity. Resource votes do not review or approve source. Installation, trust, actual-host interception and an admitted product repair pilot remain required after code review. No financial R6 probes were resumed. Full SP01–SP12, BNF/K, PCD and financial Preview obligations remain open. No blockchain transactions were submitted.

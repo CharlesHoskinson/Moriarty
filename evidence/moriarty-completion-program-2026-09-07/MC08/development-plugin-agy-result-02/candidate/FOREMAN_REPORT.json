@@ -1,0 +1,128 @@
+{
+  "milestones": [1, 2, 3, 4],
+  "status": "implemented-awaiting-independent-audit",
+  "author": "AGY Gemini 3.8 Flash high",
+  "reviewRouting": {
+    "firstReview": "Grok 4.6 high",
+    "secondReview": "fresh GPT-6 Astra"
+  },
+  "scope": "Full source implementation of Moriarty development plugin milestones M1-M4: policy stop rules, evidence admission traversal, SQLite shared store, guarded CLI, Codex plugin packaging, host wire-format hooks, actions catalog, historical regressions, and reproducer demonstration.",
+  "findingsAddressed": [
+    {
+      "id": "M1-E2-STATIC-UNBOUND",
+      "resolution": "Bound staticVerification to exact authentic path 'evidence/moriarty-completion-program-2026-09-07/SP01/loan-swap-subset-01/verify3-receipt.json' and digest 'eeef0e21216de0348ac96250508f38c2fc89d657c63176a822a7f6c8e0f3c8f2'. Required kind=='verify3', exitCode==0, and exact design scope."
+    },
+    {
+      "id": "M1-RESOURCE-IDENTITY-UNREAD",
+      "resolution": "Enforced authority_sha256 matching f6b7f17d1bda437d5f83abc656ccf4a0d9c7a57a83995668387c29bd0328f492. Validated passBinding scope/worktree/parentCandidate and rejected plugin pass on loan campaigns. Removed manufactured seconds from admission tests."
+    },
+    {
+      "id": "M2-HISTORY-ZERO-ON-MISSING",
+      "resolution": "Removed unconditional init_db from cli.py main. Store returns None when database is missing/empty, correctly reporting operational-history missing evidence. Added explicit bootstrap CLI verb."
+    },
+    {
+      "id": "M2-LAUNCH-NOT-REVALIDATED-NOT-CHARGED",
+      "resolution": "Revalidated exact admitted bytes immediately after reservation before child launch in cmd_run. Executed child via bounded runner with 120s timeout and 2048-byte limits. Restricted reproducer_verified event to actual runner-observed behavioral defect assertions."
+    },
+    {
+      "id": "M2-REVIEW-AND-FINDING-IDENTITY",
+      "resolution": "Forbade author self-review (author in reviewer), required non-empty candidateHash and scope in record_review. Tracked unresolved finding IDs across lineages; count-only resolved events cannot clear unresolved findings. Accounted admin intervals in CLI."
+    },
+    {
+      "id": "M2-OUTBOX-DELIVERED-ON-STATUS",
+      "resolution": "Kept outbox transactions undelivered during status inspection. Implemented update_tx_status state machine transitions (submitted -> unknown-finality -> failed / confirmed / delivered). Outbox items only marked delivered upon explicit delivery acknowledgment via deliver CLI verb."
+    },
+    {
+      "id": "M3-DOCTOR-AND-HOST-UNVERIFIED",
+      "resolution": "Removed subprocess calls from records.py, store.py, and hook.py in favor of pure-Python git traversal. In cmd_doctor, dynamically inspected ~/.codex/hooks.json and ~/.codex/plugins/moriarty-dev, reporting wrapper-only, degraded, or host-verified. Updated host-smoke.md."
+    },
+    {
+      "id": "M3-SKILL-ROUTING",
+      "resolution": "Updated SKILL.md to document the product default workflow (Grok 4.6 high implementation -> actual checks -> fresh GPT-6 Astra review) and temporary AGY plugin author exception. Documented all 6 CLI verbs and direct CLI execution as verified fallback."
+    },
+    {
+      "id": "M4-HARDCODED-REPRODUCER",
+      "resolution": "Replaced in-process hardcoded status with actual invocation of run-local.mjs via node under controlled inert transport (no wallets, no private keys, no network). Confirmed observed defect reproduction exiting 1 on unexecuted stub."
+    },
+    {
+      "id": "M4-PRINT-ONLY-AND-BORROWED-CATALOG",
+      "resolution": "Pointed SP05 actions in actions.json to campaign:sp05-ledger-driver-01 (honestly reporting unavailable/missing admission until admitted). Replaced dummy print commands in commands.json with real runner commands."
+    },
+    {
+      "id": "M4-REPORT-NOT-FROM-RECORDS",
+      "resolution": "Derived all 12 sprint rows from sprints.json and moriarty-completion-program.json in cli.py, dynamically presenting distinct open predicates per sprint (BNF for SP02, K for SP03, Preview for SP05)."
+    },
+    {
+      "id": "M4-NO-PILOT-OR-HOST-INSTALL",
+      "resolution": "Maintained honest boundaries: no claims of host installation when running in worktree; doctor truthfully reports wrapper-only; all 12 product sprints remain open with unestablished predicates."
+    }
+  ],
+  "milestoneDeliverables": {
+    "M1": {
+      "components": ["policy.py", "records.py", "test_policy.py", "test_records.py"],
+      "description": "Pure deterministic stop-rule evaluation, exact evidence traversal, authentic verify3 static verification binding, and scope-linked resource authority."
+    },
+    "M2": {
+      "components": ["store.py", "cli.py", "test_execution.py"],
+      "description": "Shared SQLite operational store under git-common-dir, missing-store unresolved reporting, post-reservation revalidation, non-author review validation, and outbox state machine."
+    },
+    "M3": {
+      "components": [".codex-plugin/plugin.json", "skills/develop/SKILL.md", "hooks/hooks.json", "hook.py", "test_hooks.py", "host-smoke.md", "README.md"],
+      "description": "Codex plugin packaging (passing validate_plugin.py and quick_validate.py), Grok-then-GPT6 product skill workflow, pure-Python git traversal hooks, and dynamic host trust inspection in doctor."
+    },
+    "M4": {
+      "components": [".moriarty-dev/actions.json", ".moriarty-dev/commands.json", "reproduce_driver.py", "test_regressions.py", "AGENTS.md", "docs/FOOTGUNS.md"],
+      "description": "Actions catalog with unborrowed SP05 campaign, controlled-transport node reproducer for driver defect, historical regressions, and dynamic 12-sprint status derivation."
+    }
+  },
+  "verification": {
+    "unitAndRegressionTests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=plugins/moriarty-dev/scripts python3 -m unittest discover -s plugins/moriarty-dev/tests -v",
+      "exitCode": 0,
+      "ran": 114,
+      "failures": 0,
+      "errors": 0,
+      "result": "OK"
+    },
+    "pluginValidation": {
+      "command": "python3 /home/charl/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/moriarty-dev",
+      "exitCode": 0,
+      "result": "Plugin validation passed"
+    },
+    "skillValidation": {
+      "command": "python3 /home/charl/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/moriarty-dev/skills/develop",
+      "exitCode": 0,
+      "result": "Skill is valid!"
+    }
+  },
+  "ownedFiles": [
+    "plugins/moriarty-dev/.codex-plugin/plugin.json",
+    "plugins/moriarty-dev/hooks/hooks.json",
+    "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/policy.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/hook.py",
+    "plugins/moriarty-dev/skills/develop/SKILL.md",
+    "plugins/moriarty-dev/README.md",
+    "plugins/moriarty-dev/tests/test_policy.py",
+    "plugins/moriarty-dev/tests/test_records.py",
+    "plugins/moriarty-dev/tests/test_execution.py",
+    "plugins/moriarty-dev/tests/test_hooks.py",
+    "plugins/moriarty-dev/tests/test_regressions.py",
+    "plugins/moriarty-dev/tests/reproduce_driver.py",
+    "plugins/moriarty-dev/tests/host-smoke.md",
+    ".moriarty-dev/actions.json",
+    ".moriarty-dev/commands.json",
+    "AGENTS.md",
+    "docs/FOOTGUNS.md",
+    "FOREMAN_REPORT.json",
+    "FOREMAN_REPORT.md"
+  ],
+  "notClaimed": [
+    "No claim of full financial ledger settlement or recursive proof acceptance (SP01-SP12 gates remain open)",
+    "No claim of universal host enforcement: doctor honestly reports wrapper-only unless host hook interception is verified",
+    "No autonomous self-review or self-approval; candidate bytes submitted for independent Grok 4.6 high and GPT-6 Astra audit"
+  ]
+}

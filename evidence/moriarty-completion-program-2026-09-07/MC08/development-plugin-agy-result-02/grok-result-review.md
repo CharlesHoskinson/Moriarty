@@ -1,0 +1,120 @@
+Candidate `a0f26914149558a945ae46ec119c42c0ae91f2cce40ab54e823badccec537d1a` is unchanged after the probes already run. Independent CODE verdict is **BLOCKED**. Fresh GPT-6 must not review these bytes.
+
+The reader is not deny-all: a genuine funded `sp01-loan-review` fixture was `candidateCurrent=true`, `entryEligible=true`, `authorityCurrent=true`, `resourceAdmitted=true`, `allow=true`, `missingEvidence=[]`. Production catalog on that family admits loan report/review and honestly returns `AUTHORITY_UNAVAILABLE` for SP05 (`campaign:sp05-ledger-driver-01` unresolved). Substitute verify3-shaped JSON, a plugin pass on the loan campaign, and a wrong `authority_sha256` all fail closed. Status no longer drops an undelivered public tx. Self-review and `scope=none` are rejected; count-only and renamed `defect_resolved` leave two unresolved finding IDs. Those prior M1 static/resource and M4 print/borrowed-campaign counterexamples are not the remaining gate.
+
+CODE still fails on production paths: `cli.py` launches `subprocess.run(argv)` with no existing bounded runner and no single delegated charge; a clean-exit reproduce that only wrote `one launch` was recorded as `Reproducer verified defect` / `reproducerVerified=true`. CLI review ingested `candidateHash=ffffffffffffffff` with `scope=plugin-source` as success. Missing history is named `operational-history` but still displays zeros / `blockedAction: none`; a corrupt SQLite file raised `sqlite3.DatabaseError` instead of unresolved history. `reproduce_driver.py` still maps any node catch to `admitted-not-executed`; that financial driver was not executed here. Host install, trust, interception, and product pilot remain unperformed and are not used as a circular source gate.
+
+```json
+{
+  "schema": "moriarty-dev.independent-result-review/1",
+  "candidateHash": "a0f26914149558a945ae46ec119c42c0ae91f2cce40ab54e823badccec537d1a",
+  "parentCandidate": "d17621346d61f6673623ae39ff418d3714354f37f1f9ead43126d3c80d520237",
+  "verdict": "BLOCKED",
+  "codeVerdict": "BLOCKED",
+  "overallPlugin": "BLOCKED",
+  "milestoneVerdicts": {
+    "M1": "BLOCKED",
+    "M2": "BLOCKED",
+    "M3": "BLOCKED",
+    "M4": "BLOCKED"
+  },
+  "sourceReadiness": {
+    "M1": "PASS",
+    "M2": "BLOCKED",
+    "M3": "PASS",
+    "M4": "BLOCKED"
+  },
+  "reviewerRequested": "grok-4.6 high",
+  "reviewerObserved": "grok-4.6-build; first independent CODE check of these bytes. Fresh GPT-6 Astra must not review this candidate until a later Grok CODE PASS on the same hash.",
+  "author": "AGY Gemini 3.8 Flash high",
+  "authorClaim": "FOREMAN_REPORT claims all 12 prior Grok findings addressed, 114 tests, validators green, candidate ready for Grok then GPT-6. Root verification is plugin local source/tests/packaging only. Those counts do not establish missing launch, review-identity, history-corrupt, or driver-reproducer behavior.",
+  "integrity": {
+    "freezeMatchBeforeAndAfterChecks": true,
+    "worktreeMatchesFrozenFiles": true,
+    "candidateHash": "a0f26914149558a945ae46ec119c42c0ae91f2cce40ab54e823badccec537d1a",
+    "fileMismatchesBeforeAndAfter": 0
+  },
+  "scopedSubpredicatePasses": [
+    "Genuine funded loan-review fixture: candidateCurrent=true, entryEligible=true, authorityCurrent=true, resourceAdmitted=true, allow=true, missingEvidence=[]. Deny-all is not the reader.",
+    "Production catalog on that family: sp01-loan-report and sp01-loan-review ALLOWED; sp05-ledger-reproduce/repair/implement AUTHORITY_UNAVAILABLE with admissionRef-unresolved:campaign:sp05-ledger-driver-01. SP05 no longer borrows campaign:sp01-loan-swap-grok-01.",
+    "Substitute success-shaped staticVerification JSON (kind=verify3, exitCode=0, exact design scope, unauthorizedGitActivity=false, storageStop=false, different path) => candidateCurrent=false, allow=false, publication-control-acceptance. Authentic verify3 digest eeef0e21216de0348ac96250508f38c2fc89d657c63176a822a7f6c8e0f3c8f2 is required.",
+    "Plugin-focused passBinding on the loan campaign => resource-scope-mismatch, resourceAdmitted=false. Wrong authority_sha256 => resource-authority-mismatch, resourceAdmitted=false.",
+    "Missing SQLite: get_history=None; load_snapshot names operational-history; status --json does not create the DB. Self-review APPROVED rejected (exit 3). scope=none rejected. defect_resolved resolvedCount=2 and renamed findingId did not clear two unresolved IDs.",
+    "One submitted public tx remained pending before and after status --json (tx-public-1). Denied loan-implement created no child marker (exit 2). Generic-fail reproduce did not set reproducerVerified (exit 4). Stop hook has no auto-continuation. Doctor with empty CODEX_HOME reports wrapper-only. Report emits 12 open sprints with 12 distinct predicates.",
+    "Skill documents product Grok 4.6 implementation then fresh GPT-6 review, with AGY as the user-selected plugin-author exception. Hooks no longer spawn git. Policy still denies a third implement after two same-defect failures in source."
+  ],
+  "findings": [
+    {
+      "id": "M2-HISTORY-ZERO-ON-MISSING",
+      "severity": "P1",
+      "milestone": "M2",
+      "location": "store.py:get_history; records.py:_apply_history; cli.py:cmd_status",
+      "observation": "Missing file is now None/operational-history and status did not create a DB. Snapshot and status still present sameDefectFailures=0 and blockedAction=none beside that gap. A non-SQLite state file caused get_history to raise sqlite3.DatabaseError: file is not a database rather than unresolved history. init_db on review/run/deliver/bootstrap still materializes an events table whose empty read is verified zeros. adminSeconds with no intervals is 0, not unknown.",
+      "requiredChange": "Treat missing and corrupt operational state as unresolved history, never verified zeros or an uncaught DatabaseError. Unknown admin timing must stay unknown. Do not initialize a blank store as proof of no failures."
+    },
+    {
+      "id": "M2-LAUNCH-NOT-REVALIDATED-NOT-CHARGED",
+      "severity": "P1",
+      "milestone": "M2",
+      "location": "cli.py:cmd_run",
+      "observation": "cmd_run still subprocess.run(argv, timeout=120) after reserve/re-assess. No existing bounded runner path and no single delegated charge. Independent check: reproduce argv that only wrote 'one launch' and exited 0 printed 'Reproducer verified defect for sp01-loan-reproduce' and set reproducerVerified=true. Generic-fail stderr no longer sets the flag (exit 4), but the child still ran (marker created).",
+      "requiredChange": "Revalidate exact admitted bytes immediately before invoking the existing bounded runner once. Charge only through that runner. Record reproducerVerified only from a runner-observed behavioral assertion on the affected candidate, not from a clean child exit."
+    },
+    {
+      "id": "M2-REVIEW-AND-FINDING-IDENTITY",
+      "severity": "P1",
+      "milestone": "M2",
+      "location": "store.py:record_review; cli.py:cmd_review",
+      "observation": "Author-self APPROVED is rejected. scope=none is rejected. Count-only and renamed IDs no longer clear two stored findingIds. Independent check: reviewer=gpt-6-astra, candidateHash=ffffffffffffffff, scope=plugin-source, verdict=APPROVED ingested with exit 0. record_review requires only len(candidateHash)>=16 and a nonempty scope, not the live campaign/action candidate or required review scope. Admin seconds with no intervals remain 0.",
+      "requiredChange": "Require exact current candidate/scope and non-author reviewer identity. Unresolved independent findings must survive author APPROVED, stale hashes, missing scope, renamed IDs, packet names and count-only resolved events. Account unknown/overlap/AFK/testing as specified."
+    },
+    {
+      "id": "M2-OUTBOX-DELIVERED-ON-STATUS",
+      "severity": "P2",
+      "milestone": "M2",
+      "location": "cli.py:cmd_status,cmd_deliver; store.py:update_tx_status,enqueue_tx",
+      "observation": "The prior status-clears-pending counterexample is fixed: tx-public-1 stayed undelivered after status. CLI still never enqueues driver notifications. update_tx_status does not enforce submitted→unknown-finality→failed. deliver --tx-id only sets delivered_at locally; it is not conversation posting.",
+      "requiredChange": "Keep IDs undelivered until actually posted. Persist unknown finality separately from submitted/failed with enforced transitions. Enqueue only selected public fields."
+    },
+    {
+      "id": "M3-DOCTOR-AND-HOST-UNVERIFIED",
+      "severity": "P2",
+      "milestone": "M3",
+      "location": "cli.py:cmd_doctor; hook.py:handle_session_start; tests/host-smoke.md",
+      "observation": "Doctor now inspects CODEX_HOME; empty home was wrapper-only (storeInitialized=false). It still labels CLI as 'verified fallback'. host-smoke.md remains an unexecuted CLI/hook-pipe recipe, not ordinary shell/unified exec/apply_patch/native delegation. SessionStart still hardcodes 'Last result: local custody accepted; financial settlement remains open'. Actual install/trust/interception was not performed and is not inferred.",
+      "requiredChange": "Keep unit hook calls distinct from host interception evidence. Perform actual-host smoke after install/trust. Do not call the CLI fallback verified host coverage. Derive SessionStart lastResult from the same records as status."
+    },
+    {
+      "id": "M4-HARDCODED-REPRODUCER",
+      "severity": "P1",
+      "milestone": "M4",
+      "location": "plugins/moriarty-dev/tests/reproduce_driver.py; test_regressions.py:test_reproducer_demonstrates_defect",
+      "observation": "Source catch of runLocalFinancialCase maps any exception to status admitted-not-executed. The regression only asserts nonzero exit and 'Defect reproduced'/'admitted-not-executed' in stderr. This review did not execute that node/loan driver (financial R6 probes forbidden). Author 114-test green is not an independent driver-call observation.",
+      "requiredChange": "Call the admitted local driver through controlled inert transport with no wallets/network, or leave the product pilot explicitly open and supply a real nonfinancial plugin-path regression. An unconditional or catch-all admitted-not-executed stub must fail that test."
+    },
+    {
+      "id": "M4-REPORT-NOT-FROM-RECORDS",
+      "severity": "P2",
+      "milestone": "M4",
+      "location": "cli.py:SPRINT_PREDICATES,_derive_sprint_reports,cmd_report; hook.py:handle_session_start",
+      "observation": "status lastResult on the genuine fixture was derived from program stages (atomic-prepare, atomic-accept, rp01-mc02 complete; settlement/PCD remain open). report --json had 12 open rows with 12 distinct predicates. Predicates still come from a hardcoded SPRINT_PREDICATES table. cmd_report hostCoverage is the constant wrapper-only. SessionStart still uses the old local-custody sentence.",
+      "requiredChange": "Generate sprint remaining predicates from existing program/sprint records. Do not hardcode lastResult or hostCoverage on report/hooks."
+    }
+  ],
+  "checksActuallyRun": [
+    "Recomputed freeze file SHA-256s vs candidate/ and worktree before and after probes; 0 mismatches; candidateHash a0f26914149558a945ae46ec119c42c0ae91f2cce40ab54e823badccec537d1a. Source pins from freeze were matched before probes.",
+    "Disposable GenuineRegisters: funded loan-review positive; production .moriarty-dev/actions.json+commands.json assessed on that family; substitute static receipt; plugin passBinding on loan; wrong authority_sha256.",
+    "Disposable CLI/store: missing-file get_history/status/implement; corrupt-file get_history exception; author-self and scope=none review; wrong-candidate APPROVED ingest; count-only and renamed defect_resolved; outbox enqueue then status; denied implement marker; generic-fail and clean-pass reproduce; doctor with empty CODEX_HOME; report --json; in-process Stop and SessionStart.",
+    "Direct source inspection of records.py publication/resource paths, cli.py cmd_run/doctor/report, store.py get_history/record_review, hook.py, reproduce_driver.py, commands.json, SKILL.md. Did not execute reproduce_driver.py or run-local.mjs. Did not rerun the 114-test suite as behavior evidence. Did not install, trust, intercept, or run a product repair pilot. Did not resume financial R6 probes."
+  ],
+  "finalAcceptancePending": [
+    "Codex plugin install and hook trust",
+    "Actual-host interception smoke on ordinary shell, unified exec, apply_patch, native delegation",
+    "Admitted focused product repair pilot with independent review of those product bytes",
+    "BNF, executable Moriarty K, financial Preview, PCD, and SP01–SP12 completion remain open where unestablished"
+  ],
+  "limitations": "Bounded local standard-library and disposable Git fixtures only. No source/Git/acceptance edits. No models, subagents, network, wallet, proof, or financial R6 probes. No Codex install, hook trust, or actual-host interception. No Moriarty product pilot. Plugin-test green and package/skill validators are insufficient for missing launch, review-identity, history-corrupt, and driver-reproducer predicates. Missing host/pilot evidence is recorded as pending final acceptance, not as the CODE block.",
+  "disposition": "BLOCKED. Do not dispatch GPT-6 on this candidate. Repair launch through the existing bounded runner with one charge and candidate-bound reproducerVerified, exact review candidate/scope matching, fail-closed corrupt/missing history, and a non-fake reproducer (or an honest open pilot plus a real nonfinancial plugin regression) before another independent Grok check of new bytes.",
+  "rationale": "M1 static-receipt binding and resource identity now reject the prior ordinary counterexamples while still admitting a genuine loan-review path, so the author did not merely deny every valid case. Remaining required implementation still blocks CODE: subprocess argv launch without the existing runner or delegated charge; clean-exit reproduce marked verified; wrong-candidate review ingested; corrupt history raises; reproduce_driver still catch-converts errors to admitted-not-executed and was not independently executed. Installation, trust, host smoke, and product pilot were not performed and cannot be inferred; their absence alone is not the CODE gate."
+}
+```
