@@ -1,0 +1,580 @@
+{
+  "schemaVersion": "moriarty-rp01-mc03-native-statement/1",
+  "subsetId": "RP01-MC03",
+  "status": "pending-review",
+  "candidateHash": null,
+  "candidateHashNote": "Parent freeze pending. Document existence is not RP01-MC03 completion.",
+  "scope": {
+    "task": "SP01.7 fixed native-statement design crosswalk",
+    "kind": "documentation-only",
+    "relation": "R2-fixed-first-period-loan-two-transition-IVC-with-fixed-local-authority",
+    "includes": ["3x11 financial rows", "8 R2 digest labels", "UInt128/54-limb encoding", "phase 0/1/2 binding", "fixed vs current authority", "terminal projection vs StateEnvelope/Complete/ProofContext", "work conservation", "named F0-F3 controls", "documentary runtime-type field maps"],
+    "excludes": ["new circuit/proof design", "proving campaign", "invented hashes or old-hash reuse", "partial-servicing/general ACTUS", "network/Preview acceptance", "semantic-challenges.json edit", "F2 launch", "new backend decision"],
+    "combinedReviewBound": "40KiB admitted for complete documentary fields. Old 24KiB cap is not claimed met."
+  },
+  "inputs": [
+    {"path": "experiments/moriarty-native-ivc-r3/episode.json", "sha256": "2a2ab1d92256d5778044a8e9580c96d37dada1eaa78fbad64e63cea88db0635a"},
+    {"path": "experiments/moriarty-native-ivc-r3/harness/episode.rs", "sha256": "80229b7c543f8a39d630fdc9e4e01fc16e57c23970c429fbcf22a9ab0cb05780"},
+    {"path": "experiments/moriarty-native-ivc-r3/harness/moriarty_loan_r3.rs", "sha256": "3f22e85ac4fecc60a689813247ada795f7986f922ee50932aa414340f91b2e0c"},
+    {"path": "experiments/moriarty-native-ivc-r3/export-episode.mjs", "sha256": "401643e759b7136e5fa121f7f4ef7fc123793afb34bb79601cfb235561ce73d7"},
+    {"path": "evidence/moriarty-completion-program-2026-09-07/MC03/encoding-candidate/README.md", "sha256": "2a20e07f09eddb5cb782210b7c8f504a86ca207739f5121cbbd54b07fcfd5c3d"},
+    {"path": "experiments/moriarty-language/spec/examples/loan.mori", "sha256": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49"},
+    {"path": "experiments/moriarty-language/spec/typed-schemas.md", "sha256": "6ef3383ad42b7ea2a22822f8116c7e182cbe8b476ef01e9cd3ef899679da4f04"},
+    {"path": "experiments/moriarty-language/src/runtime-types.ts", "sha256": "f6ba49cff1900109ac9c8d2e3fdf3e69b8037dd2a6ce5c539dac2b9a081ae7e0"},
+    {"path": "experiments/moriarty-language/spec/bounds.json", "sha256": "b548641a1a9d74bab68ba699ffb1e2350fa0889d61b8704e98216f9d4a6c3664"},
+    {"path": "openspec/REPORT-RECONCILIATION-2026-09-07.md", "sha256": "a1a1661fc0d554d8e469651fdbd42c41e7c9e2115c8550f369742dcee94bd5da"},
+    {"path": "evidence/moriarty-completion-program-2026-09-07/SP01/atomic-integration-01/combined-freeze.json", "sha256": "df888cf7990f6dee4cdc0a19d892bb470bf0a8565ee756d3ead1c6c5f488e511"},
+    {"path": "raw/assignments/moriarty-midnight-milestone-testing-2026-09-07.md", "role": "network-milestone-instruction", "networkAcceptanceFromThisTask": false}
+  ],
+  "currentAtomicAcceptance": {
+    "codecCommit": "c30aaf5c0d091b1efea7e042d0fcbd539ca6cc51",
+    "evidence": "b296ce95afae722177b5bba482d1d195fa334d1e",
+    "candidateSha256": "2f1fb86407537720174bbf73cb50426499744986e97ce8a5dde9f792577e0b5e",
+    "profile": "moriarty-bounded-atomic/1",
+    "note": "Pins accepted atomic loan source/evaluator. Does not bind native digest limbs or close RP01-MC03."
+  },
+  "retainedFixtureIdentity": {
+    "episodeVersion": "moriarty-r3-episode/1",
+    "episodeSha256": "2a2ab1d92256d5778044a8e9580c96d37dada1eaa78fbad64e63cea88db0635a",
+    "inputSourceCommit": "2f1797bca1579d52a82f564189eb85f838c27ee9",
+    "preserve": ["episode.json bytes", "original R3 history", "k17 row-exhaustion failure"],
+    "oldLanguage": "moriarty-r2/1",
+    "oldPackage": "Actus.LAM.FirstPeriod",
+    "oldInstance": "loan:demo",
+    "currentAgreementName": "LoanFirstPeriod",
+    "encodingCandidateStatus": "source-only, unbuilt, unproved, not launch-approved, native runs zero"
+  },
+  "fixedRows": {
+    "fieldNames": ["revision", "remaining", "notional", "principalDue", "interestDue", "principalPaid", "interestPaid", "borrowerCash", "lenderCash", "cursor", "closed"],
+    "source": "harness/episode.rs FINANCIAL",
+    "unitMapping": {
+      "oldDenomination": "USD",
+      "oldAsset": "demo:USD6",
+      "currentUnit": "USD_micro",
+      "currentSettlementAsset": "USD_TEST_ASSET",
+      "currentQuantum": "1",
+      "numericalProjection": "equal micro-unit integers on eleven fields",
+      "labelIdentity": "distinct. old USD is not USD_micro. old demo:USD6 is not USD_TEST_ASSET."
+    },
+    "currentFieldRenames": {
+      "principalDue": "principal_due",
+      "interestDue": "interest_due",
+      "principalPaid": "principal_paid",
+      "interestPaid": "interest_paid",
+      "borrowerCash": "borrower_cash",
+      "lenderCash": "lender_cash",
+      "closed": "episode_closed"
+    },
+    "orderedRows": [
+      {"phase": 0, "role": "genesis", "financial": ["0", "2", "5000000000", "0", "0", "0", "0", "20000000000", "0", "0", "0"], "revision": "0", "remaining": "2", "closed": "0"},
+      {"phase": 1, "role": "accrued", "financial": ["1", "1", "4500000000", "500000000", "33972602", "0", "0", "20000000000", "0", "1", "0"], "revision": "1", "remaining": "1", "closed": "0"},
+      {"phase": 2, "role": "settled-closed", "financial": ["2", "0", "4500000000", "0", "0", "500000000", "33972602", "19466027398", "533972602", "2", "1"], "revision": "2", "remaining": "0", "closed": "1", "finalBorrower": "19466027398", "finalLender": "533972602", "outstandingNotional": "4500000000"}
+    ]
+  },
+  "arithmetic": {
+    "method": "checked UInt128 intermediates, floor division",
+    "sources": ["moriarty_loan_r3.rs native_financial", "loan.mori accrue/settle", "episode.json source.terms"],
+    "notional": "5000000000",
+    "rate": "8/100",
+    "dayCount": "31/365",
+    "interestFloor": "33972602",
+    "interestRemainder": "27000/36500",
+    "loanMoriRemainderNote": "discard 54/73 micro-USD for this sample only",
+    "principalInstallment": "500000000",
+    "settleTotal": "533972602",
+    "maxGrossDebit": "533972602",
+    "noPartialServicing": true,
+    "noGeneralActusClaim": true
+  },
+  "twoStepEffects": {
+    "oldFlattenedEffectsAndActionArgs": "DOCUMENTARY PROJECTIONS of retained episode.json. They are not current EffectRecord or ActionCall wire objects.",
+    "oldWireEffectsShape": "{kind, fields}",
+    "currentEffectsSource": {
+      "kind": "reviewed source-derived copy, not new execution",
+      "acceptedRp01Mc02Candidate": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "note": "Copied from accepted RP01-MC02 candidate. This task did not re-run the evaluator."
+    },
+    "dueCreatedHasNoSettlementField": true,
+    "step1Accrue": {
+      "oldAction": {
+        "label": "DOCUMENTARY PROJECTION of episode.json action.args map, not ActionCall",
+        "name": "accrue",
+        "args": {"actor": "borrower", "event": "PR_IP"}
+      },
+      "currentAction": {
+        "label": "documentary projection of ActionCall.arguments NamedStoredValue[]",
+        "notAWireObject": true,
+        "name": "accrue",
+        "schemaVersion": "moriarty-action/1",
+        "argumentsProjectionMap": {"actor": "borrower"},
+        "argumentsNamedStoredValues": [
+          {"name": "actor", "value": {"tag": "Text", "value": "borrower"}}
+        ],
+        "droppedOldArg": "event/PR_IP",
+        "addedGuard": "obs.now < 2000000000"
+      },
+      "oldEffects": {
+        "label": "DOCUMENTARY PROJECTION of old {kind, fields} wire",
+        "oldWireShape": "{kind, fields}",
+        "records": [
+          {"kind": "DueCreated", "fields": {"dueId": "loan:demo:principal", "debtor": "borrower", "creditor": "lender", "denomination": "USD", "amount": "500000000"}},
+          {"kind": "DueCreated", "fields": {"dueId": "loan:demo:interest", "debtor": "borrower", "creditor": "lender", "denomination": "USD", "amount": "33972602"}}
+        ]
+      },
+      "currentEffects": [
+        {
+          "kind": "DueCreated",
+          "ordinal": "0",
+          "dueId": "lam01:period1:PR",
+          "debtor": "borrower",
+          "creditor": "lender",
+          "denomination": "USD_micro",
+          "amount": {"tag": "Amount", "unit": "USD_micro", "value": "500000000"}
+        },
+        {
+          "kind": "DueCreated",
+          "ordinal": "1",
+          "dueId": "lam01:period1:IP",
+          "debtor": "borrower",
+          "creditor": "lender",
+          "denomination": "USD_micro",
+          "amount": {"tag": "Amount", "unit": "USD_micro", "value": "33972602"}
+        }
+      ],
+      "renames": ["loan:demo:principal->lam01:period1:PR", "loan:demo:interest->lam01:period1:IP", "USD->USD_micro", "closed->episode_closed"],
+      "obligationStatusAfter": "Outstanding"
+    },
+    "step2Settle": {
+      "oldAction": {
+        "label": "DOCUMENTARY PROJECTION of episode.json action.args map, not ActionCall",
+        "name": "settle",
+        "args": {"actor": "borrower", "asset": "demo:USD6", "amount": "533972602"}
+      },
+      "currentAction": {
+        "label": "documentary projection of ActionCall.arguments NamedStoredValue[]",
+        "notAWireObject": true,
+        "name": "settle",
+        "schemaVersion": "moriarty-action/1",
+        "argumentsProjectionMap": {"actor": "borrower", "settlement_asset": "USD_TEST_ASSET", "amount_due": "533972602"},
+        "argumentsNamedStoredValues": [
+          {"name": "actor", "value": {"tag": "Text", "value": "borrower"}},
+          {"name": "settlement_asset", "value": {"tag": "Text", "value": "USD_TEST_ASSET"}},
+          {"name": "amount_due", "value": {"tag": "Amount", "unit": "USD_micro", "value": "533972602"}}
+        ]
+      },
+      "oldEffects": {
+        "label": "DOCUMENTARY PROJECTION of old {kind, fields} wire",
+        "oldWireShape": "{kind, fields}",
+        "records": [
+          {"kind": "Transfer", "fields": {"asset": "demo:USD6", "from": "borrower", "to": "lender", "amount": "533972602"}},
+          {"kind": "DueSettled", "fields": {"dueId": "loan:demo:principal", "debtor": "borrower", "creditor": "lender", "denomination": "USD", "amount": "500000000", "asset": "demo:USD6"}},
+          {"kind": "DueSettled", "fields": {"dueId": "loan:demo:interest", "debtor": "borrower", "creditor": "lender", "denomination": "USD", "amount": "33972602", "asset": "demo:USD6"}}
+        ]
+      },
+      "currentEffects": [
+        {
+          "kind": "Transfer",
+          "ordinal": "0",
+          "asset": "USD_TEST_ASSET",
+          "from": "borrower",
+          "to": "lender",
+          "amount": {"tag": "Amount", "unit": "USD_micro", "value": "533972602"},
+          "settlement": {
+            "asset": "USD_TEST_ASSET",
+            "binding": "USD_micro_asset",
+            "ledgerAmount": "533972602",
+            "nominalAmount": {"tag": "Amount", "unit": "USD_micro", "value": "533972602"},
+            "quantum": {"tag": "Amount", "unit": "USD_micro", "value": "1"},
+            "unit": "USD_micro"
+          }
+        },
+        {
+          "kind": "DueSettled",
+          "ordinal": "1",
+          "dueId": "lam01:period1:PR",
+          "debtor": "borrower",
+          "creditor": "lender",
+          "denomination": "USD_micro",
+          "asset": "USD_TEST_ASSET",
+          "amount": {"tag": "Amount", "unit": "USD_micro", "value": "500000000"},
+          "settlement": {
+            "asset": "USD_TEST_ASSET",
+            "binding": "USD_micro_asset",
+            "ledgerAmount": "500000000",
+            "nominalAmount": {"tag": "Amount", "unit": "USD_micro", "value": "500000000"},
+            "quantum": {"tag": "Amount", "unit": "USD_micro", "value": "1"},
+            "unit": "USD_micro"
+          }
+        },
+        {
+          "kind": "DueSettled",
+          "ordinal": "2",
+          "dueId": "lam01:period1:IP",
+          "debtor": "borrower",
+          "creditor": "lender",
+          "denomination": "USD_micro",
+          "asset": "USD_TEST_ASSET",
+          "amount": {"tag": "Amount", "unit": "USD_micro", "value": "33972602"},
+          "settlement": {
+            "asset": "USD_TEST_ASSET",
+            "binding": "USD_micro_asset",
+            "ledgerAmount": "33972602",
+            "nominalAmount": {"tag": "Amount", "unit": "USD_micro", "value": "33972602"},
+            "quantum": {"tag": "Amount", "unit": "USD_micro", "value": "1"},
+            "unit": "USD_micro"
+          }
+        }
+      ],
+      "renames": ["asset->settlement_asset", "amount->amount_due", "demo:USD6->USD_TEST_ASSET"],
+      "obligationStatusAfter": "Settled tombstones retained"
+    }
+  },
+  "encoding": {
+    "integer": "UInt128 low64 then high64",
+    "digestLayout": "SHA256 as four little-endian u64 limbs in byte order",
+    "limbCounts": {"financialLimbs": 22, "digestLimbs": 32, "privateLimbs": 54, "phaseCells": 1},
+    "phase": {"values": [0, 1, 2], "kind": "finite table index", "notCryptographicHash": true},
+    "checkedEncodingPublicInputs": {
+      "application": ["phase only"],
+      "ivcAlsoPublic": ["canonical VK representation", "accumulator representation"],
+      "private": "54 limbs plus assigned phase. format_public_input returns phase after host domain check."
+    },
+    "circuitBinding": "domain-restricted. circuit_transition constrains ordinary input phase<2, equals all 54 private cells to selected before-row constants, selects after-row constants, returns phase+1. SHA256 not recomputed. gadget constraints are not an executed proof.",
+    "originalK17": "row exhaustion remains failed evidence. no recursive proof here. no automatic k17 retry.",
+    "limitsPreserved": ["k=17", "unextended SRS", "1800s campaign envelope when later admitted", "8GiB", "zero swap", "two CPU", "one attempt"]
+  },
+  "commitmentBindings": {
+    "oldCodec": "SHA256 of R2 canonical UTF-8 JSON (hashCanonical). Preimages include explicit kind/version. No domain prefix. export-episode.mjs and claims.ts.",
+    "currentCodec": "SHA256(UTF8(domain)||NUL||canonical typed bytes) from bounds.json domainRegistry and codec.ts hashDomain. sourceHash and proofDigest are raw SHA256.",
+    "cannotReuseOldHashesAs": ["programHash", "stateHash", "genesisHash", "authorityDigest", "actionHash", "observationsHash", "traceHash", "proofContextHash", "claimRoot"],
+    "numericalEqualityDoesNotImplyHashEquality": true,
+    "fixturePath": "experiments/moriarty-native-ivc-r3/episode.json rows[*].hashes and preimages",
+    "digests": [
+      {"label": "domain", "oldPreimage": "kind NativeExperimentDomain network r3-native-only deployment moriarty-fixed-loan/1", "retainedHash": "ee35a694256280354536e45629ce0a5c9aa8ca66e85847618267fe59f783bb7c", "constantAcrossRows": true, "currentCounterpart": "ExecutionDomain {network,deployment} in GenesisBody/AuthorityCommon", "equality": "discrepant", "closureTask": "export current domain bytes. do not copy this hash."},
+      {"label": "program", "oldPreimage": "rows[*].preimages.program version moriarty-core/1 R2 stateSchema/effectSchemas/entrypoints including accrue event PR_IP", "retainedHash": "55760cd1c130dc3ff10d4c99e0520c92cf4f10ae57d4b425e8dfa1099be7dabf", "constantAcrossRows": true, "currentCounterpart": "programHash=SHA256(UTF8(MORIARTY-PROGRAM-bounded-atomic/1)||NUL||canonical(SemanticManifest)); also sourceHash of loan.mori", "equality": "discrepant", "closureTask": "compute current programHash/sourceHash. never treat 55760cd1 as programHash."},
+      {"label": "specification", "oldPreimage": "version moriarty-r3-fixed-loan/1 predicate exact two-transition R2 loan episode under fixed authority numeric UInt128 checked intermediates floor interest steps 2 notFullMoriartyAcceptance true", "retainedHash": "4103cfbdf54930dc6c11477fb072ffa0dc5bcb6ea0996c3e7c2f74005c86f70b", "constantAcrossRows": true, "currentCounterpart": "none. closest: profile moriarty-bounded-atomic/1 and claimRoot", "equality": "missing-current-field", "closureTask": "keep native-only tag or reviewed mapping. do not invent a current digest."},
+      {"label": "intent", "oldPreimage": "kind FixedAuthorityExperiment principal borrower recipient lender asset demo:USD6 maxGrossDebit 533972602 program 55760cd1... dynamicSignatureVerified false", "retainedHash": "e246df451ab6d8594d43c8398b24c7e714d151196f887e26d266259a4803c0e9", "constantAcrossRows": true, "currentCounterpart": "Authority ExactPlan or Outcome statementDigest/authorityDigest", "equality": "discrepant", "closureTask": "export current signed Authority per action. do not reuse e246df45 as authorityDigest."},
+      {"label": "predecessor", "oldPreimage": {"row0": "ConstrainedGenesis {kind, context: commonHashes, state: genesis}", "row1": "states[0], hash equals row0 output", "row2": "states[1], hash equals row1 output"}, "retainedHashes": {"row0": "38a9ad745acab67a5849874d1761136b13896fccdbaeef520f4cfb87ca69a7fa", "row1": "37aa7f30c8f5b06849e6b86acf24c141f8741884301037027b283c81a0007774", "row2": "0bfd7bdf926f640676dbeebb8cb49ace108a9b27fc630665ae1c139363be527a"}, "currentCounterpart": "genesisHash plus beforeStateHash plus predecessors[]", "equality": "discrepant", "closureTask": "export current genesis and per-step beforeStateHash. ConstrainedGenesis is not GenesisBody."},
+      {"label": "output", "oldPreimage": "rows[i].preimages.output {instance,revision,remaining,values} R2 state", "retainedHashes": {"row0": "37aa7f30c8f5b06849e6b86acf24c141f8741884301037027b283c81a0007774", "row1": "0bfd7bdf926f640676dbeebb8cb49ace108a9b27fc630665ae1c139363be527a", "row2": "159633b51b8fd3c52309200f0838940f5c32b2edaa18c3bd7831c9bad0826c4f"}, "currentCounterpart": "stateHash over StateBody (obligations, remainingNotional, statuses, genesisHash, instanceId, programHash)", "equality": "discrepant", "closureTask": "eleven numbers are a projection only. export StateEnvelope per row."},
+      {"label": "effects", "oldPreimage": {"row0": "[]", "row1": "two DueCreated", "row2": "Transfer plus two DueSettled"}, "retainedHashes": {"row0": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945", "row1": "e59660aca1c4a92fc7387d53b3d4f7951e729ef3b4d6d0ccc6b074db9b96119d", "row2": "4f21e6989b101bf92ce6e171536821868db3d64fa06f80ad228a6113201a0a10"}, "currentCounterpart": "CompleteBody.effects EffectRecord with ordinal/settlement. no standalone effects digest. hashed inside traceHash.", "equality": "discrepant", "closureTask": "export ordered current effects. dueId and asset strings differ."},
+      {"label": "authorityObligation", "oldPreimage": "maxGrossDebit 533972602 plus consumed/remaining gross and due/paid. row0/1 remainingGross 533972602 consumed 0. row2 consumed 533972602 remaining 0.", "retainedHashes": {"row0": "d47ba8544a312182ff8cc995adcf3220bc018c8367908451eca48600d38b14d1", "row1": "8da2c3f7d8b3d4512c2f721bac541c8610a6255ef2e50d6b11b7b5dd4dbcb424", "row2": "8c79ed55b409a015beb322f66bc94672d499f87d36fa1fc6adc9ced4b87a5a94"}, "currentCounterpart": "none as a digest. closest: CompleteBody.authorityConsumption and obligationDelta, Outcome grossDebitCaps", "equality": "missing-current-field", "closureTask": "export authorityConsumption and obligationDelta. do not treat these as statementDigest."}
+    ]
+  },
+  "authorityAndObservations": {
+    "oldIntentPreimageExact": {
+      "kind": "FixedAuthorityExperiment",
+      "principal": "borrower",
+      "recipient": "lender",
+      "asset": "demo:USD6",
+      "maxGrossDebit": "533972602",
+      "program": "55760cd1c130dc3ff10d4c99e0520c92cf4f10ae57d4b425e8dfa1099be7dabf",
+      "dynamicSignatureVerified": false,
+      "path": "episode.json rows[*].preimages.intent"
+    },
+    "currentSignedCommonFields": ["beforeStateHash", "domain", "genesisHash", "instanceId", "nonce", "predecessors", "principal", "program ProgramRef", "requiredClaimRoot", "requiredClaims", "validity.notBefore", "validity.notAfterExclusive"],
+    "signatureEnvelopeVersusStatement": {
+      "envelopeType": "Authority",
+      "envelopeSchemaVersion": "moriarty-authority/1",
+      "envelopeMembers": ["domain", "schemaVersion", "signature.algorithm", "signature.bytes", "signature.keyId", "tag", "statement"],
+      "exactPlanTag": "ExactPlan",
+      "outcomeTag": "IntentRefinement",
+      "exactPlanStatementSchemaVersionSIGNED": "moriarty-exact-plan/1",
+      "outcomeStatementSchemaVersionSIGNED": "moriarty-outcome-intent/1",
+      "statementIsNotTheEnvelope": true,
+      "noDirectObservationSetSigning": true
+    },
+    "exactPlanAdds": ["action ActionCall", "exactEffects", "exactWrites", "mode ExactPlan", "schemaVersion moriarty-exact-plan/1 SIGNED"],
+    "outcomeAdds": ["allowedActions", "grossDebitCaps", "minimumNetCredits", "permittedCalls must be empty", "permittedRecipients", "mode IntentRefinement", "schemaVersion moriarty-outcome-intent/1 SIGNED"],
+    "signatureAttests": "UTF8(authority.domain)||NUL||canonical(authority.statement)",
+    "exactPlanDomain": "MORIARTY-SIGN-bounded-atomic/1",
+    "outcomeDomain": "MORIARTY-OUTCOME-bounded-atomic/1",
+    "observations": {
+      "currentMandatory": "now:UInt128 independently authenticated via ObservationSet and genesis observationBindings",
+      "oldRelationHasNoObservationDigest": true,
+      "neitherAuthoritySignsObservationSet": true,
+      "noDirectObservationSetSigning": true,
+      "derivedHashes": ["actionHash from ActionCall", "observationsHash from ObservationSet"]
+    },
+    "carryingFixedHashesDoesNotProve": ["dynamic signatures", "currentness", "history compliance", "custody"]
+  },
+  "completeTerminalObservationMap": {
+    "kind": "documentary-field-map",
+    "notAWireObject": true,
+    "note": "Eleven financial numbers are a projection, not StateEnvelope, Complete, or ProofContext.",
+    "hashPreimagesNeverContainTheirDigest": true,
+    "missingFixtureOwner": "MC03 atomic-binding-fixture under own admission alongside F0. Missing current atomic fixture/export remains BLOCKED.",
+    "deprecatedConceptualNameCrosswalkOnly": [
+      {"deprecatedOldName": "ContractInvariant", "kind": "ContractProperty", "neverCurrentId": true},
+      {"deprecatedOldName": "IntentEffects", "kind": "IntentRefinement", "neverCurrentId": true},
+      {"deprecatedOldName": "TransitionValidity", "kind": "TransitionValidity", "neverCurrentId": true},
+      {"deprecatedOldName": "HistoryCompliance", "kind": "PredecessorHistory", "neverCurrentId": true}
+    ],
+    "terminalFixedProjection": {
+      "revision": "2", "remaining": "0", "notional": "4500000000", "principalDue": "0", "interestDue": "0",
+      "principalPaid": "500000000", "interestPaid": "33972602", "borrowerCash": "19466027398",
+      "lenderCash": "533972602", "cursor": "2", "closed": "1",
+      "oldOutputHash": "159633b51b8fd3c52309200f0838940f5c32b2edaa18c3bd7831c9bad0826c4f",
+      "oldEffectsHash": "4f21e6989b101bf92ce6e171536821868db3d64fa06f80ad228a6113201a0a10",
+      "oldAuthorityRemainingGross": "0"
+    },
+    "currentStateBody": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "type": "StateBody",
+      "schemaVersion": "moriarty-state-body/1",
+      "doesNotContain": ["stateHash"],
+      "hashPreimageRule": "StateBody is the preimage of stateHash. It does not contain stateHash.",
+      "members": [
+        {"field": "schemaVersion", "status": "specified", "value": "moriarty-state-body/1"},
+        {"field": "profile", "status": "specified", "value": "moriarty-bounded-atomic/1"},
+        {"field": "revision", "status": "known-numeric-projection", "value": "2"},
+        {"field": "remaining", "status": "known-numeric-projection", "value": "0"},
+        {"field": "agreementStatus", "status": "known-numeric-projection", "value": "Outstanding", "reason": "remainingNotional 4500000000"},
+        {"field": "episodeStatus", "status": "known-numeric-projection", "value": "Closed", "reason": "episode_closed==1"},
+        {"field": "remainingNotional.tag", "status": "known-numeric-projection", "value": "Amount"},
+        {"field": "remainingNotional.amount", "status": "known-numeric-projection", "value": {"tag": "Amount", "unit": "USD_micro", "value": "4500000000"}},
+        {"field": "values[]", "status": "known-numeric-projection", "NamedStoredValue": [
+          {"name": "notional", "value": {"tag": "Amount", "unit": "USD_micro", "value": "4500000000"}},
+          {"name": "principal_due", "value": {"tag": "Amount", "unit": "USD_micro", "value": "0"}},
+          {"name": "interest_due", "value": {"tag": "Amount", "unit": "USD_micro", "value": "0"}},
+          {"name": "principal_paid", "value": {"tag": "Amount", "unit": "USD_micro", "value": "500000000"}},
+          {"name": "interest_paid", "value": {"tag": "Amount", "unit": "USD_micro", "value": "33972602"}},
+          {"name": "borrower_cash", "value": {"tag": "Amount", "unit": "USD_micro", "value": "19466027398"}},
+          {"name": "lender_cash", "value": {"tag": "Amount", "unit": "USD_micro", "value": "533972602"}},
+          {"name": "cursor", "value": {"tag": "UInt128", "value": "2"}},
+          {"name": "episode_closed", "value": {"tag": "UInt128", "value": "1"}}
+        ]},
+        {"field": "obligations[0]", "status": "known-numeric-projection", "ObligationRecord": {"dueId": "lam01:period1:PR", "debtor": "borrower", "creditor": "lender", "denomination": "USD_micro", "status": "Settled", "amount": {"tag": "Amount", "unit": "USD_micro", "value": "500000000"}, "oldDueId": "loan:demo:principal"}},
+        {"field": "obligations[1]", "status": "known-numeric-projection", "ObligationRecord": {"dueId": "lam01:period1:IP", "debtor": "borrower", "creditor": "lender", "denomination": "USD_micro", "status": "Settled", "amount": {"tag": "Amount", "unit": "USD_micro", "value": "33972602"}, "oldDueId": "loan:demo:interest"}},
+        {"field": "genesisHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "instanceId", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "note": "old instance loan:demo is not this field"},
+        {"field": "programHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"}
+      ]
+    },
+    "currentStateEnvelope": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "type": "StateEnvelope",
+      "schemaVersion": "moriarty-state/1",
+      "members": [
+        {"field": "schemaVersion", "status": "specified", "value": "moriarty-state/1"},
+        {"field": "body", "ref": "currentStateBody"},
+        {"field": "stateHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "formula": "hash(STATE, StateBody)", "preimage": "UTF8(MORIARTY-STATE-bounded-atomic/1)||NUL||canonical(StateBody)", "preimageDoesNotContainDigest": true}
+      ]
+    },
+    "currentCompleteBody": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "type": "CompleteBody",
+      "schemaVersion": "moriarty-complete-body/1",
+      "doesNotContain": ["traceHash"],
+      "hashPreimageRule": "CompleteBody is the preimage of traceHash. It does not contain traceHash. typed-schemas.md CompleteBody lines 599-605.",
+      "members": [
+        {"field": "schemaVersion", "status": "specified", "value": "moriarty-complete-body/1"},
+        {"field": "profile", "status": "specified", "value": "moriarty-bounded-atomic/1"},
+        {"field": "outcome", "status": "specified", "value": "Complete"},
+        {"field": "after", "ref": "currentStateEnvelope", "status": "partial", "note": "body projection known. envelope stateHash unbound."},
+        {"field": "effects", "ref": "twoStepEffects.step2Settle.currentEffects", "status": "known-source-derived"},
+        {"field": "obligationDelta.created", "status": "known-numeric-projection", "value": []},
+        {"field": "obligationDelta.settled", "status": "known-numeric-projection", "note": "two Settled tombstones PR then IP as in currentStateBody.obligations"},
+        {"field": "actionHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "formula": "hash(ACTION, ActionCall)"},
+        {"field": "beforeStateHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "observationsHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "formula": "hash(OBSERVATIONS, ObservationSet)"},
+        {"field": "predecessors", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "programHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "authorityConsumption.mode", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "type": "ExactPlan|IntentRefinement"},
+        {"field": "authorityConsumption.nonce", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "authorityConsumption.principal", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "authorityConsumption.statementDigest", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.canonicalDepth", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.canonicalNodes", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.canonicalUtf8Bytes", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.effects", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.executedInstructions", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.expressionNodes", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.maximumExpressionDepth", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "resourceCounts.unitComponents", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "writes[].field", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "writes[].policy", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "type": "PolicyUse"},
+        {"field": "writes[].value", "status": "unbound", "owner": "MC03 atomic-binding-fixture"}
+      ]
+    },
+    "currentComplete": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "type": "Complete",
+      "schemaVersion": "moriarty-result/1",
+      "members": [
+        {"field": "schemaVersion", "status": "specified", "value": "moriarty-result/1"},
+        {"field": "body", "ref": "currentCompleteBody"},
+        {"field": "traceHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "formula": "hash(TRACE, CompleteBody)", "preimage": "UTF8(MORIARTY-TRACE-bounded-atomic/1)||NUL||canonical(CompleteBody)", "preimageDoesNotContainDigest": true}
+      ]
+    },
+    "currentProofContext": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "type": "ProofContext",
+      "schemaVersion": "moriarty-proof-context/1",
+      "containsTraceHash": true,
+      "doesNotContain": ["proofContextHash"],
+      "typedSchemas": "typed-schemas.md ProofContext lines 645-649",
+      "members": [
+        {"field": "schemaVersion", "status": "specified", "value": "moriarty-proof-context/1"},
+        {"field": "actionHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "authorityDigest", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "beforeStateHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "domain.deployment", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "domain.network", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "genesisHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "predecessors", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "program", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "type": "ProgramRef"},
+        {"field": "requiredClaimRoot", "status": "unbound", "owner": "MC03 atomic-binding-fixture"},
+        {"field": "traceHash", "status": "unbound", "owner": "MC03 atomic-binding-fixture", "note": "ProofContext does contain traceHash. It does not contain proofContextHash."}
+      ]
+    },
+    "derivedProofContextHash": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "notAProofContextMember": true,
+      "carriedBy": "ProofAcceptanceVerdict",
+      "typedSchemas": "typed-schemas.md ProofAcceptanceVerdict lines 657-659 and hash formula line 425",
+      "field": "proofContextHash",
+      "formula": "hash(PROOF-CONTEXT, ProofContext)",
+      "preimage": "UTF8(MORIARTY-PROOF-CONTEXT-bounded-atomic/1)||NUL||canonical(ProofContext)",
+      "preimageDoesNotContainDigest": true,
+      "status": "unbound",
+      "owner": "MC03 atomic-binding-fixture"
+    },
+    "documentaryRuntimeTypeFieldMaps": {
+      "kind": "documentary-field-map",
+      "notAWireObject": true,
+      "source": "experiments/moriarty-language/src/runtime-types.ts",
+      "unboundOwnerUnlessProjected": "MC03 atomic-binding-fixture",
+      "importedMemberTypes": {
+        "NamedStoredValue": ["name", "value:StoredValue"],
+        "StoredValue": ["tag:UInt128|Text|Amount", "value", "unit when Amount"],
+        "BoundsRef": ["boundsHash", "registryId:moriarty-bounds/1"],
+        "PolicyUse": ["tag:NonFinancial", "or tag:Financial plus name"],
+        "Span": ["endByte", "startByte"],
+        "ClaimRequirement": ["claimId", "kind:ContractProperty|IntentRefinement|TransitionValidity|PredecessorHistory"],
+        "BoundProgram": ["manifest", "programHash", "schemaVersion:moriarty-program/1"]
+      },
+      "types": {
+        "AmountValue": {"members": ["tag:Amount", "unit", "value"]},
+        "ProgramRef": {"members": ["bounds.boundsHash", "bounds.registryId:moriarty-bounds/1", "coreVersion:moriarty-core/1", "profile:moriarty-bounded-atomic/1", "programHash", "schemaVersion:moriarty-program-ref/1", "sourceHash"]},
+        "ExecutionDomain": {"members": ["deployment", "network"]},
+        "PrincipalBinding": {"members": ["actor", "principal"]},
+        "ObservationBinding": {"members": ["authenticationPolicy", "name", "provider"]},
+        "GenesisBody": {"schemaVersion": "moriarty-genesis-body/1", "doesNotContain": ["genesisHash"], "members": ["bounds", "domain", "horizon", "initialState", "instanceId", "lifetime", "observationBindings", "principalBindings", "profile:moriarty-bounded-atomic/1", "program", "requiredClaimRoot", "schemaVersion"]},
+        "Genesis": {"schemaVersion": "moriarty-genesis/1", "members": ["body:GenesisBody", "genesisHash=hash(GENESIS,GenesisBody)", "schemaVersion"], "genesisHashUnbound": true},
+        "ObligationRecord": {"members": ["amount:AmountValue", "creditor", "debtor", "denomination", "dueId", "status:Outstanding|Settled"]},
+        "Status": {"members": ["agreementStatus:Outstanding|NoOutstanding", "episodeStatus:Open|Closed", "remainingNotional:{tag:Amount,amount}|{tag:NotApplicable}"]},
+        "StateBody": {"ref": "currentStateBody"},
+        "StateEnvelope": {"ref": "currentStateEnvelope"},
+        "ObservationSet": {"schemaVersion": "moriarty-observations/1", "members": ["observations[].evidenceDigest", "observations[].name", "observations[].provider", "observations[].value", "schemaVersion"], "unbound": true, "noDirectSigning": true},
+        "ActionCall": {"schemaVersion": "moriarty-action/1", "members": ["arguments:NamedStoredValue[]", "name", "schemaVersion"], "argsMapsAreProjections": true},
+        "SettlementResolution": {"members": ["asset", "binding", "ledgerAmount", "nominalAmount:AmountValue", "quantum:AmountValue", "unit"]},
+        "EffectRecord.TransferOrFee": {"members": ["amount:AmountValue", "asset", "from", "kind:Transfer|Fee", "ordinal", "settlement:SettlementResolution", "to"]},
+        "EffectRecord.DueCreated": {"members": ["amount:AmountValue", "creditor", "debtor", "denomination", "dueId", "kind:DueCreated", "ordinal"], "noSettlementField": true},
+        "EffectRecord.DueSettled": {"members": ["amount:AmountValue", "asset", "creditor", "debtor", "denomination", "dueId", "kind:DueSettled", "ordinal", "settlement:SettlementResolution"]},
+        "WriteRecord": {"members": ["field", "policy:PolicyUse", "value:StoredValue"]},
+        "AuthorityCommon": {"members": ["beforeStateHash", "domain", "genesisHash", "instanceId", "nonce", "predecessors", "principal", "program", "requiredClaimRoot", "requiredClaims", "validity.notBefore", "validity.notAfterExclusive"]},
+        "ExactPlanStatement": {"schemaVersionSIGNED": "moriarty-exact-plan/1", "members": ["AuthorityCommon...", "action:ActionCall", "exactEffects[].effect:EffectRecord", "exactWrites[].field", "exactWrites[].value", "mode:ExactPlan", "schemaVersion"]},
+        "OutcomeStatement": {"schemaVersionSIGNED": "moriarty-outcome-intent/1", "members": ["AuthorityCommon...", "allowedActions", "grossDebitCaps[].actor", "grossDebitCaps[].asset", "grossDebitCaps[].maximumLedgerAmount", "minimumNetCredits[].actor", "minimumNetCredits[].asset", "minimumNetCredits[].minimumLedgerAmount", "mode:IntentRefinement", "permittedCalls[].callee", "permittedCalls[].selector", "permittedRecipients", "schemaVersion"]},
+        "Authority": {"envelopeSchemaVersion": "moriarty-authority/1", "members": ["domain", "schemaVersion", "signature.algorithm", "signature.bytes", "signature.keyId", "tag:ExactPlan|IntentRefinement", "statement"], "statementDistinctFromEnvelope": true, "doesNotSignObservationSet": true},
+        "ExternalChecks": {"members": ["authenticatedPrincipal", "genesisValid", "nonceFresh", "observationsAuthentic", "predecessorSetValid", "signatureValid", "stateCurrentAndUnconsumed"]},
+        "EvaluationInput": {"schemaVersion": "moriarty-evaluation/1", "members": ["action", "authority", "checks", "genesis", "observations", "program", "schemaVersion", "state"]},
+        "ResourceCounts": {"members": ["canonicalDepth", "canonicalNodes", "canonicalUtf8Bytes", "effects", "executedInstructions", "expressionNodes", "maximumExpressionDepth", "unitComponents"]},
+        "CompleteBody": {"ref": "currentCompleteBody"},
+        "Complete": {"ref": "currentComplete"},
+        "Diagnostic": {"members": ["code", "message", "primarySpan.endByte", "primarySpan.startByte", "relatedSpans[]", "stage"]},
+        "Rejected": {"schemaVersion": "moriarty-result/1", "members": ["diagnostics", "outcome:Rejected", "profile:moriarty-bounded-atomic/1", "programHash", "schemaVersion"]},
+        "ProofContext": {"ref": "currentProofContext"},
+        "Simulation": {"members": ["kind:Simulation", "candidate:Complete", "context:ProofContext"], "note": "Internal, unaccepted, non-consuming. Never a public Result."},
+        "SourceBinding": {"members": ["source", "bounds"]},
+        "TrustedAcceptanceBackend": {"extends": "SourceBinding", "members": ["authenticate(bound,inputWithoutChecks)->ExternalChecks", "verifyAndCommit(bound,input,simulation)->{tag:Committed,traceHash,proofContextHash,afterStateHash}"], "note": "Deployment-owned. Not a new backend decision here. MC05 authenticates claims. MC04 consumes state+nonce. This package supplies neither."}
+      }
+    },
+    "laterFixturesToProduceWithoutInventingApi": [
+      "current atomic Genesis/StateEnvelope/ObservationSet/ActionCall/Authority/Complete/ProofContext for this two-step loan",
+      "reviewed label map from 8 R2 digests to current domain-prefixed fields, hashes recomputed not copied",
+      "native proof/VK/state/accumulator export named by separately admitted F0a after F0 go/native-path-freeze. Accumulator::from_public_input unimplemented. IVC fields are not a public export API."
+    ]
+  },
+  "workConservation": {
+    "lifetime": "2",
+    "stepCount": "2",
+    "phaseBinding": "phase i equals revision i on this table. remaining = lifetime - revision.",
+    "invariant": "revision+remaining=lifetime (evaluate.ts LIFETIME_INVARIANT)",
+    "noReset": true,
+    "noDebtDeletion": true,
+    "closedEpisodeIsNotAgreementDischarged": true,
+    "closedOrdinaryInputHasNoSuccessor": true,
+    "residualNotional": "4500000000 remains Outstanding"
+  },
+  "claimRequirements": {
+    "fourKinds": ["ContractProperty", "IntentRefinement", "TransitionValidity", "PredecessorHistory"],
+    "fourKindsAreNotFourRequirements": true,
+    "currentLoanManifestRequirements": [
+      {"claimId": "bounded_profile_safety_v1", "kind": "ContractProperty"},
+      {"claimId": "loan_first_period_interest_floor_v1", "kind": "ContractProperty"},
+      {"claimId": "loan_first_period_principal_v1", "kind": "ContractProperty"},
+      {"claimId": "loan_first_period_settlement_exact_v1", "kind": "ContractProperty"},
+      {"claimId": "atomic_intent_refinement_v1", "kind": "IntentRefinement"},
+      {"claimId": "bounded_atomic_transition_v1", "kind": "TransitionValidity"},
+      {"claimId": "bounded_history_compliance_v1", "kind": "PredecessorHistory"}
+    ],
+    "deprecatedConceptualNameCrosswalkOnly": [
+      {"deprecatedOldName": "ContractInvariant", "kind": "ContractProperty", "neverCurrentId": true},
+      {"deprecatedOldName": "IntentEffects", "kind": "IntentRefinement", "neverCurrentId": true},
+      {"deprecatedOldName": "TransitionValidity", "kind": "TransitionValidity", "neverCurrentId": true},
+      {"deprecatedOldName": "HistoryCompliance", "kind": "PredecessorHistory", "neverCurrentId": true}
+    ],
+    "fixedHashesDoNotDischargeClaims": true,
+    "sevenCurrentIdsUnboundByFixedRelation": true
+  },
+  "controls": {
+    "testsUnrunHere": true,
+    "invalidAcceptanceStops": true,
+    "hostSourceChecks": [
+      "native_financial equals episode::FINANCIAL",
+      "preflight_native specified/unexecuted here: for each of 3 states, XOR bit 0 and bit 64 of each of 11 financial values. Not exhaustive 128-bit mutations. harness/moriarty_loan_r3.rs lines 359-368.",
+      "preflight_native specified/unexecuted here: for each of 3 states, XOR 1 on each of 8 digests times 4 limbs. harness/moriarty_loan_r3.rs lines 370-376.",
+      "wrong phase rejected",
+      "closed continuation rejected",
+      "context read/write and mutated context rejected"
+    ],
+    "directAssignment": ["valid phase 0 and 1 accepted", "every before/after of 54 limbs mutated, rejected", "full row substitution only when row matches phase", "edges to phase 0/1/2/3/u64max only successor phase accepted", "closed_phase, phase_three, phase_u64max, phase_modular_minus_one rejected", "raw limb 2^64 rejected for each limb", "all-u64-max range boundary accepted as range-only"],
+    "terminalLaterF1F2F3": ["absent/truncated/altered/appended/cross-step proofs", "canonical VK", "accumulator pairing", "transcript EOF", "final pairing", "different-VK currently unexercised", "verifier serialization currently unsupported"],
+    "f2NotBefore": ["accepted current atomic", "independently reviewed RP01-MC03 subset", "all F1 P1/P2/P3", "MC03-specific RP03 campaign admission"],
+    "f1FixturesIndependentOfF2FinancialProof": true,
+    "noNewCycle": true,
+    "f0NoGo": "blocked. no automatic k17 retry."
+  },
+  "acceptanceBlockers": [
+    {"id": "missing-current-atomic-export", "owner": "MC03 atomic-binding-fixture under own admission", "gate": "may proceed alongside F0. Missing current atomic fixture/export remains BLOCKED.", "detail": "No current atomic-context export/fixture exists. Genesis, StateEnvelope, ObservationSet, Authority, Complete and ProofContext hashes are unbound."},
+    {"id": "missing-digest-mapping", "owner": "MC03 atomic-binding-fixture under own admission", "gate": "RP01-MC03 subset record. May proceed alongside F0.", "detail": "Eight retained R2 hashes are not current bounded-atomic hashes. Migration required. Numerical row match does not waive it."},
+    {"id": "seven-loan-claim-ids-unbound", "owner": "MC03/MC05", "detail": "Four ClaimRequirement kinds are correct. Four kinds are not four requirements. Current loan requires seven IDs: bounded_profile_safety_v1, loan_first_period_interest_floor_v1, loan_first_period_principal_v1, loan_first_period_settlement_exact_v1, atomic_intent_refinement_v1, bounded_atomic_transition_v1, bounded_history_compliance_v1. Fixed hashes discharge none."},
+    {"id": "original-k17-exhaustion", "owner": "MC03", "detail": "Original R3 k17 row exhaustion remains failed evidence. This document launches no retry."},
+    {"id": "encoding-candidate-unrun", "owner": "MC03", "detail": "Checked encoding is source-only. Gadget constraints are not executed proof."},
+    {"id": "f0-route-undecided", "owner": "MC04 with MC03 export", "detail": "F0 go/no-go is open. F0 no-go blocks F2 and does not auto-raise k."},
+    {"id": "network-out-of-scope", "owner": "SP05/SP09 per moriarty-midnight-milestone-testing-2026-09-07.md", "detail": "This task supplies no Midnight network acceptance."}
+  ],
+  "closureTasks": [
+    {"id": "parent-static-verify", "owner": "parent", "action": "Verify these two files against pinned inputs. Freeze output hashes."},
+    {"id": "gpt6-subset-review", "owner": "fresh gpt-6-astra", "action": "Independent design review of RP01-MC03 subset only."},
+    {"id": "integrate-subset-record", "owner": "parent", "action": "After review, write subsets.RP01-MC03 into semantic-challenges.json. This worker did not edit that file."},
+    {"id": "atomic-context-export", "owner": "MC03 atomic-binding-fixture under own admission", "action": "Produce current atomic binding fixture/export for the two-step loan. May proceed alongside F0. Recompute hashes under domainRegistry. Do not copy R2 hashes. Missing current atomic fixture/export remains BLOCKED."},
+    {"id": "native-export-api", "owner": "MC03 F0a after F0 go and native-path-freeze", "action": "Native export authorship belongs to separately admitted F0a after F0 go/native-path-freeze. Use the named missing P2 codec/access work. Do not invent a new public IVC API in this subset."},
+    {"id": "f0-decision", "owner": "MC04/RP02", "action": "Record go or no-go. No-go stays blocked."},
+    {"id": "f1-then-f2", "owner": "MC03/MC04", "action": "F2 still requires accepted atomic, reviewed RP01-MC03, all F1 P1/P2/P3, and RP03. F1 fixtures are independent of the F2 financial proof. No new cycle."}
+  ],
+  "outputs": {
+    "statement": "evidence/moriarty-completion-program-2026-09-07/SP01/native-statement-subset-01/statement.json",
+    "design": "evidence/moriarty-completion-program-2026-09-07/SP01/native-statement-subset-01/design.md",
+    "parentHashes": "pending",
+    "statementSha256": null,
+    "designSha256": null
+  },
+  "reviews": []
+}

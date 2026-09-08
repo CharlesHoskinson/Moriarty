@@ -1,0 +1,63 @@
+{
+  "reviewer": "gpt-6-astra",
+  "effort": "high",
+  "agent": "/root/sp05_custody_source_review",
+  "recordType": "Parent summary of source review findings",
+  "scope": "Read-only advisory source preparation; not a design vote, implementation acceptance or public transaction admission.",
+  "findings": [
+    {
+      "kind": "source observation",
+      "claim": "The unshielded token tutorial authenticates secret knowledge with persistentHash. ownPublicKey is prover claimed and does not establish authorization. The tutorial mint entry needs an explicit one-shot initialization guard for this campaign.",
+      "source": "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md",
+      "lines": [
+        188,
+        204,
+        206,
+        211,
+        222,
+        263
+      ]
+    },
+    {
+      "kind": "source observation",
+      "claim": "Private arguments and witnesses are available, but witness values are untrusted. Authorization must constrain the secret or signature, not accept an authorized boolean. Constructor bindings can be sealed.",
+      "source": "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md",
+      "lines": [
+        1048,
+        1072,
+        1316,
+        1342
+      ]
+    },
+    {
+      "kind": "source observation",
+      "claim": "The inspected unshielded receive API has no payer address predicate. Signed offers and UTXO inputs support receipt-level payer attribution. Balance queries describe entry balances, not balances after intra-call mint, receive or send.",
+      "sources": [
+        "repos/LFDT-Minokawa/compact/standard-library.compact",
+        "MC02 installed ledger-v8 type declarations and retained standard library exports"
+      ]
+    },
+    {
+      "kind": "open decision",
+      "claim": "Choose role authorization and enrollment, bind recoverable capabilities to payout ownership, and explicitly distinguish receipt-level payer attribution from contract-enforced payer identity."
+    },
+    {
+      "kind": "candidate alternative",
+      "claim": "Role secrets checked by persistentHash can support a bounded local harness with constructor-bound roles and payout addresses. This requires explicit trusted enrollment and recoverable secret custody; no choice is accepted by this source review."
+    },
+    {
+      "kind": "candidate alternative",
+      "claim": "Action-specific in-circuit signatures require a separately verified compatibility path. Inspected Schnorr documentation and installed helper surfaces do not yet establish a complete signing route."
+    },
+    {
+      "kind": "required controls",
+      "claim": "Reject wrong secrets, forged witness authorization, repeat initialization, wrong action or state revision, wrong recipient or token units, missing funding, insufficient entry reserves, hidden gross movement, and misclassification of third-party funding as borrower debit. Check financial rollback separately from fees."
+    }
+  ],
+  "nextStep": "Prepare the consequential custody/authorization decision for Fable 5.1 medium, GPT-6 and Grok 4.6 high. Two substantive agreeing votes decide under the user instruction. No decision vote or provider dispatch has occurred for this proposal.",
+  "limits": [
+    "No source edits, keys, wallet creation, network operations, builds, tests or proofs were performed by this review.",
+    "No public submission allocation or finalization evidence is established."
+  ],
+  "transactionIds": []
+}
