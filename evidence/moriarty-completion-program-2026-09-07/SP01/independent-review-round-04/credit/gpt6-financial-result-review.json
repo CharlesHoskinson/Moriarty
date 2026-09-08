@@ -1,0 +1,1559 @@
+{
+  "schemaVersion": 1,
+  "verdict": "BLOCKED",
+  "scope": "Independent financial-content result review of frozen credit candidate-02; specified-only design scope.",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "high",
+    "independent": true,
+    "agent": "/root/sp01_workflow_result_review",
+    "sharedAuthorship": false
+  },
+  "startedAtUTC": "2026-09-08T07:07:56.867679+00:00",
+  "candidate": {
+    "sha256": "fe30584a26f9329021972f950d87e2d8c4ca807afd74f77f9c70fc41f3df95a0",
+    "ownedBytes": 269035,
+    "files": {
+      "experiments/moriarty-language/spec/successor/financial-fragments/credit.json": "fae6d1f56d0a74a45141506d8ec0065af369dcaa2f85182131d4f711f1340ccb",
+      "FOREMAN_REPORT.md": "676d344eb402759cdf4a1359da8bfa1a1782df748cdfcb1ba5b50e07135c9f7b",
+      "FOREMAN_REPORT.json": "da0e2b9bd863ca2ab16d5ff128080cbe7b7de5c707d1d462e7f8b383278ea06a"
+    }
+  },
+  "hashesBefore": {
+    "owned": {
+      "experiments/moriarty-language/spec/successor/financial-fragments/credit.json": "fae6d1f56d0a74a45141506d8ec0065af369dcaa2f85182131d4f711f1340ccb",
+      "FOREMAN_REPORT.md": "676d344eb402759cdf4a1359da8bfa1a1782df748cdfcb1ba5b50e07135c9f7b",
+      "FOREMAN_REPORT.json": "da0e2b9bd863ca2ab16d5ff128080cbe7b7de5c707d1d462e7f8b383278ea06a"
+    },
+    "inputs": {
+      "input-packet.json": "b6a72b079f4b64f9eae2ca89d048b5d1e67d65b6f2c8d57c54cdc73d18b66dcf"
+    },
+    "digest": "fe30584a26f9329021972f950d87e2d8c4ca807afd74f77f9c70fc41f3df95a0",
+    "started": "2026-09-08T07:07:56.867679+00:00"
+  },
+  "reviewAllowance": {
+    "seconds": 600,
+    "charged": true,
+    "enforcement": "admitted review allowance, not cgroup",
+    "elapsedSeconds": 403.309
+  },
+  "findings": [
+    {
+      "id": "CREDIT-RESULT-01",
+      "priorFindings": [
+        "CREDIT-GPT6-01",
+        "CREDIT-GPT6-04"
+      ],
+      "severity": "blocking",
+      "title": "Committed-prefix histories contradict final histories, and stale-head rejection rewrites its input",
+      "pointers": [
+        "/library/oracles/refinance/primitiveUpdates/21",
+        "/library/oracles/refinance/postState/history/consumed",
+        "/library/oracles/redemption/primitiveUpdates/17",
+        "/library/oracles/redemption/postState/history/consumed",
+        "/library/oracles/badDebt/primitiveUpdates/17",
+        "/library/oracles/badDebt/postState/history/consumed",
+        "/mutations/12/preContext",
+        "/mutations/12/rejectedState"
+      ],
+      "evidence": "All three primitive histories consume prefix-2 to produce the final head, while each asserted complete final history consumes genesis instead. Prefixes 0,1,2 are explicitly materialized as committed states and negative admissionBoundary objects preserve them. At final step the current head is prefix-2, so consuming genesis violates current-head membership. A whole-oracle atomic summary could consume genesis, but no separate summary/history layer or mapping is defined. Mutation 12 selects mutStale as its preContext (historyHead and currentHeads hist:not-genesis-loan-bob) yet returns badDebt.preState with hist:genesis-loan-bob; its advertised empty rejected effects therefore change history.",
+      "counterexamples": [
+        {
+          "oracle": "refinance",
+          "currentBeforeFinal": "hist:refinance-prefix-2",
+          "primitiveConsumes": "hist:refinance-prefix-2",
+          "postClaimsConsumed": "hist:genesis-loan-A"
+        },
+        {
+          "oracle": "redemption",
+          "currentBeforeFinal": "hist:redeem-R1-prefix-2",
+          "primitiveConsumes": "hist:redeem-R1-prefix-2",
+          "postClaimsConsumed": "hist:genesis-vault"
+        },
+        {
+          "oracle": "badDebt",
+          "currentBeforeFinal": "hist:bad-debt-prefix-2",
+          "primitiveConsumes": "hist:bad-debt-prefix-2",
+          "postClaimsConsumed": "hist:genesis-loan-bob"
+        },
+        {
+          "mutation": 12,
+          "preHead": "hist:not-genesis-loan-bob",
+          "rejectedHead": "hist:genesis-loan-bob",
+          "emptyEffects": true
+        }
+      ],
+      "requiredFix": "Choose and specify one admission model. For committed step successors, bind each final state/acceptance to its actual prefix-2 predecessor, retaining a separate complete chain/genesis record if needed. If whole-oracle atomicity is intended, distinguish speculative prefixes from committed negative contexts and provide their own admitted lineage. For the stale-head control, separate ledger preState from attempted admission input or return exactly the selected complete preContext; rejection must not restore an old head."
+    },
+    {
+      "id": "CREDIT-RESULT-02",
+      "priorFindings": [
+        "CREDIT-GPT6-04"
+      ],
+      "severity": "blocking",
+      "title": "Primitive updates and four-claim checks still do not define the complete finite transition",
+      "pointers": [
+        "/library/oracles/refinance/primitiveUpdates/14",
+        "/library/oracles/refinance/primitiveUpdates/19",
+        "/library/oracles/redemption/primitiveUpdates/1",
+        "/library/oracles/redemption/primitiveUpdates/10",
+        "/library/oracles/redemption/postState/observations",
+        "/library/oracles/badDebt/primitiveUpdates/9",
+        "/library/oracles/badDebt/primitiveUpdates/13",
+        "/library/oracles/refinance/acceptance",
+        "/library/oracles/redemption/acceptance",
+        "/library/oracles/badDebt/acceptance"
+      ],
+      "evidence": "Primitive update lists and named fullPostEquality/frame/ownership/current-head checks are useful additions, but no primitive application rules or complete record constructors bind their omitted fields. Refinance debtCreate supplies only principal/total/status, not the new debt's borrower, creditor, accrual, market aliases and financed fee record; dutyProduce supplies only an ID. Redemption has no explicit nominal-holder update or nominal share amount 100->60, and no observation writes for availableLiquidityUSDC 3800->0 and remainingExactUSDC creation. BadDebt debtWrite omits final open-impaired/lossAllocatedToShares changes; shareNAVWrite does not define removal of includesReceivable or the impaired receivable memo. IntentRefinement still says everyHardConstraintHasPlanWitness with pass=true without witnesses. Acceptance has no bound current semantics/key/spec registry or pre-verification resource inputs/predicates; the input packet requires unknownOrRevokedSemanticsReject and preVerificationBudgets. Positive genesis/admin remain prose summaries rather than a binding of the entire admitted preState.",
+      "counterexample": "Under literal field application, redemption's nominal holder remains alice unless tokenTransfer is separately defined to update nominal shares, and its observation availableLiquidityUSDC remains 3800 after the actual 3800 cash payment. The declared postState instead requires requestEscrow and liquidity 0. This is not full post equality. Changing new debt creditor or an unbound registry revocation flag likewise has no defined witness comparison in the stated checks.",
+      "requiredFix": "Define finite primitive semantics, typed/default constructors or resolved full-record replacements, and exact paths for every non-frame field. Express the four claims as predicates over those inputs, hard-constraint witnesses, full admitted genesis/admin context, registry/currentness and concrete budgets. Derive checks from state paths rather than recording self-reported pass flags. Include a full frame over the complement of actual writes. Runtime or proof implementation is not needed."
+    },
+    {
+      "id": "CREDIT-RESULT-03",
+      "priorFindings": [
+        "CREDIT-GPT6-03"
+      ],
+      "severity": "blocking",
+      "title": "Per-step footprints remain smaller than the actual committed-state changes",
+      "pointers": [
+        "/rows/0/boundedFootprint",
+        "/rows/1/boundedFootprint",
+        "/rows/2/boundedFootprint",
+        "/rows/3/boundedFootprint",
+        "/rows/4/boundedFootprint"
+      ],
+      "evidence": "Previously missing authority/duty/position names are added, but exact access accounting still fails. Every step changes historyHead/currentHeads/consumed/produced; perStep mostly lists only newly created prefix labels and omits currentHeads writes, predecessor consumption and later currentness reads. Redemption step 2 writes sharesLocked/sharesBurned/assetsClaimedUSDC/assetsRemainingExactUSDC and stored liquidity/remaining observations, but lists only request claimable/status/sharesClaimable plus balances, supply and fill authority. Its step 0 changes the nominal share holder and locked fields without a corresponding nominal share resource. BadDebt step 3 changes debt status/lossAllocatedToShares and allocatedLossUSDC observations, but the perStep list has no bob.debt or observation write. Aggregated bound=1 does not state whether it counts unique records or accesses: the actual listed work.lifetime accesses are 4, bridge balance writes 2 and redemption claimable writes 2. Prefix history creates are absent from the aggregate create list. Aliases such as duty.bob.remaining.600 versus duty.bob.serviceDebt.remaining.600 are not expanded by the supplied alias map.",
+      "counterexamples": [
+        {
+          "resource": "work.lifetime",
+          "aggregateBound": 1,
+          "listedStepWrites": 4
+        },
+        {
+          "resource": "bridge.balance.USDC",
+          "aggregateBound": 1,
+          "listedStepWrites": 2
+        },
+        {
+          "resource": "request-R1.sharesClaimable",
+          "aggregateBound": 1,
+          "listedStepWrites": 2
+        }
+      ],
+      "requiredFix": "Declare unique-resource counts separately from per-step access bounds. Provide deterministic aliases to exact financial state paths and include all reads, writes, creations, deletions and consumptions from the complete-state diffs, including nominal ownership, observation updates and current history. Reconcile totals and budgets to those accesses; identifying omitted resource names alone does not close the finding."
+    },
+    {
+      "id": "CREDIT-RESULT-04",
+      "priorFindings": [
+        "CREDIT-GPT6-02",
+        "CREDIT-GPT6-04",
+        "CREDIT-GPT6-05"
+      ],
+      "severity": "blocking",
+      "title": "Funded replay and residual discharge controls still have unproved admission prerequisites",
+      "pointers": [
+        "/library/committedStates/redemptionFundedLaterAfterFirstClaim",
+        "/mutations/5/validPrefix/replenishment",
+        "/mutations/5/mutatedContext/prerequisitesPassed",
+        "/library/attemptedStates/mut5/requests/0",
+        "/library/attemptedStates/mut9/duties/0",
+        "/mutations/9/mutatedContext/internallyConsistentAttempt"
+      ],
+      "evidence": "The new replay is genuinely cash-funded: vaultDeployed 5700->1900 supplies vaultLiquid 0->3800, total USDC stays 9500, R1 claimable and sharesClaimable stay 0, and prior burn/authority/duty counters survive. However the replenishment has no admitted authority/controller, separate successor/currentness provenance or finite resource admission; it mutates complete financial state under the unchanged first-claim head. workCharge=0 and notSuccessorStepOfOriginalOracle=true disclose a cost choice but do not establish a legal external transition. The replay's type/authority/resource/currentness prerequisites are booleans; its proposed state raises assetsClaimed to 7600 while leaving remainingExact 5700 and burn/supply counters unchanged, so the exact-goal equation also fails (13300 != 9500). No ordering establishes that replay is the distinguishing failure. The residual write-off control correctly updates principal/accrual/total/status/discharged, but leaves the complete 600 service duty undischargeable and unchanged, creating a second debt/duty consistency failure without a defined order or full legal write-off candidate shape.",
+      "counterexamples": [
+        {
+          "case": "funded replay",
+          "cashTotal": 9500,
+          "liquidAvailable": 3800,
+          "attempt": 3800,
+          "claimable": 0,
+          "attemptedClaimedPlusRemaining": 13300,
+          "goal": 9500
+        },
+        {
+          "case": "residual write-off",
+          "attemptedDebtTotal": 0,
+          "attemptedDebtDischarged": true,
+          "survivingDutyPrincipal": 600,
+          "survivingDutyDischarged": false
+        }
+      ],
+      "requiredFix": "Admit the replenishment under a complete explicit toy external boundary with named source controller/authority, conserved transfer, currentness/history scope and finite cost/resource accounting. State the candidate admission order and concrete inputs that pass before replay/claimable rejection, with later consistency checks explicitly unreachable, or construct a balanced legal-next-claim candidate differing only in the forbidden replay entitlement. For residual discharge, supply a complete authorized-discharge candidate shape including duty effects, then remove only the grant, or specify authorization rejection before downstream debt/duty checks. Preserve cash-funded and unfunded cases separately."
+    }
+  ],
+  "priorFindingDisposition": [
+    {
+      "id": "CREDIT-GPT6-01",
+      "status": "BLOCKED",
+      "progress": "Original ten complete rollback refs and exact prefix work are corrected; new stale-head rollback and committed/final history model conflict remain.",
+      "resultFindings": [
+        "CREDIT-RESULT-01"
+      ]
+    },
+    {
+      "id": "CREDIT-GPT6-02",
+      "status": "BLOCKED",
+      "progress": "Cash-funded later replay exists and arithmetic passes; admitted replenishment provenance and complete prerequisite isolation do not.",
+      "resultFindings": [
+        "CREDIT-RESULT-04"
+      ]
+    },
+    {
+      "id": "CREDIT-GPT6-03",
+      "status": "BLOCKED",
+      "progress": "Named previously omitted authority/duty/position resources added; complete per-step footprints and finite access totals remain incomplete.",
+      "resultFindings": [
+        "CREDIT-RESULT-03"
+      ]
+    },
+    {
+      "id": "CREDIT-GPT6-04",
+      "status": "BLOCKED",
+      "progress": "Primitive lists, ownership check, finite singleton heads and stale/ownership negatives added; exact application/full frame/current history and registry/budget predicates remain incomplete.",
+      "resultFindings": [
+        "CREDIT-RESULT-01",
+        "CREDIT-RESULT-02"
+      ]
+    },
+    {
+      "id": "CREDIT-GPT6-05",
+      "status": "PARTIALLY-CORRECTED",
+      "progress": "sharesClaimable explicitly clears40->0; lock100/0 and fill40/60 counters separate; lifecycle partial Pending/Claimable/Pending declared; market-controller is actual continuation owner with MC07 implementation owner separate. Gross collateral cap20 cannot be reused for two20 moves. Residual write-off debt tuple corrected but full duty/predicate isolation remains.",
+      "resultFindings": [
+        "CREDIT-RESULT-04"
+      ]
+    }
+  ],
+  "independentReplay": {
+    "oracleReplay": [
+      {
+        "oracle": "refinance",
+        "steps": [
+          {
+            "step": 0,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 12,
+            "ordinaryRemaining": 1012,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "50000"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:genesis-loan-A"
+            ],
+            "previousHead": "hist:genesis-loan-A",
+            "changedPaths": [
+              "/committedPrefixIndex",
+              "/history/cardinality",
+              "/history/consumed",
+              "/history/currentHeads/0",
+              "/history/produced",
+              "/historyHead",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryNotCopiedOnSplitJoinCancelMigrate",
+              "/work/ordinaryRemaining",
+              "/work/perActionBound",
+              "/work/perActionMaxObserved",
+              "/work/recoveryReserveCharged",
+              "/work/recoveryReserveOriginal",
+              "/work/reserveNotCopied"
+            ]
+          },
+          {
+            "step": 1,
+            "funded": true,
+            "transferCount": 1,
+            "ordinaryCharged": 32,
+            "ordinaryRemaining": 992,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "50000"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:refinance-prefix-0"
+            ],
+            "previousHead": "hist:refinance-prefix-0",
+            "changedPaths": [
+              "/accounts/1/balances/0/amount",
+              "/accounts/4/balances/0/amount",
+              "/authorities/4/cumulativeGross",
+              "/authorities/4/remaining",
+              "/committedPrefixIndex",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining",
+              "/work/perActionMaxObserved"
+            ]
+          },
+          {
+            "step": 2,
+            "funded": true,
+            "transferCount": 2,
+            "ordinaryCharged": 48,
+            "ordinaryRemaining": 976,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "0"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:refinance-prefix-1"
+            ],
+            "previousHead": "hist:refinance-prefix-1",
+            "changedPaths": [
+              "/accounts/2/balances/0/amount",
+              "/accounts/3/balances/0/amount",
+              "/accounts/4/balances/0/amount",
+              "/authorities/2/cumulativeGross",
+              "/authorities/2/remaining",
+              "/authorities/5/cumulativeGross",
+              "/authorities/5/remaining",
+              "/committedPrefixIndex",
+              "/debts/0/dischargedByTransfer",
+              "/debts/0/erasureLabelInsufficient",
+              "/debts/0/principal/amount",
+              "/debts/0/status",
+              "/debts/0/total/amount",
+              "/duties",
+              "/dutiesConsumedThisPrefix",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining"
+            ]
+          },
+          {
+            "step": 3,
+            "funded": true,
+            "transferCount": 1,
+            "ordinaryCharged": 60,
+            "ordinaryRemaining": 964,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "0",
+              "50050"
+            ],
+            "historyConsumesPreviousPrefix": false,
+            "actualHistoryConsumed": [
+              "hist:genesis-loan-A"
+            ],
+            "previousHead": "hist:refinance-prefix-2",
+            "changedPaths": [
+              "/accounts/5/balances/0/amount",
+              "/accounts/6/balances/0/amount",
+              "/authorities/1/cumulativeGross",
+              "/authorities/1/grossMovesApplied",
+              "/authorities/1/remaining",
+              "/authorities/3/cumulativeGross",
+              "/authorities/3/remaining",
+              "/committedPrefixIndex",
+              "/debts",
+              "/duties",
+              "/dutiesConsumedThisPrefix",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/positions/0/copied",
+              "/positions/0/custodian",
+              "/positions/0/marketAliases/0",
+              "/positions/0/marketAliases/1",
+              "/positions/0/residualController",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining"
+            ]
+          }
+        ],
+        "assetTotals": {
+          "USDC": 300000,
+          "WETH": 20
+        }
+      },
+      {
+        "oracle": "redemption",
+        "steps": [
+          {
+            "step": 0,
+            "funded": true,
+            "transferCount": 1,
+            "ordinaryCharged": 10,
+            "ordinaryRemaining": 1014,
+            "reserveRemaining": 16,
+            "debtTotals": [],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:genesis-vault"
+            ],
+            "previousHead": "hist:genesis-vault",
+            "changedPaths": [
+              "/accounts/0/balances/1/amount",
+              "/accounts/3/balances/0/amount",
+              "/authorities/0/cumulativeGross",
+              "/authorities/0/remaining",
+              "/committedPrefixIndex",
+              "/history/cardinality",
+              "/history/consumed",
+              "/history/currentHeads/0",
+              "/history/produced",
+              "/historyHead",
+              "/requests",
+              "/shares/0/burnedThisSuccessor",
+              "/shares/0/holder",
+              "/shares/0/locked",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryNotCopiedOnSplitJoinCancelMigrate",
+              "/work/ordinaryRemaining",
+              "/work/perActionBound",
+              "/work/perActionMaxObserved",
+              "/work/recoveryReserveCharged",
+              "/work/recoveryReserveOriginal",
+              "/work/reserveNotCopied"
+            ]
+          },
+          {
+            "step": 1,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 24,
+            "ordinaryRemaining": 1000,
+            "reserveRemaining": 16,
+            "debtTotals": [],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:redeem-R1-prefix-0"
+            ],
+            "previousHead": "hist:redeem-R1-prefix-0",
+            "changedPaths": [
+              "/committedPrefixIndex",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/requests/0/claimableUSDC",
+              "/requests/0/sharesClaimable",
+              "/requests/0/status",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining",
+              "/work/perActionMaxObserved"
+            ]
+          },
+          {
+            "step": 2,
+            "funded": true,
+            "transferCount": 1,
+            "ordinaryCharged": 42,
+            "ordinaryRemaining": 982,
+            "reserveRemaining": 16,
+            "debtTotals": [],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:redeem-R1-prefix-1"
+            ],
+            "previousHead": "hist:redeem-R1-prefix-1",
+            "changedPaths": [
+              "/accounts/0/balances/0/amount",
+              "/accounts/1/balances/0/amount",
+              "/accounts/3/balances/0/amount",
+              "/authorities/1/cumulativeGross",
+              "/authorities/1/remaining",
+              "/committedPrefixIndex",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/observations/availableLiquidityUSDC",
+              "/observations/remainingExactUSDC",
+              "/requests/0/assetsClaimedUSDC",
+              "/requests/0/assetsRemainingExactUSDC",
+              "/requests/0/claimableClearedAfterClaim",
+              "/requests/0/claimableUSDC",
+              "/requests/0/partialFillNet",
+              "/requests/0/sharesBurned",
+              "/requests/0/sharesClaimable",
+              "/requests/0/sharesLocked",
+              "/requests/0/status",
+              "/shares/0/amount",
+              "/shares/0/burnedThisSuccessor",
+              "/shares/0/locked",
+              "/shares/0/lockedResidual",
+              "/shares/0/supply",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining",
+              "/work/perActionMaxObserved"
+            ]
+          },
+          {
+            "step": 3,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 50,
+            "ordinaryRemaining": 974,
+            "reserveRemaining": 16,
+            "debtTotals": [],
+            "historyConsumesPreviousPrefix": false,
+            "actualHistoryConsumed": [
+              "hist:genesis-vault"
+            ],
+            "previousHead": "hist:redeem-R1-prefix-2",
+            "changedPaths": [
+              "/committedPrefixIndex",
+              "/duties",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/requests/0/fullSettledBranchNotTaken",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining"
+            ]
+          }
+        ],
+        "assetTotals": {
+          "USDC": 9500,
+          "FundShares": 60
+        }
+      },
+      {
+        "oracle": "badDebt",
+        "steps": [
+          {
+            "step": 0,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 8,
+            "ordinaryRemaining": 1016,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "1000"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:genesis-loan-bob"
+            ],
+            "previousHead": "hist:genesis-loan-bob",
+            "changedPaths": [
+              "/committedPrefixIndex",
+              "/history/cardinality",
+              "/history/consumed",
+              "/history/currentHeads/0",
+              "/history/produced",
+              "/historyHead",
+              "/observations/shortfallUSDC",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryNotCopiedOnSplitJoinCancelMigrate",
+              "/work/ordinaryRemaining",
+              "/work/perActionBound",
+              "/work/perActionMaxObserved",
+              "/work/recoveryReserveCharged",
+              "/work/recoveryReserveOriginal",
+              "/work/reserveNotCopied"
+            ]
+          },
+          {
+            "step": 1,
+            "funded": true,
+            "transferCount": 2,
+            "ordinaryCharged": 28,
+            "ordinaryRemaining": 996,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "1000"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:bad-debt-prefix-0"
+            ],
+            "previousHead": "hist:bad-debt-prefix-0",
+            "changedPaths": [
+              "/accounts/1/balances/0/amount",
+              "/accounts/2/balances/0/amount",
+              "/accounts/3/balances/0/amount",
+              "/accounts/3/balances/1/amount",
+              "/authorities/0/cumulativeGross",
+              "/authorities/0/remaining",
+              "/committedPrefixIndex",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/positionDeleted",
+              "/positions",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining",
+              "/work/perActionMaxObserved"
+            ]
+          },
+          {
+            "step": 2,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 40,
+            "ordinaryRemaining": 984,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "600"
+            ],
+            "historyConsumesPreviousPrefix": true,
+            "actualHistoryConsumed": [
+              "hist:bad-debt-prefix-1"
+            ],
+            "previousHead": "hist:bad-debt-prefix-1",
+            "changedPaths": [
+              "/authorities/1/cumulativeGross",
+              "/authorities/1/remaining",
+              "/committedPrefixIndex",
+              "/debts/0/discharged",
+              "/debts/0/erasure",
+              "/debts/0/principal/amount",
+              "/debts/0/recoveryApplied",
+              "/debts/0/status",
+              "/debts/0/total/amount",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining"
+            ]
+          },
+          {
+            "step": 3,
+            "funded": true,
+            "transferCount": 0,
+            "ordinaryCharged": 56,
+            "ordinaryRemaining": 968,
+            "reserveRemaining": 16,
+            "debtTotals": [
+              "600"
+            ],
+            "historyConsumesPreviousPrefix": false,
+            "actualHistoryConsumed": [
+              "hist:genesis-loan-bob"
+            ],
+            "previousHead": "hist:bad-debt-prefix-2",
+            "changedPaths": [
+              "/committedPrefixIndex",
+              "/debts/0/lossAllocatedToShares",
+              "/debts/0/status",
+              "/duties/0/accrual",
+              "/duties/0/discharged",
+              "/duties/0/id",
+              "/duties/0/impaired",
+              "/duties/0/kind",
+              "/duties/0/obligee",
+              "/duties/0/obligor",
+              "/duties/0/principal/amount",
+              "/duties/0/survivesPartialProgress",
+              "/history/consumed/0",
+              "/history/currentHeads/0",
+              "/history/produced/0",
+              "/historyHead",
+              "/observations/allocatedLossUSDC",
+              "/observations/shortfallUSDC",
+              "/positionDeleted",
+              "/shares/0/allocatedLoss",
+              "/shares/0/impairedReceivableMemo",
+              "/shares/0/includesReceivable",
+              "/shares/0/navExcludesImpairedReceivable",
+              "/shares/0/shareAssetNAV/amount",
+              "/shares/0/shareValue/amount",
+              "/shares/0/tokenQuantityUnchanged",
+              "/work/charges",
+              "/work/conservationOrdinary",
+              "/work/ordinaryCharged",
+              "/work/ordinaryRemaining"
+            ]
+          }
+        ],
+        "assetTotals": {
+          "USDC": 400,
+          "WETH": 1,
+          "FundShares": 100
+        }
+      }
+    ],
+    "mutations": [
+      {
+        "index": 0,
+        "id": "heldouts:accepted-refinance:mut:discharge-without-settlement",
+        "preWorkCharged": 32,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/debts/0/principal/amount",
+          "/debts/0/total/amount",
+          "/debts/0/status",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Concrete attempted principal/total zero with no repayment; rejected state preserves funded prefix1 and work32. Prefix history model remains blocked."
+      },
+      {
+        "index": 1,
+        "id": "heldouts:accepted-refinance:mut:fee-untransferred",
+        "preWorkCharged": 32,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/debts",
+          "/accounts/2/balances/0/amount",
+          "/accounts/4/balances/0/amount",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "transferFunding": [
+          {
+            "from": "bridge",
+            "have": 50050,
+            "need": 50000,
+            "funded": true
+          }
+        ],
+        "disposition": "Funded 50000 repayment omits fee50; bridge retains50 and feeRecipient stays0. Candidate also creates new debt outside original step2; full update/order predicate not defined."
+      },
+      {
+        "index": 2,
+        "id": "intent-cases:refinance:mut:temp-uncollateralized",
+        "preWorkCharged": 32,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/positions/0/amount",
+          "/positions/0/custodian",
+          "/observablePrefixAfterRelease",
+          "/accounts/0/balances/1/amount",
+          "/accounts/5/balances/0/amount",
+          "/collateralMoveCap",
+          "/attemptedInvalid",
+          "/attemptedGrossMoves"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "transferFunding": [
+          {
+            "from": "vaultA",
+            "have": 20,
+            "need": 20,
+            "funded": true
+          }
+        ],
+        "disposition": "First release20 is funded and collateral value0<75000. Proposed later second20 gives gross40>cap20; both failures are explicit, not an isolated single-predicate case."
+      },
+      {
+        "index": 3,
+        "id": "intent-cases:refinance:mut:new-debt-without-authority",
+        "preWorkCharged": 48,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/debts",
+          "/removedAuthorization",
+          "/authorities",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Prefix2 retains valid nominal-create authority50500; attemptedState removes that authority and creates debt50050. It demonstrates a proposed unauthorized authority deletion, but does not provide an admitted authority-absent context; reject against actual preContext requires an explicit authority-use/update rule."
+      },
+      {
+        "index": 4,
+        "id": "heldouts:pending-redemption:mut:erase-claim-on-illiquidity",
+        "preWorkCharged": 10,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/shares/0/locked",
+          "/shares/0/burnedThisSuccessor",
+          "/shares/0/supply",
+          "/shares/0/amount",
+          "/requests",
+          "/accounts/3/balances/0/amount",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "100 locked shares are erased with no USDC and no residual; concrete rejection keeps prefix0 and work10."
+      },
+      {
+        "index": 5,
+        "id": "heldouts:pending-redemption:mut:replay-claim",
+        "preWorkCharged": 50,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/requests/0/assetsClaimedUSDC",
+          "/accounts/0/balances/0/amount",
+          "/accounts/1/balances/0/amount",
+          "/prerequisitesPassed",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "transferFunding": [
+          {
+            "from": "vaultLiquid",
+            "have": 3800,
+            "need": 3800,
+            "funded": true
+          }
+        ],
+        "disposition": "3800 replay payment is cash-funded after conserved replenishment; admission provenance and isolation remain blocked by CREDIT-RESULT-04."
+      },
+      {
+        "index": 6,
+        "id": "intent-cases:pending-redemption:mut:skip-to-settled",
+        "preWorkCharged": 10,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/requests/0/status",
+          "/skipped",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Pending->Settled with no claimable/burn/payment violates explicitly declared partial/full lifecycle; rollback prefix0 is exact."
+      },
+      {
+        "index": 7,
+        "id": "intent-cases:pending-redemption:mut:drop-exact-floor",
+        "preWorkCharged": 42,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/requests/0/exactOutputGoalUSDC",
+          "/requests/0/assetsRemainingExactUSDC",
+          "/requests/0/status",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Claimed3800 cannot replace exact goal9500; residual60*95=5700. Correct rollback is afterStep2, work42/remaining982."
+      },
+      {
+        "index": 8,
+        "id": "DeFi-regressions:bad-debt:mut:erase-or-omit-socialized-loss",
+        "preWorkCharged": 8,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/omittedRecoverySale",
+          "/debts/0/principal/amount",
+          "/debts/0/total/amount",
+          "/debts/0/status",
+          "/omittedLossRecord",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Debt1000 erased with no recovery and no loss recognition is a concrete composite negative; no isolated omission-only coverage inferred."
+      },
+      {
+        "index": 9,
+        "id": "DeFi-regressions:bad-debt:mut:discharge-residual-without-auth",
+        "preWorkCharged": 56,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/debts/0/discharged",
+          "/debts/0/internallyConsistentAttempt",
+          "/debts/0/principal/amount",
+          "/debts/0/total/amount",
+          "/debts/0/status",
+          "/writeOffAuthorizationPresent",
+          "/attemptedInvalid"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Principal/accrual/total/status/discharged are now mutually consistent for debt0, but surviving duty600 remains a separate inconsistency; authorization isolation requires ordered checks or complete discharge shape."
+      },
+      {
+        "index": 10,
+        "id": "heldouts:pending-redemption:mut:replay-claim-unfunded",
+        "preWorkCharged": 50,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/attemptedDebit",
+          "/attemptedInvalid",
+          "/unfunded"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "transferFunding": [
+          {
+            "from": "vaultLiquid",
+            "have": 0,
+            "need": 3800,
+            "funded": false
+          }
+        ],
+        "disposition": "Escrow cash0 cannot fund3800; explicitly rejected at funded-source before replay. Complete unchanged state retained."
+      },
+      {
+        "index": 11,
+        "id": "DeFi-regressions:bad-debt:mut:nominal-shareholder-changed-to-buyer",
+        "preWorkCharged": 56,
+        "rejectedEqualsCompletePre": true,
+        "rejectedDiff": [],
+        "attemptedDiff": [
+          "/shares/0/holder",
+          "/numericPredicatesStillHold",
+          "/tokenAmountStill",
+          "/attemptedInvalid",
+          "/tokenAccountStill"
+        ],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Nominal holder buyer differs from FundShares account shareholders100, while cash/debt/NAV/share quantities remain unchanged. Concrete ownership counterexample."
+      },
+      {
+        "index": 12,
+        "id": "DeFi-regressions:bad-debt:mut:stale-current-head",
+        "preWorkCharged": 0,
+        "rejectedEqualsCompletePre": false,
+        "rejectedDiff": [
+          "/historyHead",
+          "/history/currentHeads/0",
+          "/attemptedInvalid",
+          "/attemptedConsume"
+        ],
+        "attemptedDiff": [],
+        "emptyRejectedEffects": true,
+        "rejectedCostZero": true,
+        "prefixWorkChargeMatches": true,
+        "attemptDebtArithmetic": true,
+        "disposition": "Genesis not in supplied singleton currentHeads rejects membership, but rejected result changes historyHead/currentHeads back to genesis: exact rollback fails."
+      }
+    ],
+    "referenceErrors": [],
+    "refsChecked": 518,
+    "identity": {
+      "rows": {
+        "input": 5,
+        "current": 5,
+        "missing": []
+      },
+      "traces": {
+        "input": 5,
+        "current": 5,
+        "missing": []
+      },
+      "mutations": {
+        "input": 5,
+        "current": 13,
+        "missing": []
+      }
+    },
+    "traces": [
+      {
+        "id": "heldouts:accepted-refinance:trace",
+        "oracleRef": "/library/oracles/refinance",
+        "stepCount": 4
+      },
+      {
+        "id": "heldouts:pending-redemption:trace",
+        "oracleRef": "/library/oracles/redemption",
+        "stepCount": 4
+      },
+      {
+        "id": "intent-cases:refinance:trace",
+        "oracleRef": "/library/oracles/refinance",
+        "stepCount": 4
+      },
+      {
+        "id": "intent-cases:pending-redemption:trace",
+        "oracleRef": "/library/oracles/redemption",
+        "stepCount": 4
+      },
+      {
+        "id": "DeFi-regressions:bad-debt:trace",
+        "oracleRef": "/library/oracles/badDebt",
+        "stepCount": 4
+      }
+    ]
+  },
+  "secondaryChecks": {
+    "arithmetic": [
+      {
+        "index": 0,
+        "id": "ver:rf:newDebt",
+        "got": 50050,
+        "matches": true
+      },
+      {
+        "index": 1,
+        "id": "ver:rf:newDebtLeCap",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 2,
+        "id": "ver:rf:collatValue",
+        "got": 80000,
+        "matches": true
+      },
+      {
+        "index": 3,
+        "id": "ver:rf:reqOld",
+        "got": 75000,
+        "matches": true
+      },
+      {
+        "index": 4,
+        "id": "ver:rf:reqNew",
+        "got": 75075,
+        "matches": true
+      },
+      {
+        "index": 5,
+        "id": "ver:rf:prefixOld",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 6,
+        "id": "ver:rf:prefixNew",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 7,
+        "id": "ver:rf:lenderPost",
+        "got": 49950,
+        "matches": true
+      },
+      {
+        "index": 8,
+        "id": "ver:rf:creditorPost",
+        "got": 250000,
+        "matches": true
+      },
+      {
+        "index": 9,
+        "id": "ver:rf:bridgePost",
+        "got": 0,
+        "matches": true
+      },
+      {
+        "index": 10,
+        "id": "ver:rf:usdcCons",
+        "got": 300000,
+        "matches": true
+      },
+      {
+        "index": 11,
+        "id": "ver:rf:usdcConsPost",
+        "got": 300000,
+        "matches": true
+      },
+      {
+        "index": 12,
+        "id": "ver:rf:work",
+        "got": 60,
+        "matches": true
+      },
+      {
+        "index": 13,
+        "id": "ver:rf:workRemain",
+        "got": 964,
+        "matches": true
+      },
+      {
+        "index": 14,
+        "id": "ver:rf:workCons",
+        "got": 1024,
+        "matches": true
+      },
+      {
+        "index": 15,
+        "id": "ver:rf:debtIncIndependent",
+        "got": 50,
+        "matches": true
+      },
+      {
+        "index": 16,
+        "id": "ver:rf:authRemain",
+        "got": 450,
+        "matches": true
+      },
+      {
+        "index": 17,
+        "id": "ver:rd:goal",
+        "got": 9500,
+        "matches": true
+      },
+      {
+        "index": 18,
+        "id": "ver:rd:fill",
+        "got": 3800,
+        "matches": true
+      },
+      {
+        "index": 19,
+        "id": "ver:rd:resid",
+        "got": 5700,
+        "matches": true
+      },
+      {
+        "index": 20,
+        "id": "ver:rd:net",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 21,
+        "id": "ver:rd:nav",
+        "got": 9500,
+        "matches": true
+      },
+      {
+        "index": 22,
+        "id": "ver:rd:work",
+        "got": 50,
+        "matches": true
+      },
+      {
+        "index": 23,
+        "id": "ver:rd:workRemain",
+        "got": 974,
+        "matches": true
+      },
+      {
+        "index": 24,
+        "id": "ver:rd:supply",
+        "got": 60,
+        "matches": true
+      },
+      {
+        "index": 25,
+        "id": "ver:bd:remain",
+        "got": 600,
+        "matches": true
+      },
+      {
+        "index": 26,
+        "id": "ver:bd:shareValPre",
+        "got": 10,
+        "matches": true
+      },
+      {
+        "index": 27,
+        "id": "ver:bd:shareValPost",
+        "got": 4,
+        "matches": true
+      },
+      {
+        "index": 28,
+        "id": "ver:bd:work",
+        "got": 56,
+        "matches": true
+      },
+      {
+        "index": 29,
+        "id": "ver:bd:workRemain",
+        "got": 968,
+        "matches": true
+      },
+      {
+        "index": 30,
+        "id": "ver:bd:notZero",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 31,
+        "id": "ver:bd:split",
+        "got": 1000,
+        "matches": true
+      },
+      {
+        "index": 32,
+        "id": "ver:rf:perAction",
+        "got": true,
+        "matches": true
+      },
+      {
+        "index": 33,
+        "id": "ver:mut:uncollat",
+        "got": false,
+        "matches": true
+      },
+      {
+        "index": 34,
+        "id": "ver:mut:partialNeFull",
+        "got": false,
+        "matches": true
+      }
+    ],
+    "sources": [
+      {
+        "pointer": "/library/oracles/refinance/provenance",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/library/oracles/redemption/provenance",
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/library/oracles/redemption/provenance/also",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/library/oracles/badDebt/provenance",
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/0/source/0",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/1/source/0",
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/1/source/1",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/2/source/0",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/2/source/1",
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/3/source/0",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/rows/4/source/0",
+        "path": "raw/reports/unified-2026-09-07/defi.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/traces/2/provenance",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/traces/2/provenance/also",
+        "path": "deliverables/defi-language-design-2026-09-07/action-targets.csv",
+        "hashMatch": true,
+        "textPresent": true
+      },
+      {
+        "pointer": "/traces/3/provenance",
+        "path": "raw/reports/unified-2026-09-07/intents.md",
+        "hashMatch": true,
+        "textPresent": true
+      }
+    ],
+    "quantityRegistry": {
+      "USDC": [
+        [
+          "USDC",
+          "1"
+        ]
+      ],
+      "WETH": [
+        [
+          "WETH",
+          "1"
+        ]
+      ],
+      "FundShares": [
+        [
+          "shares",
+          "1"
+        ]
+      ]
+    },
+    "quantityIssues": [
+      {
+        "path": "/library/oracles/refinance/effects/fees/0",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/refinance/primitiveUpdates/2",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/refinance/primitiveUpdates/6",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/refinance/primitiveUpdates/7",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/refinance/primitiveUpdates/16",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/redemption/effects/fees/0",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/redemption/acceptance/TransitionValidity/checks/2",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/redemption/primitiveUpdates/0",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/redemption/primitiveUpdates/8",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/redemption/primitiveUpdates/9",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/badDebt/acceptance/ContractInvariant/checks/7",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/badDebt/acceptance/TransitionValidity/checks/2",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/badDebt/primitiveUpdates/3",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/oracles/badDebt/primitiveUpdates/4",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/library/attemptedStates/mut5u/attemptedDebit",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      },
+      {
+        "path": "/mutations/5/validPrefix/replenishment/transfer",
+        "missing": [
+          "unit",
+          "scale"
+        ]
+      }
+    ],
+    "refs": 324,
+    "refErrors": [],
+    "rowMutationRefs": [
+      {
+        "row": "heldouts:accepted-refinance",
+        "missing": [],
+        "dangling": []
+      },
+      {
+        "row": "heldouts:pending-redemption",
+        "missing": [],
+        "dangling": []
+      },
+      {
+        "row": "intent-cases:refinance",
+        "missing": [],
+        "dangling": []
+      },
+      {
+        "row": "intent-cases:pending-redemption",
+        "missing": [],
+        "dangling": []
+      },
+      {
+        "row": "DeFi-regressions:bad-debt",
+        "missing": [],
+        "dangling": []
+      }
+    ],
+    "rowSourcesEqualToPacket": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "commandEvidence": [
+    {
+      "command": "Read-only cat/ls and python3 JSON selections of candidate freeze, binding, input packet, prior review, correction prompt, terminal receipt and candidate reports.",
+      "exitCode": 0
+    },
+    {
+      "command": "python3 - <<'PY'\nimport json,pathlib,copy,collections\ns=pathlib.Path('/home/charl/.local/state/moriarty/sp01-map-fragments-20260908/credit');d=json.loads((s/'candidate-02/experiments/moriarty-language/spec/successor/financial-fragments/credit.json').read_text());out={'oracleReplay':[],'mutations':[],'referenceErrors':[],'refsChecked':0,'identity':{}}\ndef get(p):\n x=d\n for k in p.strip('/').split('/'):\n  k=k.replace('~1','/').replace('~0','~');x=x[int(k)]if isinstance(x,list)else x[k]\n return x\ndef resolve(v):\n if isinstance(v,dict)and list(v)==['ref']:return resolve(get(v['ref']))\n return v\ndef walk(v,p=''):\n yield p,v\n if isinstance(v,dict):\n  for k,x in v.items():yield from walk(x,p+'/'+k)\n elif isinstance(v,list):\n  for k,x in enumerate(v):yield from walk(x,p+'/'+str(k))\ndef bs(st):return {(a['id'],q['asset']):(int(q['amount']),q['unit'],q['scale'])for a in st['accounts']for q in a['balances']}\ndef diff(a,b,p=''):\n if type(a)!=type(b):return[p]\n if isinstance(a,dict):return sum((diff(a.get(k),b.get(k),p+'/'+k)for k in a.keys()|b.keys()),[])\n if isinstance(a,list):\n  if len(a)!=len(b):return[p]\n  return sum((diff(x,y,p+'/'+str(i))for i,(x,y)in enumerate(zip(a,b))),[])\n return[]if a==b else[p]\nfor p,v in walk(d):\n if isinstance(v,dict)and list(v)==['ref']:\n  out['refsChecked']+=1\n  try:resolve(v)\n  except Exception as e:out['referenceErrors'].append([p,v,str(e)])\n elif isinstance(v,str)and v.startswith('/library/'):\n  out['refsChecked']+=1\n  try:get(v)\n  except Exception as e:out['referenceErrors'].append([p,v,str(e)])\nfor k,o in d['library']['oracles'].items():\n b=bs(o['preState']);prev=o['preState'];ordinary=0;reserve=0;r={'oracle':k,'steps':[]}\n for i,x in enumerate(o['steps']):\n  st=resolve(d['library']['committedStates'][k]['afterStep'+str(i)]);f=True\n  for tr in x['transfers']:\n   src=(tr['from'],tr['asset']);dst=(tr['to'],tr['asset']);n=int(tr['amount']);assert b[src][1:]==b[dst][1:]==(tr['unit'],tr['scale']);f &= b[src][0]>=n;b[src]=(b[src][0]-n,)+b[src][1:];b[dst]=(b[dst][0]+n,)+b[dst][1:]\n  if k=='redemption'and i==2:b[('requestEscrow','FundShares')]=(b[('requestEscrow','FundShares')][0]-40,'shares','1')\n  assert b==bs(st),(k,i,'cash mismatch');assert f\n  ordinary+=int(x['workCharge']['ordinary']);reserve+=int(x['workCharge']['reserve']);assert int(x['workCharge']['ordinary'])+int(x['workCharge']['reserve'])<=64\n  assert int(st['work']['ordinaryRemaining'])==1024-ordinary;assert int(st['work']['recoveryReserveRemaining'])==16-reserve\n  assert sum(int(z['ordinary'])for z in st['work']['charges'])==ordinary\n  for a in st['authorities']:assert int(a['original'])==int(a['cumulativeGross'])+int(a['remaining'])\n  for debt in st['debts']:assert int(debt['principal']['amount'])+int(debt['accrual']['amount'])==int(debt['total']['amount'])\n  historyMatches=st['history']['consumed']==[prev['historyHead']]\n  r['steps'].append({'step':i,'funded':f,'transferCount':len(x['transfers']),'ordinaryCharged':ordinary,'ordinaryRemaining':1024-ordinary,'reserveRemaining':16-reserve,'debtTotals':[z['total']['amount']for z in st['debts']],'historyConsumesPreviousPrefix':historyMatches,'actualHistoryConsumed':st['history']['consumed'],'previousHead':prev['historyHead'],'changedPaths':sorted(diff(prev,st))})\n  prev=st\n r['assetTotals']={a:sum(z[0]for (_,a2),z in b.items()if a==a2)for _,a in b};out['oracleReplay'].append(r)\nfor i,m in enumerate(d['mutations']):\n pre=resolve(m['preContext']);post=resolve(m['rejectedState']);att=resolve(m['attemptedState']);ordinary=1024-int(pre['work']['ordinaryRemaining']);r={'index':i,'id':m['id'],'preWorkCharged':ordinary,'rejectedEqualsCompletePre':pre==post,'rejectedDiff':diff(pre,post),'attemptedDiff':diff(pre,att),'emptyRejectedEffects':all(x==[]for x in m['emptyEffects'].values()),'rejectedCostZero':all(int(m['rejectedCost'][k])==0for k in ['rejectedAttemptOrdinaryCharged','rejectedAttemptReserveCharged','rejectedAttemptFeesCharged']),'prefixWorkChargeMatches':int(m['rejectedCost']['prefixOrdinaryCharged'])==ordinary,'attemptDebtArithmetic':all(int(x['principal']['amount'])+int(x['accrual']['amount'])==int(x['total']['amount'])for x in att['debts'])}\n bs1=bs(pre)\n for tr in m['mutatedContext'].get('attemptedTransfers',[]):\n  src=(tr['from'],tr['asset']);n=int(tr['amount']);r.setdefault('transferFunding',[]).append({'from':tr['from'],'have':bs1[src][0],'need':n,'funded':bs1[src][0]>=n})\n out['mutations'].append(r)\np=json.loads((s/'input-packet.json').read_text());old=json.loads((s/'gpt6-credit-review.json').read_text())\nfor k in ['rows','traces','mutations']:out['identity'][k]={'input':len(p[k]),'current':len(d[k]),'missing':[x['id']for x in p[k]if x['id']not in {z['id']for z in d[k]}]}\nout['traces']=[{'id':t['id'],'oracleRef':t['oracleRef'],'stepCount':len(resolve(t['steps']))}for t in d['traces']]\nprint(json.dumps(out))\nPY",
+      "exitCode": 0,
+      "outputChunk": "1014cb",
+      "note": "Python emitted a harmless lexical SyntaxWarning for compact numeric token spacing; exited0. Cash/debt/work assertions passed; history and rollback discrepancies were recorded rather than asserted away."
+    },
+    {
+      "command": "python3 - <<'PY'\nimport json,pathlib,hashlib,ast,operator,collections\ns=pathlib.Path('/home/charl/.local/state/moriarty/sp01-map-fragments-20260908/credit');d=json.loads((s/'candidate-02/experiments/moriarty-language/spec/successor/financial-fragments/credit.json').read_text());out={'arithmetic':[],'sources':[],'quantityRegistry':{},'quantityIssues':[],'refs':0,'refErrors':[],'rowMutationRefs':[]}\ndef val(n,a):\n if isinstance(n,ast.Expression):return val(n.body,a)\n if isinstance(n,ast.Constant)and isinstance(n.value,int):return n.value\n if isinstance(n,ast.Name)and n.id in a:return int(a[n.id])\n if isinstance(n,ast.BinOp)and type(n.op)in (ast.Add,ast.Sub,ast.Mult,ast.FloorDiv):return {ast.Add:operator.add,ast.Sub:operator.sub,ast.Mult:operator.mul,ast.FloorDiv:operator.floordiv}[type(n.op)](val(n.left,a),val(n.right,a))\n if isinstance(n,ast.Compare)and len(n.ops)==1 and type(n.ops[0])in (ast.Eq,ast.NotEq,ast.LtE,ast.GtE):return {ast.Eq:operator.eq,ast.NotEq:operator.ne,ast.LtE:operator.le,ast.GtE:operator.ge}[type(n.ops[0])](val(n.left,a),val(n.comparators[0],a))\n if isinstance(n,ast.Call)and isinstance(n.func,ast.Name)and n.func.id in ('int','max')and not n.keywords:return (int if n.func.id=='int'else max)(*[val(q,a)for q in n.args])\n raise ValueError(ast.dump(n))\ndef get(p):\n x=d\n for k in p.strip('/').split('/'):\n  k=k.replace('~1','/').replace('~0','~');x=x[int(k)]if isinstance(x,list)else x[k]\n return x\ndef walk(v,p=''):\n yield p,v\n if isinstance(v,dict):\n  for k,x in v.items():yield from walk(x,p+'/'+k)\n elif isinstance(v,list):\n  for k,x in enumerate(v):yield from walk(x,p+'/'+str(k))\nfor i,v in enumerate(d['verification']):\n got=val(ast.parse(v['expression'],mode='eval'),v['inputs']);assert str(got)==v['expected'];out['arithmetic'].append({'index':i,'id':v['id'],'got':got,'matches':True})\nfor p,v in walk(d):\n if isinstance(v,str)and v.startswith(('/library/','/traces/')):\n  out['refs']+=1\n  try:get(v)\n  except Exception as e:out['refErrors'].append([p,v,str(e)])\n if isinstance(v,dict)and all(k in v for k in ['path','sha256','pointer']):\n  q=pathlib.Path('/home/charl/Moriarty')/v['path'];b=q.read_bytes();out['sources'].append({'pointer':p,'path':v['path'],'hashMatch':hashlib.sha256(b).hexdigest()==v['sha256'],'textPresent':v['pointer']in b.decode()})\n if isinstance(v,dict)and isinstance(v.get('asset'),str)and 'amount'in v:\n  if 'unit'in v and 'scale'in v:out['quantityRegistry'].setdefault(v['asset'],set()).add((v['unit'],v['scale']))\n  else:out['quantityIssues'].append({'path':p,'missing':[k for k in ['unit','scale']if k not in v]})\nfor k,v in out['quantityRegistry'].items():out['quantityRegistry'][k]=sorted(v)\nfor r in d['rows']:\n listed=set(r['invalidMutationIds']);real={m['id']for m in d['mutations']if m['boundRow']==r['qualifiedId']};out['rowMutationRefs'].append({'row':r['qualifiedId'],'missing':sorted(real-listed),'dangling':sorted(listed-{m['id']for m in d['mutations']})})\nout['rowSourcesEqualToPacket']=[r['source']==p['source']for r,p in zip(d['rows'],json.loads((s/'input-packet.json').read_text())['rows'])]\nprint(json.dumps(out))\nPY",
+      "exitCode": 0,
+      "outputChunk": "2154d4",
+      "note": "Restricted AST arithmetic interpreter only; no eval, supplied shell commands, provider reasoning or project evaluator executed."
+    },
+    {
+      "command": "python3 - <<'PY'\nimport json,pathlib,hashlib,datetime\ns=pathlib.Path('/home/charl/.local/state/moriarty/sp01-map-fragments-20260908/credit');f=json.loads((s/'candidate-02-freeze.json').read_text());b=json.loads((s/'binding.json').read_text());h={p:hashlib.sha256((s/'candidate-02'/p).read_bytes()).hexdigest()for p in f['files']};assert h==f['files'];ih={p:hashlib.sha256((s/p).read_bytes()).hexdigest()for p in b['inputs']};assert ih==b['inputs'];digest=hashlib.sha256(json.dumps(h,sort_keys=True,separators=(',',':')).encode()).hexdigest();assert digest==f['candidateSha256'];assert sum((s/'candidate-02'/p).stat().st_size for p in h)==269035\nprint(json.dumps({'finishedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),'owned':h,'inputs':ih,'digest':digest,'allHashesMatch':True,'supplemental':{p:hashlib.sha256((s/p).read_bytes()).hexdigest()for p in ['gpt6-credit-review.json','candidate-02-freeze.json','binding.json','financial-correction-prompt.md','financial-correction-worker-receipt.json']}}))\nPY",
+      "exitCode": 0,
+      "outputChunk": "07b186"
+    }
+  ],
+  "limits": [
+    "Five distinct trace IDs share three oracles: refinance and redemption each appear twice. Replayed twelve distinct steps, representing twenty trace-step occurrences; eight distinct token transfers plus one explicit forty-share burn.",
+    "Cash totals conserved: refinance USDC300000/WETH20; redemption USDC9500 and shares100->60 by explicit burn40; badDebt USDC400/WETH1/FundShares100.",
+    "Ordinary work totals60/50/56, remaining964/974/968, reserve16 untouched. All committed-prefix debt arithmetic and authority original=cumulativeGross+remaining equations pass.",
+    "All35 recorded arithmetic values independently recomputed. Full primitive application cannot be certified because primitive semantics/record constructors are incomplete and final histories disagree.",
+    "Account/debt/position quantities consistently use USDC/USDC/1, WETH/WETH/1 and FundShares/shares/1. Sixteen compact scalar examples/primitive instructions omit unit/scale; these are listed and require an explicit inheritance rule, not silently treated as new units.",
+    "Both structural scans resolve their references (518 checks in first scan;324 root library/trace pointer strings in second, overlapping counts). All row-mutation refs resolve and source objects equal packet. Fourteen source occurrences hash/pointer-check successfully.",
+    "Toy conversion95, observations, custody, prices and bounds are considered only explicit design assumptions. No source-defined Aave/Morpho/ERC7540 conformance asserted.",
+    "No network, build, wallet, git mutation, implementation files, runtime/evaluator, chain/native proof, subagents or raw worker stdout/private provider reasoning accessed.",
+    "Only the two requested review reports are written. Existing candidate reports and previous failed author process provenance are not modified.",
+    "No runtime, proof, full-map, RP01/SP01, semantic-freeze, Preview, release or sprint acceptance."
+  ],
+  "finishedAtUTC": "2026-09-08T07:14:40.176748+00:00",
+  "hashesAfter": {
+    "finishedAtUTC": "2026-09-08T07:14:40.176748+00:00",
+    "owned": {
+      "experiments/moriarty-language/spec/successor/financial-fragments/credit.json": "fae6d1f56d0a74a45141506d8ec0065af369dcaa2f85182131d4f711f1340ccb",
+      "FOREMAN_REPORT.md": "676d344eb402759cdf4a1359da8bfa1a1782df748cdfcb1ba5b50e07135c9f7b",
+      "FOREMAN_REPORT.json": "da0e2b9bd863ca2ab16d5ff128080cbe7b7de5c707d1d462e7f8b383278ea06a"
+    },
+    "inputs": {
+      "input-packet.json": "b6a72b079f4b64f9eae2ca89d048b5d1e67d65b6f2c8d57c54cdc73d18b66dcf"
+    },
+    "digest": "fe30584a26f9329021972f950d87e2d8c4ca807afd74f77f9c70fc41f3df95a0",
+    "allHashesMatch": true,
+    "supplemental": {
+      "gpt6-credit-review.json": "fd6d65bb22dc67e22df4dca35ff9e9785da07618903b3b10ac1403ad95ff01cf",
+      "candidate-02-freeze.json": "51823f2411d7a073edbed072190c80b85b8e5ca6fc2f4c061f7d6e7f91187393",
+      "binding.json": "cf29d0f1749011649af1386022712bad00619176dd5a7149c24025a6c83cc5f5",
+      "financial-correction-prompt.md": "e426d81790b4f97b0c9a62c5603103d93b8519950e6ece469056002ec224ed68",
+      "financial-correction-worker-receipt.json": "667bf5546b7d9fc5ca39b4be7475bf92b25e9f2c72e9de03d7b52174d7bf2e8f"
+    }
+  },
+  "hashesUnchanged": true
+}

@@ -1,0 +1,317 @@
+{
+  "schemaVersion": "moriarty-financial-record/1",
+  "observationKind": "synthetic-local",
+  "networkAcceptance": false,
+  "networkEvidence": "incompleteNetworkEvidence",
+  "derivationNote": "Independent constant-product floor arithmetic from accepted swap.mori constants. Not generated-kernel output, evaluator flags, or host success flags.",
+  "sourcePins": {
+    "acceptedSourcePath": "experiments/moriarty-language/spec/examples/swap.mori",
+    "acceptedSourceSha256": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "metadataInspectedPath": "experiments/moriarty-language/compact/generated/swap/metadata.json",
+    "metadataInspectedSha256": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+    "metadataUsedForExpectations": false
+  },
+  "deploymentBinding": {
+    "status": "unresolved",
+    "roles": {
+      "trader": { "status": "symbolic-not-address", "logicalId": "trader" },
+      "pool": { "status": "symbolic-not-address", "logicalId": "pool" },
+      "provider": { "status": "symbolic-not-address", "logicalId": "provider" },
+      "setup-mint": { "status": "synthetic-local-setup-source", "logicalId": "setup-mint" }
+    },
+    "assets": [
+      {
+        "id": "ASSET_A",
+        "logicalId": "ASSET_A",
+        "denomination": "AssetA_quantum",
+        "quantum": "1",
+        "color": "ASSET_A",
+        "status": "unresolved"
+      },
+      {
+        "id": "ASSET_B",
+        "logicalId": "ASSET_B",
+        "denomination": "AssetB_quantum",
+        "quantum": "1",
+        "color": "ASSET_B",
+        "status": "unresolved"
+      }
+    ]
+  },
+  "networkFeeAccounting": {
+    "status": "unresolved",
+    "midnightFeeAsset": null,
+    "midnightFeeUnit": null,
+    "assumedZero": false
+  },
+  "agreement": {
+    "name": "ConstantProductEpoch",
+    "profile": "moriarty-bounded-atomic/1",
+    "lifetime": "8",
+    "horizon": "2000000000"
+  },
+  "stages": [
+    {
+      "stage": "setup",
+      "revision": "0",
+      "remaining": "8",
+      "work": "8",
+      "status": { "episodeClosed": "0" },
+      "economicFee": {
+        "actor": "trader",
+        "asset": "ASSET_A",
+        "color": "ASSET_A",
+        "unit": "AssetA_quantum",
+        "amount": "0",
+        "networkFeeSeparate": true
+      },
+      "bindings": {
+        "roles": ["trader", "pool", "provider", "setup-mint"],
+        "assets": [
+          {
+            "id": "ASSET_A",
+            "logicalId": "ASSET_A",
+            "denomination": "AssetA_quantum",
+            "quantum": "1",
+            "color": "ASSET_A",
+            "status": "unresolved"
+          },
+          {
+            "id": "ASSET_B",
+            "logicalId": "ASSET_B",
+            "denomination": "AssetB_quantum",
+            "quantum": "1",
+            "color": "ASSET_B",
+            "status": "unresolved"
+          }
+        ]
+      },
+      "balances": {
+        "pre": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" }
+        ],
+        "post": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "1000000" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "2000000" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "100000" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" }
+        ]
+      },
+      "transfers": [
+        { "id": "swap:setup:mint-pool-a", "ordinal": "0", "from": "setup-mint", "to": "pool", "color": "ASSET_A", "unit": "AssetA_quantum", "amount": "1000000" },
+        { "id": "swap:setup:mint-pool-b", "ordinal": "1", "from": "setup-mint", "to": "pool", "color": "ASSET_B", "unit": "AssetB_quantum", "amount": "2000000" },
+        { "id": "swap:setup:mint-trader-a", "ordinal": "2", "from": "setup-mint", "to": "trader", "color": "ASSET_A", "unit": "AssetA_quantum", "amount": "100000" }
+      ],
+      "actorEffects": [
+        { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "1000000", "fee": "0" },
+        { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "2000000", "fee": "0" },
+        { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "100000", "fee": "0" },
+        { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" }
+      ],
+      "liabilities": {
+        "nominalRemaining": "0",
+        "denomination": "AssetB_quantum",
+        "debtId": "ConstantProductEpoch:none",
+        "dues": [],
+        "principal": { "installment": "0", "paid": "0", "due": "0", "outstandingNotional": "0" },
+        "accrual": {
+          "interestCalculated": "0",
+          "interestPaid": "0",
+          "interestDue": "0",
+          "rateNumerator": "0",
+          "rateDenominator": "1",
+          "periodNumerator": "0",
+          "periodDenominator": "1",
+          "floorRemainderNumerator": "0",
+          "floorRemainderDenominator": "1"
+        }
+      },
+      "residualDuties": [
+        { "id": "reserve-for-close", "kind": "action-allowance-reservation", "amount": "1", "unit": "action", "status": "open" }
+      ]
+    },
+    {
+      "stage": "swap",
+      "revision": "1",
+      "remaining": "7",
+      "work": "7",
+      "status": { "episodeClosed": "0" },
+      "economicFee": {
+        "actor": "trader",
+        "asset": "ASSET_A",
+        "color": "ASSET_A",
+        "unit": "AssetA_quantum",
+        "amount": "30",
+        "networkFeeSeparate": true
+      },
+      "bindings": {
+        "roles": ["trader", "pool", "provider", "setup-mint"],
+        "assets": [
+          {
+            "id": "ASSET_A",
+            "logicalId": "ASSET_A",
+            "denomination": "AssetA_quantum",
+            "quantum": "1",
+            "color": "ASSET_A",
+            "status": "unresolved"
+          },
+          {
+            "id": "ASSET_B",
+            "logicalId": "ASSET_B",
+            "denomination": "AssetB_quantum",
+            "quantum": "1",
+            "color": "ASSET_B",
+            "status": "unresolved"
+          }
+        ]
+      },
+      "balances": {
+        "pre": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "1000000" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "2000000" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "100000" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" }
+        ],
+        "post": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "1010000" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "1980257" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "90000" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "19743" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" }
+        ]
+      },
+      "transfers": [
+        { "id": "swap:trade:trader-pool-a", "ordinal": "0", "from": "trader", "to": "pool", "color": "ASSET_A", "unit": "AssetA_quantum", "amount": "10000" },
+        { "id": "swap:trade:pool-trader-b", "ordinal": "1", "from": "pool", "to": "trader", "color": "ASSET_B", "unit": "AssetB_quantum", "amount": "19743" }
+      ],
+      "actorEffects": [
+        { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "10000", "fee": "0" },
+        { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "19743", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "10000", "refund": "0", "netCredit": "0", "fee": "30" },
+        { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "19743", "fee": "0" },
+        { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" }
+      ],
+      "liabilities": {
+        "nominalRemaining": "0",
+        "denomination": "AssetB_quantum",
+        "debtId": "ConstantProductEpoch:none",
+        "dues": [],
+        "principal": { "installment": "0", "paid": "0", "due": "0", "outstandingNotional": "0" },
+        "accrual": {
+          "interestCalculated": "0",
+          "interestPaid": "0",
+          "interestDue": "0",
+          "rateNumerator": "0",
+          "rateDenominator": "1",
+          "periodNumerator": "0",
+          "periodDenominator": "1",
+          "floorRemainderNumerator": "0",
+          "floorRemainderDenominator": "1"
+        }
+      },
+      "residualDuties": [
+        { "id": "reserve-for-close", "kind": "action-allowance-reservation", "amount": "1", "unit": "action", "status": "open" }
+      ]
+    },
+    {
+      "stage": "close",
+      "revision": "2",
+      "remaining": "6",
+      "work": "6",
+      "status": { "episodeClosed": "1" },
+      "economicFee": {
+        "actor": "trader",
+        "asset": "ASSET_A",
+        "color": "ASSET_A",
+        "unit": "AssetA_quantum",
+        "amount": "0",
+        "networkFeeSeparate": true
+      },
+      "bindings": {
+        "roles": ["trader", "pool", "provider", "setup-mint"],
+        "assets": [
+          {
+            "id": "ASSET_A",
+            "logicalId": "ASSET_A",
+            "denomination": "AssetA_quantum",
+            "quantum": "1",
+            "color": "ASSET_A",
+            "status": "unresolved"
+          },
+          {
+            "id": "ASSET_B",
+            "logicalId": "ASSET_B",
+            "denomination": "AssetB_quantum",
+            "quantum": "1",
+            "color": "ASSET_B",
+            "status": "unresolved"
+          }
+        ]
+      },
+      "balances": {
+        "pre": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "1010000" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "1980257" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "90000" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "19743" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" }
+        ],
+        "post": [
+          { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "0" },
+          { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "0" },
+          { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "90000" },
+          { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "19743" },
+          { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "amount": "1010000" },
+          { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "amount": "1980257" }
+        ]
+      },
+      "transfers": [
+        { "id": "swap:close:pool-provider-a", "ordinal": "0", "from": "pool", "to": "provider", "color": "ASSET_A", "unit": "AssetA_quantum", "amount": "1010000" },
+        { "id": "swap:close:pool-provider-b", "ordinal": "1", "from": "pool", "to": "provider", "color": "ASSET_B", "unit": "AssetB_quantum", "amount": "1980257" }
+      ],
+      "actorEffects": [
+        { "id": "pool|ASSET_A|AssetA_quantum", "actor": "pool", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "1010000", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "pool|ASSET_B|AssetB_quantum", "actor": "pool", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "1980257", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "trader|ASSET_A|AssetA_quantum", "actor": "trader", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "trader|ASSET_B|AssetB_quantum", "actor": "trader", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "0", "fee": "0" },
+        { "id": "provider|ASSET_A|AssetA_quantum", "actor": "provider", "asset": "ASSET_A", "unit": "AssetA_quantum", "grossDebit": "0", "refund": "0", "netCredit": "1010000", "fee": "0" },
+        { "id": "provider|ASSET_B|AssetB_quantum", "actor": "provider", "asset": "ASSET_B", "unit": "AssetB_quantum", "grossDebit": "0", "refund": "0", "netCredit": "1980257", "fee": "0" }
+      ],
+      "liabilities": {
+        "nominalRemaining": "0",
+        "denomination": "AssetB_quantum",
+        "debtId": "ConstantProductEpoch:none",
+        "dues": [],
+        "principal": { "installment": "0", "paid": "0", "due": "0", "outstandingNotional": "0" },
+        "accrual": {
+          "interestCalculated": "0",
+          "interestPaid": "0",
+          "interestDue": "0",
+          "rateNumerator": "0",
+          "rateDenominator": "1",
+          "periodNumerator": "0",
+          "periodDenominator": "1",
+          "floorRemainderNumerator": "0",
+          "floorRemainderDenominator": "1"
+        }
+      },
+      "residualDuties": [
+        { "id": "reserve-for-close", "kind": "action-allowance-reservation", "amount": "1", "unit": "action", "status": "discharged" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "scope": "Read-only inventory of protected existing fixtures. Author must constrain fixed admitted identity sets independently, not trust arbitrary expected record.",
+  "cases": {
+    "loan": {
+      "roles": [
+        "borrower",
+        "lender",
+        "setup-mint"
+      ],
+      "stages": {
+        "setup": {
+          "transfers": [
+            "loan:setup:mint-borrower"
+          ],
+          "actorEffects": [
+            "borrower|USD_TEST_ASSET|USD_micro",
+            "lender|USD_TEST_ASSET|USD_micro"
+          ],
+          "residualDuties": [
+            "remaining-notional"
+          ],
+          "balances": {
+            "pre": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ],
+            "post": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ]
+          },
+          "dues": []
+        },
+        "accrue": {
+          "transfers": [],
+          "actorEffects": [
+            "borrower|USD_TEST_ASSET|USD_micro",
+            "lender|USD_TEST_ASSET|USD_micro"
+          ],
+          "residualDuties": [
+            "remaining-notional"
+          ],
+          "balances": {
+            "pre": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ],
+            "post": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ]
+          },
+          "dues": [
+            "lam01:period1:PR",
+            "lam01:period1:IP"
+          ]
+        },
+        "settle": {
+          "transfers": [
+            "loan:settle:borrower-lender"
+          ],
+          "actorEffects": [
+            "borrower|USD_TEST_ASSET|USD_micro",
+            "lender|USD_TEST_ASSET|USD_micro"
+          ],
+          "residualDuties": [
+            "remaining-notional"
+          ],
+          "balances": {
+            "pre": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ],
+            "post": [
+              "borrower|USD_TEST_ASSET|USD_micro",
+              "lender|USD_TEST_ASSET|USD_micro"
+            ]
+          },
+          "dues": [
+            "lam01:period1:PR",
+            "lam01:period1:IP"
+          ]
+        }
+      }
+    },
+    "swap": {
+      "roles": [
+        "trader",
+        "pool",
+        "provider",
+        "setup-mint"
+      ],
+      "stages": {
+        "setup": {
+          "transfers": [
+            "swap:setup:mint-pool-a",
+            "swap:setup:mint-pool-b",
+            "swap:setup:mint-trader-a"
+          ],
+          "actorEffects": [
+            "pool|ASSET_A|AssetA_quantum",
+            "pool|ASSET_B|AssetB_quantum",
+            "trader|ASSET_A|AssetA_quantum",
+            "trader|ASSET_B|AssetB_quantum",
+            "provider|ASSET_A|AssetA_quantum",
+            "provider|ASSET_B|AssetB_quantum"
+          ],
+          "residualDuties": [
+            "reserve-for-close"
+          ],
+          "balances": {
+            "pre": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ],
+            "post": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ]
+          },
+          "dues": []
+        },
+        "swap": {
+          "transfers": [
+            "swap:trade:trader-pool-a",
+            "swap:trade:pool-trader-b"
+          ],
+          "actorEffects": [
+            "pool|ASSET_A|AssetA_quantum",
+            "pool|ASSET_B|AssetB_quantum",
+            "trader|ASSET_A|AssetA_quantum",
+            "trader|ASSET_B|AssetB_quantum",
+            "provider|ASSET_A|AssetA_quantum",
+            "provider|ASSET_B|AssetB_quantum"
+          ],
+          "residualDuties": [
+            "reserve-for-close"
+          ],
+          "balances": {
+            "pre": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ],
+            "post": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ]
+          },
+          "dues": []
+        },
+        "close": {
+          "transfers": [
+            "swap:close:pool-provider-a",
+            "swap:close:pool-provider-b"
+          ],
+          "actorEffects": [
+            "pool|ASSET_A|AssetA_quantum",
+            "pool|ASSET_B|AssetB_quantum",
+            "trader|ASSET_A|AssetA_quantum",
+            "trader|ASSET_B|AssetB_quantum",
+            "provider|ASSET_A|AssetA_quantum",
+            "provider|ASSET_B|AssetB_quantum"
+          ],
+          "residualDuties": [
+            "reserve-for-close"
+          ],
+          "balances": {
+            "pre": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ],
+            "post": [
+              "pool|ASSET_A|AssetA_quantum",
+              "pool|ASSET_B|AssetB_quantum",
+              "trader|ASSET_A|AssetA_quantum",
+              "trader|ASSET_B|AssetB_quantum",
+              "provider|ASSET_A|AssetA_quantum",
+              "provider|ASSET_B|AssetB_quantum"
+            ]
+          },
+          "dues": []
+        }
+      }
+    }
+  }
+}

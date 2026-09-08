@@ -1,0 +1,407 @@
+{
+  "schema": "moriarty.gpt6-financial-fixture-review/2",
+  "verdict": "BLOCKED",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "high",
+    "transport": "native independent agent",
+    "independent": true
+  },
+  "reviewedAt": "2026-09-08T07:20:46.047894+00:00",
+  "candidateSha256": "c721b008c941dcc629b39ff3862841e0047641d1b601d8de8c6277e00b9d35dd",
+  "candidateRoot": "/home/charl/.local/state/moriarty/sp05-financial-fixtures-20260908/candidate-02",
+  "candidateBytes": 197585,
+  "scope": "SP05.1 independent fixed financial fixtures and full normalized-effect comparison utility. No raw receipt authentication, local ledger execution or public admission.",
+  "okFinancialComparisonUtility": false,
+  "networkAcceptance": false,
+  "networkEvidence": "incompleteNetworkEvidence",
+  "findings": [
+    {
+      "id": "C1",
+      "severity": "blocking",
+      "relatedOriginalFindings": [
+        "R3",
+        "R4"
+      ],
+      "title": "Additional loan dues and residual duties bypass fixed-case financial validation",
+      "locations": [
+        "experiments/moriarty-midnight-financial/src/differential.mjs:943",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:956",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:1081",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:1197"
+      ],
+      "pointers": [
+        "/stages/2/liabilities/dues",
+        "/stages/2/residualDuties"
+      ],
+      "reproductions": [
+        {
+          "javascript": "const x = structuredClone(loan); const s = x.stages.find(s => s.stage === 'settle'); s.liabilities.dues.push({ ...s.liabilities.dues[0], id: 'rogue-due', dueId: 'rogue-due', created: '0', settled: '0', outstanding: '999' }); compareFinancialEffects(x, structuredClone(x));",
+          "actual": {
+            "ok": true,
+            "errors": [],
+            "networkAcceptance": false,
+            "networkEvidence": "incompleteNetworkEvidence"
+          },
+          "counterexample": "A third principal due has outstanding999 after settlement while principal.due=0, interestDue=0, both admitted dues outstanding0 and nominalRemaining4500000000. Borrower/lender are valid existing role identities; no malformed or unbound-role prerequisite is needed."
+        },
+        {
+          "javascript": "const x = structuredClone(loan); x.stages.find(s => s.stage === 'settle').residualDuties.push({ id: 'rogue-duty', kind: 'nominal-agreement-debt', amount: '999', unit: 'USD_micro', status: 'open' }); compareFinancialEffects(x, structuredClone(x));",
+          "actual": {
+            "ok": true,
+            "errors": [],
+            "networkAcceptance": false,
+            "networkEvidence": "incompleteNetworkEvidence"
+          },
+          "counterexample": "The record claims a second open nominal-agreement-debt999 in addition to the fixed4500000000 remaining-notional duty, yet nominalRemaining stays4500000000."
+        }
+      ],
+      "cause": "requireDue and requireDuty check required IDs but never reject additional IDs. Loan accrue/settle do not require exactly the two admitted due records; residual duties lack an exact identity/cardinality check. Equality against an equally invalid expected record therefore launders extra obligations.",
+      "requiredCorrection": "Validate exact stage-specific due and residual-duty identity sets independently on both inputs. Loan setup dues must be empty; accrue/settle must contain exactly PR/IP with derived allocations; each stage has exactly its required remaining-notional duty. Reject extra positive or zero obligations and reconcile all admitted due totals. Add equal-input and expected-only/observed-only regression controls with the required due/residual error path."
+    },
+    {
+      "id": "C2",
+      "severity": "blocking",
+      "relatedOriginalFindings": [
+        "R1",
+        "R4"
+      ],
+      "title": "Extra participant balances/effects and transfers escape the closed financial coverage checks",
+      "locations": [
+        "experiments/moriarty-midnight-financial/src/differential.mjs:434",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:822",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:932",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:986",
+        "experiments/moriarty-midnight-financial/src/differential.mjs:1269"
+      ],
+      "pointers": [
+        "/stages/*/balances/pre",
+        "/stages/*/balances/post",
+        "/stages/*/actorEffects",
+        "/stages/2/transfers"
+      ],
+      "reproductions": [
+        {
+          "javascript": "const x = structuredClone(swap); for (const s of x.stages) { for (const side of ['pre', 'post']) s.balances[side].push({ id: 'attacker|ASSET_A|AssetA_quantum', actor: 'attacker', asset: 'ASSET_A', unit: 'AssetA_quantum', amount: '999' }); s.actorEffects.push({ id: 'attacker|ASSET_A|AssetA_quantum', actor: 'attacker', asset: 'ASSET_A', unit: 'AssetA_quantum', grossDebit: '0', refund: '0', netCredit: '0', fee: '0' }); } compareFinancialEffects(x, structuredClone(x));",
+          "actual": {
+            "ok": true,
+            "errors": [],
+            "networkAcceptance": false,
+            "networkEvidence": "incompleteNetworkEvidence"
+          },
+          "counterexample": "The closed role map contains only trader/pool/provider/setup-mint, but all three stages can carry attacker ASSET_A balance999 and an attacker effect row. This also adds999 to the fixed1100000A supply outside any declared setup mint. Stage continuity and local transfer conservation both hold, so the missing fixed-domain checks matter."
+        },
+        {
+          "javascript": "const x = structuredClone(swap); x.stages.find(s => s.stage === 'close').transfers.push({ id: 'zero-extra', ordinal: '2', from: 'trader', to: 'provider', color: 'ASSET_A', unit: 'AssetA_quantum', amount: '0' }); compareFinancialEffects(x, structuredClone(x));",
+          "actual": {
+            "ok": true,
+            "errors": [],
+            "networkAcceptance": false,
+            "networkEvidence": "incompleteNetworkEvidence"
+          },
+          "counterexample": "Close accepts a third transfer ordinal2 from trader to provider amount0, despite the source-defined close returning exactly two pool-to-provider reserve transfers. This is a secondary closed-effect-coverage witness; no claim of monetary theft from the zero transfer."
+        }
+      ],
+      "cause": "checkCoverage only enforces required IDs as a subset; it does not reject extra IDs or resolve every row actor/asset/unit against the closed binding map. requireTransfer finds known transfers without enforcing exact stage transfer coverage. Generic local conservation does not establish the fixed case supply or identity domain.",
+      "requiredCorrection": "Require exact admitted participant/asset balance and actor-effect identity sets for every stage; validate every financial actor/asset/unit reference against declared bindings. Keep setup-mint as the sole explicit funding exception. Require the exact finite transfer specification for setup/settle/swap/close and no transfers for accrue; reject extra records even when amount0 or both inputs agree. Preserve legitimate order-insensitive comparison only where the record schema explicitly treats a collection as indexed."
+    }
+  ],
+  "originalFindingDisposition": {
+    "R1": "PARTIALLY_RESOLVED. Exact closed role-map fields and source-pin values now validate/compare. Extra financial rows can still reference roles outside that map (C2).",
+    "R2": "RESOLVED for exercised ordinary JSON cases: structured failure, deterministic errors and no input mutation under original controls plus2210 container probes; no universal claim for arbitrary JavaScript proxies/getters or unbounded resources.",
+    "R3": "PARTIALLY_RESOLVED. Original contradictory scalar/erased-duty/fee/work examples reject;313 numeric scalar increments all reject. Additional loan obligations still pass equal-input validation (C1).",
+    "R4": "PARTIALLY_RESOLVED. Missing required balances/effects, duplicate ordinals/role names and zero quantum reject. Exact collection coverage and all role references remain incomplete (C1,C2).",
+    "R5": "RESOLVED. New exactUTF8stdout/stderr digests and byte counts match; historical mismatched record and strings are preserved exactly with explicit unverified interpretation. Independent45pass rerun confirmsGREEN current behavior."
+  },
+  "verification": {
+    "existingTests": {
+      "command": "node --test --test-reporter=tap tests/differential.test.mjs",
+      "cwd": "/home/charl/.local/state/moriarty/sp05-financial-fixtures-20260908/candidate-02/experiments/moriarty-midnight-financial",
+      "exitCode": 0,
+      "tests": 45,
+      "pass": 45,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "adversarialSweep": {
+      "calls": 2523,
+      "loanNumericMutations": 121,
+      "swapNumericMutations": 192,
+      "loanContainerLocations": 90,
+      "swapContainerLocations": 132,
+      "containerReplacementCalls": 2210,
+      "replacementValues": [
+        null,
+        0,
+        "bad",
+        [],
+        {}
+      ],
+      "sides": "Each malformed container tested as expected-only and observed-only; numeric increment mutations tested on two equal cloned records.",
+      "exceptions": 0,
+      "inputMutations": 0,
+      "networkAcceptanceTrue": 0,
+      "nondeterministicResults": 0,
+      "unexpectedAcceptancesInSweep": 0
+    },
+    "additionalProbes": {
+      "extraRecordFalseAcceptances": 4,
+      "extraDueValidBoundRoleFalseAcceptance": 1,
+      "newlineNumericRejections": 5
+    },
+    "financialFixtureReplay": {
+      "loanStages": [
+        "setup",
+        "accrue",
+        "settle"
+      ],
+      "swapStages": [
+        "setup",
+        "swap",
+        "close"
+      ],
+      "allPrePostBalancesReplay": true,
+      "allActorGrossIncomingRefundFeeFieldsReconcile": true,
+      "interstageBalancesContinuous": true,
+      "loanPrincipalAccrualDuesResidualsReconcile": true,
+      "workRevisionRemainingReconcile": true,
+      "fixturesUnchangedFromCandidate01": true,
+      "independentOracle": {
+        "loan": {
+          "initialPrincipal": "5000000000",
+          "principalPaid": "500000000",
+          "interestPaid": "33972602",
+          "totalPaid": "533972602",
+          "remainingPrincipal": "4500000000",
+          "borrowerAfter": "19466027398"
+        },
+        "loanInterestRemainderNumerator": "27000",
+        "loanInterestRemainderDenominator": "36500",
+        "swap": {
+          "grossInput": "10000",
+          "economicFee": "30",
+          "output": "19743",
+          "poolAAfter": "1010000",
+          "poolBAfter": "1980257",
+          "traderAAfter": "90000",
+          "traderBAfter": "19743",
+          "quotientRemainder": "162290000",
+          "denominator": "1009970000"
+        }
+      },
+      "oracleMethod": "Python stdlib integer arithmetic from fixed source constants, explicit ordered transfer replay and complete admitted balance/effect/liability field assertions; no validator helper imported."
+    },
+    "newCapturedStreams": [
+      {
+        "phase": "red",
+        "stream": "stdout",
+        "bytes": 25692,
+        "sha256": "88d72f59836773cbefa50197158ecc174db88760790e7c2c88861fd2fa6127d7",
+        "verified": true
+      },
+      {
+        "phase": "red",
+        "stream": "stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "verified": true
+      },
+      {
+        "phase": "green",
+        "stream": "stdout",
+        "bytes": 6893,
+        "sha256": "7ecadc5351e5137c803cebc80420a1a5095b4bb9047249fe9cf73e738a848881",
+        "verified": true
+      },
+      {
+        "phase": "green",
+        "stream": "stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "verified": true
+      }
+    ],
+    "redEvidenceCounts": {
+      "tests": 45,
+      "pass": 29,
+      "fail": 16,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": "98.332528"
+    },
+    "greenEvidenceCounts": {
+      "tests": 45,
+      "pass": 45,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 137.5092
+    },
+    "historicalRecordsPreservedExactly": true,
+    "historicalDigestMismatchStillLabeled": "unverified/corrected-record-interpretation"
+  },
+  "integrity": {
+    "ownedSha256Before": {
+      "experiments/moriarty-midnight-financial/package.json": "0ff5360e6efef04719bba8dbd8c19412f9aab1cc4dc3fde0ffa0f4de48edfd00",
+      "experiments/moriarty-midnight-financial/README.md": "3661aed603d48587289d2efdafeb15b892589e9b121120feae630b5ab9c0b757",
+      "experiments/moriarty-midnight-financial/fixtures/loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+      "experiments/moriarty-midnight-financial/fixtures/swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374",
+      "experiments/moriarty-midnight-financial/src/differential.mjs": "aa6351df2a2644fcf463a2897261c36fb386d9ebcb718efae0871716da19c0a4",
+      "experiments/moriarty-midnight-financial/tests/differential.test.mjs": "e851aeb58126d22d114b3e27206ad381bc7c4a9cf3fdb5782c5b53585a72619d",
+      "experiments/moriarty-midnight-financial/test-evidence.json": "356f6812fc856166b5710d75c0f3f016ded5f3d7f82c53f445da2c77e178cc02",
+      "FOREMAN_REPORT.md": "6da08d453251255975e1c16eeb62700e833528b2a3da5bf855ca4930771def8a",
+      "FOREMAN_REPORT.json": "0b51213b8f26b4cb36bab96227fa0a750d368eca18662a01755b6bb05c80e8aa"
+    },
+    "ownedSha256After": {
+      "experiments/moriarty-midnight-financial/package.json": "0ff5360e6efef04719bba8dbd8c19412f9aab1cc4dc3fde0ffa0f4de48edfd00",
+      "experiments/moriarty-midnight-financial/README.md": "3661aed603d48587289d2efdafeb15b892589e9b121120feae630b5ab9c0b757",
+      "experiments/moriarty-midnight-financial/fixtures/loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+      "experiments/moriarty-midnight-financial/fixtures/swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374",
+      "experiments/moriarty-midnight-financial/src/differential.mjs": "aa6351df2a2644fcf463a2897261c36fb386d9ebcb718efae0871716da19c0a4",
+      "experiments/moriarty-midnight-financial/tests/differential.test.mjs": "e851aeb58126d22d114b3e27206ad381bc7c4a9cf3fdb5782c5b53585a72619d",
+      "experiments/moriarty-midnight-financial/test-evidence.json": "356f6812fc856166b5710d75c0f3f016ded5f3d7f82c53f445da2c77e178cc02",
+      "FOREMAN_REPORT.md": "6da08d453251255975e1c16eeb62700e833528b2a3da5bf855ca4930771def8a",
+      "FOREMAN_REPORT.json": "0b51213b8f26b4cb36bab96227fa0a750d368eca18662a01755b6bb05c80e8aa"
+    },
+    "inputSha256Before": {
+      "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+      "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+      "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+      "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+      "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+      "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804"
+    },
+    "inputSha256After": {
+      "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+      "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+      "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+      "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+      "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+      "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804"
+    },
+    "candidateDigestVerified": true,
+    "ownedByteCountVerified": true,
+    "all9OwnedAnd6InputsUnchanged": true
+  },
+  "commands": [
+    {
+      "sequence": 1,
+      "commandSummary": "ls -la <state>",
+      "exitCode": 0,
+      "result": "Inventory review files."
+    },
+    {
+      "sequence": 2,
+      "commandSummary": "python3 [read binding/freeze/correction/original-review/receipts]",
+      "exitCode": 0,
+      "result": "Read original five findings and correction constraints; author terminal0 actualgrok-4.6-build, root verify3 terminal0."
+    },
+    {
+      "sequence": 3,
+      "commandSummary": "python3 [all9+6 hashes/README/schema]; rg [code/test structure]",
+      "exitCode": 0,
+      "result": "Candidate digest/197585bytes and all source hashes match."
+    },
+    {
+      "sequence": 4,
+      "commandSummary": "node --test --test-reporter=tap tests/differential.test.mjs",
+      "exitCode": 0,
+      "result": "Independent candidate-directory rerun:45tests45pass0fail, no skip/cancel/todo."
+    },
+    {
+      "sequence": 5,
+      "commandSummary": "sed [validation/API/comparison]",
+      "exitCode": 0,
+      "result": "Inspect nested validation, deterministic structured return and comparison."
+    },
+    {
+      "sequence": 6,
+      "commandSummary": "sed [domain replay/coverage/conservation]",
+      "exitCode": 0,
+      "result": "Inspect fixed financial checks and identify subset-only collection coverage."
+    },
+    {
+      "sequence": 7,
+      "commandSummary": "sed [stage validation/helpers/economic constants]",
+      "exitCode": 0,
+      "result": "Inspect schema and domain construction."
+    },
+    {
+      "sequence": 8,
+      "commandSummary": "node --input-type=module [four extra-record probes]",
+      "exitCode": 0,
+      "result": "All four deliberately invalid equal-record pairs returned ok:true; no input mutation."
+    },
+    {
+      "sequence": 9,
+      "commandSummary": "node --input-type=module [2523 malformed/numeric probes]",
+      "exitCode": 0,
+      "result": "121loan+192swap numeric increments and2210 container replacements across222 container locations; zero exceptions/mutations/network claims/order instability; all rejected."
+    },
+    {
+      "sequence": 10,
+      "commandSummary": "python3 [test-evidence/report inspection]",
+      "exitCode": 0,
+      "result": "Read exactRED/GREEN and historical mismatch disclosures."
+    },
+    {
+      "sequence": 11,
+      "commandSummary": "node --input-type=module [five newline integer controls]; rg [tests]",
+      "exitCode": 0,
+      "result": "Five malformed numeric values rejected withNONCANONICAL_INTEGER."
+    },
+    {
+      "sequence": 12,
+      "commandSummary": "python3 [capture digest/history/full fixture fields]",
+      "exitCode": 0,
+      "result": "All four new stream digests/byte lengths match; historicalRED/GREEN exact records preserved."
+    },
+    {
+      "sequence": 13,
+      "commandSummary": "python3 [independent full-stage replay first attempt]",
+      "exitCode": 1,
+      "result": "Review-only inline Python SyntaxError from missing whitespace after else; no file mutation or financial conclusion."
+    },
+    {
+      "sequence": 14,
+      "commandSummary": "python3 [independent full-stage replay corrected]",
+      "exitCode": 0,
+      "result": "All six stages balance/transfer/effect/principal/accrual/due/residual/work replay pass; independently derived interest33972602,total533972602,residual4500000000,swap19743,fee30."
+    },
+    {
+      "sequence": 15,
+      "commandSummary": "node --input-type=module [extra due with valid existing roles]",
+      "exitCode": 0,
+      "result": "Loan third principal due outstanding999 with borrower/lender and declared principalDue0 still returns ok:true."
+    },
+    {
+      "sequence": 16,
+      "commandSummary": "python3 [write scoped review2]",
+      "exitCode": 0,
+      "result": "Recheck all frozen/pinned hashes and exact capture hashes; write only review2JSON/Markdown."
+    },
+    {
+      "sequence": 17,
+      "commandSummary": "python3 [final review validation and frozen/pinned hash check]",
+      "exitCode": 0,
+      "result": "JSON parses; two blocking findings, four exact reproductions, all nine owned and six input hashes unchanged; digest and197585bytes verified."
+    }
+  ],
+  "limitations": [
+    "Utility-only normalized synthetic-record review; symbolic IDs and missing rawreceipt decoder are honest scope limits, not standalone blockers.",
+    "All returned test results keptnetworkAcceptancefalse. No ledger, signedUTXOownership, canonical finality, Preview, proof, language or wholeSP05 acceptance.",
+    "No source/test implementation writes, builds, wallet, network, git changes, subagents, raw worker stdout or private provider reasoning.",
+    "RED capture is byte/hash verified as retained author evidence, not independently rerun against a recreated pre-correction implementation.",
+    "Command summaries preserve every attempted command and exit; exact inline bodies remain in the tool transcript. One review-script syntax error was corrected and rerun; no product defect inferred from it."
+  ],
+  "finalVerification": {
+    "status": "PASS",
+    "candidateAndInputsUnchanged": true,
+    "candidateDigestMatches": true,
+    "reviewJsonParsed": true
+  }
+}
