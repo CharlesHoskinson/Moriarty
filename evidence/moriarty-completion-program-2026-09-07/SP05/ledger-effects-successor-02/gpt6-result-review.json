@@ -1,0 +1,176 @@
+{
+  "schema": "moriarty.independent-result-review/1",
+  "candidateHash": "c6249e14c06907946ff47f0815b1540abf4bb65409a234ce3a94ddb611a87f52",
+  "reviewer": {
+    "provider": "OpenAI",
+    "model": "gpt-6-astra",
+    "identity": "GPT-6 Astra",
+    "task": "/root/ledger_effects_successor02_review",
+    "independent": true
+  },
+  "reviewedAt": "2026-09-08T17:30:25.054271+00:00",
+  "scopedVerdict": "REJECT",
+  "details": "R6 incomplete: four native action mutations accepted across binding; normal fee-dust accounting rejected; malformed resource counters bypass gross admission. Verified unshielded/Zswap-output improvements do not complete full effects or asset-aware custody accounting.",
+  "overallSP05": "BLOCKED",
+  "sourceAcceptance": false,
+  "authorRun": {
+    "status": "FAILED_MAX_TURNS",
+    "exitCode": 1,
+    "stopReason": "cancelled",
+    "maxTurns": 48,
+    "ledgerStopped": true,
+    "disposition": "Preserve failed-run candidate and failure diagnosis; no approval or retry."
+  },
+  "findings": [
+    {
+      "id": "R6-ACTION-BIND",
+      "severity": "high",
+      "status": "REPRODUCED",
+      "details": "Changed native contract transcript mint/gas and maintenance authority/counter accepted after bind; same-phase rejects; unchanged controls pass."
+    },
+    {
+      "id": "R6-DUST-FEES",
+      "severity": "high",
+      "status": "SOURCE_CONFIRMED",
+      "details": "Pinned fund path defaults to dust balancing; resulting fee spends rejected by gross inspection. DustSpend.vFee bigint is exposed; DUST units require separate accounting."
+    },
+    {
+      "id": "R6-COUNTER-VALIDATION",
+      "severity": "medium",
+      "status": "REPRODUCED",
+      "details": "100-unit native signed input reaches inert finalize with cap50/reservedGross-1000, or missing grossSpend cap. Default driver initializes well-formed counters."
+    },
+    {
+      "id": "R6-ASSET-FAMILIES",
+      "severity": "high",
+      "status": "INCOMPLETE",
+      "details": "Shielded debit/transients and multiple assets rejected; dust registration fee authorization is not explicitly accounted for or rejected; no actual fee debit inferred from registration fixture."
+    }
+  ],
+  "reportDisposition": {
+    "FOREMAN_REPORT.json": "STALE_PREDECESSOR_NOT_CURRENT_ATTESTATION",
+    "FOREMAN_REPORT.md": "Acknowledges incomplete R6, but unsupported action internals are accepted rather than fail-closed."
+  },
+  "verification": {
+    "candidateHash": "c6249e14c06907946ff47f0815b1540abf4bb65409a234ce3a94ddb611a87f52",
+    "candidateFilesVerified": true,
+    "allBindingSourcesVerified": true,
+    "sourcesCount": 201,
+    "checks": [
+      {
+        "command": [
+          "node",
+          "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/successor-effects-02/gpt6-independent-probes.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.23130932599997323,
+        "stdout": "gpt6-check-0.stdout",
+        "stderr": "gpt6-check-0.stderr"
+      },
+      {
+        "command": [
+          "node",
+          "--test",
+          "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.5698740900006669,
+        "stdout": "gpt6-check-1.stdout",
+        "stderr": "gpt6-check-1.stderr"
+      },
+      {
+        "command": [
+          "node",
+          "--test",
+          "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/successor-effects-02/root-effects.test.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.06984889799969096,
+        "stdout": "gpt6-check-2.stdout",
+        "stderr": "gpt6-check-2.stderr"
+      },
+      {
+        "command": [
+          "node",
+          "--test",
+          "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/successor-effects-02/root-sdk-effects.test.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.1465730629988684,
+        "stdout": "gpt6-check-3.stdout",
+        "stderr": "gpt6-check-3.stderr"
+      },
+      {
+        "command": [
+          "node",
+          "--test",
+          "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/successor-effects-02/root-sdk-recipe-shape.test.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.15309106400127348,
+        "stdout": "gpt6-check-4.stdout",
+        "stderr": "gpt6-check-4.stderr"
+      },
+      {
+        "command": [
+          "node",
+          "--test",
+          "/home/charl/.local/state/moriarty/sp05-ledger-integration-20260908/successor-effects-02/root-gross-admission.test.mjs"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.17145051999978023,
+        "stdout": "gpt6-check-5.stdout",
+        "stderr": "gpt6-check-5.stderr"
+      }
+    ]
+  },
+  "newProbeExpectations": {
+    "candidateHash": "c6249e14c06907946ff47f0815b1540abf4bb65409a234ce3a94ddb611a87f52",
+    "newRows": 14,
+    "constructionErrors": 0,
+    "nativeUnchangedActionControlsAccepted": 2,
+    "samePhaseAlteredActionsRejected": 4,
+    "crossBindingAlteredActionsUnexpectedlyAccepted": 4,
+    "predecessorReplay": {
+      "rows": 38,
+      "positive": 5,
+      "negative": 33,
+      "expectationFailures": 0
+    },
+    "candidateAndSourcesUnchanged": true,
+    "eraseProofsNormalization": {
+      "native maintenance unchanged across bind": true,
+      "native maintenance counter across bind": false,
+      "native maintenance authority across bind": false,
+      "native contract transcript unchanged across bind": true,
+      "native contract transcript mint across bind": false,
+      "native contract transcript gas across bind": false,
+      "native eraseProofs unchanged disjoint merge bind normalization": true
+    }
+  },
+  "candidateFilesVerified": true,
+  "allBindingSourcesVerified": true,
+  "additionalInspectedSources": {
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/v1/Transacting.js": "88a33db619ab64b99cdad0ac83ecba01251740475d4e18b84f30103e8663066f"
+  },
+  "limits": [
+    "Offline only; synthetic native UTXO objects and signatures.",
+    "Native bind/merge/serialize/eraseProofs used, no prove/mockProve or real proof.",
+    "No actual wallet, facade native finalizeRecipe, network or submission.",
+    "No other agents or source edits.",
+    "Counter defects concern malformed public API inputs, not demonstrated corruption of default well-formed driver counters.",
+    "Dust registration observation does not validate its own signature or establish actual authorized fee debit.",
+    "Canonical erased-proof comparison is only supported by bounded native synthetic bind/merge controls; real proof transformation remains unverified."
+  ],
+  "artifacts": [
+    "gpt6-result-review.md",
+    "gpt6-independent-probes.mjs",
+    "gpt6-independent-results.json",
+    "gpt6-independent-probes.stdout",
+    "gpt6-probe-expectations.json",
+    "gpt6-verification.json",
+    "gpt6-replayed-predecessor-probes.mjs",
+    "gpt6-replayed-predecessor-results.json"
+  ],
+  "remaining": "R1-R5/R7-R8 and all PCD/Preview/full SP05/SP01-SP12 gates remain open."
+}
