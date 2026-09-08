@@ -112,3 +112,14 @@ The final recommendation cannot be marked decision-grade while a mandatory
 source family is uninspected, a required empirical result is merely assumed, or
 a blocking contradiction lacks an explicit disposition. Unperformed experiments
 must be labeled specified-only, never reproduced.
+
+## Development plugin and guarded execution
+
+To prevent orchestration displacement and enforce stop rules, use the repository-scoped development plugin:
+
+```bash
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
+```
+Use the guarded CLI when host coverage is unverified. The current plugin routing is GPT-6 implementation with a separate GPT-6 reviewer, per [the latest instruction](raw/assignments/moriarty-gpt6-implementation-review-2026-09-08.md). Installation does not establish actual hook interception or the product repair pilot.

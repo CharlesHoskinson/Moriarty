@@ -605,44 +605,17 @@ def cmd_doctor(repo: Path, db_path: Path, as_json: bool):
     actions_file = repo / ".moriarty-dev" / "actions.json"
     actions_ok = actions_file.is_file()
 
-    # Inspect host hooks and trust
+    # Registration/source presence is observable; actual host interception is
+    # not derivable from files. Never promote a self-authored coverage flag.
     codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
-    hooks_file = codex_home / "hooks.json"
-    installed_plugin_dir = codex_home / "plugins" / "moriarty-dev"
-
-    host_installed = installed_plugin_dir.is_dir()
-    hooks_registered = False
-    hooks_trust_verified = False
-
-    if hooks_file.is_file():
-        try:
-            hdata = json.loads(hooks_file.read_text(encoding="utf-8"))
-            raw_str = json.dumps(hdata)
-            if "moriarty" in raw_str:
-                hooks_registered = True
-                for hlist in hdata.get("hooks", {}).values():
-                    for group in hlist:
-                        for entry in group.get("hooks", []):
-                            cmd = entry.get("command", "")
-                            if "moriarty" in cmd:
-                                parts = cmd.split()
-                                if parts and any(Path(p).is_file() for p in parts if "/" in p):
-                                    hooks_trust_verified = True
-        except Exception:
-            pass
-
-    if hooks_trust_verified and host_installed:
-        coverage = "host-verified"
-        guarantees = "Full host tool interception active and verified"
-        limitations = "None for host interception"
-    elif hooks_registered or host_installed:
-        coverage = "degraded"
-        guarantees = "Partial host registration observed; interception unverified"
-        limitations = "Incomplete host plugin registration or unverified hook executable"
-    else:
-        coverage = "wrapper-only"
-        guarantees = "Guarded execution enforced via CLI fallback; no background daemon"
-        limitations = "Host hook interception not active in ~/.codex/hooks.json; CLI is verified fallback"
+    source = Path(__file__).resolve().parents[2]
+    cache = codex_home / "plugins" / "cache"
+    host_installed = source.is_relative_to(cache.resolve()) or (codex_home / "plugins" / "moriarty-dev").is_dir()
+    hook_definitions_present = (source / "hooks" / "hooks.json").is_file()
+    hooks_registered = False  # Host activation/trust is not observable from source files.
+    coverage = "installed-unverified" if host_installed else "unverified"
+    guarantees = "Registered action launch is guarded through CLI run"
+    limitations = "Host tool interception requires observed host evidence; source or registration presence does not establish coverage"
 
     data = {
         "repository": str(repo),
@@ -651,6 +624,7 @@ def cmd_doctor(repo: Path, db_path: Path, as_json: bool):
         "actionsRegistered": actions_ok,
         "hostInstalled": host_installed,
         "hooksRegistered": hooks_registered,
+        "hookDefinitionsPresent": hook_definitions_present,
         "hostCoverage": coverage,
         "guarantees": guarantees,
         "limitations": limitations,

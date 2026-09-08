@@ -169,16 +169,16 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def make_history_reader(db_path: Path):
+def make_history_reader(db_path: Path, *, timeout: float = 10.0):
     def history_reader(lineage: dict) -> dict | None:
         repo = lineage.get("repository", "")
         req = lineage.get("requirement", "")
         cap = lineage.get("capability", "")
-        return get_history(db_path, repo, req, cap)
+        return get_history(db_path, repo, req, cap, timeout=timeout)
     return history_reader
 
 
-def get_history(db_path: Path, repo: str, requirement: str, capability: str) -> dict | None:
+def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
     if not db_path.is_file():
         return None
 
@@ -188,7 +188,7 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str) -> 
                 header = f.read(16)
             if header != b"SQLite format 3\x00":
                 return None
-        conn = sqlite3.connect(str(db_path), timeout=10.0)
+        conn = sqlite3.connect(str(db_path), timeout=timeout)
     except Exception:
         return None
 
@@ -833,13 +833,14 @@ def update_tx_status(db_path: Path, tx_id: str, new_status: str, note: str | Non
         conn.close()
 
 
-def get_undelivered_txs(db_path: Path, repo: str | None = None) -> list[dict]:
+def get_undelivered_txs(db_path: Path, repo: str | None = None, *, timeout: float = 5.0, limit: int | None = None) -> list[dict]:
     if not db_path.is_file():
         return []
-    conn = sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(str(db_path), timeout=timeout)
     try:
         cur = conn.execute(
-            "SELECT tx_id, status, details_json, enqueued_at, repository FROM outbox WHERE delivered_at IS NULL ORDER BY id ASC"
+            "SELECT tx_id, status, details_json, enqueued_at, repository FROM outbox WHERE delivered_at IS NULL ORDER BY id ASC LIMIT ?",
+            (-1 if limit is None else limit,),
         )
         rows = cur.fetchall()
         result = []

@@ -81,6 +81,6 @@ Check repository store state, hook registration, and host trust:
 ```bash
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor
 ```
-Reports `host-verified` (full hook interception active), `degraded` (partial hook configuration), or `wrapper-only` (CLI fallback active).
+Reports `unverified` or `installed-unverified`. Hook definition and cached installation paths do not establish runtime trust or interception. Use the guarded CLI and retain a separate actual-host smoke result for each tested tool path.
 
 Do not expand orchestration infrastructure to follow this workflow. Name the next demonstrable capability, implement its smallest authorized repair, and check its behavior. Preserve unresolved safety stops and independent acceptance gates.
