@@ -1,0 +1,28 @@
+{
+  "kind": "repository-source-observation",
+  "observedAt": "2026-09-08T11:51:12.362579+00:00",
+  "mainCommit": "4178faed872204bdd97e6796234602d2180d839d",
+  "candidateBase": "daac83578f105b0a70ce44d88c579018881daae5",
+  "candidateLocation": ".worktrees/sp05-ledger-integration-grok",
+  "scope": "Source inspection only. Candidate is not installed or independently accepted. No tests, compilation, wallet operation or network submission performed for this observation.",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs",
+      "sha256": "fe594c9fab7457fdc3abe228927ee92b38af5873ed2075b9b4048c52d4b5a104",
+      "lines": [
+        93,
+        104
+      ],
+      "excerpt": "export async function decodePublicFinancialReceipt(input) {\n  if (!input || typeof input !== 'object') throw new Error('input required');\n  if (input.provenance === 'finalized-bytes') {\n    const raw = input.serializedTx;\n    if (!raw || raw.length < 8) throw new Error('finalized bytes missing or not a proven transaction');\n    const ledger = await importPinned('@midnight-ntwrk/ledger-v8');\n    const tx = ledger.Transaction.deserialize('signature', 'proof', 'binding', raw);\n    const again = ledger.Transaction.deserialize('signature', 'proof', 'binding', tx.serialize());\n    if (tx.transactionHash() !== again.transactionHash()) throw new Error('canonical round-trip failed');\n    throw new Error('positive finalized-byte coverage unavailable offline: deserialize succeeded but this source pass has no admitted proven fixture');\n  }\n  const f = input.finalizedTxData || {};"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "sha256": "0c5d5347923d169ffb7c9090060f7846ae0d6449378aade4ca7ec779c64bf433",
+      "lines": [
+        62,
+        88
+      ],
+      "excerpt": "export async function runLocalFinancialCase(options) {\n  validateCaseOptions(options);\n  const admission = options.operationalAdmission;\n  if (admission.allowLocalExecution !== true || admission.reviewed !== true) {\n    fail('missing operational admission');\n  }\n  if (!options.walletContext) fail('live WalletContext handle required');\n  const providers = await createFinancialProviders({\n    walletContext: options.walletContext,\n    networkConfig: admission.networkConfig || options.networkAdmission.networkConfig,\n    provenAssetManifest: options.provenAssetManifest,\n    privateStateLocation: options.privateStateLocation || admission.privateStateLocation,\n    resourceCounters: options.resourceCounters || {submission: 1n, grossSpend: BigInt(options.limits.spend), reservedSubmission: 0n, reservedGross: 0n},\n    onSubmission: options.onSubmission || ((id) => options.eventSink?.({kind: 'submitted', id})),\n    eventSink: options.eventSink,\n    deadlineMs: options.deadlineMs || (Date.now() + options.limits.deadlineMs),\n    adapters: options.adapters,\n  });\n  const order = options.case === 'loan' ? ['deploy', 'initialize', 'accrue', 'settle'] : ['deploy', 'initialize', 'swap', 'close'];\n  return {\n    status: 'admitted-not-executed',\n    case: options.case,\n    order,\n    providersBound: true,\n    note: 'Execution still requires inspected proven assets and live local endpoints from the reviewed admission.',\n  };\n}"
+    }
+  ]
+}

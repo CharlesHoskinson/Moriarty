@@ -1,5 +1,17 @@
 # Moriarty repository instructions
 
+## Prevent orchestration displacement
+
+Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).
+The [September 8 post-mortem](docs/postmortems/2026-09-08-orchestration-recurrence.md) records the second recurrence.
+Name the next demonstrable capability before following a checkpoint queue.
+After two failed cycles of the same defect class, reproduce the defect and change the approach before another broad correction.
+After two process-only cycles or thirty minutes of administration, switch to executable diagnosis or eligible implementation.
+Inspect the production path before reporting candidate success. Tests and packet approvals cannot establish missing behavior.
+Repair approved behavior within existing scope and limits without another design vote.
+Preserve consequential decision reviews, independent result audits, resource limits and all product acceptance gates.
+These rules govern use of orchestration skills. Do not build more orchestration infrastructure to implement them.
+
 ## Scope and authority
 
 Moriarty is a bounded financial language for Midnight. ACTUS and the DeFi study

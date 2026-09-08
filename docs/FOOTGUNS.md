@@ -4,6 +4,89 @@ Standing instructions adopted by the [2026-09-06 user reset](../raw/assignments/
 Read with [the postmortem](postmortems/2026-09-06-moriarty-verification-detour.md).
 These rules apply to research, planning, implementation and recovery.
 
+The [September 8 recurrence post-mortem](postmortems/2026-09-08-orchestration-recurrence.md)
+records a second failure to apply these instructions.
+Apply the following stop rules before following a recovered work queue or dispatching more work.
+
+## Orchestration stop rules
+
+These rules implement the user's September 8 request to prevent repeated orchestration displacement.
+The lead agent owns their application. Record decisions in the existing task record.
+Do not create a new approval system, dashboard or harness for these rules.
+
+1. **Name the capability before the next action.** State what the developer will be able to do.
+   Name the command or observable result that demonstrates it.
+   A packet, hash manifest, allocation, review dispatch or checkpoint is supporting work.
+   None independently counts as a delivered capability.
+   When the user explicitly requests documentation, the requested document is the deliverable.
+
+2. **Stop repeated failure of the same approach.** Two failed implementation/result-review cycles with the same defect class trigger this rule.
+   Do not dispatch a third broad correction of that approach.
+   First reproduce one defect through the public API or smallest executable mechanism.
+   Change the implementation strategy or task size, and demonstrate why the change addresses the defect.
+   Give Grok that reproducer and a bounded repair under existing authority.
+   Retain independent GPT-6 result review and the original acceptance requirements.
+   Rewording a packet, changing an identifier or increasing a timeout does not reset this trigger.
+
+3. **Interrupt process-only work.** Two consecutive orchestration cycles without implementation, a decisive experiment or a resolved concrete blocker trigger this rule.
+   Thirty minutes spent only on orchestration administration also triggers it.
+   An orchestration cycle means preparing, dispatching, receiving and dispositioning one task or review.
+   A resolved blocker must identify the previously failing operation now enabled or a decisive technical finding.
+   A new packet approval or resource allocation alone does not reset this trigger.
+   A genuinely running required build, proof or test is not administration time.
+   Stop adding packets and bookkeeping work.
+   Inspect or test the production path, repair the current defect, or continue an independent eligible implementation task.
+   If none is possible, state the concrete blocker and evidence without inventing another preparatory dependency.
+
+4. **Inspect the production path before reporting candidate success.** Trace one input from the public entry point to its observable result.
+   Reject an unconditional throw, constant admission response or unused adapter where execution is required.
+   Source-only admission restricts invocation, not implementation of the approved production behavior.
+   Test operation order and input-dependent output through that path using controlled transport when necessary.
+   Report missing live tests or real transaction fixtures separately.
+   Never relabel synthetic transport results as network evidence.
+
+5. **Make tests challenge behavior.** Derive at least one relevant adversarial input independently from the acceptance requirement.
+   Check complete material state when the claim requires complete state.
+   Reject decisions derived from mutation names, expected errors or copied expected outputs.
+   A regression must exercise the defect through the callable mechanism.
+   Test counts, stable generation and hashes cannot replace that check.
+
+6. **Separate repairs from consequential decisions.** Repair approved behavior without another design vote when scope and authorized limits remain unchanged.
+   Record only the changed requirement, evidence and resource delta in the existing task record.
+   Use the user-required majority process for consequential design or resource changes.
+   Justify renewed resources with a changed hypothesis or decisive remaining test, not sunk cost or unfinished status.
+   Do not exceed an existing limit or waive a failed gate to avoid review.
+   A genuine limit stops that run, but does not automatically stop independent eligible work.
+
+7. **Own integration and limit unfinished work.** Keep one primary capability in focus.
+   Delegate independent work only when it has a clear boundary and available review capacity.
+   Do not create another dependent candidate while its recurring prerequisite defect lacks a reproducer and changed approach.
+   Preserve all sprint requirements and dependency gates.
+   Work on permitted provisional components without claiming a semantic freeze or broader acceptance.
+
+8. **Recover intent before obligations.** Read the latest user instruction and these rules before resuming checkpoint tasks.
+   Keep the current capability, last demonstrated result and next executable action visible in the existing checkpoint.
+   Preserve detailed evidence by reference instead of making its queue the objective.
+   Verify process liveness before claiming that work continues.
+   An active completion loop authorizes persistence, not repetition of a failed approach.
+
+9. **Report the outcome and its limits.** Lead with new usable behavior, the remaining gap and the next demonstration.
+   Distinguish author-reported results from independently verified results.
+   Report local simulation, proven compilation and finalized financial settlement as separate stages.
+   Post every actual blockchain transaction ID and observed status in the conversation.
+   If no transaction was submitted, say so when reporting the network milestone.
+
+10. **Respond to a recurrence immediately.** When the user identifies process displacement, stop starting administrative work.
+    Fulfill the requested diagnosis or correction before resuming the previous queue.
+    Do not replace the product objective with another broad planning campaign.
+    Do not claim these rules solved the problem until subsequent execution demonstrates compliance.
+
+These are behavioral controls. They do not automatically enforce themselves.
+At each trigger, the lead agent must apply the required action without requesting routine permission again.
+Keep required tests, independent audits, bounded resources, mandatory PCD and financial acceptance intact.
+
+## Existing product and evidence rules
+
 1. **Recover the purpose before the work queue.** Read the latest user directive
    and current roadmap notice before checkpoint obligations. A stale loop is
    not authority to continue. A4/A5 are unfinished historical experiments; the
