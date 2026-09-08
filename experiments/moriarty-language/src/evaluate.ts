@@ -9,6 +9,10 @@ const PROFILE='moriarty-bounded-atomic/1' as const;
 const MAX=(1n<<128n)-1n;
 const ZERO='0'.repeat(64);
 const UNKNOWN={startByte:'0',endByte:'0'};
+const evaluationByteLength=Object.getOwnPropertyDescriptor(
+ Object.getPrototypeOf(Uint8Array.prototype),'byteLength'
+)!.get!;
+const evaluationByteSet=Uint8Array.prototype.set;
 const clone=<T>(v:T):T=>structuredClone(v);
 const same=(a:unknown,b:unknown)=>canonicalEncode(a)===canonicalEncode(b);
 export const hash=(kind:string,value:unknown)=>hashDomain(`MORIARTY-${kind}-bounded-atomic/1`,value);
@@ -123,8 +127,47 @@ function admitEvaluation(input:R.EvaluationInput,limits:any):R.EvaluationInput {
 }
 const inputSchema=record({action:actionSchema,authority:authoritySchema,checks:record({authenticatedPrincipal:textValue,genesisValid:boolean,nonceFresh:boolean,observationsAuthentic:boolean,predecessorSetValid:boolean,signatureValid:boolean,stateCurrentAndUnconsumed:boolean}),genesis:genesisSchema,observations:record({observations:array(record({evidenceDigest:digest,name:identifier,provider:textValue,value})),schemaVersion:literal('moriarty-observations/1')}),program:programRefSchema,schemaVersion:literal('moriarty-evaluation/1'),state:stateSchema});
 export function decodeEvaluation(bytes:string|Uint8Array):R.EvaluationInput{
- need((typeof bytes==='string'?new TextEncoder().encode(bytes).length:bytes.length)<=65536,'INPUT_BOUNDS',9);
- try{return canonicalDecode(bytes,inputSchema) as R.EvaluationInput;}catch(e){if(e instanceof RuntimeError)throw e;throw new RuntimeError('INPUT_SCHEMA',9);}
+ try{
+  const registered=registeredBounds().bounds;
+  const limits=registered as typeof registered & {
+   evaluationEncoding:EncodingLimits;signingEnvelope:EncodingLimits
+  };
+  const maximum=limits.evaluationEncoding.utf8Bytes;
+  let admitted:string|Uint8Array;
+  if(typeof bytes==='string'){
+   // Primitive strings are immutable. Check code units before scanning, then
+   // count scalar UTF-8 bytes without allocating an encoded caller string.
+   need(bytes.length<=maximum,'INPUT_BOUNDS',9);
+   need(scalarText(bytes),'INPUT_SCHEMA',9);
+   let length=0;
+   for(let j=0;j<bytes.length;j++){
+    const c=bytes.charCodeAt(j);
+    if(c<0x80)length++;
+    else if(c<0x800)length+=2;
+    else if(c>=0xd800&&c<=0xdbff){length+=4;j++;}
+    else length+=3;
+    need(length<=maximum,'INPUT_BOUNDS',9);
+   }
+   admitted=bytes;
+  }else{
+   // Native brand tests reject proxies and impostors without property access.
+   // Never read caller .length, .buffer, .constructor or Symbol.iterator.
+   need(!nodeTypes.isProxy(bytes)&&nodeTypes.isUint8Array(bytes),'INPUT_SCHEMA',9);
+   const length=evaluationByteLength.call(bytes) as number;
+   need(length<=maximum,'INPUT_BOUNDS',9);
+   const snapshot=new Uint8Array(length);
+   // The native TypedArray-to-TypedArray copy uses internal slots. Its target
+   // capacity is fixed before copying, even for shared/resizable source views.
+   // Detached/out-of-bounds/native-copy failures normalize in the catch below.
+   evaluationByteSet.call(snapshot,bytes);
+   admitted=snapshot;
+  }
+  const decoded=canonicalDecode(admitted) as R.EvaluationInput;
+  return admitEvaluation(decoded,limits);
+ }catch(e){
+  if(e instanceof RuntimeError)throw e;
+  throw new RuntimeError('INPUT_SCHEMA',9);
+ }
 }
 export function programRef(bound:BoundProgram):R.ProgramRef {return {bounds:clone(bound.manifest.bounds),coreVersion:'moriarty-core/1',profile:PROFILE,programHash:bound.programHash,schemaVersion:'moriarty-program-ref/1',sourceHash:bound.manifest.sourceHash};}
 export function sealState(body:R.StateBody):R.StateEnvelope{return {body:clone(body),schemaVersion:'moriarty-state/1',stateHash:hash('STATE',body)};}
