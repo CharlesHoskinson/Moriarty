@@ -87,6 +87,13 @@ Keep required tests, independent audits, bounded resources, mandatory PCD and fi
 
 ## Development plugin integration
 
+Every agent must load `moriarty-dev:develop` through
+[the repository startup procedure](../AGENTS.md#required-startup-load-the-development-plugin)
+when starting or recovering Moriarty work. If the host cannot expose the skill,
+read [its tracked instructions](../plugins/moriarty-dev/skills/develop/SKILL.md)
+and use the CLI. Installation alone is not skill loading. Pass this rule to
+delegated agents and preserve the user's current task scope.
+
 The repository development plugin (`plugins/moriarty-dev`) guards registered dispatches with these stop rules:
 
 ```bash

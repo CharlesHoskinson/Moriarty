@@ -1,5 +1,40 @@
 # Moriarty repository instructions
 
+## Required startup: load the development plugin
+
+Whenever an agent starts work in Moriarty, load `moriarty-dev:develop` before
+selecting work or following a recovered queue. This applies to development,
+review, research, planning and status requests, including linked worktrees and
+delegated agents. The user does not need to request the plugin each time.
+
+1. Invoke the installed `moriarty-dev:develop` skill when the host exposes it.
+   Otherwise read and apply the repository's
+   [develop skill](plugins/moriarty-dev/skills/develop/SKILL.md) directly.
+   Reading these instructions or seeing an installed package does not load the skill.
+2. From the current Moriarty checkout root, inspect the guarded CLI status:
+
+   ```bash
+   python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json
+   ```
+
+3. Follow the user's current request. Use `next --json` when selecting execution
+   work, and `run --action <ACTION_ID>` for registered campaign dispatches.
+   Read-only diagnosis and authorized file edits do not need a new campaign,
+   runner, design vote or permission request. Missing admission blocks its
+   dependent dispatch, not unrelated authorized work.
+
+Load the skill once per fresh agent context. On resume, compaction or a switch
+to another checkout, restore it if absent and refresh status before dispatch.
+Delegation handoffs must include this startup rule and the current checkout root;
+an agent assigned a review stays within its review scope.
+
+If plugin discovery or host hooks are unavailable, apply the checked-in skill
+and use the guarded CLI. If a checkout lacks the skill or CLI, report the exact
+missing path and recover the tracked plugin before dependent dispatch. Do not
+silently bypass it or start an installation/infrastructure loop.
+Actual host interception remains unverified until observed; loading the skill
+does not establish hook trust or product acceptance.
+
 ## Prevent orchestration displacement
 
 Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).
@@ -115,7 +150,8 @@ must be labeled specified-only, never reproduced.
 
 ## Development plugin and guarded execution
 
-To prevent orchestration displacement and enforce stop rules, use the repository-scoped development plugin:
+The [required startup procedure](#required-startup-load-the-development-plugin)
+loads the repository-scoped development workflow. Its command entry points are:
 
 ```bash
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status

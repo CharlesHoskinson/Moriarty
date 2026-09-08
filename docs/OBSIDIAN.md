@@ -13,6 +13,12 @@ Windows editor does not move the vault out of WSL.
 
 ## Workflow and tool
 
+Agent research sessions first load `moriarty-dev:develop` under
+[the repository startup procedure](../AGENTS.md#required-startup-load-the-development-plugin).
+Use the checked-in skill and guarded CLI if the host has no plugin discovery,
+then apply the vault workflow below. Loading the development workflow does not
+turn a research request into a coding task or authorize additional vault writes.
+
 [Research workflow](../wiki/workflow.md) describes ingest, query, save and lint.
 [WIKI_SCHEMA.md](../WIKI_SCHEMA.md) retains Moriarty's evidence contract.
 [Provenance mapping](../wiki/meta/provenance.md) explains how existing source and

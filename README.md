@@ -221,6 +221,16 @@ Preview is the public integration target. Existing network transactions establis
 
 The repository also serves as the agents’ research vault. The [vault overview](wiki/overview.md) and [research index](wiki/index.md) connect findings to their sources and decisions. The [vault guide](docs/OBSIDIAN.md) explains the WSL setup and agent workflow; Obsidian is an optional viewer.
 
+## Agent startup
+
+Agents working in this repository must load `moriarty-dev:develop` on every new
+session and restore it after resume or compaction. Follow the
+[startup procedure in AGENTS.md](AGENTS.md#required-startup-load-the-development-plugin),
+including the guarded status command. Hosts without plugin discovery read the
+[checked-in skill](plugins/moriarty-dev/skills/develop/SKILL.md) directly and use
+the same CLI. This applies to research and reviews as well as implementation;
+the user's current request determines the work.
+
 ## Repository guide
 
 - [`experiments/moriarty-language/`](experiments/moriarty-language/): authoring language, evaluator, source examples and Compact mapping.
