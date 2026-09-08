@@ -1,0 +1,125 @@
+{
+  "schema": "moriarty.foreman-report/1",
+  "packetSha256": "ec3982a3d3ce85573cd4c058a08595ecc6392d8114b61bf74641f7d45cd3c6fc",
+  "decision": "ADMIT_SOURCE_AUTHOR_ONLY",
+  "baseCommit": "daac83578f105b0a70ce44d88c579018881daae5",
+  "worker": "grok-4.6-high",
+  "scope": "Fixed local financial ledger integration source and offline tests only. No full compile/proof/wallet/endpoint/submission or financial ledger acceptance.",
+  "claims": {
+    "onchain": false,
+    "pcd": false,
+    "sp05Complete": false,
+    "sprintComplete": false,
+    "ledgerAcceptance": false,
+    "networkAcceptance": false
+  },
+  "protectedUnchanged": {
+    "generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "differential.mjs": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+    "bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "loan.json": "cfb274a1062c75a1b558b04daad70c0c45adc7245810b3375025b420c28abbd2",
+    "swap.json": "d7d96e6ffa3bac967d7f8bdd4823c9ac894c5cb93fc9168d2cdd0e15bc117374"
+  },
+  "ownedFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/README.md",
+      "bytes": 3163,
+      "sha256": "8dad40c67e53b04c49c0c317bd6da3de4d9b430f473e71051d388aa3a8fc5a2e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "bytes": 4796,
+      "sha256": "d0120812b0f46f35c8fce31333288c2876720bdb3bb0e26877104349477010ee"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "bytes": 37593,
+      "sha256": "747109368a969e21c9d46308a5c5e95e0b0bcffbc30dab9f795827f12ca11e2a"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs",
+      "bytes": 21154,
+      "sha256": "fe594c9fab7457fdc3abe228927ee92b38af5873ed2075b9b4048c52d4b5a104"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "bytes": 5253,
+      "sha256": "0c5d5347923d169ffb7c9090060f7846ae0d6449378aade4ca7ec779c64bf433"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs",
+      "bytes": 37579,
+      "sha256": "94d3955f2956d5d81521bd25e8c6fbc74c09a4faab45d4cb118caa1c4b7624c6"
+    },
+    {
+      "path": "FOREMAN_REPORT.md",
+      "bytes": 4413,
+      "sha256": "ace351ca3e9ad0a2a47ca27cc89ef4b68ccda78877fa6c5e9ca796a93a8c4d43"
+    }
+  ],
+  "ownedBytesLimit": 262144,
+  "ownedBytesTotal": 119610,
+  "reportJsonNote": "FOREMAN_REPORT.json is the eighth owned file. Hash it after freeze. Do not treat this field as a self-digest.",
+  "commands": [
+    {
+      "phase": "first-substantive-red",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=30000", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 1,
+      "tests": 27,
+      "pass": 1,
+      "fail": 26,
+      "note": "Owned modules absent. Frozen generate.mjs names verified."
+    },
+    {
+      "phase": "final-green",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 0,
+      "tests": 27,
+      "pass": 27,
+      "fail": 0
+    }
+  ],
+  "apiReferences": {
+    "generateMjs": ["validatePinnedInputs", "generateWrappers"],
+    "walletFacade": [
+      "balanceUnboundTransaction(tx,{shieldedSecretKeys,dustSecretKey},{ttl})",
+      "signRecipe(recipe,payload=>unshieldedKeystore.signData(payload))",
+      "finalizeRecipe(signedRecipe)",
+      "submitTransaction(finalized)"
+    ],
+    "publicDataProvider": {
+      "queryContractState": "queryContractState(contractAddress, config?: BlockHeightConfig | BlockHashConfig)",
+      "queryUnshieldedBalances": "queryUnshieldedBalances(contractAddress, config?: BlockHeightConfig | BlockHashConfig)",
+      "blockHashConfigUsed": {"type": "blockHash", "blockHash": "<hex>"}
+    },
+    "ledgerV8": [
+      "Transaction.deserialize('signature','proof','binding',raw)",
+      "sampleSigningKey",
+      "signData",
+      "verifySignature",
+      "addressFromKey",
+      "rawTokenType"
+    ],
+    "contracts": ["CompiledContract.make", "withVacantWitnesses", "withCompiledFileAssets", "NodeZkConfigProvider", "httpClientProofProvider", "indexerPublicDataProvider", "levelPrivateStateProvider", "deployContract", "submitCallTx"],
+    "comparator": "compareFinancialEffects always returns networkAcceptance:false"
+  },
+  "testFixtureProvenance": {
+    "kind": "synthetic-test",
+    "keys": "in-memory sampleSigningKey",
+    "transport": "mocked",
+    "expectedComparatorRecords": ["experiments/moriarty-midnight-financial/fixtures/loan.json", "experiments/moriarty-midnight-financial/fixtures/swap.json"],
+    "sourceConstants": ["experiments/moriarty-language/spec/examples/loan.mori", "experiments/moriarty-language/spec/examples/swap.mori"],
+    "metadataRole": "layout and deployment identity only",
+    "notFinalizedOnChain": true
+  },
+  "unresolvedGaps": [
+    "No positive proven finalized-byte fixture was constructed offline. Production decoder rejects mocked finalize objects. Full proven-byte decoder coverage is not claimed.",
+    "Full compiler and proof generation remain disabled. Injected adapters emit only unproven-test-manifest.",
+    "runLocalFinancialCase cannot execute without a later reviewed operational admission. That admission is not filled with invented constants.",
+    "Oracle projection arithmetic does not establish ledger acceptance."
+  ],
+  "gitWrites": false,
+  "network": false,
+  "compilerInvoked": false,
+  "proofGenerated": false
+}
