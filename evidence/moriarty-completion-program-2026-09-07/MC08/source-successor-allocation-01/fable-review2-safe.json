@@ -1,0 +1,75 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 75.10193316499999,
+  "requestedModel": "claude-fable-5-1",
+  "effort": "medium",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 4592,
+      "outputTokens": 13,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.004657,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-fable-5-1": {
+      "inputTokens": 2,
+      "outputTokens": 6985,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 10505,
+      "webSearchRequests": 0,
+      "costUSD": 0.55937,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5009,
+      "canonicalModel": "claude-fable-5-1",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "structuredOutput": {
+    "verdict": "approved",
+    "candidateId": "cand_0C4D3F5F035F24184BFE7221F4",
+    "scope": "Bounded successor dispatch proposal (resource decision, not source acceptance). Verified bundle identity (baseSha == headSha == 50e72de9..., diffSha256 e3b0c442... is the SHA-256 of the empty string, matching the zero-byte review-diff artifact). Inspected all three required artifacts: resource-contract, resource-evidence, review-diff. Independently recomputed all arithmetic in resource-evidence and checked each acceptance criterion in the proposal. Could not verify the three authority file hashes against the repository (no file access in this environment); this does not affect the arithmetic verdict.",
+    "findings": [
+      {
+        "severity": "low",
+        "citation": "resource-contract: \"Increase the master worker-dispatch cap from 71 to 79\" and \"eight root verification bounds of 150 seconds (1200), eight independent result-review bounds of 600 seconds (4800)\"",
+        "description": "The time envelope budgets 24 bounded runs (8 author, 8 root verification, 8 result review) but the dispatch cap rises by only 8. The proposal should state explicitly that root verification and independent result-review runs do not count toward the 79 worker-dispatch cap, or raise the cap accordingly. The evidence (314 recorded charges versus 71 dispatches) suggests charges are not one-to-one with dispatches, so this is likely already the intended reading, but making it explicit removes a possible cap exhaustion mid-envelope."
+      },
+      {
+        "severity": "low",
+        "citation": "resource-evidence: ordinaryChargesSeconds, externalChargesSeconds, planningChargeSeconds, planningOverheadReservedSeconds, chargedBeforeDecision, projectedTotalUpperBound",
+        "description": "Arithmetic verified: ordinary charges sum to 108960, external charges to 57600, plus planning 2323.0473 and overhead 300 = 169183.0473 (matches chargedBeforeDecision). Envelope 8x1800 + 8x150 + 8x600 + 600 = 21000 (matches). Projected total 169183.0473 + 900 + 600 + 1800 + 21000 = 193483.0473 (matches), leaving about 4146.95 seconds under the 197630 ceiling. Count 71 preserved, new maximum 79. No defect; recorded for citation completeness."
+      }
+    ],
+    "rationale": "All acceptance criteria are satisfied. (1) Arithmetic stays within the master time ceiling: recomputed projected upper bound 193483.05 < 197630. (2) Count 71 is preserved (workerDispatches 71 == masterWorkerLimit 71 in evidence) and the new maximum is 79, exactly 71 + 8. (3) All prior charges (177 ordinary, 137 external, planning charge and overhead) and the outstanding reserves (900 root/review, 600 master host verification, 1800 decision allowance) survive in the projection; nothing is refunded, reset or relabeled. (4) Each of the eight dispatches is separately bounded (1800 author / 150 root / 600 review) with full-bound charging before dispatch, no early-completion refund, and a required live-balance atomic check. (5) No acceptance, dependency or operational gate is weakened: proof campaigns, wallet, network submission and financial spending remain behind separate gates; no scheduler, daemon or orchestrator is added; SP01-SP12 and other acceptance obligations remain owed. The bundle is an empty diff at a single commit, consistent with a resource decision carrying no source change. The single ambiguity found (whether verification and review runs count against the dispatch cap) is low severity and does not constitute a material defect, so approval is warranted with that clarification noted for the proposer."
+  },
+  "subtype": "success",
+  "stopReason": "tool_use",
+  "isError": false,
+  "token": {
+    "schemaVersion": 1,
+    "providerFamily": "anthropic",
+    "model": "claude-fable-5-1",
+    "cliVersion": "2.1.261 (Claude Code)",
+    "contractHash": "sha256:f6a5e8665cb8e131ba4dac0f9dc1a60f0864a09b6be1d10ea8cddc2942c4802d",
+    "promptHash": "sha256:0ac1e320a99518a1ba1d44d60ea719d03480e072d8c694fbe58581db22f695da",
+    "schemaVariantHash": "sha256:59af589b1640a4c230a36dd0ebd2686c40a7fdd195053a81ef03ec173abb8cd3",
+    "nonce": "2ab2f1cae4c7ec4ad0bd28c0a1fe0e689bdf62638b0a6dc43a0889f439596493",
+    "issuedAt": "2026-09-08T15:01:41.940Z",
+    "expiresAt": "2026-09-08T15:06:41.940Z"
+  },
+  "promptSha256": "0ac1e320a99518a1ba1d44d60ea719d03480e072d8c694fbe58581db22f695da",
+  "candidateId": "cand_0C4D3F5F035F24184BFE7221F4",
+  "scope": "Bounded successor resource proposal only, no implementation or public acceptance.",
+  "identityVerified": true,
+  "terminalCompleted": true,
+  "substantive": true
+}
