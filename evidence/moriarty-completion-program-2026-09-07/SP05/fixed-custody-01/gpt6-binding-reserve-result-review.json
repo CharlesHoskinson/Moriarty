@@ -1,0 +1,691 @@
+{
+ "schema": "moriarty.gpt6-fixed-kernel-custody-binding-reserve-result-review/1",
+ "verdict": "APPROVED",
+ "scope": "Fixed loan/swap local Compact custody source and fresh compiled-runtime synthetic-context behavior only.",
+ "candidateSha256": "4aae46ea54b8750b9733bd858c986f1d49545965beea1c788fec823a6c493a6e",
+ "candidateBytes": 167776,
+ "immutableCandidateRoot": "/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/candidate-02",
+ "freshArtifacts": "/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/root-verify4",
+ "reviewer": {
+  "identity": "Independent Codex reviewer; system-described GPT-6",
+  "requestedRouting": "GPT-6 Astra high",
+  "identityLimit": "Exact serving model and backend effort are not exposed. Requested routing is not independently verified provider-canonical metadata.",
+  "independentOfAuthor": true
+ },
+ "timing": {
+  "startedAtUTC": "2026-09-08T08:58:18.426124+00:00",
+  "substantiveChecksEndedAtUTC": "2026-09-08T09:04:19.528607+00:00",
+  "elapsedSeconds": 462.574,
+  "allowanceSeconds": 600,
+  "nativeAllowanceCharged": true,
+  "cgroupEnforced": false,
+  "substantiveReviewStoppedAtUTC": "2026-09-08T09:06:01Z",
+  "reportFinalizationAtUTC": "2026-09-08 09:09:38 UTC",
+  "limitNote": "Substantive checks and verdict were complete within the 600 second native allowance. Context compaction delayed report-only finalization beyond the allowance; no further substantive probes were run.",
+  "reportPreparedAtUTC": "2026-09-08 09:06:01 UTC"
+ },
+ "author": {
+  "receipt": "binding-reserve-completion-worker-receipt.json",
+  "actualProviderModel": "grok-4.6-build",
+  "modelCalls": 36,
+  "exitCode": 0
+ },
+ "findings": [],
+ "priorFindingDispositions": [
+  {
+   "id": "KC01-R1",
+   "status": "RESOLVED",
+   "paths": [
+    "experiments/moriarty-midnight-financial/custody/loan.compact:41",
+    "experiments/moriarty-midnight-financial/custody/swap.compact:43",
+    "experiments/moriarty-midnight-financial/custody/generate.mjs:115"
+   ],
+   "evidence": "Both constructors contain executable metadata-derived pinnedProgram constants, require expectedProgram equality, store that constant and use it in capability enrollment. Both 0x7f constructor controls reject PROGRAM_MISMATCH; pinned enrollment/initialize succeeds. Both duplicate bindings programDigest controls reject. Trusted role/payout enrollment and explicit network labels retain their prior scope."
+  },
+  {
+   "id": "KC01-R2",
+   "status": "RESOLVED",
+   "paths": [
+    "experiments/moriarty-midnight-financial/custody/swap.compact:86",
+    "experiments/moriarty-midnight-financial/custody/swap.compact:107",
+    "experiments/moriarty-midnight-financial/custody/swap.compact:123",
+    "experiments/moriarty-midnight-financial/custody/swap.compact:137"
+   ],
+   "evidence": "Swap and close require exact equality of both actual synthetic entry token balances to stored kernel reserves. Checked entry-plus-input/output equations bind both returned reserves. Close requires outputs equal both complete entry balances and returned reserves zero. Eight independent swap discrepancy controls and ten post-swap close discrepancy controls reject; former0A/19743B and one-unit cases no longer pass. Fully funded contexts derive from actual init claims and advance by input/output deltas."
+  },
+  {
+   "id": "KC01-R3",
+   "status": "RESOLVED",
+   "paths": [
+    "experiments/moriarty-midnight-financial/custody/generate.mjs:80",
+    "experiments/moriarty-midnight-financial/custody/build.mjs:66",
+    "experiments/moriarty-midnight-financial/custody/generate.mjs:32",
+    "experiments/moriarty-midnight-financial/custody/build.mjs:177"
+   ],
+   "evidence": "Both generation and build use shared actual-byte validation for nine source/kernel/arithmetic/metadata/bound-program inputs and profile/program/source/kernel relationships. Build requires exact fresh wrapper equality before compiler work. Twenty-three independent input/binding/relationship/wrapper controls reject with zero compiler callback invocations and zero output writes. Relationship probes repin only changed metadata/bound-program file hashes, showing internal relationships are checked beyond file hashing."
+  },
+  {
+   "id": "completion-CLI-regression",
+   "status": "RESOLVED",
+   "paths": [
+    "experiments/moriarty-midnight-financial/custody/generate.mjs:32",
+    "experiments/moriarty-midnight-financial/custody/build.mjs:177"
+   ],
+   "evidence": "isDirectRun requires an explicit caller URL and each entry point passes its own import.meta.url. Direct build without --skip-zk rejects; direct build with --skip-zk but no output directory rejects; direct generator without output directory rejects. Importing both modules prints only the review marker and does not execute either CLI. Root's independently fresh build artifacts are present and hash-bound; the prior silent exit0/no-artifact result remains explicitly historical."
+  }
+ ],
+ "verification": {
+  "authorSuite": {
+   "command": "MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/root-verify4 /usr/local/bin/node --test --test-reporter=tap --test-timeout=90000 /home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok/experiments/moriarty-midnight-financial/custody/runtime.test.mjs",
+   "exitCode": 0,
+   "tests": 24,
+   "pass": 24,
+   "fail": 0,
+   "durationMs": 2855.059719,
+   "executedByReviewer": true,
+   "artifacts": "build/root-verify4"
+  },
+  "independentRuntime": {
+   "cases": 28,
+   "failures": 0,
+   "reports": [
+    {
+     "case": "loan-fixed-constructor",
+     "wrongRejected": true,
+     "pinnedAccepted": true
+    },
+    {
+     "case": "swap-fixed-constructor",
+     "wrongRejected": true,
+     "pinnedAccepted": true
+    },
+    {
+     "case": "swap-reserves-0-19743",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-0-2000000",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-999999-2000000",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-1000001-2000000",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-1000000-0",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-1000000-19743",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-1000000-1999999",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "swap-reserves-1000000-2000001",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "isolated-min19744",
+     "reject": "minimum output not met",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min1-1010001-1980257",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min1-1010000-1980258",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min1-1010001-1980258",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min1-1009999-1980257",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min1-1010000-1980256",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "funded-swap-close-min1",
+     "entry": [
+      "1000000",
+      "2000000"
+     ],
+     "postSwap": [
+      "1010000",
+      "1980257"
+     ],
+     "postClose": [
+      "0",
+      "0"
+     ],
+     "feeA": "30"
+    },
+    {
+     "case": "close-after-min19700-1010001-1980257",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min19700-1010000-1980258",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min19700-1010001-1980258",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min19700-1009999-1980257",
+     "reject": "ENTRY_RESERVE_A_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "close-after-min19700-1010000-1980256",
+     "reject": "ENTRY_RESERVE_B_MISMATCH",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "funded-swap-close-min19700",
+     "entry": [
+      "1000000",
+      "2000000"
+     ],
+     "postSwap": [
+      "1010000",
+      "1980257"
+     ],
+     "postClose": [
+      "0",
+      "0"
+     ],
+     "feeA": "30"
+    },
+    {
+     "case": "swap-after-early-close",
+     "reject": "epoch is closed",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "loan-before-accrue",
+     "reject": "dues are not ready",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "loan-wrong-total",
+     "reject": "settlement amount mismatch",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "loan-wrong-asset",
+     "reject": "SETTLEMENT_ASSET",
+     "fullLedgerRollback": true,
+     "effectFamilies": 9
+    },
+    {
+     "case": "loan-complete-flow",
+     "state": [
+      "4500000000",
+      "0",
+      "0",
+      "500000000",
+      "33972602",
+      "19466027398",
+      "533972602",
+      "2",
+      "1"
+     ],
+     "settlement": "533972602",
+     "retainedDueEffects": 2
+    }
+   ]
+  },
+  "independentGuards": {
+   "failures": 0,
+   "guards": [
+    {
+     "case": "changed-loanSource",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-swapSource",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-arithmetic",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-loanKernel",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-swapKernel",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-loanMetadata",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-swapMetadata",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-loanBoundProgram",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "changed-swapBoundProgram",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "duplicate-loan-programDigest",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "loan-meta-programHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "loan-meta-sourceHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "loan-meta-compactSourceHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "loan-bound-programHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "loan-bound-profile-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "wrapper-loan",
+     "generatorRejected": false,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "duplicate-swap-programDigest",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "swap-meta-programHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "swap-meta-sourceHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "swap-meta-compactSourceHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "swap-bound-programHash-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "swap-bound-profile-repinned-file",
+     "generatorRejected": true,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "wrapper-swap",
+     "generatorRejected": false,
+     "buildRejected": true,
+     "compilerInvocations": 0,
+     "writes": 0
+    },
+    {
+     "case": "CLI-build.mjs-",
+     "exit": 1,
+     "expectedDiagnostic": "skip-zk"
+    },
+    {
+     "case": "CLI-build.mjs---skip-zk",
+     "exit": 1,
+     "expectedDiagnostic": "output-dir"
+    },
+    {
+     "case": "CLI-generate.mjs-",
+     "exit": 1,
+     "expectedDiagnostic": "output-dir"
+    }
+   ],
+   "validCompilerCallbackCount": 2,
+   "generatedWrapperEquality": true,
+   "importSafe": true,
+   "realCompilerInvoked": false
+  },
+  "fullRollback": {
+   "rejectedCalls": 23,
+   "completeDecodedLedgerCompared": true,
+   "capabilitiesColorsEnvelopesAndLastResultsIncluded": true,
+   "effectFamilies": [
+    "claimedNullifiers",
+    "claimedShieldedReceives",
+    "claimedShieldedSpends",
+    "claimedContractCalls",
+    "shieldedMints",
+    "unshieldedMints",
+    "unshieldedInputs",
+    "unshieldedOutputs",
+    "claimedUnshieldedSpends"
+   ]
+  },
+  "financialPreservation": {
+   "loan": {
+    "interest": "33972602",
+    "interestRemainder": "27000",
+    "settlement": "533972602",
+    "residualPrincipal": "4500000000",
+    "finalState": [
+     "4500000000",
+     "0",
+     "0",
+     "500000000",
+     "33972602",
+     "19466027398",
+     "533972602",
+     "2",
+     "1"
+    ],
+    "completeDueCreatedRecords": 2,
+    "lastAccrueRetained": true,
+    "lastSettleMatchesResult": true,
+    "remaining": 0,
+    "revision": 2,
+    "settlementInputOutputAndLenderClaim": "533972602"
+   },
+   "swap": {
+    "grossInputA": "10000",
+    "effectiveInputA": "9970",
+    "feeRetainedA": "30",
+    "outputB": "19743",
+    "validMinOut": [
+     "1",
+     "19700"
+    ],
+    "isolatedInvalidMinOut": "19744",
+    "initContractReserveClaims": [
+     "1000000",
+     "2000000"
+    ],
+    "effectDerivedPostSwap": [
+     "1010000",
+     "1980257"
+    ],
+    "effectDerivedPostClose": [
+     "0",
+     "0"
+    ],
+    "afterSwapWork": [
+     7,
+     1
+    ],
+    "afterCloseWork": [
+     6,
+     2
+    ],
+    "closeBeforeSwapPermitted": true,
+    "closeBeforeSwapWork": [
+     7,
+     1
+    ],
+    "lateSwapReject": "epoch is closed"
+   }
+  },
+  "sourceDiff": "Loan source changes are confined to fixed program enrollment/capability binding. Swap additionally adds exact reserve entry, effect delta and close-zero checks. Protected kernels/arithmetic and accepted primitive financial behavior remain byte-identical.",
+  "generation": "Two independent in-memory generated wrapper results equal each other and the frozen wrappers. Root's two clean CLI generation outputs and fresh --skip-zk build remain separately hash-bound by candidate-02-freeze.json.",
+  "evidenceIntegrity": {
+   "embeddedStdoutStderrRecordsChecked": 18,
+   "allEmbeddedHashesAndByteCountsMatch": true,
+   "historicalFailuresPreserved": [
+    "old-red-missing-artifact",
+    "compiled-runtime-10-pass-5-fail",
+    "root-compile3-empty-stdout-no-artifacts",
+    "binding-completion-22-pass-2-fail"
+   ],
+   "notClaimed": "Embedded stream verification is not a new independent replay of all historical executions."
+  }
+ },
+ "integrity": {
+  "beforeExecutionVerifiedAtUTC": "2026-09-08T08:58:53.243237+00:00",
+  "verifiedBeforeAnyCandidateExecution": true,
+  "ownedFiles": 10,
+  "sourceInputs": 19,
+  "runtimePins": 4,
+  "freshBuildArtifacts": 21,
+  "worktreeOwnedMatchesFreeze": true,
+  "candidateAggregateMatches": true,
+  "candidateBytesMatch": true,
+  "beforeAfterUnchanged": true,
+  "worktreeInputNote": "Eighteen mirrored source inputs match. The documentary standard-library source path is absent from the worktree; its authoritative sourceRoot copy exists and matches its pin. The generator's nine actual input paths all exist and match in the worktree.",
+  "hashes": {
+   "owned": {
+    "experiments/moriarty-midnight-financial/custody/README.md": "5b230e13aa331bece5fe50f44c3b3328f96ead56a76c9a5ea7903a8476ff1ecd",
+    "experiments/moriarty-midnight-financial/custody/build.mjs": "a8e14954c77588d47360f01cb0604c49d5eec5c004b0d28f7a84f930935b8b95",
+    "experiments/moriarty-midnight-financial/custody/generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "experiments/moriarty-midnight-financial/custody/loan.compact": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+    "experiments/moriarty-midnight-financial/custody/swap.compact": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56",
+    "experiments/moriarty-midnight-financial/custody/bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "experiments/moriarty-midnight-financial/custody/runtime.test.mjs": "45ab78d4a052cd7b8260b1b1e5caa451c301bc9132012ceb41189d0ffcca9cf9",
+    "experiments/moriarty-midnight-financial/custody/test-evidence.json": "263db065eddcc43a7403763f7f0190a847a8f307b1126bb5e2971d5770cccedf",
+    "FOREMAN_REPORT.md": "eeb9a063b26355d9472cd559dd19fc03c3f71ee168bfa7ff66a36e7131b40e7d",
+    "FOREMAN_REPORT.json": "578e560d83cf119d2739784b933967d6539f7e4d5dabe2b82e2c13c495b2032a"
+   },
+   "source": {
+    "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "experiments/moriarty-language/compact/materialize-mapping.mjs": "5dac9c40152378490b35c62c1815978eb4d89d4d261f02bb45761a9fe138b856",
+    "experiments/moriarty-language/compact/arithmetic.test.mjs": "81e486c3c630c07c13c66e3937923dcedc2bac57dc689e60aa18e2c3b2961c49",
+    "repos/LFDT-Minokawa/compact/compiler/standard-library.compact": "166487c61232e4058f0a5cb1a2a154d5b926a574ba5bc24f5def905c2a938e52",
+    "raw/midnight-docs-2026-09-07/markdown/tokens/unshielded-token.md": "60005ede6545ce13c213a2ab08705486a2c79d341308e15baf4bf35fc70bedf6",
+    "raw/midnight-docs-2026-09-07/markdown/compact/reference/compact-reference.md": "61a828679c922fce519352c5f184098c8f2f9d0cd02e609a64e8d876fed469ce",
+    "evidence/moriarty-completion-program-2026-09-07/SP05/custody-decision-01/decision.json": "65fcbbb80f28acade5bf564611cc6397b49e2a48d55108d2ecd3887e6a8fefe6",
+    "openspec/sprints/sp05-financial-integration-on-preview.md": "996b5aaaf81b7ae687794fde95f02aaa6460cc70faaef43d45ad7ecdfde4d804",
+    "experiments/moriarty-language/compact/generated/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+    "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+    "experiments/moriarty-language/compact/generated/loan/bound-program.json": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+    "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+    "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+    "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
+    "evidence/moriarty-completion-program-2026-09-07/SP05/kernel-custody-packet-01/implementation-packet.md": "acd2b9caac1eabdb50a64bb82f91dc49eb9a4ac0417eeb335cd77e1a17386265",
+    "evidence/moriarty-completion-program-2026-09-07/SP05/kernel-custody-packet-01/gpt6-packet-review.json": "3a50367775b300f363831c87de9fa051ba978ae85a815be0c3044e99c3b00216",
+    "evidence/moriarty-completion-program-2026-09-07/SP05/kernel-custody-packet-01/gpt6-packet-review.md": "fce0e1101e60812e9340c1b05796d8140b404cbdab1c6e97cc91a660aca767a3"
+   },
+   "runtime": {
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/package.json": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.d.ts": "2024083e64d9d08c358d93f02701b6eaaddf0f2432171fafad0f748ca1efe3ce",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.js": "1d4e04503589ad7bef59a9cc9e5386c6ffe645c9503fbb2cd11ad26aeba95a95",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/onchain-runtime-v3/onchain-runtime-v3.d.ts": "31d0d38a81d910c9154599494071b0fd4e99e354b34ebb386399a163cf0c627c"
+   },
+   "build": {
+    "build-receipt.json": "0d373a164eeb8b7e9f5a4f6f6c55c1bc83fbb28f94e42f01f285b65125f9894c",
+    "stage/swap/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "stage/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+    "stage/swap/swap.compact": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56",
+    "stage/loan/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "stage/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+    "stage/loan/loan.compact": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+    "loan/compiler/contract-info.json": "30887c06f6a15b0a5a3fd2fecbb88d9e736625d369d9f3d60137d4efec280227",
+    "loan/zkir/initialize.zkir": "cad8966b84f13e75cae88d660fb1a4ff7a8abe17a38381757aeafd2eaa7b4e16",
+    "loan/zkir/settle.zkir": "95b29c37648b95f7f50eabc4761fc5ddc8a4bbe07b9480c06320c82feb92a24d",
+    "loan/zkir/accrue.zkir": "31e90d10249d65f4496b0dffda26bf1091feec87802167d697d6ad1ff4946a82",
+    "loan/contract/index.js": "514fb8408b5a92b4a4d999b88e475dbf447cab574050417d83405599a991b912",
+    "loan/contract/index.d.ts": "ea41552d821db8c9268db56bdf4a533d1270cfa0d003e183365b63b04793c40a",
+    "loan/contract/index.js.map": "ec0873495feb13d243d000fc5dec84e2ea52e5f902c7b0709a5c3c8d3cf87617",
+    "swap/compiler/contract-info.json": "2fccf1301dee87569b922b0bed8f3f0b86654b3896f851214ef09a90ca269ffe",
+    "swap/zkir/initialize.zkir": "131479fc467abd484065222b3e60aad042a01db90f4b068c2f229566d225f56b",
+    "swap/zkir/swap.zkir": "c84e09f50bd307230281337fcc9ce0bdd8f43045c3d7996891ec366dae7866b9",
+    "swap/zkir/close.zkir": "6ffea971d0115a595d40cc070aea7495a4fb8a2bae670aa4209c5e6f73dc3825",
+    "swap/contract/index.js": "b64d25359576771789782e2d2bd6ad791c2c49c5028813eaf43debe89154e0d8",
+    "swap/contract/index.d.ts": "0dc86b7a1d31a36d4ed6b7bd37e42576894d6305e4759e7cd394b097756eb30f",
+    "swap/contract/index.js.map": "d2d876da083bfbe314b3cb53c41ab4dec7fbf07aaa4da539291bb54e539e7b12"
+   },
+   "review": {
+    "gpt6-result-review.json": "34d47a0d8dbf5b9b025ccfe84ce132480d6b2350b30fa9971687bfd59f58281b",
+    "binding-reserve-correction-prompt.md": "092e7f46f9d1771dcdceaef41e653dfe8bfebe3563ac178e7c373a32e0819d02",
+    "binding-reserve-completion-prompt.md": "54a90dbc35cd4d6a41c545801e3b8b9130f100de35df12fc7530673c520d737a",
+    "binding-reserve-completion-worker-receipt.json": "19dcc405d094e14818ef050b002ec7a61d58cbf779af2cd25d799d43e03a2b54"
+   }
+  }
+ },
+ "commands": {
+  "independentRuntime": {
+   "cmd": "MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/root-verify4 /usr/local/bin/node --input-type=module - <<'JS'\nimport assert from 'node:assert/strict';\nimport {randomBytes} from 'node:crypto';\nimport {readFileSync} from 'node:fs';\nconst root=process.env.MORIARTY_CUSTODY_ARTIFACTS;\nconst b=JSON.parse(readFileSync('/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/candidate-02/experiments/moriarty-midnight-financial/custody/bindings.json'));\nconst rt=await import(root+'/loan/node_modules/@midnight-ntwrk/compact-runtime/dist/index.js');\nconst mods={loan:await import(root+'/loan/contract/index.js'),swap:await import(root+'/swap/contract/index.js')};\nconst hex=s=>Uint8Array.from(Buffer.from(s,'hex')), key='00'.repeat(32),T=1700000000n;\nconst families=['claimedNullifiers','claimedShieldedReceives','claimedShieldedSpends','claimedContractCalls','shieldedMints','unshieldedMints','unshieldedInputs','unshieldedOutputs','claimedUnshieldedSpends'];\nconst norm=v=>JSON.stringify(v,(_,x)=>typeof x==='bigint'?x.toString():x instanceof Uint8Array?Buffer.from(x).toString('hex'):x instanceof Map?[...x]:x);\nconst B=1n<<64n,mul=(a,b)=>({aLo:a%B,aHi:a/B,bLo:b%B,bHi:b/B,lo:(a%B)*(b%B)%B,carry:(a%B)*(b%B)/B}),div=(n,d)=>({q:n/d,r:n%d,product:mul(d,n/d)});\nconst sh={h0:mul(10000n,997n),h1:mul(9970000n,2000000n),h2:mul(1000000n,1000n),h3:div(19940000000000n,1009970000n)};\nconst lh={h0:mul(5000000000n,8n),h1:mul(40000000000n,31n),h2:mul(100n,365n),h3:div(1240000000000n,36500n)};\nconst reports=[];\nfunction deploy(kind,program=hex(b[kind].programDigest)){const one=randomBytes(32),two=randomBytes(32),contract=new mods[kind].Contract({});const a=kind==='loan'?'borrowerAddress':'traderAddress',z=kind==='loan'?'lenderAddress':'providerAddress';const out=contract.initialState(rt.createConstructorContext({},key),one,two,{bytes:hex(b[kind][a])},{bytes:hex(b[kind][z])},program,hex(b.networkTag));return {kind,one,two,contract,program,state:out.currentContractState};}\nconst L=f=>mods[f.kind].ledger(f.state.data??f.state);\nfunction ctx(f,A=0n,B=0n){const c=rt.createCircuitContext(rt.dummyContractAddress(),key,f.state,{},undefined,undefined,Number(T));const balance=new Map();if(f.kind==='swap')for(const [domain,n]of[[b.swap.assetADomain,A],[b.swap.assetBDomain,B]])balance.set({tag:'unshielded',raw:rt.rawTokenType(hex(domain),rt.dummyContractAddress())},n);c.currentQueryContext.block={...c.currentQueryContext.block,secondsSinceEpoch:T,secondsSinceEpochErr:0,lastBlockTime:T,parentBlockHash:key,balance};return c;}\nfunction commit(f,r){f.state=r.context.currentQueryContext.state;return r;}\nfunction init(f){return commit(f,f.contract.circuits.initialize(ctx(f),f.kind==='loan'?f.one:f.two,f.program,hex(b.networkTag),f.kind==='loan'?2n:3n,T));}\nfunction swap(f,c,min=19700n){return f.contract.circuits.swap(c,f.one,f.program,hex(b.networkTag),L(f).revision,4n,4n,0n,1n,10000n,min,T,sh);}\nfunction close(f,c){return f.contract.circuits.close(c,f.two,f.program,hex(b.networkTag),L(f).revision,3n,T,{unused:0n});}\nfunction reject(f,c,op,expected,label){const state=norm(mods[f.kind].ledger(c.currentQueryContext.state));const effect=norm(Object.fromEntries(families.map(k=>[k,c.currentQueryContext.effects[k]])));assert.throws(()=>op(c),e=>String(e).includes(expected));assert.equal(norm(mods[f.kind].ledger(c.currentQueryContext.state)),state);assert.equal(norm(Object.fromEntries(families.map(k=>[k,c.currentQueryContext.effects[k]]))),effect);reports.push({case:label,reject:expected,fullLedgerRollback:true,effectFamilies:9});}\nconst raw=d=>String(rt.rawTokenType(hex(d),rt.dummyContractAddress()));\nfunction reserveFromInit(r){let v=[0n,0n];for(const [k,n]of r.context.currentQueryContext.effects.claimedUnshieldedSpends){if(k[1].tag!=='contract')continue;assert.equal(String(k[1].address),String(rt.dummyContractAddress()));for(let i=0;i<2;i++)if(String(k[0].raw)===raw(i?b.swap.assetBDomain:b.swap.assetADomain))v[i]+=n;}return v;}\nfunction applyIO(v,r){v=[...v];for(const [family,sign]of[['unshieldedInputs',1n],['unshieldedOutputs',-1n]])for(const [k,n]of r.context.currentQueryContext.effects[family])for(let i=0;i<2;i++)if(String(k.raw)===raw(i?b.swap.assetBDomain:b.swap.assetADomain))v[i]+=sign*n;return v;}\nfor(const kind of ['loan','swap']){assert.throws(()=>deploy(kind,new Uint8Array(32).fill(0x7f)),/PROGRAM_MISMATCH/);const f=deploy(kind);init(f);assert.equal(norm(L(f).programDigest),norm(hex(b[kind].programDigest)));reports.push({case:kind+'-fixed-constructor',wrongRejected:true,pinnedAccepted:true});}\nconst f=deploy('swap');const ir=init(f);const v=reserveFromInit(ir);assert.deepEqual(v,[1000000n,2000000n]);\nfor(const [A,B,err]of[[0n,19743n,'A'],[0n,2000000n,'A'],[999999n,2000000n,'A'],[1000001n,2000000n,'A'],[1000000n,0n,'B'],[1000000n,19743n,'B'],[1000000n,1999999n,'B'],[1000000n,2000001n,'B']])reject(f,ctx(f,A,B),c=>swap(f,c),'ENTRY_RESERVE_'+err+'_MISMATCH','swap-reserves-'+A+'-'+B);\nreject(f,ctx(f,...v),c=>swap(f,c,19744n),'minimum output not met','isolated-min19744');\nfor(const min of [1n,19700n]){const z=deploy('swap'),a=reserveFromInit(init(z)),r=commit(z,swap(z,ctx(z,...a),min)),mid=applyIO(a,r);assert.deepEqual(mid,[1010000n,1980257n]);assert.deepEqual(mid,[L(z).kernelState.f0,L(z).kernelState.f1]);assert.equal(L(z).remaining,7n);assert.equal(L(z).revision,1n);\nfor(const [A,B,err]of[[mid[0]+1n,mid[1],'A'],[mid[0],mid[1]+1n,'B'],[mid[0]+1n,mid[1]+1n,'A'],[mid[0]-1n,mid[1],'A'],[mid[0],mid[1]-1n,'B']])reject(z,ctx(z,A,B),c=>close(z,c),'ENTRY_RESERVE_'+err+'_MISMATCH','close-after-min'+min+'-'+A+'-'+B);\nconst cr=commit(z,close(z,ctx(z,...mid)));assert.deepEqual(applyIO(mid,cr),[0n,0n]);assert.equal(L(z).kernelState.f6,1n);assert.equal(L(z).remaining,6n);assert.equal(L(z).revision,2n);reports.push({case:'funded-swap-close-min'+min,entry:a.map(String),postSwap:mid.map(String),postClose:['0','0'],feeA:'30'});}\nconst z=deploy('swap'),a=reserveFromInit(init(z));const cr=commit(z,close(z,ctx(z,...a)));assert.deepEqual(applyIO(a,cr),[0n,0n]);assert.equal(L(z).remaining,7n);reject(z,ctx(z,0n,0n),c=>swap(z,c),'epoch is closed','swap-after-early-close');\nconst q=deploy('loan');init(q);const vals=x=>Array.from({length:9},(_,i)=>x.kernelState['f'+i]);assert.deepEqual(vals(L(q)),[5000000000n,0n,0n,0n,0n,20000000000n,0n,0n,0n]);\nconst accrue=c=>q.contract.circuits.accrue(c,q.one,q.program,hex(b.networkTag),L(q).revision,2n,T,lh);\nconst settle=(c,amt=533972602n,asset=0n)=>q.contract.circuits.settle(c,q.one,q.program,hex(b.networkTag),L(q).revision,2n,asset,amt,T,{unused:0n});\nreject(q,ctx(q),c=>settle(c),'dues are not ready','loan-before-accrue');const ar=commit(q,accrue(ctx(q)));assert.deepEqual(vals(L(q)),[4500000000n,500000000n,33972602n,0n,0n,20000000000n,0n,1n,0n]);assert.deepEqual(ar.result.effect0,{v0:4n,v1:2n,v2:5n,v3:1n,v4:500000000n});assert.deepEqual(ar.result.effect1,{v0:3n,v1:2n,v2:5n,v3:1n,v4:33972602n});\nreject(q,ctx(q),c=>settle(c,533972601n),'settlement amount mismatch','loan-wrong-total');reject(q,ctx(q),c=>settle(c,533972602n,1n),'SETTLEMENT_ASSET','loan-wrong-asset');const sr=commit(q,settle(ctx(q)));assert.deepEqual(vals(L(q)),[4500000000n,0n,0n,500000000n,33972602n,19466027398n,533972602n,2n,1n]);assert.equal(norm(L(q).lastAccrue),norm(ar.result));assert.equal(norm(L(q).lastSettle),norm(sr.result));assert.equal(L(q).remaining,0n);assert.equal(L(q).revision,2n);const e=sr.context.currentQueryContext.effects;for(const family of ['unshieldedInputs','unshieldedOutputs']){assert.equal(e[family].size,1);assert.equal([...e[family].values()][0],533972602n);}assert.equal(e.claimedUnshieldedSpends.size,1);assert.equal(String([...e.claimedUnshieldedSpends.keys()][0][1].address).toLowerCase(),b.loan.lenderAddress.toLowerCase());reports.push({case:'loan-complete-flow',state:vals(L(q)).map(String),settlement:'533972602',retainedDueEffects:2});\nconsole.log(JSON.stringify({cases:reports.length,failures:0,reports}));\nJS",
+   "exitCode": 0
+  },
+  "independentBindingAndCliGuards": {
+   "cmd": "/usr/local/bin/node --input-type=module - <<'JS'\nimport assert from 'node:assert/strict';\nimport {readFileSync} from 'node:fs';\nimport {spawnSync} from 'node:child_process';\nimport {createHash} from 'node:crypto';\nconst wt='/home/charl/Moriarty/.worktrees/sp05-kernel-custody-grok',here=wt+'/experiments/moriarty-midnight-financial/custody';\nconst g=await import(here+'/generate.mjs'),k=await import(here+'/build.mjs');\nconst b=JSON.parse(readFileSync(here+'/bindings.json'));const hash=x=>createHash('sha256').update(x).digest('hex');\nconst results=[];\nfunction guard(label,changes={},bindings=b){let compiles=0,writes=0;const rf=(p,enc)=>{const data=changes[String(p)]??readFileSync(p);return enc?Buffer.from(data).toString(enc):Buffer.from(data);};let ge='',be='';try{g.generateWrappers({worktree:wt,bindings,readFileSync:rf});}catch(e){ge=e.message;}try{k.buildCustody({worktree:wt,hereDir:here,bindings,readFileSync:rf,skipZk:true,skipToolchain:true,outputDir:'/not-written',compile:()=>compiles++,writeFileSync:()=>writes++,mkdirSync:()=>writes++});}catch(e){be=e.message;}assert.ok(be,label);assert.equal(compiles,0,label);assert.equal(writes,0,label);if(!label.startsWith('wrapper'))assert.ok(ge,label);results.push({case:label,generatorRejected:!!ge,buildRejected:!!be,compilerInvocations:compiles,writes});}\nfor(const [name,rel]of Object.entries(g.PIN_PATHS))guard('changed-'+name,{[wt+'/'+rel]:Buffer.from('STALE INPUT')});\nfor(const name of ['loan','swap']){\n for(const field of ['programDigest']){const altered=structuredClone(b);altered[name][field]='7f'.repeat(32);guard('duplicate-'+name+'-'+field,{},altered);}\n const metaPath=wt+'/'+g.PIN_PATHS[name+'Metadata'];\n for(const field of ['programHash','sourceHash','compactSourceHash']){const obj=JSON.parse(readFileSync(metaPath));obj[field]='7f'.repeat(32);const data=Buffer.from(JSON.stringify(obj)),altered=structuredClone(b);altered.digests[name+'Metadata']=hash(data);guard(name+'-meta-'+field+'-repinned-file',{[metaPath]:data},altered);}\n const boundPath=wt+'/'+g.PIN_PATHS[name+'BoundProgram'];\n for(const field of ['programHash','profile']){const obj=JSON.parse(readFileSync(boundPath));if(field==='profile')obj.manifest.profile='wrong-profile';else obj.programHash='7f'.repeat(32);const data=Buffer.from(JSON.stringify(obj)),altered=structuredClone(b);altered.digests[name+'BoundProgram']=hash(data);guard(name+'-bound-'+field+'-repinned-file',{[boundPath]:data},altered);}\n guard('wrapper-'+name,{[here+'/'+name+'.compact']:Buffer.concat([readFileSync(here+'/'+name+'.compact'),Buffer.from('\\n')])});\n}\nlet compiles=0;const valid=k.buildCustody({worktree:wt,hereDir:here,bindings:b,readFileSync,skipZk:true,skipToolchain:true,outputDir:'/not-written',compile:()=>compiles++});assert.equal(compiles,2);assert.equal(valid.status,'checked');\nconst first=g.generateWrappers({worktree:wt,bindings:b,readFileSync}),second=g.generateWrappers({worktree:wt,bindings:b,readFileSync});for(const name of ['loan','swap']){assert.equal(first[name+'Source'],second[name+'Source']);assert.equal(first[name+'Source'],readFileSync(here+'/'+name+'.compact','utf8'));}\nfor(const [file,args,needle]of [['build.mjs',[],'skip-zk'],['build.mjs',['--skip-zk'],'output-dir'],['generate.mjs',[],'output-dir']]){const z=spawnSync('/usr/local/bin/node',[here+'/'+file,...args],{encoding:'utf8',timeout:10000});assert.notEqual(z.status,0);assert.ok(z.stderr.includes(needle));results.push({case:'CLI-'+file+'-'+args.join(','),exit:z.status,expectedDiagnostic:needle});}\nconst imported=spawnSync('/usr/local/bin/node',['--input-type=module','-e',`await import(${JSON.stringify(here+'/generate.mjs')}); await import(${JSON.stringify(here+'/build.mjs')}); process.stdout.write('IMPORTED\\\\n');`],{encoding:'utf8',timeout:10000});assert.equal(imported.status,0);assert.equal(imported.stdout,'IMPORTED\\n');assert.equal(imported.stderr,'');assert.throws(()=>g.isDirectRun(),/explicit caller/);\nconsole.log(JSON.stringify({failures:0,guards:results,validCompilerCallbackCount:compiles,generatedWrapperEquality:true,importSafe:true,realCompilerInvoked:false}));\nJS",
+   "exitCode": 0
+  },
+  "sourceAndBuildHashVerification": {
+   "exitCode": 0,
+   "summary": "10 owned source files match worktree/freeze;19 sourceRoot inputs,4 runtime pins and21 build artifacts match. Full manifests recorded under integrity.hashes."
+  },
+  "finalHashAndEvidenceCheck": {
+   "exitCode": 0,
+   "summary": "18 embedded streams consistent; all checked source/owned/runtime/build/review hashes remain unchanged."
+  }
+ },
+ "reviewerProbeCorrections": [
+  {
+   "attempt": "initial hash command",
+   "exitCode": 1,
+   "cause": "Reviewer attempted to read every documentary dependency under the worktree; standard-library source is located only under authoritative sourceRoot.",
+   "resolution": "Corrected read-only check uses sourceRoot for all19 pins and checks each existing worktree mirror. No candidate code change; no execution before successful corrected hash gate."
+  },
+  {
+   "attempt": "first independent runtime probe",
+   "exitCode": 1,
+   "cause": "Reviewer expected the late-swap diagnostic text 'pool closed'; actual protected kernel diagnostic is 'epoch is closed'.",
+   "resolution": "Changed only the probe's expected diagnostic to the inspected kernel/test text and reran the complete probe; all28 cases passed. This was a reviewer assertion error, not a candidate defect."
+  }
+ ],
+ "limits": [
+  "Approval does not establish ledger UTXO funding, payer ownership, signed-offer attribution, third-party funding policy, transaction fees/change, finality, real ledger rollback, wallet security or deployment.",
+  "No SP05 completion, Preview transaction, full BNF/K coverage, native recursive proof or cryptographic verification claim follows from these compiled-runtime tests.",
+  "Only hash-verified root-verify4 compiled artifacts were executed. Reviewer did not rebuild or generate keys/proofs; root's fresh skip-zk build is distinct evidence. Compiler callbacks were used only to verify precompiler rejection and never presented as compile evidence.",
+  "Adversarial input changes used in-memory read doubles only. Generated comparison strings stayed in memory. No protected source, candidate, worktree, artifact or binding was modified.",
+  "Synthetic role secrets were random per test and never printed or written. Network labels and payout enrollment remain explicit trusted local setup.",
+  "No network, wallet, real ledger, proof, package installation, git mutation, publication or subagent work.",
+  "This is a focused correction/regression review, not an exhaustive security proof of Compact or its runtime."
+ ]
+}

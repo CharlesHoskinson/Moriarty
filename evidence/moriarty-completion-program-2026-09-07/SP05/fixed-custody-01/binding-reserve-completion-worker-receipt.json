@@ -1,0 +1,27 @@
+{
+  "kind": "binding-reserve-completion-worker",
+  "exitCode": 0,
+  "elapsedSeconds": 737.814433284977,
+  "chargedSeconds": 1800,
+  "beforeHead": "564e3fd0817291fa26615c0398cf1c677e51bd10",
+  "afterHead": "564e3fd0817291fa26615c0398cf1c677e51bd10",
+  "beforeStatusSha256": "5c59eb0e6810da9ce5062027f4a143066dc26b6ae3e9622176e3c72da3aedf12",
+  "afterStatusSha256": "5c59eb0e6810da9ce5062027f4a143066dc26b6ae3e9622176e3c72da3aedf12",
+  "unauthorizedGitActivity": false,
+  "storageStop": false,
+  "effectiveProperties": "RuntimeMaxUSec=29min 55s\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-kernel-custody-binding-reserve-completion-worker-1538340.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=2147483648\nMemorySwapMax=0\nKillMode=control-group\n",
+  "scope": "Generated fixed loan/swap Compact custody source and compiled-runtime tests only. No real ledger/payer/finality/wallet/proof/Preview or sprint acceptance.",
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 296422,
+      "outputTokens": 40467,
+      "cacheReadInputTokens": 3909376,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 36,
+      "costUSD": 0.47435678
+    }
+  },
+  "resultText": "I'll start from the interrupted binding/reserve correction: read the prompt, review, amendment, and retained manifest, then continue from that exact partial rather than restarting.Using systematic debugging and verification-before-completion: locate the prompt, review, amendment, and retained manifest, then continue from that partial.Using systematic debugging: I'll read the correction prompt, GPT-6 review, completion amendment, and retained manifest before touching source.Using TDD for the caller-identity bug: inspect existing tests and the five changed sources, then add the failing CLI regression before fixing `isDirectRun`.RED confirmed: `isDirectRun()` defaults to `generate.mjs`\u2019s `import.meta.url`, so `node build.mjs` compares the wrong module and exits 0 with empty stdout. Next I\u2019ll add the caller-identity tests, then fix the guard.Identity tests are in. Next I\u2019ll confirm the guard is green, then generate twice and compile into a unique `binding-completion` path.Guard is green: direct `node build.mjs` now fails on missing `--skip-zk` instead of a silent zero. Generating twice, then compiling into a unique path.Compile produced real artifacts (not empty stdout). Running the full compiled-runtime suite against that unique path.Two close-path tests failed. I'll extract the exact errors before changing anything.Close itself passed. Late swap still fed pre-close balances against zero kernel reserves, so `ENTRY_RESERVE_A_MISMATCH` fired before `epoch is closed`. I\u2019ll carry post-close 0/0 balances from the actual effect deltas and re-run.All 24 tests passed. Gathering exact hashes, argv, exits, and digests so the reports match the commands that actually ran.Writing README, then assembling test-evidence and both reports from the actual receipts.The interrupted binding/reserve correction is finished. It was not restarted.\n\n**Root cause.** `build.mjs` called imported `isDirectRun()` whose default `metaUrl=import.meta.url` was evaluated in `generate.mjs`. Direct `node build.mjs --skip-zk` therefore compared the wrong module, exited 0 with empty stdout (`root-compile3.stdout`), and created no artifacts. Runtime import then failed `ERR_MODULE_NOT_FOUND`. That zero exit did not prove a build.\n\n**Fix.** `isDirectRun` now requires an explicit caller module URL. Direct `node build.mjs` enters the CLI. Import of `build.mjs` does not compile. R1 pinned constructor program digest and duplicate binding checks, R2 exact reserve equality / post-effect continuity / full rollback, and R3 shared source/metadata/bound-program validation plus exact fresh-wrapper comparison before the compiler are in the retained source.\n\n**Compile and tests.** Two generate runs wrote wrappers byte-identical to owned `loan.compact` / `swap.compact`. Fresh `--skip-zk` compile wrote real artifacts at `state/build/binding-completion/20260908T084719Z` (compile exit 0, 630 stdout bytes, 2 compiler invocations). First runtime run was 22 pass / 2 fail: late swap still fed pre-close balances against zero kernel reserves. Tests now carry post-close 0/0 from actual effect deltas. Current suite: **24 pass, 0 fail, exit 0**.\n\nstdout sha256 `a014dbb613c4f37ae760ee9b0013bbb8c528989077900aaacb8ca87f738641f7`\n\nHistorical receipts are kept (old RED, 10/5 diagnostic, 17-pass, empty `root-compile3`, 22/2 late-swap). README, `test-evidence.json`, and both FOREMAN reports match the commands that ran. No commit, network, wallet, or proof. Fake compiler was not used as compile evidence.\n\nIndependent GPT-6 Astra result review is still required. This is not SP05, ledger, Preview, BNF, or K acceptance.",
+  "stopReason": "end_turn",
+  "status": "?? FOREMAN_REPORT.json\n?? FOREMAN_REPORT.md\n?? experiments/moriarty-midnight-financial/\n"
+}
