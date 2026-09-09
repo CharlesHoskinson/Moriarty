@@ -105,6 +105,14 @@ Each states a boundary flatly and takes a position that can be checked and
 argued with. None of them softens a claim. Naming the limit beside the claim is
 the strongest move on the page, and it survives this rule untouched.
 
+This rule departs from the measured register, and the departure is deliberate.
+The profile records hedges at 7.81 per 1,000 words, so the author this register
+comes from hedges more than the prose here ever will. The site overrides that on
+instruction. Subordination is kept at its measured rate because subordination
+carries meaning; hedging is dropped below the measured rate because it does not.
+Read any conformance score with that divergence in mind rather than treating the
+gap as a defect to close.
+
 The modal verbs survive too where they carry permission, prohibition or a
 modelled possibility. `Anyone may submit the timeout.` `No target may cover
 something that does not exist.` `The delivery may be delayed or duplicated.`
