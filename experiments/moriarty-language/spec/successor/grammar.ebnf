@@ -1,0 +1,108 @@
+(*
+  ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
+  Specified-only syntax profile. Not a semantic freeze.
+  Concatenation is comma. Alternation is vertical bar.
+  Square brackets are optional. Braces are zero or more repetition.
+  Quoted text is a terminal. A special sequence names a lexical token
+  defined in lexical.md. Every nonterminal used below is defined here
+  or is such a lexical token.
+*)
+
+program = profile_decl, agreement_decl, ? end of file ? ;
+
+profile_decl = "profile", string_token, ";" ;
+
+agreement_decl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unit_decl
+            | party_decl
+            | asset_decl
+            | const_decl
+            | state_decl
+            | action_decl ;
+
+unit_decl = "unit", identifier, ";" ;
+
+party_decl = "party", identifier, ";" ;
+
+asset_decl = "asset", identifier, ":", type, ";" ;
+
+const_decl = "const", identifier, ":", type, "=", expression, ";" ;
+
+state_decl = "state", identifier, ":", type, "=", expression, ";" ;
+
+action_decl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", type, "{", [ effect_fields ], "}", ";" ;
+
+effect_fields = effect_field, { ",", effect_field } ;
+
+effect_field = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ type_args ] ;
+
+type_args = "<", type, { ",", type }, ">" ;
+
+expression = disjunction ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparison_op, sum ] ;
+
+comparison_op = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier } ;
+
+primary = integer_token
+        | string_token
+        | "true"
+        | "false"
+        | identifier, [ "(", [ arguments ], ")" ]
+        | "(", expression, ")" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integer_token = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+string_token = ? JSON string token defined in lexical.md ? ;
+
+(* Grammar interpretation and additional admission constraints:
+   1. The source contains exactly one profile_decl and one agreement_decl.
+   2. The profile string must be the characters moriarty-successor-syntax/0.
+   3. A comparison_op cannot follow a comparison unless the inner comparison
+      is a parenthesized primary. That is chained comparison.
+   4. type_args is nonempty. Foo<> is not a type.
+   5. Parentheses do not create AST nodes. They only group.
+   6. not binds looser than comparison, so not a == b is not (a == b).
+   7. Binary operators associate to the left.
+   8. Call arguments, parameters, and effect fields have no trailing comma.
+   9. function, import, loop, obligation, request, composition, observation,
+      settlement, policy, status, reserve, and effect-schema forms are not
+      productions of this profile.
+  10. Bounds in syntax-profile.json are simultaneous and not part of EBNF.
+*)

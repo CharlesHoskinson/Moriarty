@@ -39,6 +39,8 @@ The repository contains an experimental bounded agreement syntax, parser, type c
 
 [Retained Preview evidence](evidence/midnight-preview-2026-09-07/README.md) records a hello-world deployment and call finalized with exact state readback. That demonstrates basic network integration. Financial transfer comparison and mandatory Moriarty PCD acceptance remain unperformed. The original native recursion experiment exhausted rows at k17. Its fixed-instance replacement is source work that has not produced a recursive proof. The complete native-to-Preview verifier remains unresolved.
 
+A [provisional successor syntax profile](experiments/moriarty-language/spec/successor/README.md) now has separate lexical/EBNF files, a bounded parser, canonical formatter and read-only source CLI. Its [checks and independent review](deliverables/successor-syntax-2026-09-09/README.md) cover syntax only. It does not type or execute partial payments, freeze RP01, or close SP02.
+
 The research corpus, source snapshots, target inventories and scoped experimental evidence remain useful inputs. None substitutes for the acceptance results below. Superseded A4/A5 work remains historical and is not an active execution queue.
 
 ## Design decisions before expanded execution

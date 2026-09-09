@@ -1,0 +1,15 @@
+profile "moriarty-successor-syntax/0";
+
+agreement PartialPayment {
+  unit USD;
+  party borrower;
+  party lender;
+  state principal: Debt<USD> = debt(100, USD);
+  state interest: Debt<USD> = debt(10, USD);
+  action payInterest(payment: Debt<USD>) {
+    requires payment > debt(0, USD);
+    requires payment <= pre.interest;
+    next.interest = pre.interest - payment;
+    ensures post.principal == pre.principal;
+  }
+}
