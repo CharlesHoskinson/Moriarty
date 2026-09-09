@@ -9,20 +9,32 @@ Narration. Short declarative sentences that carry a subject and a finite verb,
 with long sentences built by coordination rather than subordination. The
 measured habits behind this register:
 
-- Roughly two sentences in five run under ten words. One in ten runs past
-  thirty. A passage with no long sentence in it is not in the register.
-- Long sentences are built with `and`. Most coordination belongs in the longest
-  sentences, not sprinkled through short ones.
+The measured figures, so nothing here has to be approximated:
+
+- Median sentence length is 11 words and the mean is 15. A quarter of sentences
+  run to 7 words or fewer, a quarter run past 19, and a tenth run past 30. The
+  longest in the corpus is 150. A passage with no long sentence in it is not in
+  the register, and no long sentence is ever cut to improve a distribution.
+- Long sentences are built with `and`, at 0.675 per sentence overall. The
+  correlation between length and `and` count is 0.732, and 61.3% of all `and`
+  tokens sit in sentences past 20 words. The coordination belongs in the longest
+  sentences. Sprinkling it through short ones satisfies the rate and produces
+  the wrong prose.
 - Long sentences arrive in company. They cluster in twos and threes. Following
-  every long sentence with a short one is the imitator's reflex.
-- Qualification stays. `if`, `when`, `although`, `while`, `where` and `because`
-  all belong here, and so do hedges. The writer who never subordinates is a folk
-  model and following it produces the wrong prose.
-- Short does not mean clipped. Verbless fragments are almost absent. "The guard
-  fails." is the register. "Fails. Every time." is advertising copy. Two
-  fragments never run together.
-- Em dashes and semicolons are rare. Contractions and question marks are rarer
-  still, because those are habits of dialogue and this site is exposition.
+  every long sentence with a short one is the imitator's reflex, and in the
+  corpus only 12.1% of long sentences sit isolated between two short ones.
+- Qualification stays. Subordinators run 21.6 per 1,000 words, which is higher
+  than the technical brief this tool was once asked to rewrite. `if`, `when`,
+  `although`, `while`, `where` and `because` all belong here. The writer who
+  never subordinates is a folk model, and acting on it drove one output 23%
+  below the real rate.
+- Short does not mean clipped. About 95% of sentences of six words or fewer
+  carry a subject and a finite verb, and verbless fragments run near 0.7%. "The
+  guard fails." is the register. "Fails. Every time." is advertising copy. Two
+  fragments never run together; the corpus holds a single run of three.
+- Em dashes run 0.86 per 1,000 words and semicolons 1.4. Contractions run 8.56
+  and question marks 0.89, because those are habits of dialogue and this site is
+  exposition. Commas run 35.31 and carry the weight instead.
 
 ## The counting rule
 
@@ -62,6 +74,42 @@ acceptance criterion, a test name or a data comment may state a required count,
 because there it is a constraint on the work rather than a sentence on a page.
 `CATEGORY-TABS.md` may say that every action target must appear. The page built
 from it may not say so.
+
+## No hedging
+
+Assert or stay silent. A sentence that softens its own claim wastes the reader's
+attention and buys nothing back.
+
+Cut these on sight: `arguably`, `somewhat`, `relatively`, `fairly`, `roughly`,
+`approximately`, `generally`, `typically`, `usually`, `often`, `tends to`,
+`perhaps`, `possibly`, `probably`, `potentially`, `essentially`, `basically`,
+`effectively`, `largely`, `mostly`, `broadly`, `seems`, `appears to`, `suggests
+that`, `it is worth noting`, `it should be noted`, `in some sense`, `to some
+extent`, `a little`. Cut the aspiration verbs with them: nothing here `aims to`,
+`seeks to`, `is designed to`, `attempts to` or `helps to`. It does the thing or
+it does not.
+
+Where a number is known, give the number. `roughly one in ten` is a hedge when
+the measurement exists.
+
+**A scope statement is not a hedge.** This distinction is the whole of it, and
+getting it backwards would destroy the one thing that separates this project
+from the systems it criticises.
+
+- "The source can still lie." That is an assertion about a limit.
+- "Integrity does not create availability." That is an assertion.
+- "K is selected. It is not implemented." That is two assertions.
+- "A valid oracle signature does not establish economic truth." An assertion.
+
+Each states a boundary flatly and takes a position that can be checked and
+argued with. None of them softens a claim. Naming the limit beside the claim is
+the strongest move on the page, and it survives this rule untouched.
+
+The modal verbs survive too where they carry permission, prohibition or a
+modelled possibility. `Anyone may submit the timeout.` `No target may cover
+something that does not exist.` `The delivery may be delayed or duplicated.`
+Those are the language of a specification. A modal is a hedge only when it
+softens a claim the writer could simply make.
 
 ## Diction
 
