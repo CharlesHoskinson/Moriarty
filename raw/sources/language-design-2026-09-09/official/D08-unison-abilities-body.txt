@@ -1,0 +1,638 @@
+Unison provides a convenient feature called
+abilities
+which lets you use the same ordinary Unison syntax for programs that do (asynchronous) I/O, stream processing, exception handling, parsing, distributed computation, and lots more. Unison's system of abilities (often called "algebraic effects" in the literature) is based on
+the Frank language by Sam Lindley, Conor McBride, and Craig McLaughlin
+.
+Unison diverges slightly from the scheme detailed in this paper. In particular:
+Unison's ability polymorphism is provided by ordinary polymorphic types, and a Unison type with an empty ability set explicitly disallows any abilities. In Frank, the empty ability set implies an ability-polymorphic type.
+Unison doesn't overload function application syntax to do ability handling; instead it has a separate
+handle
+construct
+for this purpose.
+Abilities in function types
+The general form for a function type in Unison is
+I ->{A} O
+,
+where
+I
+is the input type of the function,
+O
+is the output type, and
+A
+is the set of
+ability requirements
+of the function. More generally, this can be any comma-separated list of types, like
+I ->{A1,A2,A3} O
+.
+A function type in Unison like
+A -> B
+is really syntactic sugar for a type
+A ->{e} B
+where
+e
+is some set of abilities, possibly empty. A function that definitely requires no abilities has a type like
+A ->{} B
+(it has an empty set of abilities).
+The typechecking rule for abilities
+The general typechecking rule used for abilities is this: calls to functions requiring abilities
+{A1,A2}
+must be in a context where
+at least
+the abilities
+{A1,A2}
+are available, otherwise the typechecker will complain with an ability check failure. Abilities can be made available using a
+handle
+block (discussed below) or with a type signature: so for instance, within the body of a function
+Text ->{IO} Nat
+,
+{IO}
+is available and therefore:
+We can call a function
+f : Nat ->{} Nat
+,
+since the ability requirements of f are
+{}
+which is a subset the available
+{IO}
+abilities.
+We can also call a function
+g : Text ->{IO} ()
+,
+since the requirements of
+g
+are
+{IO}
+which is a subset of the available
+{IO}
+abilities.
+For functions accepting multiple arguments, it might seem we need a different rule, but the rule is the same: the body of the function can access the abilities attached to the corresponding function type in the signature. Here's an example that won't typecheck, since the function body must be pure according to the signature:
+doesNotWork
+:
+Text
+->
+{
+Exception
+,
+IO
+}
+Text
+->
+{
+}
+Nat
+doesNotWork
+arg1
+arg2
+=
+printLine
+"Does not work!"
+42
+However, if we do the
+IO
+before returning the pure function, it typechecks just fine:
+doesWork
+:
+Text
+->
+{
+IO
+,
+Exception
+}
+Text
+->
+Nat
+doesWork
+arg1
+=
+printLine
+"Works great!"
+arg2
+->
+42
+For top-level definitions which aren't contained in a function body,
+they are required to be pure
+.
+For instance, this doesn't typecheck:
+msg
+=
+printLine
+"hello"
+But if we say
+msg = '(printLine "Hello")
+that typechecks fine, since the
+printLine
+is now inside a function body whose requirements inferred as
+{IO}
+(try it!).
+🤓 This restriction on top level definitions needing to be pure might lifted in a future version of Unison.
+Ability inference
+When inferring ability requirements for
+f
+,
+the ability requirements become the union of all requirements for functions that can be called within the body of the function.
+User-defined abilities
+A user-defined ability is declared with an
+ability
+declaration such as:
+structural
+ability
+Store
+a
+structural
+ability
+Store
+a
+where
+lib
+.
+base
+.
+abilities
+.
+Store
+.
+get
+:
+{
+Store
+a
+}
+a
+lib
+.
+base
+.
+abilities
+.
+Store
+.
+put
+:
+a
+->
+{
+Store
+a
+}
+()
+Abilities need to be defined with either the
+structural
+or
+unique
+keyword. See the sections on
+unique types
+and
+structural-types
+for more detail on the difference.
+This results in a new ability type constructor
+Store
+which takes a type argument
+a
+.
+It also create two value-level constructors named
+Store
+.
+get
+and
+Store
+.
+put
+.
+The idea is that
+Store
+.
+get
+provides the ability to "get" a value of type
+a
+from somewhere, and
+Store
+.
+put
+allows "putting" a value of type
+a
+somewhere. Where exactly these values of type
+a
+will be kept depends on the handler.
+The
+Store
+constructors
+Store
+.
+get
+and
+Store
+.
+put
+have the following types:
+Store
+.
+get
+:
+{
+Store
+a
+}
+a
+Store
+.
+put
+:
+a
+->
+{
+Store
+a
+}
+()
+The type
+{Store v}
+means that the computation which results in that type requires a
+Store v
+ability and cannot be executed except in the context of an
+ability handler
+that provides the ability.
+Ability handlers
+Learning materials for writing ability handlers are also
+available on the website here
+.
+A constructor
+{A} T
+for some ability
+A
+and some type
+T
+(or a function which uses such a constructor), can only be used in a scope where the ability
+A
+is provided. Abilities are provided by
+handle
+expressions:
+handle
+e
+with
+h
+This expression gives
+e
+access to abilities handled by the function
+h
+.
+Specifically, if
+e
+has type
+{A} T
+and
+h
+has type
+Request A T -> R
+,
+then
+handle e with h
+has type
+R
+.
+The type constructor
+Request
+is a special builtin provided by Unison which will pass arguments of type
+Request A T
+to a handler for the ability
+A
+.
+Note that
+h
+must
+accept an argument of type
+Request A T
+to handle
+e
+of type
+{A} T
+- ultimately, a type error will result if an ability is required in a scope where it is not provided by an enclosing handle expression.
+The examples in the next section should help clarify how ability handlers work.
+Pattern matching on ability constructors
+Each constructor of an ability corresponds with a
+pattern
+that can be used for pattern matching in ability handlers. The general form of such a pattern is:
+{
+A.c
+p_1
+p_2
+p_n
+->
+k
+}
+Where
+A
+is the name of the ability,
+c
+is the name of the constructor,
+p_1
+through
+p_n
+are patterns matching the arguments to the constructor, and
+k
+is a
+continuation
+for the program. If the value matching the pattern has type
+Request A T
+and the constructor of that value had type
+X ->{A} Y
+,
+then
+k
+has type
+Y -> {A} T
+.
+The continuation will always be a function accepting the return value of the ability constructor, and the body of this function is the remainder of the
+handle .. with
+block immediately following the call to the constructor. See below for an example.
+A handler can choose to call the continuation or not, or to call it multiple times. For example, a handler can ignore the continuation in order to handle an ability that aborts the execution of the program:
+structural
+ability
+Abort
+structural
+ability
+Abort
+where
+lib
+.
+base
+.
+abilities
+.
+Abort
+.
+abort
+:
+{
+Abort
+}
+a
+toDefault!
+.
+handler
+:
+'
+{
+g
+}
+a
+->
+Request
+{
+Abort
+}
+a
+->
+{
+g
+}
+a
+toDefault!
+.
+handler
+:
+'
+{
+g
+}
+a
+->
+Request
+{
+Abort
+}
+a
+->
+{
+g
+}
+a
+toDefault!
+.
+handler
+default
+=
+cases
+{
+a
+}
+->
+a
+{
+Abort
+.
+abort
+->
+_
+}
+->
+default
+()
+use
+Nat
++
+p
+:
+Nat
+p
+=
+handle
+(
+_eta
+->
+let
+x
+=
+4
+Abort
+.
+abort
+x
++
+2
+)
+(
+)
+with
+toDefault!
+.
+handler
+do
+0
+p
+⧨
+0
+If we remove the
+Abort
+.
+abort
+call in the program
+p
+,
+it evaluates to
+6
+.
+Note that although the ability constructor is given the signature
+abort :
+    ()
+,
+its actual type is
+{Abort} ()
+.
+The pattern
+{ Abort.abort -> _ }
+matches when the
+Abort
+.
+abort
+call in
+p
+occurs. This pattern ignores its continuation since it will not invoke it (which is how it aborts the program). The continuation at this point is the expression
+_ -> x + 2
+.
+The pattern
+{ x }
+matches the case where the computation is pure (makes no further requests for the
+Abort
+ability and the continuation is empty). A pattern match on a
+Request
+is not complete unless this case is handled.
+When a handler calls the continuation, it needs describe how the ability is provided in the continuation of the program, usually with a recursive call, like this:
+use
+base
+Request
+structural
+ability
+Store
+v
+where
+get
+:
+v
+put
+:
+v
+->
+(
+)
+storeHandler
+:
+v
+->
+Request
+(
+Store
+v
+)
+a
+->
+a
+storeHandler
+storedValue
+=
+cases
+{
+Store.get
+->
+k
+}
+->
+handle
+k
+storedValue
+with
+storeHandler
+storedValue
+{
+Store.put
+v
+->
+k
+}
+->
+handle
+k
+()
+with
+storeHandler
+v
+{
+a
+}
+->
+a
+Note that the
+storeHandler
+has a
+with
+clause that uses
+storeHandler
+itself to handle the
+Request`s
+made by the continuation. So it’s a recursive definition. The initial "stored value" of type
+v
+is given to the handler in its argument named
+storedValue
+,
+and the changing value is captured by the fact that different values are passed to each recursive invocation of the handler.
+In the pattern for
+Store
+.
+get
+,
+the continuation
+k
+expects a
+v
+,
+since the return type of
+Store
+.
+get
+is
+v
+.
+In the pattern for
+Store
+.
+put
+,
+the continuation
+k
+expects
+()
+,
+which is the return type of
+Store
+.
+put
+.
+It's worth noting that this is a mutual recursion between
+storeHandler
+and the various continuations (all named
+k
+).
+This is no cause for concern, as they call each other in tail position and the Unison compiler performs
+tail call elimination
+.
+An example use of the above handler:
+modifyStore : (v -> v) ->{Store v} ()
+modifyStore f =
+  v = get
+  put (f v)
+Here, when the handler receives
+Store
+.
+get
+,
+the continuation is
+v -> Store.put (f v)
+.
+When the handler receives
+Store
+.
+put
+,
+the continuation is
+_ -> ()
+.

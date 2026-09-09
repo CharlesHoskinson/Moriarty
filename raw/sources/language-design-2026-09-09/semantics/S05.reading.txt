@@ -1,0 +1,1380 @@
+Koka: Programming with Row-polymorphic Effect Types
+Daan Leijen
+Microsoft Research
+daan@microsoft.com
+
+We propose a programming model where effects are treated in a disciplined way, and where the
+potential side-effects of a function are apparent in its type signature. The type and effect of expressions can also be inferred automatically, and we describe a polymorphic type inference system based
+on Hindley-Milner style inference. A novel feature is that we support polymorphic effects through
+row-polymorphism using duplicate labels. Moreover, we show that our effects are not just syntactic
+labels but have a deep semantic connection to the program. For example, if an expression can be
+typed without an exn effect, then it will never throw an unhandled exception. Similar to Haskell’s
+runST we show how we can safely encapsulate stateful operations. Through the state effect, we
+can also safely combine state with let-polymorphism without needing either imperative type variables or a syntactic value restriction. Finally, our system is implemented fully in a new language
+called Koka1 and has been used successfully on various small to medium-sized sample programs
+ranging from a Markdown processor to a tier-splitted chat application. You can try out Koka live at
+www.rise4fun.com/koka/tutorial.
+
+1. Introduction
+We propose a programming model where effects are a part of the type signature of a function. Currently,
+types only tell us something about the input and output value of a function but say nothing about all other
+behaviors; for example, if the function writes to the console or can throw an exception. In our system,
+the squaring function:
+function sqr(x : int) { x ∗ x }
+will get the type:
+sqr : int → total int
+signifying that sqr has no side effect at all and behaves as a total function from integers to integers. If we
+add a print statement though:
+function sqr(x : int) { print(x); x ∗ x }
+the (inferred) type indicates that sqr has an input-output (io) effect:
+sqr : int → io int
+Note that there was no need to change the original function nor to promote the expression x ∗ x into the io
+effect. One of our goals is to make effects convenient for the programmer, so we automatically combine
+1 Koka means ‘effect’ or ‘effective’ in Japanese.
+
+N.R. Krishnaswami and P.B. Levy (Eds.):
+Mathematically Structured Functional Programming 2014 (MSFP 2014).
+EPTCS 153, 2014, pp. 100–126, doi:10.4204/EPTCS.153.8
+
+© Daan Leijen
+This work is licensed under the
+Creative Commons Attribution License.
+
+Daan Leijen
+
+101
+
+effects. In particular, this makes it convenient for the programmer to use precise effects without having
+to insert coercions.
+There have been many proposals for effects systems in the past [2, 8, 24, 25, 28, 33, 36, 38, 42].
+However, many such systems suffer from being syntactical in nature (i.e. effects are just labels), or by
+being quite restricted, for example being monomorphic or applied to a very specific set of effects. Some
+of the more general systems suffer from having complicated effect types, especially in a polymorphic
+setting that generally requires sub-effect constraints.
+Our main contribution in this paper is the novel combination of existing techniques into the design of
+a practical ML-like language with strong effect typing. In addition, many known techniques are applied
+in a novel way: ranging from effect types as rows with duplicate labels to the safety of runST in a strict
+setting. In particular:
+• We describe a novel effect system based on row polymorphism which allows duplicated effects.
+This simplifies the effect types and provides natural types to effect elimination forms, like catching
+exceptions.
+• The effect types are not just syntactic labels but they have a deep semantic connection to the
+program (Section 6). For example, we can prove that if an expression that can be typed without
+an exn effect, then it will never throw an unhandled exception; or if an expression can be typed
+without a div effect, then it always terminates.
+• The interaction between polymorphism and mutable state is fraught with danger. We show that
+by modeling state as an effect we can safely combine mutability with let-polymorphism without needing either imperative type variables, nor a syntactic value restriction. Moreover, we can
+safely encapsulate local state operations and we prove that such encapsulation is sound where no
+references or stateful behavior can escape the encapsulation scope.
+The interaction between divergence and higher-order mutable state is also tricky. Again, we show
+how explicit heap effects allow us to safely infer whether stateful operations may diverge.
+• We have an extensive experience with the type system within the Koka language. The Koka language fully implements the effect types as described in this paper and we have used it successfully
+in various small to medium sized code examples ranging from a fully compliant Markdown text
+processor to a tier-splitted chat application (Section 2.8).
+
+2. Overview
+Types tell us about the behavior of functions. For example, if suppose we have the type of a function foo
+in ML with type int → int. We know that foo is well defined on inputs of type int and returns values of
+type int. But that is only part of the story, the type tells us nothing about all other behaviors: i.e. if it
+accesses the file system perhaps, or throws exceptions, or never returns a result at all.
+Even ‘pure’ functional languages like Haskell do not fare much better at this. Suppose our function
+has the Haskell type Int → Int. Even though we know now there is no arbitrary side-effect, we still do not
+know whether this function terminates or can throw exceptions. Due to laziness, we do not even know
+if the result itself, when demanded, will raise an exception or diverge; i.e. even a simple transformation
+like x ∗ 0 to 0 is not possible under Haskell’s notion of purity.
+In essence, in both ML and Haskell the types are not precise enough to describe many aspects of the
+static behavior of a program. In the Haskell case, the real type is more like (Int ⊥ → Int⊥ )⊥ while the type
+signature of the ML program should really include that any kind of side-effect might happen.
+
+102
+
+Koka: Programming with Row-polymorphic Effect Types
+
+Functional programming has been done wrong! We believe it is essential for types to include potential behaviors like divergence, exceptions, or statefulness. Being able to reason about these aspects is
+crucial in many domains, including safe parallel execution, optimization, query embedding, tiersplitting,
+etc.
+
+2.1. Effect types
+To address the previous problems, we take a fresh look at programming with side-effects in the context
+of a new language called Koka [18, 19].
+Like ML, Koka has strict semantics where arguments are evaluated before calling a function. This implies
+that an expression with type int can really be modeled semantically as an integer (and not as a delayed
+computation that can potentially diverge or raise an exception).
+As a consequence, the only point where side effects can occur is during function application. We
+write function types as (τ1 , . . . , τn ) → ε τ to denote that a function takes arguments of type τ1 to τn ,
+and returns a value of type τ with a potential side effect ε . As apparent from the type, functions need
+to be fully applied and are not curried. This is to make it immediately apparent where side effects can
+occur. For example, in ML, an expression like f x y can have side effects at different points depending
+on the arity of the function f . In our system this is immediately apparent, as one writes either f (x, y) or
+(f (x))(y).
+
+2.2. Basic effects
+The effects in our system are extensible, but the basic effects defined in Koka are total, exn, div, ndet,
+allochhi, readhhi, writehhi, and io. Of course total is not really an effect but signifies the absence of any
+effect and is assigned to pure mathematical functions. When a function can throw an exception, it gets
+the exn effect. Potential divergence or non-termination is signified by the div effect. Currently, Koka uses
+a simple termination analysis based on inductive data types to assign this effect to recursive functions.
+Non-deterministic functions get the ndet effect. The effects allochhi, readhhi and writehhi are used for
+stateful functions over a heap h. Finally io is used for functions that do any input/output operations. Here
+are some type signatures of common functions in Koka:
+random : () → ndet double
+print : string → io ()
+error : ∀α . string → exn a
+(:=) : ∀α . (ref hh, ai, a) → writehhi ()
+Note that we use angled brackets to denote type application as usual in languages like C# or Scala. We
+also use angled brackets to denote a row of effects. For example, the program:
+function sqr( x : int ) { error(”hi”); sqr(x); x ∗ x }
+will get the type
+sqr : int → hexn, divi int
+where we combined the two basic effects exn and div into a row of effects hexn, divi. The combination
+of the exception and divergence effect corresponds exactly to Haskell’s notion of purity, and we call this
+
+Daan Leijen
+
+103
+
+effect pure. Common type aliases are:
+alias total = hi
+alias pure = hexn, divi
+alias sthhi = hallochhi, readhhi, writehhii
+alias io = hsthioheapi, pure, ndeti
+This hierarchy is clearly inspired by Haskell’s standard monads and we use this as a starting point for
+more refined effects which we hope to explore in Koka. For example, blocking, client/server side effects,
+reversable operations, etc.
+
+2.3. Polymorphic effects
+Often, the effect of a function is determined by the effects of functions passed to it. For example, the
+map function which maps a function over all elements of a list will have the type:
+map : ∀αβ µ . (listhα i, α → µ β ) → µ listhβ i
+where the effect of the map function itself is completely determined by the effect of its argument. In this
+case, a simple and obvious type is assigned to map, but one can quickly create more complex examples
+where the type may not be obvious at first. Consider the following program:
+function foo(f , g) { f (); g(); error(”hi”) }
+Clearly, the effect of foo is a combination of the effects of f and g, and the exn effect. One possible
+design choice is to have a ∪ operation on effect types, and write the type of foo as:
+∀µ1 µ2 . (() → µ1 (), () → µ2 ()) → (µ1 ∪ µ2 ∪ exn) ()
+Unfortunately, this quickly gets us in trouble during type inference: unification can lead to constraints of
+the form µ1 ∪ µ2 ∼ µ3 ∪ µ4 which cannot be solved uniquely and must become part of the type language.
+Another design choice is to introduce subtyping over effects and write the type of foo as:
+∀µ1 µ2 µ3 . (µ1 ≤ µ3 , µ2 ≤ µ3 , hexni ≤ µ3 ) ⇒ (() → µ1 (), () → µ2 ()) → µ3 ()
+This is the choice made in an earlier version of Koka described as a technical report [38]. However, in
+our experience with that system in practice we felt the constraints often became quite complex and the
+combination of polymorphism with subtyping can make type inference undecidable.
+The approach we advocate in this paper and which is adopted by Koka is the use of row-polymorphism
+on effects. Row polymorphism is well understood and used for many inference systems for record calculi [7, 17, 23, 31, 34, 35]. We use the notation hl | µ i to extend an effect row µ with an effect constant
+l. Rows can now have two forms, either a closed effect hexn, divi, or an open effect ending in an effect
+variable hexn, div | µ i. Using an open effect, our system infers the following type for foo:
+foo : ∀µ . (() → hexn | µ i (), () → hexn | µ i ()) → hexn | µ i ()
+The reader may worry at this point that the row polymorphic type is more restrictive than the earlier type
+using subtype constraints: indeed, the row polymorphic type requires that each function argument now
+has the same effect hexn | µ i. However, in a calling context foo(f , g) our system ensures that we always
+infer a polymorphic open effect for each expression f and g. For example, f : () → hexn | µ1 i () and g :
+() → hdiv | µ2 i (). This allows the types hexn | µ1 i and hdiv | µ2 i to unify into a common type hexn, div | µ3 i
+such that they can be applied to foo, resulting in an inferred effect hexn, div | µ3 i for foo(f , g).
+
+104
+
+Koka: Programming with Row-polymorphic Effect Types
+
+2.4. Duplicate effects
+Our effect rows differ in an important way from the usual approaches in that effect labels can be duplicated, i.e. hexn, exni 6≡ hexni (1). This was first described by Leijen [17] where this was used to enable
+scoped labels in record types. Enabling duplicate labels fits our approach well: first of all, it enables
+principal unification without needing extra constraints, and secondly, it enables us to give precise types
+to effect elimination forms (like catching exceptions).
+In particular, during unification we may end up with constraints of the form hexn | µ i ∼ hexni. With
+regular row-polymorphism which are sets of labels, such constraint can have multiple solutions, namely
+µ = hi or µ = hexni. This was first observed by Wand [43] in the context of records. Usually, this
+problem is fixed by either introducing lacks constraints [7] or polymorphic presence and absence flags
+on each label [32] (as used by Lindley and Cheney [23] for an effect system in the context of database
+queries). The problem with both approaches is that they complicate the type system quite a bit. With
+lacks contstraints we need a system of qualified types as in Haskell, while with presece and absence flags,
+we need a kind system that tracks for each type variable which labels cannot be present.
+With rows allowing duplicate labels, we avoid any additional machinery and can use straight forward
+type inference techniques. In our case µ = hi is the only solution to the above constraint (due to (1)).
+Moreover, duplicate labels make it easy to give types to effect elimination forms. For example,
+catching effects removes the exn effect:
+catch : ∀α µ . (() → hexn | µ i α , exception → µ α ) → µ α
+Here we assume that catch takes two functions, the action and the exception handler that takes as an
+argument the thrown exception. The exn effect of the action is discarded in the final effect µ since all
+exceptions are caught by the handler. But of course, the handler can itself throw an exception and have
+an exn effect itself. In that case µ will unify with a type of the form hexn|µ ′ i giving action the effect
+hexn|exn|µ ′ i where exn occurs duplicated, which gives us exactly the right behavior. Note that with lacks
+constraints we would not be able to type this example because there would be a exn 6∈ µ constraint. We
+can type this example using flags but the type would arguably be more complex with a polymorphic
+presence/absence flag ϕ on the exn label in the result effect, something like:
+catch : ∀µαϕ . (() → hexn• | µ i α , exception → hexnϕ | µ i α ) → hexnϕ | µ i α
+There is one situation where an approach with flags is more expressive though: with flags one can state
+specifically that a certain effect must be absent. This is used for example in the effect system by Lindley
+and Cheney [23] to enforce that database queries never have the wild effect (io). In our setting we can
+only enforce absence of an effect by explicitly listing a closed row of the allowed effects which is less
+modular. In our current experience this has not yet proven to be a problem in practice though but we may
+experiment with this in the future.
+2.4.1. Injection
+There are some situations where having duplicate effects is quite different from other approaches though.
+Intuitively, we can do a monadic translation of a Koka program where effect types get translated to a
+sequence of monad transformers. Under such interpretation, duplicate effects would have real semantic
+significance. For example, we could provide an injection operation for exceptions:
+inject : ∀µα . (() → hexn|µ i α ) → (() → hexn|exn|µ i α )
+
+Daan Leijen
+
+105
+
+Semantically, it would inject an extra exception layer, such that a catch operation would only catch
+exceptions raised from the outer exn, while passing the inner injected exceptions through. Internally, one
+can implement this by maintaining level numbers on thrown exceptions – increasing them on an inject
+and decreasing them on a catch (and only catching level 0 exceptions).
+Now, suppose we have some library code whose exceptions we do not want to handle, but we do
+want to handle the exceptions in our own code. In that case, we could write something like:
+catch( function() {
+... my code ...
+x = inject( ... library code ...)()
+... my code ...
+inject( ...morelibrarycode ...)()
+}, handler )
+In the example, all exceptions in ‘my code’ are caught, while exceptions raised in the library code are
+only caught by an outer exception handler. For this article though, we will not further formalize inject
+but only describe the core calculus.
+
+2.5. Heap effects
+One of the most useful side-effects is of course mutable state. Here is an example where we give a linear
+version of the fibonacci function using imperative updates:
+function fib( n : int ) {
+val x = ref (0); val y = ref (1)
+repeat(n) {
+val y0 = !y; y := !x+!y; x := y0
+}
+!x
+}
+Here x and y are bound to freshly allocated references of type ref hh, inti. The operator (!) dereferences
+a reference while the operator (:=) is used for assignment to references. Due to the reading and writing
+of x and y of type ref hh, inti, the effect inferred for the body of the function is sthhi for some heap h:
+fib : ∀h. int → sthhi int
+However, we can of course consider the function fib to be total: for any input, it always returns the same
+output since the heap h cannot be modified or observed from outside this function. In particular, we can
+safely remove the effect sthhi whenever the function is polymorphic in the heap h and where h is not
+among the free type variables of argument types or result type. This notion corresponds directly to the
+use of the higher-ranked runST function in Haskell [30] (which we will call just run):
+run : ∀µα . (∀h. () → hsthhi | µ i α ) → µ α
+Koka will automatically insert a run wrapper at generalization points if it can be applied, and infers a
+total type for the above fibonacci function:
+fib : int → total int
+
+106
+
+Koka: Programming with Row-polymorphic Effect Types
+
+Again, using row polymorphism is quite natural to express in the type of run where the sthhi effect can
+be dismissed.
+One complex example from a type inference perspective where we applied Koka, is the GarsiaWachs algorithm as described by Filliâtre [6]. The given algorithm was originally written in ML and
+uses updateable references in the leaf nodes of the trees to achieve efficiency comparable to the reference
+C implementation. However, Filliâtre remarks that these side effects are local and not observable to any
+caller. We implemented Filliâtre’s algorithm in Koka and our system correctly inferred that the state
+effect can be discarded and assigned a pure effect to the Garsia-Wachs algorithm [18].
+
+2.6. Heap safety
+Combining polymorphism and imperative state is fraught with difficulty and requires great care. In
+particular, let-polymorphism may lead to unsoundness if references can be given a polymorphic type. A
+classical example from ML is:
+let r = ref [ ] in (r := [true], !r + 1)
+Here, we let bind r to a reference with type ∀α . ref hlisthα ii. The problem is that this type can instantiate
+later to both a reference to an integer list and a boolean list. Intuitively, the problem is that the first binding
+of r generalized over type variables that are actually free in the heap. The ML language considered many
+solutions to prevent this from happening, ranging from imperative type variables [39] to the current
+syntactic value restriction, where only value expressions can be generalized.
+In our system, no such tricks are necessary. Using the effect types, we restrict generalization to
+expressions that are total, and we reject the ML example since we will not generalize over the type of
+r since it has an allochhi effect. We prove in Section 5.1 that our approach is semantically sound. In
+contrast to the value restriction, we can still generalize over any expression that is not stateful regardless
+of its syntactic form.
+The addition of run adds further requirements where we must ensure that encapsulated stateful computations truly behave like a pure function and do not ‘leak’ the state. For example, it would be unsound
+to let a reference escape its encapsulation:
+run( function(){ ref (1) } )
+or to encapsulate a computation where its effects can still be observed.
+We prove in Section 5.2 that well-typed terms never exhibit such behavior. To our knowledge we are
+the first to prove this formally for a strict language in combination with exceptions and divergence. A
+similar result is by Launchbury and Sabry [16] where they prove heap safety of the Haskell’s ST monad
+in the context of a lazy store with lazy evaluation.
+
+2.7. Divergence
+Koka uses a simple termination checker (based on [1]) to assign the divergence effect to potentially nonterminating functions. To do this safely, Koka has three kinds of data types, inductive, co-inductive, and
+arbitrary recursive data types. In particular, we restrict (co)inductive data types such that the type itself
+cannot occur in a negative position. Any function that matches on an arbitrary recursive data type is
+assumed to be potentially divergent since one can encode the Y combinator using such data type and
+write a non-terminating function that is not syntactically recursive.
+
+Daan Leijen
+
+107
+
+Recursively defined functions should of course include the divergence effect in general. However, if
+the termination checker finds that each recursive call decreases the size of an inductive data type (or is
+productive for a co- inductive data type), then we do not assign the divergent effect. The current analysis
+is quite limited and syntactically fragile but seems to work well enough in practice (Section 2.8). For our
+purpose, we prefer a predictable analysis with clear rules.
+However, in combination with higher-order mutable state, we can still define functions that are not
+syntactically recursive, but fail to terminate. Consider ‘Landin’s knot’:
+function diverge() {
+val r := ref (id)
+function foo() { (!r)() }
+r := foo
+foo()
+}
+In this function, we first create a reference r initialized with the identify function. Next we define a local
+function foo which calls the function in r. Then we assign foo itself to r and call foo, which will now
+never terminate even though there is no syntactic recursion.
+How can we infer in general that diverge must include the div effect? It turns out that in essence
+reading from the heap may result in divergence. A conservative approach would be to assign the div
+effect to the type of read (!). For simplicity, this is what we will do in the formal development.
+But in Koka we use a more sophisticated approach. In order to cause divergence, we actually need
+to read a function from the heap which accesses the heap itself. Fortunately, our effect system makes
+this behavior already apparent in the inferred types! – in our example, the effect of foo contains readhhi,
+which is being stored in a reference in the same heap of type ref hh, () → readhhi ()i.
+The trick is now that we generate a type constraint hdivhh, τ , ε i for every heap read that keeps track
+of heap type h, the type of the value that was read τ and the current effect ε . The constraint hdivhh, τ , ε i
+expresses that if h ∈ ftv(τ ) then the effect ε must include divergence. In particular, this constraint is
+fine-grained enough that any reading of a non-function type, or non-stateful functions will never cause
+divergence (and we can dismiss the constraint) The drawback is that if τ is polymorphic at generalization
+time, we need to keep the constraint around (as we cannot decide at that point whether h will ever be
+in ftv(τ )), which in turn means we need to use a system of qualified types [12]. Currently this is not
+fully implemented yet in Koka, and if at generalization time we cannot guarantee τ will never contain a
+reference to the heap h, we conservatively assume that the function may diverge.
+
+2.8. Koka in practice
+When designing a new type system it is always a question how well it will work in practice: does it infer
+the types you expect? Do the types become too complicated? Is the termination checker strong enough?
+etc. We have implemented the effect inference and various extensions in the Koka language which is
+freely available on the web [18]. The Koka system currently has a JavaScript backend and can generate
+code that runs in NodeJS or a web page. We have written many small to medium sized samples to see
+how well the system works in practice.
+Markdown One application is a fully compliant Markdown text processor. This program consists
+of three phases where it first parses block elements, performs block analysis, collects link definitions,
+
+108
+
+Koka: Programming with Row-polymorphic Effect Types
+
+numbers sections, and finally renders the inline elements in each block. The program passes the full
+Markdown test suite. In fact, this article has been written itself as a Madoko document [20].
+Remarkably, almost all functions are inferred to be total, and only a handful of driver functions
+perform side effects, like reading input files. For efficiency though, many internal functions use local
+state. For example, when rendering all inline elements in a block, we use a local mutable string builder
+(of type builderhhi) to build the result string in constant time (actual Koka code):
+function formatInline( ctx : inlineCtx, txt : string) : string {
+formatAcc(ctx, builder(), txt)
+}
+function formatAcc( ctx : inlineCtx, acc : builderhhi, txt : string ) : sthhi string {
+if (txt == ””) return acc.string
+val (s, next) = matchRules(ctx.grammar, ctx, txt, id)
+formatAcc(ctx, acc.append(s), txt.substr 1 (next))
+}
+Note how formatAcc is stateful due to the calls to the append and string methods of the string builder
+acc, but the outer function formatInline is inferred to be total since Koka can automatically apply the run
+function and encapsulate the state: indeed it is not observable if we use a mutable string builder internally
+or not. This pattern also occurs for example in the block analysis phase where we use a mutable hashmap
+to build the dictionary of link definitions.
+Safe tier-splitting Most of the HTML5 DOM and the Node API’s are available in Koka which allows
+us to write more substantial programs and evaluate the effect inference system in practice. We use the
+effect dom for functions that may have any side effect through a DOM call.
+On the web, many programs are split in a server and client part communicating with each other. It is
+advantageous to write both the client and server part as one program since that enables us to share one
+common type definition for the data they exchange. Also, their interaction will be more apparent, and
+they can share common functionality, like date parsing, to ensure that both parts behave consistently.
+Safely splitting a program into a server and client part is difficult though. For example, the client
+code may call a library function that itself calls a function that can only be run on the server (like writing
+to a log file), or the other way around. Moreover, if the client and server part both access a shared global
+variable (or both call a library function that uses an internal global variable) then we cannot split this
+code anymore.
+The Koka effect types tackle both problems and enable fully safe tier splitting. Our main tier splitting
+function has the following (simplified) type signature:
+function tiersplit(
+serverPart : () → server ((α → server ()) → server (β → server ()) ),
+clientPart : (β → client ()) → client (α → client ())
+) : io ()
+where the server and client effects are defined as:
+alias server = io
+alias client = hdom, divi
+
+Daan Leijen
+
+109
+
+kinds
+
+κ ::= ∗ | e | k | h
+values, effect rows, effect constants, heaps
+|
+(κ1 , ..., κn ) → κ type constructor
+
+types
+
+τ k ::= α k
+type variable (using µ for effects,ξ for heaps)
+|
+cκ
+type constant
+κ1
+κ
+κ
+0
+n
+|
+c hτ1 , ..., τn i κ0 = (κ1 ,...,κn ) → κ
+
+schemes σ ::= ∀α1 ...αn . τ ∗
+constants ()
+:: ∗
+unit type
+( → ) :: (∗, e, ∗) → ∗ functions
+hi
+:: e
+empty effect
+h|i
+:: (k, e) → e
+effect extension
+ref
+:: (h, ∗) → ∗
+references
+exn,div :: k
+partial, divergent
+st
+:: h→ k
+stateful
+= τ1 → hi τ2
+syntactic sugar τ1 → τ2
+hl1 , ..., ln | ε i = hl1 ... hln | ε i ...i
+hl1 , ..., ln i
+= hl1 , ..., ln | hii
+Figure 1. Syntax of types and kinds. An extra restriction is that effect constants cannot be type variables,
+i.e. α k is illegal.
+The tiersplit function takes a server and client function and sets up a socket connection. On the server it
+will call the server part function which can initialize. Now, both the client and server part can be called
+for each fresh connection where tiersplit supplies a send function that takes a message of type α for client
+messages, and β for server messages. Both the client and server part return a fresh ‘connection’ function
+that handles incoming messages from the server or client respectively. Note how this type guarantees
+that messages sent to the client, and messages handled by the client, are both of type α , while for the
+server messages they will be β . Furthermore, because the effect types for server and client are closed,
+the client and server part are only able to call functions available for the client or server respectively.
+Finally, the Koka effect system also prevents accidental sharing of global state by the client and server
+part. Both the client and server can use state that is contained in their handler. In that case the sthhi effect
+will be inferred, and discarded because h will generalize. However, if either function tries to access a
+shared variable in an outer scope, then the h will not generalize (because the variable will have type
+ref hh, ai and therefore h is not free in the environment), in which case the inferred sthhi effect cannot be
+removed. Again, this will lead to a unification failure and the program will be statically rejected.
+
+3. The type system
+In this section we are going to give a formal definition of our polymorphic effect system for a small
+core-calculus that captures the essence of Koka. We call this λ k . Figure 1 defines the syntax of types.
+The well-formedness of types τ is guaranteed by a simple kind system. We put the kind κ of a type τ in
+superscript, as τ κ . We have the usual kind ∗ and →, but also kinds for effect rows (e), effect constants
+(k), and heaps (h). Often the kind of a type is immediately apparent or not relevant, and most of the time
+we will not denote the kind to reduce clutter, and just write plain types τ . For clarity, we are using α for
+
+Koka: Programming with Row-polymorphic Effect Types
+
+110
+( EQ - REFL ) ε ≡ ε
+
+( EQ - HEAD )
+
+( EQ - TRANS )
+
+ε1 ≡ ε2
+hl | ε1 i ≡ hl | ε2 i
+( UNEQ - LAB )
+
+ε1 ≡ ε2 ε2 ≡ ε3
+ε1 ≡ ε3
+
+( EQ - SWAP )
+
+l1 6≡ l2
+hl1 | hl2 | ε ii ≡ hl2 | hl1 | ε ii
+
+c 6= c′
+chτ1 , ..., τn i 6≡ c′ hτ1′ , ..., τn′ i
+
+Figure 2. Effect equivalence.
+regular type variables, µ for effect type variables, and ξ for heap type variables.
+Effect types are defined as a row of effect labels l. Such effect row is either empty hi, a polymorphic
+effect variable µ , or an extension of an effect row ε with an effect constant l, written as hl|ε i. The
+effect constants can be anything that is interesting to our language. For our purposes we will restrict the
+constants to exceptions (exn), divergence (div), and heap operations (st). It is no problem to generalize
+this to the more fine-grained hierarchy of Koka but this simplifies the presentation and proofs. The kind
+system ensures that an effect is always either a closed effect of the form hl1 , ..., ln i, or an open effect of
+the form hl1 , ..., ln | µ i.
+Figure 2 defines an equivalence relation (≡) between effect types where we consider effects equivalent regardless of the order of the effect constants. In contrast to many record calculi [7, 32, 34] effect
+rows do allow duplicate labels where an effect hexn, exni is allowed (and not equal to the effect hexni).
+The definition of effect equality is essentially the same as for scoped labels [17] where we ignore the
+type components. Note that for rule ( EQ - SWAP ) we use the rule ( UNEQ - LAB ) to compare effect constants
+where the type arguments are not taken into account: intuitively we consider the effect constants as the
+‘labels’ of an effect record. Most constants compare directly. The only exception in our system is the
+state effect where sthh1 i 6≡ sthh2 i does not hold even if h1 6= h2 .
+Using effect equality, we define l ∈ ε iff e ≡ hl | ε ′ i for some ε ′ .
+
+3.1. Type rules
+Figure 3 defines the formal type rules of our effect system. The rules are defined over a small expression
+calculus:
+e ::= x | p | e1 e2 | λ x. e
+| x ← e1 ; e2 | let x = e1 in e2
+| catch e1 e2 | run e
+
+(variables, primitives, applications, functions)
+(sequence and let bindings)
+(catch exceptions and isolate state)
+
+p ::= () | fix | throw | new | (!) | (:=) (primitives)
+This expression syntax is meant as a surface syntax, but when we discuss the semantics of the calculus,
+we will refine and extend the syntax further (see Figure 4). We use the bind expression x ← e1 ; e2 for
+a monomorphic binding of a variable x to an expression e1 (which is really just syntactic sugar for the
+application (λ x. e2 ) e1 ). We write e1 ; e2 as a shorthand for the expression x ← e1 ; e2 where x 6∈ fv(e2 ).
+We have added run and catch as special expressions since this simplifies the presentation where we can
+give direct type rules for them. Also, we simplified both catch and throw by limiting the exception type
+to the unit type (()).
+
+Daan Leijen
+
+111
+
+( VAR )
+
+Γ(x) = σ
+Γ⊢ x:σ |ε
+
+( APP )
+
+Γ ⊢ e1 : τ2 → ε τ | ε Γ ⊢ e2 : τ2 | ε
+Γ ⊢ e1 e2 : τ | ε
+
+Γ, x : τ1 ⊢ e : τ2 | ε2
+Γ ⊢ λ x. e : τ1 → ε2 τ2 | ε
+
+( LET )
+
+( GEN )
+
+Γ ⊢ e : τ | hi α 6∈ ftv(Γ)
+Γ ⊢ e : ∀α . τ | ε
+
+( RUN )
+
+( INST )
+
+Γ ⊢ e : ∀α . τ | ε
+Γ ⊢ e : [α := τ ]τ | ε
+
+( LAM )
+
+( CATCH )
+
+Γ ⊢ e1 : σ | hi Γ, x : σ ⊢ e2 : τ | ε
+Γ ⊢ let x = e1 in e2 : τ | ε
+
+Γ ⊢ e : τ | hsthξ i | ε i ξ 6∈ ftv(Γ, τ , ε )
+Γ ⊢ run e : τ | ε
+
+Γ ⊢ e1 : τ | hexn | ε i Γ ⊢ e2 : () → ε τ | ε
+Γ ⊢ catch e1 e2 : τ | ε
+
+( ALLOC ) Γ ⊢ ref
+: τ → hsthhi | ε i ref hh, τ i | ε ′
+( READ ) Γ ⊢ (!)
+: ref hh, τ i → hsthhi, div | ε i τ | ε ′
+( WRITE ) Γ ⊢ (:=) : (ref hh, τ i, τ ) → hsthhi | ε i () | ε ′
+( THROW ) Γ ⊢ throw : () → hexn | ε i τ | ε ′
+( UNIT )
+Γ ⊢ ()
+: () | ε
+( FIX )
+Γ ⊢ fix
+: ((τ1 → hdiv | ε i τ2 ) → (τ1 → hdiv | ε i τ2 )) → (τ1 → hdiv | ε i τ2 ) | ε ′
+
+Figure 3. General type rules with effects.
+The type rules are stated under a type environment Γ which maps variables to types. An environment
+can be extended using a comma. If Γ′ is equal to Γ, x : σ then Γ′ (x) = σ and Γ′ (y) = Γ(y) for any y 6= x.
+A type rule of the form Γ ⊢ e : σ | ε states that under an environment Γ the expression e has type σ with
+an effect ε .
+Most of the type rules in Figure 3 are quite standard. The rule ( VAR ) derives the type of a variable.
+The derived effect is any arbitrary effect ε . We may have expected to derive only the total effect hi since
+the evaluation of a variable has no effect at all (in our strict setting). However, there is no rule that lets
+us upgrade the final effect and instead we get to pick the final effect right away. Another way to look at
+this is that since the variable evaluation has no effect, we are free to assume any arbitrary effect.
+The ( LAM ) rule is similar: the evaluation of a lambda expression is a value and has no effect and we
+can assume any arbitrary effect ε . Interestingly, the effect derived for the body of the lambda expression,
+ε2 , shifts from the derivation on to the derived function type τ1 → ε2 τ2 : indeed, calling this function
+and evaluating the body causes the effect ε2 . The ( APP ) is also standard, and derives an effect ε requiring
+that its premises derive the same effect as the function effect.
+Instantiation ( INST ) is standard and instantiates a type scheme. The generalization rule ( GEN ) has an
+interesting twist: it requires the derived effect to be total hi . It turns out this is required to ensure a sound
+semantics as we show in Section 4. Indeed, this is essentially the equivalent of the value restriction in ML
+[21]. Of course, in ML effects are not inferred by the type system and the value restriction syntactically
+restricts the expression over which one can generalize. In our setting we can directly express that we only
+generalize over total expressions. The rule ( LET ) binds expressions with a polymorphic type scheme σ
+and just like ( GEN ) requires that the bound expression has no effect. It turns out that is still sound to
+allow more effects at generalization and let bindings. In particular, we can allow exn, div. However, for
+the formal development we will only consider the empty effect for now.
+
+112
+
+Koka: Programming with Row-polymorphic Effect Types
+
+All other rules are just type rules for the primitive constants. Note that all the effects for the primitive
+constants are open and can be freely chosen (just as in the ( VAR ) rule). This is important as it allows us to
+always assume more effects than induced by the operation. In this article we limit exceptions to just the
+unit value () but of course in a practical implementation this would be a proper exception type. However,
+note that any exception type must be restricted to base values only and cannot contain function values!
+If this would be allowed our divergence theorem 4 (in Section 6) would not hold – indeed, unchecked
+exceptions that can include non-base values can be more expressive than call/cc [22].
+Given these type rules, we can construct an efficient type inference algorithm that infers principal
+types and is sound and complete with respect to the type rules. This is described in detail in Appendix A
+and a separate technical report [19].
+
+3.2. Simplifying types
+The rule ( APP ) is a little surprising since it requires both the effect of the function and the argument to be
+the same. This only works because we set things up to always be able to infer effects on functions that
+are ‘open’ – i.e. have a polymorphic µ in their tail. For example, consider the identify function:
+id = λ x. x
+If we assign the valid type ∀α . α → hi α to the id function, we get into trouble quickly. For example,
+the application id (throw ()) would not type check since the effect of id is total while the effect of the
+argument is hexn|µ i. Of course, the type inference algorithm always infers a most general type for id,
+namely:
+id : ∀α µ . α → µ α
+which has no such problems.
+However, in practice we may wish to simplify the types more: for most users it is more natural to
+state that id is total, instead of stating that id can be any assigned any effect. One possible way that
+we explored in Koka was to display types in a simplified form. In particular, we can close a type of a
+let-bound variable of the form:
+∀µα1 ...αn . τ1 → hl1 , ..., lm |µ i τ2 )
+where µ 6∈ ftv(τ1 , τ2 , l1 , ..., lm ), to:
+∀α1 ...αn . τ1 → hl1 , ..., lm i τ2
+However, this is not an ideal solution since in practice users often annotate functions with the more
+restrictive closed type. The solution we adopted in Koka is to actually close all the types of let-bound
+variables according the above rule, and at instantiation of such let-bound variable, we open the type
+again, introducing a fresh µ for any function type with a closed effect.
+The way our system is set up in this paper, the most general type for a let-bound function will always
+have an open effect type, and therefore the programs accepted under the Koka system will be exactly the
+same. In general though, if we allow function constants with a closed effect type, then the more liberal
+Koka system may accept more programs since it will instantiate all such function types with a closed
+effect to an open effect. Of course, this is still a sound extension since we can always soundly assume
+more effects. Finally, note that we can only apply this form of simplification to let-bound variables, and
+not to lambda-bound parameters or otherwise type inference is no longer principal.
+
+Daan Leijen
+
+113
+
+e ::= v | e1 e2 | let x = e1 in e2
+| hp ϕ . e | run e
+
+(values, applications, let bindings)
+(heap binding and isolation)
+
+v ::= λ x. e | catch e
+| b
+
+(functions and partial catch)
+(basic value (contains no e))
+
+b ::= x | c
+| fix | throw | catch
+| r | ref | (!) | (:=) | (r :=)
+
+(variable and constants)
+(fixpoint and exceptions)
+(references)
+
+w ::= b | throw c
+(basic value or exception)
+a ::= v | throw c | hp ϕ . v | hp ϕ . throw c (answers)
+
+ϕ ::= hr1 7→ v1 i ... hrn 7→ vn i
+
+(heap bindings)
+
+Figure 4. Full expression syntax
+∀hri 7→ vi i ∈ ϕ . Γ, ϕ h ⊢ vi : τi | hi
+( HEAP )
+
+Γ, ϕ h ⊢ e : τ | hsthhi | ε i
+Γ ⊢ hp ϕ . e : τ | hsthhi | ε i
+
+( CONST )
+
+typeof(c) = σ
+Γ⊢ c:σ |ε
+
+Figure 5. Extra type rules for heap expressions and constants. We write ϕ h for the conversion of a heap
+ϕ to a type environment: if ϕ equals hr1 7→ v1 , ..., rn 7→ vn i then ϕ h = r1 : ref hh, τ1 i, ..., rn : ref hh, τn i
+for some τ1 to τn .
+
+4. Semantics of effects
+In this section we are going to define a precise semantics for our language, and show that well-typed
+programs cannot go ‘wrong’. In contrast to our earlier soundness and completeness result for the type
+inference algorithm, the soundness proof of the type system in Hindley-Milner does not carry over easily
+in our setting: indeed, we are going to model many complex effects which is fraught with danger.
+First, we strengthen our expression syntax by separating out value expressions v, as shown in Figure 4. We also define basic values b as values that cannot contain expressions themselves. Moreover,
+we added a few new expressions, namely heap bindings (hp ϕ . e), a partially applied catch (catch e), a
+partially applied assignments (v :=), and general constants (c). Also, we denote heap variables using r.
+An expression hp hr1 7→ v1 i, ..., hrn 7→ vn i. e binds r1 to rn in v1 , ..., vn and e. By convention, we always
+require r1 to rn to be distinct, and consider heaps ϕ equal modulo alpha-renaming.
+The surface language never exposes the heap binding construct hp ϕ . e directly to the user but during
+evaluation the reductions on heap operations create heaps and use them. In order to give a type to such
+expression, we need an extra type rule for heap bindings, given in Figure 5. Note how each heap value
+is typed under an enviroment that contains types for all bindings (much like a recursive let binding).
+Moreover, a heap binding induces the stateful effect sthhi. In the type rule for constants we assume a
+function typeof(c) that returns a closed type scheme for each constant.
+
+Koka: Programming with Row-polymorphic Effect Types
+
+114
+(δ )
+(β )
+( LET )
+( FIX )
+
+cv
+(λ x. e) v
+let x = v in e
+fix v
+
+( THROW ) X[throw c]
+( CATCHT ) catch (throw c) e
+( CATCHV ) catch v e
+
+−→ δ (c, v) if δ (c, v) is defined
+−→ [x 7→ v]e
+−→ [x 7→ v]e
+−→ v (λ x. (fix v) x)
+−→ throw c
+−→ e c
+−→ v
+
+if X 6= [ ]
+
+( ALLOC )
+( READ )
+( WRITE )
+( MERGE )
+( LIFT )
+
+ref v
+−→ hp hr 7→ vi. r
+hp ϕ hr 7→ vi. R[!r]
+−→ hp ϕ hr 7→ vi. R[v]
+hp ϕ hr 7→ v1 i. R[r := v2 ] −→ hp ϕ hr 7→ v2 i. R[()]
+−→ hp ϕ1 ϕ2 . e
+hp ϕ1 . hp ϕ2 . e
+−→ hp ϕ . R[e] if R 6= [ ]
+R[hp ϕ . e]
+
+( RUNL )
+( RUNC )
+( RUNH )
+
+run [hp ϕ . ] λ x. e
+run [hp ϕ . ] catch e
+run [hp ϕ . ] w
+
+−→ λ x. run ([hp ϕ . ] e)
+−→ catch (run ([hp ϕ . ] e))
+−→ w if frv(w) 6 ∩ dom(ϕ )
+
+Evaluation contexts:
+X ::= [ ] | X e | v X | let x = X in e
+R ::= [ ] | R e | v R | let x = R in e | catch R e
+E ::= [ ] | E e | v E | let x = E in e | catch E e | hp ϕ . E | run E
+Figure 6. Reduction rules and evaluation contexts.
+
+4.1. Reductions
+We can now consider primitive reductions for the various expressions as shown in Figure 6. The first
+four reductions are standard for the lambda calculus. To abstract away from a particular set of constants,
+we assume a function δ which takes a constant and a closed value to a closed value. If typeof(c) =
+∀α . τ1 → ετ2 , with θ = [α 7→ τ ] and · ⊢ v : θ τ1 | hi, then δ (c, v) is defined, and · ⊢ δ (c, v) : θ τ2 | θ ε .
+The reductions β , ( LET ) and ( FIX ) are all standard.
+The next three rules deal with exceptions. In particular, the rule ( THROW ) progates exceptions under
+a context X . Since X does not include catch e1 e2 , hp ϕ . e or run e, this propagates the exception to the
+nearest exception handler or state block. The ( CATCHT ) reduction catches exceptions and passes them on
+to the handler. If the handler raises an exception itself, that exception will then propagate to its nearest
+enclosing exception hander.
+The next five rules model heap reductions. Allocation creates a heap, while (!) and (:=) read and
+write from the a heap. Through the R context, these always operate on the nearest enclosing heap since
+R does not contain hp ϕ . e or run e expressions. The rules ( LIFT ) and ( MERGE ) let us lift heaps out of
+expressions to ensure that all references can be bound in the nearest enclosing heap.
+The final three rules deal with state isolation through run. We write [hp ϕ . ] to denote an optional
+heap binding (so we really define six rules for state isolation). The first two rules ( RUNL ) and ( RUNC )
+push a run operation down into a lambda-expression or partial catch expression. The final rule ( RUNH )
+captures the essence of state isolation and reduces to a new value (or exception) discarding the heap ϕ .
+
+Daan Leijen
+
+115
+
+The side condition frv(w) 6 ∩ dom(ϕ ) is necessary to ensure well-formedness where a reference should
+not ‘escape’ its binding.
+Using the reduction rules, we can now define an evaluation function. Using the evaluation context
+E defined in Figure 6, we define E[e] 7−→ E[e′ ] iff e −→ e′ . The evaluation context ensures strict
+semantics where only the leftmost- outermost reduction is applicable in an expression. We define the
+relation 7−→
+→ as the reflexive and transtive closure of 7−→. We can show that 7−→
+→ is a function even
+though we need a simple diamond theorem since the order in which ( LIFT ) and ( MERGE ) reductions
+happen is not fixed [44].
+The final results, or answers a, that expressions evaluate to, are either values v, exceptions throw c,
+heap bound values hp ϕ . v or heap bound exceptions hp ϕ . throw c (as defined in Figure 4).
+Our modeling of the heap is sligthly unconventional. Usually, a heap is defined either as a parameter
+to the semantics, or always scoped on the outside. This has the advantage that one doesn’t need operations
+like ( MERGE ) and ( LIFT ). However, for us it is important that the run operation can completely discard
+the heap which is hard to do in the conventional approach. In particular, in Section 6 we want to state the
+purity Theorem 3 that says that if Γ ⊢ e : τ | ε where sthhi 6∈ ε then we never have e 7−→
+→ hp ϕ . v. Such
+theorem is difficult to state if we modeled the heap more conventionally.
+
+5. Semantic soundness
+We now show that well-typed programs cannot go ‘wrong’. Our proof closely follows the subject reduction proofs of Wright and Felleisen [44]. Our main theorem is:
+Theorem 1. (Semantic soundness)
+If · ⊢ e : τ | ε then either e ⇑ or e 7−→
+→ a where · ⊢ a : τ | ε .
+where we use the notation e ⇑ for a never ending reduction. The proof of this theorem consists of showing
+two main lemmas:
+• Show that reduction in the operational semantics preserves well-typing (called subject reduction).
+• Show that faulty expressions are not typeable.
+If programs are closed and well-typed, we know from subject reduction that we can only reduce to welltyped terms, which can be either faulty, an answer, or an expression containing a further redex. Since
+faulty expressions are not typeable it must be that evaluation either produces a well-typed answer or
+diverges. Often, proofs of soundness are carried out using progress instead of faulty expressions but it
+turns out that for proving the soundness of state isolation, our current approach works better.
+
+5.1. Subject reduction
+The subject reduction theorem states that a well-typed term remains well-typed under reduction:
+Lemma 1. (Subject reduction)
+If Γ ⊢ e1 : τ | ε and e1 −→ e2 then Γ ⊢ e2 : τ | ε .
+To show that subject reduction holds, we need to establish various lemmas. Two particularly important
+lemmas are the substitution and extension lemmas:
+Lemma 2. (Substitution)
+If Γ, x : ∀α . τ ⊢ e : τ ′ | ε where x 6∈ dom(Γ), Γ ⊢ v : τ | hi, and α 6 ∩ ftv(Γ), then Γ ⊢ [x 7→ v]e : τ ′ | ε .
+Lemma 3. (Extension)
+If Γ ⊢ e : τ | ε and for all x ∈ fv(e) we have Γ(x) = Γ′ (x), then Γ′ ⊢ e : τ | ε .
+
+116
+
+Koka: Programming with Row-polymorphic Effect Types
+
+The proofs of these lemmas from [44] carry over directly to our system. However, to show subject
+reduction, we require an extra lemma to reason about state effects.
+Lemma 4. (Stateful effects)
+If Γ ⊢ e : τ | hsthhi | ε i and Γ ⊢ R[e] : τ ′ | ε ′ then sthhi ∈ ε ′ .
+The above lemma essentially states that a stateful effect cannot be discarded in an R context. Later we
+will generalize this lemma to arbitrary contexts and effects but for subject reduction this lemma is strong
+enough.
+Proof. (Lemma 4) We proceed by induction on the structure of R:
+Case R = []: By definition sthhi ∈ hsthhi | ε i.
+Case R = R′ e2 : We have Γ ⊢ (R′ [e]) e2 : τ ′ | ε ′ and by ( APP ) we have Γ ⊢ R′ [e] : τ2 → ε ′ τ ′ | ε ′ . By
+induction, sthhi ∈ ε ′ .
+Case R = v R′ : Similar to previous case.
+Case R = let x = R′ in e2 : By ( LET ) we have Γ ⊢ R′ [e] : τ1 | hi but that contradicts our assumption.
+Case R = catch R′ e2 : By ( CATCH ) we have Γ ⊢ catch R′ [e] e2 : τ ′ | ε ′ where Γ ⊢ R′ [e] : τ ′ | hexn | ε ′ i. By
+induction sthhi ∈ hexn | ε ′ i which implies that sthhi ∈ ε ′ .
+Before proving subject reduction we need one more type rule on our internal language. The ( EXTEND )
+rule states that we can always assume a stateful effect for an expression:
+Γ⊢ e:τ |ε
+Γ ⊢ e : τ | hsthhi | ε i
+Now we are ready to prove the subject reduction theorem:
+( ST- EXTEND )
+
+Proof. (Lemma 1) We prove this by induction on the reduction rules of −→. We will not repeat all
+cases here and refer to [44], but instead concentrate on the interesting cases, especially with regard to
+state isolation.
+Case let x = v in e −→ [x 7→ v]e: From ( LET ) we have Γ ⊢ v : τ ′ | hi and Γ, x : gen(Γ, τ ′ ) ⊢ e : τ | ε . By
+definition, gen(Γ, τ ′ ) = ∀α . τ ′ where α 6∈ ftv(Γ) and by Lemma 2 we have Γ ⊢ [x 7→ v]e : τ | ε .
+Case R[hp ϕ . e] −→ hp ϕ . R[e]: This is case is proven by induction over the structure of R:
+case R = []: Does not apply due to the side condition on −→.
+case R = R′ e′ : Then Γ ⊢ R′ [hp ϕ . e] e′ : τ | ε and by ( APP ) we have Γ ⊢ R′ [hp ϕ . e] : τ2 → ε τ | ε (1)
+and Γ ⊢ e′ : τ2 | ε (2). By the induction hypothesis and (1), we have Γ ⊢ hp ϕ . R′ [e] : τ2 → ε τ | ε .
+Then by ( HEAP ) we know Γ, ϕ h ⊢ vj : τj | hi (3) and Γ, ϕ h ⊢ R′ [e] : τ2 → ε τ | ε (4) where ϕ = hr1 7→
+v1 , ..., rn 7→ vn i. Since r1 , ..., rn 6∈ fv(e′ ) we can use (2) and 3 to conclude Γ, ϕ ⊢ e′ : τ2 | ε (5). Using
+( APP ) with (4) and (5), we have Γ, ϕ ⊢ R′ [e] e′ : τ | ε where we can use ( HEAP ) with (3) to conclude
+Γ ⊢ hp ϕ . R′ [e] e′ : τ | ε .
+case R = v R′ : Similar to the previous case.
+case R = let x = R′ in e′ : If this is well-typed, then by rule ( LET ) we must have Γ ⊢ R′ [hp ϕ . e] : τ ′ | hi.
+However, due to Lemma 4 and ( HEAP ), we have sthhi ∈ hi which is a contradiction. Note that this case
+is essential, as it prevents generalization of stateful references. For ML, this is also the tricky proof case
+that only works if one defines special ‘imperative type variables’ [44] or the value restriction. In our
+case the effect system ensures safety.
+Case run ([hp ϕ . ] λ x. e) −→ λ x. run ([hp ϕ . ] e): By rule ( RUN ) and ( HEAP ) we have that Γ ⊢ λ x. e :
+τ | hsthhi | ε i where h 6∈ ftv(Γ, τ , ε ) (1). Applying ( LAM ) gives Γ, x : τ1 ⊢ e : τ2 | ε2 with τ = τ1 → ε2 τ2 .
+Using ( ST- EXTEND ) we can also derive Γ, x : τ1 ⊢ e : τ2 | hsthhi | ε2 i. Due to (1) and h 6∈ τ1 , we can apply
+( RUN ) and ( HEAP ) again to infer Γ, x : τ1 ⊢ run ([hp ϕ . ] e) : τ2 | ε2 and finally ( LAM ) again to conclude
+
+Daan Leijen
+
+117
+
+Γ ⊢ λ x. (run ([hp ϕ . ] e)) : τ | ε .
+Case run ([hp ϕ . ] catch e) −→ catch (run ([hp ϕ . ] e)): Similar to the previous case.
+Case run ([hp ϕ . ] w) −→ w with frv(w) 6 ∩ dom(ϕ ) (1): By rule ( RUN ) and ( HEAP ) we have that Γ, ϕ h ⊢ w :
+τ | hsthhi | ε i where h 6∈ ftv(Γ, τ , ε ) (2). By (1) it must also be that Γ ⊢ w : τ | hsthhi | ε i (3) (this follows
+directly if there was no heap binding hp ϕ . ). We proceed over the structure of w:
+case w = throw c: Then by (3) we have Γ ⊢ throw c : τ | hsthhi | ε i, but also Γ ⊢ throw c : τ | ε since we
+can choose the result effect freely in ( THROW ).
+case w = r: By ( VAR ) and (3), we have Γ ⊢ r : ref hh′ , τ ′ i | hsthhi | ε i. where h 6= h′ satisfying (2). Since
+the result effect is free in ( VAR ), we can also derive Γ ⊢ r : ref hh′ , τ ′ i | ε
+case w = (r :=): As the previous case.
+case w = x: By ( VAR ) and (3), we have Γ ⊢ x : τ | hsthhi | ε i but in ( VAR ) the result effect is free, so we
+can also derive Γ ⊢ x : τ | ε .
+case other: Similarly.
+
+5.2. Faulty expressions
+The main purpose of type checking is of course to guarantee that certain bad expressions cannot occur.
+Apart from the usual errors, like adding a number to a string, we particularly would like to avoid state
+errors. There are two aspects to this. One of them is notorious where polymorphic types in combination
+with state can be unsound (which is not the case in our system because of Lemma 1). But in addition, we
+would like to show that in our system it is not possible to read or write to locations outside the local heap
+(encapsulated by run), nor is it possible to let local references escape. To make this precise, the faulty
+expressions are defined as:
+• Undefined: c v where δ (c, v) is not defined.
+• Escaping read: run (hp ϕ . R[!r]) where r 6∈ dom(ϕ ).
+• Escaping write: run (hp ϕ . R[r := v]) where r 6∈ dom(ϕ ).
+• Escaping reference: run (hp ϕ . w) where frv(w) ∩ dom(ϕ ) 6= ∅.
+• Not a function: v e where v is not a constant or lambda expression.
+• Not a reference: !v or v := e where v is not a reference.
+• Not an exception: throw c where c is not the unit value.
+Lemma 5. (Faulty expressions are untypeable)
+If an expression e is faulty, it cannot be typed, i.e. there exists no Γ, τ , and ε such that Γ ⊢ e : τ | ε .
+In the following proof, especially the case for escaping state is interesting. To our knowledge, this is the
+first proof of the safety of run in a strict setting (and in combination with other effects like exceptions).
+Proof. (Lemma 5) Each faulty expression is handled separately. We show here the interesting cases for
+escaping reads, writes, and references:
+Case run (hp ϕ . R[!r]) with r 6∈ dom(ϕ ) (1): To be typed in a context Γ we apply ( RUN ) and ( HEAP )
+and need to show Γ, ϕ h ⊢ R[!r] : τ | hsthhi | ε i (2), where h 6∈ ftv(Γ, τ , ε ) (3). For R[!r] to be welltyped, we also need Γ, ϕ h ⊢ !r : τ ′ | hsthh′ i | ε ′ i (4) where Γ, ϕ h ⊢ r : ref hh′ , τ ′ i | hsthh′ i | ε ′ i (5). From
+Lemma 4, (4), and (2), it must be that h′ = h (6). But since r 6∈ dom(ϕ ) (1), it follows by (5) and (6), that
+Γ ⊢ r : ref hh, τ ′ i | hsthhi | ε ′ i. But that means h ∈ ftv(Γ) contradicting (3).
+Case run (hp ϕ . R[(r :=)]) with r 6∈ dom(ϕ ): Similar to the previous case.
+Case run (hp ϕ . w) where frv(w) ∩dom(ϕ ) 6= ∅ (1) To be typed in a context Γ we need to show by ( HEAP )
+and ( RUN ) that Γ, ϕ h ⊢ w : τ | hsthhi | ε i where h 6∈ ftv(Γ, τ , ε ) (2). If w = throw c then by ( THROW ) the
+type of c is () and thus c is the unit constant. But frv(()) = ∅ contradicting our assumption. Otherwise,
+
+118
+
+Koka: Programming with Row-polymorphic Effect Types
+
+w = b and cannot contain an arbitrary e. Since frv(w) 6= ∅ (1), it must be that w is either one of r or
+(r :=) with r ∈ dom(ϕ ). To be well-typed, Γ, ϕ h ⊢ r : ref hh, τ ′ i | ε ′ must hold. However, the possible
+types for r and (r :=) are ref hh, τ ′ i and τ ′ → sthhi () and in both cases h ∈ ftv(τ ) which contradicts (2).
+
+6. Effectful semantics
+Up till now, we have used the effect types to good effect and showed that our system is semantically
+sound, even though state and polymorphic types are notoriously tricky to combine. Moreover, we showed
+that local state isolation through run is sound and statically prevents references from escaping.
+But the true power of the effect system is really to enable more reasoning about the behavior of a
+program at a higher level. In particular, the absence of certain effects determines the absence of certain
+answers. For example, if the exception effect is not inferred, then evaluating the program will never
+produce an answer of the form throw c or hp ϕ . throw c! It would not be entirely correct to say that such
+program never throws an exception: indeed, a local catch block can handle such exceptions. We can state
+the exception property formally as:
+Theorem 2. (Exceptions)
+If Γ ⊢ e : τ | ε where exn 6∈ ε then either e ⇑, e 7−→
+→ v or e 7−→
+→ hp ϕ . v.
+Proof. (Theorem 2) By contradiction over the result terms:
+Case e 7−→
+→ throw c: By subject reduction (Lemma 1), it must be Γ ⊢ throw c : τ | ε . Using the type rule
+for throw with ( APP ), it must be the case that ε ≡ hexn | ε ′ i contradicting our assumption.
+Case e 7−→
+→ hp ϕ . throw c: Similar to the previous case.
+Similarly to the exception case, we can state such theorem over heap effects too. In particular, if the sthhi
+effect is absent, then evaluation will not produce an answer that contains a heap, i.e. hp ϕ . w. Again, it
+would not be right to say that the program itself never performs any stateful operations the state can be
+encapsulated inside a run construct and its stateful behavior is not observable from outside. Formally,
+we can state this as:
+Theorem 3. (State)
+→ v or e 7−→
+→ throw c.
+Iff Γ ⊢ e : τ | ε where sthhi 6∈ ε then either e ⇑, e 7−→
+Proof. (Theorem 3) We prove by contradiction over the result terms:
+Case e 7−→
+→ hp ϕ . v: By subject reduction (Lemma 1), it must be Γ ⊢ hp ϕ . v : τ | ε . Using ( HEAP ), it must
+be the case that ε ≡ hsthhi | ε ′ i contradicting our assumption.
+Case e 7−→
+→ hp ϕ . throw c: Similar to the previous case.
+Finally, our most powerful theorem is about the divergence effect; in particular, if the divergent effect is
+absent, then evaluation is guaranteed to terminate!
+Theorem 4. (Divergence)
+→ a.
+If Γ ⊢ e : τ | ε where div 6∈ ε then e 7−→
+The proof of the divergence theorem (Theorem 4) is more complicated as we cannot use subject reduction
+to show this by contradiction. Instead, we need to do this proof using induction over logical relations [9].
+In our case, we say that if · ⊢ e : τ | ε , then e is in the set R(τ | ε ), “the reducible terms of type τ with
+effect ε ”, if div 6∈ ε and (1) when τ is a non-arrow type, if e halts, and (2) when τ = τ1 → ε2 τ2 , if e halts
+and if for all e1 ∈ R(τ1 | ε ), we have that e e1 ∈ R(τ2 | ε2 ).
+The proof of Theorem 4 is a standard result [9] and is a corollary from the following two main
+lemmas:
+
+Daan Leijen
+
+119
+
+Lemma 6. (R is preserved by reduction) Iff · ⊢ e : τ | ε , e ∈ R(τ | ε ), and e 7−→ e′ , then also e′ ∈ R(τ | ε ).
+Lemma 7. (A well-typed term is in R) If · ⊢ e : τ | ε and div 6∈ ε , then e ∈ R(ε | τ ).
+Proof. (Lemma 6) This is shown by induction over the type τ . For atomic types, this holds by definition.
+For arrow types, τ1 → ε2 τ2 we must show for a given e1 ∈ R(τ1 | ε ) that if e e1 ∈ R(τ2 | ε2 ), then also
+e′ e1 ∈ R(τ2 | ε2 ) (and the other direction). By ( APP ), it must be ε2 = ε (1). We can now proceed over the
+structure of reductions on e e1 :
+Case (!) e1 : In this case, since ( READ ) has a div effect, we have by (1) that div ∈ ε contradicting our
+assumption. Note that if we would have cheated and not include div in the type, we would have gotten a
+reduction to some v which we could not show to be strongly normalizing, and thus if it is an element of
+R(τ2 | ε2 ).
+Case fix ε1 : As the previous case.
+Case (λ x. e2 ) e1 : In this case, we can reduce to e′ e1 , and by the induction hypothesis e′ e1 ∈ R(τ | ε2 )
+since τ2 is smaller.
+Proof. (Lemma 7) This is proven over the structure of the type derivation. However, as usual, we need
+to strengthen our induction hypothesis to include the environment. We extend R over environments to
+be a set of substitutions:
+R(Γ) = {θ | dom(Γ) = dom(θ ) ∧ ∀(x : τ ∈ Γ). θ x ∈ R(τ | hi)}
+where we assume a monomorphic environment for simplicity but we can extend this easily to a (firstorder) polymorphic setting. Our strengthened lemma we use for our proof is:
+if Γ ⊢ e : τ | ε ∧ θ ∈ R(Γ) ∧ div 6∈ ε then θ e ∈ R(τ | ε )
+The induction is standard, and we show only some sample cases:
+Case ( FIX ): Since the result effect is free, we can choose any ε such that div 6∈ ε . Indeed, just an
+occurrence of fix is ok – only an application may diverge.
+Case ( APP ): By the induction hypothesis and ( APP ) we have θ e1 ∈ R(τ2 → ε τ | ε ) and θ e2 ∈ R(τ2 | ε ).
+By definition of R(τ2 → ε τ | ε ), θ e1 θ e2 ∈ R(τ2 | ε ) and therefore θ (e1 e2 ) ∈ R(τ2 | ε ). Note that the
+induction hypothesis ensures that div 6∈ ε and therefore we cannot apply a potentially divergent function
+(like fix or (!)).
+Case other: Standard, except that for effect elimination rules, we need to show that div is not eliminated.
+Contrast the results of this section to many other effect systems [25, 33] that just use effect types as
+syntactic ‘labels’. In our case the theorems of this section are truly significant as they show there is a
+deep correspondence between the effect types and the dynamic semantics which eventually enables us to
+reason about our programs much more effectively.
+
+7. Related work
+A main contribution of this paper is showing that our notion of mutable state is sound, in particular the
+combination of mutable state and polymorphic let- bindings is tricky as shown by Tofte [39] for the ML
+language. Later, variants of the ML value restriction are studied by Leroy [21].
+Safe state encapsulation using a lazy state monad was first proven formally by Launchbury and
+Sabry [16]. Their formalization is quite different though from ours and applies to a lazy store in a
+monadic setting. In particular, in their formalization there is no separate heap binding, but heaps are
+
+120
+
+Koka: Programming with Row-polymorphic Effect Types
+
+always bound at the outer run. We tried this, but it proved difficult in our setting; for example, it is hard
+to state the stateful lemma since answers would never contain an explicit heap. Very similar to our state
+encapsulation is region inference [40]. Our run operation essentially delimits a heap region. Regions are
+values though, and we can for example not access references in several regions at once.
+Independently of our work, Lindley and Cheney [23] also used row polymorphism for effect types.
+Their approach is based on presence/absence flags [32] to give effect types to database operations in
+the context of the Links web programming language. The main effects of the database operations are
+wild, tame, and hear, for arbitrary effects including divergence, pure queries, and asynchronous messages
+respectively. They report on practical experience exposing effect types to the programmer and discuss
+various syntax forms to easily denote effect types.
+The problems with arbitrary effects have been widely recognized, and there is a large body of work
+studying how to delimit the scope of effects. There have been many effect typing disciplines proposed.
+Early work is by Gifford and Lucassen [8, 24] which was later extended by Talpin [37] and others [28,
+36]. These systems are closely related since they describe polymorphic effect systems and use type
+constraints to give principal types. The system described by Nielson et al. [28] also requires the effects
+to form a complete lattice with meets and joins.
+Java contains a simple effect system where each method is labeled with the exceptions it might
+raise [10]. A system for finding uncaught exceptions was developed for ML by Pessaux et al. [29]. A
+more powerful system for tracking effects was developed by Benton [2] who also studies the semantics
+of such effect systems [3]. Recent work on effects in Scala [33] shows how even a restricted form of
+polymorphic effect types can track effects for many programs in practice.
+Tolmach [41] describes an effect analysis for ML in terms of effect monads, namely Total, Partial,
+Divergent and ST. This is system is not polymorphic though and meant more for internal compiler
+analysis. In the context proof systems there has been work to show absence of observable side effects for
+object-oriented programming languages, for example by Naumann [27].
+Marino et al. recently produced a generic type-and-effect system [25]. This system uses privilege
+checking to describe analytical effect systems. For example, an effect system could use try-catch statements to grant the canThrow privilege inside try blocks. throw statements are then only permitted when
+this privilege is present. Their system is very general and can express many properties but has no semantics on its own. For example, it would be sound for the effect system to have “+” grant the canThrow
+privilege to its arguments, and one has to do an additional proof to show that the effects in these systems
+actually correspond to an intended meaning.
+Wadler and Thiemann showed the close relation between effect systems and monads [42] and showed
+how any effect system can be translated to a monadic version. For our particular system though a monadic
+translation is quite involved due to polymorphic effects; essentially we need dependently typed operations and we leave a proper monadic semantics for future work.
+Recently, effect handlers are proposed to program with effects [4, 14, 15]. In this work, computational
+effects are modeled as operations of an algebraic theory. Even though algebraic effects are subsumed
+by monads, they can be combined more easily and the specification of handlers offers new ways of
+programming. This work is quite different than what we described in this paper since we only considered
+effects that are intrinsic to the language while effect handlers deal specifically with ‘user-defined’ effects.
+However, we are currently working on integrating user-defined effects in Koka using effect handlers, and
+investigating how this can work well with the current effect type system.
+
+Daan Leijen
+
+121
+
+References
+[1] Andreas Abel (1998): Foetus – A Termination Checker for Simple Functional Programs. Unpublished note.
+[2] Nick Benton & Peter Buchlovsky (2007): Semantics of an effect analysis for exceptions. In: TLDI ’07:
+Proceedings of the 2007 ACM SIGPLAN international workshop on Types in languages design and implementation, pp. 15–26, doi:10.1145/1190315.1190320.
+[3] Nick Benton, Andrew Kennedy, Lennart Beringer & Martin Hofmann (2007): Relational semantics for effectbased program transformations with dynamic allocation. In: PPDP ’07: Proc. of the 9th ACM SIGPLAN
+int. conf. on Principles and Practice of Declarative Prog., pp. 87–96, doi:10.1145/1273920.1273932.
+[4] Edwin Brady (2013): Programming and Reasoning with Algebraic Effects and Dependent Types. In: Proceedings of the 18th ACM SIGPLAN International Conference on Functional Programming, ICFP ’13, ACM,
+New York, NY, USA, pp. 133–144, doi:10.1145/2500365.2500581.
+[5] Luis Damas & Robin Milner (1982): Principal type-schemes for functional programs. In: 9th ACM symp.
+on Principles of Programming Languages (POPL’82), pp. 207–212, doi:10.1145/582153.582176.
+[6] Jean-Christophe Filliâtre (2008): A Functional Implementation of the Garsia–wachs Algorithm: (Functional
+Pearl). In: Proceedings of the 2008 ACM SIGPLAN Workshop on ML, ML ’08, ACM, New York, NY,
+USA, pp. 91–96, doi:10.1145/1411304.1411317.
+[7] Ben R. Gaster & Mark P. Jones (1996): A Polymorphic Type System for Extensible Records and Variants.
+Technical Report NOTTCS-TR-96-3, University of Nottingham.
+[8] David K. Gifford & John M. Lucassen (1986): Integrating functional and imperative programming. In:
+LFP ’86: Proceedings of the 1986 ACM conference on LISP and functional programming, pp. 28–38,
+doi:10.1145/319838.319848.
+[9] Jean-Yves Girard, Paul Taylor & Yves Lafont (1989): Proofs and types. Cambridge University Press.
+[10] James Gosling, Bill Joy & Guy Steele (1996): The Java Language Specification. Addison-Wesley.
+[11] J.R. Hindley (1969): The principal type scheme of an object in combinatory logic. Trans. of the American
+Mathematical Society 146, pp. 29–60, doi:10.2307/1995158.
+
+4th. European Symposium on Pro[12] Mark P. Jones (1992): A theory of qualified types.
+In:
+Lecture Notes in Computer Science 582, Springer-Verlag, pp. 287–306,
+gramming (ESOP’92),
+doi:10.1007/3-540-55253-7 17.
+[13] Mark P. Jones (1995): A system of constructor classes: overloading and implicit higher-order polymorphism.
+Journal of Functional Programming 5(1), pp. 1–35, doi:10.1145/165180.165190.
+[14] Ohad Kammar, Sam Lindley & Nicolas Oury (2013): Handlers in Action. In: Proceedings of the 18th ACM
+SIGPLAN International Conference on Functional Programming, ICFP ’13, ACM, New York, NY, USA, pp.
+145–158, doi:10.1145/2500365.2500590.
+[15] Ohad Kammar & Gordon D. Plotkin (2012): Algebraic Foundations for Effect-dependent Optimisations.
+In: Proceedings of the 39th Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming
+Languages, POPL ’12, ACM, New York, NY, USA, pp. 349–360, doi:10.1145/2103656.2103698.
+[16] John Launchbury & Amr Sabry (1997): Monadic State: Axiomatization and Type Safety. In: ICFP’97, pp.
+227–238, doi:10.1145/258948.258970.
+[17] Daan Leijen (2005): Extensible records with scoped labels. In: In: Proceedings of the 2005 Symposium on
+Trends in Functional Programming, pp. 297–312.
+[18] Daan Leijen (2012): Try Koka online. http://rise4fun.com/koka/tutorial and http://koka.codeplex.com.
+[19] Daan Leijen (2013): Koka: Programming with Row-Polymorphic Effect Types. Technical Report MSR-TR2013-79, Microsoft Research.
+[20] Daan Leijen (2014): Madoko: A Scholarly Markdown processor. http://madoko.codeplex.com.
+
+122
+
+Koka: Programming with Row-polymorphic Effect Types
+
+[21] Xavier Leroy (1993): Polymorphism by name for references and continuations. In: POPL ’93: Proc.
+of the 20th ACM SIGPLAN-SIGACT symposium on Principles of programming languages, pp. 220–231,
+doi:10.1145/158511.158632.
+[22] Mark Lillibridge (1999): Unchecked Exceptions Can Be Strictly More Powerful Than Call/CC.
+Order and Symbolic Computation 12(1), pp. 75–104, doi:10.1023/A:1010020917337.
+
+Higher-
+
+[23] Sam Lindley & James Cheney (2012): Row-based effect types for database integration. In: TLDI’12, pp.
+91–102, doi:10.1145/2103786.2103798.
+[24] J. M. Lucassen & D. K. Gifford (1988): Polymorphic effect systems.
+In:
+POPL ’88, pp. 47–57,
+doi:10.1145/73560.73564s.
+TLDI ’09: Pro[25] Daniel Marino & Todd Millstein (2009): A generic type-and-effect system.
+In:
+ceedings of the 4th international workshop on Types in language design and implementation, pp. 39–50,
+doi:10.1145/1481861.1481868.
+[26] Robin Milner (1978): A theory of type polymorphism in programming. Journal of Computer and System
+Sciences 17, pp. 248–375, doi:10.1016/0022-007890014-4.
+[27] David A. Naumann (2007): Observational purity and encapsulation. Theor. Comput. Sci. 376(3), pp.
+205–224, doi:10.1007/978-3-540-31984-9 15.
+[28] Hanne Riis Nielson, Flemming Nielson & Torben Amtoft (1997): Polymorphic Subtyping for Effect Analysis:
+The Static Semantics. In: Selected papers from the 5th LOMAPS Workshop on Analysis and Verification
+of Multiple-Agent Languages, pp. 141–171, doi:10.1007/3-540-62503-8 8.
+[29] François Pessaux & Xavier Leroy (1999): Type-based analysis of uncaught exceptions. In: POPL ’99, pp.
+276–290, doi:10.1145/292540.292565.
+[30] Simon L Peyton Jones & John Launchbury (1995): State in Haskell. Lisp and Symbolic Comp. 8(4), pp.
+293–341, doi:10.1007/BF01018827.
+[31] Didier Remy (1994): Programming Objects with ML-ART, an Extension to ML with Abstract and Record
+Types. In: TACS ’94: Proc. Int. Conf. on Theoretical Aspects of Computer Software, pp. 321–346,
+doi:10.1007/3-540-57887-0 102.
+[32] Didier Rémy (1994): Theoretical Aspects of Object-oriented Programming.
+chapter Type Inference
+for Records in Natural Extension of ML, MIT Press, Cambridge, MA, USA, pp. 67–95. Available
+at http://dl.acm.org/citation.cfm?id=186677.186689.
+[33] Lukas Rytz, Martin Odersky & Philipp Haller (2012): Lightweight Polymorphic Effects. In: Proceedings
+of the 26th European Conference on Object-Oriented Programming, ECOOP’12, Springer-Verlag, Berlin,
+Heidelberg, pp. 258–282, doi:10.1007/978-3-642-31057-7 13.
+[34] Martin Sulzmann (1997): Designing record systems. Technical Report YALEU/DCS/RR-1128, Yale University.
+[35] Martin Sulzmann (1998): Type systems for records revisited. Unpublished.
+[36] Jean-Pierre Talpin & Pierre Jouvelot (1994): The type and effect discipline.
+245–296, doi:10.1006/inco.1994.1046.
+
+Inf. Comput. 111(2), pp.
+
+[37] J.P. Talpin (1993): Theoretical and practical aspects of type and effect inference. Ph.D. thesis, Ecole des
+Mines de Paris and University Paris VI, Paris, France.
+[38] Ross Tate & Daan Leijen (2010): Convenient Explicit Effects using Type Inference with Subeffects. Technical
+Report MSR-TR-2010-80, Microsoft Research.
+
+Inf. Comput. 89(1), pp. 1–34,
+[39] Mads Tofte (1990): Type inference for polymorphic references.
+doi:10.1016/0890-5401(90)90018-D90018-D).
+[40] Mads Tofte & Lars Birkedal (1998): A region inference algorithm. ACM Trans. Program. Lang. Syst. 20(4),
+pp. 724–767, doi:10.1145/291891.291894.
+[41] Andrew P. Tolmach (1998): Optimizing ML Using a Hierarchy of Monadic Types. In: TIC ’98, pp. 97–115,
+doi:10.1007/BFb0055514.
+
+123
+[42] Philip Wadler & Peter Thiemann (2003): The marriage of effects and monads. ACM Trans. Comput. Logic
+4(1), pp. 1–32, doi:10.1145/601775.601776.
+[43] Mitchell Wand (1987): Complete Type Inference for Simple Objects. In: Proceedings of the 2nd. IEEE Symposium on Logic in Computer Science, pp. 37–44, doi:10.1109/LICS.1988.5111. Corrigendum in LICS’88,
+page 132.
+[44] Andrew K. Wright & Matthias Felleisen (1994): A syntactic approach to type soundness.
+115(1), pp. 38–94, doi:10.1006/inco.1994.1093.
+
+Inf. Comput.
+
+124
+
+( VAR )s
+
+Γ(x) = ∀α . τ
+Γ ⊢s x : [α 7→ τ ]τ | ε
+Γ ⊢s e1 : τ1 | hi
+
+( LET )s
+
+α 6∈ ftv(Γ)
+Γ, x : ∀α . τ1 ⊢s e2 : τ2 | ε
+Γ ⊢s let x = e1 in e2 : τ2 | ε
+
+Figure 7. Changed rules for the syntax directed system; Rule ( INST ) and ( GEN ) are removed, and all
+other rules are equivalent to the declarative system (Figure 3)
+
+Appendix
+A. Type inference
+As a first step toward type inference, we first present in a syntax directed version of our declarative type
+rules in Figure 7. For this system, the syntax tree completely determines the derivation tree. Effectively,
+we removed the ( INST ) and ( GEN ) rules, and always apply instantiation in the ( VAR ) rule, and always
+generalize at let-bindings. This technique is entirely standard [11, 12, 26] and we can show that the
+syntax directed system is sound and complete with respect to the declarative rules:
+Theorem 5. (Soundness of the syntax directed rules)
+When Γ ⊢s e : τ | ε then we also have Γ ⊢ e : τ | ε .
+Theorem 6. (Completeness of the syntax directed rules)
+When Γ ⊢ e : σ | ε then we also have Γ ⊢ e : τ | ε where σ can be instantiated to τ .
+Both proofs are by straightforward induction using standard techniques as described for example by
+Jones [12].
+
+A.1. The type inference algorithm
+Starting from the syntax directed rules, we can now give a the type inference algorithm for our effect
+system which is shown in Figure 8. Following Jones [12] we present the algorithm as natural inference
+rules of the form θ Γ ⊢ e : τ | ε where θ is a substitution, Γ the environment, and e, τ , and ε , the
+expression, its type, and its effect respectively. The rules can be read as an attribute grammar where θ ,
+τ , and ε are synthesised, and Γ and e inherited. An advantage is that this highlights the correspondence
+between the syntax directed rules and the inference algorithm.
+The algorithm uses unification written as τ1 ∼ τ2 : θ which unifies τ1 and τ2 with a most general
+substitution θ such that θ τ1 = θ τ2 . %The unification algorithm is standard and effects are unified using
+standard row unificiation allowing for duplicate label as described by Leijen [17]. The gen function
+generalizes a type with respect to an environment and is defined as:
+gen(Γ, τ ) = ∀(ftv(τ ) − ftv(Γ)). τ
+We can prove that the inference algorithm is sound and complete with respect to the syntax directed rules
+(and by Theorem 5 and 6 also sound and complete to the declarative rules):
+Theorem 7. (Soundness)
+If θ Γ ⊢i e : τ | ε then there exists a θ ′ such that θ Γ ⊢s e : τ ′ | ε ′ where θ ′ τ = τ ′ and θ ′ ε = ε ′ .
+
+125
+
+( VAR )i
+
+( LAM )i
+
+Γ(x) = ∀α . τ
+∅Γ ⊢i x : [α 7→ β ]τ | µ
+
+θ Γ, x : α ⊢i e : τ2 | ε2
+θ Γ ⊢i λ x. e : θ α → ε2 τ2 | µ
+θ1 Γ ⊢i e1 : τ1 | ε1
+
+( APP )i
+
+θ2 (θ1 Γ) ⊢i e2 : τ2 | ε2
+
+θ2 τ1 ∼ (τ2 → ε2 α ) : θ3 θ3 θ2 ε1 ∼ θ3 ε2 : θ4
+θ4 θ3 θ2 θ1 Γ ⊢i e1 e2 : θ4 θ3 α | θ4 θ3 ε2
+θ1 Γ ⊢i e1 : τ1 | ε1 ε1 ∼ hi : θ2
+σ = gen(θ2 θ1 Γ, θ2 τ1 )
+
+( LET )i
+
+( RUN )i
+
+θ3 (θ2 θ1 Γ, x : σ ) ⊢i e2 : τ | ε
+θ3 θ2 θ1 Γ ⊢i let x = e1 in e2 : τ | ε
+θ1 Γ ⊢i e : τ | ε ε ∼ hsthξ i | µ i : θ2
+θ2 ξ ∈ TypeVar θ2 ξ 6∈ ftv(θ2 θ1 Γ, θ2 τ , θ2 µ )
+θ2 θ1 Γ ⊢i run e : θ2 τ | θ2 µ
+θ1 Γ ⊢i e1 : τ1 | ε1 θ2 (θ1 Γ) ⊢i e2 : τ2 | ε2
+θ2 ε1 ∼ hexn | ε2 i : θ3
+
+( CATCH )i
+
+θ3 τ2 ∼ () → θ3 ε2 θ3 θ2 τ1 : θ4
+θ4 θ3 θ2 θ1 Γ ⊢ catch e1 e2 : θ4 θ3 τ2 | θ4 θ3 ε2
+
+Figure 8. Type and effect inference algorithm. Any type variables α , µ , ξ , and α are considered fresh.
+Theorem 8. (Completeness)
+If θ1 Γ ⊢s e : τ1 | ε1 then θ2 Γ ⊢i e : τ2 | ε2 and there exists a substitution θ such that θ1 ≈ θ θ2 , τ1 = θ τ2
+and ε1 = θ ε2 .
+Since the inference algorithm is basically just algorithm W [5] together with extra unifications for effect
+types, the proofs of soundness and completeness are entirely standard. The main extended lemma is for
+the soundness, completeness, and termination of the unification algorithm which now also unifies effect
+types.
+The unification algorithm is shown in Figure 9. The algorithm is an almost literal adaption of the
+unification algorithm for records with scoped labels as described by Leijen [17], and the proofs of soundness, completeness, and termination carry over directly.
+The first four rules are the standard Robinson unification rules with a slight modification to return
+only kind-preserving substitutions [7, 13]. The rule ( UNI - EFF ) unifies effect rows. The operation tl(ε ) is
+defined as:
+tl(hl1 , ..., ln | µ i) = µ
+tl(hl1 , ..., ln i)
+= hi
+As described in detail in [17], the check tl(ε1 ) 6∈ dom(θ )1 is subtle but necessary to guarantee termination
+of row unification. The final three rules unify an effect with a specific head. In particular, ε ≃ l | ε ′ : θ
+
+126
+
+( UNI - VAR )
+
+α ∼ α : []
+
+( UNI - VARL )
+
+α k ∼ τ k : [α 7→ τ ]
+
+( UNI - VARR )
+
+τ k ∼ α k : [α 7→ τ ]
+
+α 6∈ ftv(τ )
+α 6∈ ftv(τ )
+
+∀i ∈ 1..n.
+( UNI - CON )
+
+( UNI - EFF )
+
+θi−1 ...θ1 τi ∼ θi−1 ...θ1 ti : θi
+
+κ = (κ1 , ..., κn ) → κ ′
+κ
+cκ hτ1 1 , ..., τnκn i ∼ cκ ht1κ1 , ..., tnκn i : θn ...θ1
+ε2 ≃ l | ε3 : θ1 tl(ε1 ) 6∈ dom(θ1 )
+θ1 ε1 ∼ θ1 ε3 : θ2
+hl | ε1 i ∼ ε2 : θ2 θ1
+
+( EFF - HEAD )
+
+l ≡ l′ l ∼ l′ : θ
+hl′ | ε i ≃ l | ε : θ
+
+( EFF - SWAP )
+
+l 6≡ l′ ε ≃ l | ε ′ : θ
+hl′ | ε i ≃ l | hl | ε ′ i : θ
+
+( EFF - TAIL )
+
+fresh µ ′
+µ ≃ l | µ ′ : [µ 7→ hl | µ ′ i]
+
+Figure 9. Unification: τ ∼ τ ′ : θ unifies two types and returns a substitution θ . It uses effect unification
+ε ≃ l | ε ′ : θ which takes an effect ε and effect primitive l as input, and returns effect tail ε ′ and a
+substition θ .
+states that for a given effect row ε , we match it with a given effect constant l, and return an effect tail ε ′
+and substitution θ such that θ ε ≡ hθ l | θ ε ′ i. Each rule basically corresponds to the equivalence rules on
+effect rows (Figure 2).
+
+

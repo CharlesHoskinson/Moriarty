@@ -1,0 +1,1316 @@
+     Static Type Systems (Sometimes) have a Positive Impact on the
+     Usability of Undocumented Software: An Empirical Evaluation
+
+       Clemens Mayer, Stefan                    Romain Robbes, Éric Tanter                           Andreas Stefik
+            Hanenberg                                University of Chile,                     Southern Illinois University
+      University Duisburg-Essen,                 Computer Science Department,                       Edwardsville,
+  Institute for Computer Science and               Santiago de Chile, Chile                 Department of Computer Science,
+    Business Information Systems,                     rrobbes@dcc.uchile.cl                        Edwardsville, IL
+             Essen, Germany                           etanter@dcc.uchile.cl                           astek@siue.edu
+      clemens.mayer@stud.uni-due.de
+     stefan.hanenberg@icb.uni-due.de
+
+
+
+
+Abstract                                                           While a large number of programming languages with indus-
+Static and dynamic type systems (as well as more recently          trial relevance include a static type system (e.g., Java, C++,
+gradual type systems) are an important research topic in pro-      Haskell, or Scala), a number of programming languages—
+gramming language design. Although the study of such sys-          especially those used in web technologies—include a dy-
+tems plays a major role in research, relatively little is known    namic type system (such as Ruby, PHP, JavaScript, or
+about the impact of type systems on software development.          Smalltalk). Thus, a lingering question is whether one sys-
+Perhaps one of the more common arguments for static type           tem or another, either static or dynamic, has a larger benefit
+systems is that they require developers to annotate their code     for the humans that use them.
+with type names, which is thus claimed to improve the doc-             Although there is an ongoing debate about the pros and
+umentation of software. In contrast, one common argument           cons of static type systems where different authors strongly
+against static type systems is that they decrease flexibility,     argue for or against static type systems, it is rare that such ar-
+which may make them harder to use. While positions such            guments are backed by empirical observations. In contrast,
+as these, both for and against static type systems, have been      such claims are often backed by personal experience, specu-
+documented in the literature, there is little rigorous empir-      lation, or anecdote.
+ical evidence for or against either position. In this paper,           To help summarize the debate both for and against static
+we introduce a controlled experiment where 27 subjects per-        type systems, typical arguments against include reasoning
+formed programming tasks on an undocumented API with               such as:
+a static type system (which required type annotations) as           • Type systems are inflexible: not all valid programs can
+well as a dynamic type system (which does not). Our re-               be handled by a given type systems. As such program-
+sults show that for some types of tasks, programmers were             mers often use workarounds, such as type casts, to bypass
+afforded faster task completion times using a static type sys-        the limitations of the type system.
+tem, while for others, the opposite held. In this work, we
+                                                                    • For the same reason, type systems impede rapid proto-
+document the empirical evidence that led us to this conclu-
+sion and conduct an exploratory study to try and theorize             typing, where, for instance, an object passed as an argu-
+why.                                                                  ment may not comply with a given type, but will work in
+                                                                      practice if it implements an acceptable subset of the pro-
+Categories and Subject Descriptors D.3.3 [Programming                 tocol it should respond to. Inserting type annotations and
+Languages]: Language Constructs and Features                          making objects conform to the expected type distract the
+                                                                      programmer from the task at hand.
+General Terms Human Factors, Languages
+Keywords programming languages, type systems, empiri-              On the other hand, typical arguments in favor of static type
+cal research                                                       systems often include:
+                                                                    • Type systems improve the program structure. Type
+1.     Introduction                                                   systems help in the design of clear and well-structured
+For decades, type systems (cf. [4, 18]) have played an es-            programs. Logical errors can be detected by any compiler
+sential role in software education, research, and industry.           that enforces a type system. (see [1, p. 8]).
+ • Type systems act as a form of documentation. Quoting           liability for subjects using the language with the static type
+     Pierce: “A static type system provides the reader of code    checking. The programming languages used were artificially
+     with an implicit documentation. Because a static type        designed for the experiment.
+     system enforces type declarations for variables, methods         By using the programming languages ANSI C and K&R
+     parameters and return types, it implicitly increases the     C, Prechelt and Tichy studied the impact of static type check-
+     documentation factor by making the code speak for it-        ing on procedure arguments [21]; ANSI C is a language
+     self.” [18, p. 5]                                            which performs type checking on arguments of procedure
+                                                                  calls while K&R C does not. The experiment divided 34 sub-
+Interestingly, more recent programming languages such as
+                                                                  jects into four groups. Each group had to solve two program-
+Dart1 try to avoid this question by providing a gradual type
+                                                                  ming tasks, one using ANSI C and one using K&R C. The
+system (see [25]) which permits developers to use static and
+                                                                  groups differed with respect to the ordering of the tasks and
+dynamic typing in combination. While this approach appears
+                                                                  with respect to what task had to be fulfilled with what tech-
+to be a compromise at first glance, such a technique essen-
+                                                                  nique. While the experiment tested several hypotheses with
+tially pushes the decision onto developers themselves. While
+                                                                  slightly mixed results, it measured with respect to develop-
+developers using a gradual type system have the freedom to
+                                                                  ment time for one of the two programming tasks a signifi-
+choose the type system, they (still) suffer from the problem
+                                                                  cant impact of the programming language in use—for one
+of determining in what situations each type system is appro-
+                                                                  task subjects using the statically type checked ANSI C were
+priate.
+                                                                  faster in solving the programming task. For the other pro-
+    In order to address the question of pros and cons of static
+                                                                  gramming task, no significant difference was measured.
+and dynamic type systems, this paper focusses on the second
+                                                                      In a qualitative pilot-study on static type systems Daly et
+of the above mentioned arguments—the static type system’s
+                                                                  al. observed programmers who used a new type system for
+potential benefit in documentation. We present an empiri-
+                                                                  an existing language (a statically typed Ruby [6]). The au-
+cal study on 27 human subjects that we asked to perform
+                                                                  thors concluded from their work that the benefits of static
+five different programming tasks on an API which was not
+                                                                  typing could not be shown, however, the study did not in-
+initially known to the subjects and which was documented
+                                                                  clude quantitative analysis, making it difficult for other re-
+only via its source code (without any additional documenta-
+                                                                  search teams to replicate their findings at other institutions.
+tion such as comments, programming examples, handbooks,
+                                                                      Another study, which did not directly focus on static type
+etc.). While the expected outcome of this experiment was
+                                                                  systems compared seven different programming languages
+that the static type system has, at least, no negative impact
+                                                                  [19]. Although the focus was not explicitly on static or dy-
+on the usability of such APIs, our empirical observations re-
+                                                                  namic type systems, one finding was that programs writ-
+vealed that for three of the five tasks, static type systems
+                                                                  ten in scripting languages (Perl, Python, Rexx, or Tcl), took
+had a positive impact on development time–while for two
+                                                                  half— or less—time to write than equivalent programs writ-
+programming tasks, we found that dynamic type systems af-
+                                                                  ten in C, C++, or Java. However, it should be emphasized
+forded faster development times.
+                                                                  that this experiment had considerable methodological flaws,
+    We start this paper with a discussion of related work in
+                                                                  including: 1) the development times for the scripting lan-
+section 2. Then, section 3 describes the experimental design,
+                                                                  guages —as explicitly emphasized by the author— were not
+the programming tasks given to the subjects, the execution
+                                                                  directly measured on subjects (which was the case for the
+of the experiment, and the threats to its validity. Section 4
+                                                                  languages C, C++, and Java), 2) the subjects were permitted
+describes the results of the experiment. As the results we
+                                                                  to use tools of their choice (e.g., IDE, testing tools), and 3)
+observed did not conform to our initial expectations, we
+                                                                  the programs subjects wrote were not of equivalent length.
+performed exploratory studies that try to explain the result
+                                                                  As such, that study was not a controlled experiment and even
+of the experiment using further measurements (section 5).
+                                                                  it the results are ultimately correct is difficult to replicate.
+We discuss this work in section 6. Finally, we conclude the
+                                                                  Despite the potential methodological issues, Prechelt con-
+paper in section 7 and include additional empirical data in
+                                                                  cluded that humans writing in programming languages with
+an appendix.
+                                                                  a dynamic type system (the scripting languages) were af-
+                                                                  forded faster development times.
+2.     Related Work                                                   Our studies. The study presented here is part of a larger
+In an experiment in the late 1970s, Gannon was able to show       experiment series that analyzes the impact of static type
+a positive impact of static type systems [8]. Thirty-eight        systems on software development (see [12]). We performed
+subjects participated in a two-group experiment where each        four other experiments ([10, 15, 26, 27]).2
+group had to solve a programming task twice, with a stat-             The study by Hanenberg studied the impact of statically
+ically type checked language and a language without type          and dynamically typed programming languages to imple-
+checking. The study reveled an increase in programming re-        ment two programming tasks within approximately 27 hours
+1 See http://www.dartlang.org/                                    2 The work by Steinberg and Hanenberg is not yet published [26].
+[10]. Forty-nine students were divided in two groups, one          velopers in the two groups, the experimental design, and why
+solving programming tasks using a statically typed language        we chose that design. Finally, as all experiments have limi-
+and the other a dynamically typed language. Subjects us-           tations, we discuss the threats to validity.
+ing the dynamically typed programming language had a sig-
+nificant positive time benefit for a smaller task, while no        3.1     Hypotheses
+significant difference could be measured for a larger task.
+                                                                   Our experiment tests the belief that a static type system helps
+However, the experiment did not reveal a possible explana-
+                                                                   developers use an undocumented API. By “helping”, we
+tion for the benefit of the dynamically typed group for the
+                                                                   mean that a static type system either requires less effort in
+smaller task. The object-oriented programming languages
+                                                                   comparison to a dynamic type system in order to fulfill the
+being used were artificially designed for the experiment.
+                                                                   same programming tasks, or, with the same effort, that more
+    In a different experiment, Stuchlik and Hanenberg ana-
+                                                                   programming tasks can be fulfilled with the aid of static type
+lyzed to what extent type casts, which are a language feature
+                                                                   systems. The second perspective differs from the first one in
+required by languages with a static type system, influenced
+                                                                   that the effort is fixed, while it is variable in the first one.
+the development of simple programming tasks [27]. Twenty-
+                                                                   In our experiment, we decided to use development time as a
+one subjects divided into two groups, took part in a within-
+                                                                   variable, as it is easier to measure the time required to ful-
+subjects design—participants complete two tasks, once with
+                                                                   fill a certain task than determining how much work has been
+static typing and once with dynamic typing. It turned out that
+                                                                   accomplished within a given amount of time; Development
+type casts do influence the development time of rather trivial
+                                                                   time is a common measurement for effort in pure program-
+programming tasks in a negative way, while code longer than
+                                                                   ming experiments (see [8, 13, 19–21, 24, 28]).
+eleven lines of code showed no significant difference. The
+                                                                       Hence, the first hypothesis to be tested is:
+programming languages being used were Java (for the stati-
+cally typed language) and Groovy (where Groovy was only
+                                                                    • Null Hypothesis 1: The development time for complet-
+used as a dynamically typed Java without using Groovy’s
+additional language features).                                           ing a programming tasks in an undocumented API is
+    A further experiment performed by Steinberg and Hanen-               equivalent when using either a static type system or a dy-
+berg analyzed to what extent static type systems help to iden-           namic type system.
+tify and fix type errors as well as semantic errors in an appli-
+cation [26]. The study was based on 31 subjects (again based       Given that our first null hypothesis only takes into account
+on a two-group within-subject design). The result of the ex-       the design of an undocumented API as a whole, it is de-
+periment was that static type systems have a positive impact       sirable to formulate a second null hypothesis that potential
+on the time required to fix type errors (in comparison to the      confounding factors into account. For example, it seems rea-
+time for fixing equivalent no-such-method exceptions). With        sonable that given a larger undocumented API, static type
+respect to the time required to fix semantic errors, the exper-    information may help the user more than a similar task us-
+iment did not reveal any significant differences between the       ing a smaller API, where using the API may be more obvious
+statically and dynamically typed languages. Again, the pro-        because there are less classes or methods3 .
+gramming languages Java and Groovy were used.                         Accordingly, we formulate a second null hypothesis as
+    Finally, Kleinschmager et al. performed an experiment on       follows:
+33 subjects which combined repetitions of previous exper-           • Null Hypothesis 2: There is no difference in respect to
+iments (with Java and Groovy as languages) [15]. Among                   development time between static and dynamic type sys-
+other tested hypotheses, it was confirmed that fixing type er-           tems, despite the number and complexity of type decla-
+rors in a statically typed language is faster than correspond-           rations in an undocumented API.
+ing fixes in a dynamically typed language, while no differ-
+ences for fixing semantic errors was measured. As we see           Note that the second hypothesis only takes a different num-
+from our literature review, there is not yet an empirically        ber of classes and types into account but does not try to ex-
+rigorous consensus amongst the few studies we are aware of.        plain the relationship between the number of types and de-
+As such, further experiments—like this one—are needed.             velopment time. Finally, both hypotheses focus on the de-
+                                                                   velopment time of programming tasks. Hence, if either of
+                                                                   these hypotheses can be rejected through standard statistical
+3.   Experiment Description
+                                                                   inference techniques, we may gain insight into the relative
+We begin by stating the underlying hypotheses of our exper-        benefits or consequences of static and dynamic typing.
+iment and then discuss initial considerations when running
+such studies. After introducing issues such as which pro-          3 According to programming languages such as Java or C++ we assume a
+gramming languages, programming environments, and APIs             close connection between class hierarchy and type hierarchy. Furthermore,
+we used, we describe our programming tasks in detail. Then,        we assume here that the dynamically typed API does not contain any type
+we state our expectations about the performance of the de-         annotations.
+3.2     Initial considerations for the experiment                Method overloading. When the overloaded and overload-
+In order to build an experiment that tests the previously        ing methods have the same number of parameters, param-
+defined hypotheses, it was necessary to find:                    eter types must be explicit in order to distinguish between
+                                                                 the methods. Hence, if no static types are available, method
+ • Two comparable languages (with a static and a dynamic         overloading cannot be used. An alternative would have been
+      type system);                                              to use in the dynamically typed version methods with differ-
+ • An undocumented piece of software that should be used         ent names, where the caller of the method is responsible for
+      within the experiment;                                     choosing the right one. However, it was unclear whether this
+                                                                 alternative would introduce other experimental confounds,
+ • Appropriate programming tasks that should be fulfilled
+                                                                 as the two APIs would be different. Thus we decided to ig-
+      by the subjects; and                                       nore method overloading in the experiment.
+ • A reasonable experimental design.                                For the programming environment used by the subjects,
+                                                                 our intention was (again) to provide a comparable situation
+At the time the experiment was planned, we knew that volun-
+                                                                 for both Java and Groovy. While at first glance IDEs such as
+teers from the University of Duisburg-Essen, Germany, and
+                                                                 Eclipse provide tool support for Java as well as Groovy, Java
+the University of Chile would participate as subjects in the
+                                                                 tool support in Eclipse is much more mature than that of
+experiment. In order to obtain participation from these vol-
+                                                                 Groovy. Consequently, using Eclipse would probably have
+unteers, we agreed that that the experiment should last for
+                                                                 been an advantage for Java developers and would have con-
+no more than one day. Further, we estimated upfront that the
+                                                                 founded the measurements: the intention of the experiment
+number of subjects would be around thirty. Hence, the exper-
+                                                                 was to measure the impact of the language feature type sys-
+imental setup and the experimental design should take into
+                                                                 tem, not the maturity level of tool support. Hence, we de-
+account that the expected effect size should be measurable
+                                                                 cided to use a plain text editor, as has been done in previ-
+for a rather small sample size.
+                                                                 ous experiments [15, 26]). This custom editor permitted the
+                                                                 user to compile programs, run applications, and execute test
+3.3     Programming languages and environment
+                                                                 cases. This simple IDE also logged data for the experiment
+The broad goal for our experiment was to compare two dif-        such as when subjects were about to run their code, or when
+ferent languages—one with a static type system (which re-        they fulfilled a given programming task.
+quires type annotations in the code) and one with a dynamic
+type system (without any type annotations). In order to ad-      3.4   Experimental design—two groups within-subject
+dress the problem that different languages have different lan-         design
+guage features and that consequently differences in an ex-       The experiment was designed as a 2-group within-subject
+periment cannot be reduced to the factor type system, it is      design (see [13, 20, 28] for a more detailed introduction
+necessary to find two very similar languages.                    into such kinds of experiments) where the subjects were
+   According to previous experiments (see [26, 27]) we de-       randomly assigned to one of both groups. The groups should
+cided to use Java and Groovy [16]. While Groovy has a num-       be balanced with respect to the number of subjects, i.e. both
+ber of language features in addition to Java, it can also be     groups should have a comparable number of subjects. Each
+used as a “dynamically typed Java”: all type declarations of     group solved the programming tasks in both languages, i.e.
+variables, fields and parameters can be annotated with the       in Java as well as in Groovy. Both groups differ with respect
+keyword def (without referring to the corresponding nomi-        to the ordering of both languages: While the first group
+nal type). In this case, Groovy does not perform any static      (group A) solved all programming tasks in Groovy and then
+type checking on these elements but dynamically performs         solved all programming tasks in Java, the other group (group
+the type check at runtime. Consequently, a pure reduction of     B) did it the other way around. The main motivation for
+Groovy on the language features of Java permitted us to have     this kind of design is, that the problem of deviation among
+two similar languages which only differ with respect to the      different subjects is reduced (see section A.1 for a more
+type system.                                                     detailed discussion).
+   One further argument for using Java and Groovy was               Obviously, learning effects are a potential problem in ex-
+that the subjects already had some programming skills in         perimental designs that have subjects complete more than
+Java. Consequently, it was not necessary to perform any          one task. Once a programming task is solved using lan-
+exhaustive training for the subjects. This implies that we       guage A, it becomes easier to solve the same program-
+did not intent to introduce Groovy as a new programming          ming task with language B (if both languages are simi-
+language. Instead, we only introduced Groovy as “a Java          lar). Consequently, it seems obvious—at first—that a within-
+version where the declarations of variables, parameters, etc.    subject measurement, where each subject solves a program-
+only required the keyword def.”                                  ming task twice cannot lead to valid results. However, apart
+   To maximize the similarity of the two experimental set-       from the fact that this experimental design has been already
+tings, it was necessary to exclude another language feature:     successfully applied (see for example [27]), there are several
+valid statistical approaches for fairly analyzing data in such                         searching for the right types or reading source code in dif-
+studies. Here we just roughly discuss the design – a more                              ferent files, the source code should be large enough that a
+detailed description and discussion can be found in the ap-                            difference could be measured.
+pendix (section A.1).                                                                      Finally, we needed to take the previously described
+                                                                                       within-subject design into account. Since this design poten-
+  Accumulated Language and Learning Effect                                             tially suffers from learning effects, it is desirable to consider
+  (Groovy first)                                                                       some precautions against it. For example, we would gener-
+                Measured Difference (per subject)                                      ally expect that subjects using the API a second time would
+                                                                                       be better at doing so. As such, our statistical procedures must
+                                                     learning
+                                                                                       take this into account by conducting comparisons across first
+                       language                                                        time users of both static and dynamic typing, in addition to
+                                                                                       secondary use.
+                                                                         Development
+                                                                                           Structurally identical APIs. With these factors in mind,
+        Second                                                     First
+                                                                         duration      we provided two structurally identical APIs, where the sec-
+      measurement                                               measurement            ond one derived from the first by renaming classes, meth-
+  Abrogated Language and Learning Effect                                               ods, variables, etc. This was done in a manner that ensured
+  (Java first)          Measured Difference
+                                                                                       the two APIs, despite having the same complexity, seemed to
+                                     (per subject)                                     address two entirely different problems. We designed an API
+                                                                                       consisting of 35 classes, in four packages, having 1279 lines
+                     learning
+                                                                                       of code. One version of the API handled the implementation
+                                                                                       of UI tree views, the other version handled SQL queries (as
+                      language
+                                                                                       trees of SQL elements) and results. The tree view API was
+                                                                                       built first and from it we derived the SQL API.
+                                                                        Development
+                                                                        duration
+                                   First               Second                          3.6   Description of programming tasks
+                                measurement          measurement
+                                                                                       The programming tasks should directly reflect on the hy-
+                                                                                       potheses as introduced in section 3.1. In order to do so, we
+Figure 1. Impact of within-subject design on experiment                                decided to design programming tasks that differ with respect
+results (taken with adaptations from [27])                                             to whether the API is statically or dynamically typed (hy-
+                                                                                       pothesis 1). They also should differ with respect to the com-
+   Figure 1 illustrates the assumed effect on both groups                              plexity of type declarations needed in order to fulfill the pro-
+– the first measurement and then the second measurement                                gramming tasks (hypothesis 2).
+which includes the learning effect as well as the language                                 Task complexity. Since we are interested in the effect of
+effect. As the figure shows, the second measurement is still                           typing on APIs, we wish to measure the difference with re-
+able to reveal the effect of the language, if the learning ef-                         spect to typing and not the possible influence of type systems
+fect is smaller than the language effect (in the lower part of                         on different language constructs, or on the complexity of the
+Figure 1 the second measurement is still larger then the first                         code to write. While complexity measurements such as lines
+measurement). It is even acceptable if the learning effect is                          of code, Halstead, or cyclomatic complexity are often used
+similar to the language effect (which means that no differ-                            [7], we decided to use a different approach. In order to max-
+ence between the first and the second measurement is found                             imize the effect of using the API, and reduce the effect of
+for group B)– but the design fails, if the learning effect is                          the complexity of the programming task itself, we kept the
+larger than the language effect (see section A.1 for a more                            complexity of the code snippets subjects have to write are
+detailed discussion).                                                                  similar. The programs that use the APIs should only con-
+                                                                                       sists of single methods which do not make use of non-trivial
+3.5    Description of the APIs                                                         constructs such as loops or conditions. Instead, the intention
+API Design Considerations. Our aim was to provide two                                  was to use only assignments, variable reads, method calls
+versions of an undocumented API—one Java version and                                   and object creation operators. The complexity in the tasks
+one Groovy version—as similar as possible. The only dif-                               only stems from the number of types to identify and the re-
+ference should be that the pure Java version makes use of                              lationships between the tasks.
+static types while the Groovy version does not. Similarly,                                 Task completion. We instructed the subjects to move to
+we the API should be simple enough to understand how to                                the next task only when they successfully completed the cur-
+use it in a relatively small amount of time. However, the API                          rent task. For each task, we defined several tests that verify
+must not be so trivial that all subjects immediately finish the                        that the task has been indeed completed. These were Unit
+tasks (a ceiling effect). Since the time difference between                            Tests run, run each time the code snippet is compiled suc-
+static and dynamic type systems potentially depends on the                             cessfully. Only when all the tests passed were the subjects
+allowed to go to the next task. The subjects did not have ac-                3.6.3    Task 3 (medium, three classes to identify)
+cess to the tests.                                                           The third task required developers to create a transformer
+   Warm-up task. We included a simple warm-up task so                        of the tree view. A corresponding class Transformer was
+that the subjects would have time to familiarize themselves                  given within the API which performs such a transformation.
+with the development environment, the testing process to de-                 However, it was necessary to create first a graph from the tree
+termine correctness, and the Groovy programming language.                    view and pass it to the transformer. Then, a walker must be
+We asked that subjects solve three vary basic programming                    created and passed to the transformer. Finally, a start node
+tasks (e.g., summing a list of numbers). This task was not                   for the transformation (the tree’s root node) is provided; it
+included in the analysis and is not described below.                         needs to be extracted by converting it into a TreeViewNode
+   Task description. In the following section, we describe                   (by sending a corresponding message to the graph object).
+the programming tasks from the following perspectives: (1)                   Figure 3 illustrates a possible solution for the task. Alto-
+what the expected solution of the task is; (2) what the char-                gether, the types Graph, Walker and TreeViewNode needed
+acteristics of the programming tasks are; and (3) how many                   to be identified.
+unique types are required in order to fulfill the program-
+ming tasks. We show the solution from the first API—UI                       3.6.4    Task 4 (difficult, three classes to identify)
+tree views—the subsequent ones have similar solutions.
+                                                                             The fourth task required developers to add a new node
+3.6.1     Task 1 (easy, one class to identify)                               (with name sampletreenode) to a graph which can be ac-
+                                                                             complished by parameterizing an initializer correctly. The
+In the first programming task, developers were asked to re-                  problem with this task is that the design of the initial-
+turn an instance of a certain class (AbstractTreeFactory).                   izer object is not trivial. The initializer must be parame-
+In order to do so, they were told the name of the abstract su-               terized with instances of an IdentifiedSequence. This
+perclass, but not the name of the concrete subclass (where                   sequence contains a tree node identifier (the node’s name)
+only one such concrete subclass exists in the project).                      and a sequence of pairs consisting of an identifier and an
+    Hence, on both cases (dynamically and statically typed)                  IdentifiedSequence—each child of a tree node itself is
+it was necessary to identify one type (which corresponds to                  identified by a corresponding identifier. In that way, it is
+only one class AbstractTreeViewFactory) in the project.                      possible to parameterize the initializer already with a tree of
+The code consists of a single line, which returns the object                 identifiers.
+being created (see Figure 2).                                                    Again, three classes need to be identified: Identified-
+                                                                             Sequence, TreeNodeIdentifier, and Pair. Due to the
+3.6.2     Task 2 (easy, three classes to identify)
+                                                                             underlying recursive definition of the items, we suspected
+In the second programming task, developers were required                     this code to be rather difficult to understand (if no static type
+to create an initialized TreeView object with the name                       system directly reveals the underlying design of the API).
+sampletree. This object is created by invoking a method
+in the previously described factory. Additionally, an initial-               3.6.5    Task 5 (easy, six classes to identify)
+izer needed to be passed to the factory. This initializer itself             For the final task, a menu with a corresponding command
+required a Configuration object which contains the title                     should be created for the tree view. A command, represented
+of the tree (an instance of class Title); altogether, subjects               by a String, is passed to the method. It should be added to a
+had to identify Initializer, Configuration and Title.                        corresponding Command object (which needs to be created).
+                                                                             The command object needs to be passed to the menu. Further
+public s t a t i c AbstractTreeViewFactory task1 ( ) {                       objects (LayoutPolicy, BackgroundImage, Font) should
+  r e t u r n new T r e e V i e w F a c t o r y ( ) ;                        also be passed to the menu object in order to fully specify
+}
+                                                                             the command.
+p u b l i c s t a t i c TreeView t a s k 2 ( ) {                                The task required six classes to be identified: Menu,
+   AbstractTreeViewFactory stv ;                                             MenuItem, SingleCommand, LayoutPolicy, Background-
+   I n i t i a l i z e r i n i t = new I n i t i a l i z e r ( ) ;           Image, Font. We suspected that this task might be simpler
+   C o n f i g u r a t i o n c o n f = new C o n f i g u r a t i o n ( ) ;
+   T i t l e t = new T i t l e ( ) ;
+                                                                             than others, since the relations between the types is much
+   t . setName ( " s a m p l e t r e e " ) ;                                 more straightforward than the preceding task.
+   conf . s e t T i t l e ( t ) ;
+   i n i t . setConfig ( conf ) ;                                            3.7     Assumed Disadvantage of Dynamic Type Systems
+   s t v = new T r e e V i e w F a c t o r y ( i n i t ) ;
+   return s t v . c r e a t e T r e e ( ) ;                                  The programming tasks were designed in a way that we as-
+}                                                                            sumed that for all tasks (except task 1) the static type system
+                                                                             would show a measurable positive impact; we explain the
+Figure 2. Example solutions for programming tasks 1 & 2                      assumed reasons for this and the assumed behavior of devel-
+                                                                             opers in the following. We use “DT developers” to describe
+p u b l i c s t a t i c T r a n s f o r m e r <TreeViewNode >
+                                                                                              class mentioned in the task description is abstract. In both
+                              t a s k 3 ( TreeView t v ) {                                    cases, developers need to scan the code in order to find a
+   G r a p h F a c t o r y g f = new G r a p h F a c t o r y ( ) ;                            concrete class that implements the mentioned one. As such,
+   Graph <TreeViewNode , Edge <TreeViewNode >> g =                                            we expected no significant difference between the groups.
+       gf . createGraphFromTreeView ( tv ) ;
+   T r a n s f o r m e r <TreeViewNode > t =                                                  3.7.2   Task 2
+       new T r a n s f o r m e r <TreeViewNode > ( ) ;
+   t . setTransformableStructure (g );                                                        For programming task 2 we suppose that DT developers
+                                                                                              have a disadvantage in comparison to ST developers. We as-
+    Walker w = new Walker ( ) ;
+    t . s e t W a l k e r (w ) ;
+                                                                                              sumed that developers first will have to investigate the class
+    TreeViewNode s =                                                                          TreeViewFactory in order to determine how a new tree
+        g . getNodeFromContent ( t v . getRootNode ( ) ) ;                                    view can be created. DT developers then find a parameter
+    t . setStartNode ( s );                                                                   named init in the constructor (which is then passed to an
+    t . doTransformation ( ) ;
+    return t ;                                                                                instance variable named init). DT developers should need
+}                                                                                             additional time in order to determine that an Initializer
+                                                                                              instance is required here. Then, the type Initializer
+public s t a t i c void t a s k 4 ( I n i t i a l i z e r i n i t ) {                         needs to be understood. While the ST developers directly
+  IdentifiedSequence <TreeNodeIdentifier > z =
+      new I d e n t i f i e d S e q u e n c e < T r e e N o d e I d e n t i f i e r > ( ) ;   can see in the code that a type Configuration is required,
+  T r e e N o d e I d e n t i f i e r t = new T r e e N o d e I d e n t i f i e r ( ) ;       DT developers only see that there is a field named config.
+  t . setName ( " s a m p l e r o o t n o d e " ) ;                                           Again, DT developers might assume that the tree name
+                                                                                              should be assigned to config. Finally, while ST developers
+    Pair <TreeNodeIdentifier ,
+      IdentifiedSequence <                                                                    directly get the information that a Configuration object
+        T r e e N o d e I d e n t i f i e r >> p =                                            requires a Title object (which contains the String object
+      new P a i r < T r e e N o d e I d e n t i f i e r ,                                     representing the tree’s name), DT developers need to find it
+      IdentifiedSequence < TreeNodeIdentifier > >();
+                                                                                              out on their own—perhaps assuming that they can directly
+    p. setFirst ( t );                                                                        pass the String to the config object.
+    p . s e t S e c o n d ( new I d e n t i f i e d S e q u e n c e <
+            TreeNodeIdentifier >());                                                          3.7.3   Task 3
+    z . add ( p ) ;
+    i n i t . setItems ( z );
+                                                                                              Task 3 is slightly harder to solve than task 2. The main
+}                                                                                             difference lies in the way the API can be read. In task 2,
+                                                                                              it was possible to study a class in order to determine what
+Figure 3. Example solutions for programming tasks 3 & 4                                       needs to be done next. In task 3, DT developers only know
+                                                                                              that they need a Transformer object, but no TreeView is
+                                                                                              permitted as parameter. Here, developers need to detect that
+p u b l i c s t a t i c Menu t a s k 5 ( S t r i n g cmd ) {                                  a different class GraphFactory converts the tree view into a
+   Menu m = new Menu ( ) ;
+   MenuItem mi = new MenuItem ( ) ;
+                                                                                              graph which then can be passed to the transformer. The same
+   mi . s e t T i t l e ( " samplecommand " ) ;                                               is true for the start node, which needs to be returned from the
+   m. add ( mi ) ;                                                                            graph in order to be passed to the transformer. We assume
+   SingleCommand c c = new SingleCommand ( ) ;                                                that the relationships between these different tasks are harder
+   mi . setCmd ( c c ) ;
+   c c . setCommand ( cmd ) ;                                                                 to detect for DT developers, advantaging ST developers.
+   L a y o u t P o l i c y l = new L a y o u t P o l i c y ( ) ;
+   B a c k g r o u n d I m a g e bg = new B a c k g r o u n d I m a g e ( ) ;                 3.7.4   Task 4
+   F o n t f = new F o n t ( " A r i a l " , 1 2 , F o n t . S t y l e . DEFAULT ) ;          Task four is the hardest task for the DT developers. We think
+   m. s e t L a y o u t ( l ) ;
+   l . s e t B g I m a g e ( bg ) ;
+                                                                                              that developers easily become aware that the items need to
+   l . setFont ( f );                                                                         be set in the Initializer object. For the ST developers,
+   r e t u r n m;                                                                             the method directly reveals the required (generic) type which
+}                                                                                             guides developers to type IdentifiedSequence. From the
+     Figure 4. Example solution for programming tasks 5                                       types, ST developers see that a TreeNodeIdentifier is re-
+                                                                                              quired and that an object of type Pair needs to be added to
+                                                                                              the sequence. Hence, the static type system directly docu-
+those developers that use the dynamically typed API, and                                      ments the recursive definition of IdentifiedSequence. In
+“ST developers” for those using the statically typed API.                                     contrast, DT developers have to discover this either by read-
+                                                                                              ing the API’s source code or by interpreting the error mes-
+3.7.1      Task 1                                                                             sages when they used the wrong classes in their code. We
+For the first task, DT developers as well as ST developers                                    think that this is a very time consuming task and expect that
+have the same problem: they need to become aware that the                                     DT developers will require more than ST developers.
+3.7.5    Task 5                                                     3.10     Threats to validity
+We suspected that Task 5 would be less difficult to under-          As in any experiment, there is a number of threats to va-
+stand (no recursive type definition, etc.), even though it had      lidity. Most of the threats are in common with previous ex-
+the largest number of classes that have to be identified. We        periments [10, 27] (such as chosen subjects, background of
+assume that ST developers have an advantage over DT de-             subjects, etc.) and will not be discussed here.
+velopers due to the number of identified classes (and not, as           Internal Threat: Experimental Design. As already
+in task 4, the complexity of the type definitions).                 mentioned before, a general threat is that the underlying
+                                                                    design assumes that the (possible) main effect (the effect of
+                                                                    the type system) is larger than the possible learning effect
+3.8     Summary of the programming tasks                            in the within-subject measurement. If, however, the learning
+The programming tasks are trivial code, algorithmically             effect is very large, it potentially invalidates the main effect.
+speaking: no loops, conditions, or advanced language fea-               Internal Threat: Measurement. The chosen program-
+tures are used. This is intentional; instead the tasks construct    ming tasks largely depend on the underlying system. It might
+data structures. Each task requires the developer to identify       be the case that the underlying system is very simple so
+the classes to instantiate and to pass them to other classes.       that the effect “undocumented API” does not play any role.
+    However, the tasks have different levels of difficulty.         We tried to avoid this problem by using an implementation
+While tasks 1, 2, and 5, are relatively trivial programming         which is from our subjective point of view complex enough
+tasks, tasks 3 and 4 are slightly more complex. For task 3, the     – although we cannot argue exactly what “complex enough”
+conversion of some objects need to be understood and task           means. For example, we may have chosen tasks that are ei-
+4 requires the understanding of a recursive data structure.         ther too simple or too hard. While this is true, we have care-
+Both tasks make use of generic types in Java, but from our          fully documented the tasks we used so that other research
+point of view, task 4 is more complex, as the the recursive         groups can reproduce them, modify them, or at least com-
+data definition is directly documented by the generic types         pare them to future work.
+for ST developers. In sum, we designed our tasks such that              External Threat: Dynamically Typed API. The under-
+there was a variety of different complexity levels. In doing        lying system is created by creating a statically typed system
+so, we attempted to provide insight into how this character-        first and then by removing the type annotations (i.e. replac-
+istic might influence our goal of learning the pros and cons        ing the type annotations with the keyword def and by remov-
+of static and dynamic type systems.                                 ing interfaces and implements declarations). Consequently,
+                                                                    the system does not make use of any possible features of
+                                                                    dynamically typed languages. It could be possible that the
+3.9     Experiment Execution / Subjects                             existence of the dynamic type system would have a large im-
+                                                                    pact of the overall system’s architecture. From our point of
+We recruited 33 subjects for our experiment. All subjects
+                                                                    view, the dynamically type system still represents a reason-
+were (undergraduate as well as graduate) students from the
+                                                                    able design—we do not think that the dynamic type system
+the University of Duisburg Essen, Germany or the University
+                                                                    would have had any impact of the resulting structure.
+of Chile – all of the students were trained as part of their
+                                                                        External Threat: Artificiality of the tasks. At first
+studies in the programming language Java. Three subjects
+                                                                    glance, some tasks may seem to be intentionally complex, to
+did not complete the programming tasks and abandoned the
+                                                                    the point of being artificial. However, we have found similar
+experiment (two starting with Groovy first, one starting with
+                                                                    examples in the field. For instance, using the XML DOM
+Java first); their results were excluded from the analysis.
+                                                                    API to write a document to a file, one must instantiate a
+    Another subject was removed from the experiment, be-
+                                                                    DocumentBuilderFactory—catch various exceptions in
+cause after watching the measurements, it was revealed that
+                                                                    the process—, then create a Transformer (through a sec-
+the student spent a very large amount of time in reading
+                                                                    ond factory), and finally get a NodeList of elements of
+the complete source code while working on task 2 and then
+                                                                    interest wrapped inside a NodeSource that is passed to the
+solved the tasks 3 and 4 quickly – the subject confirmed in
+                                                                    Transformer. Similar tasks to ours may happen in the field;
+a following interview that he worked like that. We removed
+                                                                    we do not regard the tasks we designed as artificial.4
+the subject because we considered our measurement method
+(time until a programming task was completed) to be insuf-
+ficient in this situation. This is because it was not possible to   4.     Experiment Results
+determine how time should be now considered for the differ-         This section illustrates the analysis of the experiment data.
+ent tasks. For similar reasons, we removed two further sub-         In order to ease the reading of the paper, we decided to
+jects from the experiment, because they abandoned one task,         shift parts of the analysis to the appendix. This choice was
+switched then to another one and then came back to the orig-
+inal one. We finally considered 27 subject for the analysis –       4 The full example is available at:
+
+fifteen from Duisburg-Essen and twelve from Chile.                  http://docs.oracle.com/javaee/1.4/tutorial/doc/JAXPXSLT4.html
+made to focus on the most important parts of the analysis—         is a significant difference, it is necessary to apply appropriate
+which is otherwise quite systematic and long—and on the            statistical tests (see [9, 22] for an introduction).
+results themselves. In this section, we focus only on the time
+taken to solve the tasks. As the subjects did switch tasks         4.2    Repeated measures ANOVA
+only when they successfully passed a task, we do not need          We start our analysis by running two repeated measures
+to analyze the correctness of the tasks; the solutions are by      ANOVAs. The first was run on tasks 1-5 for the groups that
+definition correct. Subjects unable to complete some tasks         used static or dynamic typing for the first time. The sec-
+were discarded from the analysis (see section 3.9).                ond ANOVA compared the groups that had “switched” from
+   Structure of the results. We first give an overview of          static to dynamic, or vice versa, for tasks 1-5 again. This
+the results with descriptive statistics of the data (Section       analysis does not benefit from the within-subject measure-
+4.1). We then conduct a between-subject analysis, which            ment of each individual task; i.e., it cannot detect the effect
+concludes that the results are significantly influenced by the     of the static or dynamic type system on each subject for a
+tasks (Section 4.2). Given the variability of performance be-      given task. As explained above, this analysis is also sensi-
+tween subjects and tasks, the between-subject analysis does        ble to the variability of the performance between subjects; it
+not find a main effect of the type systems. This is however        can, however, detect differences in performance due to the
+the goal of the following within-subject analysis, which as-       tasks themselves. Figures 6 and 7 show the boxplots for the
+certains which language (and by extension type system) is          first—respectively second—round where we group the re-
+better performing on a task-by-task basis (Section 4.3). We        sults by the programming tasks.
+continue the analysis to conclude whether the number and               We perform a repeated measures ANOVA on program-
+complexity of the types to identify has a relationship with        ming tasks and programming language. This analysis con-
+the difference we observe between the tasks (Section 4.4).         siders programming task and programming language as in-
+We finally wrap up the results with a discussion motivating        dependent variables while we have the development times
+the need for a further exploratory analysis (Section 4.5).         as dependent variable. The different programming tasks are
+                                                                   considered within-subject, i.e. each individual’s difference
+4.1   Measurements and descriptive statistics                      in development times for different tasks is considered.
+We start with a high-level analysis of the measurements of
+task completion time. A first view on the boxplot (see Figure                          8000                                   Lang
+                                                                                                                              Groovy
+5) representing the measured data (see appendix A.2) seems                                                                    Java
+to support the following statements: while for task one, four
+and five there is a tendency that the Groovy solutions re-                             6000
+
+quired more time, task three (and to a certain extent, task
+two) required more time in Java.
+                                                                               Times   4000
+
+
+                 8000                                   Language
+                                                          Groovy
+                                                          Java                         2000
+
+
+                 6000
+
+                                                                                          0
+
+                                                                                              Task1   Task2   Task3   Task4   Task5
+         Times   4000                                                                                         Task
+
+
+                                                                   Figure 6. Boxplot for first round (no repeated measurement
+                 2000                                              of same tasks)
+
+                                                                      We first observe that, in both the first and the second
+                    0                                              round, the dependent variable programming time is differ-
+                        Task1   Task2   Task3   Task4     Task5    ent for the different programming tasks—the ANOVA re-
+                                        Task                       veals a significant impact of the factor programming task for
+Figure 5. Boxplot for all measured data (combined round 1          the first round (p<0.0015 , partial η 2 =.354) as well as for the
+and round 2) grouped by tasks                                      second round (p<0.001, partial η 2 =.396). An interesting ob-
+                                                                   servation here is, that the partial η 2 values are very similar
+                                                                   (which indicates that the impact of the task on the variance
+   However, the raw data, the descriptive statistics and the
+                                                                   of the corresponding development time is similar). As a first
+visual representation only give a rough overview of the mea-
+surements. For instance, the boxplot does not consider that        5 The Greenhouse-Geisser was applied since the sphericity test turned out
+
+each subject is measured twice. To understand whether there        to be significant with p<0.02.
+                 6000     Lang                                    ing to section 3.4 we then combine the results of the tasks
+                         Groovy                                   where one group reveals a significant difference while the
+                         Java
+                 5000                                             other one either shows the same or no significant difference.
+                                                                  In case both groups show contradicting differences for one
+                 4000                                             task, it is not possible to interpret the result for this task.
+                                                                      The complete analysis of the separate groups is in ap-
+         Times                                                    pendix A.3. The combination of the analyses shows a signif-
+                 3000
+
+                                                                  icant difference for each task. For no task, the significance
+                 2000
+                                                                  test revealed the same results, i.e., for no task did group A
+                                                                  have the same positive impact of one language as group B.
+                 1000
+                                                                  Additionally, no contradiction between the results appeared,
+                    0
+                                                                  i.e., for no task did one group have a different significant
+                        Task1     Task2   Task3   Task4   Task5
+                                                                  result than the other group.
+                                          Task                        Table 1 shows the results of the analysis for null hypothe-
+                                                                  sis 1—that development time for completing a programming
+Figure 7. Boxplot for second round (no repeated measure-          tasks in an undocumented API is equivalent when using ei-
+ment of same tasks)                                               ther a static or a dynamic type system—and the correspond-
+                                                                  ing p-values (see section A.3). For tasks 1, 4, and 5 we find
+conclusion, we can say that the individual task has a strong      a positive impact of Java; however, we find a positive impact
+influence on the development time; this finding is in accor-      of Groovy for tasks 2 and 3. Consequently, we reject the null
+dance with the existing literature [10, 21, 27].                  hypothesis in all cases, but for tasks 2 and 3, the dominating
+    A second observation is that there is a significant inter-    language is contrary to our expectations.
+action between the factor task and programming language
+(in the first round p<0.025, partial η 2 =.167; in the second      Task                 Task 1   Task 2   Task 3   Task 4   Task 5
+round p<0.001, partial η 2 =.195). This corresponds to our ex-     P-values
+pectations: the experimental design assumes that the impact         Group A              0.00     0.93     0.45     0.03     0.00
+                                                                    Group B              0.35     0.01     0.01     0.34     0.86
+of the type system is different for the different tasks, since     Dominating
+their complexity varies. With regard to the factor program-                              Java    Groovy   Groovy    Java     Java
+                                                                   language
+ming language, the first round did not reveal a significant
+impact (not even any tendency, since p>0.90!) while the sec-      Table 1. Experiment results for hypothesis 1 – Combination
+ond round reveals a close to significant difference (p<0.06).     of both analysis for both groups
+Consider what this means in plain English.
+    At first glance, it appears that we cannot reject our
+Null Hypothesis 1. Since no significant effect has been           4.4     Analysis of complexity: Null hypothesis 2
+demonstrated, it seems that the impact of the programming
+language—if any—is so small that it is hidden by the de-          Given the results from our task by task analysis, we fail to
+viation amongst tasks, developers, or any other confounds         reject our second Null hypothesis:
+we have not considered here. This is however a weakness            • For the “easy” tasks (task one, two, and five) we find that
+of this particular analysis, in cases—such as programming               the dynamic type system had a positive impact for task
+experiments—where the between-subject variability is high.              two, while it had a negative impact for tasks one and five.
+This is the case here: as shown in the appendix, the stan-              This contradicts our hypothesis that the number of types
+dard deviation of the task completion time is comparable to             to identify is the main factor, since task two, where the
+the median—a common occurrence in programming exper-                    dynamic type system prevailed, required to identify more
+iments. Hence, the between-subject analysis is not able to              types than task one, and less than task five.
+take into account the (possible) effect of the programming         • For tasks three and four—with the same number of types
+language on each individual; as argued in our experimen-
+                                                                        to be identified but with a different complexity—we ob-
+tal design, we go on in the analysis with a within-subject
+                                                                        served another result that contradicts our hypothesis,
+analysis.
+                                                                        since the dynamic type system prevailed in a task of
+4.3   Analysis of groups and tasks: Null hypothesis 1                   “medium” difficulty (and did not prevail in all the “easy”
+                                                                        tasks).
+We now study the tasks and the groups in isolation, and
+combine the results of the analyses afterwards. Such a sepa-      Consequently, a pure reduction of the programming tasks to
+rated analysis means that we study, for each task, the differ-    the number and the difficulty of the types to be identified
+ences between the Java and the Groovy development times           cannot be a main effect on the difference between static and
+for group A (Groovy first), and group B (Java first). Accord-     dynamic typing; there are clearly other factors at work.
+4.5   Discussion                                                     to spend more time on different class definitions in order to
+The results show that the chosen experimental design was             find out what types might be expected by the corresponding
+appropriate for the research question and the given task: the        API. A third—and related—data point is the number of file
+learning effect did compensate the main effect for the group         switches that occur during the session.
+starting with Java (no significant differences for task 1, 4            These data points are recorded by our IDE; we study
+and 5) but it did not lead to contradictory results (such as         them in turn. First, we analyze how often people built and
+one group showing positive effects for one language, while           ran the code. Second, we analyze the number of files that
+the other shows a positive effect for the other).                    were consulted for each task. Finally, we analyze how much
+    However, the study revealed unexpected results: While            developers have navigated between files.
+there was a significant positive impact of the static type              As we did previously, we shifted parts of the analysis to
+system for tasks one, four, and five, there was a significant        the appendix in order to ease the reading of the paper (see
+positive impact of the dynamic type system on tasks two and          appendix A.4, A.5, and A.6).
+three. This result is surprising in several ways.                    5.1   Number of Builds and Test Runs
+    First, it is unclear why there should be a significant differ-
+ence for task one: the task was only to instantiate a class—         The numbers of builds and test runs we count here is not
+no parameters needed to be sent, nor anything that seems to          only the number of test runs on code that compiles, but the
+be related to the question of type system seems to be rel-           number of times a developer pressed the start-button from
+evant here. The subjects (which were mainly familiar with            the IDE; this involved compiling and running the test cases.
+Java) could have been slightly surprised by seeing the key-          For statically typed solutions this test run also implies the
+word def in the code snippet. Following this argumentation           type check, which potentially fails. The potential difference
+leads to the conclusion that the Java solutions had a benefit        between such test runs could mean that people working on
+in comparison to the Groovy solutions, possibly due to the           the statically typed solutions gain more information about
+subjects being more accustomed to Java than Groovy, de-              the expected types than the people using the dynamically
+spite the presence of the warmup task.                               typed solutions. In contrast, the users of the dynamic type
+    We were not surprised to see a positive impact of Java in        system need to explore on their own which types are required
+tasks four and five: For task four, the static type system ex-       by the API, possibly leading to more run-time errors.
+plicitely documents the recursive type definition and gives in        Task             Task 1   Task 2   Task 3   Task 4   Task 5
+that way developers a benefit in comparison to the dynami-            P-Values
+cally typed version where this information was missing. For            Group A          0.23     0.70     0.03     0.01     0.81
+task five, a large set of types were necessary in order to ini-        Group B          0.23     0.03     0.78     0.48     0.68
+tialize the required Menu object. While developers having the         Less test runs      -     Groovy    Java     Java       -
+annotations of the static type system could directly see from
+the class definitions which objects needed to be instantiated,             Table 2. Wilcoxon tests for number of test runs
+developers with the dynamic type system need to find out on
+                                                                        We apply the same analysis as in the previous section by
+their own which classes possibly match.
+                                                                     studying the tasks and groups in separation (see appendix
+    However, tasks two and three revealed a completely dif-
+                                                                     A.4). The result is in Table 2, which shows the language
+ferent picture: in both cases the developers with the dynamic
+                                                                     which had less builds and test runs. While the result is
+type system were faster. Since our IDE gathers more infor-
+                                                                     similar to the comparison of the development times for tasks
+mation than the completion time of the tasks, we conducted
+                                                                     two and four, no significant difference was found for tasks
+an exploratory stury to better understand this result.
+                                                                     one and five. The result for task three is the opposite of the
+                                                                     development time analysis: although task three required less
+5.    Exploratory Study                                              test runs using Java, the development time was still higher.
+For some tasks the impact of the static or dynamic type                 At first glance, it seems that the number of test runs
+system is contrary to our intuitions; we investigated whether        do not provide an appropriate explanation for the measured
+this contrary effect might be explained by other factors.            development time; we will elaborate on this in the general
+   A possible influencing factor is the number of builds and         discussion.
+test runs that were performed during the implementation
+of each task. Assuming that people with the dynamically              5.2   Number of Watched Files
+typed solutions need to explore on their own what kind of            Next, we analyze the number of files being viewed by the
+objects are required by the API, they would require more             developer. The number of watched files might be an indi-
+compilations and test runs in order to situate themselves.           cator of the quantity of source code one has to read before
+   Another influencing factor is the number of files devel-          one solves the task. A reason for differences would be that
+opers were watching while working on a solution. People              developers using a dynamic type systems are more likely to
+working on the dynamically typed solutions probably have             look into sources which are not related to the current task. If
+one assumes that dynamically typed language do not directly            switches for the statically typed solutions; they require more
+guide developers to those types which are needed by the API,           file switches for task two and three. What’s even more inter-
+many different files are opened by the developer—the more              esting, the p-values for the different groups are quite similar.
+files are opened, the larger the number of files which are not             Hence, the number of file switches seem to be a plausible
+related to a given task.                                               indicator for the resulting development time. We will inves-
+    Performing a separate analysis for the tasks and the lan-          tigate the reasons for this in the discussion.
+guage (see appendix A.5) reveals the results which are sum-
+marized in Figure 3: for all tasks (with the exception of task         6.   Discussion
+two) the number of watched files is higher for the dynami-
+                                                                       We start with a summary of our findings in the main exper-
+cally typed solutions; for task two, it is the opposite.
+                                                                       iment and the exploratory analysis. Table 5 reports on all
+ Task                  Task 1     Task 2    Task 3   Task 4   Task 5   results of the measurements we investigated.
+ P-Values
+                                                                        Aspect                  Task 1   Task 2   Task 3   Task 4   Task 5
+  Group A                0.02      0.35      0.05     0.01     0.00
+  Group B                0.67      0.01      0.85     0.04     0.05     Less Development Time    Java    Groovy   Groovy    Java     Java
+                                                                        Less Builds/Runs          —      Groovy    Java     Java      —
+ Less watched files      Java     Groovy     Java     Java     Java
+                                                                        Less Files watched       Java    Groovy    Java     Java     Java
+                                                                        Less File switches       Java    Groovy   Groovy    Java     Java
+      Table 3. Wilcoxon tests for number of watched files
+                                                                        Our Expectations         —        Java     Java     Java     Java
+   Hence, it looks like that the number of watched files
+seems to provide similar results as the development time               Table 5. Summary of measurements we performed, and
+measurement, with the exception of task 3, where Groovy                our expectations before carrying out the experiment. Unex-
+users watched more files than Java users, despite taking less          pected results are shown in bold.
+time overall.
+                                                                           A priori expectations. Initially, we expected to see de-
+5.3     Number of File Switches                                        velopers using the static type system (Java users) perform
+The number of file switches determines how often a devel-              the tasks faster, with the exception of task one, where a neg-
+oper switches between different files; the first opening of a          ligible difference would be seen. Similarly, we expected sub-
+file is already considered as a file switch. If for a given task       jects using the static type sytem to hold an advantage for
+a developer has only one file switch, then this means that             tasks two to five, in all other metrics: number of builds and
+he has solved the tasked without switching to another file.            runs—indicator of ad-hoc explorations and trial-and-error;
+We can see the number of file switches as a measure of the             number of file switches—indicator of the amount of explo-
+amount of exploration that a developer has to perform in or-           ration; and number of files watched—indicator of quantity
+der to solve a task. The underlying assumption from the task           of code read to finish the task.
+design was that the use of the dynamically typed language                  Results. As shown above, we found some surprising re-
+would cause the developer to switch more often between dif-            sults: task 1 shows an unexpected advantage to Java; task 2,
+ferent files as he or she needs to consult more code in order          an unexpected and consistent advantage to Groovy; task 3,
+to decide which types are needed.                                      a time advantage to Groovy, reflected in file switches, but
+    The difference between the number of file switches and             not in build and runs and files watched. On the other hand,
+the (previously analyzed) number of watched files is, that in          task 4 yields consistently expected results, and task 5 yields
+the previous analysis each file that is opened more than once          expected results (except in builds and runs where there is
+is only counted as one watched file.                                   no clear advantage to Java). We continue with a task-based
+    Performing a separate analysis for the tasks and the lan-          discussion of the possible reasons for the results we observe.
+guage reveals the results shown in Table 4 (see appendix A.6               Task 1. We measured a positive effect of the static type
+for the details of the analysis).                                      system although one would expect that typing hardly plays
+                                                                       any role for such a simple task. A possible explantion would
+  Task            Task 1        Task 2     Task 3    Task 4   Task 5
+                                                                       be the background of the subjects, who all had experience
+  P-Values
+                                                                       with Java, but not with Groovy. We included a warm-up task
+   Group A             0.0       0.78       0.55      0.01     0.00
+   Group B            0.48       0.01       0.02      0.17     0.36
+                                                                       to alleviate this effect, but it still could be present.
+  Less switches       Java      Groovy     Groovy     Java     Java        Task 2. In all cases the results were better for the dynami-
+                                                                       cally typed solutions (time, build and runs, file switches, and
+      Table 4. Wilcoxon tests for number of file switches              files watched). This is even more surprising if one accepts
+                                                                       the argument put forward for task one—that the subjects had,
+   The result of this analysis directly corresponds to the             because of their background, some advantage in Java.
+analysis of the development times (again, see Table 1):                    A possible reason for the unexpected result is that the task
+For task one, four and five the developers require less file           is simple enough that types hinders more than they help.
+The design of the API—having an Initializer object                three. In task three, it might have been helpful to see that
+and additionally having a Configuration object which              an object of type Graph is required, but the additional type
+receives a string—may be intuitive; people can simply use         parameters may have reduced—even negated—the possible
+it correctly without committing any obvious error.                positive impact of the static type system.
+    In case this is not quite sufficient, the message-not-            In contrast, in task four, the recursive type definition is
+understood exception for the dynamically typed solutions          hard to understand without type information. Groovy users
+may easily guide developers to the correct class; the error       hence needed to read more files, more file switches, more
+specifies which message is not understood, hinting at the         builds and runs, and more time overall. According to our
+correct class. In contrast, the subjects using the statically     theory, the trial-and-error approach, appropriate for simple
+typed solution may be enticed to browse the classes they          types, clearly shows its limit for complex types.
+know they will use, in order to get more familiar with their          Task 5. Task five is also interesting in constrast to task
+API, even if the full API of these classes will not be used.      two. Task five required more types to be identified, but the
+    Hence, instead of trying to understand the class defini-      types to identify were of a similar complexity. Thus one
+tion in detail, trial-and-error seems like a reasonable way of    could conclude that the more types need to be found, the
+solving the task—and in simple cases, it may be efficient for     more the statically typed solution is advantageous; less file
+developers to behave that way, instead of consistently read-      browing is necessary, and less file switches as well. There
+ing class definitions.                                            are no differences in builds and runs, however. This could be
+    Task 3. Contrary to task two, Groovy developers indeed        due to the simplicity of the type definitions themselves (in
+watched more files than Java developers, even if they spent       comparison to task four).
+less time to solve the task. The Java developers also had less        Summary. Analyzing the tasks through the various met-
+build and runs, and less files watched.                           rics, we built a working theory of why we saw the results
+    This finding is consistent with the interpretation of task    we observed: The difference in task one could be due to the
+two: Java developers spend more time reading API classes          experience of the subjects with Java.
+but read less API classes. They read these files with more            For tasks two onwards, simple type definition may be eas-
+attention, covering more of the API than Groovy developers.       ier to understand through trial-and-error than through static
+In contrast, Groovy developers seem to “jump around the           typing. Static typing encourages subjects to consult the class
+system”, more frequently compiling and running the system,        definition that are mentioned, whereas the users of the dy-
+and browsing more files in the process (including files less      namic type system employ a more partial and less system-
+relevant to the task).                                            atic program comprehension process. This approach shows
+    Hence, it is possible that the same “trial and error”, and    its limits for more complex tasks, when more types, or more
+partial program comprehension approach that worked for            complex types are identified. These need more browing, file
+task 2 still works for task 3. We already see the limits of the   switches, and program runs (especially for complex type
+approach, as the “slow but deliberate” approach used in the       definitions), than the statically typed version.
+Java solutions ends up requiring less builds and runs—less            This is only a working theory; it needs to be confirmed
+runtime errors—, and less investigation of unrelated files.       by other controlled experiments, and qualitative and quanti-
+    The task may also be simple enough that subjects easily       tative program comprehension studies. Further, we are cur-
+know where to start: From the task definition, subjects were      rently not able to formulate this theory more precisely: Al-
+already aware that some kind of transformation is needed;         though we suspect that, for example, task two and four differ
+the initialization of the tranformer object, and the construc-    with respect to their complexity, and although we think that
+tion of the graph may be intuitive enough for the “trial and      the type system in task four documents better the design of
+error” approach to work.                                          the underlying classes, we cannot describe this in a way that
+    On the other hand, Java users may have been confused by       we could determine to what extent this documentation is bet-
+the presence of the generic types. Although they had the ben-     ter. Likewise, the apparent correlation between file switches
+efit that they can read directly from the Transformer’s class     and development time warrants further investigation.
+definition that a graph object is required, they possibly spent       However, this working theory is a first step towards for-
+more time on the definition of the generic types without a        mulating a theory that describes differences in developer per-
+significant benefit.                                              formance in statically and dynamically typed programs.
+    Task 4. The argument that complex types reveal more
+about the structure of the program, but are harder to interpret
+                                                                  7.   Conclusion
+would also explain the difference (pro Java) for task four.
+    Generic types were also required; while the generic type      This paper described an experiment comparing static and dy-
+definitions reveals an important characteristic—the recursive     namic type systems for programming tasks in an undocu-
+type definitions—which directly help to understand the de-        mented API. We gave 27 subjects five programming tasks
+sign of the underlying class. this was not the case in task       and found that the type systems had a significant impact on
+                                                                  the development time: for three of five tasks me measured a
+positive impact of the static type system, for two tasks we      “complexity of the required interaction between the devel-
+measured a positive impact of the dynamic type system.           oper and the API classes”.
+   Based on the previous discussion, our overall conclusions         Future work. While there is already some strong evi-
+for the use of static/dynamic type systems in undocumented       dence for our first two conclusions (as they agree with sev-
+APIs are the following:                                          eral previous experiments in the literature), we think that
+                                                                 much more research is required in order to give more ev-
+1. There is no simple answer to the static vs. dynamic           idence for the conclusions three and four. We plan to do
+   typing question: The question of whether or not static
+                                                                 so in subsequent studies. Rather than closing the issues, we
+   types are helpful for developers cannot be generally an-
+                                                                 see this experiment as starting point that opens a number of
+   swered without taking the programming tasks into ac-
+                                                                 questions for following experiments.
+   count. In fact, this is completely consistent with the            Our discussions (and even the original research question)
+   results of previous experiments, such as Prechelt and         were strongly related to the idea that the static type system
+   Tichy’s [21], or our own experiments[10, 27].                 has a positive impact on the documentation. In fact, this is
+2. The type system has an influence on the development           related to the kind of static type system as provided by pro-
+   time: The choice of the static or dynamic type system had     gramming languages—such as Java—where the type system
+   an influence on the development time for all program-         also implies the existence of corresponding type annotations
+   ming tasks in the experiment. Again, this is consistent       in the code.
+   with previous experiments (such as [11, 21, 27]).                 In a follow up experiment, we will study if the positive
+3. Dynamic type systems potentially reduce develop-              impact of the static type system, as shown in the program-
+   ment times for easier tasks: Although we are currently        ming tasks four and five, can also be achieved only with type
+   not aware of how to determine exactly what “easy” and         annotations in the code—without static type checks. This ex-
+   “hard” means, it seems that if a dynamic type systems         periment is currently planned and will be executed in the
+   has a positive impact, this is rather the case for easier     very near future. A related experiment would be to evaluate
+   tasks (which is consistent with the experiments described     the benefits of a statically typed language using type infer-
+   in [10, 27]). Although there was one counter example in       ence instead of annotations (such as Haskell or ML).
+   the experiment (task 1), we think that the result for this        Another question is to what extent the type system plays
+   task is rather a consequence of the chosen subjects’ low      a role if the API is well documented. A good documentation
+   familiarity with the dynamic language, Groovy (despite        may reduce the effect of the (static or dynamic) type system
+   the presence of a warmup task).                               on the developer performance. Works such as [14, 23] pro-
+                                                                 vide additional insights about other possible influencing fac-
+4. Static type systems reduce development times if
+                                                                 tors for the use of APIs, which might have a larger effect than
+  (a) the type annotations explicitely document design de-       the type system of the underlying programming language.
+      cisions, or                                                    Strong empirical evidence is needed to back the argu-
+                                                                 ments in favor of static or dynamic type systems. From that
+  (b) the number of classes in the programming tasks are         perspective, we consider this experiment as a valuable con-
+      relatively high.                                           tribution. We also think that much more experimentation is
+   We argued for a) based on the fourth programming task         needed in order to strengthen the evidence—the current state
+   (also in comparison to task two and three) and for b)         of experimentation in the area of programming languages,
+   based on the fifth programming task (in comparison to         and type systems in particular, is weak. We hope that more
+   taks two and three). However, we also showed that a           experiments and replications will be performed by the pro-
+   pure reduction of the number of classes is not valid (see     gramming language community at large.
+   section 4.4).
+                                                                 Acknowledgments
+Comparison to related work. The experiment by Klein-
+schmager et al. [15] should also be taken into account; there,   The authors would like to thank the volunteers from the
+for no single task a positive impact of the dynamic type sys-    University of Duisburg-Essen and from the University of
+tem could be shown. Comparing the tasks of the experiment        Chile that participated in the experiment.
+presented here and the one in [15], we think that (again) the
+difference lies in the complexity of the programming tasks.      References
+While the programming tasks here require to instantiate an        [1] B IRD , R., AND WADLER , P. An introduction to functional
+configure objects, the programming tasks in [15] required             programming. Prentice Hall International (UK) Ltd., Hert-
+more interactions between the objects. We think that it is            fordshire, UK, UK, 1988.
+necessary in future experiments not only to think about com-      [2] B ORTZ , J. Statistik: für Human- und Sozialwissenschaftler,
+plexity from the perspective of “number of unknown arte-              6., vollst. überarb. u. aktualisierte aufl. ed. Springer, Septem-
+facts that should be used” but also from the perspective of           ber 2005.
+ [3] B ROOKS , R. E. Studying programmer behavior experimen-           [19] P RECHELT, L. An empirical comparison of seven program-
+     tally: the problems of proper methodology. Commun. ACM 23              ming languages, ieee computer (33). Computer 33 (2000),
+     (April 1980), 207–213.                                                 23–29.
+ [4] B RUCE , K. B. Foundations of object-oriented languages:          [20] P RECHELT, L.      Kontrollierte Experimente in der Soft-
+     types and semantics. MIT Press, Cambridge, MA, USA, 2002.              waretechnik. Springer, Berlin, March 2001.
+ [5] C URTIS , B. Five paradigms in the psychology of program-         [21] P RECHELT, L., AND T ICHY, W. F. A controlled experiment
+     ming. In Handbook of Human-Computer Interaction, M. He-                to assess the benefits of procedure argument type checking.
+     lander, Ed. Elsevier (North-Holland), 1988, pp. 87–106.                IEEE Trans. Softw. Eng. 24, 4 (1998), 302–312.
+ [6] DALY, M. T., S AZAWAL , V., AND F OSTER , J. S. Work in           [22] R ICE , J. A. Mathematical Statistics and Data Analysis.
+     progress: an empirical study of static typing in ruby. Workshop        Duxbury Press, Apr. 2001.
+     on Evaluation and Usability of Programming Languages and          [23] ROBILLARD , M. P. What makes apis hard to learn? answers
+     Tools (PLATEAU),Orlando, Florida, October 2009 (2009).                 from developers. IEEE Software 26, 6 (2009), 27–34.
+ [7] F ENTON , N. E., AND P FLEEGER , S. L. Software Metrics:          [24] S HNEIDERMAN , B. Software Psychology: Human Factors
+     A Rigorous and Practical Approach. PWS Publishing Co.,                 in Computer and Information Systems. Winthrop Publishers,
+     Boston, MA, USA, 1998.                                                 August 1980.
+ [8] G ANNON , J. D. An experimental evaluation of data type           [25] S IEK , J. G., AND TAHA , W. Gradual typing for objects.
+     conventions. Commun. ACM 20, 8 (1977), 584–595.                        In ECOOP 2007 - Object-Oriented Programming, 21st Euro-
+                                                                            pean Conference, Berlin, Germany, July 30 - August 3, 2007,
+ [9] G RAVETTER , F., AND WALLNAU , L. Statistics for the Be-               Proceedings (2007), vol. 4609 of Lecture Notes in Computer
+     havioral Sciences. Cengage Learning, 2008.                             Science, Springer, pp. 2–27.
+[10] H ANENBERG , S. An experiment about static and dynamic            [26] S TEINBERG , M., AND H ANENBERG , S. What is the impact
+     type systems: Doubts about the positive impact of static type          of static type systems on debugging type errors and semantic
+     systems on development time. In Proceedings of the ACM                 errors? an empirical study of differences in debugging time us-
+     international conference on Object oriented programming                ing statically and dynamically typed languages - unpublished
+     systems languages and applications (New York, NY, USA,                 work in progress.
+     2010), OOPSLA ’10, ACM, pp. 22–35.
+                                                                       [27] S TUCHLIK , A., AND H ANENBERG , S. Static vs. dynamic
+[11] H ANENBERG , S. Faith, hope, and love: An essay on software            type systems: an empirical study about the relationship be-
+     science’s neglect of human factors. In to appear in Proceed-           tween type casts and development time. In Proceedings of
+     ings of Onward/SPLASH (October 2010).                                  the 7th symposium on Dynamic languages (Portland, Oregon,
+[12] H ANENBERG , S. A chronological experience report from                 USA, 2011), DLS ’11, ACM, pp. 97–106.
+     an initial experiment series on static type systems. In 2nd       [28] W OHLIN , C., RUNESON , P., H ÖST, M., O HLSSON , M. C.,
+     Workshop on Empirical Evaluation of Software Composition               R EGNELL , B., AND W ESSLÉN , A. Experimentation in soft-
+     Techniques (ESCOT) (Lancaster, UK, 2011).                              ware engineering: an introduction. Kluwer Academic Pub-
+[13] J URISTO , N., AND M ORENO , A. M. Basics of Software                  lishers, Norwell, MA, USA, 2000.
+     Engineering Experimentation. Springer, 2001.
+[14] K AWRYKOW, D., AND ROBILLARD , M. P. Improving                    A.    Appendix
+     api usage through automatic detection of redundant code.
+     In ASE 2009, 24th IEEE/ACM International Conference on            A.1    Experimental Design
+     Automated Software Engineering, Auckland, New Zealand,            A general question when designing an experiment is whether
+     November 16-20, 2009 (2009), IEEE Computer Society,               it should be done as a between-subject (without repeated
+     pp. 111–122.                                                      measurement) or a within-subject (with repeated measure-
+[15] K LEINSCHMAGER , S., H ANENBERG , S., ROBBES , R., TAN -          ment on each subject) experiment. The main reason for
+     TER , É., AND S TEFIK , A. Do static type system improve the      choosing a within-subject design is that programming tasks
+     maintainability of software systems? an empirical study. In       are typically quite complex. The subjects do not only have
+     Accepted for publication in: International Conference on Pro-     to manage the intellectual effort of the programming tasks,
+     gram Comprehension, ICPC’12 (Passau, German, 2012).               they must additionally be able to handle a development en-
+[16] KOENIG , D., G LOVER , A., K ING , P., L AFORGE , G., AND         vironment such as an editor, understand compiler or run-
+     S KEET, J. Groovy in Action. Manning Publications Co.,            time exceptions, etc. We are far from ideal situations, such
+     Greenwich, CT, USA, 2007.                                         as measuring reaction times to simple stimuli. As a con-
+[17] M C C ONNELL , S. What does 10x mean? Measuring varia-            sequence, programming tasks have a large deviation (see
+     tions in programmer productivity. In Making Software: What        for example [5, 17] for a more detailed discussion on this)
+     Really Works, and Why We Believe It, A. Oram and G. Wilson,       that potentiallys hide the main effect that should be stud-
+     Eds., O’Reilly Series. O’Reilly Media, 2010, pp. 567–575.         ied in the experiment. This does not happens because there
+[18] P IERCE , B. C. Types and programming languages. MIT              is no main effect; this happens because the individual dif-
+     Press, Cambridge, MA, USA, 2002.                                  ferences among subjects are much larger than the main ef-
+fect. Within-subject design help to overcome this problem                  Accumulated Language and Learning Effect
+(see [3])—although the potential problem of learning effects               (Groovy first) - Problem of Large Learning Effect
+                                                                                        Measured Difference (per subject)
+needs to be considered.
+    We assumed for the experiment a (positive) impact of the                                                      learning
+
+static type system on the measured results, but we also as-                        language
+
+sumed a positive impact of the learning effect. Consequently,
+                                                                                                                                              Development
+the repeated measurement for each subject contains both, the                   Second                                                   First
+                                                                                                                                              duration
+
+learning effect as well as the type system effect.                           measurement                                             measurement
+
+
+    Figure 1 in section 3.4 illustrates the implications of                Abrogated Language and Learning Effect
+                                                                           (Java first) - Problem of large Learning Effect
+the within-subject design – whose measurement implies the                                        Measured Difference (per subject)
+
+learning as well as the language effect – in more detail: the                                          learning
+upper and the lower part of the figure represents two (very
+similar) subjects in the two different groups. The figure con-                       language
+
+tains the first as well as the second measurement. For group                                                                                 Development
+one (Groovy first) this means that the first measurement is                                  Second                             First
+                                                                                                                                             duration
+
+
+the development time for the Groovy solution, while for the                                measurement                       measurement
+
+
+second group (Java first) the first measurement is the de-
+velopment time required for the Java solution. The second         Figure 8. Potential problem in the experimental design:
+measurement (and hence the difference between the first and       large learning effect
+the second measurement) represents the development time
+required for the second language. The second measurement
+also contains the learning effect, which in both cases reduces
+the development time of the first measurement.                    subjects who perform a programming tasks for the second
+    Under the assumption that the static type system reduces      time, are quicker in the second round – which is irrelevant
+the development time, the second measurement for a sub-           for the research question followed by the experiment.
+ject in the group starting with Groovy must be much smaller          Importantly, the design does not require the learning ef-
+than the first measurement, because learning effect as well       fect to be much smaller than the language effect. It is valid if
+as the language effect reduce the development time. Under         both effects have a comparable size. In such a situation, the
+the assumption that the learning effect is smaller than the       group with the accumulated effects will show (significant)
+language effect, the second measurement for a subject in the      differences between the first and the second measurement
+group starting with Java is higher than the first measurement.    while the group with the abrogated effects does not.
+Hence, if for each subject in the sample the first and the sec-
+ond measurements are similar to the ones shown in Figure
+                                                                  A.2   Measured Development Time and Descriptive
+1, it can be concluded that the development time using the
+                                                                        Statistics
+static type system in Java requires less time than the devel-
+opment time using the dynamic type system in Groovy.              Table 6 contains all measured data for all 27 subjects in
+    Keep in mind that the resulting analysis is performed on a    the experiment. In addition to the raw data we also include
+sample; it is not necessary that the assumptions hold for each    the differences for each subject and each task in the table
+subject in the sample, they should hold only in the average.      (Groovy times - Java times), i.e. a negative value means that
+    The experimental design would fail if the learning effect     the subject required more time using Java than using Groovy.
+is much larger than the effect of the type system. In such        Table 7 shows the descriptive statistics for the measure-
+a situation, the experiment would reveal for both groups a        ments. It turns out, that the standard deviation for the differ-
+significant decrease of development times. Figure 8 illus-        ent tasks is quite large (in most cases comparable to the me-
+trates this potential problem: In both cases the language ef-     dian) – a phenomenon that can be often found in program-
+fect is rather small in comparison to the learning effect, i.e.   ming experiments – which from our point of view strength-
+the learning effect dominates the language effect. Conse-         ens the experimental design based in a within-subject com-
+quently, for the subjects in both groups the second measure-      parison (see sections 3.4, A.1 and 3.10).
+ment would be lower than the first measurement. In such              For task one 19 subjects required more time for the
+a situation the experiment would not reveal anything with         Groovy solution than for the Java solution. For task two and
+respect to type systems – in both situations the second mea-      three, just 10 subjects required more time for the Groovy
+surement is lower than the first measurement. Because of the      solution, for task four 22 subjects required more time for the
+above mentioned large deviations, the differences between         Groovy solution, and finally 20 subjects required for task 5
+the first and the second measurements will probably not be        more time for Groovy than for Java. For task one, four and
+significant. Hence, it would only be possible to conclude that    five a majority required more time using the dynamic type
+                                                                  system while for task two and three it is the opposite.
+                      Task 1                            Task2                          Task3                         Task4                            Task5                         Sums
+
+No    Group   Java     Groovy            Di    Java     Groovy     Di        Java      Groovy     Di       Java    Groovy     Di          Java       Groovy     Di      Java     Groovy      Di
+  1     B     897      124         -773         793     1336        543       2362     1390        -972     3079     2225       -854     1113           941        -172    8244      6016       -2228
+  2     B     179       58         -121        1152      373       -779        817     1703         886     1307     2414       1107      949          1342         393    4404      5890        1486
+  3     B     175      944          769        2868     1210      -1658       2447     1271       -1176     1887     1834        -53     1669          1399        -270    9046      6658       -2388
+  4     B     196      110          -86        1451      644       -807       4823      607       -4216      899     1554        655     1148          1220          72    8517      4135       -4382
+  5     B      89       60          -29         596      691         95       2191      278       -1913     1877      824      -1053      605          1126         521    5358      2979       -2379
+  6     B     366      121         -245        2842     2708       -134       1348     1234        -114     1761     2942       1181     2296          1120       -1176    8613      8125        -488
+  7     B     122      139           17        1021      310       -711       2444      805       -1639      886     2942       2056      893           887          -6    5366      5083        -283
+  8     B      82       69          -13         454      633        179        845     1419         574     2817     3113        296      890           607        -283    5088      5841         753
+  9     A      86      448          362        2429     1977       -452       1108      924        -184     1054     2238       1184     1326          1484         158    6003      7071        1068
+ 10     A      58      228          170         348      492        144        634      518        -116      455     1671       1216      644          1025         381    2139      3934        1795
+ 11     A     105      144           39         461      345       -116        621      805         184      382     1144        762      532           548          16    2101      2986         885
+ 12     A      45      225          180        1380      951       -429       1134     1604         470      652     2625       1973      577          1774        1197    3788      7179        3391 x
+ 13     A      63      539          476         404      358        -46        917      477        -440      738     2473       1735      387          2705        2318    2509      6552        4043
+ 14     A      83      248          165         944     2190       1246        515     1247         732     1514     4359       2845      862          1652         790    3918      9696        5778
+ 15     A      62      177          115         374     1266        892        338      515         177      697     3714       3017      435           759         324    1906      6431        4525
+ 16     B     139      181           42         648      362       -286       1558      328       -1230     1557     4179       2622      988           615        -373    4890      5665         775
+ 17     B     904       76         -828        4644      437      -4207       4963     1378       -3585     5795     2663      -3132     1296          1078        -218   17602      5632      -11970
+ 18     B     483      730          247        4787      608      -4179       5747      768       -4979     2801     4614       1813     1238          5953        4715   15056     12673       -2383
+ 19     B     183      243           60        1673      683       -990       2344      500       -1844     1848     2012        164      709           812         103    6757      4250       -2507
+ 20     B     255      155         -100        2298     1449       -849       2398     1472        -926     2144     2649        505     1236          2142         906    8331      7867        -464
+ 21     A      44      144          100        1097     1775        678        225     1059         834      272     8042       7770      407          2955        2548    2045     13975       11930
+ 22     A     273     1195          922        1602      847       -755        527      866         339     1392     5185       3793     1170          2310        1140    4964     10403        5439
+ 23     A     107     6411         6304        4081      147      -3934       1088     1388         300     1001     1682        681      897          1596         699    7174     11224        4050
+ 24     A     169      190           21         408     1060        652       1040      936        -104     4107     1555      -2552      517           813         296    6241      4554       -1687
+ 25     A     234     1011          777        2449      665      -1784       2955     1564       -1391     1296     3558       2262     1235          2612        1377    8169      9410        1241
+ 26     A     288      610          322         789     1180        391       2015     6676        4661     1559     6341       4782      567          1387         820    5218     16194       10976
+ 27     A      75      216          141         473     1059        586       3534     2399       -1135     1292     3190       1898      645           735          90    6019      7599        1580
+
+
+Table 6. Development times for all 27 subjects; times in seconds, differences are Groovy times - Java times; Group A =
+Groovy first; Group B = Java first
+
+                        Task 1                                    Task2                                   Task3                                Task4                                Task5
+
+       No       Java            Groovy         Di        Java       Groovy           Di         Java      Groovy       Di           Java          Groovy        Di       Java     Groovy       Di
+      min      44,0       58,0            -828,0        348,0      147,0       -4207,0       225,0         278,0     -4979,0     272,0          824,0         -3132,0      387,0     548,0     -1176,0
+      max     904,0     6411,0            6304,0       4787,0     2708,0        1246,0      5747,0        6676,0      4661,0    5795,0         8042,0          7770,0     2296,0    5953,0      4715,0
+    mean      213,4      548,0             334,6       1572,8      953,9        -618,9      1886,6        1264,1      -622,5    1669,2         3027,5          1358,3      934,5    1540,6       606,1
+  median      139,0      190,0             100,0       1097,0      691,0        -286,0      1348,0        1059,0      -184,0    1392,0         2649,0          1184,0      893,0    1220,0       324,0
+ std. dev.    224,1     1212,8            1252,7       1314,5      634,6        1452,5      1473,2        1189,4      1834,0    1215,4         1622,4          2153,1      431,9    1106,5      1143,1
+
+
+                    Table 7. Descriptive statistics for development time (time in seconds for all but standard deviation)
+
+
+A.3     Within-Subject Analysis                                                                                  The significance tests confirm the previous impressions
+Figure 9 illustrates the boxplot for the within-subject mea-                                                 concerning differences for the five tasks. Because the data
+surement of group A (the group that started first with the                                                   is now based on a within-subject measurement, the Java and
+dynamically typed tasks). The differences to the between-                                                    Groovy development times should not be tested for normal-
+subject measurement from Figure 10 are obvious: tasks four                                                   ity separately. Instead, the differences should be checked
+and five reveal differences, task one and three show potential                                               (see [2]). Table 8 shows the results for the Shapiro-Wilk-test
+differences and task two probably does not reveal any differ-                                                in order to check the normality assumption, and the corre-
+ence in the development time of Groovy and Java. Further-                                                    sponding p-values for the Wilcoxon-test and t-test. For task
+more, the differences correspond to the expectations: in all                                                 1, 4 and 5, the differences are significant
+cases the median of the Groovy development times is larger                                                       Figure 10 is the boxplot for the group B. For task 1 and 2,
+than the median of the Java development times. As argued in                                                  there is a potential benefit for Groovy; for task 3, the Groovy
+section 3.4 this difference consists not only of the difference                                              benefit is obvious; for task 4 and 5, a potential advantage to
+between the type systems but also of the learning effect.                                                    Java. We perform the same analysis as before: we check the
+                                         8000
+                                                                                                          Language                A.4    Test Runs
+                                                                                                            Groovy
+
+                                                                      41
+                                                                                                            Java
+                                                                                                                                  Table 10 contains the descriptive statistics for the number
+
+
+
+
+         Development Time (in seconds)
+                                                10
+
+                                         6000
+                                                                                                                                  of test runs, and Figure 11 shows the boxplot. It seems as
+                                                                                                                                  if the boxplot (which does not take into account that each
+                                                                94                      123
+                                                                                                                                  subject is measured twice) already indicates that there is no
+                                         4000                               112
+                                                                                                                                  general tendency with respect to the number of test-runs:
+                                                                            110
+                                                                                                                                  for task one, three, and four there seems to be a tendency
+                                         2000                                                                                     that the number of test runs is higher for the dynamically
+                                                                                                                                  typed solutions. For task two and five it is unclear whether
+                                                                                                                                  there is a difference between the number of test runs for the
+                                            0
+                                                                                                                                  dynamically typed or the statically typed solutions.
+                                                 1          2          3           4            5
+                                                                     Task
+                                                                                                                                                          100                                             Language
+                                                                                                                                                                                                               Groovy
+Figure 9. Boxplot for the within-subject comparison of                                                                                                                                             210
+                                                                                                                                                                                                               Java
+
+Group A (Groovy first)                                                                                                                                     80
+                                                                                                                                                                                                         179
+                                                                                                                                                                50
+                                                                                                                                                                                            125
+                                                                                                                                                                                                                 261
+
+                                                                                                                                                           60                               135
+
+
+
+
+                                                                                                                                               TestRuns
+                                                                                                                                                                             77                                        222
+         Task                                         Task 1           Task 2                  Task 3         Task 4    Task 5                                                    58        126
+                                                                                                                                                                     6       71
+ Shapiro-Wilk p-value                                  0.00             0.01                    0.00           0.29      0.05                              40                                                          230
+     Applied test                                    Wilcoxon         Wilcoxon                Wilcoxon        t-Test   Wilcoxon
+       p-value                                         0.00             0.93                    0.45           0.03      0.00                                        9
+
+ dominating language                                   Java               -                       -            Java      Java                              20
+
+
+
+
+Table 8. Significance tests for the within-subject compari-                                                                                                 0
+
+son of Group A (Groovy first)                                                                                                                                   1        2              3           4             5
+                                                                                                                                                                                       Task
+
+
+                                                                                                                                                     Figure 11. Boxplot for test runs
+                                         5000                               30
+                                                                                                          Language
+                                                                       36
+                                                                                  115
+                                                                                                            Groovy
+                                                                                                            Java
+                                                                                                                                      Performing a repeated measures ANOVA on the test runs
+                                                                                                                                  reveals a first interesting characteristic. For the first round,
+
+
+
+
+         Development Time (in seconds)
+                                         4000
+
+                                                                                                                                  with p<.01 and η 2 =.142 there is a significant impact of the
+                                         3000
+                                                           84                                                                     programming tasks. However, the interaction between the
+                                                                                               130
+                                                                                                     58                           factor task and programming language is only close to sig-
+                                         2000                                                                                     nificant (p<.07 and η 2 =.092). Again, the factor program-
+                                                                                                                                  ming language is not significant (p>.99). This is similar to
+                                                68
+                                         1000
+                                                76
+                                                     10
+                                                     1
+                                                                                                                                  the results for the measured development time. However,
+                                                                                                                                  the second round reveals different results. Neither the fac-
+                                            0
+                                                                                                                                  tor programming task nor the interaction between task and
+                                                 1          2          3           4            5
+                                                                                                                                  programming language are significant (p=.101, respectively
+                                                                     Task
+                                                                                                                                  p=0.188). Instead, the factor programming language turns
+Figure 10. Boxplot for within-subject comparison of Group                                                                         out to be significant (p<.01, η 2 =.30). A non-parametric test
+B (Java first)                                                                                                                    shows significant differences for tasks 2, 3, and 4 (Table 11).
+                                                                                                                                   Group A (Groovy first)
+                                                                                                                                         Task       Task 1               Task 2               Task 3             Task 4      Task 5
+differences in measurements for normality, then we perform                                                                              p-value      0.23                 0.70                 0.03               0.01        0.81
+either the Wilcoxon-test or the t-test (Table 9).                                                                                    less test runs    -                    -                  Java               Java          -
+
+                                                                                                                                   Group B (Java first)
+         Task                                            Task 1       Task 2                  Task 3        Task 4      Task 5
+                                                                                                                                        p-value       0.23                0.03                    0.78             0.48       0.68
+ Shapiro-Wilk p-value                                     0.08         0.00                     0.43         0.60        0.00
+                                                                                                                                     less test runs     -                Groovy                     -                -          -
+     Applied test                                        t-Test      Wilcoxon                  t-Test       t-Test     Wilcoxon
+       p-value                                            0.35         0.01                     0.01         0.34        0.86
+ dominating language                                        -        Groovy                   Groovy           -           -            Table 11. Wilcoxon tests for number of test runs
+
+Table 9. Significance tests for the within-subject compari-                                                                       A.5    Watched Files
+son of Group B (Java first)
+                                                                                                                                  The repeated measures ANOVA on the number of watched
+                                                                                                                                  files reveals for the second round a significant factor of pro-
+                                                    Task 1                                   Task2                        Task3                        Task4                       Task5
+
+                                   No        Java        Groovy        Di         Java        Groovy     Di      Java     Groovy      Di     Java    Groovy     Di      Java     Groovy     Di
+                             min               1            1            0           4           2         -2        1        3           2       2        8         6        4        1         -3
+                             max              44           70           26          51          24        -27       66       57          -9      72       83        11       49       63         14
+                           mean             7.67        12.15         4.48       16.78       10.63      -6.15    12.33    20.81        8.48   15.67    25.89     10.22    12.48    11.48      -1.00
+                         median                4           10            6          11          10         -1        4       19          15      13       20         7       10        6         -4
+                        std. dev.           9.17        13.99         4.82       13.96        6.04      -7.92    18.14    14.64       -3.51   14.37    16.68      2.31     9.80    14.25       4.45
+
+
+                                                                       Table 10. Descriptive statistics for number of test runs
+
+
+gramming task (p=.0 and η 2 =.31), a significant interaction                                                                significant (p<.01 and η 2 =.157) and the factor group is close
+between the programming task and the group (p<.02 and                                                                       to significant (p<.06). The Wilcoxon-test on both groups is
+η 2 =.116) and non-significant factor group (p=.19). For the                                                                shown in Table 14.
+second round, the factor programming task is significant
+                                                                                                                                Group A (Groovy first)
+(p=.0 and η 2 =.367) the interaction is significant (p<.01 and                                                                    Task            Task 1             Task 2        Task 3      Task 4   Task 5
+η 2 =.176) as well as the factor group (p=.0 and η 2 =.35). The                                                                   p-value           0.0               0.78          0.55        0.01     0.00
+results of the Wilcoxon-test for both groups is in Table 12.                                                                      more switches Groovy                  -             -        Groovy   Groovy
+
+ Group A (Groovy first)                                                                                                         Group B (Java first)
+     Task     Task 1 Task 2                                           Task 3        Task 4              Task 5                    p-value            0.48                0.01       0.02         0.17    0.36
+    p-value    0.02     0.35                                           0.05          0.01                0.00                     more switches        -                 Java       Java           -       -
+   more files Groovy      -                                           Groovy        Groovy              Groovy
+                                                                                                                                     Table 14. Wilcoxon tests for number of file switches
+ Group B (Java first)
+    p-value      0.67                              0.01                0.85          0.04                0.05
+   more files      -                               Java                  -          Groovy              Groovy
+
+  Table 12. Wilcoxon tests for number of watched files
+
+                                                                                  Language
+                             400
+                                                                                    Groovy
+                                                                                    Java
+
+
+                             300
+
+
+
+
+             File Switches
+                             200
+
+
+
+
+                             100
+
+
+
+
+                               0
+
+                                        1           2             3          4           5
+                                                             Task
+
+
+            Figure 12. Boxplot for file switches
+
+A.6   File Switches
+Table 13 contains the descriptive statistics for the number
+of test runs, and Figure 12 shows the boxplot. The boxplot
+shows that the number of file switches is comparable to the
+development time.
+   The repeated measures ANOVA reveals for the first round
+a significant factor of programming task (p=.0 and η 2 =.36),
+significant interaction between the programming task and
+the group (p<.01 and η 2 =.173) and a non-significant fac-
+tor group (p>.75). For the second round, the factor program-
+ming task is significant (p=.0 and η 2 =.412) the interaction is
+                    Task 1                     Task2                        Task3                        Task4                       Task5
+
+     No      Java    Groovy     Di     Java    Groovy      Di      Java     Groovy      Di     Java     Groovy     Di     Java     Groovy     Di
+     min       1        1                26        1        -25       24       30           6      27        57        30      35        31        -4
+     max      29      202       173     366      162       -204      412      285        -127     444       375       -69     201       299        98
+   mean     9.67    23.63     13.96   90.33    52.96     -37.37   113.33    80.41      -32.93   91.59    156.37     64.78   71.74    102.07     30.33
+ median        8       11         3      73       43        -30       73       60         -13      71       156        85      64        91        27
+std. dev.   7.13    40.36     33.23   75.43    35.94     -39.49    93.14    65.10      -28.04   82.28     76.41     -5.86   32.81     60.69     27.88
+
+
+                              Table 13. Descriptive statistics for number of file switches
+

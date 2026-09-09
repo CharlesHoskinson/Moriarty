@@ -1,0 +1,1987 @@
+arXiv:1903.05879v2 [cs.PL] 11 Jun 2019
+
+1
+Simply RaTT
+A Fitch-style Modal Calculus for Reactive Programming Without
+Space Leaks
+PATRICK BAHR, IT University of Copenhagen
+CHRISTIAN ULDAL GRAULUND, IT University of Copenhagen
+RASMUS EJLERS MØGELBERG, IT University of Copenhagen
+Functional reactive programming (FRP) is a paradigm for programming with signals and events, allowing the
+user to describe reactive programs on a high level of abstraction. For this to make sense, an FRP language
+must ensure that all programs are causal, and can be implemented without introducing space leaks and time
+leaks. To this end, some FRP languages do not give direct access to signals, but just to signal functions.
+Recently, modal types have been suggested as an alternative approach to ensuring causality in FRP languages in the synchronous case, giving direct access to the signal and event abstractions. This paper presents
+Simply RaTT, a new modal calculus for reactive programming. Unlike prior calculi, Simply RaTT uses a Fitchstyle approach to modal types, which simpliﬁes the type system and makes programs more concise. Echoing
+a previous result by Krishnaswami for a diﬀerent language, we devise an operational semantics that safely
+executes Simply RaTT programs without space leaks.
+We also identify a source of time leaks present in other modal FRP languages: The unfolding of ﬁxed
+points in delayed computations. The Fitch-style presentation allows an easy way to rules out these leaks,
+which appears not to be possible in the more traditional dual context approach.
+CCS Concepts: •Software and its engineering → General programming languages; •Social and professional topics → History of programming languages;
+Additional Key Words and Phrases: Functional reactive programming, Modal types, Synchronous data ﬂow
+languages, Type systems
+ACM Reference format:
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg. 2018. Simply RaTT. Proc. ACM Program. Lang. 1, ICFP, Article 1 (January 2018), 28 pages.
+DOI:
+
+1
+
+INTRODUCTION
+
+Reactive programs are programs that engage in an ongoing dialogue with their environment, taking inputs and producing outputs, typically dependent on an internal state. Examples include GUIs,
+servers, and control software for components in cars, aircraft, and robots. These are traditionally
+implemented in imperative programming languages using often complex webs of components
+communicating through callbacks and shared state. As a consequence, reactive programming in
+imperative languages is error-prone and program behaviour diﬃcult to reason about. This is unfortunate since many of the most safety-critical programs in use today are reactive.
+The idea of Functional Reactive Programming (FRP) (Elliott and Hudak 1997) is to bring reactive
+programming into the functional paradigm by providing the programmer with abstractions for
+describing the dataﬂow between components in a simple and direct way. At the same time, this
+should give the usual beneﬁts of functional programming: Modular programming using higherorder functions, and simple equational reasoning. The abstractions provided by the early FRP
+2018. XXXX-XXXX/2018/1-ART1 $15.00
+DOI:
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:2
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+languages were signals and events: A signal of type A is a time-varying value of type A, and an
+event of type A is a value of type A appearing at some point in time. The notion of time is abstract,
+but can, depending on the application, be thought of as either discrete or continuous.
+For such high-level abstractions to make sense, the language designer must ensure that all programs can be executed in an eﬃcient way. A ﬁrst problem is ensuring causality, i.e., the property
+that the value of output signals at a given time only depends on the values read from input signals before or at that time. For example, implementing signals in the discrete time case simply
+as streams will break this abstraction, as there are many non-causal functions from streams to
+streams. Another issue is time leaks, i.e., the problem of programs exhibiting gradually slower
+response time, typically due to intermediate values being recomputed whenever output is needed.
+The related notion of space leaks is the problem of programs holding on to memory while continually allocating more until they eventually run out of memory.
+A good language for FRP should only allow programmers to write causal functions. On the other
+hand, in expressive programming languages some of the responsibility for avoiding the problems
+of space and time leaks must be left to the programmer. For example, if the language has linked
+lists, a programmer could write a function that stores all input in a list, leading to a space leak.
+We will refer to this as an explicit space leak, since it can be detected from the code. A good FRP
+language should avoid implicit space and time leaks, i.e., leaks that are caused by the language
+implementation, and so are out of the programmers control.
+Due to these concerns, newer libraries and languages for FRP do not give the programmer direct
+access to signal and event types. For example, Arrowised FRP (Nilsson et al. 2002) has a primitive
+notion of signal functions and provides combinators for combining these to construct dataﬂow
+networks statically, along with switching operators for dynamically changing these networks. This
+approach sacriﬁces some of the simplicity and ﬂexibility of the original suggestions for FRP, and
+the switching combinators have an ad hoc ﬂavour. Moreover, to the best of our knowledge, no
+strong guarantees concerning space or time leaks have been proved in this setting.
+
+1.1
+
+Modal FRP calculi
+
+Recently, a number of authors ((Jeﬀrey 2012, 2014; Jeltsch 2013; Krishnaswami 2013; Krishnaswami and Benton
+2011)) have suggested using modal types for functional reactive programming. These all work
+in the synchronous case of time being given by a global clock. With this assumption, the resulting languages can be thought of as extensions of synchronous dataﬂow languages such as
+Lustre (Caspi et al. 1987), and Lucid Synchrone (Pouzet 2006) with higher-order functions and
+operations for dynamically changing the dataﬂow network. This restricted setting covers many
+applications of FRP, and in this paper we shall restrict ourselves to that as well. Since continuous
+time can be simulated by discrete time (see Section 7), we will further restrict ourselves to discrete
+time.
+Under the assumption of a global discrete clock a signal is simply a stream. Causality is ensured
+by using a modal type operator to encode the notion of a time step in types: A value of type A
+is a computation returning a value of type A in the next time step. Using , one can describe the
+streams corresponding to signals as a type satisfying the type isomorphism Str(A)  A × Str(A),
+capturing the fact that the tail of the stream is only available in the next time step. Streams and
+programs processing streams can be deﬁned recursively using the guarded ﬁxed point combinator
+of Nakano (2000) taking input of type A → A and producing elements of type A as output.
+The most advanced programming language of this kind, in terms of operational semantics with
+run-time guarantees, is that of Krishnaswami (2013). This language extends the simply typed
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:3
+
+lambda calculus with two modal type operators: The mentioned above, as well as one for classifying stable, i.e., time-invariant data. Unlike the arrowised approach to FRP, Krishnaswami’s
+calculus gives direct access to streams as a data type which can even be nested to give streams of
+streams. Other important data types, such as events can be encoded using guarded recursive types,
+a concept also stemming from Nakano (2000).
+Krishnaswami’s calculus has an operational semantics for evaluating terms in each step of the
+global clock, and this can be extended to a step-by-step evaluation of streams. The language is
+total in the sense that each step evaluates to a value in ﬁnite time (a property often referred to
+as productivity). The operational semantics evaluates by storing delayed computations on a heap,
+and Krishnaswami shows that all heap data can be safely garbage collected after each evaluation
+step, eﬀectively guaranteeing the absence of (implicit) space leaks.
+1.2
+
+Fitch-style modal calculi
+
+Like most modal calculi, Krishnaswami’s calculus uses let-expressions to program with modalities. This aﬀects the programming style: Many programs consist of a long series of unpacking
+statements, essentially giving access to the values produced by delayed computations in the next
+time step, followed by relatively short expressions manipulating these. While this can be to a large
+extent be dealt with using syntactic sugar, it has a more fundamental problem, which is harder to
+deal with: It complicates equational reasoning about programs. This is an important issue, since
+simple equational reasoning is supposed to be one of the beneﬁts of functional programming. Our
+long-term goal is to design a dependent type theory for reactive programming in which programs
+have operational guarantees like the ones proved by Krishnaswami, and where program speciﬁcations can be expressed using dependent types. Introducing let-expressions in terms will lead to
+let-expressions also in the types, which is a severe complication of the type theory.
+Fitch-style modal calculi (Clouston 2018; Fitch 1952) are an alternative approach to modal types
+not using let-expressions. Instead, elements of modal types are constructed by abstracting tokens
+from the context, and modal operators are likewise eliminated by placing tokens in the context. Recent research in guarded dependent type theory (Bahr et al. 2017; Clouston et al. 2018) has shown
+the beneﬁt of this approach also for dependent types. Guarded dependent type theory is an extension of Martin-Löf type theory (Martin-Löf and Sambin 1984) with a delay modality reminiscent
+of the used in modal FRP together with Nakano’s ﬁxed point combinator also mentioned above.
+In this setting, the token used in the Fitch-style approach is thought of as a ’tick’ – evidence that
+time has passed – which can be used to open a delayed computation. Using ticks, one can prove
+properties of guarded recursive programs in a compellingly simple way.
+1.3 Simply RaTT
+In this paper, we present Simply Typed Reactive Type Theory (Simply RaTT) a simply typed calculus for reactive programming based on the Fitch-style approach to modal types. This is a ﬁrst
+step towards our goal of a dependently typed theory for reactive programming (RaTT), but already the simply typed version oﬀers several beneﬁts over existing approaches. Compared to
+Krishnaswami’s calculus, Simply RaTT has a signiﬁcantly simpler type system. The Fitch-style
+approach eliminates the need for the qualiﬁers ’now’, ’later’ and ’stable’ used in Krishnaswami’s
+calculus on variables and term judgements. Similar (but not quite the same) qualiﬁers can be derived from the position of variables relative to tokens in contexts in Simply RaTT. Moreover, we
+eliminate the need for allocation tokens, a technical tool used by Krishnaswami to control heap allocation. This, together with the Fitch-style typing rules makes programs shorter and (we believe)
+more readable than in Krishnaswami’s calculus.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:4
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+Compared to the standard approach to modal types, the Fitch-style used here is based on a shift
+in time-dependence. Whereas terms in Krishnaswami’s language can look into the future (since
+now-terms can depend on later-variables), terms in Simply RaTT can only look into the past (since
+later-expressions can depend on now-variables). This explains how let-expressions are eliminated:
+There is no need to refer to the values produced in the future by delayed computations. Instead,
+Simply RaTT allows delayed computations from the past to be run in the present.
+We prove a garbage collection result similar to that proved by Krishnaswami, and show how this
+can be used to construct a safe evaluation strategy for stream transducers written in our language.
+Input to stream transducers are treated as delayed computations, and therefore stored in a heap
+and garbage collected in the next time step.
+We also identify and eliminate a source of time leaks present in previous approaches. This is
+best illustrated by the following two implementations of the stream of natural numbers written in
+Haskell-notation:
+leakyNats = 0 :: map (+1) leakyNats
+
+nats = from 0
+where from n = n :: from (n + 1)
+
+On most machines (some compilers may use clever techniques to detect this problem), the evaluation of the nth element of leakyNats will not use the previously computed values, but instead
+compute it using n successive applications of suc, resulting in a time leak. This is indeed what happens on Krishnaswami’s machine and also the machine of this paper. Contrary to that, the nats
+example uses an internal state declared explicitly in the type of from to maintain a constant evaluation time for each step. In this paper we identify the source of the time leak to be the ability to
+unfold ﬁxed points in delayed computations, and use this to eliminate examples such as leakyNats
+in typing. The ability to control when unfolding of ﬁxed points are allowed relies crucially on the
+Fitch-style presentation, and it is very unclear whether a similar restriction can be added to the
+traditional dual context presentation.
+The calculus is illustrated through examples showing how to implement a small FRP library as
+well as how to simulate the most basic constructions of Lustre in Simply RaTT. Examples are also
+used to illustrate our abstract machine for evaluating streams and stream transducers.
+1.4
+
+Overview of paper
+
+The paper is organised as follows: Section 2 gives an overview of the language introducing the
+main concepts and their intuitions through examples. Section 3 deﬁnes the operational semantics, including the evaluation of stream transducers and states the garbage collection results for
+these. Section 4 shows how to implement a small library for reactive programming in Simply RaTT
+and Section 5 shows how to encode the most basic constructions of the synchronous dataﬂow language Lustre in Simply RaTT. Section 6 sketches the proof of our garbage collection result. Finally,
+Section 7 describes related work and Section 8 concludes and describes future work.
+2
+
+SIMPLY RATT
+
+This section gives an overview of the Simply RaTT language. The complete formal description of
+the syntax of the language, and in particular the typing rules, can be found in Figure 2, Figure 3,
+and Figure 4.
+The type system of Simply RaTT extends that of the simply typed lambda calculus with two
+modal type operators:
+for classifying delayed computations, and  for classifying stable computations, i.e., computations that can be performed safely at any time in the future. We start by
+describing the constructions for .
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:5
+
+Γ ⊢t :A
+
+Γ, ♯, ΓN ⊢ t : A
+
+Γ, ♯, ΓN , X, ΓL ⊢ t : A
+
+(a) Initial judgement
+
+(b) Now judgement
+
+(c) Later judgement
+
+Fig. 1. The diﬀerent type judgement forms. In these, the contexts Γ, ΓN and ΓL are assumed to be token-free
+and contain variables referred to as initial variables, now-variables and, later-variables.
+
+Data of type A are computations that produce data of type A in the next time step. To perform
+such a computation we must wait a time step, as represented in typing judgements by the addition
+of a X (pronounced ’tick’) in the context. More precisely, the typing rule for eliminating states
+that if Γ ⊢ t : A then Γ, X, Γ ′ ⊢ adv(t) : A. The X in the context of adv(t) should be thought of as
+separating variables in time: Those in Γ are available one time step before those in Γ ′. Since there
+can be at most one X in a context, we will refer to these times as ’now’ and ’later’. The typing
+assumption on t states that it has type A now, and the conclusion states that adv(t) has type A
+later. The constructor for A states that if Γ, X ⊢ t : A, i.e., if t has type A later, but depends only
+on variables available now, then it can be turned into a thunk delay(t) of type A now.
+Note that terms in ‘later’ judgements can refer to variables available now as well as later, but
+’now’ judgements can only refer to variables available now. This separates the Fitch-style approach
+of Simply RaTT from the traditional dual context approach to calculi with modalities, such as
+Krishnaswami’s [(2013)] modal calculus for reactive programming. The latter also has a distinction
+between ‘later’ and ‘now’, but the time dependencies work the opposite way: A later-judgement
+can only depend on later-variables, whereas a now-judgement can depend on both now- and latervariables.
+Data of type A are time invariant computations that produce data of type A. That is, these computations can be executed safely at any time in the future. To allow time invariant computations to
+depend on initial data, that is, data available before the reactive program starts executing, contexts
+may contain a ♯ separating the context into initial variables (those to the left of ♯) and temporal
+variables to the right of ♯. There can be at most one ♯ in a context, and Γ, X is only well-formed if
+there is a ♯ in Γ. Thus X separates the temporal variables into now and later. We refer collectively
+to X and ♯ as tokens. Judgements in a token-free context is referred to as an initial judgement. The
+three kinds of judgements are summarised in Figure 1.
+If Γ, ♯ ⊢ t : A then t does not depend on any temporal data, and can thus be thunked to a time
+invariant computation Γ ⊢ box(t) : A to be run at a later time. The typing rule for eliminating
+ states that if Γ ⊢ t : A and Γ ′ is token-free, then Γ, ♯, Γ ′ ⊢ unbox(t) : A. The restriction on Γ ′
+means that we can only run the time invariant computation t now, not later. This may seem to
+contradict the intuition for A given above, but is needed to rule out certain time leaks as we shall
+see below. Time invariant computations can still be run at arbitrary times in the future through
+the use of ﬁxed points.
+Both these modal type operators have restricted forms of applicative actions. In the case of ,
+if Γ ⊢ t : (A → B) and Γ ⊢ u : A then Γ ⊢ t ⊛ u : B is deﬁned as
+t ⊛ u = delay(adv(t)(adv(u))).
+Note that this is only well-typed if Γ contains ♯ but not X, since the subterm adv(f )(adv(x)) must
+be typed in context Γ, X, and by the restrictions mentioned above, this is only a well-formed
+context if ♯ is the only token in Γ. Similarly, if Γ ⊢ t : (A → B) and Γ ⊢ u : A then Γ ⊢ t  u : B
+is deﬁned as box(unbox(t)(unbox(u))). As above, this is only well-typed if Γ is token-free. Note
+that neither  nor are applicative functors in the sense of McBride and Paterson (2008), since
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:6
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+there are generally no maps A → A, nor A → A. The former would force computations to be
+stable, and the latter would push data into the future, which is generally unsafe as it can lead to
+space leaks. This restriction is enforced in the type theory in the variable introduction rule, which
+does not allow variables to be introduced over tokens. As a consequence, weakening of typing
+judgements with tokens is not admissible. An exception to this exists for the stable types, as we
+shall see below.
+2.1
+
+Fixed points
+
+Reactive programs can be deﬁned recursively using a ﬁxed point combinator. To ensure productivity and causality, the recursion variable must be a delayed computation. Precisely, the rule for
+ﬁxed points state that if Γ, ♯, x : A ⊢ t : A then Γ ⊢ fix x .t : A. These guarded recursive ﬁxed
+points can be used to program with guarded recursive types such as guarded recursive streams
+Str(A) satisfying the type isomorphism Str(A)  A × Str(A). Terms of this type compute to an
+element in A (the head) now, and a delayed computation of a tail. We will use :: as inﬁx notation
+for the right to left direction of the isomorphism, i.e., t ::u is a shorthand for into ht, ui. Given t : A
+and u : Str(A), we thus have t :: u : Str(A).
+As a simple example of a recursive deﬁnition, the stream of all zeros can be deﬁned as
+zeros = fix x . 0 :: x :  (Str (Nat))
+Note that ﬁxed points are time invariant in the sense of having a type of the form A. This is
+because they essentially need to call themselves in the future. For this reason, their deﬁnition
+cannot depend on temporal data, as can be seen from the typing rule, since x must be the only
+temporal variable in t.
+As a second example of a recursively deﬁned function, we deﬁne a map function for guarded
+streams. This should take a function A → B as input and a stream of type Str(A) and produce a
+stream of type Str(B). Since the input function will be called repeatedly at all future time steps it
+needs to be time-invariant, and can be deﬁned as:
+map :  (A → B) →  (Str A → Str B)
+map = λf . fix x . λas . unbox f (head as) :: x ⊛ tail as
+where head and tail compute the head and the tail of a stream, respectively.
+For readability we introduce the following syntax for deﬁning ﬁxed points such as map:
+map f ♯ (a :: as) = unbox f a :: map f ⊛ as
+This should be read as deﬁning the term to the left of ♯ as a ﬁxed point and in particular it allows
+us to write pattern matching in a simple way. When type checking the right-hand side of this
+deﬁnition, map f should be given type (Str(A) → Str(B)) because it represents the recursion
+variable. Any such deﬁnition can be translated syntactically to our core language in a straightforward manner: Pattern matching is translated to the corresponding elimination forms (πi , case,
+out) and the recursion syntax with ♯ is translated to fix.
+The type of guarded streams deﬁned above is just one example of a guarded recursive type. Simply RaTT includes a construction for general recursive types µα .A satisfying type isomorphisms
+of the form µα .A  A[ (µα .A)/α]. In these α can appear everywhere in A, including non-strictly
+positive and even negative positions. Another example of a guarded recursive type is that of events
+deﬁned as Ev(A) = µα .A+α, and thus satisfying Ev(A)  A+ Ev(A). Streams and events form the
+building blocks of functional reactive programming. Similarly to streams, one can deﬁne a map
+function for events using ﬁxed points as follows
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:7
+
+map :  (A → B) →  (Ev A → Ev B)
+map f ♯ (wait eva) = wait (map f ⊛ eva)
+map f ♯ (val a)
+= val (f a)
+where we write val t and wait t instead of into (in1 t) and into (in2 t), respectively.
+2.2 Stable types
+Next we show how to deﬁne the stream of natural numbers using a helper function mapping a
+natural number n to the stream (n, n + 1, n + 2, . . . ). A ﬁrst attempt at deﬁning from could look as
+follows:
+from :  (Nat → Str (Nat))
+from ♯ n = n :: from ⊛ delay (n + 1)
+is not well typed, because to type delay(n + 1) the term n + 1 must have type Nat later, but n is
+a now-variable. The number n therefore must be kept for the next time step, an operation that
+generally is unsafe, because general values can have references to temporal data. For example,
+a value of type Str(A) in our machine is a reference to the tail of a stream, which could be an
+input stream. Allowing such values to be kept for the next step can lead the machine to store input
+data indeﬁnitely, causing space leaks. Similarly, values of function types can contain references
+to time dependent data in closures and should therefore not be kept. On the other hand, a value
+of type natural numbers cannot contain such references and so can safely be kept for the next
+time step. We say that Nat is a stable type, and a grammar for these stable types is given in
+Figure 3. Data of stable type can be kept one time step using the construction progress which
+allows a now-judgement of the form Γ ⊢ t : A to be transformed to a later judgement of the form
+Γ, X, Γ ′ ⊢ progress t : A if Γ contains a ♯ and no X and if A is stable. In our operational semantics,
+progress t evaluates by evaluating t to a value now pushing the result to the future. Postponing the
+evaluation of t would be unsafe, since terms of stable types, unlike values of stable types, can refer
+to temporal data. Similarly, promote can be used to make stable initial data available in temporal
+judgements.
+We introduce the constructions ⊙, deﬁned as t ⊙ u = delay(adv(t)(progress u)), and , deﬁned
+as t  u = box(unbox(t)(promote u)), with derived typing rules
+Γ ⊢t :
+
+(A → B)
+
+Γ ⊢u :A
+Γ ⊢t ⊙u :
+
+Γ ⊢ t : (A → B)
+
+Γ, X ⊢
+
+A stable
+
+Γ, ♯ ⊢
+
+A stable
+
+B
+
+Γ ⊢u :A
+Γ ⊢ t  u : B
+
+Using this, from and nats can be deﬁned as follows
+from :  (Nat → Str Nat)
+from ♯ n = n :: from ⊙ (n + 1)
+
+nats =  (Str Nat)
+nats = from  0
+
+Many programming languages would also allow nats to be deﬁned directly as ﬁxed point as
+leakyNats = 0 :: map (+1) leakyNats. In Simply RaTT, however, such a deﬁnition would not be
+well typed, because the term map(box(+1)) of type (Str(Nat) → Str(Nat)) would have to be
+unboxed in a context with a X in order to type a term like
+leakyNats ♯ = 0 :: delay(unbox(map(box(+1)))) ⊛ leakyNats
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:8
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+and this is not allowed according to the typing rule for unbox. We believe such a deﬁnition should
+be ruled out because it leads to time leaks as explained in the introduction. This indeed happens
+on the machined described in Section 3 as well as the machine of Krishnaswami (2013).
+The time leak in the leakyNats example above happens because the ﬁxed point deﬁnition of map
+is unfolded in a delayed term, allowing the term to be evaluated to grow for each iteration. In the
+nats example, on the other hand, the recursive deﬁnition uses a state, namely the input to from,
+to avoid repeating computations. Moreover, this state usage is essentially declared in the type of
+from.
+For similar reasons, the scary const example of Krishnaswami (2013) in which all data from an
+input stream is kept indeﬁnitely by explicitly storing it in a stream of streams cannot be typed in
+Simply RaTT. An implementation of scary const in Simply RaTT would require an explicit state
+that stores all previous elements from the input stream. That could be achieved by extending the
+language to include a list type List A, and deﬁning that List A is stable if A is. The fact that the
+memory usage of scary const is unbounded is then reﬂected by the fact that the state of type List A
+that is needed for scary const is unbounded in size.
+Note that we make crucial use of the Fitch-style presentation to rule out leakyNats. In the more
+traditional dual context approach of Krishnaswami (2013), it does not seem possible to have a similar restriction on unfolding of ﬁxed points. The diﬀerence is that Simply RaTT “remembers” when
+we are under a delay whereas that information is lost in the system by Krishnaswami (2013). In
+the example of leakyNats, the leak stems from the call of map in the tail, which in Krishnaswami’s
+system is typed as a regular now judgement, and thus cannot be prevented.
+2.3 Function types
+The operational semantics of Simply RaTT uses a heap for delayed computations as well as input
+streams. The operation delay(t) stores the computation t on the heap and adv retrieves a delayed
+computation from the heap and evaluates it. In this sense, delay and adv can be understood as
+computational eﬀects.
+Our main result (Theorem 6.3) states that delayed computations and input data on the heap can
+be safely garbage collected after each computation step. This result relies crucially on the property
+that open terms typed in now-judgements cannot retrieve delayed computations from the heap.
+One reason for this is that such terms can not contain adv unless under delay. To maintain this
+invariant also for function calls, function types A → B are restricted to functions with no retrieve
+eﬀects. For this reason, functions may not be constructed in a later-judgement. Later-variables
+can still be used for case-expressions, and so are included in Simply RaTT. The language could be
+extended with an extra function type with read eﬀects, constructed by abstracting later-variables
+in later-judgements, but we found no use for this in our examples.
+For example, we can deﬁne a function reading an input stream and returning a stream of functions as follows
+f :  (Str Nat → Str (Nat → Nat))
+f = map (box (λn . λx . n + x))
+and apply streams of functions as follows
+strApp :  (Str (A → B) → Str A → Str B)
+strApp ♯ (f :: fs) (a :: as) = f a :: strApp ⊛ fs ⊛ as
+On the other hand, allowing lambda abstraction of later-variables would type the following
+(rather contrived) stream deﬁnition leaky, which breaks the safety of the garbage collection strategy:
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:9
+
+Types A, B ::= A | 1 | Nat | A × B | A + B | A → B | A | A | µα .A
+Values v, w ::= hi | n̄ | λx .t | hv, wi | ini v | box t | into v | fix x .t | l
+Terms s, t ::= hi | n̄ | λx .t | hs, ti | ini t | box t | into t | fix x .t | l | x | t 1 t 2 | t 1 + t 2 | adv t
+| delay t | case t of in1 x .t 1 ; in2 x .t 2 | unbox t | progress t | promote t | out t
+Fig. 2. Syntax.
+
+Well-formed types Θ ⊢ A : type
+Θ ⊢ A : type
+
+α ∈Θ
+Θ ⊢ α : type
+
+Θ ⊢ 1 : type
+
+Θ ⊢ A : type
+
+Θ ⊢ B : type
+
+Θ ⊢ Nat : type
+Θ ⊢ A : type
+
+Θ ⊢ A + B : type
+
+Θ ⊢ A × B : type
+Θ ⊢ B : type
+
+∅⊢
+
+Θ⊢
+
+Θ ⊢ A : type
+
+Θ, α ⊢ A : type
+
+Θ ⊢ A : type
+
+Θ ⊢ µα .A : type
+
+⊢ A : type
+
+Γ⊢
+
+token-free(Γ)
+
+Γ⊢
+
+Nat stable
+
+tick-free(Γ)
+
+Γ, ♯ ⊢
+
+Γ, x : A ⊢
+
+A stable
+
+A : type
+
+Γ⊢
+♯∈Γ
+
+Γ, X ⊢
+
+Stable types A stable
+A stable
+B stable
+1 stable
+
+Θ ⊢ A : type
+
+Θ ⊢ A → B : type
+
+Well-formed contexts
+Γ⊢
+
+Θ ⊢ B : type
+
+A stable
+
+A × B stable
+
+B stable
+
+A + B stable
+
+Fig. 3. Context and type formation rules for Simply RaTT.
+
+leaky ′ :  ((1 → Bool) → Str Bool)
+leaky ′ ♯ p = true :: delay (adv (if (p hi) then leaky ′ else leaky ′ )
+(λx . head (adv leaky ′ (λy . true))))
+leaky :  (Str Bool)
+leaky = box (unbox leaky (λx . true))
+In particular, in the deﬁnition of leaky ′ we use adv on the recursive call of leaky ′ inside a function.
+The problem here is that the function body only gets evaluated when applied to an argument.
+However, this application happens too late – at a time where the recursive call to leaky ′ has already
+been garbage collected (cf. Section 3.4).
+3
+
+OPERATIONAL SEMANTICS
+
+Following the idea of Krishnaswami (2013), we devise an operational semantics for Simply RaTT
+that is free of space leaks by construction. To this end, the operational semantics is deﬁned in
+terms of a machine that has access to a store consisting of up to two separate heaps: A ‘now’
+heap η N from which we can retrieve delayed computations, and a ‘later’ heap η L where we can
+store computations that should be performed in the next time step. Once the machine advances
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:10
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+Γ, x : A, Γ ′ ⊢
+
+token-free(Γ ′)
+′
+
+Γ, x : A, Γ ⊢ x : A
+Γ, x : A ⊢ t : B
+
+Γ⊢
+
+n∈N
+
+Γ ⊢ hi : 1
+
+Γ ⊢ n̄ : Nat
+
+Γ ⊢ t : A1 × A2
+
+i ∈ {1, 2}
+
+Γ ⊢ ht, t ′ i : A × B
+Γ ⊢ t : Ai
+
+Γ ⊢ πi t : Ai
+Γ, x : Ai ⊢ ti : B
+
+i ∈ {1, 2}
+
+Γ ⊢ ini t : A1 + A2
+
+Γ ⊢ t : A1 + A2
+
+i ∈ {1, 2}
+
+Γ, X ⊢ t : A
+
+Γ ⊢ case t of in1 x .t 1 ; in2 x .t 2 : B
+Γ⊢t :
+
+A
+
+Γ, X, Γ ′ ⊢
+
+Γ, ♯, Γ ⊢ unbox t : A
+A stable
+
+Γ ⊢ box t : A
+Γ, ♯, Γ ′ ⊢
+
+Γ⊢t :A
+
+′
+
+A
+
+Γ, ♯ ⊢ t : A
+
+′
+
+Γ, X, Γ ⊢ adv t : A
+Γ, X, Γ ′ ⊢
+
+Γ ⊢ delay t :
+token-free(Γ ′)
+
+Γ ⊢ t : A
+
+′
+
+Γ ⊢t :A
+
+Γ ⊢ t′ : B
+
+Γ⊢t :A
+
+Γ ⊢ t t′ : B
+
+Γ ⊢ λx .t : A → B
+
+Γ ⊢ t : Nat
+
+Γ ⊢ s + t : Nat
+
+Γ ⊢ t′ : A
+
+Γ⊢t :A→B
+
+tick-free(Γ)
+
+Γ ⊢ s : Nat
+
+A stable
+
+′
+
+Γ, ♯, Γ ⊢ promote t : A
+
+Γ, X, Γ ⊢ progress t : A
+Γ ⊢ t : A[ (µα .A)/α]
+
+Γ ⊢ t : µα .A
+
+Γ ⊢ into t : µα .A
+
+Γ ⊢ out t : A[ (µα .A)/α]
+
+Γ, ♯, x :
+
+A⊢t :A
+
+Γ ⊢ fix x .t : A
+
+Fig. 4. Typing rules of Simply RaTT.
+
+to the next time step, it will delete the ‘now’ heap η N and the ‘later’ heap η L will become the new
+‘now’ heap. Thus the problem of proving the absence of space leaks is reduced to the problem of
+soundness, i.e., that well-typed programs never get stuck.
+3.1
+
+Term Semantics
+
+The operational semantics of terms is presented in Figure 5. Given a term t together with a store
+σ , we write ht; σ i ⇓ hv; σ ′i to denote that the machine evaluates t in the context of σ to a value
+v and produces an updated store σ ′. Importantly, a store σ can take on three diﬀerent forms: It
+may contain no heap, written σ = ⊥; it may consist of one heap η L , written σ = ♯η L ; or it may
+consist of two heaps η N and η L , written σ = ♯η N Xη L . These diﬀerent forms of stores enforce
+eﬀective restrictions on when the machine is allowed to store or retrieve delayed computations.
+If σ = ⊥, then computations may neither be stored nor retrieved. If σ = ♯η L , then computations
+may be stored in η L to be retrieved in the next time step. And if σ = ♯η N Xη L , computations may
+be stored in η L as well as retrieved from η N . Heaps themselves are simply ﬁnite mappings from
+heap locations to terms.
+Given a store σ that is not ⊥, i.e., it is either of the form ♯η L or ♯η N Xη L , the machine can store
+delayed computations on the ‘later’ heap η L . To this end, we use the notation later(σ ) to refer
+to η L , and given l < dom (η L ), we write σ , l 7→ t for the store ♯(η L , l 7→ t) or ♯η N X(η L , l 7→ t),
+respectively. In turn, η L , l 7→ t denotes the heap obtained by extending η L with a new mapping
+l 7→ t. To allocate a fresh heap locations, we assume a function alloc (·) that takes a store σ , ⊥
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:11
+ht; σ i ⇓ hu; σ ′ i
+
+ht ′ ; σ ′i ⇓ hu ′ ; σ ′′ i
+
+hht, t ′ i ; σ i ⇓ hhu, u ′ i ; σ ′′ i
+
+hv; σ i ⇓ hv; σ i
+ht; σ i ⇓ hhv 1, v 2 i ; σ ′i
+
+ht; σ i ⇓ hv; σ ′i
+
+i ∈ {1, 2}
+′
+
+i ∈ {1, 2}
+
+hini (t); σ i ⇓ hini (v); σ ′i
+
+hπi (t); σ i ⇓ hvi ; σ i
+ht; σ i ⇓ hini (u); σ ′i
+
+hti [v/x]; σ ′i ⇓ hui ; σ ′′i
+
+i ∈ {1, 2}
+′′
+
+hcase t of in1 x .t 1 ; in2 x .t 2 ; σ i ⇓ hui ; σ i
+ht; σ i ⇓ hλx .s; σ ′i
+
+ht ′ ; σ ′i ⇓ hv; σ ′′i
+
+hs[v/x]; σ ′′i ⇓ hv ′; σ ′′′ i
+
+ht t ′ ; σ i ⇓ hv ′; σ ′′′ i
+ht; σ i ⇓ hm; σ ′i
+
+ht ′ ; σ ′i ⇓ hn; σ ′′ i
+
+′
+
+ht + t ; σ i ⇓ m + n; σ
+ht; ♯η N i ⇓ l; ♯η ′N
+
+σ ,⊥
+
+′′
+
+hdelay t; σ i ⇓ hl; σ , l 7→ ti
+
+η ′N (l); ♯η ′N Xη L ⇓ hv; σ ′i
+
+ht; ⊥i ⇓ hv; ⊥i
+
+′
+
+hadv t; ♯η N Xη L i ⇓ hv; σ i
+ht; ♯η N i ⇓ v; ♯η ′N
+hprogress t; ♯η N Xη L i ⇓
+
+l = alloc (σ )
+
+hpromote t; σ i ⇓ hv; σ i
+ht; ⊥i ⇓ hbox t ′ ; ⊥i
+
+v; ♯η ′N Xη L
+
+ht ′ ; σ i ⇓ hv; σ ′i
+
+σ ,⊥
+
+′
+
+hunbox t; σ i ⇓ hv; σ i
+
+ht; σ i ⇓ hv; σ ′i
+
+ht; σ i ⇓ hintov; σ ′i
+
+hinto t; σ i ⇓ hinto v; σ ′i
+
+hout t; σ i ⇓ hv; σ ′i
+
+ht; ⊥i ⇓ hfix x .t ′ ; ⊥i
+
+σ ,⊥
+
+ht ′ [l/x]; σ , l 7→ unbox(fix x .t ′ )i ⇓ hv; σ ′i
+
+σ ,⊥
+
+l = alloc (σ )
+
+′
+
+hunbox t; σ i ⇓ hv; σ i
+Fig. 5. Big-step operational semantics.
+
+ht; ♯ηXi ⇓ hv :: l; ♯η N Xη L i
+v
+
+ht; ηi =⇒ hadv l; η L i
+
+ht; ♯η, l ∗ 7→ v :: l ∗ Xl ∗ 7→ hii ⇓ hv ′ :: l; ♯η N Xη L , l ∗ 7→ hii
+v/v ′
+
+ht; ηi =⇒ hadv l; η L i
+
+Fig. 6. Small-step operational semantics for stream unfolding and stream processing.
+
+and returns a heap location l such that l < dom (later(σ )). That is, given l = alloc (σ ), we can form
+the new store σ , l 7→ t without overwriting any mappings that are present in σ .
+As the notation suggests, there is a close correspondence between the shape of a context Γ
+and the shape of a store σ . Terms typable in an initial judgement (cf. Figure 1) can be executed
+safely with a store ⊥ – they need not store nor retrieve delayed computations. Terms typable in
+a now judgement can be executed safely with a store ♯η L or ♯η N Xη L – they may store delayed
+computations in η L , but need not retrieve delayed computations. And ﬁnally, terms typable in a
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:12
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+later judgement can be executed safely in a store of the form ♯η N Xη L – they may retrieve delayed
+computations from η N .
+This intuition of the capabilities of the diﬀerent stores can be observed directly in the semantics
+for delay and adv: For delay t to evaluate, the machine expects a store that is not ⊥, i.e., a store
+♯η L or ♯η N Xη L . Then the machine allocates a fresh heap location l in the heap η L and stores t in it.
+This corresponds to the fact that delay t can only be typed in a now judgement. Conversely, adv t
+requires the store to be of the form ♯η N Xη L so that t can be evaluated safely with the store ♯η N to
+a heap location l, which either already existed in η N or was allocated when evaluating t. In either
+case, the delayed computation stored at heap location l is retrieved and executed. The combinator
+progress with its typing rule similar to that of adv, also has similar operational behaviour in terms
+of how it interacts with the store.
+Fixed points are evaluated when a term t that evaluates to a value of the form fix x .t ′ is unboxed.
+For a general ﬁxed point combinator, we would expect that fix x .t ′ unfolds to t ′ [fix x .t ′ /x]. In our
+setting, the types dictate that fix x .t ′ should rather unfold to t ′ [delay(unbox(fix x .t ′ ))/x], because
+x has type A and fix x .t ′ has type A. This is close to the behaviour of our machine (and would
+in fact be a safe alternative deﬁnition). Instead, however, the machine anticipates that the term allocates a mapping l 7→ unbox(fix x .t ′ ) on the store and evaluates to that heap location l. Therefore,
+the machine evaluates the ﬁxed point by allocating a mapping l 7→ unbox(fix x .t ′ ) on the store
+right away and evaluating t ′ [l/x] subsequently.
+3.2
+
+Stream Semantics
+
+The careful distinction between a ‘now’ heap η N and a ‘later’ heap η L is crucial in order to avoid
+implicit space leaks. After the machine has evaluated a term t to a value v and produced a store
+of the form ♯η N Xη L , we can safely garbage collect the entire heap η N and compute the next step
+with the store ♯η L X. For example, if the original term t was of type Str(Nat), then its value v will
+be of the form n :: l, where n is the head of the stream and l is a heap location that points to the
+delayed computation that computes the tail of the steam. The tail of the stream can then be safely
+computed by evaluating adv l with the store ♯η L X, i.e. with the entire ‘now’ heap η N garbage
+collected.
+This idea of computing streams is made formal in the deﬁnition of the small-step operational
+·
+semantics =⇒ for streams given in the left half of Figure 6. It starts by evaluating the term to a
+value of the form v :: l, which additionally produces the store ♯η N Xη L . Then the computation can
+be continued by evaluating adv l in the garbage collected store ♯η L X, which in turn produces a
+value v ′ :: l ′ and a store ♯η ′N Xη L′ – and so on.
+Given a closed term t of type Str(A), we compute the elements v 1, v 2 , v 3, . . . of the stream
+deﬁned by t as follows:
+v1
+
+v2
+
+v3
+
+hunbox t; ∅i =⇒ ht 1 ; η 1 i =⇒ ht 2 ; η 2 i =⇒ . . .
+where we start with the empty heap ∅. Each state of the computation hti ; ηi i consists of a term ti
+and its ‘now’ heap ηi .
+For example, consider the stream ⊢ nats : (Str(Nat)) deﬁned in Section 2.2. To understand how
+this stream is executed, it is helpful to see how the deﬁnition of nats desugars to our core calculus.
+Namely, nats is deﬁned as the term from  0 where
+from = fixf .λn.n :: delay (adv f (progress (n + 1)))
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:13
+
+Here we also unfold the deﬁnition of ⊙. The ﬁrst three steps of executing the nats stream look as
+follows:
+hunbox nats; ∅i
+
+0
+
+adv l 1′ ; l 1 7→ unbox from, l 1′ 7→ adv l 1 (progress 0 + 1)
+
+=⇒
+1
+
+adv l 2′ ; l 2 7→ unbox from, l 2′ 7→ adv l 2 (progress 1 + 1)
+
+=⇒
+2
+
+adv l 3′ ; l 3 7→ unbox from, l 3′ 7→ adv l 3 (progress 2 + 1)
+
+=⇒
+..
+.
+
+As expected, the computation produces the consecutive natural numbers. In each step of the
+computation, the location li stores the ﬁxed point from that underlies nats, whereas li′ stores the
+computation that calls that ﬁxed point with the current state of the computation, namely the
+number i.
+Our main result is that execution of programs by the machine in Figure 5 and Figure 6 is safe.
+For the stream semantics, this means that we can compute the stream deﬁned by a term t of type
+(Str(A)) by successive unfolding ad inﬁnitum as follows:
+v1
+
+v2
+
+v3
+
+hunbox t; ∅i =⇒ ht 1 ; η 1 i =⇒ ht 2 ; η 2 i =⇒ . . .
+This intuition is expressed more formally in the following theorem:
+Theorem 3.1 (productivity). Let A be a value type, i.e., a type constructed from 1, Nat, +, × only,
+and ⊢ t : (Str(A)). Given any n ∈ N, there is a reduction sequence
+v1
+
+v2
+
+hunbox t; ∅i =⇒ ht 1 ; η 1 i =⇒
+3.3
+
+...
+
+vn
+
+=⇒ htn ; ηn i
+
+such that ⊢ vi : A for all 1 ≤ i ≤ n.
+
+Stream Transducer Semantics
+
+More importantly, our language also facilitates stream processing, that is executing programs of
+·/·
+
+type (Str(A) → Str(B)). The small-step operational semantics =⇒ for executing such programs
+is given on the right half of Figure 6. So far the store has only been used by the term semantics
+to store delayed computations. In addition to that purpose, the stream transducer semantics uses
+the store to transfer the data received from the input steam to the stream transducer. To this end,
+we assume an arbitrary but ﬁxed heap location l ∗ , which the machine uses to successively insert
+the input stream of type Str(A) as it becomes available. Note that the stream transducer semantics
+reserves the heap location l ∗ in new ‘later’ heap by storing hi in it. That means, l ∗ cannot be
+allocated by the machine and is available later when the input becomes available and needs to be
+stored in l ∗ .
+Given a closed term t of type (Str(A) → Str(B)), we can execute it as follows:
+v 1 /v 1′
+
+v 2 /v 2′
+
+v 3 /v 3′
+
+hunbox t (adv l ∗ ); ∅i =⇒ ht 1 ; η 1 i =⇒ ht 2 ; η 2 i =⇒ . . .
+v i +1 /v i′ +1
+
+The machine starts with an empty heap ∅. In each step hti ; ηi i =⇒ hti +1 ; ηi +1i, the machine
+starts in a state hti ; ηi i consisting of a term ti and heap ηi . Then it reads an input vi +1 and subsequently produces the output vi′+1 and the next state hti +1 ; ηi +1i.
+Let’s consider a simple stream transducer to illustrate the workings of the semantics. The stream
+transducer sum takes a stream of numbers and computes at each point in time the sum of all
+previous numbers from the input stream. To this end sum uses the auxiliary function sum′ that
+takes as additional argument the accumulator of type Nat.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:14
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+sum′ :  (Nat → Str (Nat) → Str (Nat))
+sum′ ♯ acc (n :: ns) = (acc + n) :: sum′ ⊙ (acc + n) ⊛ ns
+sum :  (Str (Nat) → Str (Nat))
+sum = sum′  0
+To appreciate the workings of the stream transducer semantics, we desugar the deﬁnition of
+sum′ in the surface syntax to our core calculus. In addition, we also unfold the deﬁnition of ⊛:
+sum′ = fixf .λacc.λs.(acc + head s) :: delay (adv (f ⊙ (acc + head s)) (adv (tail s)))
+Let’s look at the ﬁrst three steps of executing the sum stream transducer. To this end, we feed the
+computation 2, 11, and 5 as input:
+hunbox sum; ∅i
+2/2
+
+=⇒
+11/13
+
+=⇒
+5/18
+
+=⇒
+..
+.
+
+adv l 1′ ; l 1 7→ unbox sum′, l 1′ 7→ adv (l 1 ⊙ (0 + head (2 :: l ∗ ))) (adv (tail (2 :: l ∗ )))
+adv l 2′ ; l 2 7→ unbox sum′, l 2′ 7→ adv (l 2 ⊙ (2 + head (11 :: l ∗ ))) (adv (tail (11 :: l ∗ )))
+adv l 3′ ; l 3 7→ unbox sum′, l 3′ 7→ adv (l 3 ⊙ (13 + head (5 :: l ∗ ))) (adv (tail (5 :: l ∗ )))
+
+As expected, we receive 2, 13 (= 2 + 11), and 18 (= 2 + 11 + 5) as result. Moreover, in each step
+of the computation the location li stores the ﬁxed point sum′ that underlies the deﬁnition of sum,
+whereas li′ stores the computation that calls that ﬁxed point with the new accumulator value (0 + 2,
+2 + 11, and 13 + 5, respectively) and the tail of the input stream.
+Corresponding to the productivity property from the previous section, we prove the following
+causality property that states that the stream transducer semantics never gets stuck. To characterise the causality property, the theorem constructs a family of sets Tk (A, B) which consists of
+states ht; ηi on which the stream transducer machine can run for k more time steps.
+Theorem 3.2 (causality). Given any value types A and B, there is a family of sets Tk (A, B) such
+that the following holds for all k ∈ N:
+(i) If ⊢ t : (Str(A) → Str(B)) then hunbox t (adv l ∗ ); ∅i ∈ Tk (A, B).
+(ii) If ht, ηi ∈ Tk+1 (A, B) and ⊢ v : A then there are t ′, η ′ , and ⊢ v ′ : B such that
+v/v ′
+
+ht; ηi =⇒ ht ′ ; η ′i and ht ′ ; η ′i ∈ Tk (A, B).
+That is, any term t of type (Str(A) → Str(B)) deﬁnes a causal stream function which is eﬀectively computed by the machine:
+v 1 /v 1′
+
+v 2 /v 2′
+
+v 3 /v 3′
+
+hunbox t; ∅i =⇒ ht 1 ; η 1 i =⇒ ht 2 ; η 2 i =⇒ . . .
+Note that the stream transducer semantics also extends to stream transducers with multiple
+streams as inputs. This can be achieved by a combinator split of type (Str(A×B) → Str(A)×Str(B)).
+Similarly, the semantics also extends to transducers that take an event as input by virtue of a
+combinator ﬁrst of type (Str(1 + A) → Ev(A)). Conversely, transducers producing events instead
+of streams can be executed using a combinator of type (Ev(A) → Str(1 + A)).
+We give the proof of Theorem 3.1 and Theorem 3.2 in Section 6. Both results follow from a more
+general result for the machine, which is formulated using a Kripke logical relation.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+3.4
+
+1:15
+
+Counterexamples
+
+To conclude this section we review some programs that are rejected by our type system and illustrate their operational behaviour.
+Unbox under delay. Recall the alternative deﬁnition of the stream of consecutive natural numbers leakyNats that uses the map combinator. First consider the deﬁnition of leakyNats in our core
+calculus:
+leakyNats = fix s.0 :: delay (unbox (map (box(λx .x + 1)))) ⊛ s
+Let’s contrast the execution of nats that we have seen in Section 3.2 with the execution of
+leakyNats:
+hunbox leakyNats; ∅i
+0
+
+=⇒
+1
+
+=⇒
+
+2
+
+=⇒
+..
+.
+
+adv l 1′ ; l 1 7→ unbox leakyNats, l 1′ 7→ unbox map (box λx .x + 1) (adv l 1 )
+
+
+l 0 7→ unbox leakyNats, l 21 7→ unbox map (box λx .x + 1) (adv l 20 ),
+adv l 23 ; 22
+l 2 7→ unbox step,
+l 23 7→ adv l 22 (adv (tail (0 :: l 21 )))
+
+*
+
+l 30 7→ unbox leakyNats, l 31 7→ unbox map (box λx .x + 1) (adv l 30 ), +
+5
+adv l 3 ; l 32 7→ unbox step,
+l 33 7→ adv l 32 (adv (tail (0 :: l 31 )))
+4
+l 3 7→ unbox step,
+l 35 7→ adv l 34 (adv (tail (1 :: l 33 )))
+
+
+
+where step = fix f .λ s.unbox (box λ n.n + 1) (head s) :: (f ⊛ tail s).
+While our type system rejects the term leakyNats, a corresponding term is typable in Krishnaswami’s
+calculus (Krishnaswami 2013) and manifests the same memory allocation behaviour as leakyNats
+in our machine.
+Lambda abstraction under delay. Recall the deﬁnition of the stream leaky from Section 2.3. It
+introduces a lambda abstraction in a later judgement and is therefore rejected by our type system.
+
+true
+
+=⇒
+
+true
+
+=⇒
+·
+
+hunbox leaky; ∅i
+
+
+l 1 7→ unbox leaky ′,
+adv l 1′ ; ′
+l 1 7→ adv (if (λ x .true) hi then l 1 else l 1 ) (λ x .head (adv l 1 λ y.true))
+*
+
++
+l 2 7→ unbox leaky ′,
+′
+′
+adv l 2 ; l 2 7→ adv (if (λ x .head (adv l 1 λ y.true)) hi then l 2 else l 2 )
+(λ x .head (adv l 2 λ y.true))
+
+6=⇒
+Note that the term (λ x .head (adv l 1 λ y.true)) from the heap after the ﬁrst step is a value and thus
+appears unevaluated also in the heap after the second step. However, this term contains a reference
+to the heap location l 1 , which has been garbage collected completing the second step. The machine
+thus ends up in a stuck state when it tries to dereference the garbage collected heap location l 1
+during the third step.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:16
+4
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+GENERIC FRP LIBRARY
+
+This section gives a number of higher-order FRP combinators in Simply RaTT, reminiscent of those
+found in libraries such as Yampa (Nilsson et al. 2002). These can be used for programming with
+streams and events.
+Perhaps the simplest example of a stream function is the constant stream over some element.
+Since we need to output this element in each time step in the future, we require it to come from a
+stable type. Thus the argument is of type  A.
+const :  A →  (Str A)
+const a ♯ = unbox a :: const a
+We can now recreate the zeros stream presented above as:
+zeros : Str (Nat)
+zeros = const (box 0)
+Another simple way to generate a stream is to iterate a function f : A → A over some initial input,
+such that the output stream will be (a, f a, f (f a), . . .). Since we will keep using the function at
+every time step, it needs to be stable, i.e., f : (A → A). Moreover, since we will keep a state with
+the current value of type A, that type A must be stable as well. We adopt a syntax like the one used
+in Haskell for type classes, to denote the additional requirement that a type is stable:
+iter : A stable ⇒  (A → A) →  (A → Str A)
+iter f ♯ acc = acc :: iter f ⊙ (unbox f acc)
+With this, we can deﬁne the stream of natural numbers:
+nats :  (Str Nat)
+nats = iter (box (λn . n + 1))  0
+We may also deﬁne a more general iter where A need not be stable:
+iter :  (A → A) →  (A → Str A)
+iter f ♯ acc = acc :: iter f ⊛ (unbox f acc)
+Given some stream, a standard operation in an FRP setting is to ﬁlter it according to some
+predicate. This behaviour is easy to implement in Simply RaTT, but because productivity forces us
+to output a value at each time step, if we take as input Str(A), we will need to output Str(Maybe(A)),
+where Maybe(A) is a shorthand for 1 + A. Accordingly, we use the notation nothing and just t to
+denote in1 hi and in2 t, respectively.
+ﬁlter :  (A → Bool) →  (Str A → Str (Maybe A))
+ﬁlter p = map box (λa . if unbox p a then just a else nothing)
+To go from Str(Maybe(A)) and back to Str(A), we can use the fromMaybe function that replaces
+each missing value with a default value:
+fromMaybe :  A →  (Str (Maybe A) → Str A)
+fromMaybe def ♯ (just a :: as) = a
+:: fromMaybe def ⊛ as
+fromMaybe def ♯ (nothing :: as) = unbox def :: fromMaybe def ⊛ as
+Given two streams, we can construct the product stream by simply “zipping” the two streams
+together. It is often easier to construct the more general version where a function is applied to
+each pair of inputs
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:17
+
+zipWith :  (A → B → C) →  (Str A → Str B → Str C)
+zipWith f ♯ (a :: as) (b :: bs) = unbox f a b :: zipWith f ⊛ as ⊛ bs
+The regular zip function is then deﬁned as
+zip :  (Str A → Str B → Str (A × B))
+zip = zipWith (box (λa . λb . (a, b)))
+Many applications require the ability to dynamically change the dataﬂow graph, e.g., when
+opening and closing windows in a GUI. Such behaviour can be implemented using switches, such
+as the following, which given an initial stream and a stream event, outputs a stream following the
+initial stream until it receives a new one on its second argument
+switch :  (Str A → Ev (Str A) → Str A)
+switch ♯ (x :: xs) (wait fas) = x :: switch ⊛ xs ⊛ fas
+switch ♯ xs
+(val ys) = ys
+As we have described above, we may deﬁne streams that require a state, but the state must be
+deﬁned explicitly. An example is the scan function that given a binary operator and an initial state,
+will output the stream of successive application of the binary operator on the input stream
+scan : B stable ⇒  (B → A → B) →  (B → Str A → Str B)
+scan f ♯ acc (a :: as) = acc ′ :: scan f ⊙ acc ′ ⊛ as
+where acc ′ = unbox f acc a
+We can now redeﬁne the sum function from Section 3.3 as follows:
+sum :  (Str (Nat) → Str (Nat))
+sum = scan (box (λn . λm . n + m))  0
+In general, we can encode any computable stream in our language by virtue of the following
+unfolding combinator:
+unfold :  (X → A × X ) →  (X → Str A)
+unfold f ♯ x = π1 (unbox f x) :: unfold f ⊛ (π2 (unbox f x))
+To further showcase programming with events, we deﬁne the function await, which listens for
+two events and produces a pair event that triggers after both events have arrived. As with scan,
+we need a state to keep the value of the ﬁrst arriving event while waiting for the second one. This
+behaviour is implemented by two helper functions, which diﬀer only in which element of the pair
+is given, and we only show one:
+awaitA : A stable ⇒  (A → Ev B → Ev (A × B))
+awaitA ♯ a (wait eb) = wait (awaitA ⊙ a ⊛ eb)
+awaitA ♯ a (val b) = val (a, b)
+We can now deﬁne await as
+await : A, B stable ⇒  (Ev A → Ev B → Ev (A × B))
+await ♯ (wait ea) (wait eb) = await ⊛ ea ⊛ eb
+await ♯ (val a) eb
+= unbox awaitA a eb
+await ♯ ea
+(val b) = unbox awaitB b ea
+The requirement that A and B be stable is crucial since we need to keep the ﬁrst arriving event
+until the second occurs.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:18
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+A second example using events is the accumulator combinator. Given a value and a stream of
+events carrying functions, every time an event is received, the function is applied to the value and
+output as an event:
+accum :  A →  (Str (Ev (A → B)) → Str (Ev B))
+accum a = map (eventApp a)
+The accum function uses the helper function below that takes a single event carrying a function
+and produces an event that applies the function to a given value:
+eventApp :  A →  (Ev (A → B) → Ev B)
+eventApp a = map (box (λf . f (unbox a)))
+5
+
+SIMULATING LUSTRE
+
+Lustre is a synchronous dataﬂow language. Programs describe dataﬂow graphs and evaluation
+proceeds in steps, reading input signals and producing output signals. Each signal is associated
+with a clock, which is always a sub-clock of the global clock, and as such can be described as a
+sequence of Booleans describing when the clock ticks. A pair of a clock and a signal that produces
+an output whenever the clock ticks is called a ﬂow.
+In Simply RaTT clocks can be encoded as Boolean streams and ﬂows as streams of maybe values
+Clock = Str(Bool)
+
+Flow(A) = Str(Maybe(A))
+
+With these encodings, we now show how to encode some of the basic constructions of Lustre.
+The clock associated to a ﬂow ticks whenever the stream produces a value in A. For example,
+the basic clock of the system is the fastest possible clock and the clock never is the clock that never
+ticks. These can be deﬁned as
+basicClock :  Clock
+basicClock = const (box true)
+
+never :  Clock
+never = const (box false)
+
+In Simply RaTT, a cycle of the program corresponds to a single stream (transducer) unfolding.
+Given a clock, we can slow it down to tick only at certain intervals. We deﬁne here a function
+that given a clock, slows it down to only tick every nth tick. Since we need to carry a state (how
+often to tick and what step we are at) we deﬁne ﬁrst a helper function:
+everyNthAux : Nat →  (Nat → Clock → Clock)
+everyNthAux step ♯ count (c :: cs) = if (unbox (promote step) = count)
+then c :: everyNthAux step ⊙ 0 ⊛ cs
+else false :: everyNthAux step ⊙ (count + 1) ⊛ cs
+We can now deﬁne the actual function by giving the helper function an initial state:
+everyNth : Nat →  (Clock → Clock)
+everyNth n = everyNthAux n  0
+Given a ﬂow and a clock, we can restrict the ﬂow to that clock. If the clock is faster than the
+“internal” clock of the ﬂow, this will not change the ﬂow.
+when :  (Clock → Flow A → Flow A)
+when ♯ (c :: cs) (a :: as) = (if c then a else nothing) :: when ⊛ cs ⊛ as
+Recursive ﬂows are implemented in Lustre using pre (previous) and -> (followed by). We could
+implement these directly in Simply RaTT, but in many Lustre programs pre and -> are used in
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:19
+
+a pattern that is very natural to Simply RaTT programs: pre is used to keep track of some state
+(that we may update) and -> provides the initial state. As an example, consider the Lustre node
+that computes the ﬂow of natural numbers:
+n = 0 -> pre(n) + 1
+The equivalent Simply RaTT program is
+nats :  (Flow (Nat))
+nats = natsAux  0
+where natsAux :  (Nat → Flow (Nat))
+natsAux ♯ pre = just pre :: natsAux ⊙ (pre + 1)
+which is similarly composed of an initial state and then the actual computation, which may refer
+to the previous value.
+As another example, consider the following Lustre node which takes a Boolean ﬂow b as input:
+edge = false -> (b and not pre(b))
+This output ﬂow is true when it detects a “rising edge” in its input ﬂow, i.e., when the input goes
+from false to true. This is translated in a similar way to a helper function that does the computation:
+edgeAux :  (Bool → Flow (Bool) → Flow (Bool))
+edgeAux ♯ pre (just b :: bs) = b ′ :: edgeAux ⊙ b ′ ⊛ cs
+edgeAux ♯ pre (nothing :: bs) = pre :: edgeAux ⊙ pre ⊛ cs
+where b ′ = (b and (¬ pre))
+and then a function giving the initial state:
+edge :  (Flow (Bool) → Flow (Bool))
+edge = edgeAux  false
+Since a ﬂow is restricted to its internal clock, it may not produce anything at many ticks of the
+basic clock. To alleviate this, Lustre provides the current operator, which given a ﬂow on a clock
+slower than the basic clock, ﬁlls the holes in the ﬂow with whatever the latest values was. The
+equivalent Simply RaTT program is:
+current : A stable ⇒  (Flow A → Flow A)
+current as = box (λas . unbox currentAux (head as) as)
+where currentAux : A stable ⇒  (Maybe A → Flow A → Flow A)
+currentAux ♯ pre (just a :: as) = just a :: currentAux ⊙ just a ⊛ as
+currentAux ♯ pre (nothing :: as) = pre :: currentAux ⊙ pre ⊛ as
+
+Our last example is an implementation of counter from the Lustre V6 manual (Erwan Jahier and Halbwachs
+2019). The counter program takes as input an initial value and a constant that determines how
+much to increment in each step. Its current state is stored in pre. It then listens to two ﬂows, an “increment” ﬂow and a “reset” ﬂow. If the counter receives true on the increment ﬂow, it increments
+the counter by the increment constant. If it receives true on the reset ﬂow, it resets the counter to
+the initial value and otherwise it will continue in the same state.
+counter : Nat → Nat →  (Nat → Flow Bool → Flow Bool → Flow Nat)
+counter init incr ♯ pre (just s :: ss) (just r :: rs) =
+if s then just init
+:: counter init incr ⊙ init ⊛ ss ⊛ rs
+else just (pre + incr)
+:: counter init incr ⊙ (pre + incr) ⊛ ss ⊛ rs
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:20
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+VJNatKH
+σ = {n | n ∈ N }
+VJ1KH
+σ = {hi}
+n
+o
+H
+H
+=
+hv
+,
+v
+i
+∧
+v
+∈
+VJBK
+v
+∈
+VJAK
+VJA × BKH
+1
+2
+2
+1
+σ
+σ
+σ
+n
+o
+H
+H
+VJA + BKH
+σ = in1 v v ∈ VJAKσ } ∪ {in2 v | v ∈ VJBKσ
+n
+′
+′o
+′
+H
+H
+′
+H
+)
+⊒
+(gc(σ
+)
+⋄
+H
+).∀w
+∈
+VJAK
+.t[w/x]
+∈
+T
+JBK
+=
+λx
+.t
+∀(σ
+⋄
+VJA → BKH
+′
+′
+σ
+σ
+σ
+n
+′ o
+′
+H
+VJAKH
+σ = v ∀H ≤suf H .unbox(v) ∈ T JAK♯
+VJ AK()σ = {l | l is any heap location }
+o
+n
+;H
+= l ∀η ∈ H .σ (l) ∈ T JAKH
+VJ AKH
+σ
+gc(σ )Xη
+n
+o
+H
+VJµα .AKσ = into(v) v ∈ VJA[ (µα .A)/α]KH
+σ
+
+n
+′ o
+′
+′′
+′
+′′
+H
+′
+T JAKH
+σ = t ∀(σ ⋄ H ) ⊒X (σ ⋄ H ).∃σ , v. ht; σ i ⇓ hv; σ i ∧ v ∈ VJAKσ ′′
+
+CJ·KH
+⊥ = {⋆}
+n
+o
+H
+CJΓ, x : AKσH = γ [x 7→ v] γ ∈ CJΓKH
+σ , v ∈ VJAKσ
+
+Garbage Collection:
+
+{η }, H
+
+CJΓ, XKH
+= CJΓK♯ηL
+♯η N Xη L
+N
+Ø
+′
+H
+H
+CJΓK⊥
+CJΓ, ♯Kσ =
+H ≤suf H
+
+gc(⊥) = ⊥
+gc(♯η L ) = ♯η L
+gc(♯η N Xη L ) = ♯η L
+
+if σ , ⊥
+
+′
+
+Fig. 7. Logical Relation.
+
+counter init incr ♯ pre (nothing :: ss) (just r :: rs) =
+if r then just init
+:: counter init incr ⊙ init ⊛ ss ⊛ rs
+else just pre
+:: counter init incr ⊙ pre ⊛ ss ⊛ rs
+counter init incr ♯ pre (just s :: ss) (nothing :: rs) =
+if r then just (pre + incr) :: counter init incr ⊙ (pre + incr) ⊛ ss ⊛ rs
+else just pre
+:: counter init incr ⊙ pre ⊛ ss ⊛ rs
+counter init incr ♯ pre (nothing :: ss) (nothing :: rs) =
+just pre
+:: counter init incr ⊙ pre ⊛ ss ⊛ rs
+
+6
+
+METATHEORY
+
+Since the operational semantics rules out space leaks by construction, it only remains to be shown
+that the type system is sound, i.e., well-typed terms never get stuck.
+To this end, we devise a Kripke logical relation. Essentially, such a logical relation is a family
+JAKw of sets of closed terms that satisfy the desired soundness property. This family of sets is
+indexed by w drawn from a suitable set of ‘worlds’ and is deﬁned inductively on the structure of
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:21
+
+the type A and w. Then the proof of soundness is reduced to a proof that ⊢ t : A implies t ∈ JAKw
+for all possible worlds.
+6.1 Worlds
+To a ﬁrst approximation, the worlds in our logical relation contain two components: a store σ and
+a number n, written JAKnσ . The number index n allows us to deﬁne the logical relation for recursive types via step-indexing (Appel and McAllester 2001). Concretely, this is achieved by deﬁning
+J AKn+1
+in terms of JAKnσ . Since unfolding recursive types µα .A to A[ µα .A/α] introduces a
+σ
+modality, we thus achieve that the step index n decreases for recursive types. In essence, this
+means that terms in the logical relation JAKnσ can be executed safely for the next n time steps
+starting with the store σ . Ultimately, the index σ enables us to prove that the garbage collection
+performed by the stream and stream transducer semantics (cf. Figure 6) is sound.
+While this setup would be suﬃcient to prove soundness for the stream semantics (Theorem 3.1),
+it is not enough for the soundness of the stream transducer semantics (Theorem 3.2): To characterise our soundness property it is not enough to require that a term can be executed n more time
+steps. We also need to know what the input to a stream transducer of type Str(A) → Str(B) looks
+like, namely a stream where the ﬁrst n elements are values of type A. We achieve this by describing
+what the heaps should look like in the next n time steps. Concretely, we assume a ﬁnite sequence
+(H 1 ; . . . ; Hn ), where each Hi is the set of heaps that we could potentially encounter i time steps
+into the future.
+To summarise, the worlds in our logical relation consist of a store σ and a ﬁnite sequence
+(H 1 ; . . . ; Hn ) of sets of heaps. Instead of, (H 1 ; . . . ; Hn ) we also write H , and we use the notation
+(σ ⋄H) to refer to the world consisting of the store σ and the sequence H . Intuitively, σ is the store
+for which the term in the logical relation can be safely executed, whereas each Hi in H contains
+all heaps for which the term can be safely executed after i time steps have passed.
+A crucial ingredient of a Kripke logical relation is a preorder . on the set of worlds such that
+the logical relation is closed under that preorder in the sense that w . w ′ implies JAKw ⊆ JAKw ′ .
+To this end, we use a partial order ⊑ on heaps, which is the standard partial order on partial maps,
+i.e., η ⊑ η ′ iﬀ η(l) = η ′(l) for all l ∈ dom (η). Moreover, we extend this order to stores in two
+diﬀerent ways, resulting in the two orders ⊑ and ⊑X :
+
+⊥⊑⊥
+
+η ⊑ η′
+
+η N ⊑ η ′N
+
+η L ⊑ η L′
+
+σ ⊑ σ′
+
+η ⊑ η′
+
+♯η ⊑ ♯η ′
+
+♯η N Xη L ⊑ ♯η ′N Xη L′
+
+σ ⊑X σ ′
+
+♯η ⊑X ♯η ′′ Xη ′
+
+That is, the heap order ⊑ is lifted to stores pointwise, whereas ⊑X extends ⊑ by deﬁning ♯η L ⊑X
+♯η N Xη L . The more general order ⊑X is used in the logical relation, whereas the more restrictive
+⊑ is needed to characterise the following property of the operational semantics:
+Lemma 6.1. Given any term t, value v, and pair of stores σ , σ ′ such that ht; σ i ⇓ hv; σ ′i, then
+σ ⊑ σ ′.
+We also extend the heap order ⊑ to sets of heaps and sequences of sets of heaps:
+H
+(H 1 ; H 2 ; . . . ; Hn )
+
+⊑ H′
+⊑ (H 1′ ; H 2′ ; . . . ; Hn′ )
+
+⇐⇒ ∀η ′ ∈ H ′ .∃η ∈ H .η ⊑ η ′
+⇐⇒ ∀1 ≤ i ≤ n.Hi ⊑ Hi′
+
+That is, if H ⊑ H ′ , then for every heap in H ′ there is a smaller one in H , and this ordering is lifted
+pointwise to ﬁnite sequences.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:22
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+Finally, we combine these orderings to worlds pointwise as well
+(σ ⋄ H )
+(σ ⋄ H )
+
+⊑
+⊑X
+′
+
+′
+
+(σ ′ ⋄ H )
+′
+(σ ′ ⋄ H )
+
+⇐⇒ σ ⊑ σ ′
+⇐⇒ σ ⊑X σ ′
+
+′
+
+∧ H ⊑H
+′
+∧ H ⊑H
+
+′
+
+′
+
+Note that whenever H ⊑ H , then H and H are of the same length. That is, both H and H
+describe the same number of future time steps. In order to describe a possible future world, i.e.,
+after some time steps have passed, we use suﬃx ordering ≤suf on sequences. We say that H is a
+′
+′
+′′
+suﬃx of H , written H ≤suf H iﬀ there is a sequence H such that H ′ is equal to the concatenation
+′′
+′′
+′
+′′
+of H and H , written H ; H . Thus, a suﬃx H ≤suf H describes a future state where the preﬁx H
+has already been consumed.
+6.2
+
+Logical Relation
+
+Our logical relation consists of two parts: A value relation VJAKw that contains all values that
+semantically inhabit type A at the world w, and a corresponding term relation T JAKw containing
+H
+terms. Given a world (σ ⋄ H ) we write VJAKH
+σ and T JAKσ instead of VJAK(σ ⋄H ) and T JAK(σ ⋄H ) ,
+respectively. The two relations are deﬁned by mutual induction in Figure 7. More precisely, the
+two relations are deﬁned by well-founded induction by the lexicographic ordering on the triple
+(|H |, |A| , e), where |H | is the length of H , |A| is the size of A deﬁned below, and e = 1 for the term
+relation and e = 0 for the value relation.
+|α | = | A| = |Nat| = |1| = 1
+|A × B| = |A + B| = |A → B| = 1 + |A| + |B|
+|A| = |µα .A| = 1 + |A|
+We deﬁne the size of A to be the same as α. Thus A[ µα .A/α] is strictly smaller than µα .A.
+This justiﬁes the well-foundedness for recursive types. For types A, the well-foundedness of the
+deﬁnition can be observed by the fact that H is strictly shorter than H ; H , which is a shorthand
+notation for the sequence (H ; H 1 ; . . . ; Hn ) where H = (H 1 ; . . . ; Hn ).
+The deﬁnition of the value relation for hi, Nat, ×, and + is standard. The deﬁnition of VJAKH
+σ
+expresses the fact that all its inhabitants can be evaluated safely at any time in the future. To
+express this, we use suﬃx ordering ≤suf . A value in VJAKH
+σ may be unboxed and subsequently
+evaluated at any time in the future, i.e., in the context of any suﬃx of H .
+The value relation for types A encapsulates the soundness of garbage collection. The set
+;H
+VJ AKH
+contains all heap locations that point to terms that can be executed safely in the next
+σ
+time step. The notation σ (l) is a shorthand for η L (l) given that σ = ♯η L or σ = ♯η N Xη L . Hence,
+we look up the location l in the ‘later’ heap of σ and require that the term that we ﬁnd can be
+executed with the store obtained from σ by ﬁrst garbage collecting the ‘now’ heap (if present) and
+extending it with any future heap drawn from H .
+Garbage collection is also crucial in the deﬁnition of VJA → BKH
+σ , which only contains lambda
+abstractions that can be applied in a garbage collected store. This reﬂects the restriction of the
+typing rule for lambda abstraction, which requires the context Γ to be tick-free. The leaky example
+in Section 3.4 illustrates the necessity of this restriction. Semantically, this implies the following
+essential property of values:
+H
+Lemma 6.2. For all A, σ , H, we have that VJAKH
+σ ⊆ VJAKgc(σ ) .
+
+That is, after evaluating a term to a value, we can safely garbage collect the ‘now’ heap.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:23
+
+Finally, we obtain the soundness of the language by the following fundamental property of the
+logical relation T JAKH
+σ.
+Theorem 6.3 (Fundamental Property). Given Γ ⊢ t : A, and γ ∈ CJΓKσH , then tγ ∈ T JAKσH .
+The theorem is proved by a lengthy but entirely standard induction on the typing relation Γ ⊢ t :
+A. Two crucial ingredients to the proof are that all logical relations are closed under the ordering
+⊑X on worlds, and that CJΓKσH captures the correspondence between the tokens occurring in Γ
+and σ , namely they have the same number of locks and σ may not have fewer ticks than Γ.
+6.3 Soundness of Stream and Stream Transducer Semantics
+We conclude this section by demonstrating how we can use the fundamental property of our logical
+relation for proving the soundness of the abstract machines for evaluating streams (Theorem 3.1)
+and stream transducers (Theorem 3.2), which amounts to proving productivity and causality of the
+calculus.
+First, we observe that the operational semantics is deterministic:
+Proposition 6.4 (deterministic machine).
+(1) If ht; σ i ⇓ hv 1 ; σ1 i and ht; σ i ⇓ hv 2 ; σ2 i, then v 1 = v 2 and σ1 = σ2 .
+v1
+v2
+(2) If ht; ηi =⇒ ht 1 ; η 1 i and ht; ηi =⇒ ht 2 ; η 2 i, then v 1 = v 2 , t 1 = t 2 , and η 1 = η 2 .
+v/v 1
+
+v/v 2
+
+(3) If ht; ηi =⇒ ht 1 ; η 1 i and ht; ηi =⇒ ht 2 ; η 2 i, then v 1 = v 2 , t 1 = t 2 , and η 1 = η 2 .
+Before we can prove Theorem 3.1, we need the following property of value types, i.e., types
+constructed from 1, Nat, +, ×
+Lemma 6.5. Let A be a value type and (σ ⋄ H ) a world.
+(i) For all values v, we have that v ∈ VJAKH
+σ iﬀ ⊢ v : A.
+H
+(ii) VJAKσ is non-empty.
+Proof. By a straightforward induction on A.
+
+
+
+For the proof of Theorem 3.1, we construct for each type A the following family of sets Sk (A),
+which intuitively contains all states on which the stream semantics can run for k more steps:
+n
+o
+{ ∅} k
+Sk (A) = ht; ηi t ∈ T JStr(A)K♯ηX
+
+where {∅} is the singleton set containing the empty heap, and {∅}k is the sequence containing
+k copies of {∅}. Theorem 3.1 follows from the following lemma and the fact that the operational
+semantics is deterministic:
+Lemma 6.6 (productivity). Given any value type A, the following holds for all k ∈ N:
+(i) If ⊢ t : (Str(A)) then hunbox t; ∅i ∈ Sk (A).
+(ii) If ht, ηi ∈ Sk+1 (A) then there are t ′, η ′, and ⊢ v : A such that
+v
+
+ht; ηi =⇒ ht ′ ; η ′i and ht ′ ; η ′i ∈ Sk (A).
+Proof.
+(i) ⊢ t : (Str(A)) implies ♯ ⊢ unbox t : Str(A) which by Theorem 6.3, implies that unbox t ∈
+k
+
+k
+
+{∅}
+T JStr(A)K♯{ ∅} and thus also unbox t ∈ T JStr(A)K♯X
+. Hence hunbox t; ∅i ∈ Sk (A).
+
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:24
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+{ ∅} k +1
+
+(ii) Let ht, ηi ∈ Sk+1 (A). Then t ∈ T JStr(A)K♯ηX , which means that ht; ♯ηXi ⇓ hw; σ i and
+k +1
+
+k +1
+
+k +1
+
+w ∈ VJStr(A)Kσ{ ∅} . Hence, w = v :: l with v ∈ VJAKσ{ ∅} and l ∈ VJ Str(A)Kσ{∅} .
+Moreover, by Theorem 6.5 ⊢ v : A and by Theorem 6.1 σ = ♯η N Xη L . Hence, adv l ∈
+v
+
+k
+
+{ ∅}
+T JStr(A)K♯η
+. That is, ht; ηi =⇒ hadv l; η L i and hadv l; η L i ∈ Tk (A).
+X
+
+
+
+L
+
+For the proof of causality we need the following property of the operational semantics, which
+essentially states that we never read from the ‘later’ heap.
+Lemma 6.7. If ht; σ , l 7→ ui ⇓ hv; σ ′, l 7→ ui, then ht; σ , l 7→ u ′ i ⇓ hv; σ ′, l 7→ u ′ i for any u ′ .
+To prove the above lemma we have to make the following reasonable assumption about the
+function alloc (·) that performs the allocation of fresh heap locations: Given two stores σ , σ ′ with
+dom (later(σ )) = dom (later(σ ′)), we have that alloc (σ ) = alloc (σ ′ ). In other words, alloc (σ ) only
+depends on the domain of the ‘later’ heap. For example, if the set of heap locations is just N, then
+alloc (σ ) could be implemented as the smallest heap location that is fresh for the ‘later’ heap of σ .
+Analogously to the family of sets Sk (A), we construct a family of sets Tk (A, B) that contains all
+states which are safe to run for k more steps on the stream transducer semantics:
+o
+n
+()
+H k (A)
+Tk (A, B) = ht, ηi l ∗ < dom (η) ∧ ∀v, w ∈ VJAK⊥ .t ∈ T JStr(B)K♯η,l ∗7→v::l ∗ Xl ∗ 7→w ::l ∗
+
+o
+n
+where H (A) = l ∗ 7→ v :: l ∗ v ∈ VJAK()⊥ and H k (A) is the sequence of k copies of H (A).
+Finally, we give the proof of causality:
+Proof of Theorem 3.2.
+
+(i) Given ⊢ t : (Str(A) → Str(B)) and v, v ′ ∈ VJAK()⊥ , we need to show that unbox t (adv l ∗ ) ∈
+k
+
+k +1
+
+(A)
+(A)
+T JStr(B)KH
+.
+. By induction on k+1 we can show that l ∗ ∈ VJ Str(A)KH
+♯l ∗ 7→v::l ∗
+♯l ∗ 7→v::l ∗ Xl ∗ 7→v ′ ::l ∗
+k
+
+(A)
+,
+By deﬁnition of the value relation, this means that v :: l ∗ ∈ T JStr(A)KH
+♯l ∗7→v::l ∗ Xl ∗ 7→v ′ ::l ∗
+k
+
+(A)
+. Since ⊢ t : (Str(A) →
+which in turn implies that adv l ∗ ∈ T JStr(A)KH
+♯l ∗7→v::l ∗ Xl ∗ 7→v ′ ::l ∗
+Str(B)), we know that ♯ ⊢ unbox t : Str(A) → Str(B). Using Theorem 6.3 we thus obk (A)
+tain that unbox t ∈ T JStr(A) → Str(B)KH
+, which in turn implies that unbox t ∈
+♯
+k
+
+k
+
+(A)
+(A)
+T JStr(A) → Str(B)KH
+. Therefore, we have that unbox t (adv l ∗ ) ∈ T JStr(B)KH
+♯l ∗ 7→v::l ∗ Xl ∗ 7→v ′ ::l ∗
+♯l ∗ 7→v::l ∗ Xl ∗
+(ii) Let ht, ηi ∈ Tk+1 (A, B) and ⊢ v : A. We need to ﬁnd l, η N , η L , and ⊢ v ′ : B such that
+
+ht; ♯η, l ∗ 7→ v :: l ∗ Xl ∗ 7→ hii ⇓ hv ′ :: l; ♯η N Xη L , l ∗ 7→ hii
+and
+
+H k (A)
+
+(1)
+
+for all w, w ′ ∈ VJAK()⊥ .
+
+adv l ∈ T JStr(B)K♯η ,l ∗ 7→w ::l ∗ Xl ∗ 7→w ′::l ∗
+L
+
+(2)
+
+By Theorem 6.5 (i), v ∈ VJAK()⊥ , and by Theorem 6.5 (ii), there is some w ∗ ∈ VJAK()⊥ . Since
+k +1
+
+(A)
+, we have that
+t ∈ T JStr(B)KH
+♯η,l ∗7→v::l ∗ Xl ∗ 7→w ∗ ::l ∗
+
+ht; ♯η, l ∗ 7→ v :: l ∗ Xl ∗ 7→ w ∗ :: l ∗ i ⇓ hv ′′ ; σ i and v ′′ ∈ VJStr(B)KH
+σ
+k +1
+
+k +1 (A)
+
+Consequently, v ′′ = v ′ :: l for some v ′ ∈ VJBKσH (A) by Theorem 6.1, σ is of the form
+♯η N Xη L , l ∗ 7→ w ∗ :: l ∗ . By Theorem 6.7 and Theorem 6.5 (i), we then have (1) and ⊢ v ′ : B,
+respectively.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:25
+k
+
+(A)
+Finally, to prove (2), we assume w, w ′ ∈ VJAK()⊥ and show adv l ∈ T JStr(B)KH
+.
+♯η ,l ∗ 7→w ::l ∗ Xl ∗ 7→w ′ ::l ∗
+L
+
+k +1
+
+(A)
+Since t ∈ T JStr(B)KH
+, we have that
+♯η,l ∗7→v::l ∗ Xl ∗ 7→w ::l ∗
+k +1 (A)
+
+ht; ♯η, l ∗ 7→ v :: l ∗ Xl ∗ 7→ w :: l ∗ i ⇓ hv ′′′ ; σ ′i and v ′′′ ∈ VJStr(B)KH
+σ′
+
+By Theorem 6.7 and Theorem 6.4 we thus know that v ′′′ = v ′ :: l and σ ′ = ♯η N Xη L , l ∗ 7→
+k
+, which implies that
+w :: l ∗ . Consequently, σ ′ (l) ∈ T JStr(B)KH
+♯η ,l ∗ 7→w ::l ∗ Xl ∗ 7→w ′ ::l ∗
+L
+
+k (A)
+adv l ∈ T JStr(B)KH
+.
+♯η L,l ∗ 7→w ::l ∗ Xl ∗ 7→w ′ ::l ∗
+
+
+7 RELATED WORK
+The central ideas of functional reactive programming were originally developed for the language
+Fran (Elliott and Hudak 1997) for reactive animation. These ideas have since been developed into
+general purpose libraries for reactive programming, most prominently the Yampa library (Nilsson et al.
+2002) for Haskell, which has been used in a variety of applications including games, robotics, vision, GUIs, and sound synthesis. Some of these libraries use a continuous notion of time, allowing
+e.g., integrals over input data to be computed. A continuous notion of time can be encoded in
+Simply RaTT as well given that the language is extended with a type Time that suitably represents
+positive time intervals (e.g., ﬂoating-point numbers). For example, a Yampa-style signal function
+type from A to B is thus encoded as (Str(Time) → Str(A) → Str(B)). This encoding reﬂects the
+(unoptimised) deﬁnition of Yampa-style signal functions (Nilsson et al. 2002), which is a coinductive type satisfying SF A B  Time → A → (B × SF A B). We believe that it should be possible to
+implement a Yampa-style FRP library in Simply RaTT, and Section 4 has some examples of combinators similar to those found in Yampa. While some of these combinators have stability constraints
+on types, we believe that these constraints will always be satisﬁed in concrete applications.
+Simply RaTT follows a pull-based approach to FRP, which means that the program is performing computations at every time step even if no event occurred. Elliott (2009) proposed an implementation of an FRP library that combines pull-based FRP with a push-based approach, where
+computation is only performed in response to incoming events. Whereas a pull-based approach
+is appropriate for example in games, which run at a ﬁxed sampling rate, a push-based approach
+is more eﬃcient for applications like GUIs, which often only need to react to events that occur
+infrequently.
+The idea of using modal type operators for reactive programming goes back at least to the independent works of Jeﬀrey (2012); Krishnaswami and Benton (2011) and Jeltsch (2013). One of the
+inspirations for Jeﬀrey (2012) was to use linear temporal logic (Pnueli 1977) as a programming language through the Curry-Howard isomorphism. The work of Jeﬀrey and Jeltsch has mostly been
+based on denotational semantics, and Cave et al. (2014); Krishnaswami (2013); Krishnaswami and Benton
+(2011); Krishnaswami et al. (2012) are the only works to our knowledge giving operational guarantees. The work of Cave et al. (2014) shows how one can encode notions of fairness in modal FRP, if
+one replaces the guarded ﬁxed point operator with more standard (co)recursion for (co)inductive
+types.
+The guarded recursive types and ﬁxed point combinator originate with Nakano (2000), but
+have since been used for constructing logics for reasoning about advanced programming languages (Birkedal et al. 2011) using an abstract form of step-indexing (Appel and McAllester 2001).
+The Fitch-style approach to modal types (Fitch 1952) has been used for guarded recursion in
+Clocked Type Theory (Bahr et al. 2017), where contexts can contain multiple, named ticks. Ticks
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:26
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+can be used for reasoning about guarded recursive programs. The denotational semantics of
+Clocked Type Theory (Mannaa and Møgelberg 2018) reveals the diﬀerence from the more standard
+two-context approaches to modal logics, such as Dual Intuitionistic Linear Logic (Barber 1996): In
+the latter, the modal operator is implicitly applied to the type of all variables in one context, in the
+Fitch-style, placing a tick in a context corresponds to applying a left adjoint to the modal operator
+to the context.
+The previous work closest to the present work is that of Krishnaswami (2013). We have already
+compared to this several times above, but give a short summary here. Simply RaTT is expressive
+enough to encompass all the positive examples of Krishnaswami’s calculus, but we go a step further and identify a source of time leaks which allows us to eliminate in typing a number of leaking
+examples typable in Krishnaswami’s calculus including the leakyNats example from the introduction, and scary const. One might claim that these are explicit leaks, but detecting them in the type
+system is a major step forward we believe. Note that the Fitch-style approach is a real shift in
+approach: The time dependencies have changed, and Krishnaswami’s context of stable variables
+has been replaced by a context of initial variables. One diﬀerence between these is that variables
+can be introduced from Krishnaswami’s stable context. In Simply RaTT, initial variables can generally not be introduced into temporal judgements. We plan to explain this change in terms of
+denotational semantics in future work.
+Another approach to reactive programming is that of synchronous dataﬂow languages. Here
+the main abstraction is that of a “logical tick” or synchronous abstraction. This is the assumption
+that at each tick, the output is computed instantaneously from the input. This abstraction makes
+reasoning about time much easier than if we had to consider both the reactive behaviour and the
+internal timing behaviour of a program. Of particular interest is the synchronous dataﬂow language Lustre (Caspi et al. 1987). Lustre is a ﬁrst-order language used for describing and verifying
+real-time systems and is at the core of the SCADE industrial environment (Esterel Technologies SA
+2019a) which is used for critical control systems in aerospace, rail transportation, industrial systems and nuclear power plants (Esterel Technologies SA 2019b). In Section 5, we have shown how
+to encode some of the simpler concepts of Lustre in Simply RaTT, and how the concept of a logical
+tick ﬁts well with the notion of stepwise stream unfolding.
+8
+
+CONCLUSIONS AND FUTURE WORK
+
+We have presented the modal calculus Simply RaTT for reactive programming. Using the Fitchstyle approach to modal types this gives a signiﬁcant simpliﬁcation of the type system and programming examples over existing approaches, in particular the calculus of Krishnaswami (2013).
+Moreover, we have identiﬁed a source of time leaks and designed the type system to rule these
+out.
+In future work we aim to extend Simply RaTT to a full type theory with dependent types for
+expressing properties of programs. Before doing that, however, we would like to extend Simply
+RaTT to encode fairness in types as in the work of Cave et al. (2014). This is not easy, since it
+requires a distinction between inductive and coinductive guarded types, but Nakano’s ﬁxed point
+combinator forces these to coincide.
+ACKNOWLEDGMENTS
+This work was supported by a research grant (13156) from VILLUM FONDEN.
+REFERENCES
+Andrew W. Appel and David McAllester. 2001. An Indexed Model of Recursive Types for Foundational Proof-carrying
+Code. ACM Trans. Program. Lang. Syst. 23, 5 (Sept. 2001), 657–683. https://doi.org/10.1145/504709.504712 00283.
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+Simply RaTT
+
+1:27
+
+Patrick Bahr, Hans Bugge Grathwohl, and Rasmus Ejlers Møgelberg. 2017. The clocks are ticking: No more delays!. In
+32nd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS 2017, Reykjavik, Iceland, June 20-23, 2017. IEEE
+Computer Society, Washington, DC, USA, 1–12. https://doi.org/10.1109/LICS.2017.8005097
+Andrew Barber. 1996. Dual intuitionistic linear logic. Technical Report. University of Edinburgh, Edinburgh, UK.
+Lars Birkedal, Rasmus Ejlers Møgelberg, Jan Schwinghammer, and Kristian Støvring. 2011. First steps in synthetic guarded
+domain theory: Step-indexing in the topos of trees. In In Proc. of LICS. IEEE Computer Society, Washington, DC, USA,
+55–64. https://doi.org/10.2168/LMCS-8(4:1)2012
+P. Caspi, D. Pilaud, N. Halbwachs, and J. A. Plaice. 1987. LUSTRE: A Declarative Language for Real-time Programming.
+In Proceedings of the 14th ACM SIGACT-SIGPLAN Symposium on Principles of Programming Languages (POPL ’87). ACM,
+New York, NY, USA, 178–188. https://doi.org/10.1145/41625.41641
+Andrew Cave, Francisco Ferreira, Prakash Panangaden, and Brigitte Pientka. 2014. Fair Reactive Programming. In Proceedings of the 41st ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages (POPL ’14). ACM, San Diego,
+California, USA, 361–372. https://doi.org/10.1145/2535838.2535881
+Ranald Clouston. 2018. Fitch-style modal lambda calculi. In Foundations of Software Science and Computation Structures,
+Christel Baier and Ugo Dal Lago (Eds.), Vol. 10803. Springer, Springer International Publishing, Cham, 258–275.
+Ranald Clouston, Bassel Mannaa, Rasmus Ejlers Møgelberg, Andrew M. Pitts, and Bas Spitters. 2018. Modal Dependent Type Theory and Dependent Right Adjoints. CoRR abs/1804.05236 (2018), 1–21. arXiv:1804.05236
+http://arxiv.org/abs/1804.05236
+Conal Elliott and Paul Hudak. 1997.
+Functional Reactive Animation. In Proceedings of the Second ACM SIGPLAN International Conference on Functional Programming (ICFP ’97). ACM, New York, NY, USA, 263–273.
+https://doi.org/10.1145/258948.258973
+Conal M. Elliott. 2009. Push-pull Functional Reactive Programming. In Proceedings of the 2Nd ACM SIGPLAN Symposium
+on Haskell (Haskell ’09). ACM, New York, NY, USA, 25–36. https://doi.org/10.1145/1596638.1596643
+Pascal Raymond Erwan Jahier and Nicolas Halbwachs. 2019.
+The LUSTRE V6 Reference Manual.
+https://www-verimag.imag.fr/DIST-TOOLS/SYNCHRONE/lustre-v6/doc/lv6-ref-man.pdf
+Esterel Technologies SA. 2019a. Scientiﬁc Background. http://www.esterel-technologies.com/about-us/scientiﬁc-historic-background/.
+Esterel Technologies SA. 2019b. Success Stories. http://www.esterel-technologies.com/success-stories/.
+F. B Fitch. 1952. Symbolic logic, an introduction. Ronald Press Co., New York, NY, USA.
+Alan Jeﬀrey. 2012. LTL types FRP: linear-time temporal logic propositions as types, proofs as functional reactive
+programs. In Proceedings of the sixth workshop on Programming Languages meets Program Veriﬁcation, PLPV 2012,
+Philadelphia, PA, USA, January 24, 2012, Koen Claessen and Nikhil Swamy (Eds.). ACM, Philadelphia, PA, USA, 49–
+60. https://doi.org/10.1145/2103776.2103783
+Alan Jeﬀrey. 2014. Functional Reactive Types. In Proceedings of the Joint Meeting of the Twenty-Third EACSL Annual Conference on Computer Science Logic (CSL) and the Twenty-Ninth Annual ACM/IEEE Symposium on Logic in Computer Science
+(LICS) (CSL-LICS ’14). ACM, New York, NY, USA, Article 54, 9 pages. https://doi.org/10.1145/2603088.2603106
+Wolfgang Jeltsch. 2013. Temporal Logic with ”Until”, Functional Reactive Programming with Processes, and Concrete
+Process Categories. In Proceedings of the 7th Workshop on Programming Languages Meets Program Veriﬁcation (PLPV
+’13). ACM, New York, NY, USA, 69–78. https://doi.org/10.1145/2428116.2428128
+Neelakantan R. Krishnaswami. 2013. Higher-order Functional Reactive Programming Without Spacetime Leaks. In Proceedings of the 18th ACM SIGPLAN International Conference on Functional Programming (ICFP ’13). ACM, Boston, Massachusetts, USA, 221–232. https://doi.org/10.1145/2500365.2500588
+N. R. Krishnaswami and N. Benton. 2011.
+Ultrametric Semantics of Reactive Programs. In 2011 IEEE 26th
+Annual Symposium on Logic in Computer Science. IEEE Computer Society, Washington, DC, USA, 257–266.
+https://doi.org/10.1109/LICS.2011.38
+Neelakantan R. Krishnaswami, Nick Benton, and Jan Hoﬀmann. 2012. Higher-order functional reactive programming in
+bounded space. In Proceedings of the 39th ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages,
+POPL 2012, Philadelphia, Pennsylvania, USA, January 22-28, 2012, John Field and Michael Hicks (Eds.). ACM, Philadelphia,
+PA, USA, 45–58. https://doi.org/10.1145/2103656.2103665
+Bassel Mannaa and Rasmus Ejlers Møgelberg. 2018. The Clocks They Are Adjunctions Denotational Semantics for Clocked
+Type Theory. In 3rd International Conference on Formal Structures for Computation and Deduction, FSCD 2018, July 9-12,
+2018, Oxford, UK (LIPIcs), Hélène Kirchner (Ed.), Vol. 108. Schloss Dagstuhl - Leibniz-Zentrum fuer Informatik, New
+York, NY, USA, 23:1–23:17. https://doi.org/10.4230/LIPIcs.FSCD.2018.23
+Per Martin-Löf and Giovanni Sambin. 1984. Intuitionistic type theory. Vol. 9. Bibliopolis Naples, Napoli, IT.
+Conor McBride and Ross Paterson. 2008. Applicative programming with eﬀects. Journal of functional programming 18, 1
+(2008), 1–13.
+
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+1:28
+
+Patrick Bahr, Christian Uldal Graulund, and Rasmus Ejlers Møgelberg
+
+H. Nakano. 2000. A modality for recursion. In Proceedings Fifteenth Annual IEEE Symposium on Logic in Computer Science
+(Cat. No.99CB36332). IEEE Computer Society, Washington, DC, USA, 255–266. https://doi.org/10.1109/LICS.2000.855774
+Henrik Nilsson, Antony Courtney, and John Peterson. 2002. Functional Reactive Programming, Continued. In
+Proceedings of the 2002 ACM SIGPLAN Workshop on Haskell (Haskell ’02). ACM, New York, NY, USA, 51–64.
+https://doi.org/10.1145/581690.581695
+Amir Pnueli. 1977. The Temporal Logic of Programs. In Proceedings of the 18th Annual Symposium on Foundations of
+Computer Science. IEEE Computer Society, Washington, DC, USA, 46–57. https://doi.org/10.1109/SFCS.1977.32
+Marc Pouzet. 2006. Lucid synchrone, version 3. Tutorial and reference manual. Université Paris-Sud, LRI 1 (2006), 25.
+
+Proc. ACM Program. Lang., Vol. 1, No. ICFP, Article 1. Publication date: January 2018.
+
+
