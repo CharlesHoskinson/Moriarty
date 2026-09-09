@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marginalia. The Moriarty source reader</title>
+<style>
+/* ------------------------------------------------------------------
+   Tokens. One accent (verdigris), one failure colour, cool neutrals.
+   ------------------------------------------------------------------ */
+:root{
+  --bg:#f3f4f6; --bg-2:#ffffff; --bg-3:#e9ebee;
+  --ink:#14171b; --ink-2:#4a5058; --ink-3:#7a8088;
+  --line:#d6d9de; --line-2:#c2c6cc;
+  --accent:#1f6f63; --accent-ink:#0f4a42; --accent-wash:#e2efec;
+  --fail:#a83d27; --fail-wash:#f6e6e1;
+  --dim:.42;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono","DejaVu Sans Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --radius:4px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --bg-2:#1a1d21; --bg-3:#22262b;
+    --ink:#e7e9ec; --ink-2:#b4b9c0; --ink-3:#7f858d;
+    --line:#2e3339; --line-2:#3c424a;
+    --accent:#5cb8a8; --accent-ink:#8ad3c6; --accent-wash:#183530;
+    --fail:#e07a62; --fail-wash:#3a1f19;
+    --dim:.38;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --bg-2:#1a1d21; --bg-3:#22262b;
+  --ink:#e7e9ec; --ink-2:#b4b9c0; --ink-3:#7f858d;
+  --line:#2e3339; --line-2:#3c424a;
+  --accent:#5cb8a8; --accent-ink:#8ad3c6; --accent-wash:#183530;
+  --fail:#e07a62; --fail-wash:#3a1f19;
+  --dim:.38;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  padding-inline:16px; padding-block:0 96px;
+}
+a{color:var(--accent-ink)}
+button{font:inherit; color:inherit}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.page{max-width:1240px;margin:0 auto}
+
+/* header ---------------------------------------------------------- */
+.top{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  height:64px; border-bottom:1px solid var(--line);
+}
+.brand{font-weight:600; letter-spacing:-.01em; font-size:16px}
+.brand small{font-weight:400;color:var(--ink-3);margin-left:10px;font-family:var(--mono);font-size:12px}
+.controls{display:flex;gap:10px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--radius);overflow:hidden}
+.seg button{
+  background:transparent;border:0;padding:6px 12px;cursor:pointer;color:var(--ink-2);
+  font-size:13px;line-height:1;
+}
+.seg button+button{border-left:1px solid var(--line-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible,.lens button:focus-visible,.files button:focus-visible,.code .ln:focus-visible,.ghost:focus-visible,input:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px
+}
+.ghost{background:transparent;border:1px solid var(--line-2);border-radius:var(--radius);padding:6px 10px;cursor:pointer;font-size:13px;color:var(--ink-2);line-height:1}
+
+/* intro ----------------------------------------------------------- */
+.intro{padding-block:56px 32px;max-width:760px}
+.intro h1{
+  font-size:clamp(28px,4.2vw,44px);line-height:1.08;letter-spacing:-.025em;
+  font-weight:600;margin:0 0 16px
+}
+.intro h1 em{font-style:italic;font-weight:600}
+.intro p{margin:0;color:var(--ink-2);font-size:17px;max-width:60ch}
+.intro p code{font-family:var(--mono);font-size:.92em;background:var(--bg-3);padding:1px 5px;border-radius:3px}
+
+/* reader ---------------------------------------------------------- */
+.reader{
+  border:1px solid var(--line); border-radius:var(--radius); background:var(--bg-2);
+  display:grid; grid-template-columns:200px minmax(0,1fr) 300px; grid-template-rows:auto 1fr;
+  min-height:520px;
+}
+.reader > .files{grid-row:1/3;border-right:1px solid var(--line);padding:14px 0}
+.reader > .toolbar{grid-column:2/4;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:10px 16px;min-height:52px}
+.reader > .code{grid-column:2;position:relative;min-width:0}
+.reader > .margin{grid-column:3;border-left:1px solid var(--line);position:relative;padding:0}
+
+.files h2{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px;padding:0 16px}
+.files button{
+  display:block;width:100%;text-align:left;background:transparent;border:0;border-left:2px solid transparent;
+  padding:8px 16px;cursor:pointer;font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.35
+}
+.files button span{display:block;font-family:var(--sans);font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.files button[aria-selected="true"]{border-left-color:var(--accent);color:var(--ink);background:var(--bg-3)}
+.files .group{margin-top:14px}
+
+.toolbar .path{font-family:var(--mono);font-size:12px;color:var(--ink-3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 260px}
+.lens{display:flex;gap:6px;flex-wrap:wrap}
+.lens button{
+  background:transparent;border:1px solid var(--line-2);border-radius:999px;padding:4px 11px;
+  font-size:12.5px;cursor:pointer;color:var(--ink-2);line-height:1.3
+}
+.lens button[aria-pressed="true"]{background:var(--accent-wash);border-color:var(--accent);color:var(--accent-ink)}
+.lens button b{font-weight:500;color:var(--ink-3);margin-left:5px;font-variant-numeric:tabular-nums}
+
+/* code pane */
+.code .scroll{overflow-x:auto;padding:14px 0 18px}
+.code ol{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:13px;line-height:1.75;min-width:max-content}
+.code li{display:grid;grid-template-columns:52px auto minmax(0,1fr);align-items:baseline;position:relative}
+.code li.elide{color:var(--ink-3);font-size:11.5px;padding:6px 0;grid-template-columns:52px 1fr}
+.code li.elide .n{visibility:hidden}
+.code .n{color:var(--ink-3);text-align:right;padding-right:14px;user-select:none;font-size:11.5px;font-variant-numeric:tabular-nums}
+.code .ln{
+  display:block;background:transparent;border:0;text-align:left;padding:0 16px 0 10px;margin:0;
+  white-space:pre;cursor:default;font:inherit;border-left:2px solid transparent;width:100%
+}
+.code li.noted .ln{cursor:pointer}
+.code li.noted .ln:hover, .code li.noted.open .ln{background:var(--accent-wash);border-left-color:var(--accent)}
+.code li.noted.open .ln{border-left-color:var(--accent)}
+.code li.dim{opacity:var(--dim)}
+.code li.noted:not(.dim) .ln{border-left-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.code .ev{font-size:11px;padding-right:6px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right;min-width:0}
+.code .ev:not(:empty){padding-left:6px;padding-right:12px;border-right:1px solid var(--line)}
+.code ol.has-ev li:not(.elide){grid-template-columns:52px 150px minmax(0,1fr)}
+.code ol.has-ev .ev{border-right:1px solid var(--line);padding-right:12px;align-self:stretch}
+.code .ev.pass{color:var(--accent-ink)}
+.code .ev.fail{color:var(--fail);font-weight:600}
+.code .ev.unreached{color:var(--ink-3);font-style:italic}
+.code li.hit .ln{background:var(--fail-wash);border-left-color:var(--fail)}
+
+/* tokens */
+.k{color:var(--accent-ink);font-weight:600}
+.t{color:var(--ink)}
+.t.gen{text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--accent) 55%,transparent);text-underline-offset:3px}
+.s{color:var(--ink-2)}
+.s.msg{color:var(--fail)}
+.num{color:var(--ink);font-variant-numeric:tabular-nums}
+.ns{color:var(--ink-3)}
+.op{color:var(--ink-2)}
+.thesis .ln{font-weight:600}
+
+/* inline notes (mobile) */
+.inote{display:none}
+
+/* margin column */
+.margin .card{padding:18px 18px 22px;position:absolute;left:0;right:0;transition:top .18s ease}
+.margin .card.static{position:static}
+.note h3{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin:0 0 8px}
+.note h3 .ref{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--accent-ink);margin-left:6px}
+.note p{margin:0 0 10px;font-size:13.5px;line-height:1.55;color:var(--ink)}
+.note p:last-child{margin-bottom:0}
+.note code{font-family:var(--mono);font-size:.92em;background:var(--bg-3);padding:1px 4px;border-radius:3px}
+.note .calc{font-family:var(--mono);font-size:12px;line-height:1.7;background:var(--bg-3);padding:8px 10px;border-radius:var(--radius);margin:8px 0 10px;white-space:pre-wrap;word-break:break-word;font-variant-numeric:tabular-nums}
+.note .assume{border-left:2px solid var(--line-2);padding-left:10px;color:var(--ink-2);font-size:12.5px}
+.note .assume b{color:var(--ink);font-weight:600}
+.note .fail{color:var(--fail)}
+
+/* run panel */
+.run{border-top:1px solid var(--line);padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 18px;align-items:end}
+.run label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:4px}
+.run label code{font-family:var(--mono);color:var(--ink)}
+.run input{
+  width:100%;font-family:var(--mono);font-size:14px;padding:7px 9px;border:1px solid var(--line-2);
+  border-radius:var(--radius);background:var(--bg-2);color:var(--ink);font-variant-numeric:tabular-nums
+}
+.run .result{grid-column:1/-1;font-size:13.5px;padding:12px 14px;border-radius:var(--radius);background:var(--accent-wash);color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+.run .result.rej{background:var(--fail-wash);color:var(--fail);border-color:color-mix(in srgb,var(--fail) 45%,transparent)}
+.run .result code{font-family:var(--mono);font-weight:600}
+.run .result small{display:block;color:var(--ink-2);font-size:12px;margin-top:6px}
+.run .hint{grid-column:1/-1;font-size:12px;color:var(--ink-3);margin:0}
+
+/* diff panel */
+.diff{padding:18px 16px 22px;font-size:13.5px}
+.diff .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;padding:14px 0;border-top:1px solid var(--line);align-items:start}
+.diff .row:first-child{border-top:0;padding-top:4px}
+.diff .row .lab{grid-column:1/-1;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.diff pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;background:var(--bg-3);padding:10px 12px;border-radius:var(--radius);min-height:44px}
+.diff pre .from{display:block;font-family:var(--sans);font-size:11px;color:var(--ink-3);margin-bottom:4px}
+.diff .row p{grid-column:1/-1;margin:10px 0 0;color:var(--ink-2)}
+.diff .absent{color:var(--ink-3);font-style:italic}
+.diff .heads{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding-bottom:10px}
+.diff .heads div{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.diff .heads div span{display:block;font-family:var(--sans);color:var(--ink-3);font-size:11.5px}
+
+/* footer of centrepiece */
+.sources{margin-top:14px;font-size:12.5px;color:var(--ink-3);font-family:var(--mono);line-height:1.7}
+.sources span{color:var(--ink-2)}
+
+/* mode-dependent copy */
+[data-mode="build"] .verify-only{display:none!important}
+[data-mode="verify"] .build-only{display:none!important}
+
+/* responsive ------------------------------------------------------- */
+@media (max-width:1000px){
+  .reader{grid-template-columns:180px minmax(0,1fr)}
+  .reader > .toolbar{grid-column:2/3}
+  .reader > .margin{display:none}
+  .inote{display:none;grid-column:1/-1;margin:6px 16px 12px 62px;padding:12px 14px;border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:var(--radius);background:var(--bg);font-family:var(--sans);white-space:normal;line-height:1.5;max-width:60ch}
+  .code li.open .inote{display:block}
+  .code ol{min-width:0}
+  .code .ln{white-space:pre-wrap;word-break:break-word;padding-left:10px;text-indent:-1.2em;margin-left:1.2em;width:calc(100% - 1.2em)}
+  .code li{grid-template-columns:44px auto minmax(0,1fr)}
+  .code ol.has-ev li:not(.elide){grid-template-columns:44px 128px minmax(0,1fr)}
+  .code ol.has-ev .ev{font-size:10px;letter-spacing:-.01em}
+}
+@media (max-width:640px){
+  body{font-size:14.5px}
+  .top{height:auto;padding-block:12px;flex-wrap:wrap}
+  .reader{grid-template-columns:minmax(0,1fr);border-radius:var(--radius)}
+  .reader > .files{grid-row:auto;border-right:0;border-bottom:1px solid var(--line);padding:10px 8px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin}
+  .files h2{display:none}
+  .files .group{margin:0;display:contents}
+  .files button{width:auto;border-left:0;border-bottom:2px solid transparent;white-space:nowrap;padding:6px 10px}
+  .files button span{display:none}
+  .files button[aria-selected="true"]{border-bottom-color:var(--accent)}
+  .reader > .toolbar{grid-column:1}
+  .reader > .code{grid-column:1}
+  .code li{grid-template-columns:36px auto minmax(0,1fr)}
+  .code ol.has-ev li:not(.elide){grid-template-columns:30px 124px minmax(0,1fr)}
+  .code .n{padding-right:8px}
+  .inote{margin-left:14px}
+  .diff .row{grid-template-columns:1fr}
+  .diff .heads{grid-template-columns:1fr}
+  .intro{padding-block:32px 20px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .margin .card{transition:none}
+  *{scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body data-mode="build">
+<div class="page">
+
+<header class="top">
+  <div class="brand">Moriarty <small>marginalia / centrepiece prototype</small></div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Reader mode">
+      <button type="button" data-mode-btn="build" aria-pressed="true">Build</button>
+      <button type="button" data-mode-btn="verify" aria-pressed="false">Verify</button>
+    </div>
+    <button type="button" class="ghost" id="theme" aria-label="Cycle colour theme">Theme: auto</button>
+  </div>
+</header>
+
+<section class="intro">
+  <h1 class="build-only">The guarantee is <em>written in the source.</em></h1>
+  <h1 class="verify-only">Five specification layers, read from the source down.</h1>
+  <p class="build-only">Four real <code>.mori</code> files from the repository. Read a line and the margin tells you which bug it makes unwritable.</p>
+  <p class="verify-only">The same four files. The margin names the grammar production, the profile that admits it, and the obligation the semantics still owe.</p>
+</section>
+
+<!-- ============================ centrepiece ============================ -->
+<section class="reader" id="reader" aria-label="Annotated Moriarty source">
+  <nav class="files" aria-label="Source files">
+    <div class="group" role="tablist" aria-orientation="vertical">
+      <h2>Files</h2>
+      <button type="button" role="tab" data-file="partial" aria-selected="true">partial-payment.mori<span>successor profile</span></button>
+      <button type="button" role="tab" data-file="funded" aria-selected="false">funded-partial-payment.mori<span>successor profile</span></button>
+      <button type="button" role="tab" data-file="swap" aria-selected="false">swap.mori<span>atomic profile, action swap</span></button>
+      <button type="button" role="tab" data-file="loan" aria-selected="false">loan.mori<span>atomic profile, policy and accrue</span></button>
+      <button type="button" role="tab" data-file="diff" aria-selected="false">profile diff<span>one obligation, two profiles</span></button>
+    </div>
+  </nav>
+
+  <div class="toolbar">
+    <div class="path" id="path"></div>
+    <div class="lens" role="group" aria-label="Lens" id="lens"></div>
+  </div>
+
+  <div class="code" id="code"></div>
+
+  <aside class="margin" id="margin" aria-hidden="true">
+    <div class="card" id="card"></div>
+  </aside>
+</section>
+
+<p class="sources" id="sources"></p>
+
+</div>
+
+<script>
+/* =====================================================================
+   DATA. Every source line below is verbatim from the repository.
+   Line numbers are the real line numbers in the named file.
+   ===================================================================== */
+const REPO = 'experiments/moriarty-language/';
+
+const FILES = {
+partial: {
+  path: REPO + 'spec/successor/examples/partial-payment.mori',
+  profile: 'moriarty-successor-syntax/0',
+  status: {
+    build: 'This profile parses, formats and checks syntax. It does not execute a payment yet; the typed semantics that will make this file run are later work.',
+    verify: 'Provisional syntax profile: lexical rules, ISO/IEC 14977 EBNF, bounded parser, canonical formatter, read-only CLI (check-syntax, format). No typing, evaluation, obligation conservation or K. RP01 unfrozen.'
+  },
+  segments: [{ start: 1, lines: [
+'profile "moriarty-successor-syntax/0";',
+'',
+'agreement PartialPayment {',
+'  unit USD;',
+'  party borrower;',
+'  party lender;',
+'  state principal: Debt<USD> = debt(100, USD);',
+'  state interest: Debt<USD> = debt(10, USD);',
+'  action payInterest(payment: Debt<USD>) {',
+'    requires payment > debt(0, USD);',
+'    requires payment <= pre.interest;',
+'    next.interest = pre.interest - payment;',
+'    ensures post.principal == pre.principal;',
+'  }',
+'}' ]}],
+  thesis: [13],
+  notes: {
+    1: { lens: 'bounds', title: 'profile', build: 'The first line names which language the file is written in. There is no fallback: a file that claims this profile is parsed only by this profile.', verify: '<code>profileDecl = "profile", stringToken, ";"</code>. The string must be exactly <code>moriarty-successor-syntax/0</code>; anything else is <code>PROFILE_MISMATCH</code>. The grammar admits exactly one profileDecl and one agreementDecl per file.' },
+    4: { lens: 'types', title: 'unit', build: 'A unit is declared before any amount can carry it. <code>USD</code> here is a denomination, not a token: which ledger asset settles it is a separate declaration.', verify: '<code>unitDecl = "unit", identifier, ";"</code>. Units have a separate namespace from terms, so a denomination and a settlement asset may share a spelling.' },
+    5: { lens: 'types', title: 'party', build: 'Parties are declared names, not addresses. Who may call <code>payInterest</code> is authority, decided outside the grammar.', verify: '<code>partyDecl = "party", identifier, ";"</code>. Authorization is not a syntactic property; the successor profile leaves it to typed authority.' },
+    7: { lens: 'types', title: 'Debt&lt;USD&gt;', build: '<code>Debt&lt;USD&gt;</code> is not <code>Amount&lt;USD&gt;</code>. A debt is an obligation someone owes; an amount is cash someone holds. The checker will not let you add one to the other, so a repayment cannot be booked as if it were a balance.', verify: '<code>type = identifier, [ typeArgs ]</code>, <code>typeArgs</code> nonempty (<code>Foo&lt;&gt;</code> is <code>EMPTY_TYPE_ARGS</code>). In the funded profile, Debt and Amount are distinct types even when their unit names match.' },
+    8: { lens: 'types', title: 'two obligations', build: 'Principal and interest are two separately typed obligations, not one balance. That is what lets the last line of the action say anything at all.', verify: 'Two state fields of type <code>Debt&lt;USD&gt;</code> initialised by the <code>debt(INTEGER, U)</code> constructor. Integer tokens are canonical unsigned decimal, kept as text, never converted to a floating number.' },
+    9: { lens: 'types', title: 'payment: Debt&lt;USD&gt;', build: 'The payment parameter is typed as nominal debt. It says how much obligation is being discharged, not which coins moved. The funded file next to this one shows the cash leg as a separate object.', verify: '<code>parameter = identifier, ":", type</code>. The parameter is a nominal quantity; a settlement transfer is a distinct emission with its own identifier.' },
+    10: { lens: 'guards', title: 'requires', build: 'A zero payment is rejected before anything is written. There is no code path that quietly does nothing.', verify: '<code>requirement = "requires", expression, ";"</code>. Statements precede postconditions; a statement after an <code>ensures</code> is <code>STATEMENT_AFTER_ENSURES</code>.' },
+    11: { lens: 'guards', title: 'requires', build: 'You cannot pay more interest than is owed. There is no overflow that spills into principal, because the action rejects first.', verify: 'The comparison reads the pre-state through the identifier <code>pre</code>. Unparenthesised chained comparison is rejected (<code>CHAINED_COMPARISON</code>).' },
+    12: { lens: 'prepost', title: 'next', build: 'The only state this action writes. Interest goes down by exactly the payment; nothing else is touched.', verify: '<code>update = "next", ".", identifier, "=", expression, ";"</code>. <code>next</code> is a keyword; <code>pre</code> and <code>post</code> are ordinary identifiers by the lexical rules.' },
+    13: { lens: 'prepost', title: 'ensures', build: 'The thesis. Paying interest must not touch principal, and the file says so where the reader can see it. A partial repayment that quietly erodes principal is not a bug here; it is an unwritable program.', verify: '<code>postcondition = "ensures", expression, ";"</code>. Under this profile it is parsed and formatted only. Discharging it is an obligation on the later typed semantics and K, not on the parser.' }
+  }
+},
+
+funded: {
+  path: REPO + 'spec/successor/examples/funded-partial-payment.mori',
+  profile: 'moriarty-successor-syntax/0',
+  status: {
+    build: 'This file is prepared locally by the funded-source slice: it elaborates to typed Core and runs the retained repayment kernel against a supplied state. No signature, proof or ledger acceptance is claimed.',
+    verify: 'Semantic profile moriarty-funded-source/0 over the unchanged successor parser. elaborateSuccessorSource produces deterministic JSON Core; prepareSuccessor returns Prepared or Rejected. The state is an unauthenticated projection.'
+  },
+  segments: [{ start: 1, lines: [
+'profile "moriarty-successor-syntax/0";',
+'agreement FundedPartialPayment {',
+'  unit Cash;',
+'  party Payer;',
+'  party Lender;',
+'  asset Cash: Asset<Cash>;',
+'',
+'  action pay(cash: Amount<Cash>, nominal: Debt<Cash>) {',
+'    emit Transfer {',
+'      id: TransferId("T1"), from: Payer, to: Lender,',
+'      settlementAsset: Cash, amount: cash',
+'    };',
+'    emit Repay {',
+'      allocationId: AllocationId("Alloc1"), transferId: TransferId("T1"),',
+'      obligationId: ObligationId("Due100"), payer: Payer, nominalAmount: nominal',
+'    };',
+'  }',
+'}' ]}],
+  thesis: [8],
+  notes: {
+    6: { lens: 'types', title: 'asset vs unit', build: 'Line 3 declared <code>Cash</code> as a denomination. This line declares a settlement asset that happens to share the name. They are different things: what a debt is counted in, and what actually moves.', verify: '<code>assetDecl = "asset", identifier, ":", type, ";"</code>. Units and terms are separate namespaces; the asset type argument must name a declared unit.' },
+    8: { lens: 'types', title: 'Amount and Debt, side by side', build: 'One action, two typed inputs: <code>cash</code> is what is transferred, <code>nominal</code> is how much obligation it discharges. Conflating them is the partial-repayment bug, and here the signature forbids it.', verify: 'Parameter types <code>Amount&lt;Cash&gt;</code> and <code>Debt&lt;Cash&gt;</code> are distinct even though both name <code>Cash</code>. Conversion between them is the kernel’s job, with a declared rounding: none, floor or ceil.' },
+    9: { lens: 'prepost', title: 'the cash leg', build: 'The transfer has its own identity, <code>T1</code>. It moves cash from Payer to Lender and says nothing about debt.', verify: 'Emission fields are closed, mandatory and unique. <code>TransferId</code> is a constructor over an ASCII identifier within the retained bound.' },
+    13: { lens: 'prepost', title: 'the allocation leg', build: 'A payment is a transfer <b>plus</b> an allocation against a named obligation. <code>Due100</code> is the debt being discharged; <code>T1</code> is the cash that funds it. The kernel checks that the converted settlement of the nominal fits inside that transfer.', verify: 'The kernel allocates by AccrualFirst, PrincipalFirst or ProRata. A positive nominal converting to zero settlement rejects as <code>DUST</code>; ProRata requires <code>N×P</code> and <code>P+A</code> to fit UInt128 before dividing. Every arithmetic step is BigInt on canonical decimal strings.' }
+  }
+},
+
+swap: {
+  path: REPO + 'spec/examples/swap.mori',
+  profile: 'moriarty-bounded-atomic/1',
+  status: {
+    build: 'Implemented profile: grammar, parser, type checker, canonical encoding, local evaluator and restricted Compact lowering. This action runs.',
+    verify: 'Accepted atomic profile. Guards evaluate in source order against a private working copy; the first false guard rejects with GUARD_FAILED carrying the exact source message. The in-page run below is the site’s own reading of the source in that order, not the repository evaluator.'
+  },
+  segments: [
+    { start: 1, lines: [
+'agreement ConstantProductEpoch profile "moriarty-bounded-atomic/1" {',
+'  lifetime 8;',
+'  horizon 2000000000;' ]},
+    { start: 9, lines: [
+'  const fee_numerator: UInt128 = uint(997);',
+'  const fee_denominator: UInt128 = uint(1000);',
+'  const expected_output: Amount<AssetB_quantum> = amount(19743, AssetB_quantum);' ]},
+    { start: 14, lines: [
+'  state reserve_a: Amount<AssetA_quantum> = amount(1000000, AssetA_quantum);',
+'  state reserve_b: Amount<AssetB_quantum> = amount(2000000, AssetB_quantum);',
+'  state trader_a: Amount<AssetA_quantum> = amount(100000, AssetA_quantum);' ]},
+    { start: 26, lines: [
+'  reserve swap for close;' ]},
+    { start: 65, lines: [
+'  action swap(actor: Text, recipient: Text, asset_in: Text, asset_out: Text, amount_in: Amount<AssetA_quantum>, min_out: Amount<AssetB_quantum>) {',
+'    guard obs.now < uint(2000000000), "horizon expired";',
+'    guard remaining > uint(1), "final allowance is reserved for closure";',
+'    guard arg.actor == const.trader, "trader authority required";',
+'    guard arg.recipient == const.trader, "recipient must be trader";',
+'    guard arg.asset_in == text("ASSET_A"), "asset_in mismatch";',
+'    guard arg.asset_out == text("ASSET_B"), "asset_out mismatch";',
+'    guard state.epoch_closed == uint(0), "epoch is closed";',
+'    guard arg.amount_in > amount(0, AssetA_quantum), "input must be positive";',
+'    guard arg.amount_in <= state.trader_a, "insufficient synthetic balance";',
+'    let effective_input = arg.amount_in * const.fee_numerator;',
+'    let numerator = effective_input * state.reserve_b;',
+'    let denominator = state.reserve_a * const.fee_denominator + effective_input;',
+'    let output_calculated = floor_div(numerator, denominator);',
+'    guard output_calculated == const.expected_output, "independent output value mismatch";',
+'    guard arg.min_out <= output_calculated, "minimum output not met";',
+'    guard output_calculated < state.reserve_b, "output would empty reserve";',
+'    set trader_a = state.trader_a - arg.amount_in;',
+'    set reserve_a = state.reserve_a + arg.amount_in;',
+'    set reserve_b = state.reserve_b - output_calculated;',
+'    set trader_b = state.trader_b + output_calculated;',
+'    guard state.reserve_a == const.expected_reserve_a, "reserve_a mismatch";',
+'    guard state.reserve_b == const.expected_reserve_b, "reserve_b mismatch";',
+'    emit Transfer { asset: arg.asset_in, from: const.trader, to: const.pool, amount: arg.amount_in };',
+'    emit Transfer { asset: arg.asset_out, from: const.pool, to: arg.recipient, amount: output_calculated };',
+'  }' ]}
+  ],
+  thesis: [80],
+  run: true,
+  notes: {
+    2: { lens: 'bounds', title: 'lifetime', build: 'This agreement gets eight transitions, ever. The count never resets. An AMM epoch written here cannot become an unbounded subscription.', verify: 'Positive UInt128 genesis allowance. Every input state must satisfy <code>revision + remaining == genesis.lifetime</code>; each Complete action decrements <code>remaining</code> exactly once. <code>remaining == 0</code> is <code>LIFETIME_EXHAUSTED</code>.' },
+    3: { lens: 'bounds', title: 'horizon', build: 'An absolute clock bound, UTC epoch seconds, exclusive. After it, no action of this agreement can be accepted, whether or not the author remembered to guard for it.', verify: 'The evaluator requires authenticated <code>now &lt; horizon</code> independently of the source guard, so the guard on line 66 repeats a check the semantics enforce anyway. Header horizon is not host-clock access.' },
+    11: { lens: 'policy', title: 'the pinned answer', build: 'The author has written down what the correct output is: 19,743. Line 79 checks the formula against it. Two independent derivations must agree before value moves.', verify: 'Const of type <code>Amount&lt;AssetB_quantum&gt;</code>. The literal <code>amount(19743, AssetB_quantum)</code> carries its unit; a bare integer would not type as an amount.' },
+    14: { lens: 'types', title: 'unit-indexed reserves', build: '<code>reserve_a</code> is an amount of A. You cannot add it to <code>reserve_b</code>, and you cannot compare it to a bare number. Ticker confusion is a type error.', verify: '<code>stored_type = "UInt128" | "Text" | "Amount", "&lt;", identifier, "&gt;"</code>. Unit exponents are tracked through <code>*</code> and <code>floor_div</code>; mismatched units reject before lowering.' },
+    26: { lens: 'bounds', title: 'reserve swap for close', build: 'The last transition is reserved for closing the pool. A trader cannot spend the final allowance and strand the provider’s reserves.', verify: 'Lowers to <code>ReserveRule {action:"swap", closure:"close"}</code>. Stage 6 requires the reserved action to contain a top-level guard whose condition is exactly <code>Gt(Remaining, 1)</code> after parenthesis erasure; equivalent reformulations do not satisfy it (<code>RESERVE_RULE</code>).' },
+    66: { lens: 'guards', title: 'guard, named', build: 'Every guard carries the message you will get when it fails. There is no silent path.', verify: '<code>statement = "guard", expression, ",", json_string, ";"</code>. On rejection the diagnostic <code>message</code> equals the code, except <code>GUARD_FAILED</code>, which uses the exact source guard message.' },
+    67: { lens: 'bounds', title: 'remaining', build: '<code>remaining</code> is how many transitions this agreement has left. At genesis it equals <code>lifetime</code>, 8. This guard is what makes line 26 hold.', verify: '<code>remaining</code> is a UInt128 primary in the expression grammar, read from the checked state envelope, not from a caller-supplied certificate.' },
+    73: { lens: 'guards', title: 'positive input', build: 'A zero-input swap is rejected by name rather than returning zero output and emitting two empty transfers.', verify: 'Comparison between two <code>Amount&lt;AssetA_quantum&gt;</code> values. Comparing an amount with a bare <code>uint</code> would fail typing.' },
+    74: { lens: 'guards', title: 'balance check', build: 'The trader holds 100,000 A in this epoch. Ask to swap more and the rejection says so.', verify: 'Reads <code>state.trader_a</code> from the committed pre-state. State reads inside an action see the private working copy after earlier <code>set</code> statements.' },
+    78: { lens: 'policy', title: 'floor_div', build: 'The only division the language has. It rounds down, and the <code>policy swap_output</code> block in this file names that direction, the unit, the derivation, where the remainder goes, and the proof obligation.', verify: '<code>floor_div(n, d)</code> elaborates to <code>FloorDiv(n, d)</code>. There is no <code>/</code> token in either profile. The policy targets <code>write(swap, reserve_b)</code>, <code>write(swap, trader_b)</code> and effect ordinal 1.' },
+    79: { lens: 'policy', title: 'independent value check', build: 'The computed output must equal the value the author derived by hand. Change the input and this is the guard that fires: the file is a frozen worked example, not a general pool.', verify: 'Equality over <code>Amount&lt;AssetB_quantum&gt;</code>. This is the source-level form of the sample’s conformance vector.' },
+    80: { lens: 'guards', title: 'the slippage guard', build: 'Ask for 19,744 and you get <span class="fail">"minimum output not met"</span>, not 19,743 delivered quietly. The rejection has a name and a line.', verify: 'Guard message is the exact string returned in the <code>GUARD_FAILED</code> diagnostic. Try it in the panel below.' },
+    81: { lens: 'guards', title: 'reserve safety', build: 'The constant-product formula is satisfied by an output that empties the pool. This guard is why that is not a legal transition.', verify: 'Strict inequality against <code>state.reserve_b</code>. Reserve safety is stated as a guard, not inferred from the invariant.' },
+    85: { lens: 'prepost', title: 'each field written once', build: 'Four writes, one per field. An action may not write the same state field twice, so there is no order-dependent double update.', verify: 'Semantic obligation 11 of the atomic grammar: each action writes a state field at most once; effect ordinals are zero-based in emit order.' },
+    86: { lens: 'prepost', title: 'post-state check', build: 'After the writes, the reserves must equal the values the author expected: 1,010,000 A and 1,980,257 B. This is the atomic profile’s way of writing <code>ensures</code>.', verify: 'Reads of <code>state.reserve_a</code> after <code>set</code> observe the working copy. The successor profile gives this pattern a keyword; see the profile diff.' },
+    88: { lens: 'prepost', title: 'emit Transfer', build: 'Value moves only here, and only after every guard held. Two transfers, both with a unit-indexed amount and named endpoints.', verify: 'Effect ordinal 0 of action <code>swap</code>; <code>policy swap_input</code> targets it. <code>Amount</code> without a parameter in an effect schema is emit-only and records the operand unit.' }
+  }
+},
+
+loan: {
+  path: REPO + 'spec/examples/loan.mori',
+  profile: 'moriarty-bounded-atomic/1',
+  status: {
+    build: 'Implemented profile. The first period of a fixed-rate loan: interest accrues by a declared formula, then settles. Both dues are created, settled and closed with exact micro-USD integers.',
+    verify: 'Accepted atomic profile. The policy block is metadata the checker validates against targets; the K definition executes the transfer-then-repay shape with AccrualFirst, PrincipalFirst and ProRata allocation across 16 frozen cases.'
+  },
+  segments: [
+    { start: 1, lines: [
+'agreement LoanFirstPeriod profile "moriarty-bounded-atomic/1" {',
+'  lifetime 2;',
+'  horizon 2000000000;',
+'  unit USD_micro;' ]},
+    { start: 15, lines: [
+'  state notional: Amount<USD_micro> = amount(5000000000, USD_micro);' ]},
+    { start: 28, lines: [
+'  policy accrued_interest targets write(accrue, interest_due), effect(accrue, 1, amount) {',
+'    unit USD_micro;',
+'    derivation "notional*8*31/(100*365)";',
+'    rounding floor(accrue, interest_calculated);',
+'    remainder "discard 54/73 micro-USD for this sample only";',
+'    comparison "exact integer sample value; no ACTUS tolerance claim";',
+'    proof "loan_first_period_interest_floor_v1";',
+'  }' ]},
+    { start: 73, lines: [
+'  action accrue(actor: Text) {',
+'    guard obs.now < uint(2000000000), "horizon expired";',
+'    guard arg.actor == const.borrower, "borrower authority required";',
+'    guard state.cursor == uint(0), "period already accrued";',
+'    let interest_numerator = state.notional * const.annual_rate_numerator * const.day_count_numerator;',
+'    let interest_denominator = const.annual_rate_denominator * const.day_count_denominator;',
+'    let interest_calculated = floor_div(interest_numerator, interest_denominator);',
+'    guard interest_calculated == const.expected_interest, "independent interest value mismatch";',
+'    set principal_due = const.principal_installment;',
+'    set interest_due = interest_calculated;',
+'    set notional = state.notional - const.principal_installment;',
+'    guard state.notional == const.expected_outstanding_notional, "outstanding notional mismatch";' ]},
+    { start: 108, lines: [
+'    guard state.notional == const.expected_outstanding_notional, "episode closure cannot discharge remaining notional";',
+'  }' ]}
+  ],
+  thesis: [28, 108],
+  notes: {
+    2: { lens: 'bounds', title: 'lifetime 2', build: 'Two transitions: accrue, then settle. There is no third. A loan period that could be re-accrued forever is not expressible.', verify: 'Genesis allowance 2. After settle, <code>remaining == 0</code>; any further action is <code>LIFETIME_EXHAUSTED</code> before evaluation.' },
+    4: { lens: 'types', title: 'USD_micro', build: 'Every money value in this file is an integer count of micro-dollars. No decimals, no floating point, nothing to round by accident.', verify: 'Declared unit. Amounts carry it as a type parameter; the settlement declaration binds it to a ledger asset with quantum 1.' },
+    28: { lens: 'policy', title: 'policy', build: 'Rounding is a declared, named artifact. This block says what is rounded (the interest write and the second effect of <code>accrue</code>), in what unit, by which formula, in which direction, what happens to the remainder, how it is compared, and which proof discharges it.', verify: '<code>field_policy</code> production. Targets are <code>write(action, field)</code> and <code>effect(action, ordinal, label)</code>; they must resolve to a real write and a real emission or the program rejects. The six fields are mandatory and ordered by the grammar.' },
+    30: { lens: 'policy', title: 'derivation', build: 'The formula, in words a reviewer can check: 5,000,000,000 × 8 × 31 / (100 × 365).', verify: 'A JSON string; the checker does not parse it. Lines 77 to 79 are the executable form, and line 80 pins the result to the constant <code>expected_interest</code>.' },
+    31: { lens: 'policy', title: 'rounding floor', build: 'Rounding down, and it says so. In a vault or a swap, the direction is the exploit; here it is a declared fact about a named local.', verify: '<code>rounding_form = "none" | "floor", "(", identifier, "," identifier, ")"</code>. The named local must be the <code>floor_div</code> result in the named action.' },
+    32: { lens: 'policy', title: 'remainder', calc: '1,240,000,000,000 / 36,500\n= 33,972,602 remainder 27,000\n27,000 / 36,500 = 54/73 micro-USD', build: 'The remainder is not lost by accident; it is discarded on purpose, and the file says how much. Do the division: the fraction is exactly 54/73 of one micro-dollar.', verify: 'The sample’s remainder is stated for this instance only ("for this sample only"). The policy makes the disposition reviewable; it does not generalise the value.' },
+    33: { lens: 'policy', title: 'comparison', build: 'An honest scope note written into the program: this is an exact integer sample, and it does not claim ACTUS tolerance conformance.', verify: 'Comparison basis is free text for the reviewer and the conformance vector. ACTUS reproduction is a separate commitment (277 fixtures, 18 executable types).' },
+    34: { lens: 'policy', title: 'proof', build: 'The name of the proof obligation this rounding must discharge. A reviewer can ask whether <code>loan_first_period_interest_floor_v1</code> exists and what it establishes.', verify: 'Proof identifiers are recorded in the manifest alongside Core hash, bounds and artifact hashes. The identifier is a commitment, not evidence of discharge.' },
+    77: { lens: 'policy', title: 'the numerator', build: '5,000,000,000 × 8 × 31 = 1,240,000,000,000. Multiplication of amounts and rates is checked UInt128 arithmetic; overflow is a rejection, not a wrap.', verify: '<code>*</code> adds unit exponents. <code>Amount&lt;USD_micro&gt; × UInt128 × UInt128</code> stays an amount of USD_micro.' },
+    79: { lens: 'policy', title: 'floor_div', calc: 'floor(1,240,000,000,000 / 36,500)\n= 33,972,602', build: 'The interest for the period, rounded down, exactly as the policy block declared.', verify: 'The local named in <code>rounding floor(accrue, interest_calculated)</code>. The policy and the statement are checked to refer to the same thing.' },
+    80: { lens: 'guards', title: 'independent value check', build: 'The computed interest must equal a value derived independently and written as a constant: 33,972,602. If the formula and the constant disagree, nothing accrues.', verify: 'Source-level conformance vector. The atomic examples pin every derived value to a constant so the evaluator and the author’s arithmetic are checked against each other.' },
+    83: { lens: 'prepost', title: 'principal moves once', build: 'The notional falls by exactly the installment, 500,000,000 micro-USD, and the next line checks that it now equals 4,500,000,000.', verify: 'The subsequent guard reads the working copy after the write. Together the pair is the atomic profile’s <code>ensures</code>.' },
+    108: { lens: 'prepost', title: 'closure cannot discharge notional', build: 'The last line of the settle action. Paying this period’s dues closes the episode, but the remaining notional must still be 4,500,000,000. Closing a period is not the same as being paid off.', verify: 'Status <code>remaining_notional notional</code> derives Outstanding from this field. Episode closure and agreement closure are distinct statuses; this guard keeps them distinct.' }
+  }
+},
+
+diff: { isDiff: true, path: 'spec/successor/examples/partial-payment.mori  vs  spec/examples/loan.mori', profile: 'both profiles' }
+};
+
+const LENSES = [
+  { id: 'all', label: 'All' },
+  { id: 'types', label: 'Types', build: 'Where the type system carries financial meaning: units, Debt versus Amount, parties, assets. These lines are why a ticker mix-up or a debt booked as cash is a compile error.', verify: 'Nominal types with unit parameters. Typing judgments over these lines are the static-semantics layer; the grammar admits the shapes, the checker decides admissibility.' },
+  { id: 'guards', label: 'Guards', build: 'Every rejection has a name. These lines are the difference between a named failure and a silent adjustment.', verify: 'Preconditions and post-write checks. Atomic profile: guard with a message string. Successor profile: requires. Evaluation is in source order; the first false guard rejects.' },
+  { id: 'policy', label: 'Policy', build: 'Rounding as a declared artifact: unit, derivation, direction, remainder, comparison, proof. Plus the independent value checks that pin computed results to hand-derived constants.', verify: 'The field_policy production and the lines it targets. Policy targets must resolve to real writes and emissions.' },
+  { id: 'bounds', label: 'Bounds', build: 'What the agreement promises about itself: how many transitions, until when, and which transition is reserved for closing.', verify: 'lifetime, horizon, reserve and the remaining primary. Enforced by the state envelope invariant revision + remaining == lifetime and the exclusive horizon check.' },
+  { id: 'prepost', label: 'Pre / Post', build: 'Where state is written and what must be true afterwards. The successor profile says ensures; the atomic profile writes a guard after the set.', verify: 'Updates and postconditions. Each field written at most once per action; post-write guards read the private working copy.' }
+];
+
+/* =====================================================================
+   HIGHLIGHTER
+   ===================================================================== */
+const KW = new Set(('profile agreement unit party asset const state action requires let next emit ensures true false not and or ' +
+  'lifetime horizon observation settlement quantum policy targets write derivation rounding remainder comparison proof none floor ' +
+  'status episode closed_when remaining_notional no_remaining_notional reserve for effect guard set uint text amount remaining floor_div debt').split(' '));
+const NS = new Set(['pre','post','next','state','arg','obs','const']);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function highlight(line){
+  const isGuard = /^\s*guard\b/.test(line);
+  const re = /("(?:[^"\\]|\\.)*")|(\b\d+\b)|([A-Za-z_][A-Za-z0-9_]*)|(==|!=|<=|>=|[<>+\-*=:;,.(){}])|(\s+)|(.)/g;
+  let out = '', m;
+  while ((m = re.exec(line))) {
+    if (m[1]) out += `<span class="s${isGuard ? ' msg' : ''}">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="num">${m[2]}</span>`;
+    else if (m[3]) {
+      const w = m[3];
+      const after = line.slice(re.lastIndex, re.lastIndex + 1);
+      if (NS.has(w) && after === '.') out += `<span class="ns">${w}</span>`;
+      else if (KW.has(w) && !(w === 'next' && after === '.')) out += `<span class="k">${w}</span>`;
+      else if (/^[A-Z]/.test(w)) out += `<span class="t${after === '<' ? ' gen' : ''}">${w}</span>`;
+      else out += w;
+    }
+    else if (m[4]) out += `<span class="op">${esc(m[4])}</span>`;
+    else out += esc(m[0]);
+  }
+  return out;
+}
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const state = { mode: 'build', file: 'partial', lens: 'all', open: null, run: { now: '1700000000', amount_in: '10000', min_out: '19743' } };
+const $ = s => document.querySelector(s);
+const codeEl = $('#code'), cardEl = $('#card'), lensEl = $('#lens'), pathEl = $('#path'), srcEl = $('#sources');
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(){
+  document.body.dataset.mode = state.mode;
+  const f = FILES[state.file];
+  pathEl.textContent = f.path + '   ·   ' + f.profile;
+  renderLens(f);
+  if (f.isDiff) { renderDiff(); return; }
+  renderCode(f);
+  renderCard(f);
+  srcEl.innerHTML = 'Source: <span>' + esc(f.path) + '</span>. Line numbers are the file’s own. Nothing on this surface is paraphrased.';
+}
+
+function renderLens(f){
+  if (f.isDiff) { lensEl.innerHTML = ''; return; }
+  lensEl.innerHTML = LENSES.map(l => {
+    const n = l.id === 'all' ? Object.keys(f.notes).length : Object.values(f.notes).filter(x => x.lens === l.id).length;
+    return `<button type="button" data-lens="${l.id}" aria-pressed="${state.lens === l.id}">${l.label}<b>${n}</b></button>`;
+  }).join('');
+}
+
+function visibleNote(f, n){
+  const note = f.notes[n];
+  if (!note) return false;
+  return state.lens === 'all' || note.lens === state.lens;
+}
+
+function noteHtml(f, n){
+  const note = f.notes[n];
+  const text = note[state.mode];
+  return `<div class="note"><h3>${note.title}<span class="ref">line ${n}</span></h3>${note.calc ? `<div class="calc">${esc(note.calc)}</div>` : ''}<p>${text}</p></div>`;
+}
+
+function renderCode(f){
+  let html = `<div class="scroll"><ol class="${f.run ? 'has-ev' : ''}">`;
+  f.segments.forEach((seg, i) => {
+    if (i > 0) {
+      const prevEnd = f.segments[i-1].start + f.segments[i-1].lines.length - 1;
+      const gap = seg.start - prevEnd - 1;
+      html += `<li class="elide" aria-hidden="true"><span class="n"></span><span>… ${gap} line${gap === 1 ? '' : 's'} not shown (${prevEnd + 1} to ${seg.start - 1})</span></li>`;
+    }
+    seg.lines.forEach((text, j) => {
+      const n = seg.start + j;
+      const noted = !!f.notes[n];
+      const vis = visibleNote(f, n);
+      const cls = ['line', noted ? 'noted' : '', (state.lens !== 'all' && !vis) ? 'dim' : '', f.thesis && f.thesis.includes(n) ? 'thesis' : '', state.open === n ? 'open' : ''].filter(Boolean).join(' ');
+      const inner = highlight(text) || ' ';
+      if (noted) {
+        html += `<li class="${cls}" data-line="${n}"><span class="n" aria-hidden="true">${n}</span>` +
+          `<span class="ev" data-ev="${n}"></span><button type="button" class="ln" data-line="${n}" aria-expanded="${state.open === n}" aria-describedby="sr-${n}" aria-label="Line ${n}. ${esc(text.trim())}. ${esc(f.notes[n].title.replace(/&lt;/g,'<').replace(/&gt;/g,'>'))}">${inner}</button>` +
+          `<div class="inote" id="inote-${n}">${state.open === n ? noteHtml(f, n) : ''}</div>` +
+          `<span class="sr-only" id="sr-${n}">${f.notes[n][state.mode].replace(/<[^>]+>/g, '')}</span></li>`;
+      } else {
+        html += `<li class="${cls}" data-line="${n}"><span class="n" aria-hidden="true">${n}</span><span class="ev" data-ev="${n}"></span><span class="ln" tabindex="-1">${inner}</span></li>`;
+      }
+    });
+  });
+  html += '</ol></div>';
+  if (f.run) html += runPanelHtml();
+  codeEl.innerHTML = html;
+  if (f.run) evaluateSwap();
+}
+
+function renderCard(f, hover){
+  const n = hover ?? state.open;
+  if (n && f.notes[n]) {
+    cardEl.className = 'card';
+    cardEl.innerHTML = noteHtml(f, n);
+    const li = codeEl.querySelector(`li[data-line="${n}"]`);
+    if (li) cardEl.style.top = Math.max(0, li.offsetTop - 6) + 'px';
+    return;
+  }
+  cardEl.className = 'card static';
+  cardEl.style.top = '';
+  if (state.lens !== 'all') {
+    const l = LENSES.find(x => x.id === state.lens);
+    const count = Object.values(f.notes).filter(x => x.lens === l.id).length;
+    cardEl.innerHTML = `<div class="note"><h3>${l.label} lens<span class="ref">${count} line${count === 1 ? '' : 's'}</span></h3><p>${l[state.mode]}</p><p class="assume">Move through the marked lines with the arrow keys; Enter pins a note.</p></div>`;
+  } else {
+    cardEl.innerHTML = `<div class="note"><h3>What this profile establishes<span class="ref">${esc(f.profile)}</span></h3><p class="assume">${f.status[state.mode]}</p><p>Hover or focus a marked line. ${Object.keys(f.notes).length} lines are annotated in this file.</p></div>`;
+  }
+}
+
+/* =====================================================================
+   SWAP EVALUATION. Source order, first false guard rejects.
+   Constants and initial state are the file's own (lines 5 to 22).
+   ===================================================================== */
+function runPanelHtml(){
+  const r = state.run;
+  return `<div class="run" role="group" aria-label="Run the swap action against the source">
+    <div><label for="in-now"><code>obs.now</code> (UTC seconds)</label><input id="in-now" inputmode="numeric" value="${esc(r.now)}"></div>
+    <div><label for="in-amount"><code>arg.amount_in</code> (AssetA_quantum)</label><input id="in-amount" inputmode="numeric" value="${esc(r.amount_in)}"></div>
+    <div><label for="in-min"><code>arg.min_out</code> (AssetB_quantum)</label><input id="in-min" inputmode="numeric" value="${esc(r.min_out)}"></div>
+    <div class="result" id="run-result" aria-live="polite"></div>
+    <p class="hint">Fixed by the file: actor and recipient are <code>trader</code>, assets are ASSET_A and ASSET_B, the epoch is open, and <code>remaining</code> is 8 at genesis. Guards are evaluated top to bottom; evaluation stops at the first false guard. Try 19744, or 10001.</p>
+  </div>`;
+}
+
+const fmt = v => v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+function parseU(s){ return /^(0|[1-9]\d*)$/.test(s.trim()) ? BigInt(s.trim()) : null; }
+
+function evaluateSwap(){
+  const r = state.run;
+  const now = parseU(r.now), amount_in = parseU(r.amount_in), min_out = parseU(r.min_out);
+  const res = $('#run-result');
+  codeEl.querySelectorAll('.ev').forEach(e => { e.textContent = ''; e.className = 'ev'; });
+  codeEl.querySelectorAll('li.hit').forEach(e => e.classList.remove('hit'));
+  if (now === null || amount_in === null || min_out === null) {
+    res.className = 'result rej';
+    res.innerHTML = 'Not evaluated: every input must be a canonical unsigned decimal integer (no sign, no leading zero, no decimal point).';
+    return;
+  }
+  const C = { horizon: 2000000000n, remaining: 8n, fee_n: 997n, fee_d: 1000n, expected_output: 19743n, expected_reserve_a: 1010000n, expected_reserve_b: 1980257n };
+  const S = { reserve_a: 1000000n, reserve_b: 2000000n, trader_a: 100000n, trader_b: 0n, epoch_closed: 0n };
+  const L = {};
+  const steps = [
+    [66, () => now < C.horizon, 'horizon expired'],
+    [67, () => C.remaining > 1n, 'final allowance is reserved for closure'],
+    [68, () => true, 'trader authority required'],
+    [69, () => true, 'recipient must be trader'],
+    [70, () => true, 'asset_in mismatch'],
+    [71, () => true, 'asset_out mismatch'],
+    [72, () => S.epoch_closed === 0n, 'epoch is closed'],
+    [73, () => amount_in > 0n, 'input must be positive'],
+    [74, () => amount_in <= S.trader_a, 'insufficient synthetic balance'],
+    [75, () => { L.effective_input = amount_in * C.fee_n; return fmt(L.effective_input); }],
+    [76, () => { L.numerator = L.effective_input * S.reserve_b; return fmt(L.numerator); }],
+    [77, () => { L.denominator = S.reserve_a * C.fee_d + L.effective_input; return fmt(L.denominator); }],
+    [78, () => { L.output_calculated = L.numerator / L.denominator; return fmt(L.output_calculated); }],
+    [79, () => L.output_calculated === C.expected_output, 'independent output value mismatch'],
+    [80, () => min_out <= L.output_calculated, 'minimum output not met'],
+    [81, () => L.output_calculated < S.reserve_b, 'output would empty reserve'],
+    [82, () => { S.trader_a -= amount_in; return fmt(S.trader_a); }],
+    [83, () => { S.reserve_a += amount_in; return fmt(S.reserve_a); }],
+    [84, () => { S.reserve_b -= L.output_calculated; return fmt(S.reserve_b); }],
+    [85, () => { S.trader_b += L.output_calculated; return fmt(S.trader_b); }],
+    [86, () => S.reserve_a === C.expected_reserve_a, 'reserve_a mismatch'],
+    [87, () => S.reserve_b === C.expected_reserve_b, 'reserve_b mismatch'],
+    [88, () => fmt(amount_in) + ' A'],
+    [89, () => fmt(L.output_calculated) + ' B'],
+  ];
+  let rejected = null;
+  for (const [line, fn, msg] of steps) {
+    const ev = codeEl.querySelector(`.ev[data-ev="${line}"]`);
+    if (rejected) { ev.textContent = 'not reached'; ev.className = 'ev unreached'; continue; }
+    const out = fn();
+    if (typeof out === 'string') { ev.textContent = out; ev.className = 'ev'; }
+    else if (out) { ev.textContent = 'holds'; ev.className = 'ev pass'; }
+    else { ev.textContent = 'REJECT'; ev.className = 'ev fail'; rejected = { line, msg }; codeEl.querySelector(`li[data-line="${line}"]`).classList.add('hit'); }
+  }
+  if (rejected) {
+    res.className = 'result rej';
+    res.innerHTML = `Rejected at line ${rejected.line}: <code>GUARD_FAILED</code> “${esc(rejected.msg)}”<small>No state was written and no transfer was emitted. The message is the exact string in the source; the diagnostic carries the line.</small>`;
+  } else {
+    res.className = 'result';
+    res.innerHTML = `Complete. Output <code>${fmt(L.output_calculated)}</code> ASSET_B for <code>${fmt(amount_in)}</code> ASSET_A. Reserves ${fmt(S.reserve_a)} A and ${fmt(S.reserve_b)} B. <code>remaining</code> 8 → 7.<small>Rounding: floor, per <code>policy swap_output</code>. Remainder stays in reserve_b, as that policy declares.</small>`;
+  }
+}
+
+/* =====================================================================
+   PROFILE DIFF. One obligation, two profiles.
+   ===================================================================== */
+function renderDiff(){
+  const B = state.mode === 'build';
+  const rows = [
+    { lab: 'Precondition',
+      l: { from: 'partial-payment.mori, line 11', code: 'requires payment <= pre.interest;' },
+      r: { from: 'loan.mori, line 96', code: 'guard state.borrower_cash >= arg.amount_due, "insufficient synthetic balance";' },
+      p: B ? 'Same job, two spellings. The atomic profile makes the failure message part of the statement, so every rejection is named at the point it is written. The successor profile keeps the condition bare and leaves the diagnostic to the checker.'
+           : 'requirement = "requires", expression, ";" versus statement = "guard", expression, ",", json_string, ";". Both evaluate in source order; the atomic GUARD_FAILED diagnostic carries the exact source string.' },
+    { lab: 'State write',
+      l: { from: 'partial-payment.mori, line 12', code: 'next.interest = pre.interest - payment;' },
+      r: { from: 'loan.mori, line 82', code: 'set interest_due = interest_calculated;' },
+      p: B ? 'Both write one field once. The successor profile names the pre-state explicitly on the right-hand side, so a reader never has to ask which version of interest is meant.'
+           : 'update = "next", ".", identifier, "=", expression versus "set", identifier, "=", expression. In the atomic profile a later read of state.x sees the working copy; in the successor profile pre and post are separate identifiers.' },
+    { lab: 'Postcondition',
+      l: { from: 'partial-payment.mori, line 13', code: 'ensures post.principal == pre.principal;' },
+      r: { from: 'loan.mori, line 108', code: 'guard state.notional == const.expected_outstanding_notional, "episode closure cannot discharge remaining notional";' },
+      p: B ? 'The atomic profile has no ensures keyword, so the author writes a guard after the writes and pins the result to a constant. The successor profile gives that pattern a word, and lets it relate post-state to pre-state without a hand-derived constant.'
+           : 'postcondition = "ensures", expression, ";" has no counterpart in the atomic grammar. The atomic idiom is a trailing guard over the working copy; it can only compare against declared constants, not against pre.' },
+    { lab: 'Nominal debt',
+      l: { from: 'partial-payment.mori, line 7', code: 'state principal: Debt<USD> = debt(100, USD);' },
+      r: { from: 'loan.mori, line 15', code: 'state notional: Amount<USD_micro> = amount(5000000000, USD_micro);', absent: 'No Debt type. stored_type = "UInt128" | "Text" | "Amount", "<", identifier, ">"' },
+      p: B ? 'The atomic profile tracks the loan as Amount fields plus DueCreated and DueSettled effects; debt is a discipline the author follows. The successor profile makes it a type, so following the discipline is no longer optional.'
+           : 'The atomic stored_type set has no Debt. The successor profile introduces Debt<U> distinct from Amount<A> (funded-source: distinct even when the unit names match), moving the transfer-versus-obligation distinction from convention into the static semantics.' },
+    { lab: 'Rounding policy',
+      l: { from: 'successor grammar, admission note 9', code: '', absent: 'policy is not a production of this profile. floor_div and ceil_div parse as ordinary calls; their rounding policy is not implemented in this slice.' },
+      r: { from: 'loan.mori, lines 28 to 35', code: 'policy accrued_interest targets write(accrue, interest_due), effect(accrue, 1, amount) {\n  unit USD_micro;\n  derivation "notional*8*31/(100*365)";\n  rounding floor(accrue, interest_calculated);\n  remainder "discard 54/73 micro-USD for this sample only";\n  comparison "exact integer sample value; no ACTUS tolerance claim";\n  proof "loan_first_period_interest_floor_v1";\n}' },
+      p: B ? 'This one runs the other way. The implemented profile already has the policy block; the successor profile does not yet. Where the two profiles differ, the site says which one has the construct today.'
+           : 'field_policy exists only in moriarty-bounded-atomic/1. The successor profile lists policy among unsupported declarations that still belong to later owners.' }
+  ];
+  codeEl.innerHTML = `<div class="diff">
+    <div class="heads"><div>moriarty-successor-syntax/0<span>provisional successor profile</span></div><div>moriarty-bounded-atomic/1<span>implemented profile</span></div></div>
+    ${rows.map(r => `<div class="row"><div class="lab">${r.lab}</div>
+      <pre><span class="from">${esc(r.l.from)}</span>${r.l.absent ? `<span class="absent">${esc(r.l.absent)}</span>` : highlight(r.l.code)}</pre>
+      <pre><span class="from">${esc(r.r.from)}</span>${r.r.absent ? `<span class="absent">${esc(r.r.absent)}</span><br>` : ''}${r.r.code.split('\n').map(highlight).join('\n')}</pre>
+      <p>${r.p}</p></div>`).join('')}
+  </div>`;
+  cardEl.className = 'card static';
+  cardEl.style.top = '';
+  cardEl.innerHTML = `<div class="note"><h3>Reading the diff</h3><p class="assume">${B
+    ? 'Left is where the language is going; right is what runs today. The two are not interchangeable and the site never pretends a successor line executes.'
+    : 'Construct-level correspondence, not a translation. No elaboration from successor syntax to atomic Core exists; RP01 is unfrozen and the successor profile does not fall back to the atomic one.'}</p></div>`;
+  srcEl.innerHTML = 'Sources: <span>' + esc(REPO + 'spec/successor/examples/partial-payment.mori') + '</span>, <span>' + esc(REPO + 'spec/examples/loan.mori') + '</span>, <span>' + esc(REPO + 'spec/successor/grammar.ebnf') + '</span>, <span>' + esc(REPO + 'spec/grammar.ebnf') + '</span>.';
+}
+
+/* =====================================================================
+   INTERACTION
+   ===================================================================== */
+document.querySelectorAll('[data-mode-btn]').forEach(b => b.addEventListener('click', () => {
+  state.mode = b.dataset.modeBtn;
+  document.querySelectorAll('[data-mode-btn]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  try { localStorage.setItem('moriarty-mode', state.mode); } catch (e) {}
+  render();
+}));
+try { const m = localStorage.getItem('moriarty-mode'); if (m === 'build' || m === 'verify') { state.mode = m; document.querySelectorAll('[data-mode-btn]').forEach(x => x.setAttribute('aria-pressed', x.dataset.modeBtn === m)); } } catch (e) {}
+
+document.querySelectorAll('[data-file]').forEach(b => b.addEventListener('click', () => {
+  state.file = b.dataset.file; state.open = null; state.lens = 'all';
+  document.querySelectorAll('[data-file]').forEach(x => x.setAttribute('aria-selected', x === b));
+  render();
+}));
+
+lensEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-lens]'); if (!b) return;
+  state.lens = b.dataset.lens; state.open = null; render();
+});
+
+codeEl.addEventListener('click', e => {
+  const b = e.target.closest('button.ln'); if (!b) return;
+  const n = +b.dataset.line;
+  state.open = state.open === n ? null : n;
+  const f = FILES[state.file];
+  codeEl.querySelectorAll('li.open').forEach(li => { li.classList.remove('open'); li.querySelector('.inote').innerHTML = ''; li.querySelector('button.ln').setAttribute('aria-expanded', 'false'); });
+  if (state.open) {
+    const li = b.closest('li'); li.classList.add('open'); li.querySelector('.inote').innerHTML = noteHtml(f, n); b.setAttribute('aria-expanded', 'true');
+  }
+  renderCard(f);
+});
+
+codeEl.addEventListener('mouseover', e => {
+  const b = e.target.closest('button.ln'); if (!b) return;
+  renderCard(FILES[state.file], +b.dataset.line);
+});
+codeEl.addEventListener('mouseleave', () => renderCard(FILES[state.file]));
+codeEl.addEventListener('focusin', e => {
+  const b = e.target.closest('button.ln'); if (!b) return;
+  renderCard(FILES[state.file], +b.dataset.line);
+});
+
+codeEl.addEventListener('keydown', e => {
+  const b = e.target.closest('button.ln'); if (!b) return;
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Escape') return;
+  if (e.key === 'Escape') { if (state.open) { b.click(); } return; }
+  e.preventDefault();
+  const f = FILES[state.file];
+  const buttons = [...codeEl.querySelectorAll('button.ln')].filter(x => visibleNote(f, +x.dataset.line));
+  const i = buttons.indexOf(b);
+  const next = buttons[i + (e.key === 'ArrowDown' ? 1 : -1)];
+  if (next) next.focus();
+});
+
+codeEl.addEventListener('input', e => {
+  if (!e.target.matches('input')) return;
+  state.run = { now: $('#in-now').value, amount_in: $('#in-amount').value, min_out: $('#in-min').value };
+  evaluateSwap();
+});
+
+/* theme */
+const themeBtn = $('#theme');
+const THEMES = ['auto', 'light', 'dark'];
+let theme = 'auto';
+try { theme = localStorage.getItem('moriarty-theme') || 'auto'; } catch (e) {}
+const qt = new URLSearchParams(location.search).get('theme'); if (qt && THEMES.includes(qt)) theme = qt;
+function applyTheme(){
+  if (theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+  themeBtn.textContent = 'Theme: ' + theme;
+}
+themeBtn.addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; try { localStorage.setItem('moriarty-theme', theme); } catch (e) {} applyTheme(); });
+applyTheme();
+
+window.addEventListener('resize', () => { if (!FILES[state.file].isDiff) renderCard(FILES[state.file]); });
+
+/* deep link: #file or #file:line, e.g. #swap:80 */
+(function(){
+  const m = /^#([a-z]+)(?::(\d+))?$/.exec(location.hash || '');
+  if (m && FILES[m[1]]) {
+    state.file = m[1];
+    document.querySelectorAll('[data-file]').forEach(x => x.setAttribute('aria-selected', x.dataset.file === m[1]));
+    if (m[2] && FILES[m[1]].notes && FILES[m[1]].notes[+m[2]]) state.open = +m[2];
+  }
+})();
+render();
+if (state.open) { const b = codeEl.querySelector(`button.ln[data-line="${state.open}"]`); if (b) { b.closest('li').querySelector('.inote').innerHTML = noteHtml(FILES[state.file], state.open); } }
+</script>
+</body>
+</html>
