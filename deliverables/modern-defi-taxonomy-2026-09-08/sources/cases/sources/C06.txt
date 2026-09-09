@@ -1,0 +1,185 @@
+Search
+/
+Get Started
+Quick Start
+Concepts
+Swapping
+Overview
+Uniswap API
+Custom Linking
+Embed the Uniswap App
+Liquidity
+Overview
+Liquidity Provisioning
+Liquidity Launchpad
+UniswapX
+Protocols
+Overview
+Deployments
+Uniswap v4
+Overview
+Concepts
+Architecture
+v4 vs v3
+Hooks
+Integrated Routing with UniswapX
+PoolManager
+Dynamic Fees
+ERC-6909
+Flash Accounting
+Subscribers
+Guides
+Deployments
+Security Framework
+Uniswap Hooks
+Uniswap v3
+Uniswap v2
+Smart Wallet
+The Compact
+Permit2
+Universal Router
+Protocol Fee
+SDKs
+Overview
+Uniswap v4
+Uniswap v3
+Uniswap v2
+Uniswap AI
+Overview
+Uniswap Skills
+Contributions
+Unichain
+Overview
+Get Started
+Guides
+Technical Information
+Tools
+Ecosystem
+Builder Support
+Governance
+Subgraphs
+Research
+Architecture
+Copy Markdown
+Open in...
+Uniswap v4 Architecture
+Understand the core design pillars of Uniswap v4, including hooks, singleton architecture, and flash accounting.
+Uniswap v4 inherits all of the capital efficiency gains of Uniswap v3, but provides flexibility via
+hooks
+and gas optimizations across the entire lifecycle.
+For additional information, see the
+Uniswap v4 whitepaper
+.
+Hooks
+Developers can attach solidity logic to the
+swap lifecycle
+through hooks. The logic executes before and/or after major operations such as pool creation, liquidity addition and removal, swapping, and donations. Hooks are deployed contracts and are called by the Uniswap v4 PoolManager for permissionless execution.
+The flexibility of hooks can enable:
+Limit orders
+Custom oracles
+Fee management
+Automated liquidity management
+Dynamic Fees
+Uniswap v4 supports dynamic fees, allowing pools to adjust their fees up or down. While other AMMs may have hard-coded logic for dynamic fees, v4 provides no opinionated calculation of the fee. The frequency of
+liquidity fee
+updates is also flexible and determined by the developer. Fee updates can occur on every swap, every block, or on an arbitrary schedule (weekly, monthly, yearly, etc).
+Dynamic fees open up the design space for fee optimization, value redistribution, and research.
+Singleton Design
+Architecturally, all pool state and operations are managed by a single contract,
+PoolManager.sol
+. The singleton design provides major gas savings. For example, creating a pool is now a state update instead of deploying a new contract. Swapping through multiple pools no longer requires transferring tokens for intermediate pools.
+Flash Accounting
+By leveraging EIP-1153 transient storage, v4 provides an optimization referred to as
+flash accounting
+. Swapping, liquidity modification, and donations incur
+balance changes
+, i.e., tokens to be sent in and tokens to be taken out. With
+flash accounting
+, these balance changes are efficiently recorded in transient storage and netted against each other. This system allows users to only pay the final balance change, without resolving intermediate balance changes.
+Native ETH
+Uniswap v4 supports native token assets (Ether), without the need to wrap or unwrap the native token to Wrapped Ether (WETH9).
+Custom Accounting
+The flexibility of custom accounting allows developers to alter token amounts for swaps and liquidity modifications. The feature opens up the design space for hooks to charge fees or forgo the underlying concentrated liquidity model.
+Example use cases:
+Custom curves, opting out of the concentrated liquidity curve in favor of an independent pricing mechanism
+Hook swap fees, charging and collecting fees on swaps
+Liquidity withdrawal fees, penalizing and/or redistributing fee revenue
+Core libraries
+The
+PoolManager
+delegates most of its arithmetic and state handling to a set of libraries in
+v4-core
+. These are the contracts a v4 integration reads when reasoning about ticks, prices, deltas and hook permissions.
+Library
+What it does
+TickMath
+Computes sqrt prices from ticks and vice versa
+SqrtPriceMath
+Price and amount functions based on Q64.96 sqrt price and liquidity
+SwapMath
+Computes the result of a swap within a single tick
+Pool
+Every action that can be performed on a pool
+Position
+Per-position state, keyed by owner and tick range
+CurrencyDelta
+Stores callers' currency deltas in transient storage, the basis of flash accounting
+TransientStateLibrary
+Reads the transient state the manager keeps during a lock
+ProtocolFeeLibrary
+Packs and reads the protocol fee for each swap direction
+FullMath
+512-bit multiply and divide without loss of precision
+LiquidityMath
+Adds a signed liquidity delta to liquidity
+TickBitmap
+Packed record of which ticks are initialized
+Three libraries have their own pages rather than a row here, because they carry concepts rather than arithmetic:
+Hooks
+,
+LPFeeLibrary
+and
+StateLibrary
+.
+Alongside these sit the numeric and encoding helpers:
+BitMath
+,
+FixedPoint96
+,
+FixedPoint128
+,
+SafeCast
+,
+UnsafeMath
+,
+CustomRevert
+,
+ParseBytes
+,
+Lock
+,
+NonzeroDeltaCount
+and
+CurrencyReserves
+.
+Every library carries natspec on each function, so the source is the reference.
+Source code:
+src/libraries/
+API keys
+Help
+Feedback
+Status
+Legal
+GitHub
+Discord
+X
+Overview
+v4 vs v3
+On this page
+Hooks
+Dynamic Fees
+Singleton Design
+Flash Accounting
+Native ETH
+Custom Accounting
+Core libraries

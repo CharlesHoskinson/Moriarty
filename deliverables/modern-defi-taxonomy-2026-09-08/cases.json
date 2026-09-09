@@ -1,0 +1,1103 @@
+{
+  "schema_version": "1.0",
+  "research_cutoff": "2026-09-08",
+  "execution_date_utc": "2026-09-09",
+  "case_count": 24,
+  "verification_scope": "Primary documentation and pinned source inspection; no live-state, bytecode or transaction conformance testing. Current access-time documentation may contain changes after the cutoff; those details need pre-cutoff history confirmation before strict historical assertions.",
+  "cases": [
+    {
+      "id": "CASE-01",
+      "classification_unit": "component or scoped component composition",
+      "component": "Maker MCD collateral Vault / Vat and adapters",
+      "version_chain_scope": "Historical Ethereum MCD design, 2020 whitepaper and dss source snapshot fa4f6630",
+      "functions": [
+        "FIN-MON",
+        "FIN-CRE"
+      ],
+      "mechanism": "Collateralized issuance of new Dai; collateral health checks; liquidation auctions",
+      "asset_claim": "Vault owner owes Dai plus stability fee; Dai holder owns a transferable monetary token, not the originating Vault",
+      "return_source": "Borrower pays stability fees; holding Dai alone is not a yield entitlement",
+      "lifecycle": "Debt accrues until repayment or liquidation; shutdown is a separate process",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ADAPTER",
+          "scope": "external collateral / Dai representations through join adapters",
+          "source_refs": [
+            "C37"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "MKR governance authorizes collateral, risk parameters and trusted modules",
+      "dependencies": "Oracles, collateral adapters, keepers, auction liquidity, governance",
+      "exit": "Repay debt/fees and release collateral; a Dai holder sells/transfers Dai or uses separately applicable system facilities",
+      "source_refs": [
+        "C01",
+        "C37",
+        "C38"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "The 2020 auction design is historical; this is not a claim about every 2026 Sky facility. The Vault is not an ERC-4626 investment share.",
+      "category_ids": [
+        "FIN-MON.1",
+        "FIN-CRE.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-02",
+      "classification_unit": "component or scoped component composition",
+      "component": "Circle Mint USDC issuance/redemption and EVM FiatToken",
+      "version_chain_scope": "Circle Mint documentation; FiatTokenV2_2 source family at fc85788b",
+      "functions": [
+        "FIN-MON"
+      ],
+      "mechanism": "Fiat funding and issuer-controlled mint/burn; account-mediated bank payout",
+      "asset_claim": "USDC balance; direct issuer redemption depends on account eligibility and issuer terms",
+      "return_source": "No interest right established by holding the token",
+      "lifecycle": "On-chain transfer and bank settlement have separate finality/timing",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "FiatToken transfer interface",
+          "source_refs": [
+            "C35"
+          ],
+          "evidence_level": "pinned repository design; no deployed-bytecode test"
+        }
+      ],
+      "authority": "Issuer mint, pause, blacklist and proxy administration; bank/account controls",
+      "dependencies": "Reserve and issuer arrangements, banks, chain, proxy keys",
+      "exit": "Eligible Mint account payout or secondary sale; transferability does not guarantee universal bank redemption",
+      "source_refs": [
+        "C02",
+        "C35"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-MON.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-03",
+      "classification_unit": "component or scoped component composition",
+      "component": "Sablier Lockup stream and recipient NFT",
+      "version_chain_scope": "EVM fixed-term Lockup component; source monorepo at 67774a16",
+      "functions": [
+        "FIN-MON"
+      ],
+      "mechanism": "Prefunded time-based vesting/payment schedule",
+      "asset_claim": "NFT represents right to vested withdrawals; cancellation/transfer settings qualify remaining rights",
+      "return_source": "Sender funds distribution; passage of time is not investment yield",
+      "lifecycle": "Vesting unlocks over schedule; recipient claims; cancellation may return unvested assets",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "prefunded stream asset",
+          "source_refs": [
+            "C41"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-721",
+          "relationship": "IMPLEMENTS",
+          "scope": "stream recipient representation",
+          "source_refs": [
+            "C51"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Sender-selected cancellation and transfer restrictions; NFT owner controls claim",
+      "dependencies": "Underlying token behavior and contract accounting",
+      "exit": "Withdraw vested balance; NFT transfer only where enabled",
+      "source_refs": [
+        "C03",
+        "C41",
+        "C51"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-MON.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-04",
+      "classification_unit": "component or scoped component composition",
+      "component": "Uniswap V3 NonfungiblePositionManager liquidity position",
+      "version_chain_scope": "Ethereum/EVM V3 periphery component; not all pool positions are NFTs",
+      "functions": [
+        "FIN-EXC"
+      ],
+      "mechanism": "Concentrated liquidity within tick interval; periphery wraps position ownership",
+      "asset_claim": "ERC-721 identifies range liquidity plus collectible fees",
+      "return_source": "Swap fees, offset by inventory-value changes; incentive programs are separate",
+      "lifecycle": "Mint/increase/decrease/collect are distinct operations",
+      "standards_relationships": [
+        {
+          "standard": "ERC-721",
+          "relationship": "IMPLEMENTS",
+          "scope": "periphery position NFT",
+          "source_refs": [
+            "C05"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "pool currencies; WETH wraps native ETH",
+          "source_refs": [
+            "C05"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Position owner/approved NFT operator; core/periphery configuration must be scoped",
+      "dependencies": "Token behavior, pool price path, liquidity and execution ordering",
+      "exit": "Decrease liquidity and collect amounts; token composition depends on current price",
+      "source_refs": [
+        "C05"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-05",
+      "classification_unit": "component or scoped component composition",
+      "component": "Uniswap V4 PoolManager pool and flash accounting",
+      "version_chain_scope": "EVM V4 singleton component, documented architecture",
+      "functions": [
+        "FIN-EXC"
+      ],
+      "mechanism": "Concentrated-liquidity accounting with optional hook callbacks; net currency deltas settled on unlock completion",
+      "asset_claim": "Liquidity/accounting state and currency claims; a hook can change economics",
+      "return_source": "Trading fees and inventory exposure; hooks may add separate terms",
+      "lifecycle": "Within-transaction delta settlement; positions outlive transactions",
+      "standards_relationships": [
+        {
+          "standard": "ERC-6909",
+          "relationship": "IMPLEMENTS",
+          "scope": "PoolManager currency claim representation, not a general financial product",
+          "source_refs": [
+            "C52"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Hook-specific permissions and dynamic-fee authority; verify selected hook",
+      "dependencies": "Currency contracts, hook code, PoolManager, transient storage",
+      "exit": "Remove liquidity and settle/take currency deltas under chosen pool/hook rules",
+      "source_refs": [
+        "C06",
+        "C07",
+        "C52"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Flash accounting is not synonymous with an ERC-3156 flash loan; source architecture alone does not establish safety of arbitrary hooks.",
+      "category_ids": [
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-06",
+      "classification_unit": "component or scoped component composition",
+      "component": "CoW GPv2Settlement and solver auction",
+      "version_chain_scope": "EVM settlement contract plus off-chain auction component",
+      "functions": [
+        "FIN-EXC"
+      ],
+      "mechanism": "Signed user constraints, solver-selected trades and batched on-chain settlement",
+      "asset_claim": "Order authority to exchange balances; no persistent yield claim created by the order",
+      "return_source": "User pays execution costs; solvers compete for surplus/fees",
+      "lifecycle": "Off-chain auction followed by on-chain settlement; auction batch need not equal one universal transaction",
+      "standards_relationships": [
+        {
+          "standard": "EIP-712",
+          "relationship": "IMPLEMENTS",
+          "scope": "typed order authorization through GPv2 signing components",
+          "source_refs": [
+            "C48"
+          ],
+          "evidence_level": "pinned source references; signing implementation not separately audited"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "settlement trade tokens",
+          "source_refs": [
+            "C48"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Settlement authenticator controls solver access; users authorize orders and token spending",
+      "dependencies": "Orderbook/auction service, solver availability, external liquidity and signatures",
+      "exit": "Order fill under constraints, cancellation or expiry; approval remains separately revocable",
+      "source_refs": [
+        "C08",
+        "C48"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-EXC.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-07",
+      "classification_unit": "component or scoped component composition",
+      "component": "Aave V3 Pool reserve supply/borrow position",
+      "version_chain_scope": "EVM Aave V3 Pool API; exclude V4 and Aptos implementation",
+      "functions": [
+        "FIN-CRE"
+      ],
+      "mechanism": "Inventory lending with variable debt, collateral health and liquidations",
+      "asset_claim": "Supplier aToken claim and borrower debt accounting; collateral may be enabled separately",
+      "return_source": "Borrower interest less protocol allocations; emissions separate",
+      "lifecycle": "Open-ended accrual; exits bounded by collateral health and reserve liquidity",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "reserve underlying",
+          "source_refs": [
+            "C09"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-2612",
+          "relationship": "ACCEPTS",
+          "scope": "supplyWithPermit for supporting underlying tokens",
+          "source_refs": [
+            "C09"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Pool proxy, configurator and governance risk controls",
+      "dependencies": "Oracles, reserve assets, liquidators, chain, borrower solvency",
+      "exit": "Repay and withdraw within health/liquidity constraints; collateralized debt token is not a transferable bond",
+      "source_refs": [
+        "C09"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-CRE.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-08",
+      "classification_unit": "component or scoped component composition",
+      "component": "Aave V3 flashLoanSimple execution",
+      "version_chain_scope": "EVM single-reserve flashLoanSimple path",
+      "functions": [
+        "FIN-CRE"
+      ],
+      "mechanism": "Temporary liquidity with callback and same-transaction repayment plus premium",
+      "asset_claim": "Transient repayment obligation; no overnight uncollateralized receivable",
+      "return_source": "User pays flash premium; operation profit comes from the strategy executed",
+      "lifecycle": "Repayment/approval check before transaction completion; failure reverts",
+      "standards_relationships": [
+        {
+          "standard": "ERC-3156",
+          "relationship": "ANALOGUE",
+          "scope": "similar capability, different executeOperation callback and Pool API",
+          "source_refs": [
+            "C10"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "borrowed asset",
+          "source_refs": [
+            "C10"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Reserve/flash parameters and governance; callback code belongs to receiver",
+      "dependencies": "Token behavior, callback implementation, Pool and execution ordering",
+      "exit": "Repay principal/premium within transaction; unlike flashLoan multi-asset path, no debt-opening option",
+      "source_refs": [
+        "C10"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-CRE.3"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-09",
+      "classification_unit": "component or scoped component composition",
+      "component": "Morpho Blue five-parameter variable-rate market",
+      "version_chain_scope": "EVM Blue market component; collateral, loan asset, oracle, IRM and LLTV identify market",
+      "functions": [
+        "FIN-CRE"
+      ],
+      "mechanism": "Isolated collateralized pool; immutable market parameters and variable interest",
+      "asset_claim": "Supply/debt shares in market bookkeeping; collateral separately accounted",
+      "return_source": "Borrower interest; rewards separate",
+      "lifecycle": "Open-ended debt and liquidity-constrained withdrawals",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "loan/collateral token requirements; docs explicitly allow omitted transfer return values",
+          "source_refs": [
+            "C11"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Creation permissionless within approved IRM/LLTV set; market token/oracle controls remain external",
+      "dependencies": "Oracle, IRM, both token contracts, liquidators",
+      "exit": "Repay debt before removing unsafe collateral; withdraw supply only with available liquidity",
+      "source_refs": [
+        "C11"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Isolation is accounting scope, not elimination of common-token, shared-oracle or recursive-collateral risk.",
+      "category_ids": [
+        "FIN-CRE.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-10",
+      "classification_unit": "component or scoped component composition",
+      "component": "MetaMorpho / Morpho Vault V1.1 lending allocator",
+      "version_chain_scope": "EVM Morpho Vault V1.1 component at pinned repository; not Vault V2",
+      "functions": [
+        "FIN-MGT",
+        "FIN-CRE"
+      ],
+      "mechanism": "One-asset vault allocates supply among Morpho markets; caps and ordered withdrawals",
+      "asset_claim": "Fungible vault share claims pro-rata portfolio value subject to credit losses and liquidity; V1.1 bad-debt accounting is not automatic loss realization",
+      "return_source": "Borrower interest from allocated markets, less vault fees; incentives distinct",
+      "lifecycle": "Synchronous ERC-4626 interface over potentially illiquid lending assets",
+      "standards_relationships": [
+        {
+          "standard": "ERC-4626",
+          "relationship": "IMPLEMENTS",
+          "scope": "vault accounting/entry/exit interface",
+          "source_refs": [
+            "C47"
+          ],
+          "evidence_level": "pinned source design; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "vault shares",
+          "source_refs": [
+            "C47"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Owner, curator, allocator and guardian have different controls; cap changes/timelocks scoped to version",
+      "dependencies": "Morpho markets, their oracles/tokens, liquidity, role holders",
+      "exit": "Redeem from accessible withdrawal queue liquidity; conversion quote is not an exit guarantee",
+      "source_refs": [
+        "C13",
+        "C47"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Combines an investment container and delegated lending allocation. Does not transform underlying credit into risk-free savings.",
+      "function_scope": "MGT at vault/allocator component; CRE on the explicitly composed underlying markets, not a second independent vault obligation.",
+      "category_ids": [
+        "FIN-MGT.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-11",
+      "classification_unit": "component or scoped component composition",
+      "component": "Pendle PT-sUSDe-31JUL2025 used in Aave V3 Ethereum Core",
+      "version_chain_scope": "Historical May 15, 2025 market observation; PT matured July 31, 2025",
+      "functions": [
+        "FIN-DER",
+        "FIN-CRE"
+      ],
+      "mechanism": "Principal/yield separation composed with collateralized borrowing",
+      "asset_claim": "Maturity principal claim on SY-held yield asset, plus Aave debt; accounting-asset units differ from output tokens",
+      "return_source": "PT purchase discount conditional on redemption; net levered result subtracts borrowing costs",
+      "lifecycle": "PT maturity and loan maturity are different; loan can continue after PT matures",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "PT representation accepted by EVM lending market",
+          "source_refs": [
+            "C44"
+          ],
+          "evidence_level": "official risk-steward reported market use; token bytecode not inspected"
+        },
+        {
+          "standard": "ERC-5115",
+          "relationship": "ANALOGUE",
+          "scope": "SY has protocol-specific standardized-yield API; exact formal conformance not established here",
+          "source_refs": [
+            "C15"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Aave risk controls; underlying/SY administration; user borrowing authority",
+      "dependencies": "Pendle SY/PT accounting, sUSDe/USDe backing, oracle, Aave liquidity, liquidation markets",
+      "exit": "Unwind/repay debt then redeem matured PT through SY; secondary sale before maturity has price impact",
+      "source_refs": [
+        "C42",
+        "C43",
+        "C44",
+        "C15"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Market observation supports real integration, not a fresh on-chain replay. Do not label matured July-2025 PT a current lending opportunity or assume every PT is eligible.",
+      "category_ids": [
+        "FIN-DER.4",
+        "FIN-CRE.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-12",
+      "classification_unit": "component or scoped component composition",
+      "component": "Centrifuge AsyncVault external-asset subscription/redemption component",
+      "version_chain_scope": "EVM protocol AsyncVault / share-token architecture; JTRSY fund documents are a separate economic example",
+      "functions": [
+        "FIN-MGT"
+      ],
+      "mechanism": "Request/issuer-fulfill/claim lifecycle; external share token; multiple investment-asset entry points",
+      "asset_claim": "Permissioned tokenized fund share; exact rights depend on specific issuer/fund documents",
+      "return_source": "External portfolio income net costs; wrapper itself generates no income",
+      "lifecycle": "Asynchronous deposit and redemption; valuation time and fulfillment time separate",
+      "standards_relationships": [
+        {
+          "standard": "ERC-7540",
+          "relationship": "IMPLEMENTS",
+          "scope": "AsyncVault request lifecycle",
+          "source_refs": [
+            "C16"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-7575",
+          "relationship": "IMPLEMENTS",
+          "scope": "external share/multi-entry vault architecture",
+          "source_refs": [
+            "C17"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "share-token representation",
+          "source_refs": [
+            "C28"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Pool issuer fulfills requests; permission manager/share hooks restrict eligible holders; custody and manager authority off-chain",
+      "dependencies": "Fund/custodian/administrator, valuations, asset liquidity, permissions, Hub messaging",
+      "exit": "Request redeem; await fulfillment and funds; claim assets; accounting conversion is not guaranteed settlement price",
+      "source_refs": [
+        "C16",
+        "C17",
+        "C18",
+        "C28",
+        "C46",
+        "C53"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "JTRSY issuer deck establishes external fund economics. We did not bind a specific JTRSY deployment to this exact AsyncVault version or verify legal title. Composition is a documented architecture with product-specific mapping left explicit.",
+      "category_ids": [
+        "FIN-MGT.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-13",
+      "classification_unit": "component or scoped component composition",
+      "component": "Goldfinch V1 Borrower Pool junior/senior financing",
+      "version_chain_scope": "Historical Goldfinch V1 documentation, EVM",
+      "functions": [
+        "FIN-CRE",
+        "FIN-RSK"
+      ],
+      "mechanism": "Negotiated term credit with junior first-loss backing and senior allocation",
+      "asset_claim": "NFT tracks contribution and redeemed repayments by tranche",
+      "return_source": "Borrower interest; junior compensation reflects first-loss exposure",
+      "lifecycle": "Term/payment schedule; repayment waterfall and available-cash redemption",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "loan inventory representation; exact asset scoped per pool",
+          "source_refs": [
+            "C19"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Borrower terms, auditor admission in V1 design, backer underwriting and governance",
+      "dependencies": "Borrower/off-chain business, optional legal collateral agreements, senior allocation",
+      "exit": "Claim proportional available repayments; no automatic liquid collateral recovery promised",
+      "source_refs": [
+        "C19"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "The source establishes NFTs but not an explicit ERC-721 conformance result. V1 Auditor mechanics are not asserted as current Goldfinch behavior.",
+      "category_ids": [
+        "FIN-CRE.1",
+        "FIN-RSK.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-14",
+      "classification_unit": "component or scoped component composition",
+      "component": "Balancer V2 LiquidityBootstrappingPool token-sale component",
+      "version_chain_scope": "Historical/version-scoped EVM V2 LBP, with documented Fjord/Gitcoin examples",
+      "functions": [
+        "FIN-CAP",
+        "FIN-EXC"
+      ],
+      "mechanism": "Weighted AMM whose weights change over owner-defined schedule",
+      "asset_claim": "Buyer receives sale token; pool owner holds liquidity/proceeds entitlement",
+      "return_source": "Capital raising transfers buyer funds to issuer; no generic return promised",
+      "lifecycle": "Scheduled weight changes and trading; owner-only joins",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "sale/reserve tokens; exact pool scope required",
+          "source_refs": [
+            "C20"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Pool owner selects weights/times and can pause swaps",
+      "dependencies": "Sale-token rights, owner powers, trading liquidity and token contracts",
+      "exit": "Buyers sell tokens subject to markets; owner exits pool/proceeds under pool rules",
+      "source_refs": [
+        "C20"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "An LBP used for treasury disposal performs exchange/capital distribution; classify purpose from the actual sale, not the AMM formula alone.",
+      "function_scope": "CAP when configured for a distinct primary token offering; treasury disposal alone is EXC. Routine vault share issuance is not capital formation.",
+      "category_ids": [
+        "FIN-CAP.1",
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-15",
+      "classification_unit": "component or scoped component composition",
+      "component": "Opyn Gamma cash-settled European oToken",
+      "version_chain_scope": "Historical EVM Gamma V2 source at 841f81d9; no current market availability claim",
+      "functions": [
+        "FIN-DER"
+      ],
+      "mechanism": "Collateralized options minting, spread margin and expiry-price cash settlement",
+      "asset_claim": "Long oToken contingent payoff; seller collateral obligation",
+      "return_source": "Option premium paid by buyer; seller bears contingent loss",
+      "lifecycle": "European expiry and settlement-price finalization before redemption",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "oToken fungible option representation",
+          "source_refs": [
+            "C50"
+          ],
+          "evidence_level": "pinned source if available; no deployed-bytecode test"
+        }
+      ],
+      "authority": "Controller, oracle and collateral/series eligibility controls",
+      "dependencies": "Expiry oracle, collateral, margin logic and market liquidity",
+      "exit": "Redeem cash payoff after settlement or offset/sell option before expiry",
+      "source_refs": [
+        "C30",
+        "C50"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "README contains broad at-or-before wording but explicitly identifies Gamma oTokens as European cash-settled; use that narrower version-specific definition.",
+      "category_ids": [
+        "FIN-DER.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-16",
+      "classification_unit": "component or scoped component composition",
+      "component": "GMX V2 oracle-priced perpetual market position",
+      "version_chain_scope": "Arbitrum EVM V2 component; exclude current cross-chain account wrappers",
+      "functions": [
+        "FIN-DER",
+        "FIN-EXC"
+      ],
+      "mechanism": "Oracle-referenced perpetual PnL with flexible collateral and market liquidity",
+      "asset_claim": "Leveraged linear USD PnL exposure, not title to referenced underlying",
+      "return_source": "Counterparty PnL/funding transfers; trading/borrowing costs reduce investor outcome",
+      "lifecycle": "Open-ended position; order execution and collateral/margin constraints",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "market collateral and pool assets",
+          "source_refs": [
+            "C21"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Market/oracle configuration and execution permissions require deployment-specific review",
+      "dependencies": "Price oracle, keepers, pool liquidity, collateral, chain",
+      "exit": "Close/reduce through order execution and withdraw residual collateral",
+      "source_refs": [
+        "C21",
+        "C54"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No current fee percentage, maximum leverage, deployment address or oracle-security guarantee asserted. Flexible collateral changes overall exposure.",
+      "category_ids": [
+        "FIN-DER.1",
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-17",
+      "classification_unit": "component or scoped component composition",
+      "component": "Gnosis ConditionalTokens split/merge/redeem positions",
+      "version_chain_scope": "Historical reference contract at eeefca66, EVM",
+      "functions": [
+        "FIN-DER"
+      ],
+      "mechanism": "Collateral split into outcome collections, then oracle payout-vector resolution",
+      "asset_claim": "ERC-1155 indexed contingent claims on collateral",
+      "return_source": "Redistribution of collateral according to realized outcome; no native interest source",
+      "lifecycle": "Prepare, split/trade/merge; oracle resolves; redeem",
+      "standards_relationships": [
+        {
+          "standard": "ERC-1155",
+          "relationship": "IMPLEMENTS",
+          "scope": "outcome position representation",
+          "source_refs": [
+            "C31"
+          ],
+          "evidence_level": "pinned Solidity inheritance/API; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "backing collateral",
+          "source_refs": [
+            "C31"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Designated oracle controls outcome report; operator approval controls transfers",
+      "dependencies": "Oracle truth/liveness, collateral, payout indexing and downstream market",
+      "exit": "Merge complete sets before resolution where possible; redeem payouts afterward",
+      "source_refs": [
+        "C31"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "ConditionalTokens is a position engine; a particular prediction market adds question design, trading and resolution governance.",
+      "category_ids": [
+        "FIN-DER.3"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-18",
+      "classification_unit": "component or scoped component composition",
+      "component": "Yearn V3 TokenizedStrategy single-strategy vault",
+      "version_chain_scope": "Pinned EVM strategy specification at 90514f12; strategy-specific implementation remains distinct",
+      "functions": [
+        "FIN-MGT"
+      ],
+      "mechanism": "ERC-4626 vault bookkeeping delegated to shared implementation; custom strategy deploy/free/harvest logic",
+      "asset_claim": "Fungible shares on selected strategy assets; mandate separate from interface",
+      "return_source": "Underlying strategy revenue less fees; reports account for profit/loss",
+      "lifecycle": "Deposit/withdraw limits, reporting and optional live accounting; pause/shutdown are distinct",
+      "standards_relationships": [
+        {
+          "standard": "ERC-4626",
+          "relationship": "IMPLEMENTS",
+          "scope": "tokenized strategy accounting interface",
+          "source_refs": [
+            "C29"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "strategy shares",
+          "source_refs": [
+            "C29"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-2612",
+          "relationship": "IMPLEMENTS",
+          "scope": "share permits",
+          "source_refs": [
+            "C29"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Management, emergency administrator and keeper; custom strategy can define limits",
+      "dependencies": "Strategy assets/protocols, report correctness, valuation and shared implementation",
+      "exit": "Withdraw within strategy liquidity/limits and unpaused state; shutdown alone is not redemption assurance",
+      "source_refs": [
+        "C29"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No transaction or live parameter inspection. Documentation is evidence of stated design, not operational guarantees.",
+      "category_ids": [
+        "FIN-MGT.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-19",
+      "classification_unit": "component or scoped component composition",
+      "component": "Lido stETH core plus WithdrawalQueueERC721",
+      "version_chain_scope": "Ethereum pooled-staking and withdrawal components; source docs at access",
+      "functions": [
+        "FIN-SEC"
+      ],
+      "mechanism": "Delegated consensus stake with rebasing liquid token and queued ETH exit",
+      "asset_claim": "stETH pooled staking balance; unstETH NFT is a finalized-or-pending withdrawal claim",
+      "return_source": "Consensus rewards, execution fees/MEV net protocol fees and losses",
+      "lifecycle": "Stake, oracle accounting, request, finalize, claim",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "IMPLEMENTS",
+          "scope": "stETH rebasing representation",
+          "source_refs": [
+            "C22"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-721",
+          "relationship": "IMPLEMENTS",
+          "scope": "unstETH withdrawal request",
+          "source_refs": [
+            "C23"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-2612",
+          "relationship": "ACCEPTS",
+          "scope": "withdrawal requests using token permits",
+          "source_refs": [
+            "C23"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Operator selection, oracle reporting, governance/pausing and queue roles",
+      "dependencies": "Ethereum validator exits/slashing, operators, oracle and contract roles",
+      "exit": "Queued claim of reserved ETH after finalization or independent secondary-market sale",
+      "source_refs": [
+        "C22",
+        "C23"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "An asynchronous NFT queue need not be ERC-7540. stETH rebasing and wstETH exchange-rate accounting require separate adapter assumptions.",
+      "category_ids": [
+        "FIN-SEC.1",
+        "FIN-SEC.2"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-20",
+      "classification_unit": "component or scoped component composition",
+      "component": "EigenLayer AllocationManager operator-set stake allocation",
+      "version_chain_scope": "Pinned EVM source documentation at ef8f9799; includes v1.9 slasher migration boundaries",
+      "functions": [
+        "FIN-SEC"
+      ],
+      "mechanism": "Stake magnitude allocated to operator sets with slashability and deallocation rules",
+      "asset_claim": "Slashable stake commitment, not an ordinary borrower repayment claim",
+      "return_source": "Security-service compensation if separately offered; base stake rewards distinct",
+      "lifecycle": "Allocate/register, exposure interval, deallocate/deregister delays",
+      "standards_relationships": [],
+      "authority": "AVS/slasher/operator permissions, pausing and governance; authorization changes version-sensitive",
+      "dependencies": "Strategy assets, operator behavior, AVS slashing criteria, delegation accounting",
+      "exit": "Deallocate and complete withdrawal processes subject to residual slashability",
+      "source_refs": [
+        "C32"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Source shows who can slash and accounting conditions; it does not establish truth of an off-chain offence or live reward adequacy.",
+      "category_ids": [
+        "FIN-SEC.3"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-21",
+      "classification_unit": "component or scoped component composition",
+      "component": "Nexus Mutual cover claim-assessment component",
+      "version_chain_scope": "Documentation distinguishes current post-November-2025 assessment from V1/V2 history",
+      "functions": [
+        "FIN-RSK"
+      ],
+      "mechanism": "Loss evidence assessed by Claims Committee or named designated assessor",
+      "asset_claim": "Conditional cover payout under product wording, subject to assessment",
+      "return_source": "Cover premiums compensate pooled capital/risk bearing; claimant gets loss payment",
+      "lifecycle": "Loss, evidence, vote, cooldown, payout-claim window",
+      "standards_relationships": [],
+      "authority": "Assessors decide claims; Advisory Board handles fraud controls; product terms select assessor",
+      "dependencies": "Cover wording, proof of loss, mutual capital, assessment integrity",
+      "exit": "Claim accepted payout within applicable window; cover is not automatic oracle-triggered insurance",
+      "source_refs": [
+        "C24"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "No universal legal-insurance characterization or current payout-capital adequacy claim. NXM stake-weighted member voting is a historical design, not the current generic description.",
+      "category_ids": [
+        "FIN-RSK.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-22",
+      "classification_unit": "component or scoped component composition",
+      "component": "Across V3 SpokePool fill / HubPool optimistic repayment",
+      "version_chain_scope": "EVM depositV3 / fillV3Relay and optimistic settlement design; no V4 ZK assertion",
+      "functions": [
+        "FIN-MON",
+        "FIN-EXC"
+      ],
+      "mechanism": "Origin deposit intent; relayer fronts destination tokens; bundled verified reimbursement",
+      "asset_claim": "User delivery claim until fill; relayer reimbursement exposure; LP capital exposed to settlement",
+      "return_source": "User-paid relayer/LP fees compensate capital, execution and settlement risks",
+      "lifecycle": "Origin inclusion, destination fill and final repayment are separate events",
+      "standards_relationships": [
+        {
+          "standard": "ERC-7683",
+          "relationship": "ADAPTER",
+          "scope": "documented open() entry follows former order/settler draft; resolver-revision conformance not established",
+          "source_refs": [
+            "C26"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        },
+        {
+          "standard": "ERC-20",
+          "relationship": "ACCEPTS",
+          "scope": "transfer/settlement assets",
+          "source_refs": [
+            "C26"
+          ],
+          "evidence_level": "documentation assertion; conformance not tested"
+        }
+      ],
+      "authority": "Dataworker/HubPool roles, UMA disputes, protocol configuration and optional exclusive fill period",
+      "dependencies": "Two-chain finality, relayer capital, UMA economic verification, canonical bridges, token controls",
+      "exit": "Recipient receives destination fill; relayer awaits reimbursement; unfilled/slow path governed by protocol rules",
+      "source_refs": [
+        "C25",
+        "C26",
+        "C27"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "A destination action can be atomic with its local fill; no universal all-or-nothing cross-chain settlement follows. Do not reuse the old ERC-7683 interface description for the new resolver revision.",
+      "function_scope": "MON for cross-chain asset delivery; EXC only for the documented Swap API/configurations exchanging different assets. Relayer reimbursement alone is not labeled separate credit.",
+      "category_ids": [
+        "FIN-EXC.2",
+        "FIN-MON.3"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-23",
+      "classification_unit": "component or scoped component composition",
+      "component": "Drift V2 Solana perpetual order/margin component",
+      "version_chain_scope": "Historical/scoped protocol-v2 code at 13e8e9b8; current docs branding is not used as deployment evidence",
+      "functions": [
+        "FIN-DER",
+        "FIN-EXC"
+      ],
+      "mechanism": "Keeper/DLOB order matching with AMM fallback and collateralized perpetual accounting",
+      "asset_claim": "Solana account position and collateral balances; no ERC token required",
+      "return_source": "Counterparty funding/PnL and fees; liquidity providers face inventory/counterparty risk",
+      "lifecycle": "Order filling, funding accrual, margin checks and liquidation",
+      "standards_relationships": [
+        {
+          "standard": "ERC-20",
+          "relationship": "ANALOGUE",
+          "scope": "SPL-token/account assets serve analogous financial role; ERC conformance is inapplicable",
+          "source_refs": [
+            "C33"
+          ],
+          "evidence_level": "chain/source distinction"
+        }
+      ],
+      "authority": "Program/admin and market/oracle configuration require deployment review",
+      "dependencies": "Solana execution, keeper/order discovery, oracle, collateral and liquidation liquidity",
+      "exit": "Offset/close position and withdraw free collateral under protocol rules",
+      "source_refs": [
+        "C33",
+        "C39",
+        "C40"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "historical design or market observation",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "Repository source availability does not establish deployed program identity or current market operation. The case tests taxonomy generality, not cross-chain interface compatibility.",
+      "category_ids": [
+        "FIN-DER.1",
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    },
+    {
+      "id": "CASE-24",
+      "classification_unit": "component or scoped component composition",
+      "component": "Osmosis concentrated-liquidity module position",
+      "version_chain_scope": "Cosmos SDK x/concentrated-liquidity source at 2df8d8e3",
+      "functions": [
+        "FIN-EXC"
+      ],
+      "mechanism": "Tick-range AMM liquidity represented in native module state",
+      "asset_claim": "Native position ID plus token balances and fee/incentive claims",
+      "return_source": "Swap spread rewards; explicit incentives distinct from operating revenue",
+      "lifecycle": "Create position, accrue/collect rewards, withdraw liquidity",
+      "standards_relationships": [
+        {
+          "standard": "ERC-721",
+          "relationship": "ANALOGUE",
+          "scope": "native position ID, not EVM NFT conformance",
+          "source_refs": [
+            "C34"
+          ],
+          "evidence_level": "pinned native-module source"
+        }
+      ],
+      "authority": "Chain governance controls module parameters; position owner controls actions",
+      "dependencies": "Consensus, native token denominations, pool accounting; IBC risks only for IBC assets",
+      "exit": "Withdraw native liquidity and collect rewards under module rules",
+      "source_refs": [
+        "C34"
+      ],
+      "verified_at": "2026-09-09",
+      "research_cutoff": "2026-09-08",
+      "current_vs_historical": "documentation/source design observed at access; live state not reverified",
+      "confidence": "high for directly cited design; function assignments are proposed classification, not source-author labels; no deployed-bytecode conformance claim",
+      "limitations": "An app-chain is deployment scope. IBC asset origin and any cross-chain settlement are independent facets, not inferred from the financial function.",
+      "category_ids": [
+        "FIN-EXC.1"
+      ],
+      "category_assignment_kind": "analyst recommendation, not source author label"
+    }
+  ]
+}

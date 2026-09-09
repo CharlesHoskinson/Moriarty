@@ -4,12 +4,13 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - navigation
 updated_at: 2026-09-07T18:01:49Z
 sources:
+  - SRC-0105
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -197,3 +198,7 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 [Library and full PDF captures](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) · [interactive graph](../deliverables/defi-taxonomy-papers-2026-09-08/graph.html) · [language implications and proposed tests](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md). SRC-0100–SRC-0103 preserve 80 pages and source-version relationships; CLM-0926–CLM-0931 connect the findings to [[wiki/defiformal-taxonomy|families/facets]], [[wiki/security|security boundaries]], [[wiki/moriarty-architecture|language semantics]] and [[wiki/contradictions|source discrepancies]]. S2 research; no sprint or proof acceptance.
 
 [ERC-4626 collateral-vault report](../deliverables/erc4626-vault-report-2026-09-08/README.md) · [report graph linked to the four papers](../deliverables/erc4626-vault-report-2026-09-08/graph.html) · [valuation and request design implications](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md). SRC-0104 adds A–H/T01–T11 and six proposed tests. External report citations and missing atlas files remain unverified; CLM-0932–CLM-0935 preserve interpretation and source limitations.
+
+## Modern DeFi taxonomy and standards atlas
+
+[Executive reference](../deliverables/modern-defi-taxonomy-2026-09-08/README.md) · [standards crosswalk](../deliverables/modern-defi-taxonomy-2026-09-08/STANDARDS.md) · [24 cases](../deliverables/modern-defi-taxonomy-2026-09-08/VALIDATION.md) · [interactive graph](../deliverables/modern-defi-taxonomy-2026-09-08/graph.html). SRC-0105 preserves the independently versioned source collection; CLM-0936 records the eight-root research recommendation. Cutoff September 8, 2026; verification September 9 UTC. Complete JSON/CSV and explicit coverage/evidence gaps accompany the report; no language or network acceptance is inferred.

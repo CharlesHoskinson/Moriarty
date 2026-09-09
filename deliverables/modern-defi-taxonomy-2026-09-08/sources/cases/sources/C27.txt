@@ -1,0 +1,314 @@
+Embedded Actions
+Embedded Crosschain Actions
+Execute custom on-chain operations on the destination chain immediately after a crosschain swap.
+Copy Markdown
+Open with AI
+Embedded crosschain actions let you compose arbitrary destination-chain operations — token transfers, DeFi deposits, contract calls — into a single crosschain transaction via the Swap API. Instead of bridging first and then executing separately, the user submits one transaction and everything happens atomically on the destination.
+API key required for production.
+Get your API key and Integrator ID
+to authenticate your requests.
+How It Works
+Submit Intent with Actions
+Call
+POST /swap/approval
+with an
+actions
+array in the request body. Each action defines a contract call or native transfer to execute after the swap lands on the destination chain.
+Relayer Includes Message
+The relayer fills the intent on the destination chain and includes the same
+message
+field to ensure repayment. This message encodes your actions.
+SpokePool Executes Actions
+When the
+message
+field is non-empty and the recipient is a contract, the destination SpokePool calls
+handleV3AcrossMessage()
+on the
+MulticallHandler
+contract. If any action uses dynamic balances, it calls
+makeCallWithBalance()
+to inject runtime token amounts.
+Action Object Schema
+Each action in the
+actions
+array has this structure:
+action-schema.json
+{
+"target"
+:
+"0x..."
+,
+"functionSignature"
+:
+"function transfer(address to, uint256 value)"
+,
+"args"
+: [
+{
+"value"
+:
+"0x..."
+,
+"populateDynamically"
+:
+false
+},
+{
+"value"
+:
+"0"
+,
+"populateDynamically"
+:
+true
+,
+"balanceSourceToken"
+:
+"0x..."
+}
+],
+"value"
+:
+"0"
+,
+"isNativeTransfer"
+:
+false
+,
+"populateCallValueDynamically"
+:
+false
+}
+Field Reference
+Field
+Type
+Description
+target
+string
+Contract or recipient address on the destination chain
+functionSignature
+string
+Solidity function signature (e.g.,
+"function transfer(address,uint256)"
+). Empty string
+""
+for native transfers
+args
+array
+Ordered array of function arguments
+args[].value
+string
+Argument value. For dynamic args, this is ignored at runtime
+args[].populateDynamically
+boolean
+If
+true
+, the actual token balance at execution time replaces this value
+args[].balanceSourceToken
+string
+Token address whose balance to inject. Use
+0x0000000000000000000000000000000000000000
+for native ETH
+value
+string
+Static
+msg.value
+in wei to send with the call
+isNativeTransfer
+boolean
+If
+true
+, this is a simple ETH transfer —
+functionSignature
+must be
+""
+and
+args
+must be
+[]
+populateCallValueDynamically
+boolean
+If
+true
+, the entire native balance from the swap is used as
+msg.value
+Deciding How to Configure an Action
+Determine the Action Type
+Native ETH transfer
+: Set
+isNativeTransfer: true
+, leave
+functionSignature
+as
+""
+and
+args
+as
+[]
+Contract call
+: Set
+isNativeTransfer: false
+and provide the full
+functionSignature
+Contract call with ETH value
+: Choose between a static
+value
+or set
+populateCallValueDynamically: true
+to forward the entire swapped ETH balance
+Define Function Parameters
+For each argument:
+Static value
+(e.g., a recipient address): set
+populateDynamically: false
+and provide the
+value
+Dynamic value
+(e.g., the swapped token amount): set
+populateDynamically: true
+and specify
+balanceSourceToken
+with the token address whose balance should be injected
+Handle Native ETH as Value
+When a dynamic argument references native ETH (
+balanceSourceToken: "0x0000..."
+), the transaction's
+msg.value
+is automatically set to the same amount. You don't need to set
+populateCallValueDynamically
+separately in this case.
+Avoid
+exactOutput
+with dynamic balances.
+When using
+tradeType: exactOutput
+, some routes may return more tokens than expected. If your embedded action requires an exact amount, use static values instead of
+populateDynamically: true
+.
+API Request Format
+Embedded actions use the
+POST
+method on
+/swap/approval
+. Query parameters remain the same as
+GET
+, but the actions go in the request body:
+post-with-actions.ts
+const
+params
+=
+new
+URLSearchParams
+({
+tradeType:
+"exactInput"
+,
+originChainId:
+"42161"
+,
+destinationChainId:
+"1"
+,
+inputToken:
+"0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+,
+outputToken:
+"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+,
+amount:
+"1000000000"
+,
+depositor:
+"0xYourWalletAddress"
+,
+recipient:
+"0x924a9f036260DdD5808007E1AA95f08eD08aA569"
+,
+// MulticallHandler
+});
+const
+response
+=
+await
+fetch
+(
+`https://app.across.to/api/swap/approval?${
+params
+}`
+,
+{
+method:
+"POST"
+,
+headers: {
+"Content-Type"
+:
+"application/json"
+,
+Authorization:
+"Bearer YOUR_API_KEY"
+,
+},
+body:
+JSON
+.
+stringify
+({
+actions: [
+{
+target:
+"0x..."
+,
+functionSignature:
+"function transfer(address,uint256)"
+,
+args: [
+{ value:
+"0xRecipient"
+, populateDynamically:
+false
+},
+{ value:
+"0"
+, populateDynamically:
+true
+, balanceSourceToken:
+"0x..."
+},
+],
+value:
+"0"
+,
+isNativeTransfer:
+false
+,
+populateCallValueDynamically:
+false
+,
+},
+],
+}),
+}
+);
+The
+recipient
+parameter should be set to the
+MulticallHandler
+contract address on the destination chain. This is the contract that executes your actions. See
+contract addresses
+for each chain.
+Examples
+Transfer ERC-20 Tokens
+Transfer swapped tokens to a different address on the destination chain.
+Deposit ETH into Aave
+Swap to ETH and deposit directly into Aave's lending pool.
+Add HubPool Liquidity
+Swap to ETH and add liquidity to the Across HubPool in one transaction.
+Simple ETH Transfer
+Send native ETH to an address after a crosschain swap.
+Nested Parameters
+Handle tuple and struct parameters in function signatures.
+Hyperliquid Withdrawals
+Withdraw from Hyperliquid (HyperCore) to any Across-supported chain via a gasless multi-signature flow.
+Transfer ERC-20 Tokens After Swap
+Transfer swapped ERC-20 tokens to a different address on the destination chain.

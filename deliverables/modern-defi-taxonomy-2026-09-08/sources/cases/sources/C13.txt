@@ -1,0 +1,809 @@
+Morpho Vaults
+Code
+V1.1 repository
+V1.0 repository
+Market
+Those following 3 elements are defined in the
+Morpho related section
+.
+MarketParams
+struct,
+market
+struct,
+Id
+of markets.
+Also we have:
+struct
+MarketAllocation
+{
+MarketParams marketParams;
+uint256
+assets;
+}
+Name
+Type
+Description
+marketParams
+MarketParams
+The market to allocate assets to.
+assets
+uint256
+The amount of assets to allocate.
+External Functions
+deposit
+function
+deposit
+(
+uint256
+assets
+,
+address
+receiver
+)
+public
+override
+returns
+(
+uint256
+shares
+) {}
+Deposits
+assets
+of underlying token into the vault to mint vault shares to
+receiver
+.
+Parameters:
+Name
+Type
+Description
+assets
+uint256
+The quantity of asset to deposit.
+receiver
+address
+The address that will own the position on the vault.
+Return Values:
+Name
+Type
+Description
+shares
+uint256
+The amount of vault shares minted.
+mint
+function
+mint
+(
+uint256
+shares
+,
+address
+receiver
+)
+public
+override
+returns
+(
+uint256
+assets
+) {}
+Mints exactly
+shares
+vault shares to receiver by depositing underlying tokens into the vault.
+Parameters:
+Name
+Type
+Description
+shares
+uint256
+The quantity of shares to mint.
+receiver
+address
+The address that will own the position on the vault.
+Return Values:
+Name
+Type
+Description
+assets
+uint256
+The amount of underlying token deposited.
+withdraw
+function
+withdraw
+(
+uint256
+assets
+,
+address
+receiver
+,
+address
+owner
+)
+public
+override
+returns
+(
+uint256
+shares
+) {}
+Withdraws
+assets
+of underlying token by burning vault shares of
+owner
+, and sends the withdrawn assets to
+receiver
+.
+msg.sender
+must be authorized to manage
+owner
+'s vault balance.
+Parameters:
+Name
+Type
+Description
+assets
+uint256
+The quantity of asset to withdraw.
+receiver
+address
+The address that will receive the withdrawn assets.
+owner
+address
+The address that will see its position burnt of the amount of assets.
+Return Values:
+Name
+Type
+Description
+shares
+uint256
+The amount of shares burned.
+redeem
+function
+redeem
+(
+uint256
+shares
+,
+address
+receiver
+,
+address
+owner
+)
+public
+override
+returns
+(
+uint256
+assets
+) {}
+Burns exactly
+shares
+vault shares from
+owner
+and sends the withdrawn assets of underlying tokens to
+receiver
+.
+msg.sender
+must be authorized to manage
+owner
+'s vault balance.
+Parameters:
+Name
+Type
+Description
+shares
+uint256
+The quantity of shares to burn.
+receiver
+address
+The address that will receive the minted shares.
+owner
+address
+The address that will see its position burnt of the amount of shares.
+Return Values:
+Name
+Type
+Description
+assets
+uint256
+The amount of underlying token withdrawn.
+acceptTimelock
+function
+acceptTimelock
+()
+external
+;
+Accepts the pending timelock.
+This function is timelocked, which means
+timelock
+must have passed since the pending timelock submission for this function to be successfully called.
+acceptGuardian
+function
+acceptGuardian
+()
+external
+afterTimelock
+(
+pendingGuardian
+.
+validAt
+) {}
+Accepts the pending guardian.
+This function is timelocked, which means
+timelock
+must have passed since the pending guardian submission for this function to be successfully called.
+acceptCap
+function
+acceptCap
+(
+MarketParams
+memory
+marketParams
+)
+external
+;
+Accepts the pending cap of the market defined by
+marketParams
+.
+This function is timelocked, which means
+timelock
+must have passed since the pending cap submission for this function to be successfully called.
+Parameters:
+Name
+Type
+Description
+id
+Id
+The id of the market to accept the cap.
+skim
+function
+skim
+(
+address
+token
+)
+external
+{}
+Skims the vault
+token
+balance to
+skimRecipient
+.
+Parameters:
+Name
+Type
+Description
+token
+address
+The address of the token to skim the balance of.
+The following functions are inheriting the
+IERC4626 interface
+As a reminder, there are specific types of
+roles
+in Morpho Vaults:
+Owner
+,
+Curator
+,
+Allocator
+,
+Guardian
+.
+OnlyOwner Functions
+setName (V1.1)
+function
+setName
+(
+string
+memory
+newName
+)
+external
+onlyOwner
+{}
+Sets the vault's name to
+newName
+.
+Parameters:
+Name
+Type
+Description
+newName
+string
+The new name of the vault
+setSymbol (V1.1)
+function
+setSymbol
+(
+string
+memory
+newSymbol
+)
+external
+onlyOwner
+{}
+Sets the vault's symbol to
+newSymbol
+.
+Parameters:
+Name
+Type
+Description
+newSymbol
+string
+The new symbol of the vault
+setCurator
+function
+setCurator
+(
+address
+newCurator
+)
+external
+onlyOwner
+{};
+Sets
+curator
+to
+newCurator
+.
+Parameters:
+Name
+Type
+Description
+newCurator
+address
+The address of the new curator.
+setIsAllocator
+function
+setIsAllocator
+(
+address
+newAllocator
+,
+bool
+newIsAllocator
+)
+external
+onlyOwner
+{};
+Sets
+newAllocator
+as an allocator or not (
+newIsAllocator
+).
+Parameters:
+Name
+Type
+Description
+newAllocator
+address
+The address of the new allocator.
+newIsAllocator
+bool
+A boolean (true or false) indicating if the address is an allocator or not.
+setSkimRecipient
+function
+setSkimRecipient
+(
+address
+newSkimRecipient
+)
+external
+onlyOwner
+{};
+Sets
+skimRecipient
+to
+newSkimRecipient
+.
+Parameters:
+Name
+Type
+Description
+newSkimRecipient
+address
+The address of the new recipient parameters.
+submitTimelock
+function
+submitTimelock
+(
+uint256
+newTimelock
+)
+external
+onlyOwner
+{};
+Submits a
+newTimelock
+.
+Warning: Reverts if a timelock is already pending. Revoke the pending timelock to overwrite it.
+In case the new timelock is higher than the current one, the timelock is set immediately.
+Parameters:
+Name
+Type
+Description
+newTimelock
+uint256
+The value of the new timelock (in seconds).
+setFee
+function
+setFee
+(
+uint256
+newFee
+)
+external
+onlyOwner
+{};
+Sets the
+fee
+to
+newFee
+.
+Parameters:
+Name
+Type
+Description
+newFee
+uint256
+The value of the new fee scaled in wad.
+setFeeRecipient
+function
+setFeeRecipient
+(
+address
+newFeeRecipient
+)
+external
+onlyOwner
+{};
+Sets
+feeRecipient
+to
+newFeeRecipient
+.
+Parameters:
+Name
+Type
+Description
+newFeeRecipient
+address
+The address of the new fee recipient.
+Fees are minted as shares. To receive the underlying asset, the fee recipient must call
+redeem()
+at some point, either directly, or by granting allowance to another address that redeems on their behalf.
+The fee recipient must be an address capable of interacting with the vault
+(EOA, smart wallet, multisig, etc.). A fully passive address that never interacts with the chain won't be able to actually receive the fee in the underlying asset.
+submitGuardian
+function
+submitGuardian
+(
+address
+newGuardian
+)
+external
+onlyOwner
+{};
+Submits a
+newGuardian
+.
+Warning: a malicious guardian could disrupt the vault's operation, and would have the power to revoke any pending guardian.
+In case there is no guardian, the gardian is set immediately.
+Warning: Submitting a gardian will overwrite the current pending gardian.
+Parameters:
+Name
+Type
+Description
+newGuardian
+address
+The address of the new guardian.
+onlyCuratorRole Functions
+Note that owner and curator has the
+onlyCuratorRole
+.
+submitCap
+function
+submitCap
+(
+MarketParams
+memory
+marketParams
+,
+uint256
+newSupplyCap
+)
+external
+onlyCuratorRole
+{};
+Submits a
+newSupplyCap
+for the market defined by
+marketParams
+.
+Warning: Reverts if a cap is already pending. Revoke the pending cap to overwrite it.
+Warning: Reverts if a market removal is pending.
+In case the new cap is lower than the current one, the cap is set immediately.
+Parameters:
+Name
+Type
+Description
+marketParams
+MarketParams
+The market parameters.
+newSupplyCap
+uint256
+The new supply cap in underlying units.
+submitMarketRemoval
+function
+submitMarketRemoval
+(
+Id
+id
+)
+external
+onlyCuratorRole
+{};
+Submits a forced market removal from the vault, eventually losing all assets supplied to the market.
+Funds can be recovered by enabling this market again and withdrawing from it (using
+reallocate
+), but assets will be distributed pro-rata to the shares at the time of withdrawal, not at the time of removal.
+This forced removal is expected to be used as an emergency process in case a market constantly reverts. To softly remove a sane market, the curator role is expected to bundle a reallocation that empties the market first (using
+reallocate
+), followed by the removal of the market (using
+updateWithdrawQueue
+).
+Warning: Removing a market with non-zero supply will instantly impact the vault's price per share.
+Warning: Reverts for non-zero cap or if there is a pending cap. Successfully submitting a zero cap will prevent such reverts.
+Parameters:
+Name
+Type
+Description
+marketParams
+MarketParams
+The market parameters.
+onlyAllocatorRole Functions
+Note that owner, curator and an address that has been set as an allocator has the
+onlyAllocatorRole
+.
+setSupplyQueue
+function
+setSupplyQueue
+(
+Id
+[]
+calldata
+newSupplyQueue
+)
+external
+onlyAllocatorRole
+{};
+Sets
+supplyQueue
+to
+newSupplyQueue
+.
+Parameters:
+Name
+Type
+Description
+newSupplyQueue
+Id
+[ ]
+newSupplyQueue is an array of enabled markets, and can contain duplicate markets, but it would only increase the cost of depositing to the vault.
+updateWithdrawQueue
+function
+updateWithdrawQueue
+(
+uint256
+[]
+calldata
+indexes
+)
+external
+onlyAllocatorRole
+{};
+Updates the withdraw queue. Some markets can be removed, but no market can be added.
+Removing a market requires the vault to have 0 supply on it, or to have previously submitted a removal for this market (with the function
+submitMarketRemoval
+).
+Warning: Anyone can supply on behalf of the vault so the call to
+updateWithdrawQueue
+that expects a market to be empty can be griefed by a front-run. To circumvent this, the allocator can simply bundle a reallocation that withdraws max from this market with a call to
+updateWithdrawQueue
+.
+Warning: Removing a market with supply will decrease the fee accrued until one of the functions updating
+lastTotalAssets
+is triggered (deposit/mint/withdraw/redeem/setFee/setFeeRecipient).
+Warning:
+updateWithdrawQueue
+is not idempotent. Submitting twice the same tx will change the queue twice.
+Parameters:
+Name
+Type
+Description
+indexes
+uint256 [ ]
+The indexes of each market in the previous withdraw queue, in the new withdraw queue's order.
+reallocate
+function
+reallocate
+(
+MarketAllocation
+[]
+calldata
+allocations
+)
+external
+onlyAllocatorRole
+{};
+Reallocates the vault's liquidity so as to reach a given allocation of assets on each given market.
+The allocator can withdraw from any market, even if it's not in the withdraw queue, as long as the loan token of the market is the same as the vault's asset.
+The behavior of the reallocation can be altered by state changes, including:
+Deposits on the vault that supplies to markets that are expected to be supplied to during reallocation.
+Withdrawals from the vault that withdraws from markets that are expected to be withdrawn from during
+reallocation.
+Donations to the vault on markets that are expected to be supplied to during reallocation.
+Withdrawals from markets that are expected to be withdrawn from during reallocation.
+Sender is expected to pass
+assets = type(uint256).max
+with the last MarketAllocation of
+allocations
+to
+supply all the remaining withdrawn liquidity, which would ensure that
+totalWithdrawn
+=
+totalSupplied
+.
+Parameters:
+Name
+Type
+Description
+allocations
+MarketAllocation
+The respective allocations in each market chosen.
+onlyGuardianRole Functions
+Note that owner and guardian has the
+onlyAllocatorRole
+.
+revokePendingTimelock
+function
+revokePendingTimelock
+()
+external
+onlyGuardianRole
+{};
+Revokes the pending timelock.
+Does not revert if there is no pending timelock.
+revokePendingGuardian
+function
+revokePendingGuardian
+()
+external
+onlyGuardianRole
+{};
+Revokes the pending guardian.
+onlyCuratorOrGuardianRole Functions
+Note that owner, curator and guardian has the
+onlyAllocatorRole
+.
+revokePendingCap
+function
+revokePendingCap
+(
+Id
+id
+)
+external
+onlyCuratorOrGuardianRole
+{};
+Revokes the pending cap of the market defined by
+id
+.
+Does not revert if there is no pending cap.
+Parameters:
+Name
+Type
+Description
+id
+Id
+The id of the market to revoke the pending cap.
+revokePendingMarketRemoval
+function
+revokePendingMarketRemoval
+(
+Id
+id
+)
+external
+onlyCuratorOrGuardianRole
+{};
+Revokes the pending removal of the market defined by
+id
+.
+Does not revert if there is no pending market removal.
+Parameters:
+Name
+Type
+Description
+id
+Id
+The id of the market to revoke the pending removal.
+Errors Codes
+Below is a list of the different
+Errors
+that can be thrown when executing transactions on Morpho Vaults.
+E.g
+: One can try to execute an action on Morpho Vaults' contracts, and get:
+reverted with an unrecognized custom
+error
+(
+return
+data
+:
+0x46fedb57
+)
+According to the following tables, this is an error that emitted the
+AboveMaxTimelock()
+function.
+Custom Error
+Error Signature (returned data)
+AboveMaxTimelock()
+0x46fedb57
+AlreadyPending()
+0x49b204ce
+AlreadySet()
+0xa741a045
+AllCapsReached()
+0xded0652d
+BelowMinTimelock()
+0x342b27be
+DuplicateMarket(Id id)
+0x074e4d4b
+InconsistentAsset(Id id)
+0xf17887ec
+InconsistentReallocation()
+0x9e36b890
+InvalidMarketRemovalNonZeroCap(Id id)
+0xd2575d1a
+InvalidMarketRemovalNonZeroSupply(Id id)
+0x6316104f
+InvalidMarketRemovalTimelockNotElapsed(Id id)
+0x813435c5
+MarketNotCreated()
+0x96e13529
+MarketNotEnabled(Id id)
+0x11b0e0ab
+MaxFeeExceeded()
+0xf4df6ae5
+MaxQueueLengthExceeded()
+0x80f2f7ae
+NonZeroCap()
+0xc48e3172
+NoPendingValue()
+0xe5f408a5
+NotAllocatorRole()
+0xf7137c0f
+NotCuratorNorGuardianRole()
+0xd080fa31
+NotCuratorRole()
+0xca899cec
+NotEnoughLiquidity()
+0x4323a555
+NotGuardianRole()
+0xf9f2fc9a
+PendingCap(Id id)
+0x42288ef1
+PendingRemoval()
+0x4bec0146
+SupplyCapExceeded(Id id)
+0xd018394f
+TimelockNotElapsed()
+0x6677a596
+UnauthorizedMarket(Id id)
+0x9cd14834
+ZeroAddress()
+0x867915ab
+ZeroFeeRecipient()
+0xcff9f194

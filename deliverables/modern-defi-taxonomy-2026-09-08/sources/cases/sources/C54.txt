@@ -1,0 +1,537 @@
+Trading
+Positions and order types
+On this page
+Positions and order types
+This page covers how pricing works on GMX, how to open and manage positions, the available order types, and swaps.
+Pricing on GMX
+​
+GMX uses oracle-based pricing rather than an orderbook model. Understanding this is important for limit orders, stop-loss orders, and other conditional order types.
+Oracle prices: minPrice and maxPrice
+​
+GMX receives price data from
+Chainlink Data Streams
+as a spread with two values derived from the bid and ask in each data stream report:
+minPrice: The lower bound of the price spread (bid)
+maxPrice: The upper bound of the price spread (ask)
+The oracle price used for both triggering and execution depends on the operation:
+Operation
+Oracle price used
+Reasoning
+Long open
+maxPrice
+You pay the higher price to enter a long
+Long close / liquidation
+minPrice
+You receive the lower price when exiting a long
+Short open
+minPrice
+You sell at the lower price to enter a short
+Short close / liquidation
+maxPrice
+You buy back at the higher price when exiting a short
+Entry price
+Your entry price is the Chainlink oracle price used for your order —
+maxPrice
+for longs,
+minPrice
+for shorts. No price impact is applied at entry; it is
+stored and applied when you close
+. Because the entry price is the market price from Chainlink with no additional adjustments, it is not displayed separately in the interface.
+Mark price
+​
+The mark price is the midpoint of the oracle spread:
+(minPrice + maxPrice) / 2
+The mark price is used for:
+Display in the interface and charts
+Funding rate calculations
+Price impact calculations (deposits, swaps, position sizing)
+It is not used for order triggering or execution.
+Trigger price evaluation
+​
+This is a key difference from orderbook exchanges. On orderbook platforms, limit and stop orders fill when a counterparty matches at that price level in the orderbook. On GMX, there is no orderbook — trigger prices are evaluated against minPrice or maxPrice depending on the order direction, which is the same price used for execution.
+Example: You set a Stop-Loss at $3,900 for your ETH long. The order triggers when minPrice reaches $3,900 (not when the mark price reaches $3,900). Since closing a long uses minPrice, the trigger and execution price are the same oracle price.
+The spread between minPrice and maxPrice is typically small (a few basis points) but can widen during volatility.
+Charts
+​
+The current price displayed on the chart — the live price line and the price in the chart header — is the mark price:
+(minPrice + maxPrice) / 2
+.
+Candlestick charts use:
+Open: previous candle's close (the average price at the end of the prior period)
+Close: average price (minPrice + maxPrice) / 2
+High: highest maxPrice reported by oracles
+Low: lowest minPrice reported by oracles
+This means a candle may show your trigger price being reached, but your order may not trigger. For example, if you set a Limit Increase to open a long at $3,900, the chart might show a low of $3,900 (based on minPrice), but your order uses maxPrice — which may have only reached $3,901.
+TradingView drawings and tool settings are saved in your browser and restored after a refresh.
+Price gaps and volatility
+​
+During rapid price movements, the oracle price at execution may differ from your trigger price. This applies to all trigger-based orders (Limit Increase, Limit Decrease, Stop Market, TP/SL).
+Examples:
+Stop-Loss at $4,000: Oracle price updates from $4,010 → $3,990 (skipping past $4,000). Order triggers and executes at $3,990.
+Take-Profit at $4,100: Oracle price updates from $4,090 → $4,110 (skipping past $4,100). Order triggers and executes at $4,110.
+Trigger orders are not guaranteed to execute if the oracle price does not reach the specified trigger price.
+Opening a position
+​
+On the
+Trade
+page, select "Long" or "Short," choose an order type (Market, Limit, or via the "More" dropdown: Stop Market or TWAP), and configure your position using the fields described below.
+Pool and collateral
+​
+Select the market you want to trade from the market selector at the top left of the trade page. At the top of the trade box, you can configure:
+Pool
+— if multiple pools are available for your market (for example, BTC-USDC and BTC-USDT), choose based on your preferred collateral, net rates, and price impact. Each pool may have different funding/borrowing rates and price impact levels depending on its balance.
+Collateral
+— choose which token your position's collateral is stored as. For example, in the BTC-USDC market, you can choose BTC or USDC.
+Collateral choice affects your exposure:
+Long ETH with ETH collateral:
+You gain exposure from both the long position and the collateral itself. For example, a 0.1 ETH long with 1 ETH as collateral gives 1.1 ETH total exposure.
+Long ETH with USDC collateral:
+Exposure comes only from the long position. Useful if switching frequently between longing and shorting.
+Short ETH with ETH collateral:
+Useful for delta neutral strategies to earn funding fees. For example, a 1 ETH short with 1 ETH as collateral.
+Short ETH with USDC collateral:
+Useful if switching frequently between longing and shorting.
+warning
+If you open a long position with non-stablecoin collateral, your liquidation price may change as the collateral's price fluctuates.
+Margin, size, and leverage
+​
+The trade box has three interconnected fields:
+Margin
+— the amount you deposit as position margin. You can select the pay token and fill your available balance from this field.
+Size
+— the total position size. You can toggle between USD and token units (for example, BTC).
+Leverage
+— displayed at the top of the trade box. Click on it to open the leverage adjuster, which has a slider with marks that vary by market (based on the market's max allowed leverage) and a manual input field.
+A percentage slider below these fields lets you quickly adjust margin or size as a percentage of your maximum available amount, depending on the
+Manual leverage
+setting.
+How these fields interact depends on the
+Manual leverage
+setting (in Settings):
+Manual leverage on (default):
+You set the leverage and one of the other fields. The third is calculated automatically. The percentage slider adjusts margin. For example, setting 10x leverage and 100 USDC margin gives a 1,000 USD position size.
+Manual leverage off:
+You set margin and size freely, and leverage is derived from their ratio. The percentage slider adjusts size.
+Are GMX perps linear or inverse?
+​
+GMX V2 uses linear PnL math rather than inverse perp math. In simple terms, GMX calculates profit and loss from your token exposure, while inverse perps are built around a fixed USD contract value and usually pay profit and loss in the underlying token. Internally, GMX keeps both token size and USD position value for pricing and risk calculations, while collateral remains flexible within the market's supported tokens.
+For linear perps, price-move PnL equals
+size in tokens × price move
+, which is equivalently the position's USD notional at entry multiplied by the percentage price change. For example, a 10,000 USD ETH position that moves 10% has 1,000 USD of profit or loss before fees and price impact. On GMX, this is true whether your collateral is ETH or USDC.
+What changes with collateral is your additional exposure outside the position itself:
+Stablecoin collateral
+feels more linear because the collateral value stays relatively stable while the position PnL moves.
+Non-stable collateral
+can feel more inverse-like because the collateral value can rise or fall with the market too.
+Profitable longs use the market's long token and profitable shorts use the market's short token for PnL payments. In the close modal, the token you receive as profit can be changed, but this is done through a swap from that PnL token, so the final output token does not by itself determine whether a position is linear or inverse.
+In practice, GMX is best thought of as a
+multi-collateral perpetual market with linear, USD-based PnL
+, not as an inverse perp venue.
+Take-Profit / Stop-Loss
+​
+You can set basic TP/SL orders directly in the trade box before opening a position. Toggle the TP/SL section to configure a trigger price and view estimated PnL for each. These orders fully close your position when triggered. For more advanced TP/SL configurations (partial closes, multiple entries), use the positions list after opening the position.
+Stop-Loss execution and liquidation
+A Stop-Loss is a trigger order, not a guaranteed exit before liquidation. If a fast price move makes your position liquidatable before the Stop-Loss can execute, liquidation can execute first and the Stop-Loss may no longer have a position to close. Keep Stop-Loss triggers comfortably away from the liquidation price, use lower leverage, or add collateral to leave room for volatility, oracle spread, price gaps, and execution timing.
+Execution details
+​
+Before submitting, expand the "Execution details" section at the bottom of the trade box to review: liquidation price, fees, network fee, collateral spread, allowed slippage, stored price impact, leverage, size, and collateral. Adjust the allowed slippage in this section or in Settings if needed.
+Max leverage
+​
+The max allowed leverage of a pool decreases as the total open interest of the pool increases. This guards the pool against gaming of price impact using high-leverage positions. This mainly affects markets with less liquidity but can affect high-liquidity markets if the open interest is very large.
+The interface shows a warning if the max allowed leverage would be exceeded. This only affects opening or increasing positions — it does not affect positions that have already been opened. For closing or decreasing positions, if the max allowed leverage would be exceeded, the order can still execute, but the collateral within the position would not be reduced.
+note
+For opening or increasing a position, the interface derives the market's max allowed leverage from its onchain minimum collateral factor, liquidation collateral factor, and position fee factor. It uses the lower of the fee-aware opening limit and a limit that keeps the required collateral at least twice the liquidation threshold, then rounds down to a 5x increment. Because these factors can differ, the result is not always half of the market's theoretical max. A market-specific interface cap can reduce the result further.
+When you deposit collateral through the edit button, the interface validates against the leverage derived directly from
+minCollateralFactor
+, without the opening and liquidation buffers. A deposit is blocked only when the resulting leverage exceeds that value or a lower market-specific interface cap.
+Managing positions
+​
+After opening a trade, you can view it under your positions list. Each position row displays the market and side, size, net value, collateral, entry price, mark price, liquidation price, and any active TP/SL orders.
+You can also interact directly from the position row:
+Click the edit button next to the collateral value to deposit or withdraw collateral, adjusting your leverage and liquidation price. Deposits can be immediate or
+conditional
+.
+Use the "Market" or "TWAP" buttons in the Close column to close the position (see
+Closing a position
+).
+Position actions
+​
+Click the "..." menu on a position row to access additional actions:
+Increase size
+— add to your position using a Market, Limit, Stop Market, or TWAP order.
+Set TP/SL
+— create, edit, or cancel Take-Profit and Stop-Loss orders. You can set multiple TP/SL orders per position with different trigger prices and sizes.
+Share position
+— generate a shareable image of your position with optional PnL display, and share it via link or on X.
+View position history
+— open Trade History filtered to every action in that position's lifecycle, from opening through full closure.
+Conditional margin deposits
+​
+To schedule additional collateral for an existing position, click the edit button next to its collateral value, select "Deposit" and "At price," then enter the deposit amount and trigger price. For a long position, the trigger must be below the current mark price and becomes eligible when
+maxPrice <= trigger price
+. For a short position, it must be above the current mark price and becomes eligible when
+minPrice >= trigger price
+.
+A conditional margin deposit is a zero-size
+LimitIncrease
+order. It reserves the deposit amount and execution fee, then adds collateral without changing the position size or open interest if it executes. The order appears as "Deposit margin" under the "Orders" tab. You can edit its trigger price, replace its deposit amount, or cancel it to return the reserved collateral through the normal refund flow.
+At execution, accrued borrowing and funding fees are accounted for before the added collateral improves the position. The order only executes if the resulting position remains above its liquidation requirement.
+When a position becomes liquidatable, keepers may attempt an eligible conditional margin deposit before liquidation, after eligible Stop-Loss orders. This is best-effort execution. Oracle updates, execution availability, transaction timing, changing position state, and the deposit-specific collateral check can all prevent execution. Moving the trigger farther from the liquidation price provides more room, but there is no fixed safe percentage or published success rate that guarantees execution. See
+Related orders and liquidations
+.
+Current auto-cancel limitation
+The "Auto-cancel TP/SL" setting does not currently cover conditional margin deposits because they are
+LimitIncrease
+orders. If the associated position closes or is liquidated first, manually cancel any remaining "Deposit margin" order to release its reserved collateral. Do this before reopening a position with the same market, collateral token, and direction, because the new position uses the same position key.
+Net value and collateral tooltips
+​
+Hover over the net value to see a breakdown of initial collateral, PnL, borrow fees, funding fees, net price impact, price impact rebates, and close fees. Hover over the collateral to see accrued borrow and funding fees, daily fee rates, and claimable positive funding fees.
+Closing a position
+​
+Close a position partially or completely by clicking the "Market" or "TWAP" button in the position row. This opens a dialog where you configure the close amount, receive token, and execution details. Closing realizes pending profits or losses proportional to the percentage of the position that is closed.
+Close amount
+​
+Enter the USD amount to close, or use the percentage slider (0–100%) and quick-select buttons (10%, 25%, 50%, 75%) to set a partial or full close.
+If the remaining position size would be below 1 USD, the close is treated as a full close instead of leaving a dust position.
+Market vs TWAP close
+​
+Market
+— closes immediately at the current oracle price.
+TWAP
+— splits the close into multiple smaller orders executed over a specified duration. Configure the duration (hours and minutes), number of parts, and review the calculated frequency and size per part. TWAP is recommended for large positions to reduce price impact — the interface suggests switching to TWAP if it detects high net price impact.
+Keep leverage
+​
+When partially closing with a Market order, the "Keep leverage" toggle maintains your current leverage ratio by proportionally reducing collateral alongside the size. This is enabled by default and disabled for full closes.
+If a partial close would leave the position with collateral below the protocol minimum, the close is blocked. This can happen more easily when "Keep leverage" is enabled, since reducing size also withdraws collateral proportionally.
+Receive token
+​
+When a close realizes profit, profitable long positions receive the market's long token and profitable short positions receive the market's short token. This token is the position's PnL token.
+When the profit token and collateral token differ, supported close flows let you receive the realized profit in the PnL token and returned collateral in the collateral token separately. This skips the internal output swap and its associated swap fee.
+You can change the receive token in the close dialog. If the selected receive token differs from the PnL token, GMX attempts to swap the realized profit into the selected token. For example, if you close a profitable ETH long and choose USDC as the receive token, the ETH profit is swapped into USDC.
+The close dialog shows this conversion cost in the fee details. It only shows the
+High swap profit fee
+warning when the estimated conversion cost crosses the high-fee threshold, currently 1% or more of the realized profit amount for market closes. This fee is caused by the PnL-token-to-receive-token conversion, not by using USDC or another token as collateral. To avoid that conversion, select the position's PnL token as the receive token; otherwise, review the swap fee, price impact, and minimum receive before confirming.
+If the swap fails during execution, the decrease order may output two tokens instead of a single token.
+Execution details
+​
+Before confirming, expand the "Execution details" section to review exit price, trade fees, network fee, allowed slippage, leverage, size, and collateral transitions. The net price impact and fees summary is shown above this section.
+PnL
+​
+The PnL from price movement is proportional to your position size. For example, if you open a 10,000 USD long ETH position and the price of ETH increases by 10%, the profit is 1,000 USD. If the price decreases by 10%, the loss is 1,000 USD. This excludes changes in your collateral's value — if your collateral is a non-stablecoin asset, its price movement also affects your net value.
+The trade history separates price-move PnL from fee and impact components. The realized PnL value reflects the position's base PnL from price movement for the executed position change, while fees, discounts, swap fees, and price impact are shown as separate values in the row or tooltip. The opening fee is deducted from the initial margin you pay when opening a position (initial margin - opening fee = initial collateral), so the initial collateral displayed on the interface already accounts for it. Because the opening fee is absorbed into the starting collateral, it is not subtracted again when calculating realized PnL at close.
+For example, holding a position for an extended period accumulates borrowing fees, and closing during an imbalanced market may incur negative price impact. Hover over the net value in the positions list for a full breakdown. See
+Fees
+for details on each fee type.
+Leverage for a position is displayed as (position size) / (position collateral). You can change this to (position size + PnL) / (position collateral) in "Settings."
+Swaps
+​
+GMX supports perpetual trading and swaps. To swap, click the "Swap" tab on the
+Trade
+page.
+Swap order types
+​
+Three order types are available for swaps:
+Market Swap
+— executes immediately at the current oracle price, subject to your allowed slippage setting.
+Limit Swap
+— executes when the exchange rate reaches your specified limit price. See
+Limit orders
+for details on how limit swap execution works.
+TWAP Swap
+— splits the swap into smaller parts executed over a specified duration to reduce price impact. See
+TWAP orders
+for configuration details.
+Wrap and unwrap operations (for example, ETH to WETH on Arbitrum, AVAX to WAVAX on Avalanche) are restricted to Market Swap only.
+Swap configuration
+​
+The swap form has two main fields:
+Pay
+— the token and amount you are swapping from. You can fill your available balance from this field.
+Receive
+— the token and amount you receive. For TWAP swaps, this value is approximate since the final amount depends on execution conditions across each part.
+Use the swap button between the fields to reverse the token pair. For Limit Swaps, click the current mark price to prefill the limit price field.
+Routing
+​
+GM pools provide the native swap routes. The available tokens include collateral tokens across active GM pools on the connected network: long tokens such as ETH and BTC, short tokens such as USDC and USDT, and native tokens where wrapped versions exist.
+For an eligible Market Swap, the interface can select a KyberSwap route when there is no internal GM-pool route or when the external route returns more output. The execution details show the selected route before you confirm. TWAP swaps use GM pools only. One-Click Trading can't submit a swap that requires external routing; select another available route or switch trading mode.
+Eligible Limit Increase orders can also use an external swap to convert the payment token into the position's collateral token when they execute. This conversion is part of the position order rather than a standalone Limit Swap.
+Execution details
+​
+Before confirming, expand the "Execution details" section to review:
+Spread
+— the combined bid-ask spread for both tokens (Market Swap only). A warning is displayed if the spread is high.
+Min. receive
+— the minimum output amount after slippage is applied. See
+Min. receive
+for details.
+Price impact / fees
+— the net price impact percentage and total fee percentage. Positive price impact means you receive more tokens than expected. See
+Price impact
+and
+Swap fees
+for details.
+Network fee
+— the estimated blockchain execution fee. Overestimated amounts are refunded after execution.
+Min. receive
+​
+Min. receive is a slippage protection mechanism for swaps. It sets the minimum output amount you accept — if the actual output falls below this value, the swap reverts and you keep your input tokens.
+The min. receive value is derived from the expected output and your allowed slippage:
+minReceive = expectedOutput × (1 − allowedSlippage)
+For example, with 1% slippage and an expected output of 1,000 USDC, the min. receive is 990 USDC.
+Market Swaps vs. Limit Swaps
+​
+Min. receive is applied differently depending on the order type:
+Market Swap
+— the interface applies your allowed slippage automatically. It calculates the expected output, reduces it by your slippage tolerance, and sends the reduced value to the contract as
+minOutputAmount
+.
+Limit Swap
+— slippage is not applied. The expected output based on your limit price is sent directly as
+minOutputAmount
+, because the limit price itself provides price protection.
+You can configure your slippage tolerance in the swap form's execution details section, which offers preset options of 0.3%, 0.5%, 1%, and 1.5%, or enter a custom value. Slippage can also be set in settings. The default is 1% (100 basis points).
+What happens when the minimum isn't met
+​
+If the actual swap output is less than
+minOutputAmount
+, the contract reverts the transaction. You don't receive partial output — the swap either completes above the minimum or doesn't execute at all.
+Factors that affect the output amount
+​
+The final output amount is determined by three factors:
+Swap fees
+— deducted from the swap amount. Rates depend on whether the swap improves pool balance and on the token types involved. See
+Swap fees
+for rates.
+Price impact
+— based on pool balance changes caused by your swap. Positive price impact increases your output; negative price impact reduces it. See
+Price impact
+.
+Oracle price movement
+— the oracle price may change between when you submit the swap and when a keeper executes it.
+The expected output estimate already accounts for fees and price impact at submission time. Oracle price movement during the execution window is the remaining source of divergence — the slippage buffer protects against this.
+note
+On most DEX aggregators and AMMs, "slippage" covers everything that can reduce your output — including the price impact of your trade on liquidity pools. On GMX, slippage and
+price impact
+are separate: the expected output already factors in price impact and fees, and slippage only covers oracle price movement during execution. Setting 1% slippage on GMX is narrower in scope than 1% slippage on a typical DEX aggregator.
+Limit orders
+​
+Limit orders let you specify a price at which to open or increase a position, or to execute a swap. Create a limit order by selecting "Limit" in the trade box, or by selecting "Increase Size (Limit)" from the position menu if you already have an open position.
+Perp limit orders
+​
+Limit orders on GMX work differently from orderbook exchanges. There is no orderbook — when the oracle price reaches your trigger price, a keeper picks up and executes the order at that oracle price.
+warning
+Unlike resting limit orders on a centralized exchange, GMX orders don't fill passively as price moves through them. They're executed by keepers against oracle prices — there is no queue priority or passive fill. Fast market moves can cause the oracle price to skip past your trigger price entirely, resulting in execution at a different price or non-execution. See
+Price gaps and volatility
+.
+On centralized exchanges, traders sometimes use limit orders to open a position immediately with controlled slippage — setting a limit price that would fill right away but caps the worst acceptable execution price. On GMX, use a Market Increase instead and set an acceptable slippage under the execution details.
+Limit swaps
+​
+For Limit Swaps, execution may occur at a price different from your set limit price. The actual execution price is influenced by fees and price impact. For example, with positive price impact, the order might execute before the limit price is reached. With negative price impact, it might execute only after the price moves past your limit.
+If the order executes, you receive at least the minimum output amount derived from your limit price and allowed slippage. If this minimum can't be satisfied, the order doesn't execute. This means even if charts show the limit price was reached, execution isn't guaranteed.
+Managing limit orders
+​
+After creating a limit order, it appears under the "Orders" tab. You can edit the order to adjust the trigger price or limit price.
+Stop Market orders
+​
+A Stop Market order opens or increases a position when the oracle price reaches your specified stop price. Stop Market orders are available for long and short positions only — they are not available for swaps.
+To create a Stop Market order, select "Stop Market" from the order type selector in the trade box. If you already have an open position, select "Increase size (Stop Market)" from the "..." menu in the position row.
+Trigger conditions
+​
+The oracle price checked against your stop price depends on the direction of your position:
+Long:
+The order triggers when
+maxPrice >= stop price
+. The
+maxPrice
+oracle value is also used for execution.
+Short:
+The order triggers when
+minPrice <= stop price
+. The
+minPrice
+oracle value is also used for execution.
+The UI enforces that a long stop price must be set above the current mark price, and a short stop price must be set below it.
+Execution price
+​
+When the oracle price reaches your stop price, the order executes at the closest oracle price update to the trigger price — not necessarily at the exact stop price you set. During fast market moves, the oracle price may skip past your trigger price, causing execution at a different oracle update or no execution at all. See
+Price gaps and volatility
+.
+Acceptable price
+​
+Stop Market orders do not have a user-configurable acceptable price. The acceptable price is set automatically to the maximum possible value for longs and the minimum for shorts, meaning there is no upper or lower price constraint beyond the trigger condition. No acceptable price is shown for Stop Market orders. Because the acceptable price is set to a boundary value, the UI does not display it.
+Managing Stop Market orders
+​
+After creation, a Stop Market order appears under the "Orders" tab. You can edit the order to adjust the stop price. Stop Market orders cannot be partially filled — the full order executes when the trigger condition is met.
+note
+Stop Market orders are not guaranteed to execute. Execution may fail if the oracle price does not reach your stop price, if there is insufficient liquidity, or if the
+max allowed leverage
+would be exceeded.
+TWAP orders
+​
+TWAP (Time-Weighted Average Price) orders execute increases or decreases to positions, and swaps, in evenly distributed parts over a specified duration. By splitting into smaller parts executed at regular time intervals, TWAP reduces price impact — making it suitable for large positions where a single market order would move the price significantly.
+The interface suggests switching to TWAP when your order size is at least $1,000,000 USD and the estimated negative price impact exceeds 0.2%.
+How TWAP works
+​
+When you create a TWAP order, one transaction creates multiple standard orders — each a Limit Increase, Limit Decrease, or Limit Swap — with their total size divided equally across all parts. Each part has a staggered activation timestamp. The first part activates immediately; the last part activates at the end of your configured duration. Keepers execute each part once its timestamp is reached, using the current oracle price at execution.
+The production contracts expose
+ExchangeRouter.createTwapOrder
+, which creates the full set atomically: if creation reverts, none of the parts are created. TWAP still isn't a distinct executable order type; after creation, each part is a standard limit order with a time-gated activation.
+Configuration
+​
+The TWAP configuration panel exposes these fields:
+Duration
+— the total time over which parts are spread, entered as hours and minutes. There is no enforced minimum or maximum duration.
+Number of parts
+— the number of individual orders to create. The minimum is 2 and the maximum is 30. The default is 5.
+Frequency
+— a derived, display-only field: total duration in seconds divided by one less than the number of parts, so the first part starts immediately and the final part starts at the end of the duration.
+Size per part
+— a derived, display-only field: total position size divided by the number of parts.
+The default duration is 10 hours.
+For new positions (with no existing position), the minimum margin per part is $1 USD.
+Creating a TWAP order
+​
+To open or increase a position: select "TWAP" from the order type selector (under the "More" dropdown in the trade box), or select "Increase size (TWAP)" from the "..." menu on the position row.
+To close or decrease a position: click the "TWAP" button in the Close column of the position row.
+To perform a TWAP swap: select "TWAP" in the order type selector on the Swap tab.
+For a TWAP close where the profit token and collateral token differ, you can receive them separately to skip the internal output swap and its fee.
+Monitoring and cancelling TWAP orders
+​
+After creating a TWAP order, it appears under the "Orders" tab. The trigger price column shows "N/A" because each part executes at the oracle price at the time of execution, not at a fixed trigger price. Progress is displayed as the number of executed parts out of the total — for example, "(3/5)" means 3 of 5 parts have already executed.
+TWAP orders can't be edited. To modify a TWAP order, cancel it and create a new one. Cancelling a TWAP order cancels all remaining unexecuted parts in a single transaction.
+Execution fees
+​
+The total execution fee for all parts is paid upfront when you create the TWAP order. This fee is divided equally across all parts. If network fees rise after creation and a part's allocated fee becomes insufficient for keeper execution, that part may be frozen rather than executed automatically.
+note
+If a TWAP part is frozen due to insufficient execution fee, you may need to top it up separately. This situation is the same as for any frozen limit order.
+TWAP orders are not guaranteed to execute. Individual parts may fail to execute if there is insufficient liquidity, the max allowed leverage would be exceeded, or the allocated execution fee is insufficient for the keeper to process the order at that time. See
+Order execution guarantees
+for the full list of conditions that apply to all non-market order types.
+Take-Profit and Stop-Loss orders
+​
+Take-Profit and Stop-Loss (TP/SL) orders automatically close part or all of a position when the oracle price reaches a specified level. Take-Profit closes at a favorable price to lock in gains. Stop-Loss closes at an unfavorable price to limit losses.
+You can create TP/SL orders in three ways:
+Select "Set TP/SL" from the "..." menu in the positions list.
+Use the TP/SL section in the trade box before opening a position.
+Use the close dialog on an open position.
+After creating a TP/SL order, it appears in your position row and under the "Orders" tab. You can edit the order to adjust the trigger price if needed.
+When the profit token and collateral token differ, full-close TP/SL orders can return the two tokens separately to skip the internal output swap. If you edit an existing full-close order and change between combined and separate receive modes, the interface cancels and recreates that order because its receive behavior can't be changed with an in-place order update.
+Trigger price evaluation
+​
+Take-Profit and Stop-Loss orders are mapped to distinct on-chain order types —
+LimitDecrease
+and
+StopLossDecrease
+— each with its own trigger condition:
+Order
+Side
+Triggers when
+Take-Profit
+Long
+minPrice >= trigger price
+Take-Profit
+Short
+maxPrice <= trigger price
+Stop-Loss
+Long
+minPrice <= trigger price
+Stop-Loss
+Short
+maxPrice >= trigger price
+The same oracle price component used to trigger the order is also used as the base execution price, before any price impact adjustment is applied.
+Fast market moves can cause the oracle price to skip past your trigger price, resulting in execution at the next oracle update or non-execution. See
+Price gaps and volatility
+.
+The interface shows a non-blocking warning if a TP/SL trigger is beyond the position's liquidation price. You can still submit the order, but the position may be liquidated before the trigger can execute. Move the trigger farther from the liquidation price, reduce leverage, or add collateral to increase the buffer.
+Auto-cancel TP/SL
+​
+When a position is fully closed — whether by a market close, liquidation, or a triggered TP/SL order — any remaining TP/SL orders on that position are automatically cancelled. This prevents orphaned orders from persisting after the position no longer exists.
+Auto-cancel applies only to
+LimitDecrease
+(Take-Profit) and
+StopLossDecrease
+(Stop-Loss) order types. Limit Increase orders — including
+conditional margin deposits
+— and Stop Market orders are not auto-cancelled.
+Auto-cancel is enabled by default. You can turn it off in settings.
+The current per-network limits for auto-cancel TP/SL orders per position are:
+Network
+Max auto-cancel TP/SL orders
+Arbitrum
+11
+Avalanche
+6
+These limits are enforced on-chain. If creating an order with auto-cancel enabled would exceed the limit, the transaction reverts. The frontend handles this by automatically setting
+autoCancel
+to
+false
+for orders that would exceed the limit, so the order is still created but won't be auto-cancelled when the position closes. The interface displays a warning when this occurs — orders created without auto-cancel require manual cancellation.
+note
+The auto-cancel limit is read live from the on-chain data store and may change over time.
+Order execution guarantees
+​
+For resting Limit Increase and Stop Market increase orders, the interface also flags an order when the resulting position would be liquidatable at the trigger price. The alert means the order may not execute. Add collateral, reduce the order size or leverage, or move the trigger to leave a larger liquidation buffer.
+warning
+Limit, Stop Market, TWAP, and TP/SL orders are not guaranteed to execute. This can occur in situations including but not limited to:
+The oracle price did not reach the specified trigger price — see
+trigger price evaluation
+for how trigger conditions differ by order type and side (Limit, Stop Market, TP/SL)
+There may not be sufficient liquidity to execute the order
+The
+max allowed leverage
+would be exceeded
+If your position becomes liquidatable, keepers attempt to execute eligible related orders first, but this is not guaranteed to succeed — see
+Related orders and liquidations
+Previous
+Trading overview
+Next
+Fees
+Pricing on GMX
+Oracle prices: minPrice and maxPrice
+Mark price
+Trigger price evaluation
+Charts
+Price gaps and volatility
+Opening a position
+Pool and collateral
+Margin, size, and leverage
+Are GMX perps linear or inverse?
+Take-Profit / Stop-Loss
+Execution details
+Max leverage
+Managing positions
+Position actions
+Conditional margin deposits
+Net value and collateral tooltips
+Closing a position
+Close amount
+Market vs TWAP close
+Keep leverage
+Receive token
+Execution details
+PnL
+Swaps
+Swap order types
+Swap configuration
+Routing
+Execution details
+Min. receive
+Limit orders
+Perp limit orders
+Limit swaps
+Managing limit orders
+Stop Market orders
+Trigger conditions
+Execution price
+Acceptable price
+Managing Stop Market orders
+TWAP orders
+How TWAP works
+Configuration
+Creating a TWAP order
+Monitoring and cancelling TWAP orders
+Execution fees
+Take-Profit and Stop-Loss orders
+Trigger price evaluation
+Auto-cancel TP/SL
+Order execution guarantees

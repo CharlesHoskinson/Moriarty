@@ -5,6 +5,7 @@ title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0105
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -28,7 +29,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
@@ -218,3 +219,9 @@ Metadata: SRC-0070/SRC-0072; observed 2026-09-07; secondary descriptive synthesi
 ## Collateral-vault report supplement — 2026-09-08
 
 **CLM-0932.** The supplied ERC-4626 collateral-vault report separates eight overlapping architectures A–H and eleven research facets T01–T11. Its four valuation quantities—accounting, redemption, market and stressed liquidation—refine the existing family/facet design. Source: SRC-0104, input lines 38–63 and 311–325; report as-of 2026-09-08, author/publication unverified; secondary descriptive synthesis; reviewed 2026-09-08; source fact plus S2 recommendation, not implemented or reproduced; confidence high for transcription and medium for language inference. [Analysis and graph](../deliverables/erc4626-vault-report-2026-09-08/README.md); [eight-row crosswalk](../deliverables/erc4626-vault-report-2026-09-08/crosswalk.csv). Keep A–H and T01–T11 as descriptors, not new Core constructors or replacement coverage denominators.
+
+## Modern financial taxonomy and standards atlas — 2026-09-08 cutoff
+
+**CLM-0936.** The [research reference](../deliverables/modern-defi-taxonomy-2026-09-08/README.md) recommends eight financial-function roots and 23 subcategories, linked to independent mechanism, claim, lifecycle, authority and deployment facets. It includes 47 full standards profiles, 24 source-scoped component cases, 50 terms and a typed graph. Routine vault-share issuance is not automatically capital formation; solver reimbursement is not automatically lending; token locking without security duties is not consensus staking. Source: SRC-0105, member provenance in the dossier source manifest, plus SRC-0100–SRC-0103 paper crosswalk. Normative pins: ethereum/ERCs f4c23717b6a6fc48436bb6778dcecce29cc5345c and ethereum/EIPs 991d932f52a56477753cd9f62114b842cd77275c; cutoff 2026-09-08, verified 2026-09-09 UTC. Evidence kind: source facts plus analyst recommendation; confidence medium for taxonomy, high for inspected metadata. Lifecycle S2; no protocol execution/conformance or language adoption. The report explicitly separates unverified deployment, economic adoption and legal/solvency claims. Existing accepted Moriarty financial families, full ACTUS/DeFi coverage and proof/ledger acceptance gates remain controlling.
+
+The [revision atlas](../deliverables/modern-defi-taxonomy-2026-09-08/STANDARDS-EXECUTION.md) distinguishes ERC-7683's May 2026 resolver redesign from older order/settler implementations. The [coverage ledger](../deliverables/modern-defi-taxonomy-2026-09-08/category-coverage.json) names categories without dedicated benchmark cases; diagrams distinguish documented architecture from unverified live bindings. This is a reusable research recommendation, not a replacement semantic freeze.

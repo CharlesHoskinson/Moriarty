@@ -1,0 +1,13 @@
+# Independent final research review
+
+Verdict: **PASS**, bounded to the research reference, reusable artifacts and inspected staged vault intake. Reviewer: GPT-6 Astra (`/root/final_research_review`). Exact final hashes are recorded in `final-review.json`; the earlier initial review remains preserved.
+
+The substantive taxonomy and standards conclusions remain supported by the independent raw-source spot checks recorded in the initial review. The final package adds usable leaf assignments and openly identifies three unexercised leaves. Its source-fact, classification, implementation and adoption boundaries remain intact. No blocking unsupported financial claim or false conformance assertion was found within this scope.
+
+The final graph has 226 nodes, 619 typed edges, 605 directed pairs and two additional composition annotations. Independent checks confirmed every typed evidence record survives the pair projection, graph references resolve, and there are no self-loops. The historical ERC-7683 order/settler revision now has its own pinned node: Across's old interface evidence targets that node, while the current resolver revision points to it through the revision edge. This fixes the initial graph's ambiguous version collapse.
+
+Independent artifact verification passed the required row schemas, JSON/CSV consistency, 203 source-manifest hashes, 47 normative-profile source hashes, 155 local links and syntax checks for both inline JavaScript scripts. All 203 immutable archive member payloads also match their hashes. Browser rendering and interactive behavior were not tested; the HTML depends on a pinned external vis-network script.
+
+The staged vault intake adds SRC-0105 and one provisional, medium-confidence S2 research recommendation, CLM-0936. It appends research navigation and preserves existing accepted taxonomy/semantics and implementation acceptance gates. Six staged content hashes and current target preconditions match. The reviewed inventory preserves all 104 previous rows and appends SRC-0105 only. The collection is expressly an archive container rather than another independent corroborating author. These are scoped authorized research intake changes; no new permission flow is required. Apply-time verification must still confirm the inventory and portable ledger remain paired.
+
+The earlier root-only validation and graph-version issues are resolved. Minor residual date/number spacing is cosmetic. This verdict does not establish deployment, conformance, reserve quality, economic adoption, legal rights, security, financial protocol execution or Moriarty product acceptance. This reviewer did not apply the transaction, edit repository files, commit or perform a chain action.

@@ -1,0 +1,1923 @@
+Pool
+Copy for LLM
+This contract is the main user-facing contract. Most user interactions with the Aave Protocol occur via the
+Pool
+contract. It exposes the liquidity management methods that can be invoked using either
+Solidity
+or
+Web3
+libraries.
+Pool.sol
+allows users to:
+Supply
+Withdraw
+Borrow
+Repay
+Enable/disable supplied assets as collateral
+Liquidate positions
+Execute Flash Loans
+Pool is covered by a proxy contract and is owned by the
+PoolAddressesProvider
+of the specific market. All admin functions are callable by the
+PoolConfigurator
+contract defined in the
+PoolAddressesProvider
+.
+The source code is available on
+GitHub
+.
+Write Methods
+initialize
+function
+initialize
+(
+IPoolAddressesProvider provider
+)
+external
+virtual
+Initializes the Pool.
+Function is invoked by the proxy contract when the
+Pool
+contract is added to the
+PoolAddressesProvider
+of the market.
+Caches the address of the
+PoolAddressesProvider
+in order to reduce gas consumption on subsequent operations.
+Input Parameters:
+Name
+Type
+Description
+provider
+address
+The address of the PoolAddressesProvider
+supply
+function
+supply
+(
+address
+asset
+,
+uint256
+amount
+,
+address
+onBehalfOf
+,
+uint16
+referralCode
+)
+public
+virtual override
+Supplies a certain
+amount
+of an
+asset
+into the protocol, minting the same amount of corresponding aTokens and transferring them to the
+onBehalfOf
+address. For example, if a user supplies 100 USDC and onBehalfOf address is the same as
+msg.sender
+, they will get 100 aUSDC in return.
+The
+referralCode
+is emitted in Supply event and can be for third-party referral integrations. To activate the referral feature and obtain a unique referral code, integrators need to submit a proposal to Aave Governance.
+When supplying, the
+Pool
+contract must have
+allowance()
+to spend funds on
+behalf of
+msg.sender
+for at least the amount for the asset being supplied.
+This can be done via the standard ERC20
+approve()
+method on the underlying
+token contract.
+Referral supply is currently inactive, you can pass
+0
+as
+referralCode
+.
+This program may be activated in the future through an Aave governance
+proposal.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset being supplied to the pool
+amount
+uint256
+The amount of asset to be supplied
+onBehalfOf
+address
+The address that will receive the corresponding aTokens. This is the only address that will be able to withdraw the asset from the pool. This will be the same as msg.sender if the user wants to receive aTokens into their own wallet, or use a different address if the beneficiary of aTokens is a different wallet
+referralCode
+uint16
+Referral supply is currently inactive, you can pass
+0
+. This code is used to register the integrator originating the operation, for potential rewards. 0 if the action is executed directly by the user, without any middle-men
+supplyWithPermit
+function
+supplyWithPermit
+(
+address
+asset
+,
+uint256
+amount
+,
+address
+onBehalfOf
+,
+uint16
+referralCode
+,
+uint256
+deadline
+,
+uint8
+permitV
+,
+bytes32
+permitR
+,
+bytes32
+permitS
+)
+public
+virtual override
+Supply with transfer approval of the asset to be supplied via permit function. This method removes the need for separate approval tx before supplying asset to the pool. See:
+https://eips.ethereum.org/EIPS/eip-2612
+.
+Permit signature must be signed by
+msg.sender
+with spender as Pool address.
+Referral program is currently inactive, you can pass
+0
+as
+referralCode
+.
+This program may be activated in the future through an Aave governance
+proposal.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of underlying asset being supplied. The same asset as used in permit v, s, and r
+amount
+uint256
+The amount of asset to be supplied and signed for approval. The same amount as used in permit v, s, and r
+onBehalfOf
+address
+The address that will receive the aTokens. This will be the same as msg.sender if the user wants to receive aTokens into their own wallet, or use a different address if the beneficiary of aTokens is a different wallet
+referralCode
+uint16
+Referral supply is currently inactive, you can pass
+0
+. This code is used to register the integrator originating the operation, for potential rewards. 0 if the action is executed directly by the user, without any middle-men
+deadline
+uint256
+The unix timestamp up until which the permit signature is valid
+permitV
+uint8
+The v parameter of the ERC712 permit signature
+permitR
+bytes32
+The r parameter of the ERC712 permit signature
+permitS
+bytes32
+The s parameter of the ERC712 permit signature
+withdraw
+function
+withdraw
+(
+address
+asset
+,
+uint256
+amount
+,
+address
+to
+)
+public
+virtual override
+returns
+(
+uint256
+)
+Withdraws an
+amount
+of underlying
+asset
+from the reserve, burning the equivalent aTokens owned. For example, if a user has 100 aUSDC and calls withdraw(), they will receive 100 USDC, burning the 100 aUSDC.
+If user has any existing debt backed by the underlying token, then the maximum
+amount
+available to withdraw is the
+amount
+that will not leave user's health factor < 1 after withdrawal.
+When withdrawing
+to
+another address,
+msg.sender
+should have
+aToken
+that
+will be burned by
+Pool
+.
+Reserves with a Loan To Value parameter of 0% must be disabled as collateral
+(using
+Pool.setUserUseReserveAsCollateral
+or by fully withdrawing the
+supplied balance) before other assets can be withdrawn.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset to withdraw, not the aToken
+amount
+uint256
+The underlying amount to be withdrawn (the amount supplied), expressed in wei units. Use
+type(uint).max
+to withdraw the entire aToken balance
+to
+address
+The address that will receive the underlying
+asset
+. This will be the same as msg.sender if the user wants to receive the tokens into their own wallet, or use a different address if the beneficiary is a different wallet
+Return Values:
+Type
+Description
+uint256
+The final amount withdrawn
+borrow
+function
+borrow
+(
+address
+asset
+,
+uint256
+amount
+,
+uint256
+interestRateMode
+,
+uint16
+referralCode
+,
+address
+onBehalfOf
+)
+public
+virtual override
+Allows users to borrow a specific
+amount
+of the reserve underlying
+asset
+, provided the borrower has already supplied enough collateral, or they were given enough allowance by a credit delegator on the corresponding debt token (VariableDebtToken). For example, if a user borrows 100 USDC passing their own address as
+onBehalfOf
+, they will receive 100 USDC into their wallet and 100 variable debt tokens.
+NOTE: If
+onBehalfOf
+is not the same as
+msg.sender
+, then
+onBehalfOf
+must
+have supplied enough collateral via
+supply()
+and have delegated credit to
+msg.sender
+via
+approveDelegation()
+.
+Referral program is currently inactive, you can pass
+0
+as
+referralCode
+.
+This program may be activated in the future through an Aave governance
+proposal.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset to borrow
+amount
+uint256
+The amount to be borrowed, expressed in wei units
+interestRateMode
+uint256
+Should always be passed a value of
+2
+(variable rate mode)
+referralCode
+uint16
+Referral supply is currently inactive, you can pass
+0
+. This code is used to register the integrator originating the operation, for potential rewards. 0 if the action is executed directly by the user, without any middle-men
+onBehalfOf
+address
+This should be the address of the borrower calling the function if they want to borrow against their own collateral, or the address of the credit delegator if the caller has been given credit delegation allowance
+repay
+function
+repay
+(
+address
+asset
+,
+uint256
+amount
+,
+uint256
+interestRateMode
+,
+address
+onBehalfOf
+)
+public
+virtual override
+returns
+(
+uint256
+)
+Repays a borrowed
+amount
+on a specific reserve, burning the equivalent debt tokens owned. For example, if a user repays 100 USDC, the 100 variable debt tokens owned by the
+onBehalfOf
+address will be burned.
+When repaying, the
+Pool
+contract must have allowance to spend funds on
+behalf of
+msg.sender
+for at least the
+amount
+for the asset you are
+repaying with. This can be done via the standard ERC20
+approve()
+method on
+the underlying token contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the borrowed underlying asset previously borrowed
+amount
+uint256
+The amount to repay, expressed in wei units. Use
+type(uint256).max
+in order to repay the whole debt, ONLY when the repayment is not executed on behalf of a 3rd party. In case of repayments on behalf of another user, it's recommended to send an amount slightly higher than the current borrowed amount
+interestRateMode
+uint256
+Only available option is
+2
+(variableRateMode)
+onBehalfOf
+address
+The address of the user who will get their debt reduced/removed. This should be the address of the user calling the function if they want to reduce/remove their own debt, or the address of any other borrower whose debt should be removed
+repayWithPermit
+function
+repayWithPermit
+(
+address
+asset
+,
+uint256
+amount
+,
+uint256
+interestRateMode
+,
+address
+onBehalfOf
+,
+uint256
+deadline
+,
+uint8
+permitV
+,
+bytes32
+permitR
+,
+bytes32
+permitS
+)
+public
+virtual override
+returns
+(
+uint256
+)
+Repay with transfer approval of the borrowed asset to be repaid, done via permit function. This method removes the need for separate approval tx before repaying asset to the pool. See:
+https://eips.ethereum.org/EIPS/eip-2612
+.
+Permit signature must be signed by
+msg.sender
+with spender value as
+Pool
+address.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the borrowed underlying asset previously borrowed. The same asset as used in permit v, r, and s
+amount
+uint256
+The amount to repay, expressed in wei units. Use
+type(uint256).max
+in order to repay the whole debt to pay without leaving aToken dust. The same amount as used in permit v,r,s
+interestRateMode
+uint256
+Only available option is
+2
+(variableRateMode)
+onBehalfOf
+address
+The address of the user who will get their debt reduced/removed. This should be the address of the user calling the function if they want to reduce/remove their own debt, or the address of any other borrower whose debt should be removed
+deadline
+uint256
+The unix timestamp up until which the permit signature is valid
+permitV
+uint8
+The v parameter of the ERC712 permit signature
+permitR
+bytes32
+The r parameter of the ERC712 permit signature
+permitS
+bytes32
+The s parameter of the ERC712 permit signature
+Return Values:
+Type
+Description
+uint256
+The final amount repaid
+repayWithATokens
+function
+repayWithATokens
+(
+address
+asset
+,
+uint256
+amount
+,
+uint256
+interestRateMode
+)
+public
+virtual override
+returns
+(
+uint256
+)
+Allows a user to repay a borrowed
+amount
+on a specific reserve using the reserve aTokens, burning the equivalent debt tokens. For example, a user repays 100 USDC using 100 aUSDC, burning 100 variable debt tokens. Passing
+uint256.max
+as the amount will clean up any residual aToken dust balance, if the user aToken balance is not enough to cover the whole debt.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the borrowed underlying asset previously borrowed
+amount
+uint256
+The amount to repay. Use
+type(uint256).max
+in order to repay the whole debt for
+asset
+to pay without leaving aToken dust
+interestRateMode
+uint256
+Only available option is
+2
+(variableRateMode)
+Return Values:
+Type
+Description
+uint256
+The final amount repaid
+setUserUseReserveAsCollateral
+function
+setUserUseReserveAsCollateral
+(
+address
+asset
+,
+bool
+useAsCollateral
+)
+public
+virtual override
+Allows suppliers to enable/disable a specific supplied asset as collateral. Sets the
+asset
+of
+msg.sender
+to be used as collateral or not.
+An asset in
+Isolation Mode
+can be enabled to use as collateral
+only if no other asset is already enabled to use as collateral.
+An asset with LTV parameter of 0% cannot be enabled as collateral.
+The user won’t be able to disable an asset as collateral if they have an outstanding debt position which could be left with the Health Factor <
+HEALTH_FACTOR_LIQUIDATION_THRESHOLD
+on disabling the given asset as collateral.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset supplied
+useAsCollateral
+bool
+true
+if the user wants to use the supply as collateral,
+false
+otherwise
+liquidationCall
+function
+liquidationCall
+(
+address
+collateralAsset
+,
+address
+debtAsset
+,
+address
+user
+,
+uint256
+debtToCover
+,
+bool
+receiveAToken
+)
+public
+virtual override
+Function to liquidate a non-healthy position collateral-wise, with Health Factor below 1.
+When the health factor of a position is below 1, the caller (liquidator) repays the
+debtToCover
+amount of debt of the user getting liquidated. This is part or all of the outstanding borrowed amount on behalf of the borrower. The caller then receives a proportional amount of the
+collateralAsset
+(discounted amount of collateral) plus a liquidation bonus to cover market risk.
+Liquidators can decide if they want to receive an equivalent amount of collateral aTokens instead of the underlying asset. When the liquidation is completed successfully, the health factor of the position is increased, bringing the health factor above 1.
+Liquidators can only close a certain amount of collateral defined by a close factor. Currently the
+close factor is 0.5
+. In other words, liquidators can only liquidate a maximum of 50% of the amount pending to be repaid in a position. The liquidation discount applies to this amount.
+In most scenarios
+, profitable liquidators will choose to liquidate as much as they can (50% of the
+user
+position).
+debtToCover
+parameter can be set to
+uint(-1)
+and the protocol will proceed with the highest possible liquidation allowed by the close factor.
+To check a user's health factor, use [
+getUserAccountData()
+].
+Liquidators must
+approve()
+the
+Pool
+contract to use
+debtToCover
+of the
+underlying ERC20 of the
+asset
+used for the liquidation.
+Input Parameters:
+Name
+Type
+Description
+collateralAsset
+address
+The address of the underlying asset used as collateral, to receive as result of the liquidation
+debtAsset
+address
+The address of the underlying borrowed asset to be repaid with the liquidation
+user
+address
+The address of the borrower getting liquidated
+debtToCover
+uint256
+The debt amount of borrowed
+asset
+the liquidator will repay
+receiveAToken
+bool
+true
+if the liquidator wants to receive the aTokens equivalent of the purchased collateral,
+false
+if they want to receive the underlying collateral asset directly
+flashLoan
+function
+flashLoan
+(
+address
+receiverAddress
+,
+address
+[
+]
+calldata
+assets
+,
+uint256
+[
+]
+calldata
+amounts
+,
+uint256
+[
+]
+calldata
+interestRateModes
+,
+address
+onBehalfOf
+,
+bytes
+calldata
+params
+,
+uint16
+referralCode
+)
+public
+virtual override
+Allows users to access liquidity of the pool for a given list of assets within one transaction, as long as the amount taken plus a fee is returned. The receiver must approve the
+Pool
+contract for at least the
+amount borrowed + fee
+, otherwise the transaction will revert.
+The flash loan fee is waived for approved
+FLASH_BORROWER
+.
+There are security concerns for developers of flashloan receiver contracts
+that must be taken into consideration. For further details, visit
+Flash Loan
+Developers Guide
+.
+Referral program is currently inactive, you can pass
+0
+as
+referralCode
+.
+This program may be activated in the future through an Aave governance
+proposal.
+Input Parameters:
+Name
+Type
+Description
+receiverAddress
+address
+The address of the contract receiving the flash-borrowed funds, implementing the IFlashLoanReceiver interface
+assets
+address[]
+The addresses of the assets being flash-borrowed
+amounts
+uint256[]
+The amounts of the assets being flash-borrowed. This needs to contain the same number of entries as assets
+interestRateModes
+uint256[]
+The types of the debt position to open if the flash loan is not returned: 0 -> Don't open any debt, the amount + fee must be paid in this case or just revert if the funds can't be transferred from the receiver. 2 -> Open variable rate borrow position for the value of the amount flash-borrowed to the
+onBehalfOf
+address
+onBehalfOf
+address
+The address that will receive the debt if the associated
+interestRateModes
+is 1 or 2.
+onBehalfOf
+must already have approved sufficient borrow allowance of the associated asset to
+msg.sender
+params
+bytes
+Variadic packed params to pass to the receiver as extra information
+referralCode
+uint16
+Referral supply is currently inactive, you can pass
+0
+. This code is used to register the integrator originating the operation, for potential rewards. 0 if the action is executed directly by the user, without any middle-men
+flashLoanSimple
+function
+flashLoanSimple
+(
+address
+receiverAddress
+,
+address
+asset
+,
+uint256
+amount
+,
+bytes
+calldata
+params
+,
+uint16
+referralCode
+)
+public
+virtual override
+Allows users to access liquidity of the pool for a given asset within one transaction, as long as the amount taken plus a fee is returned. The receiver must approve the
+Pool
+contract for at least the
+amount borrowed + fee
+, otherwise the transaction will revert.
+This function does not waive the fee for approved
+FLASH_BORROWER
+, nor does it allow for opening a debt position instead of repaying.
+There are security concerns for developers of flashloan receiver contracts
+that must be kept into consideration.
+Referral program is currently inactive, you can pass
+0
+as
+referralCode
+.
+This program may be activated in the future through an Aave governance
+proposal.
+Input Parameters:
+Name
+Type
+Description
+receiverAddress
+address
+The address of the contract receiving the flash-borrowed funds, implementing the IFlashLoanReceiver interface
+asset
+address
+The address of the asset being flash-borrowed
+amount
+uint256
+The amount of the asset being flash-borrowed
+params
+bytes
+Variadic packed params to pass to the receiver as extra information
+referralCode
+uint16
+Referral supply is currently inactive, you can pass
+0
+. This code is used to register the integrator originating the operation, for potential rewards. 0 if the action is executed directly by the user, without any middle-men
+mintToTreasury
+function
+mintToTreasury
+(
+address
+[
+]
+calldata
+assets
+)
+external
+virtual override
+Mints the assets accrued through the reserve factor to the treasury in the form of aTokens for the given list of assets.
+Input Parameters:
+Name
+Type
+Description
+assets
+address[]
+The list of reserves for which the minting needs to be executed
+finalizeTransfer
+function
+finalizeTransfer
+(
+address
+asset
+,
+address
+from
+,
+address
+to
+,
+uint256
+amount
+,
+uint256
+balanceFromBefore
+,
+uint256
+balanceToBefore
+)
+external
+virtual override
+Validates and finalizes an aToken transfer. It is only callable by the overlying aToken of the
+asset
+.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the aToken
+from
+address
+The user from which the aTokens are transferred
+to
+address
+The user receiving the aTokens
+amount
+uint256
+The amount being transferred/withdrawn
+balanceFromBefore
+uint256
+The aToken balance of the
+from
+user before the transfer
+balanceToBefore
+uint256
+The aToken balance of the
+to
+user before the transfer
+setUserEMode
+function
+setUserEMode
+(
+uint8
+categoryId
+)
+external
+virtual override
+Allows a user to use the protocol in efficiency mode. The category id must be a valid id already defined by
+Pool or Risk Admins
+.
+Will revert if user is borrowing non-compatible asset or if the change will drop the Health Factor <
+HEALTH_FACTOR_LIQUIDATION_THRESHOLD
+.
+Input Parameters:
+Name
+Type
+Description
+categoryId
+uint8
+The eMode category id (0 - 255) defined by Risk or Pool Admins.
+categoryId
+set to 0 is a non eMode category
+initReserve
+function
+initReserve
+(
+address
+asset
+,
+address
+aTokenAddress
+,
+address
+stableDebtAddress
+,
+address
+variableDebtAddress
+,
+address
+interestRateStrategyAddress
+)
+external
+virtual override onlyPoolConfigurator
+Initializes a reserve, activating it, assigning an aToken and debt tokens and an interest rate strategy.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+aTokenAddress
+address
+The address of the aToken that will be assigned to the reserve
+stableDebtAddress
+address
+The address of the StableDebtToken that will be assigned to the reserve (deprecated)
+variableDebtAddress
+address
+The address of the VariableDebtToken that will be assigned to the reserve
+interestRateStrategyAddress
+address
+The address of the interest rate strategy contract
+dropReserve
+function
+dropReserve
+(
+address
+asset
+)
+external
+virtual override onlyPoolConfigurator
+Drop a reserve.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+setReserveInterestRateStrategyAddress
+function
+setReserveInterestRateStrategyAddress
+(
+address
+asset
+,
+address
+rateStrategyAddress
+)
+external
+virtual override onlyPoolConfigurator
+Updates the address of the interest rate strategy contract.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+rateStrategyAddress
+address
+The address of the interest rate strategy contract
+setConfiguration
+function
+setConfiguration
+(
+address
+asset
+,
+DataTypes
+.
+ReserveConfigurationMap
+calldata
+configuration
+)
+external
+virtual override onlyPoolConfigurator
+Sets the configuration bitmap of the reserve as a whole.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+configuration
+DataTypes.ReserveConfigurationMap
+The new configuration bitmap
+The
+DataTypes.ReserveConfigurationMap
+struct is composed of the following fields:
+bit
+Description
+0-15
+LTV
+16-31
+Liquidation threshold
+32-47
+Liquidation bonus
+48-55
+Decimals
+56
+Reserve is active
+57
+Reserve is frozen
+58
+Borrowing is enabled
+59
+Stable rate borrowing enabled (deprecated)
+60
+Asset is paused
+61
+Borrowing in isolation mode is enabled
+62
+Siloed borrowing is enabled
+63
+Flashloaning is enabled
+64-79
+Reserve factor
+80-115
+Borrow cap in whole tokens, borrowCap == 0 => no cap
+116-151
+Supply cap in whole tokens, supplyCap == 0 => no cap
+152-167
+Liquidation protocol fee
+168-175
+eMode category (deprecated)
+176-211
+Unbacked mint cap in whole tokens, unbackedMintCap == 0 => minting disabled
+212-251
+Debt ceiling for isolation mode with (ReserveConfiguration::
+DEBT_CEILING_DECIMALS
+) decimals
+252
+Virtual accounting is enabled
+253-255
+Unused
+updateBridgeProtocolFee
+function
+updateBridgeProtocolFee
+(
+uint256
+protocolFee
+)
+external
+virtual override onlyPoolConfigurator
+Updates the protocol fee on the bridging.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+protocolFee
+uint256
+The part of the premium sent to the protocol treasury
+updateFlashloanPremiums
+function
+updateFlashloanPremiums
+(
+uint128
+flashLoanPremiumTotal
+,
+uint128
+flashLoanPremiumToProtocol
+)
+external
+virtual override onlyPoolConfigurator
+Updates flash loan premiums. A flash loan premium consists of two parts:
+A part is sent to aToken holders as extra, one time accumulated interest
+A part is collected by the protocol treasury
+The total premium is calculated on the total borrowed amount. The premium to protocol is calculated on the total premium, being a percentage of
+flashLoanPremiumTotal
+.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+flashLoanPremiumTotal
+uint128
+The total premium, expressed in bps
+flashLoanPremiumToProtocol
+uint128
+The part of the premium sent to the protocol treasury, expressed in bps
+configureEModeCategory
+function
+configureEModeCategory
+(
+uint8
+id
+,
+DataTypes
+.
+EModeCategory
+memory
+category
+)
+external
+virtual override onlyPoolConfigurator
+Configures a new category for the eMode. In eMode, the protocol allows very high borrowing power to borrow assets of the same category. The category 0 is reserved for volatile heterogeneous assets and it's always disabled.
+Each eMode category has a custom ltv and liquidation threshold. Each eMode category may or may not have a custom oracle to override the individual assets price oracles.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+id
+uint8
+The total premium, expressed in bps
+category
+DataTypes.EModeCategory
+The configuration of the category
+The
+DataTypes.EModeCategory
+struct is composed of the following fields:
+Name
+Type
+Description
+ltv
+uint16
+The custom Loan to Value for the eMode category
+liquidationThreshold
+uint16
+The custom liquidation threshold for the eMode category
+liquidationBonus
+uint16
+The liquidation bonus for the eMode category
+collateralBitmap
+uint128
+Bitmap of collateral assets in the category
+label
+string
+The custom label describing the eMode category
+borrowableBitmap
+uint128
+Bitmap of borrowable assets in the category
+resetIsolationModeTotalDebt
+function
+resetIsolationModeTotalDebt
+(
+address
+asset
+)
+external
+virtual override onlyPoolConfigurator
+Resets the isolation mode total debt of the given asset to zero. It requires the given asset to have a zero debt ceiling.
+Only callable by the
+PoolConfigurator
+contract.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset to reset the isolationModeTotalDebt
+rescueTokens
+function
+rescueTokens
+(
+address
+token
+,
+address
+to
+,
+uint256
+amount
+)
+external
+virtual override onlyPoolAdmin
+Rescue and transfer tokens locked in this contract.
+Only available to
+POOL_ADMIN
+role. Pool admin is
+selected by the governance.
+Input Parameters:
+Name
+Type
+Description
+token
+address
+The address of the token
+to
+address
+The address of the recipient
+amount
+uint256
+The amount of token to transfer
+eliminateReserveDeficit
+Covers the deficit of a specified reserve by burning the equivalent aToken
+amount
+for assets with virtual accounting enabled or the equivalent
+amount
+of underlying for assets with virtual accounting disabled (e.g. GHO). Only callable by address with
+onlyUmbrella
+modifier.
+function
+eliminateReserveDeficit
+(
+address
+asset
+,
+uint256
+amount
+)
+external
+;
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+Underlying token address
+amount
+uint256
+The amount to be covered, in aToken or underlying on non-virtual accounted assets
+View Methods
+getUserAccountData
+function
+getUserAccountData
+(
+address
+user
+)
+external
+view
+virtual override
+returns
+(
+uint256
+totalCollateralBase
+,
+uint256
+totalDebtBase
+,
+uint256
+availableBorrowsBase
+,
+uint256
+currentLiquidationThreshold
+,
+uint256
+ltv
+,
+uint256
+healthFactor
+)
+Returns the user account data across all the reserves.
+Input Parameters:
+Name
+Type
+Description
+user
+address
+The address of the user
+Return Values:
+Name
+Type
+Description
+totalCollateralBase
+uint256
+The total collateral of the user in the base currency used by the price feed
+totalDebtBase
+uint256
+The total debt of the user in the base currency used by the price feed
+availableBorrowsBase
+uint256
+The borrowing power left of the user in the base currency used by the price feed
+currentLiquidationThreshold
+uint256
+The liquidation threshold of the user
+ltv
+uint256
+The loan to value of the user
+healthFactor
+uint256
+The current health factor of the user
+getConfiguration
+function
+getConfiguration
+(
+address
+asset
+)
+external
+view
+virtual override
+returns
+(
+DataTypes
+.
+ReserveConfigurationMap
+memory
+)
+Returns the configuration of the reserve.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+Return Values:
+Type
+Description
+DataTypes.ReserveConfigurationMap
+The configuration of the reserve
+The
+DataTypes.ReserveConfigurationMap
+struct is composed of the following fields:
+bit
+Description
+0-15
+LTV
+16-31
+Liquidation threshold
+32-47
+Liquidation bonus
+48-55
+Decimals
+56
+Reserve is active
+57
+Reserve is frozen
+58
+Borrowing is enabled
+59
+Stable rate borrowing enabled (deprecated)
+60
+Asset is paused
+61
+Borrowing in isolation mode is enabled
+62
+Siloed borrowing enabled
+63
+Flashloaning enabled
+64-79
+Reserve factor
+80-115
+Borrow cap in whole tokens, borrowCap == 0 => no cap
+116-151
+Supply cap in whole tokens, supplyCap == 0 => no cap
+152-167
+Liquidation protocol fee
+168-175
+eMode category (deprecated)
+176-211
+Unbacked mint cap in whole tokens, unbackedMintCap == 0 => minting disabled
+212-251
+Debt ceiling for isolation mode with (ReserveConfiguration::
+DEBT_CEILING_DECIMALS
+) decimals
+252
+Virtual accounting is enabled for the reserve
+253-255
+Unused
+getUserConfiguration
+function
+getUserConfiguration
+(
+address
+user
+)
+external
+view
+virtual override
+returns
+(
+DataTypes
+.
+UserConfigurationMap
+memory
+)
+Returns the configuration of the user across all the reserves.
+Input Parameters:
+Name
+Type
+Description
+user
+address
+The user address
+Return Values:
+Type
+Description
+DataTypes.UserConfigurationMap
+The configuration of the user
+The
+DataTypes.UserConfigurationMap
+struct is composed of the following fields:
+Name
+Type
+Description
+data
+uint256
+Bitmap of the users collaterals and borrows. It is divided into pairs of bits, one pair per asset. The first bit indicates if an asset is used as collateral by the user, the second whether an asset is borrowed by the user. The corresponding assets are in the same position as
+getReservesList()
+. For example, if the hex value returned is
+0x40020
+, which represents a decimal value of
+262176
+, then in binary it is
+1000000000000100000
+. If we format the binary value into pairs, starting from the right, we get
+1 00 00 00 00 00 00 10 00 00
+. If we start from the right and move left in the above binary pairs, the third pair is
+10
+. Therefore the
+1
+indicates that third asset from the
+reserveList
+is used as collateral, and
+0
+indicates it has not been borrowed by this user
+getReserveNormalizedIncome
+function
+getReserveNormalizedIncome
+(
+address
+asset
+)
+external
+view
+virtual override
+returns
+(
+uint256
+)
+Returns the ongoing normalized income for the reserve.
+A value of
+1e27
+means there is no income. As time passes, the yield is accrued. A value of
+2*1e27
+means for each unit of asset, one unit of income has been accrued.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+Return Values:
+Type
+Description
+uint256
+The reserve's normalized income
+getReserveNormalizedVariableDebt
+function
+getReserveNormalizedVariableDebt
+(
+address
+asset
+)
+external
+view
+virtual override
+returns
+(
+uint256
+)
+Returns the normalized variable debt per unit of asset.
+A value of
+1e27
+means there is no debt. As time passes, the debt is accrued. A value of
+2*1e27
+means that for each unit of debt, one unit worth of interest has been accumulated.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+Return Values:
+Type
+Description
+uint256
+The reserve normalized variable debt
+getReservesList
+function
+getReservesList
+(
+)
+external
+view
+virtual override
+returns
+(
+address
+[
+]
+memory
+)
+Returns the list of the underlying assets of all the initialized reserves. It does not include dropped reserves.
+Return Values:
+Type
+Description
+address[]
+The addresses of the underlying assets of the initialized reserves
+getReserveAddressById
+function
+getReserveAddressById
+(
+uint16
+id
+)
+external
+view
+returns
+(
+address
+)
+Returns the address of the underlying asset of a reserve by the reserve id as stored in the
+DataTypes.ReserveData
+struct.
+Input Parameters:
+Name
+Type
+Description
+id
+uint16
+The id of the reserve as stored in the
+DataTypes.ReserveData
+struct
+Return Values:
+Type
+Description
+address
+The address of the reserve associated with id
+getEModeCategoryData
+function
+getEModeCategoryData
+(
+uint8
+id
+)
+external
+view
+virtual override
+returns
+(
+DataTypes
+.
+EModeCategory
+memory
+)
+Returns the data of an eMode category.
+Each eMode category has a custom LTV and liquidation threshold. Each eMode category may or may not have a custom oracle to override the individual assets' price oracles.
+Input Parameters:
+Name
+Type
+Description
+id
+uint8
+The id of the category
+Return Values:
+Type
+Description
+DataTypes.EModeCategory
+The configuration data of the category
+The
+DataTypes.EModeCategory
+struct is composed of the following fields:
+Name
+Type
+Description
+ltv
+uint16
+The custom Loan to Value for the eMode category
+liquidationThreshold
+uint16
+The custom liquidation threshold for the eMode category
+liquidationBonus
+uint16
+The liquidation bonus for the eMode category
+collateralBitmap
+uint128
+Bitmap of collateral assets in the category
+label
+string
+The custom label describing the eMode category
+borrowableBitmap
+uint128
+Bitmap of borrowable assets in the category
+getReserveData
+function
+getReserveData
+(
+address
+asset
+)
+external
+view
+virtual override
+returns
+(
+DataTypes
+.
+ReserveData
+memory
+)
+Returns the state and configuration of the reserve.
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+The address of the underlying asset of the reserve
+Return Values:
+Type
+Description
+DataTypes.ReserveData
+The state and configuration data of the reserve
+The
+DataTypes.ReserveData
+struct is composed of the following fields:
+Name
+Type
+Description
+configuration
+ReserveConfigurationMap
+Stores the
+reserve configuration
+liquidityIndex
+uint128
+The yield generated by the reserve during time interval since lastUpdatedTimestamp. Expressed in ray
+currentLiquidityRate
+uint128
+The current supply rate. Expressed in ray
+variableBorrowIndex
+uint128
+The yield accrued by reserve during time interval since lastUpdatedTimestamp. Expressed in ray
+currentVariableBorrowRate
+uint128
+The current variable borrow rate. Expressed in ray
+__deprecatedStableBorrowRate
+uint128
+DEPRECATED on v3.2.0
+lastUpdateTimestamp
+uint40
+The timestamp of when reserve data was last updated. Used for yield calculation
+id
+uint16
+The id of the reserve. It represents the reserve’s position in the list of active reserves
+liquidationGracePeriodUntil
+uint40
+The timestamp until liquidations are not allowed on the reserve. If set to the past, liquidations will be allowed
+aTokenAddress
+address
+The address of associated aToken
+__deprecatedStableDebtTokenAddress
+address
+DEPRECATED on v3.2.0
+variableDebtTokenAddress
+address
+The address of associated variable debt token
+interestRateStrategyAddress
+address
+The address of interest rate strategy
+accruedToTreasury
+uint128
+The current treasury balance (scaled)
+unbacked
+uint128
+The outstanding unbacked aTokens minted through the bridging feature
+isolationModeTotalDebt
+uint128
+The outstanding debt borrowed against this asset in isolation mode
+virtualUnderlyingBalance
+uint128
+The virtual balance of the underlying asset for yield calculation purposes
+getUserEMode
+function
+getUserEMode
+(
+address
+user
+)
+external
+view
+virtual override
+returns
+(
+uint256
+)
+Returns eMode the user is using. 0 is a non eMode category.
+Input Parameters:
+Name
+Type
+Description
+user
+address
+The address of the user
+Return Values:
+Type
+Description
+uint256
+The eMode id
+FLASHLOAN_PREMIUM_TOTAL
+function
+FLASHLOAN_PREMIUM_TOTAL
+(
+)
+public
+view
+virtual override
+returns
+(
+uint128
+)
+Returns the percent of total flashloan premium paid by the borrower.
+A part of this premium is added to reserve's liquidity index i.e. paid to the liquidity provider and the other part is paid to the protocol i.e. accrued to the treasury.
+Return Values:
+Type
+Description
+uint128
+The total fee on flashloans
+BRIDGE_PROTOCOL_FEE
+function
+BRIDGE_PROTOCOL_FEE
+(
+)
+public
+view
+virtual override
+returns
+(
+uint256
+)
+Returns the part of the bridge fees sent to protocol.
+Return Values:
+Type
+Description
+uint256
+The percentage of available liquidity to borrow, expressed in bps
+FLASHLOAN_PREMIUM_TO_PROTOCOL
+function
+FLASHLOAN_PREMIUM_TO_PROTOCOL
+(
+)
+public
+view
+virtual override
+returns
+(
+uint128
+)
+Returns the percent of flashloan premium that is accrued to the treasury.
+Return Values:
+Type
+Description
+uint128
+The percentage of available liquidity to borrow, expressed in bps
+MAX_NUMBER_RESERVES
+function
+MAX_NUMBER_RESERVES
+(
+)
+public
+view
+virtual override
+returns
+(
+uint16
+)
+Returns the maximum number of reserves supported to be listed in this Pool.
+Return Values:
+Type
+Description
+uint16
+The maximum number of reserves supported
+getLiquidationGracePeriod
+Returns the liquidation grace period of the given asset
+function
+getLiquidationGracePeriod
+(
+address
+asset
+)
+external
+view
+virtual override
+returns
+(
+uint40
+)
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+Underlying token address
+Return Values:
+Type
+Description
+uint256
+Timestamp when the liquidation grace period will end
+getReserveDeficit
+Returns the current deficit of a reserve.
+function
+getReserveDeficit
+(
+address
+asset
+)
+external
+view
+returns
+(
+uint256
+)
+;
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+Underlying token address
+Return Values:
+Type
+Description
+uint256
+Current reserve deficit from undercollateralized borrow positions
+getReserveAToken
+Returns the aToken address of a reserve.
+function
+getReserveAToken
+(
+address
+asset
+)
+external
+view
+returns
+(
+address
+)
+;
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+Underlying token address
+Return Values:
+Type
+Description
+address
+The address of the AToken
+getReserveVariableDebtToken
+Returns the variableDebtToken address of a reserve.
+function
+getReserveVariableDebtToken
+(
+address
+asset
+)
+external
+view
+returns
+(
+address
+)
+;
+Input Parameters:
+Name
+Type
+Description
+asset
+address
+Underlying token address
+Return Values:
+Type
+Description
+address
+The address of the VariableDebtToken
+Pure Methods
+getRevision
+function
+getRevision
+(
+)
+internal
+pure
+virtual override
+returns
+(
+uint256
+)
+Returns the revision number of the contract. Needs to be defined in the inherited class as a constant.
+Returns
+0x1
+.
+Return Values:
+Type
+Description
+uint256
+The revision number
+Previous
+Smart Contracts
+Next
+L2 Pool

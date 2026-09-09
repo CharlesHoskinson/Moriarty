@@ -1,0 +1,85 @@
+Concepts
+Intent Architecture in Across
+The three-layer architecture — RFQ, relayer network, and settlement — that powers crosschain intents.
+Copy Markdown
+Open with AI
+Across implements crosschain intents through a
+three-layer architecture
+. Each layer is modular and can evolve independently, allowing the protocol to support new chains, new auction mechanisms, and more efficient settlement without changing the core design.
+The Three Layers
+1. Request-for-Quote (RFQ) Mechanism
+The RFQ layer houses user intents. Users submit their desired outcome — input token, output token, chains, amounts — and receive quotes from the relayer network.
+The current implementation uses
+fixed fees
+with relayer competition strictly based on
+speed
+. The
+Swap API
+is the primary RFQ interface.
+RFQ systems exist externally to the core protocol. Across can support any auction mechanism that produces transactions or signed orders recognized by the SpokePool infrastructure.
+2. Competitive Relayer Network
+Relayers claim orders and execute them by fronting their own capital on the destination chain. Key properties:
+Permissionless
+— anyone can run a relayer
+Competitive
+— relayers compete on speed to fill intents
+Flexible repayment
+— relayers choose which chain to receive repayment on, affecting LP fee distribution
+Capital-efficient
+— relayers reuse capital across fills, getting repaid every ~1.5 hours
+Risk Labs provides an
+open-source relayer implementation
+, but relayers can customize behavior or build alternatives.
+3. Settlement Layer
+The settlement layer verifies that fills are valid and repays relayers. This is where Across's key innovations live:
+Aggregated verification
+— Instead of verifying each fill individually (O(N) cost), the Dataworker aggregates all fills into a single bundle and proposes it to the HubPool. This makes settlement cost
+O(1)
+regardless of how many fills occurred — an order of magnitude in gas savings vs. other approaches.
+Optimistic verification
+— Bundles are proposed with a bond and accepted unless challenged within a window. Only a single honest actor needs to dispute an invalid proposal.
+Hub-and-Spoke Model
+The settlement layer uses a hub-and-spoke architecture:
+Component
+Location
+Role
+HubPool
+Ethereum L1
+Coordinates settlement, holds LP capital, processes bundles
+SpokePools
+Every supported chain
+Handle deposits (origin) and fills (destination)
+Dataworker
+Off-chain
+Aggregates fills into bundles, proposes to HubPool
+UMA Optimistic Oracle
+Ethereum L1
+Secures bundle verification with economic bonds
+Canonical Bridges
+Between L1 and L2s
+Transfer funds for rebalancing after bundle finalization
+How Settlement Flows
+Relayers fill intents on destination SpokePools using their own capital
+The Dataworker aggregates all fills within a time window (~1.5 hours)
+Fills are validated against deposits, organized into merkle trees
+The bundle is proposed to the HubPool with a bond
+After the challenge period, the bundle is finalized
+Relayer refunds are executed on the chains where relayers requested repayment
+Token rebalancing instructions move funds between SpokePools via canonical bridges
+Relayer Repayment Flexibility
+A key architectural advantage: relayers can request repayment on
+any supported chain
+, not just the origin or destination. The Hub-and-Spoke model enables this by:
+Passive LPs
+extend short-term loans — their capital covers the gap between fill and reimbursement
+Canonical bridges
+handle rebalancing — after settlement, the HubPool routes funds to the correct SpokePools
+Relayer capital costs drop
+— relayers can optimize their treasury across chains without needing balanced liquidity everywhere
+The modular design means each layer can evolve independently. New RFQ mechanisms, new relayer strategies, and new settlement approaches (like
+Across V4's ZK proofs
+) can be added without disrupting the rest of the system.
+What are Crosschain Intents?
+How intent-based bridging differs from traditional bridges and why it matters.
+Intent Lifecycle in Across
+The three phases every crosschain intent goes through — initiation, fill, and settlement.

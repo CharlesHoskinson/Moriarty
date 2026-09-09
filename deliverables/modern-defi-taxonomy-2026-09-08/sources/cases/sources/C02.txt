@@ -1,0 +1,177 @@
+On this page
+Minting
+Redemption
+Account structure
+Primary wallet
+Balances
+Linked bank accounts
+Deposit addresses
+Recipient addresses
+Onchain transfers
+Transfer status lifecycle
+Network fees
+Travel Rule compliance
+Approval workflows
+Mint
+Mint and redeem
+How minting and redemption works
+Copy page
+Copy page
+Understand how Circle Mint converts fiat to USDC (minting) and USDC back to fiat (redemption), including settlement timing, account structure, and compliance requirements.
+Copy page
+Copy page
+Circle Mint’s core operations are minting and redemption. Minting converts fiat
+currency into stablecoins (USDC or EURC), and redemption converts stablecoins
+back to fiat. Every token mints and redeems at a 1:1 ratio with the underlying
+fiat currency. This page explains the mental model behind these operations,
+including settlement timing, account structure, onchain transfers, fees, and
+compliance.
+​
+Minting
+Minting (also known as an onramp) is the process of depositing fiat currency and
+receiving an equivalent amount of stablecoins. When you send a fiat transfer to
+Circle, Circle credits your Mint account balance with the corresponding
+stablecoin amount at a 1:1 ratio.
+The minting flow works as follows:
+You initiate a fiat transfer from your linked bank account to Circle.
+Circle receives the fiat deposit and credits your Mint account balance.
+The stablecoins become available for onchain transfers or other operations.
+Circle supports multiple payment rails for fiat deposits, including standard
+wires (FedWire and SWIFT), real-time interbank rails (RTP, SPEI, SEPA, and
+CHATS) in supported regions, and book transfers when you bank with one of
+Circle’s settlement partners. Rail availability depends on your region and the
+currency you are depositing.
+Settlement timing:
+Domestic wire deposits received before the daily cutoff
+settle on the same business day. Real-time interbank rails settle in seconds,
+subject to network operating hours and transaction limits. International wires
+take 1-3 business days depending on intermediary banks. In the sandbox
+environment, mock wire deposits process in batches and may take up to 15
+minutes.
+For step-by-step instructions, see
+Deposit Fiat
+.
+​
+Redemption
+Redemption (also known as an offramp) is the reverse of minting. You convert
+stablecoins back to fiat currency by creating a payout to a linked bank account.
+The redemption flow works as follows:
+You create a payout request specifying the amount and destination bank
+account.
+Circle debits the stablecoin amount from your Mint account balance.
+Circle sends a fiat transfer to your bank account using the appropriate rail
+for your region and bank.
+Settlement timing:
+Payouts typically settle on the next business day. In
+some cases, your bank may reject the incoming wire, resulting in a returned
+withdrawal. If a payout is returned, the funds are credited back to your Mint
+account balance.
+For step-by-step instructions, see
+Withdraw Fiat
+.
+​
+Account structure
+Your Circle Mint account has several key components that work together to
+support minting, redemption, and onchain transfers.
+​
+Primary wallet
+Every Circle Mint account has a primary wallet identified by a
+masterWalletId
+.
+You retrieve this identifier from the
+/v1/configuration
+endpoint. The primary
+wallet serves as the source for outbound transfers and the destination for
+inbound deposits.
+​
+Balances
+Your account maintains two types of balances:
+Available balance:
+Settled funds you can transfer or redeem immediately.
+Unsettled balance:
+Funds that are in transit and not yet available. Wire
+deposits appear as unsettled until they clear.
+​
+Linked bank accounts
+You register external bank accounts to send and receive fiat. Each linked bank
+account receives a unique Virtual Account Number (VAN). When you wire funds to
+Circle using the VAN, Circle attributes the deposit to your account without
+requiring a tracking reference in the payment instruction.
+​
+Deposit addresses
+Circle generates one deposit address per blockchain for your account. These
+addresses receive inbound stablecoin transfers from external wallets. You
+retrieve your deposit addresses through the API for each
+supported blockchain
+.
+​
+Recipient addresses
+Recipient addresses are external blockchain addresses that you register and
+allowlist for outbound transfers. You must create a recipient address before you
+can send stablecoins to it. This allowlisting step provides an additional layer
+of security for outbound transfers.
+​
+Onchain transfers
+Circle Mint supports both receiving and sending stablecoins onchain.
+Receiving:
+External wallets send USDC or EURC to your deposit address on
+any supported blockchain. Circle detects the transfer and credits your account
+after the required number of
+blockchain confirmations
+.
+Sending:
+You create a transfer to a registered recipient address. Circle
+debits your balance and broadcasts the transaction onchain.
+​
+Transfer status lifecycle
+Onchain transfers progress through the following statuses:
+Status
+Description
+pending
+The transfer request is created but not yet broadcast onchain.
+running
+The transaction is broadcast and awaiting blockchain confirmations.
+complete
+The required confirmations are reached and the transfer is final.
+For details on confirmation requirements per blockchain, see
+Blockchain confirmations
+.
+For step-by-step transfer instructions, see
+Transfer USDC Onchain
+.
+​
+Network fees
+Circle covers gas fees for outbound stablecoin transfers in most cases. You do
+not need to hold the native token of each blockchain to send USDC or EURC from
+your Mint account.
+​
+Travel Rule compliance
+Transfers of $3,000 or more in value on supported blockchains are subject to the
+FinCEN Travel Rule, which requires identity data about the originator of the
+transaction.
+How Circle handles the identity requirement depends on the type of transfer:
+Business account transfers:
+Circle uses your company’s identity stored on
+file. You do not need to include identity data in each request.
+Third-party payouts:
+If you send funds on behalf of someone else, you must
+provide the originator’s identity (name and address) in the payout request.
+Omitting required identity data causes the transfer to fail.
+For the full list of supported blockchains and implementation details, see
+Travel Rule compliance
+.
+​
+Approval workflows
+Customers in France and Singapore are subject to additional recipient address
+verification requirements. Before an outbound transfer can proceed, the
+recipient address must be verified through the
+Mint Console
+. This approval step ensures
+compliance with local regulatory requirements in those jurisdictions.
+Was this page helpful?
+Yes
+No
+Quickstart: Mint and redeem cirBTC
+Previous
+How-to: Deposit fiat
+Next

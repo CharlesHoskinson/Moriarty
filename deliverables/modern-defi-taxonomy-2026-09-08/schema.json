@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Modern DeFi taxonomy record schemas",
+  "description": "Validate rows using the named $defs; see DATA-AND-METHOD.md for file containers. Unknown fields allowed for forward-compatible extension. Referential integrity requires separate cross-file checks.",
+  "$defs": {
+    "category": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "parents",
+        "definition",
+        "inclusion_test",
+        "exclusion_test",
+        "neighbors",
+        "mechanisms",
+        "asset_position_types",
+        "source_refs",
+        "confidence",
+        "verified_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^FIN-[A-Z]{3}(\\.[0-9]+)?$"
+        },
+        "parents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "neighbors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "standard": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "type",
+        "category",
+        "status",
+        "created",
+        "verified_at",
+        "source_url",
+        "source_commit",
+        "source_sha256",
+        "requires",
+        "methods_events",
+        "mandatory_optional",
+        "unspecified",
+        "implementation_maturity",
+        "deployment_evidence",
+        "economic_adoption_evidence",
+        "security_evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(ERC|EIP)-[0-9]+$"
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "methods_events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "mapping": {
+      "type": "object",
+      "required": [
+        "id",
+        "category_id",
+        "standard_id",
+        "relationship",
+        "scope",
+        "evidence_kind",
+        "confidence",
+        "source_refs",
+        "verified_at",
+        "implementation_claim"
+      ],
+      "properties": {
+        "relationship": {
+          "enum": [
+            "position_representation",
+            "accounting_interface",
+            "authorization",
+            "request_lifecycle",
+            "execution_interface",
+            "messaging",
+            "governance",
+            "supporting_infrastructure"
+          ]
+        },
+        "implementation_claim": {
+          "const": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "component",
+        "version_chain_scope",
+        "functions",
+        "category_ids",
+        "mechanism",
+        "asset_claim",
+        "return_source",
+        "lifecycle",
+        "standards_relationships",
+        "authority",
+        "dependencies",
+        "exit",
+        "source_refs",
+        "verified_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^CASE-[0-9]{2}$"
+        },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "category_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "standards_relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "standard",
+              "relationship",
+              "scope",
+              "source_refs",
+              "evidence_level"
+            ],
+            "properties": {
+              "relationship": {
+                "enum": [
+                  "IMPLEMENTS",
+                  "ACCEPTS",
+                  "ADAPTER",
+                  "ANALOGUE",
+                  "GOVERNANCE_ONLY",
+                  "PARTIAL",
+                  "DEVIATES"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "relationship": {
+      "type": "object",
+      "required": [
+        "id",
+        "source",
+        "target",
+        "relation",
+        "source_file",
+        "confidence",
+        "confidence_score"
+      ],
+      "properties": {
+        "confidence": {
+          "enum": [
+            "EXTRACTED",
+            "INFERRED",
+            "AMBIGUOUS"
+          ]
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

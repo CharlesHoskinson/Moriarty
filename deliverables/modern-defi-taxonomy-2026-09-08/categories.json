@@ -1,0 +1,1470 @@
+[
+  {
+    "id": "FIN-MON",
+    "name": "Money, payments and escrow",
+    "parents": [],
+    "definition": "Create money-like liabilities or discharge/secure payment obligations.",
+    "inclusion_test": "A unit targets monetary use, or a service undertakes payment delivery as its financial purpose.",
+    "exclusion_test": "Incidental transfers inside another function do not add a payment-service label. Trading the unit is exchange; external backing is a facet.",
+    "neighbors": [
+      "FIN-CRE",
+      "FIN-EXC"
+    ],
+    "mechanisms": [
+      "issuance/redemption",
+      "conditional transfer",
+      "streaming"
+    ],
+    "asset_position_types": [
+      "money-like liability",
+      "payment entitlement"
+    ],
+    "principal_dependencies": [
+      "reserves",
+      "custodians",
+      "peg liquidity",
+      "governance",
+      "payer funding",
+      "cancellation authority",
+      "clock",
+      "transfer behavior",
+      "arbiter",
+      "timeouts",
+      "counterparty fulfillment",
+      "finality"
+    ],
+    "representative_implementations": [
+      "Maker Vat/Dai",
+      "Sablier Lockup",
+      "Across SpokePool deposit (trade leg)"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-3643",
+      "ERC-7943",
+      "ERC-721",
+      "ERC-2612",
+      "ERC-3009",
+      "ERC-1271",
+      "ERC-5164"
+    ],
+    "source_refs": [
+      "P1 \u00a73.5 pp13\u201314; P4 \u00a73.3 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-EXC",
+    "name": "Exchange and trade execution",
+    "parents": [],
+    "definition": "Exchange existing exposures and organize price discovery or execution for traders.",
+    "inclusion_test": "A service matches, prices, routes or settles a trade.",
+    "exclusion_test": "Primary capital raising adds CAP; writing a derivative adds DER.",
+    "neighbors": [
+      "FIN-CAP",
+      "FIN-DER"
+    ],
+    "mechanisms": [
+      "AMM",
+      "order book",
+      "RFQ",
+      "batch auction",
+      "solver routing"
+    ],
+    "asset_position_types": [
+      "spot balances",
+      "LP inventory claim",
+      "execution order"
+    ],
+    "principal_dependencies": [
+      "price impact",
+      "adverse selection",
+      "ordering",
+      "token behavior",
+      "solver competition",
+      "authorization",
+      "venue adapters",
+      "chain finality"
+    ],
+    "representative_implementations": [
+      "Uniswap V3 pool",
+      "Osmosis pool",
+      "CoW settlement",
+      "Across SpokePool"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-721",
+      "ERC-6909",
+      "ERC-7683",
+      "EIP-712",
+      "ERC-1271",
+      "ERC-2612",
+      "ERC-3009"
+    ],
+    "source_refs": [
+      "P1 \u00a73.1 pp7\u201310; P4 \u00a73.1 pp3\u20134"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CRE",
+    "name": "Credit and financing",
+    "parents": [],
+    "definition": "Advance purchasing power subject to repayment or agreed collateral/default resolution.",
+    "inclusion_test": "A lender or issuer creates a repayment obligation.",
+    "exclusion_test": "A token price target alone does not imply credit; allocating to loans adds MGT.",
+    "neighbors": [
+      "FIN-MON",
+      "FIN-MGT",
+      "FIN-DER"
+    ],
+    "mechanisms": [
+      "inventory lending",
+      "debt issuance",
+      "margin",
+      "underwriting",
+      "liquidation"
+    ],
+    "asset_position_types": [
+      "receivable",
+      "debt position",
+      "lender share"
+    ],
+    "principal_dependencies": [
+      "oracle",
+      "underwriting",
+      "collateral sale liquidity",
+      "default waterfall",
+      "collateral appraisal",
+      "mint authority",
+      "liquidation",
+      "monetary feedback",
+      "callback",
+      "initiator identity",
+      "fee",
+      "approved asset",
+      "atomic scope"
+    ],
+    "representative_implementations": [
+      "Aave V3 market",
+      "Morpho Blue market",
+      "Maple loan",
+      "Maker Vat/Dai",
+      "Aave V3 flashLoan",
+      "Uniswap flash behavior"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-4626",
+      "ERC-3525",
+      "ERC-3475",
+      "ERC-7092",
+      "ERC-3156"
+    ],
+    "source_refs": [
+      "P2 \u00a7\u00a7III\u2013V pp3\u20138; P4 \u00a73.2 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CAP",
+    "name": "Capital formation",
+    "parents": [],
+    "definition": "Raise resources for an issuer, venture or collective through primary issuance or contributions.",
+    "inclusion_test": "Resources pass to an issuer/project under a primary funding arrangement.",
+    "exclusion_test": "Secondary trading is EXC; passive treasury allocation is MGT; ordinary incentive distribution alone is neither.",
+    "neighbors": [
+      "FIN-EXC",
+      "FIN-CRE",
+      "FIN-MGT"
+    ],
+    "mechanisms": [
+      "subscription",
+      "issuance auction",
+      "bonding curve",
+      "conditional crowdfunding"
+    ],
+    "asset_position_types": [
+      "newly issued ownership/debt/utility claim",
+      "contribution claim"
+    ],
+    "principal_dependencies": [
+      "issuer authority",
+      "allocation policy",
+      "legal rights",
+      "proceeds custody",
+      "beneficiary",
+      "adjudication",
+      "deadline",
+      "project delivery"
+    ],
+    "representative_implementations": [
+      "Balancer V2 liquidity bootstrapping use",
+      "Coverage design",
+      "no measured deployment asserted"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-3525",
+      "ERC-3475",
+      "ERC-3643",
+      "ERC-1155"
+    ],
+    "source_refs": [
+      "P1 Fig1 p2 limited coverage; analyst extension tested by LBP case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-DER",
+    "name": "Derivatives and contingent exposure",
+    "parents": [],
+    "definition": "Create a payoff determined by prices, rates or events rather than ownership of the referenced asset.",
+    "inclusion_test": "An agreed payoff references a variable or event and has margin, settlement or exercise rules.",
+    "exclusion_test": "A fully redeemable custody receipt is not automatically a derivative; protection responding to defined loss also has RSK.",
+    "neighbors": [
+      "FIN-CRE",
+      "FIN-RSK",
+      "FIN-EXC"
+    ],
+    "mechanisms": [
+      "futures/perpetual funding",
+      "options",
+      "outcome resolution",
+      "payoff tranching"
+    ],
+    "asset_position_types": [
+      "margined position",
+      "option",
+      "outcome share",
+      "rate claim"
+    ],
+    "principal_dependencies": [
+      "oracle",
+      "funding",
+      "insurance/backstop",
+      "liquidator and liquidity",
+      "option writers",
+      "premium",
+      "margin",
+      "exercise window",
+      "settlement data",
+      "resolver",
+      "event wording",
+      "challenge process",
+      "collateral",
+      "underlying yield asset",
+      "maturity",
+      "negative yield",
+      "index/oracle"
+    ],
+    "representative_implementations": [
+      "Drift perpetual market",
+      "Opyn Gamma option design",
+      "Gnosis Conditional Tokens",
+      "Pendle PT/YT market"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-1155",
+      "ERC-3525",
+      "ERC-165",
+      "ERC-5095",
+      "ERC-5115"
+    ],
+    "source_refs": [
+      "P1 \u00a73.8 pp15\u201316; P4 \u00a73.5 pp4\u20135"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MGT",
+    "name": "Asset and portfolio management",
+    "parents": [],
+    "definition": "Allocate or manage capital for a mandate with returns passed to participants.",
+    "inclusion_test": "An allocator/strategy controls portfolio exposure or its recurring management.",
+    "exclusion_test": "A container or ERC-4626 ABI alone supplies no mandate; operating the underlying market is a separate function.",
+    "neighbors": [
+      "FIN-CRE",
+      "FIN-EXC",
+      "FIN-SEC"
+    ],
+    "mechanisms": [
+      "strategy execution",
+      "rebalancing",
+      "curated allocation",
+      "index tracking"
+    ],
+    "asset_position_types": [
+      "portfolio share",
+      "segregated managed position"
+    ],
+    "principal_dependencies": [
+      "underlying venues",
+      "allocator",
+      "caps",
+      "fees",
+      "unwind liquidity",
+      "valuation",
+      "custody",
+      "manager",
+      "tracking error",
+      "external rights",
+      "venue hooks",
+      "adverse selection",
+      "rebalance execution"
+    ],
+    "representative_implementations": [
+      "Morpho MetaMorpho",
+      "Yearn V3 vault",
+      "Centrifuge fund vault",
+      "Set portfolio design",
+      "Arrakis liquidity vault design"
+    ],
+    "relevant_standards": [
+      "ERC-4626",
+      "ERC-7540",
+      "ERC-7575",
+      "ERC-3643",
+      "ERC-7943",
+      "ERC-721"
+    ],
+    "source_refs": [
+      "P2 \u00a7VII pp11\u201313; P4 \u00a73.4 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-SEC",
+    "name": "Consensus and shared-security capital services",
+    "parents": [],
+    "definition": "Commit capital to consensus or other security services in exchange for rewards with specified duties and penalties.",
+    "inclusion_test": "Capital backs validator/operator duties or is delegated to such exposure.",
+    "exclusion_test": "Node software alone is a supporting capability; ordinary collateralized borrowing is CRE even if collateral is a staking receipt.",
+    "neighbors": [
+      "FIN-MGT",
+      "FIN-CRE",
+      "FIN-RSK"
+    ],
+    "mechanisms": [
+      "staking delegation",
+      "liquid receipt issuance",
+      "restaking allocation"
+    ],
+    "asset_position_types": [
+      "stake",
+      "liquid staking claim",
+      "restaked security exposure"
+    ],
+    "principal_dependencies": [
+      "validator",
+      "chain rewards",
+      "slashing",
+      "exit queue",
+      "operators",
+      "share accounting",
+      "queue",
+      "secondary liquidity",
+      "service rules",
+      "operator",
+      "slashing authority",
+      "collateral reuse"
+    ],
+    "representative_implementations": [
+      "Ethereum validator deposit",
+      "Lido staking pool",
+      "Lido stETH/wstETH",
+      "EigenLayer allocation/delegation"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-721"
+    ],
+    "source_refs": [
+      "P1 \u00a73.6 pp14\u201315; contemporary case extension"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-RSK",
+    "name": "Protection and loss allocation",
+    "parents": [],
+    "definition": "Transfer specified loss exposure or assign differentiated loss-bearing obligations to capital.",
+    "inclusion_test": "A cover, guarantee, tranche or backstop defines who absorbs a loss and on what trigger.",
+    "exclusion_test": "Ordinary investment loss is not a protection service; a generic price bet is DER.",
+    "neighbors": [
+      "FIN-DER",
+      "FIN-CRE",
+      "FIN-MGT"
+    ],
+    "mechanisms": [
+      "mutual assessment",
+      "parametric payout",
+      "subordination",
+      "first-loss fund"
+    ],
+    "asset_position_types": [
+      "cover entitlement",
+      "junior/senior claim",
+      "guarantee"
+    ],
+    "principal_dependencies": [
+      "claims authority",
+      "exclusions",
+      "capital sufficiency",
+      "dispute process",
+      "underlying default",
+      "valuation",
+      "waterfall implementation",
+      "fund adequacy",
+      "governance",
+      "deficit measurement",
+      "recapitalization"
+    ],
+    "representative_implementations": [
+      "Nexus Mutual cover",
+      "Centrifuge tranche design",
+      "Drift insurance fund"
+    ],
+    "relevant_standards": [
+      "ERC-721",
+      "ERC-20",
+      "ERC-3525",
+      "ERC-7575"
+    ],
+    "source_refs": [
+      "P3 threat overlay distinct from function; analyst extension tested by cover case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MON.1",
+    "name": "Monetary issuance and redemption",
+    "parents": [
+      "FIN-MON"
+    ],
+    "definition": "Issue/cancel units designed for monetary use and define reserve, peg and redemption arrangements.",
+    "inclusion_test": "An issuer or monetary mechanism creates money-like units.",
+    "exclusion_test": "Using USDC for a swap does not make the AMM a monetary issuer.",
+    "neighbors": [
+      "FIN-CRE.2"
+    ],
+    "mechanisms": [
+      "reserve subscriptions",
+      "collateralized minting",
+      "supply adjustment"
+    ],
+    "asset_position_types": [
+      "issuer liability or protocol redemption claim"
+    ],
+    "principal_dependencies": [
+      "reserves",
+      "custodians",
+      "peg liquidity",
+      "governance"
+    ],
+    "representative_implementations": [
+      "Maker Vat/Dai"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-3643",
+      "ERC-7943"
+    ],
+    "source_refs": [
+      "P1 \u00a73.5 pp13\u201314; P4 \u00a73.3 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MON.2",
+    "name": "Payments and streaming",
+    "parents": [
+      "FIN-MON"
+    ],
+    "definition": "Transfer value to discharge a payment duty, immediately or over time.",
+    "inclusion_test": "Receiver obtains a payment or accrued withdrawal entitlement.",
+    "exclusion_test": "Routing a priced asset exchange is EXC.2; mere token transfer interface is capability.",
+    "neighbors": [
+      "FIN-MON.3",
+      "FIN-EXC.2"
+    ],
+    "mechanisms": [
+      "push/pull payment",
+      "vesting stream",
+      "recurring settlement"
+    ],
+    "asset_position_types": [
+      "accrued payment right"
+    ],
+    "principal_dependencies": [
+      "payer funding",
+      "cancellation authority",
+      "clock",
+      "transfer behavior"
+    ],
+    "representative_implementations": [
+      "Sablier Lockup"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-721",
+      "ERC-2612",
+      "ERC-3009"
+    ],
+    "source_refs": [
+      "P1 \u00a73.5 pp13\u201314; P4 \u00a73.3 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MON.3",
+    "name": "Escrow and conditional settlement",
+    "parents": [
+      "FIN-MON"
+    ],
+    "definition": "Hold value until agreed release/refund conditions are met.",
+    "inclusion_test": "A custodied balance secures delivery or another obligation.",
+    "exclusion_test": "A cross-chain message alone moves no funds and proves no escrow.",
+    "neighbors": [
+      "FIN-MON.2",
+      "FIN-EXC.2"
+    ],
+    "mechanisms": [
+      "hash/time conditions",
+      "adjudicated release",
+      "atomic delivery versus payment"
+    ],
+    "asset_position_types": [
+      "conditional beneficiary/refund claim"
+    ],
+    "principal_dependencies": [
+      "arbiter",
+      "timeouts",
+      "counterparty fulfillment",
+      "finality"
+    ],
+    "representative_implementations": [
+      "Across SpokePool deposit (trade leg)"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-1271",
+      "ERC-5164"
+    ],
+    "source_refs": [
+      "P1 \u00a73.5 pp13\u201314; P4 \u00a73.3 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-EXC.1",
+    "name": "Trading venues and liquidity provision",
+    "parents": [
+      "FIN-EXC"
+    ],
+    "definition": "Price or match transfers and maintain trading liquidity.",
+    "inclusion_test": "Traders execute against matched orders or a liquidity inventory.",
+    "exclusion_test": "A price oracle publishes data; it need not execute trades.",
+    "neighbors": [
+      "FIN-EXC.2",
+      "FIN-DER.1"
+    ],
+    "mechanisms": [
+      "constant-function/concentrated AMM",
+      "CLOB",
+      "RFQ",
+      "batch matching"
+    ],
+    "asset_position_types": [
+      "inventory ownership or liquidity position"
+    ],
+    "principal_dependencies": [
+      "price impact",
+      "adverse selection",
+      "ordering",
+      "token behavior"
+    ],
+    "representative_implementations": [
+      "Uniswap V3 pool",
+      "Osmosis pool"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-721",
+      "ERC-6909"
+    ],
+    "source_refs": [
+      "P1 \u00a73.1 pp7\u201310; P4 \u00a73.1 pp3\u20134"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-EXC.2",
+    "name": "Routing and coordinated trade execution",
+    "parents": [
+      "FIN-EXC"
+    ],
+    "definition": "Select and coordinate venues or counterparties to satisfy a trade instruction.",
+    "inclusion_test": "The service chooses a path, match or fulfillment plan for an exchange.",
+    "exclusion_test": "A settlement message bus without financial routing is infrastructure.",
+    "neighbors": [
+      "FIN-EXC.1",
+      "FIN-MON.3"
+    ],
+    "mechanisms": [
+      "aggregator path search",
+      "solver auction",
+      "intent resolution"
+    ],
+    "asset_position_types": [
+      "signed trade authority",
+      "escrow and fulfillment claims"
+    ],
+    "principal_dependencies": [
+      "solver competition",
+      "authorization",
+      "venue adapters",
+      "chain finality"
+    ],
+    "representative_implementations": [
+      "CoW settlement",
+      "Across SpokePool"
+    ],
+    "relevant_standards": [
+      "ERC-7683",
+      "EIP-712",
+      "ERC-1271",
+      "ERC-2612",
+      "ERC-3009"
+    ],
+    "source_refs": [
+      "P1 \u00a73.1 pp7\u201310; P4 \u00a73.1 pp3\u20134"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CRE.1",
+    "name": "Inventory-funded lending",
+    "parents": [
+      "FIN-CRE"
+    ],
+    "definition": "Lend existing assets against repayment duties, with pooled, isolated or matched funding.",
+    "inclusion_test": "An agreed financing advance creates repayment duties denominated in an existing asset.",
+    "exclusion_test": "Pure debt-asset minting is CRE.2, not inventory lending. A solver reimbursement incidental to trade settlement is EXC.2; add CRE.1 only for a separately agreed financing service. An allocator owns MGT.1.",
+    "neighbors": [
+      "FIN-CRE.2",
+      "FIN-CRE.3",
+      "FIN-MGT.1"
+    ],
+    "mechanisms": [
+      "utilization curves",
+      "bilateral negotiation",
+      "credit accounts",
+      "liquidation"
+    ],
+    "asset_position_types": [
+      "lender receivable/share",
+      "borrower debt and collateral position"
+    ],
+    "principal_dependencies": [
+      "oracle",
+      "underwriting",
+      "collateral sale liquidity",
+      "default waterfall"
+    ],
+    "representative_implementations": [
+      "Aave V3 market",
+      "Morpho Blue market",
+      "Maple loan"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-4626",
+      "ERC-3525",
+      "ERC-3475",
+      "ERC-7092"
+    ],
+    "source_refs": [
+      "P2 \u00a7\u00a7III\u2013V pp3\u20138; P4 \u00a73.2 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CRE.2",
+    "name": "Credit issuance",
+    "parents": [
+      "FIN-CRE"
+    ],
+    "definition": "Create new debt units against an obligation to repay or settle collateral.",
+    "inclusion_test": "The advance increases an issued debt asset supply under a borrower obligation.",
+    "exclusion_test": "Reserve-backed token subscription without borrower debt is MON.1 only.",
+    "neighbors": [
+      "FIN-MON.1",
+      "FIN-CRE.1"
+    ],
+    "mechanisms": [
+      "collateralized debt position",
+      "debt ceilings",
+      "stability fee",
+      "mint/burn"
+    ],
+    "asset_position_types": [
+      "issuer debt unit plus separate borrower debt position"
+    ],
+    "principal_dependencies": [
+      "collateral appraisal",
+      "mint authority",
+      "liquidation",
+      "monetary feedback"
+    ],
+    "representative_implementations": [
+      "Maker Vat/Dai"
+    ],
+    "relevant_standards": [
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P2 \u00a7\u00a7III\u2013V pp3\u20138; P4 \u00a73.2 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CRE.3",
+    "name": "Transaction-scoped liquidity",
+    "parents": [
+      "FIN-CRE"
+    ],
+    "definition": "Advance assets with repayment or an equivalent settlement condition before the enclosing atomic scope ends.",
+    "inclusion_test": "A callback grants temporary purchasing power and enforces repay-or-revert.",
+    "exclusion_test": "Same-block timestamps do not provide rollback across transactions.",
+    "neighbors": [
+      "FIN-CRE.1",
+      "FIN-EXC.1"
+    ],
+    "mechanisms": [
+      "flash loan",
+      "flash swap",
+      "flash accounting"
+    ],
+    "asset_position_types": [
+      "temporary obligation without persistent lender receivable"
+    ],
+    "principal_dependencies": [
+      "callback",
+      "initiator identity",
+      "fee",
+      "approved asset",
+      "atomic scope"
+    ],
+    "representative_implementations": [
+      "Aave V3 flashLoan",
+      "Uniswap flash behavior"
+    ],
+    "relevant_standards": [
+      "ERC-3156"
+    ],
+    "source_refs": [
+      "P2 \u00a7\u00a7III\u2013V pp3\u20138; P4 \u00a73.2 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CAP.1",
+    "name": "Primary issuance and subscription",
+    "parents": [
+      "FIN-CAP"
+    ],
+    "definition": "Sell or allocate newly issued claims to raise capital.",
+    "inclusion_test": "A distinct primary offering raises capital for an issuer or project in exchange for newly issued rights.",
+    "exclusion_test": "Routine deposit receipts or redeemable share accounting for an existing investment mandate are MGT, not automatically capital formation. Add CAP only for a separately identified capital-raising offering. Secondary trading is EXC.1.",
+    "neighbors": [
+      "FIN-CRE.2",
+      "FIN-EXC.1"
+    ],
+    "mechanisms": [
+      "fixed subscription",
+      "auction",
+      "bonding-curve issuance"
+    ],
+    "asset_position_types": [
+      "equity/fund/debt/utility units with explicit rights"
+    ],
+    "principal_dependencies": [
+      "issuer authority",
+      "allocation policy",
+      "legal rights",
+      "proceeds custody"
+    ],
+    "representative_implementations": [
+      "Balancer V2 liquidity bootstrapping use"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-3525",
+      "ERC-3475",
+      "ERC-3643"
+    ],
+    "source_refs": [
+      "P1 Fig1 p2 limited coverage; analyst extension tested by LBP case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-CAP.2",
+    "name": "Conditional collective funding",
+    "parents": [
+      "FIN-CAP"
+    ],
+    "definition": "Pool contributions subject to a funding goal, delivery condition or refund rule.",
+    "inclusion_test": "Contributor capital finances a project subject to collective conditions.",
+    "exclusion_test": "An unconditional payment donation is MON.2; treasury investment is MGT.2.",
+    "neighbors": [
+      "FIN-MON.3",
+      "FIN-CAP.1"
+    ],
+    "mechanisms": [
+      "crowdfund escrow",
+      "milestone releases",
+      "refund thresholds"
+    ],
+    "asset_position_types": [
+      "contribution and possible refund claim"
+    ],
+    "principal_dependencies": [
+      "beneficiary",
+      "adjudication",
+      "deadline",
+      "project delivery"
+    ],
+    "representative_implementations": [
+      "Coverage design",
+      "no measured deployment asserted"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-1155"
+    ],
+    "source_refs": [
+      "P1 Fig1 p2 limited coverage; analyst extension tested by LBP case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-DER.1",
+    "name": "Linear price exposure",
+    "parents": [
+      "FIN-DER"
+    ],
+    "definition": "Provide linear or approximately linear exposure to a reference price with explicit margin/funding/settlement.",
+    "inclusion_test": "Position payout responds to the referenced price without requiring asset delivery now.",
+    "exclusion_test": "Holding a redeemable wrapped asset is not sufficient.",
+    "neighbors": [
+      "FIN-EXC.1",
+      "FIN-DER.2"
+    ],
+    "mechanisms": [
+      "futures",
+      "perpetual mark/index",
+      "cash or physical settlement"
+    ],
+    "asset_position_types": [
+      "margined long/short obligation"
+    ],
+    "principal_dependencies": [
+      "oracle",
+      "funding",
+      "insurance/backstop",
+      "liquidator and liquidity"
+    ],
+    "representative_implementations": [
+      "Drift perpetual market"
+    ],
+    "relevant_standards": [
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P1 \u00a73.8 pp15\u201316; P4 \u00a73.5 pp4\u20135"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-DER.2",
+    "name": "Optional and structured payoffs",
+    "parents": [
+      "FIN-DER"
+    ],
+    "definition": "Provide exercise rights or nonlinear combinations of reference-dependent payments.",
+    "inclusion_test": "Payoff changes nonlinearly or is conditional on exercise/structured thresholds.",
+    "exclusion_test": "A loss-specific cover also uses RSK; leverage alone is not an option.",
+    "neighbors": [
+      "FIN-DER.1",
+      "FIN-RSK.1"
+    ],
+    "mechanisms": [
+      "options",
+      "capped/floored return",
+      "payoff replication"
+    ],
+    "asset_position_types": [
+      "option or structured note"
+    ],
+    "principal_dependencies": [
+      "option writers",
+      "premium",
+      "margin",
+      "exercise window",
+      "settlement data"
+    ],
+    "representative_implementations": [
+      "Opyn Gamma option design"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-1155",
+      "ERC-3525"
+    ],
+    "source_refs": [
+      "P1 \u00a73.8 pp15\u201316; P4 \u00a73.5 pp4\u20135"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-DER.3",
+    "name": "Event and outcome claims",
+    "parents": [
+      "FIN-DER"
+    ],
+    "definition": "Allocate payoffs according to a resolved external or on-chain event.",
+    "inclusion_test": "A resolution rule determines which contingent claims pay.",
+    "exclusion_test": "Claims paying specifically on insured loss also use RSK.1.",
+    "neighbors": [
+      "FIN-RSK.1",
+      "FIN-DER.2"
+    ],
+    "mechanisms": [
+      "binary/multioutcome shares",
+      "oracle resolution",
+      "dispute window"
+    ],
+    "asset_position_types": [
+      "outcome token"
+    ],
+    "principal_dependencies": [
+      "resolver",
+      "event wording",
+      "challenge process",
+      "collateral"
+    ],
+    "representative_implementations": [
+      "Gnosis Conditional Tokens"
+    ],
+    "relevant_standards": [
+      "ERC-1155",
+      "ERC-165"
+    ],
+    "source_refs": [
+      "P1 \u00a73.8 pp15\u201316; P4 \u00a73.5 pp4\u20135"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-DER.4",
+    "name": "Interest and yield exposure transformation",
+    "parents": [
+      "FIN-DER"
+    ],
+    "definition": "Separate, exchange or hedge future cash-flow/rate exposure.",
+    "inclusion_test": "A claim changes exposure to future yield or an interest index.",
+    "exclusion_test": "Fixed-interest debt alone stays CRE.1; a principal strip also records its underlying debt/asset claim.",
+    "neighbors": [
+      "FIN-CRE.1",
+      "FIN-MGT.1"
+    ],
+    "mechanisms": [
+      "principal/yield split",
+      "rate swap",
+      "fixed/floating exchange"
+    ],
+    "asset_position_types": [
+      "principal strip",
+      "yield strip",
+      "rate derivative"
+    ],
+    "principal_dependencies": [
+      "underlying yield asset",
+      "maturity",
+      "negative yield",
+      "index/oracle"
+    ],
+    "representative_implementations": [
+      "Pendle PT/YT market"
+    ],
+    "relevant_standards": [
+      "ERC-5095",
+      "ERC-5115",
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P1 \u00a73.8 pp15\u201316; P4 \u00a73.5 pp4\u20135"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MGT.1",
+    "name": "Strategy and credit allocation",
+    "parents": [
+      "FIN-MGT"
+    ],
+    "definition": "Allocate capital among selected strategies or credit venues under a mandate.",
+    "inclusion_test": "Manager/allocator chooses exposures or limits for participants.",
+    "exclusion_test": "The lending market itself remains CRE.1; automated execution alone need not pool assets.",
+    "neighbors": [
+      "FIN-CRE.1",
+      "FIN-MGT.2"
+    ],
+    "mechanisms": [
+      "curated lending allocation",
+      "harvest/reinvest",
+      "leverage",
+      "nested vaults"
+    ],
+    "asset_position_types": [
+      "portfolio share or managed account claim"
+    ],
+    "principal_dependencies": [
+      "underlying venues",
+      "allocator",
+      "caps",
+      "fees",
+      "unwind liquidity"
+    ],
+    "representative_implementations": [
+      "Morpho MetaMorpho",
+      "Yearn V3 vault"
+    ],
+    "relevant_standards": [
+      "ERC-4626",
+      "ERC-7540",
+      "ERC-7575"
+    ],
+    "source_refs": [
+      "P2 \u00a7VII pp11\u201313; P4 \u00a73.4 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MGT.2",
+    "name": "Portfolio, index and treasury management",
+    "parents": [
+      "FIN-MGT"
+    ],
+    "definition": "Maintain diversified or policy-constrained holdings and manage liquidity for a beneficiary.",
+    "inclusion_test": "A mandate controls holdings, weights, cash or treasury exposures.",
+    "exclusion_test": "An index number without an investable mandate is data infrastructure.",
+    "neighbors": [
+      "FIN-CAP.1",
+      "FIN-MGT.1"
+    ],
+    "mechanisms": [
+      "rebalancing",
+      "index replication",
+      "treasury cash management"
+    ],
+    "asset_position_types": [
+      "portfolio/fund share or segregated assets"
+    ],
+    "principal_dependencies": [
+      "valuation",
+      "custody",
+      "manager",
+      "tracking error",
+      "external rights"
+    ],
+    "representative_implementations": [
+      "Centrifuge fund vault",
+      "Set portfolio design"
+    ],
+    "relevant_standards": [
+      "ERC-4626",
+      "ERC-7540",
+      "ERC-7575",
+      "ERC-3643",
+      "ERC-7943"
+    ],
+    "source_refs": [
+      "P2 \u00a7VII pp11\u201313; P4 \u00a73.4 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-MGT.3",
+    "name": "Liquidity-position management",
+    "parents": [
+      "FIN-MGT"
+    ],
+    "definition": "Choose and maintain exchange liquidity positions for capital owners.",
+    "inclusion_test": "An agent/strategy manages ranges, inventory or fee reinvestment.",
+    "exclusion_test": "The exchange pool supplies EXC.1; self-directed LP ownership is a position/strategy.",
+    "neighbors": [
+      "FIN-EXC.1",
+      "FIN-MGT.1"
+    ],
+    "mechanisms": [
+      "range rebalance",
+      "inventory hedging",
+      "fee compounding"
+    ],
+    "asset_position_types": [
+      "managed LP share"
+    ],
+    "principal_dependencies": [
+      "venue hooks",
+      "manager",
+      "adverse selection",
+      "rebalance execution"
+    ],
+    "representative_implementations": [
+      "Arrakis liquidity vault design"
+    ],
+    "relevant_standards": [
+      "ERC-4626",
+      "ERC-721"
+    ],
+    "source_refs": [
+      "P2 \u00a7VII pp11\u201313; P4 \u00a73.4 p4"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-SEC.1",
+    "name": "Consensus capital participation and delegation",
+    "parents": [
+      "FIN-SEC"
+    ],
+    "definition": "Commit or delegate capital to consensus validation under reward and penalty rules.",
+    "inclusion_test": "Capital is exposed to validator duties and consensus withdrawal rules.",
+    "exclusion_test": "An ERC-20 staking incentive with no security duty is not consensus staking.",
+    "neighbors": [
+      "FIN-SEC.2",
+      "FIN-MGT.1"
+    ],
+    "mechanisms": [
+      "validator deposit",
+      "delegation",
+      "reward accrual",
+      "slashing"
+    ],
+    "asset_position_types": [
+      "stake or delegated stake claim"
+    ],
+    "principal_dependencies": [
+      "validator",
+      "chain rewards",
+      "slashing",
+      "exit queue"
+    ],
+    "representative_implementations": [
+      "Ethereum validator deposit",
+      "Lido staking pool"
+    ],
+    "relevant_standards": [
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P1 \u00a73.6 pp14\u201315; contemporary case extension"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-SEC.2",
+    "name": "Liquid security-capital claims",
+    "parents": [
+      "FIN-SEC"
+    ],
+    "definition": "Issue transferable claims on capital committed to consensus or shared security.",
+    "inclusion_test": "A receipt gives economic exposure to underlying security capital and its exit conditions.",
+    "exclusion_test": "Liquid receipt collateral in a loan adds CRE, without relabeling the loan as staking.",
+    "neighbors": [
+      "FIN-SEC.1",
+      "FIN-SEC.3"
+    ],
+    "mechanisms": [
+      "rebasing receipt",
+      "exchange-rate wrapper",
+      "withdrawal request"
+    ],
+    "asset_position_types": [
+      "staking or restaking receipt"
+    ],
+    "principal_dependencies": [
+      "operators",
+      "share accounting",
+      "queue",
+      "secondary liquidity"
+    ],
+    "representative_implementations": [
+      "Lido stETH/wstETH"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-721"
+    ],
+    "source_refs": [
+      "P1 \u00a73.6 pp14\u201315; contemporary case extension"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-SEC.3",
+    "name": "Shared-security allocation",
+    "parents": [
+      "FIN-SEC"
+    ],
+    "definition": "Assign capital-backed security obligations across additional services.",
+    "inclusion_test": "Committed capital secures additional service duties with defined allocation and penalties.",
+    "exclusion_test": "Looped lending yield without security duties is not restaking.",
+    "neighbors": [
+      "FIN-SEC.1",
+      "FIN-RSK.2"
+    ],
+    "mechanisms": [
+      "operator delegation",
+      "restaking",
+      "slashable allocation",
+      "reward distribution"
+    ],
+    "asset_position_types": [
+      "restaked exposure and contingent penalty obligation"
+    ],
+    "principal_dependencies": [
+      "service rules",
+      "operator",
+      "slashing authority",
+      "collateral reuse"
+    ],
+    "representative_implementations": [
+      "EigenLayer allocation/delegation"
+    ],
+    "relevant_standards": [
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P1 \u00a73.6 pp14\u201315; contemporary case extension"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-RSK.1",
+    "name": "Protection and cover",
+    "parents": [
+      "FIN-RSK"
+    ],
+    "definition": "Provide payment or loss reimbursement when defined covered conditions are accepted.",
+    "inclusion_test": "Beneficiary acquires a protection entitlement separate from ordinary asset appreciation.",
+    "exclusion_test": "Outcome speculation alone is DER.3; transfer controls are not legal insurance.",
+    "neighbors": [
+      "FIN-DER.3",
+      "FIN-RSK.2"
+    ],
+    "mechanisms": [
+      "mutual claims assessment",
+      "parametric trigger",
+      "capped indemnity"
+    ],
+    "asset_position_types": [
+      "cover claim"
+    ],
+    "principal_dependencies": [
+      "claims authority",
+      "exclusions",
+      "capital sufficiency",
+      "dispute process"
+    ],
+    "representative_implementations": [
+      "Nexus Mutual cover"
+    ],
+    "relevant_standards": [
+      "ERC-721",
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P3 threat overlay distinct from function; analyst extension tested by cover case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-RSK.2",
+    "name": "Subordination and first-loss capital",
+    "parents": [
+      "FIN-RSK"
+    ],
+    "definition": "Assign differing priorities of loss absorption to claims against shared exposures.",
+    "inclusion_test": "A contractual waterfall specifies junior/senior treatment.",
+    "exclusion_test": "Every risky token is not a tranche; priority must be explicit.",
+    "neighbors": [
+      "FIN-CRE.1",
+      "FIN-MGT.2",
+      "FIN-RSK.3"
+    ],
+    "mechanisms": [
+      "seniority",
+      "credit enhancement",
+      "tranche reallocation"
+    ],
+    "asset_position_types": [
+      "senior/junior claim"
+    ],
+    "principal_dependencies": [
+      "underlying default",
+      "valuation",
+      "waterfall implementation"
+    ],
+    "representative_implementations": [
+      "Centrifuge tranche design"
+    ],
+    "relevant_standards": [
+      "ERC-20",
+      "ERC-3525",
+      "ERC-7575"
+    ],
+    "source_refs": [
+      "P3 threat overlay distinct from function; analyst extension tested by cover case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  },
+  {
+    "id": "FIN-RSK.3",
+    "name": "Default and settlement backstops",
+    "parents": [
+      "FIN-RSK"
+    ],
+    "definition": "Commit capital or guarantees to residual shortfalls from financial settlement.",
+    "inclusion_test": "A reserve or guarantor has a stated role absorbing deficits.",
+    "exclusion_test": "Protocol revenue retained without a defined backstop is only treasury capital.",
+    "neighbors": [
+      "FIN-RSK.2",
+      "FIN-CRE.1",
+      "FIN-DER.1"
+    ],
+    "mechanisms": [
+      "insurance fund",
+      "guarantee",
+      "auction recapitalization",
+      "mutualization"
+    ],
+    "asset_position_types": [
+      "contingent loss-bearing capital"
+    ],
+    "principal_dependencies": [
+      "fund adequacy",
+      "governance",
+      "deficit measurement",
+      "recapitalization"
+    ],
+    "representative_implementations": [
+      "Drift insurance fund"
+    ],
+    "relevant_standards": [
+      "ERC-20"
+    ],
+    "source_refs": [
+      "P3 threat overlay distinct from function; analyst extension tested by cover case"
+    ],
+    "classification_kind": "recommendation",
+    "confidence": "medium",
+    "verified_at": "2026-09-09",
+    "cutoff": "2026-09-08"
+  }
+]

@@ -1,0 +1,140 @@
+Actors in the System
+The key participants that make crosschain transfers work — users, relayers, LPs, dataworkers, and the UMA oracle.
+Copy Markdown
+Open with AI
+Across is a multi-actor system where each participant plays a distinct role in making crosschain transfers fast, secure, and capital-efficient. Understanding these roles helps you reason about the protocol's trust assumptions and economic incentives.
+User
+Users initiate crosschain transfers by submitting deposit orders to a SpokePool on the origin chain. They pay fees to relayers and liquidity providers in exchange for near-instant token delivery on the destination chain.
+Users interact with the protocol through:
+The
+Swap API
+(most common)
+ERC-7683
+open()
+calls
+Direct
+depositV3()
+calls on SpokePool contracts
+Relayer
+Relayers are the actors that make ~2 second fills possible. When a user deposits on the origin chain, relayers
+front their own capital
+on the destination chain to fill the intent immediately, then wait for reimbursement through the settlement process.
+How Relayers Work
+Monitor origin SpokePools for
+V3FundsDeposited
+events
+Evaluate profitability (fees vs. gas costs and capital lock-up)
+Call
+fillV3Relay()
+on the destination SpokePool using their own tokens
+Request repayment on any Across-supported chain (not necessarily the origin chain)
+Receive the user's
+inputAmount
+minus the LP fee after bundle settlement
+Relayer Risks
+Relayer fees compensate for real costs and risks:
+Risk
+Description
+Gas costs
+Submitting fill transactions on destination chains
+Capital lock-up
+Funds are locked until bundle settlement (~1.5 hours)
+Software bugs
+Errors in relayer implementation could lead to invalid fills
+Finality risk
+Chain reorganizations could revert confirmed fills
+Permissionless Participation
+Running a relayer is
+permissionless
+— anyone can operate one. Risk Labs provides
+open-source relayer software
+, though developers can customize behavior or build alternative implementations.
+Exclusive Relayers
+For some intents, a relayer may have
+exclusive fill rights
+during an exclusivity period. This is determined by the
+exclusiveRelayer
+and
+exclusivityDeadline
+fields in the deposit. After the exclusivity window expires, any relayer can fill.
+Liquidity Provider (LP)
+LPs deposit assets into pools on Ethereum mainnet at
+across.to/pool
+. This capital serves two purposes:
+Repayment flexibility
+— Relayers can request repayment on any chain. LP capital ensures the HubPool can rebalance funds across SpokePools to honor these requests
+Backup fulfillment
+— In rare cases where no relayer fills a deposit, LP capital can be used to fulfill the transfer directly
+LP Risks
+Risk
+Description
+Capital deployment
+Deposited capital is actively used for rebalancing and fills
+Liquidity risk
+High demand periods may temporarily prevent withdrawals
+Smart contract risk
+Standard DeFi smart contract risk
+LP Fee Model
+LPs earn fees based on pool utilization — the more the pool is used for crosschain rebalancing, the higher the LP fee percentage. See
+Fees in the System
+for details on the utilization-based pricing model.
+Dataworker
+The dataworker is a
+whitelisted
+off-chain actor that coordinates settlement between all chains. It aggregates fills into
+bundles
+and proposes them to the HubPool on Ethereum.
+What the Dataworker Does
+Determines block ranges
+for each supported chain
+Validates fills
+against deposits across all chains
+Aggregates
+valid fills into payment lists
+Computes
+crosschain transfer instructions for rebalancing
+Organizes
+everything into merkle trees
+Proposes
+the bundle to the HubPool with a bond
+Bundles
+A bundle is a set of merkle roots encoding:
+Relayer refund instructions (which relayers to pay, how much, on which chain)
+Token rebalancing instructions (how to move funds between SpokePools)
+Slow fill instructions (for deposits that weren't filled by relayers)
+Bundles are proposed every
+~1.5 hours minimum
+. After proposal, they enter a challenge period where anyone can dispute them.
+Settlement cost is
+O(1)
+, not O(N). No matter how many individual fills happen in a period, they're aggregated into a single bundle proposal. This is what makes Across gas-efficient at scale.
+Dataworker Rules
+Dataworker behavior is precisely defined by
+UMIP-157
+and
+UMIP-179
+— UMA Improvement Proposals that specify exactly how bundles must be constructed. Any deviation from these rules can be disputed.
+UMA Optimistic Oracle
+The UMA Optimistic Oracle provides the economic security layer for Across. It verifies that proposed bundles are valid through an
+optimistic verification
+mechanism.
+How It Works
+The dataworker proposes a bundle and posts a bond
+The bundle enters a
+challenge period
+During this period, anyone can dispute the bundle by also posting a bond
+If no dispute occurs, the bundle is finalized and executed
+If disputed, UMA's
+Data Verification Mechanism (DVM)
+resolves it — UMA token holders vote on whether the bundle was valid
+Trust Assumption
+The system only needs
+a single honest actor
+willing to dispute invalid proposals to remain secure. This is a much weaker trust assumption than requiring a majority of validators to be honest.
+See
+Security Model
+for more details on the verification and dispute process.
+Fees in the System
+How LP fees, relayer fees, gas fees, and capital fees are calculated in Across.
+Tracking Deposits
+Monitor crosschain transfer status using the deposit tracking API.

@@ -4,12 +4,13 @@ title: Moriarty research log
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - navigation
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0105
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -1002,3 +1003,7 @@ Capture operation `moriarty-defi-pdf-capture-20260908`; coupled synthesis operat
 ## [2026-09-08] ingest | ERC-4626 collateral-vault report supplement
 
 Registered SRC-0104 with unchanged full Markdown bytes, all 383 logical lines read. Capture `moriarty-vault-report-capture-20260908`; synthesis `moriarty-vault-report-ingest-20260908`. Added [taxonomy/design analysis and linked graph](../deliverables/erc4626-vault-report-2026-09-08/README.md), A–H/T01–T11 crosswalk and six proposed tests; retained the unverified report evidence labels and absent atlas attachments. CLM-0932–CLM-0935 record the source scope and the SRC-0084 creation-date correction against retained primary snapshots without rewriting the original capsule. Network requests zero; no implementation, incident replay, theorem or Midnight transaction produced. Four-paper research remains separately reviewed and its original source/version distinctions are preserved.
+
+## 2026-09-09 UTC — Modern DeFi research through September 8
+
+Added [financial taxonomy and linked standards atlas](../deliverables/modern-defi-taxonomy-2026-09-08/README.md), SRC-0105 and CLM-0936: 31 category records, 47 full standards profiles, 24 source-scoped cases, 253 capability mappings and a 226-node typed graph. Primary registry/code revisions and access-time documentation are distinguished. Independent classifier feedback tightened four boundary rules. Research S2 only; unchanged implementation, proof and financial settlement acceptance gates.
