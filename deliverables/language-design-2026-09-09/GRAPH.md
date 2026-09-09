@@ -17,6 +17,8 @@ flowchart LR
   F3 --> G
 ```
 
+The original-source column below is the transitive set reached through each listed claim’s source support. It differs intentionally from the curated direct `source_ids` field in features.json. D08 in F05 supports the derived effect-summary constraint, not an empirical claim about local inference. PANEL claims add expert design recommendations and do not turn review opinions into academic findings.
+
 ## Traceable feature edges
 
 | Feature | Claim IDs | Original sources |
@@ -31,7 +33,7 @@ flowchart LR
 | F08 General resumable effect handlers | SEM-04-L, UCL06, DOC03 | D08, S05, U02 |
 | F09 Finite event inputs and schedules | SEM-01-L, SEM-02-L, DOC01 | D01, D02, D03, D04R, S01, S03 |
 | F10 Infinite streams or implicit lifetime reset | SEM-01-L, SEM-02-L | S01, S03 |
-| F11 Explicit residual duties and recovery | UCL06, SEM-06-L, REPO01 | R1, R2, R3, R4, R5, S07, U02 |
+| F11 Checked domain duties and authorized recovery | UCL06, SEM-06-L, REPO01 | R1, R2, R3, R4, R5, S07, U02 |
 | F12 Checked arithmetic and named rounding | UCL15, DOC05, REPO01 | D11, R1, R2, R3, R4, R5, U06 |
 | F13 Structured source diagnostics | UCL11 | U02, U05 |
 | F14 Content-addressed typed Core and dependencies | SEM-03-R, UCL20, DOC02, DOC04 | D06, D07, D10, D14, S04, U09 |
@@ -94,3 +96,30 @@ flowchart LR
 | DOC06 | source_fact | D12, D13; D12 update/upgrade workflows; D13 entire short guide | Unison documents guided dependent updates and separate author/license values associated with projects. Hash identity does not replace upgrade workflow or provenance metadata. |
 | DOC07 | source_fact | D09; Tour watch expressions/testing | Unison tour describes a codebase workflow and caching pure watch results by expression hash. This is not evidence that a financial proof remains valid for changed state or verifier context. |
 | REPO01 | repository_observation | R1, R2, R3, R4, R5; R2 introduction and unsupported; R1 semantics and mandatory proof acceptance; R3 roadmap | Successor syntax profile is provisional and does not supply typing, evaluation, K emission or financial admission; current design requires explicit authority, units, residual duties, bounds and all-layer correspondence. |
+
+## Converged requirements
+
+Expert-review sources REV-USABILITY, REV-SEMANTICS and REV-OPUS inform PANEL-F01 through PANEL-F20; they are design recommendations, not additional academic evidence. [CONVERGENCE.md](CONVERGENCE.md) records unanimous disposition labels, substantive amendments and parent-adjudicated dissent. The matrix below states the final requirement on each feature.
+
+| Feature | Recommendation claim | Final constraint |
+|---|---|---|
+| F01 | PANEL-F01 | Familiar punctuation can imply wrong host semantics; state exact grammar/profile |
+| F02 | PANEL-F02 | Future static extraction must not execute the enclosing TS module; prohibit interpolation independently of TS types, specify raw/cooked characters, escaping and source spans; replacing the tag binding cannot yield a trusted artifact. |
+| F03 | PANEL-F03 | No closures, eval, ambient IO, host coercions or dynamic imports in trusted execution |
+| F04 | PANEL-F04 | Nominal units/identities; arithmetic checks additional to type checking |
+| F05 | PANEL-F05 | Public financial interfaces stay explicit; unique local inference is inspectable without an IDE. Effect summaries may be derived within declared limits; no any/unsafe cast. |
+| F06 | PANEL-F06 | Immutable pre; at most one next write per field; no next reads; unwritten fields persist; post appears only in the final ensures suffix; rejection discards all tentative changes. |
+| F07 | PANEL-F07 | Compiler-derived conservative effect summaries checked against declared interface limits; signed quantitative authority is separate and visible. No repeated effect row or authority token per emit is mandatory; outcome intent needs no compulsory second exact-plan signature. |
+| F08 | PANEL-F08 | Multiple resume can duplicate effects/work; single-shot/accounting theorem needed |
+| F09 | PANEL-F09 | Bound queue, horizon, observations, ordering and recovery reserve |
+| F10 | PANEL-F10 | Productivity/causality not finite lifetime; no unbounded queue or allowance refresh |
+| F11 | PANEL-F11 | Identified duties carry forward automatically unless a named funded allocation, domain transformation or explicitly authorized resolution changes them. Static structural checks plus state-dependent preparation/proof conservation; no generic linear calculus or universal static-detection claim. |
+| F12 | PANEL-F12 | Intermediate bounds, scale, zero division and named inspectable rounding/allocation policy; direction is instrument-policy-dependent, not universally hostile to payer. |
+| F13 | PANEL-F13 | Concise syntax/setup and financial diagnostics with safe next steps, exact spans and truthful preparation/proof/submission/finality stage; no witness disclosure or unsupported superiority claim. |
+| F14 | PANEL-F14 | Full domain-separated references and bounded available dependency closure; initially normalize local binders only where encoding says so, retain public/nominal identifiers until specified; readable hash display remains an open empirical question. |
+| F15 | PANEL-F15 | Source/Core/build/output/claim/execution identities bind their exact domains and immediate inputs. Compiler change alters build identity; Core changes only if elaboration changes. Technical details expand on demand. |
+| F16 | PANEL-F16 | Retain ordinary text review initially; database workflow has migration/provenance cost and unmeasured benefit. Permanent exclusion is not established by this evidence. |
+| F17 | PANEL-F17 | Authorized migration retains duties, authority, custody, consumed history and aggregate remaining work; alias edits cannot redirect live positions. |
+| F18 | PANEL-F18 | Midnight Preview is fixed; financial acceptance remains open. Require all four claims plus native/ledger checks, unique consumption and exact effects; parsing/signing is not settlement. |
+| F19 | PANEL-F19 | Formative sessions may start now; confirmatory comparison waits for a stable executable source/Core/K/evaluator prototype and pilot calibration. First pilot varies locals, not public annotations. PL votes are not participant evidence. |
+| F20 | PANEL-F20 | Lexing/parsing/formatting separate from typing; stable spans and profile labels |

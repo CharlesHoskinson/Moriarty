@@ -1,3 +1,5 @@
+# Historical draft assembly script; do not rerun over the converged synthesis.
+# Final panel amendments are maintained in report/features/graph and CONVERGENCE.md.
 from pathlib import Path
 import json,hashlib,csv,datetime
 D=Path('deliverables/language-design-2026-09-09');R=Path('raw/sources/language-design-2026-09-09');base=Path.cwd()
