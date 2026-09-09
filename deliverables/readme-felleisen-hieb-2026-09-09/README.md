@@ -1,0 +1,9 @@
+# Felleisen–Hieb presentation of the implemented repayment projection
+
+The root [README](../../README.md#small-step-semantics-implemented-repayment-subset) now uses instruction terms, single-hole evaluation contexts, local contractions, a contextual reduction rule and whole-program rejection. It describes the existing `moriarty-funded-repayment/0` Transfer/Repay control layer. Its successful trace and first-failure trace explain the 24-step abstract presentation bound, under terminating pure helpers. The two charged action-work units and K internal rewrite counts remain distinct.
+
+The [open textbook corpus](../reduction-semantics-textbooks-2026-09-09/CORPUS.md) supplies source-linked practices and a typed research graph. The original [Felleisen–Hieb paper](../../raw/sources/felleisen-hieb-2026-09-09/felleisen-hieb-1992.pdf) was downloaded with Scrapling; PDF page 3 (two-up manuscript pages 5–6) was visually checked for Definition 2.3 and evaluation-context closure. The primary paper is a historical reference, not an open-source textbook.
+
+Independent GPT-6 reviewed the control relation and both traces against K. Claude Opus independently reviewed the supplied README/K text and textbook practices; its exact scope and resolved model appear in its receipt. The README grammar-drift check passed. Scrapling's browser fetch checked the candidate rendered with GitHub Markdown on desktop and mobile; screenshots and metrics are retained. Live verification is recorded separately after publication.
+
+No executable language behavior changed. No new K, Redex, Agda, Rocq, native proof or Midnight financial transaction ran. Full successor semantics, proof of source/K correspondence and financial ledger settlement remain open. Existing bounded-K acceptance evidence covers its own recorded 16 cases only.
