@@ -1,0 +1,314 @@
+{
+  "checksPassed": 4,
+  "duplicateStateLastWins": {
+    "input": "{\"schemaVersion\":\"moriarty-funded-source/0\",\"action\":\"pay\",\"arguments\":{\"cash\":{\"type\":{\"kind\":\"Amount\",\"name\":\"Cash\"},\"value\":\"30\"},\"nominal\":{\"type\":{\"kind\":\"Debt\",\"name\":\"Cash\"},\"value\":\"30\"}},\"state\":{\"balances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"amount\":\"100\"},{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"}],\"allowances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"remaining\":\"100\",\"spent\":\"0\"}],\"obligations\":[{\"id\":\"Due100\",\"debtor\":\"Payer\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"100\",\"accrued\":\"0\",\"outstanding\":\"100\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\"}],\"usedTransferIds\":[],\"usedAllocationIds\":[],\"work\":{\"remaining\":\"100\",\"spent\":\"0\",\"closureReserve\":\"16\"}},\"state\":{\"balances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"amount\":\"200\"},{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"}],\"allowances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"remaining\":\"200\",\"spent\":\"0\"}],\"obligations\":[{\"id\":\"Due100\",\"debtor\":\"Payer\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"200\",\"accrued\":\"0\",\"outstanding\":\"200\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\"}],\"usedTransferIds\":[],\"usedAllocationIds\":[],\"work\":{\"remaining\":\"100\",\"spent\":\"0\",\"closureReserve\":\"16\"}}}",
+    "result": {
+      "status": "Prepared",
+      "schemaVersion": "moriarty-funded-repayment/0",
+      "post": {
+        "balances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "amount": "170"
+          },
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "remaining": "170",
+            "spent": "30"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Due100",
+            "debtor": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "170",
+            "accrued": "0",
+            "outstanding": "170",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding"
+          }
+        ],
+        "usedTransferIds": [
+          "T1"
+        ],
+        "usedAllocationIds": [
+          "Alloc1"
+        ],
+        "work": {
+          "remaining": "98",
+          "spent": "2",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "T1",
+          "from": "Payer",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "Alloc1",
+          "transferId": "T1",
+          "obligationId": "Due100",
+          "payer": "Payer",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "30",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "170"
+        }
+      ]
+    }
+  },
+  "duplicateStateLastInvalid": {
+    "input": "{\"schemaVersion\":\"moriarty-funded-source/0\",\"action\":\"pay\",\"arguments\":{\"cash\":{\"type\":{\"kind\":\"Amount\",\"name\":\"Cash\"},\"value\":\"30\"},\"nominal\":{\"type\":{\"kind\":\"Debt\",\"name\":\"Cash\"},\"value\":\"30\"}},\"state\":{\"balances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"amount\":\"100\"},{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"}],\"allowances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"remaining\":\"100\",\"spent\":\"0\"}],\"obligations\":[{\"id\":\"Due100\",\"debtor\":\"Payer\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"100\",\"accrued\":\"0\",\"outstanding\":\"100\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\"}],\"usedTransferIds\":[],\"usedAllocationIds\":[],\"work\":{\"remaining\":\"100\",\"spent\":\"0\",\"closureReserve\":\"16\"}},\"state\":{}}",
+    "result": {
+      "status": "Rejected",
+      "code": "SCHEMA",
+      "actionIndex": null
+    }
+  },
+  "duplicateNestedLastWins": {
+    "input": "{\"schemaVersion\":\"moriarty-funded-source/0\",\"action\":\"pay\",\"arguments\":{\"cash\":{\"type\":{\"kind\":\"Amount\",\"name\":\"Cash\"},\"value\":\"30\"},\"nominal\":{\"type\":{\"kind\":\"Debt\",\"name\":\"Cash\"},\"value\":\"30\"}},\"state\":{\"balances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"amount\":\"100\"},{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"}],\"allowances\":[{\"party\":\"Payer\",\"asset\":\"Cash\",\"remaining\":\"100\",\"spent\":\"0\"}],\"obligations\":[{\"id\":\"Due100\",\"debtor\":\"Payer\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"bad\",\"principal\":\"100\",\"accrued\":\"0\",\"outstanding\":\"100\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\"}],\"usedTransferIds\":[],\"usedAllocationIds\":[],\"work\":{\"remaining\":\"100\",\"spent\":\"0\",\"closureReserve\":\"16\"}}}",
+    "result": {
+      "status": "Prepared",
+      "schemaVersion": "moriarty-funded-repayment/0",
+      "post": {
+        "balances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "amount": "70"
+          },
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "remaining": "70",
+            "spent": "30"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Due100",
+            "debtor": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "70",
+            "accrued": "0",
+            "outstanding": "70",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding"
+          }
+        ],
+        "usedTransferIds": [
+          "T1"
+        ],
+        "usedAllocationIds": [
+          "Alloc1"
+        ],
+        "work": {
+          "remaining": "98",
+          "spent": "2",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "T1",
+          "from": "Payer",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "Alloc1",
+          "transferId": "T1",
+          "obligationId": "Due100",
+          "payer": "Payer",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "30",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "70"
+        }
+      ]
+    }
+  },
+  "transferOnly": {
+    "source": "profile \"moriarty-successor-syntax/0\";\nagreement FundedPartialPayment {\n  unit Cash;\n  party Payer;\n  party Lender;\n  asset Cash: Asset<Cash>;\n\n  action pay(cash: Amount<Cash>, nominal: Debt<Cash>) {\n    emit Transfer {\n      id: TransferId(\"T1\"), from: Payer, to: Lender,\n      settlementAsset: Cash, amount: cash\n    };\n  }\n}\n",
+    "invocation": {
+      "schemaVersion": "moriarty-funded-source/0",
+      "action": "pay",
+      "arguments": {
+        "cash": {
+          "type": {
+            "kind": "Amount",
+            "name": "Cash"
+          },
+          "value": "30"
+        },
+        "nominal": {
+          "type": {
+            "kind": "Debt",
+            "name": "Cash"
+          },
+          "value": "30"
+        }
+      },
+      "state": {
+        "balances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Due100",
+            "debtor": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding"
+          }
+        ],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "work": {
+          "remaining": "100",
+          "spent": "0",
+          "closureReserve": "16"
+        }
+      }
+    },
+    "result": {
+      "status": "Prepared",
+      "schemaVersion": "moriarty-funded-repayment/0",
+      "post": {
+        "balances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "amount": "70"
+          },
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Payer",
+            "asset": "Cash",
+            "remaining": "70",
+            "spent": "30"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Due100",
+            "debtor": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding"
+          }
+        ],
+        "usedTransferIds": [
+          "T1"
+        ],
+        "usedAllocationIds": [],
+        "work": {
+          "remaining": "99",
+          "spent": "1",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "T1",
+          "from": "Payer",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        }
+      ]
+    }
+  }
+}

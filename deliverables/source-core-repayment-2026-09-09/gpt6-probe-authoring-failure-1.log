@@ -1,0 +1,18 @@
+PASS baseline full result
+PASS field order produces same Core
+PASS mutating inspected Core cannot change recompilation
+PASS malformed serialized Core is not source
+PASS objects and proxies trigger no source/invocation getters
+file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/deliverables/source-core-repayment-2026-09-09/gpt6-adversarial-probes.mjs:25
+check('source selection changes Transfer and debt independently',()=>{const s=program(transfer+repay).replace(/}$/,`action alternate(cash: Amount<Cash>, nominal: Debt<Cash>) {${transfer.replace('amount: cash','amount: amount(40, Cash)')}${repay.replace('nominalAmount: nominal','nominalAmount: debt(20, Cash)')}}`);const v=base();v.action='alternate';const r=run(s,v);assert.equal(r.post.balances[0].amount,'60');assert.equal(r.post.obligations[0].principal,'80');});
+                                                                                                                                                                                                                                                                                                                                                                                                    ^
+
+TypeError: Cannot read properties of undefined (reading 'balances')
+    at file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/deliverables/source-core-repayment-2026-09-09/gpt6-adversarial-probes.mjs:25:389
+    at check (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/deliverables/source-core-repayment-2026-09-09/gpt6-adversarial-probes.mjs:15:27)
+    at file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/deliverables/source-core-repayment-2026-09-09/gpt6-adversarial-probes.mjs:25:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.18.1

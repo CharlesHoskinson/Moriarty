@@ -1,0 +1,1061 @@
+✖ independent full financial result: principal-partial (3.567912ms)
+✖ independent full financial result: interest-first (0.589597ms)
+✖ independent full financial result: principal-first (0.561665ms)
+✖ independent full financial result: full-payment (0.424431ms)
+✖ independent full financial result: cross-interest-boundary (0.527262ms)
+✖ independent full financial result: overfunded-transfer (0.397362ms)
+✖ Core is deterministic serializable and cannot be executed as source (0.207398ms)
+✖ payment arguments change both debt and cash (0.223431ms)
+✖ complete unrelated duties, terms, order and tombstones survive (0.22217ms)
+✖ runtime nominal denomination is checked (0.404028ms)
+✖ runtime settlement asset is checked (0.213508ms)
+✖ retained conversion is honored (0.417825ms)
+✖ atomic financial rejection: zero (0.688809ms)
+✖ atomic financial rejection: overpayment (0.167732ms)
+✖ atomic financial rejection: balance (0.170953ms)
+✖ atomic financial rejection: allowance (0.146024ms)
+✖ atomic financial rejection: work (0.423386ms)
+✖ atomic financial rejection: transfer reuse (0.293038ms)
+✖ atomic financial rejection: allocation reuse (0.183517ms)
+✖ atomic financial rejection: insufficient funding (0.347989ms)
+✖ Repay without Transfer cannot discharge debt (1.20071ms)
+✔ closed source subset rejects state (0.350847ms)
+✔ closed source subset rejects next (0.158006ms)
+✔ closed source subset rejects const (0.182175ms)
+✔ closed source subset rejects requires (0.157089ms)
+✔ closed source subset rejects let (0.147278ms)
+✔ closed source subset rejects ensures (0.106349ms)
+✔ closed source subset rejects arithmetic (0.096761ms)
+✔ closed source subset rejects projection (0.103601ms)
+✔ closed source subset rejects unknown reference (0.182952ms)
+✔ closed source subset rejects duplicate party (0.153192ms)
+✔ closed source subset rejects duplicate unit (0.129168ms)
+✔ closed source subset rejects duplicate param (0.107478ms)
+✔ closed source subset rejects unsupported type (0.097462ms)
+✔ closed source subset rejects wrong field type (0.106134ms)
+✔ closed source subset rejects unknown field (0.096547ms)
+✔ closed source subset rejects duplicate field (0.092438ms)
+✔ closed source subset rejects parameter type confusion (0.166254ms)
+✔ closed invocation rejects unknown argument (0.15749ms)
+✔ closed invocation rejects missing argument (0.114255ms)
+✔ closed invocation rejects wrong unit (0.106905ms)
+✔ closed invocation rejects wrong type (0.159002ms)
+✔ closed invocation rejects coercion (0.123263ms)
+✔ closed invocation rejects overflow (0.112742ms)
+✔ closed invocation rejects negative (0.10259ms)
+✔ closed invocation rejects unknown invocation field (0.612161ms)
+✔ closed invocation rejects unknown typed field (0.116459ms)
+✔ closed invocation rejects unknown state field (0.098923ms)
+✔ closed invocation rejects unknown action (0.073961ms)
+✔ closed invocation rejects prototype key (0.094769ms)
+✖ hostile objects are rejected without executing accessors (0.164495ms)
+✖ CLI reads actual source and invocation and rejects with nonzero status (72.996756ms)
+ℹ tests 52
+ℹ suites 0
+ℹ pass 29
+ℹ fail 23
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 192.717386
+
+✖ failing tests:
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: principal-partial (3.567912ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '30',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '0',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '30',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '30',
+  -       remainingOutstanding: '70',
+  -       settlementAmount: '30',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '70',
+  -         spent: '30'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '70',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '30',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '0',
+  -         allocationRule: 'AccrualFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '70',
+  -         principal: '70',
+  -         settlementAsset: 'Cash',
+  -         status: 'Outstanding'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: interest-first (0.589597ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '7',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '7',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '7',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '0',
+  -       remainingOutstanding: '103',
+  -       settlementAmount: '7',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '93',
+  -         spent: '7'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '93',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '7',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '3',
+  -         allocationRule: 'AccrualFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '103',
+  -         principal: '100',
+  -         settlementAsset: 'Cash',
+  -         status: 'Outstanding'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: principal-first (0.561665ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '7',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '0',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '7',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '7',
+  -       remainingOutstanding: '103',
+  -       settlementAmount: '7',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '93',
+  -         spent: '7'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '93',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '7',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '10',
+  -         allocationRule: 'PrincipalFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '103',
+  -         principal: '93',
+  -         settlementAsset: 'Cash',
+  -         status: 'Outstanding'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: full-payment (0.424431ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '100',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '10',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '100',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '90',
+  -       remainingOutstanding: '0',
+  -       settlementAmount: '100',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '0',
+  -         spent: '100'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '0',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '100',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '0',
+  -         allocationRule: 'AccrualFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '0',
+  -         principal: '0',
+  -         settlementAsset: 'Cash',
+  -         status: 'Settled'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: cross-interest-boundary (0.527262ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '15',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '10',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '15',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '5',
+  -       remainingOutstanding: '95',
+  -       settlementAmount: '15',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '85',
+  -         spent: '15'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '85',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '15',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '0',
+  -         allocationRule: 'AccrualFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '95',
+  -         principal: '95',
+  -         settlementAsset: 'Cash',
+  -         status: 'Outstanding'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:24
+✖ independent full financial result: overfunded-transfer (0.397362ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   actionIndex: null,
+  +   code: 'UNEXPECTED_TOKEN',
+  +   status: 'Rejected'
+  -   effects: [
+  -     {
+  -       amount: '40',
+  -       asset: 'Cash',
+  -       from: 'Payer',
+  -       id: 'T1',
+  -       kind: 'Transfer',
+  -       to: 'Lender'
+  -     },
+  -     {
+  -       accruedDischarged: '0',
+  -       allocationId: 'Alloc1',
+  -       creditor: 'Lender',
+  -       denomination: 'Cash',
+  -       kind: 'Repayment',
+  -       nominalAmount: '30',
+  -       obligationId: 'Due100',
+  -       payer: 'Payer',
+  -       principalDischarged: '30',
+  -       remainingOutstanding: '70',
+  -       settlementAmount: '30',
+  -       settlementAsset: 'Cash',
+  -       transferId: 'T1'
+  -     }
+  -   ],
+  -   post: {
+  -     allowances: [
+  -       {
+  -         asset: 'Cash',
+  -         party: 'Payer',
+  -         remaining: '60',
+  -         spent: '40'
+  -       }
+  -     ],
+  -     balances: [
+  -       {
+  -         amount: '60',
+  -         asset: 'Cash',
+  -         party: 'Payer'
+  -       },
+  -       {
+  -         amount: '40',
+  -         asset: 'Cash',
+  -         party: 'Lender'
+  -       }
+  -     ],
+  -     obligations: [
+  -       {
+  -         accrued: '0',
+  -         allocationRule: 'AccrualFirst',
+  -         conversion: {
+  -           mantissa: '1',
+  -           rounding: 'none',
+  -           scale: '0'
+  -         },
+  -         creditor: 'Lender',
+  -         debtor: 'Payer',
+  -         denomination: 'Cash',
+  -         id: 'Due100',
+  -         outstanding: '70',
+  -         principal: '70',
+  -         settlementAsset: 'Cash',
+  -         status: 'Outstanding'
+  -       }
+  -     ],
+  -     usedAllocationIds: [
+  -       'Alloc1'
+  -     ],
+  -     usedTransferIds: [
+  -       'T1'
+  -     ],
+  -     work: {
+  -       closureReserve: '16',
+  -       remaining: '98',
+  -       spent: '2'
+  -     }
+  -   },
+  -   schemaVersion: 'moriarty-funded-repayment/0',
+  -   status: 'Prepared'
+    }
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:36:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { status: 'Rejected', code: 'UNEXPECTED_TOKEN', actionIndex: null },
+    expected: { status: 'Prepared', schemaVersion: 'moriarty-funded-repayment/0', post: { balances: [Array], allowances: [Array], obligations: [Array], usedTransferIds: [Array], usedAllocationIds: [Array], work: [Object] }, effects: [ [Object], [Object] ] },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:37:1
+✖ Core is deterministic serializable and cannot be executed as source (0.207398ms)
+  Error [SuccessorSyntaxError]: unexpected token asset
+      at fail (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:255:9)
+      at Parser.fail (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:641:5)
+      at Parser.unexpected (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:645:10)
+      at Parser.expectIdent (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:660:10)
+      at Parser.parseEffectField (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:910:23)
+      at Parser.parseStatement (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:894:28)
+      at Parser.parseAction (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:819:28)
+      at Parser.parseDeclaration (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:737:40)
+      at Parser.parseAgreement (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:720:30)
+      at Parser.parseProgram (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/src/successor/frontend.ts:613:28) {
+    code: 'UNEXPECTED_TOKEN',
+    start: 238,
+    end: 243
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:43:1
+✖ payment arguments change both debt and cash (0.223431ms)
+  TypeError: Cannot read properties of undefined (reading 'balances')
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:45:45)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:47:1
+✖ complete unrelated duties, terms, order and tombstones survive (0.22217ms)
+  TypeError: Cannot read properties of undefined (reading 'obligations')
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:50:49)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:53:1
+✖ runtime nominal denomination is checked (0.404028ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'NOMINAL_UNIT'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:53:122)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'NOMINAL_UNIT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:54:1
+✖ runtime settlement asset is checked (0.213508ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'SETTLEMENT_UNIT'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:56:2)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'SETTLEMENT_UNIT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:58:1
+✖ retained conversion is honored (0.417825ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'Rejected'
+  - 'Prepared'
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:60:32)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Rejected',
+    expected: 'Prepared',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: zero (0.688809ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'ZERO_AMOUNT'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'ZERO_AMOUNT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: overpayment (0.167732ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'EXCEEDS_OUTSTANDING'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'EXCEEDS_OUTSTANDING',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: balance (0.170953ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'INSUFFICIENT_BALANCE'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'INSUFFICIENT_BALANCE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: allowance (0.146024ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'INSUFFICIENT_ALLOWANCE'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'INSUFFICIENT_ALLOWANCE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: work (0.423386ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'INSUFFICIENT_WORK'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'INSUFFICIENT_WORK',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: transfer reuse (0.293038ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'DUPLICATE'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'DUPLICATE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: allocation reuse (0.183517ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'DUPLICATE'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'DUPLICATE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:4
+✖ atomic financial rejection: insufficient funding (0.347989ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'INSUFFICIENT_UNALLOCATED'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:73:84)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'INSUFFICIENT_UNALLOCATED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:74:1
+✖ Repay without Transfer cannot discharge debt (1.20071ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'SCHEMA'
+  - 'TRANSFER_NOT_IN_STEP'
+  
+      at rejects (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:33:19)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:74:60)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SCHEMA',
+    expected: 'TRANSFER_NOT_IN_STEP',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:108:1
+✖ hostile objects are rejected without executing accessors (0.164495ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'UNEXPECTED_TOKEN'
+  - 'INVOCATION_TYPE'
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:110:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'UNEXPECTED_TOKEN',
+    expected: 'INVOCATION_TYPE',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at experiments/moriarty-language/tests/successor-source-repayment.test.mjs:113:1
+✖ CLI reads actual source and invocation and rejects with nonzero status (72.996756ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/sp03-source-repayment/experiments/moriarty-language/tests/successor-source-repayment.test.mjs:116:72)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

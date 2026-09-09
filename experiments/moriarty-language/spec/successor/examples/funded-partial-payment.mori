@@ -1,0 +1,18 @@
+profile "moriarty-successor-syntax/0";
+agreement FundedPartialPayment {
+  unit Cash;
+  party Payer;
+  party Lender;
+  asset Cash: Asset<Cash>;
+
+  action pay(cash: Amount<Cash>, nominal: Debt<Cash>) {
+    emit Transfer {
+      id: TransferId("T1"), from: Payer, to: Lender,
+      settlementAsset: Cash, amount: cash
+    };
+    emit Repay {
+      allocationId: AllocationId("Alloc1"), transferId: TransferId("T1"),
+      obligationId: ObligationId("Due100"), payer: Payer, nominalAmount: nominal
+    };
+  }
+}

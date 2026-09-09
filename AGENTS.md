@@ -92,7 +92,7 @@ resource and acceptance gates. Merge status is not product acceptance.
 
 ## Current implementation and review routing
 
-The [September 9 roadmap refinement and AFK instruction](raw/assignments/moriarty-roadmap-refinement-and-afk-2026-09-09.md) requires finishing the specification revision before resuming all twelve sprints. It reaffirms the [Grok/GPT-6 execution instruction](raw/assignments/moriarty-grok-high-gpt6-execution-2026-09-07.md). Use Grok 4.6 at high reasoning effort for implementation and fresh independent GPT-6 Astra for result review. This supersedes older Fable result-review requirements in these instructions and sprint packets. Preserve historical identities and all acceptance/resource gates.
+The [September 9 model-routing instruction](raw/assignments/moriarty-gpt6-fable-audit-execution-2026-09-09.md) supersedes the earlier Grok implementation route: GPT-6 writes code, and a separate fresh GPT-6 Astra reviewer plus exact Fable 5.1 audit the resulting candidate. Use `claude-fable-5-1` at medium effort and preserve actual reviewer identities. Both audits are required; unavailable reviewers do not approve work or trigger substitution. Continue the revised twelve-sprint roadmap while preserving historical identities and all acceptance/resource gates.
 
 ## Autonomous sprint decisions
 
@@ -158,4 +158,4 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
 ```
-Use the guarded CLI when host coverage is unverified. The current plugin routing is GPT-6 implementation with a separate GPT-6 reviewer, per [the latest instruction](raw/assignments/moriarty-gpt6-implementation-review-2026-09-08.md). Installation does not establish actual hook interception or the product repair pilot.
+Use the guarded CLI when host coverage is unverified. Current code routing is GPT-6 implementation with separate GPT-6 Astra and Fable 5.1 audits, per [the latest instruction](raw/assignments/moriarty-gpt6-fable-audit-execution-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.
