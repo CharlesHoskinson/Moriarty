@@ -6,6 +6,8 @@ title: Contradictions and documentation drift
 status: active
 updated_at: 2026-09-07T16:50:22.642457+00:00
 sources:
+  - SRC-0106
+  - SRC-0107
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -46,7 +48,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
@@ -246,3 +248,7 @@ SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the
 **CLM-0934.** SRC-0104 contains opaque turn-style citations and sandbox links to an atlas/ZIP/JSON/CSV/BibTeX bundle, but only the Markdown report was supplied. Its line 335 claims 80 source records and 15 projects; the visible table has fourteen grouped project rows (lines 212–225), which does not settle the absent catalog's count. The report's standards matrix omits dedicated previewRedeem/maxWithdraw/maxRedeem rows (lines 81–92). Preserve those limits and its reported incident discrepancies rather than accepting the external claims. Report as-of 2026-09-08; secondary synthesis; reviewed 2026-09-08; source observation, S2 research use, no reproduction; confidence high for supplied-file contents. [Full analysis](../deliverables/erc4626-vault-report-2026-09-08/ANALYSIS.md).
 
 **CLM-0935.** SRC-0084's immutable capsule records ERC-7540 creation as 2023-08-30; the retained [ERC-7540 text](../raw/sources/moriarty-intent-semantics-2026-09-03/erc-7540.md), Created row, and the originally acquired HTML both say 2023-10-18. Corrected the inventory and its portable legacy metadata to 2023-10-18, preserving the capsule bytes and prior date in the ledger correction record. Primary retained standard snapshot; observed 2026-09-08; repository/source metadata correction, S2 research use, not a new standards-status check or implementation claim; confidence high. The supplied report independently of this metadata record also states October 18, but its opaque citation is not accepted as primary proof.
+
+## Report 8 portability and scope — 2026-09-09
+
+**CLM-0939.** SRC-0106 contains opaque citation handles and links to three companion sandbox files not supplied in this intake. Its illustrative classifications are not deployed conformance evidence; its “Morpho Midnight” label does not establish a Midnight blockchain integration. Our SRC-0107 captures independently identify all40 named standards, but do not resolve every original citation or retroactively prove the report cutoff. Source observation and scope inference, S2, confidence high; [comparison](../deliverables/defi-report8-comparison-2026-09-09/README.md).

@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-6900: Modular Smart Contract Accounts</title>
+      <meta property="og:title" content="ERC-6900: Modular Smart Contract Accounts" />
+    
+    <meta name="description" content="Interfaces for smart contract accounts and modules, optionally supporting upgradability and introspection" />
+    <meta property="og:description" content="Interfaces for smart contract accounts and modules, optionally supporting upgradability and introspection" />
+    <meta name="twitter:description" content="Interfaces for smart contract accounts and modules, optionally supporting upgradability and introspection" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-6900" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-6900" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-6900: Modular Smart Contract Accounts
+    <a href="https://ethereum-magicians.org/t/eip-modular-smart-contract-accounts-and-plugins/13885" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-6900.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Interfaces for smart contract accounts and modules, optionally supporting upgradability and introspection</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Adam Egyed&nbsp;(<a href="https://github.com/adamegyed">@adamegyed</a>), Fangting Liu&nbsp;(<a href="https://github.com/trinity-0111">@trinity-0111</a>), Jay Paik&nbsp;(<a href="https://github.com/jaypaik">@jaypaik</a>), Yoav Weiss&nbsp;(<a href="https://github.com/yoavw">@yoavw</a>), Huawei Gu&nbsp;(<a href="https://github.com/huaweigu">@huaweigu</a>), Daniel Lim&nbsp;(<a href="https://github.com/dlim-circle">@dlim-circle</a>), Ruben Koch&nbsp;(<a href="https://github.com/0xrubes">@0xrubes</a>), David Philipson&nbsp;(<a href="https://github.com/dphilipson">@dphilipson</a>), Howy Ho&nbsp;(<a href="https://github.com/howydev">@howydev</a>), Nikita Belenkov&nbsp;(<a href="https://github.com/nikita-quantstamp">@nikita-quantstamp</a>), zer0dot&nbsp;(<a href="https://github.com/zer0dot">@zer0dot</a>), David Kim&nbsp;(<a href="https://github.com/PowerStream3604">@PowerStream3604</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2023-04-18</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/eip-modular-smart-contract-accounts-and-plugins/13885" target="_blank" rel="noopener">https://ethereum-magicians.org/t/eip-modular-smart-contract-accounts-and-plugins/13885</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-165">EIP-165</a>, 
+
+  <a href="eip-1271">EIP-1271</a>, 
+
+  <a href="eip-4337">EIP-4337</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#terms">Terms</a></li>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#interfaces">Interfaces</a></li>
+      <li><a href="#validation-functions">Validation Functions</a></li>
+      <li><a href="#execution-functions">Execution Functions</a></li>
+      <li><a href="#hooks">Hooks</a></li>
+      <li><a href="#validation-call-flow">Validation Call Flow</a></li>
+      <li><a href="#execution-call-flow">Execution Call Flow</a></li>
+      <li><a href="#extension">Extension</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#erc-4337-dependency">ERC-4337 Dependency</a></li>
+      <li><a href="#community-consensus">Community Consensus</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#walletsdk-developers">Wallet/SDK Developers</a></li>
+      <li><a href="#module-developers">Module Developers</a></li>
+      <li><a href="#users">Users</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This proposal standardizes smart contract accounts and account modules, which are smart contracts that allow for composable logic within smart contract accounts. This proposal is compliant with <a href="/EIPS/eip-4337">ERC-4337</a>. This standard emphasizes secure permissioning of modules, and maximal interoperability between all spec-compliant accounts and modules.</p>
+
+<p>This modular approach splits account functionality into three categories, implements them in external contracts, and defines an expected execution flow from accounts.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>One of the goals that ERC-4337 accomplishes is abstracting the logic for execution and validation to each smart contract account.</p>
+
+<p>Many new features of accounts can be built by customizing the logic that goes into the validation and execution steps. Examples of such features include session keys, subscriptions, spending limits, and role-based access control. Currently, some of these features are implemented natively by specific smart contract accounts, and others are able to be implemented by proprietary module systems like Safe modules.</p>
+
+<p>However, managing multiple account implementations provides a poor user experience, fragmenting accounts across supported features and security configurations. Additionally, it requires module developers to choose which platforms to support, causing either platform lock-in or duplicated development effort.</p>
+
+<p>We propose a standard that coordinates the implementation work between module developers and account developers. This standard defines a modular smart contract account capable of supporting all standard-conformant modules. This allows users to have greater portability of their data, and for module developers to not have to choose specific account implementations to support.</p>
+
+<p><img src="/assets/eip-6900/MSCA_Shared_Components_Diagram.svg" alt="diagram showing relationship between accounts and modules with modular functions" /></p>
+
+<p>These modules can contain execution logic, validation functions, and hooks. Validation functions define the circumstances under which the smart contract account will approve actions taken on its behalf, while hooks allow for pre and post execution controls.</p>
+
+<p>Accounts adopting this standard will support modular, upgradable execution and validation logic. Defining this as a standard for smart contract accounts will make modules easier to develop securely and will allow for greater interoperability.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119 and RFC 8174.</p>
+  
+    <h3 id="terms">
+      
+      
+        <a href="#terms" class="anchor-link"></a> Terms
+      
+      
+    </h3>
+
+<ul>
+  <li>An <strong>account</strong> (or <strong>smart contract account, SCA</strong>) is a smart contract that can be used to send transactions and hold digital assets. It implements the <code class="language-plaintext highlighter-rouge">IAccount</code> interface from ERC-4337.</li>
+  <li>A <strong>modular account</strong> (or <strong>modular smart contract account, MSCA</strong>) is an account that supports modular functions. There are three types of modular functions:
+    <ul>
+      <li><strong>Validation functions</strong> validate authorization on behalf of the account.</li>
+      <li><strong>Execution functions</strong> execute custom logic allowed by the account.</li>
+      <li><strong>Hooks</strong> execute custom logic and checks before and/or after an execution function or validation function. There are two types of hooks:
+        <ul>
+          <li><strong>Validation hooks</strong> run before a validation function. These can enforce permissions on actions authorized by a validation function.</li>
+          <li><strong>Execution hooks</strong> can run before and/or after an execution function. Execution hooks can be attached either to a specific execution function or a validation function. A pre execution hook may optionally return data to be consumed by a post execution hook.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>A <strong>native function</strong> refers to a function implemented by the modular account, as opposed to a function added by a module.</li>
+  <li>A <strong>module</strong> is a deployed smart contract that hosts any amount of the above three kinds of modular functions.</li>
+  <li>A module’s <strong>manifest</strong> describes the execution functions, interface IDs, and hooks that should be installed on the account.</li>
+</ul>
+  
+    <h3 id="overview">
+      
+      
+        <a href="#overview" class="anchor-link"></a> Overview
+      
+      
+    </h3>
+
+<p>A modular account handles two kinds of calls: either from the <code class="language-plaintext highlighter-rouge">EntryPoint</code> through ERC-4337, or through direct calls from externally owned accounts (EOAs) and other smart contracts. This standard supports both use cases.</p>
+
+<p>A call to the modular account can be broken down into the steps as shown in the diagram below. The validation steps validate if the caller is allowed to perform the call. The pre execution hook step can be used to do any pre execution checks or updates. It can also be used along with the post execution hook step to perform additional actions or verification. The execution step performs a defined task or collection of tasks.</p>
+
+<p><img src="/assets/eip-6900/Modular_Account_Call_Flow.svg" alt="diagram showing call flow within a modular account" /></p>
+
+<p>Each step is modular, supporting different implementations, which allows for open-ended programmable accounts.</p>
+  
+    <h3 id="interfaces">
+      
+      
+        <a href="#interfaces" class="anchor-link"></a> Interfaces
+      
+      
+    </h3>
+
+<p>Modular accounts MUST implement:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">IAccount.sol</code> and <code class="language-plaintext highlighter-rouge">IAccountExecute.sol</code> from <a href="/EIPS/eip-4337">ERC-4337</a>.</li>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900Account.sol</code> to support module management and usage, and account identification.</li>
+  <li>The function <code class="language-plaintext highlighter-rouge">isValidSignature</code> from <a href="/EIPS/eip-1271">ERC-1271</a></li>
+</ul>
+
+<p>Modular accounts MAY implement:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900AccountView.sol</code> to support visibility in account states on-chain.</li>
+  <li><a href="/EIPS/eip-165">ERC-165</a> for interfaces installed from modules.</li>
+</ul>
+
+<p>Modules MUST implement:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900Module.sol</code> described below and implement ERC-165 for <code class="language-plaintext highlighter-rouge">IERC6900Module</code>.</li>
+</ul>
+
+<p>Modules MAY implement any of the following module types:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900ValidationModule</code> to support validation functions for the account.</li>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900ValidationHookModule</code> to support hooks for validation functions.</li>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900ExecutionModule</code> to support execution functions and their installations on the account.</li>
+  <li><code class="language-plaintext highlighter-rouge">IERC6900ExecutionHookModule</code> to support pre &amp; post execution hooks for execution functions.</li>
+</ul>
+  
+    <h4 id="ierc6900accountsol">
+      
+      
+        <a href="#ierc6900accountsol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900Account.sol</code>
+      
+      
+    </h4>
+
+<p>Module execution and management interface. Modular accounts MUST implement this interface to support installing and uninstalling modules, and open-ended execution.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">/// @dev A packed representation of a module function.
+/// Consists of the following, left-aligned:
+/// Module address: 20 bytes
+/// Entity ID:      4 bytes
+</span><span class="k">type</span> <span class="n">ModuleEntity</span> <span class="k">is</span> <span class="kt">bytes24</span><span class="p">;</span>
+
+<span class="c1">/// @dev A packed representation of a validation function and its associated flags.
+/// Consists of the following, left-aligned:
+/// Module address:     20 bytes
+/// Entity ID:          4 bytes
+/// ValidationFlags:    1 byte
+</span><span class="k">type</span> <span class="n">ValidationConfig</span> <span class="k">is</span> <span class="kt">bytes25</span><span class="p">;</span>
+
+<span class="c1">// ValidationFlags layout:
+// 0b00000___ // unused
+// 0b_____A__ // isGlobal
+// 0b______B_ // isSignatureValidation
+// 0b_______C // isUserOpValidation
+</span><span class="k">type</span> <span class="n">ValidationFlags</span> <span class="k">is</span> <span class="kt">uint8</span><span class="p">;</span>
+
+<span class="c1">/// @dev A packed representation of a hook function and its associated flags.
+/// Consists of the following, left-aligned:
+/// Module address: 20 bytes
+/// Entity ID:      4 bytes
+/// Flags:          1 byte
+///
+/// Hook flags layout:
+/// 0b00000___ // unused
+/// 0b_____A__ // hasPre (exec only)
+/// 0b______B_ // hasPost (exec only)
+/// 0b_______C // hook type (0 for exec, 1 for validation)
+</span><span class="k">type</span> <span class="n">HookConfig</span> <span class="k">is</span> <span class="kt">bytes25</span><span class="p">;</span>
+
+<span class="k">struct</span> <span class="n">Call</span> <span class="p">{</span>
+    <span class="c1">// The target address for the account to call.
+</span>    <span class="kt">address</span> <span class="n">target</span><span class="p">;</span>
+    <span class="c1">// The value to send with the call.
+</span>    <span class="kt">uint256</span> <span class="n">value</span><span class="p">;</span>
+    <span class="c1">// The calldata for the call.
+</span>    <span class="kt">bytes</span> <span class="n">data</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IERC6900Account</span> <span class="p">{</span>
+    <span class="k">event</span> <span class="n">ExecutionInstalled</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">module</span><span class="p">,</span> <span class="n">ExecutionManifest</span> <span class="n">manifest</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">ExecutionUninstalled</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">module</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">onUninstallSucceeded</span><span class="p">,</span> <span class="n">ExecutionManifest</span> <span class="n">manifest</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">ValidationInstalled</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">module</span><span class="p">,</span> <span class="kt">uint32</span> <span class="k">indexed</span> <span class="n">entityId</span><span class="p">);</span>
+    <span class="k">event</span> <span class="n">ValidationUninstalled</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">module</span><span class="p">,</span> <span class="kt">uint32</span> <span class="k">indexed</span> <span class="n">entityId</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">onUninstallSucceeded</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Standard execute method.
+</span>    <span class="c1">/// @param target The target address for the account to call.
+</span>    <span class="c1">/// @param value The value to send with the call.
+</span>    <span class="c1">/// @param data The calldata for the call.
+</span>    <span class="c1">/// @return The return data from the call.
+</span>    <span class="k">function</span> <span class="n">execute</span><span class="p">(</span><span class="kt">address</span> <span class="n">target</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">value</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span> <span class="k">payable</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Standard executeBatch method.
+</span>    <span class="c1">/// @dev If the target is a module, the call SHOULD revert. If any of the calls revert, the entire batch MUST
+</span>    <span class="c1">/// revert.
+</span>    <span class="c1">/// @param calls The array of calls.
+</span>    <span class="c1">/// @return An array containing the return data from the calls.
+</span>    <span class="k">function</span> <span class="n">executeBatch</span><span class="p">(</span><span class="n">Call</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">calls</span><span class="p">)</span> <span class="k">external</span> <span class="k">payable</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span><span class="p">[]</span> <span class="k">memory</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Execute a call using the specified runtime validation.
+</span>    <span class="c1">/// @param data The calldata to send to the account.
+</span>    <span class="c1">/// @param authorization The authorization data to use for the call. The first 24 bytes is a ModuleEntity which
+</span>    <span class="c1">/// specifies which runtime validation to use, and the rest is sent as a parameter to runtime validation.
+</span>    <span class="k">function</span> <span class="n">executeWithRuntimeValidation</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">authorization</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">payable</span>
+        <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Install a module to the modular account.
+</span>    <span class="c1">/// @param module The module to install.
+</span>    <span class="c1">/// @param manifest the manifest describing functions to install.
+</span>    <span class="c1">/// @param installData Optional data to be used by the account to handle the initial execution setup. Data encoding
+</span>    <span class="c1">/// is implementation-specific.
+</span>    <span class="k">function</span> <span class="n">installExecution</span><span class="p">(</span>
+        <span class="kt">address</span> <span class="n">module</span><span class="p">,</span>
+        <span class="n">ExecutionManifest</span> <span class="k">calldata</span> <span class="n">manifest</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">installData</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Uninstall a module from the modular account.
+</span>    <span class="c1">/// @param module The module to uninstall.
+</span>    <span class="c1">/// @param manifest The manifest describing functions to uninstall.
+</span>    <span class="c1">/// @param uninstallData Optional data to be used by the account to handle the execution uninstallation. Data
+</span>    <span class="c1">/// encoding is implementation-specific.
+</span>    <span class="k">function</span> <span class="n">uninstallExecution</span><span class="p">(</span>
+        <span class="kt">address</span> <span class="n">module</span><span class="p">,</span>
+        <span class="n">ExecutionManifest</span> <span class="k">calldata</span> <span class="n">manifest</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">uninstallData</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Installs a validation function across a set of execution selectors, and optionally mark it as a
+</span>    <span class="c1">/// global validation function.
+</span>    <span class="c1">/// @param validationConfig The validation function to install, along with configuration flags.
+</span>    <span class="c1">/// @param selectors The selectors to install the validation function for.
+</span>    <span class="c1">/// @param installData Optional data to be used by the account to handle the initial validation setup. Data
+</span>    <span class="c1">/// encoding is implementation-specific.
+</span>    <span class="c1">/// @param hooks Optional hooks to install and associate with the validation function. Data encoding is
+</span>    <span class="c1">/// implementation-specific.
+</span>    <span class="k">function</span> <span class="n">installValidation</span><span class="p">(</span>
+        <span class="n">ValidationConfig</span> <span class="n">validationConfig</span><span class="p">,</span>
+        <span class="kt">bytes4</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">selectors</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">installData</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">hooks</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Uninstall a validation function from a set of execution selectors.
+</span>    <span class="c1">/// @param validationFunction The validation function to uninstall.
+</span>    <span class="c1">/// @param uninstallData Optional data to be used by the account to handle the validation uninstallation. Data
+</span>    <span class="c1">/// encoding is implementation-specific.
+</span>    <span class="c1">/// @param hookUninstallData Optional data to be used by the account to handle hook uninstallation. Data encoding
+</span>    <span class="c1">/// is implementation-specific.
+</span>    <span class="k">function</span> <span class="n">uninstallValidation</span><span class="p">(</span>
+        <span class="n">ModuleEntity</span> <span class="n">validationFunction</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">uninstallData</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">hookUninstallData</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Return a unique identifier for the account implementation.
+</span>    <span class="c1">/// @dev This function MUST return a string in the format "vendor.account.semver". The vendor and account
+</span>    <span class="c1">/// names MUST NOT contain a period character.
+</span>    <span class="c1">/// @return The account ID.
+</span>    <span class="k">function</span> <span class="n">accountId</span><span class="p">()</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">string</span> <span class="k">memory</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900accountviewsol">
+      
+      
+        <a href="#ierc6900accountviewsol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900AccountView.sol</code>
+      
+      
+    </h4>
+
+<p>Module inspection interface. Modular accounts MAY implement this interface to support visibility in module configuration.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">/// @dev Represents data associated with a specific function selector.
+</span><span class="k">struct</span> <span class="n">ExecutionDataView</span> <span class="p">{</span>
+    <span class="c1">// The module that implements this execution function.
+</span>    <span class="c1">// If this is a native function, the address must be the address of the account.
+</span>    <span class="kt">address</span> <span class="n">module</span><span class="p">;</span>
+    <span class="c1">// Whether or not the function needs runtime validation, or can be called by anyone. The function can still be
+</span>    <span class="c1">// state changing if this flag is set to true.
+</span>    <span class="c1">// Note that even if this is set to true, user op validation will still be required, otherwise anyone could
+</span>    <span class="c1">// drain the account of native tokens by wasting gas.
+</span>    <span class="kt">bool</span> <span class="n">skipRuntimeValidation</span><span class="p">;</span>
+    <span class="c1">// Whether or not a global validation function may be used to validate this function.
+</span>    <span class="kt">bool</span> <span class="n">allowGlobalValidation</span><span class="p">;</span>
+    <span class="c1">// The execution hooks for this function selector.
+</span>    <span class="n">HookConfig</span><span class="p">[]</span> <span class="n">executionHooks</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">struct</span> <span class="n">ValidationDataView</span> <span class="p">{</span>
+    <span class="c1">// ValidationFlags layout:
+</span>    <span class="c1">// 0b00000___ // unused
+</span>    <span class="c1">// 0b_____A__ // isGlobal
+</span>    <span class="c1">// 0b______B_ // isSignatureValidation
+</span>    <span class="c1">// 0b_______C // isUserOpValidation
+</span>    <span class="n">ValidationFlags</span> <span class="n">validationFlags</span><span class="p">;</span>
+    <span class="c1">// The validation hooks for this validation function.
+</span>    <span class="n">HookConfig</span><span class="p">[]</span> <span class="n">validationHooks</span><span class="p">;</span>
+    <span class="c1">// Execution hooks to run with this validation function.
+</span>    <span class="n">HookConfig</span><span class="p">[]</span> <span class="n">executionHooks</span><span class="p">;</span>
+    <span class="c1">// The set of selectors that may be validated by this validation function.
+</span>    <span class="kt">bytes4</span><span class="p">[]</span> <span class="n">selectors</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IERC6900AccountView</span> <span class="p">{</span>
+    <span class="c1">/// @notice Get the execution data for a selector.
+</span>    <span class="c1">/// @dev If the selector is a native function, the module address will be the address of the account.
+</span>    <span class="c1">/// @param selector The selector to get the data for.
+</span>    <span class="c1">/// @return The execution data for this selector.
+</span>    <span class="k">function</span> <span class="n">getExecutionData</span><span class="p">(</span><span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExecutionDataView</span> <span class="k">memory</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Get the validation data for a validation function.
+</span>    <span class="c1">/// @dev If the selector is a native function, the module address will be the address of the account.
+</span>    <span class="c1">/// @param validationFunction The validation function to get the data for.
+</span>    <span class="c1">/// @return The validation data for this validation function.
+</span>    <span class="k">function</span> <span class="n">getValidationData</span><span class="p">(</span><span class="n">ModuleEntity</span> <span class="n">validationFunction</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">view</span>
+        <span class="k">returns</span> <span class="p">(</span><span class="n">ValidationDataView</span> <span class="k">memory</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900modulesol">
+      
+      
+        <a href="#ierc6900modulesol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900Module.sol</code>
+      
+      
+    </h4>
+
+<p>Module interface. Modules MUST implement this interface to support module management and interactions with <a href="/EIPS/eip-6900">ERC-6900</a> modular accounts.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC6900Module</span> <span class="k">is</span> <span class="n">IERC165</span> <span class="p">{</span>
+    <span class="c1">/// @notice Initialize module data for the modular account.
+</span>    <span class="c1">/// @dev Called by the modular account during `installExecution`.
+</span>    <span class="c1">/// @param data Optional bytes array to be decoded and used by the module to setup initial module data for the
+</span>    <span class="c1">/// modular account.
+</span>    <span class="k">function</span> <span class="n">onInstall</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Clear module data for the modular account.
+</span>    <span class="c1">/// @dev Called by the modular account during `uninstallExecution`.
+</span>    <span class="c1">/// @param data Optional bytes array to be decoded and used by the module to clear module data for the modular
+</span>    <span class="c1">/// account.
+</span>    <span class="k">function</span> <span class="n">onUninstall</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Return a unique identifier for the module.
+</span>    <span class="c1">/// @dev This function MUST return a string in the format "vendor.module.semver". The vendor and module
+</span>    <span class="c1">/// names MUST NOT contain a period character.
+</span>    <span class="c1">/// @return The module ID.
+</span>    <span class="k">function</span> <span class="n">moduleId</span><span class="p">()</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">string</span> <span class="k">memory</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900validationmodulesol">
+      
+      
+        <a href="#ierc6900validationmodulesol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900ValidationModule.sol</code>
+      
+      
+    </h4>
+
+<p>Validation module interface. Modules MAY implement this interface to provide validation functions for the account.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC6900ValidationModule</span> <span class="k">is</span> <span class="n">IERC6900Module</span> <span class="p">{</span>
+    <span class="c1">/// @notice Run the user operation validation function specified by the `entityId`.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param userOp The user operation.
+</span>    <span class="c1">/// @param userOpHash The user operation hash.
+</span>    <span class="c1">/// @return Packed validation data for validAfter (6 bytes), validUntil (6 bytes), and authorizer (20 bytes).
+</span>    <span class="k">function</span> <span class="n">validateUserOp</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span> <span class="n">PackedUserOperation</span> <span class="k">calldata</span> <span class="n">userOp</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">userOpHash</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Run the runtime validation function specified by the `entityId`.
+</span>    <span class="c1">/// @dev To indicate the entire call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param account The account to validate for.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param sender The caller address.
+</span>    <span class="c1">/// @param value The call value.
+</span>    <span class="c1">/// @param data The calldata sent.
+</span>    <span class="c1">/// @param authorization Additional data for the validation function to use.
+</span>    <span class="k">function</span> <span class="n">validateRuntime</span><span class="p">(</span>
+        <span class="kt">address</span> <span class="n">account</span><span class="p">,</span>
+        <span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span>
+        <span class="kt">address</span> <span class="n">sender</span><span class="p">,</span>
+        <span class="kt">uint256</span> <span class="n">value</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">authorization</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Validates a signature using ERC-1271.
+</span>    <span class="c1">/// @dev To indicate the entire call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param account The account to validate for.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param sender The address that sent the ERC-1271 request to the smart account.
+</span>    <span class="c1">/// @param hash The hash of the ERC-1271 request.
+</span>    <span class="c1">/// @param signature The signature of the ERC-1271 request.
+</span>    <span class="c1">/// @return The ERC-1271 `MAGIC_VALUE` if the signature is valid, or 0xFFFFFFFF if invalid.
+</span>    <span class="k">function</span> <span class="n">validateSignature</span><span class="p">(</span>
+        <span class="kt">address</span> <span class="n">account</span><span class="p">,</span>
+        <span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span>
+        <span class="kt">address</span> <span class="n">sender</span><span class="p">,</span>
+        <span class="kt">bytes32</span> <span class="n">hash</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">signature</span>
+    <span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes4</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900validationhookmodulesol">
+      
+      
+        <a href="#ierc6900validationhookmodulesol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900ValidationHookModule.sol</code>
+      
+      
+    </h4>
+
+<p>Validation hook module interface. Modules MAY implement this interface to provide hooks for validation functions for the account.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC6900ValidationHookModule</span> <span class="k">is</span> <span class="n">IERC6900Module</span> <span class="p">{</span>
+    <span class="c1">/// @notice Run the pre user operation validation hook specified by the `entityId`.
+</span>    <span class="c1">/// @dev Pre user operation validation hooks MUST NOT return an authorizer value other than 0 or 1.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param userOp The user operation.
+</span>    <span class="c1">/// @param userOpHash The user operation hash.
+</span>    <span class="c1">/// @return Packed validation data for validAfter (6 bytes), validUntil (6 bytes), and authorizer (20 bytes).
+</span>    <span class="k">function</span> <span class="n">preUserOpValidationHook</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span> <span class="n">PackedUserOperation</span> <span class="k">calldata</span> <span class="n">userOp</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">userOpHash</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Run the pre runtime validation hook specified by the `entityId`.
+</span>    <span class="c1">/// @dev To indicate the entire call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param sender The caller address.
+</span>    <span class="c1">/// @param value The call value.
+</span>    <span class="c1">/// @param data The calldata sent.
+</span>    <span class="c1">/// @param authorization Additional data for the hook to use.
+</span>    <span class="k">function</span> <span class="n">preRuntimeValidationHook</span><span class="p">(</span>
+        <span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span>
+        <span class="kt">address</span> <span class="n">sender</span><span class="p">,</span>
+        <span class="kt">uint256</span> <span class="n">value</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">authorization</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Run the pre signature validation hook specified by the `entityId`.
+</span>    <span class="c1">/// @dev To indicate the call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param sender The caller address.
+</span>    <span class="c1">/// @param hash The hash of the message being signed.
+</span>    <span class="c1">/// @param signature The signature of the message.
+</span>    <span class="k">function</span> <span class="n">preSignatureValidationHook</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span> <span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">hash</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">signature</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">view</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900executionmodulesol">
+      
+      
+        <a href="#ierc6900executionmodulesol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900ExecutionModule.sol</code>
+      
+      
+    </h4>
+
+<p>Execution module interface. Modules MAY implement this interface to provide execution functions for the account.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">ManifestExecutionFunction</span> <span class="p">{</span>
+    <span class="c1">// The selector to install.
+</span>    <span class="kt">bytes4</span> <span class="n">executionSelector</span><span class="p">;</span>
+    <span class="c1">// If true, the function won't need runtime validation, and can be called by anyone.
+</span>    <span class="kt">bool</span> <span class="n">skipRuntimeValidation</span><span class="p">;</span>
+    <span class="c1">// If true, the function can be validated by a global validation function.
+</span>    <span class="kt">bool</span> <span class="n">allowGlobalValidation</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">struct</span> <span class="n">ManifestExecutionHook</span> <span class="p">{</span>
+    <span class="kt">bytes4</span> <span class="n">executionSelector</span><span class="p">;</span>
+    <span class="kt">uint32</span> <span class="n">entityId</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">isPreHook</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">isPostHook</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">/// @dev A struct describing how the module should be installed on a modular account.
+</span><span class="k">struct</span> <span class="n">ExecutionManifest</span> <span class="p">{</span>
+    <span class="c1">// Execution functions defined in this module to be installed on the MSCA.
+</span>    <span class="n">ManifestExecutionFunction</span><span class="p">[]</span> <span class="n">executionFunctions</span><span class="p">;</span>
+    <span class="n">ManifestExecutionHook</span><span class="p">[]</span> <span class="n">executionHooks</span><span class="p">;</span>
+    <span class="c1">// List of ERC-165 interface IDs to add to account to support introspection checks. This MUST NOT include
+</span>    <span class="c1">// IERC6900Module's interface ID.
+</span>    <span class="kt">bytes4</span><span class="p">[]</span> <span class="n">interfaceIds</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IERC6900ExecutionModule</span> <span class="k">is</span> <span class="n">IERC6900Module</span> <span class="p">{</span>
+    <span class="c1">/// @notice Describe the contents and intended configuration of the module.
+</span>    <span class="c1">/// @dev This manifest MUST stay constant over time.
+</span>    <span class="c1">/// @return A manifest describing the contents and intended configuration of the module.
+</span>    <span class="k">function</span> <span class="n">executionManifest</span><span class="p">()</span> <span class="k">external</span> <span class="k">pure</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExecutionManifest</span> <span class="k">memory</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="ierc6900executionhookmodulesol">
+      
+      
+        <a href="#ierc6900executionhookmodulesol" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">IERC6900ExecutionHookModule.sol</code>
+      
+      
+    </h4>
+
+<p>Execution hook module interface. Modules MAY implement this interface to provide hooks for execution functions for the account.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC6900ExecutionHookModule</span> <span class="k">is</span> <span class="n">IERC6900Module</span> <span class="p">{</span>
+    <span class="c1">/// @notice Run the pre execution hook specified by the `entityId`.
+</span>    <span class="c1">/// @dev To indicate the entire call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param sender The caller address.
+</span>    <span class="c1">/// @param value The call value.
+</span>    <span class="c1">/// @param data The calldata sent. For `executeUserOp` calls of validation-associated hooks, hook modules
+</span>    <span class="c1">/// should receive the full calldata.
+</span>    <span class="c1">/// @return Context to pass to a post execution hook, if present. An empty bytes array MAY be returned.
+</span>    <span class="k">function</span> <span class="n">preExecutionHook</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span> <span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">value</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">external</span>
+        <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Run the post execution hook specified by the `entityId`.
+</span>    <span class="c1">/// @dev To indicate the entire call should revert, the function MUST revert.
+</span>    <span class="c1">/// @param entityId An identifier that routes the call to different internal implementations, should there
+</span>    <span class="c1">/// be more than one.
+</span>    <span class="c1">/// @param preExecHookData The context returned by its associated pre execution hook.
+</span>    <span class="k">function</span> <span class="n">postExecutionHook</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">entityId</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">preExecHookData</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h3 id="validation-functions">
+      
+      
+        <a href="#validation-functions" class="anchor-link"></a> Validation Functions
+      
+      
+    </h3>
+  
+    <h4 id="installation">
+      
+      
+        <a href="#installation" class="anchor-link"></a> Installation
+      
+      
+    </h4>
+
+<ul>
+  <li>The account MUST install all validation hooks specified by the user and SHOULD call <code class="language-plaintext highlighter-rouge">onInstall</code> with the user-provided data on the hook module to initialize state if specified by the user.</li>
+  <li>The account MUST install all execution hooks specified by the user and SHOULD call <code class="language-plaintext highlighter-rouge">onInstall</code> with the user-provided data on the hook module to initialize state if specified by the user.</li>
+  <li>The account MUST configure the validation function to validate all of the selectors specified by the user.</li>
+  <li>The account MUST set all flags as specified, like <code class="language-plaintext highlighter-rouge">isGlobal</code>, <code class="language-plaintext highlighter-rouge">isSignatureValidation</code>, and <code class="language-plaintext highlighter-rouge">isUserOpValidation</code>.</li>
+  <li>The account SHOULD call <code class="language-plaintext highlighter-rouge">onInstall</code> on the validation module to initialize state if specified by the user.</li>
+  <li>The account MUST emit <code class="language-plaintext highlighter-rouge">ValidationInstalled</code> as defined in the interface for all installed validation functions.</li>
+</ul>
+  
+    <h4 id="uninstallation">
+      
+      
+        <a href="#uninstallation" class="anchor-link"></a> Uninstallation
+      
+      
+    </h4>
+
+<p>During validation uninstallation, the account MUST correctly clear flags and other fields based on the incoming data provided by the user.</p>
+
+<ul>
+  <li>The account MUST clear all flags for the validation function, like <code class="language-plaintext highlighter-rouge">isGlobal</code>, <code class="language-plaintext highlighter-rouge">isSignatureValidation</code>, and <code class="language-plaintext highlighter-rouge">isUserOpValidation</code>.</li>
+  <li>The account MUST remove all hooks and SHOULD clear hook module states by calling <code class="language-plaintext highlighter-rouge">onUninstall</code> with the user-provided data for each hook, including both validation hooks and execution hooks, if specified by the user.
+    <ul>
+      <li>The account MAY ignore the revert from <code class="language-plaintext highlighter-rouge">onUninstall</code> with try/catch depending on the design principle of the account.</li>
+    </ul>
+  </li>
+  <li>The account MUST clear the configuration for the selectors that the validation function can validate.</li>
+  <li>The account SHOULD call <code class="language-plaintext highlighter-rouge">onUninstall</code> on the validation module to clean up state if specified by the user.</li>
+  <li>The account MUST emit <code class="language-plaintext highlighter-rouge">ValidationUninstalled</code> as defined in the interface for all uninstalled validation functions.</li>
+</ul>
+  
+    <h3 id="execution-functions">
+      
+      
+        <a href="#execution-functions" class="anchor-link"></a> Execution Functions
+      
+      
+    </h3>
+  
+    <h4 id="installation-1">
+      
+      
+        <a href="#installation-1" class="anchor-link"></a> Installation
+      
+      
+    </h4>
+
+<ul>
+  <li>The account MUST install all execution functions and set flags and fields as specified in the manifest.
+    <ul>
+      <li>An execution function selector MUST be unique in the account.</li>
+      <li>An execution function selector MUST not conflict with native ERC-4337 and ERC-6900 functions.</li>
+    </ul>
+  </li>
+  <li>The account MUST add all execution hooks as specified in the manifest.</li>
+  <li>The account SHOULD add all supported interfaces as specified in the manifest.</li>
+  <li>The account SHOULD call <code class="language-plaintext highlighter-rouge">onInstall</code> on the execution module to initialize state if specified by the user.</li>
+  <li>The account MUST emit <code class="language-plaintext highlighter-rouge">ExecutionInstalled</code> as defined in the interface for all installed executions.</li>
+</ul>
+  
+    <h4 id="uninstallation-1">
+      
+      
+        <a href="#uninstallation-1" class="anchor-link"></a> Uninstallation
+      
+      
+    </h4>
+
+<p>During execution uninstallation, the account MUST correctly clear flags and other fields based on the incoming data and module manifest provided by the user.</p>
+
+<ul>
+  <li>The account MUST remove all execution functions and clear flags and fields as specified in the manifest.</li>
+  <li>The account MUST remove all execution hooks as specified in the manifest.</li>
+  <li>The account SHOULD remove all supported interfaces as specified in the manifest.</li>
+  <li>The account SHOULD call <code class="language-plaintext highlighter-rouge">onUninstall</code> on the execution module to clean up state and track call success if specified by the user.</li>
+  <li>The account MUST emit <code class="language-plaintext highlighter-rouge">ExecutionUninstalled</code> as defined in the interface for all uninstalled executions.</li>
+</ul>
+  
+    <h3 id="hooks">
+      
+      
+        <a href="#hooks" class="anchor-link"></a> Hooks
+      
+      
+    </h3>
+  
+    <h4 id="execution-hooks-data-format">
+      
+      
+        <a href="#execution-hooks-data-format" class="anchor-link"></a> Execution Hooks Data Format
+      
+      
+    </h4>
+
+<p>For accounts that implement execution hooks, accounts MUST conform to these execution hook formats:</p>
+
+<ol>
+  <li>For <code class="language-plaintext highlighter-rouge">executeUserOp</code> calls, for execution hooks associated with a validation function, accounts MUST send the full calldata (<code class="language-plaintext highlighter-rouge">msg.data</code> in solidity), including the <code class="language-plaintext highlighter-rouge">executeUserOp</code> selector.</li>
+  <li>For <code class="language-plaintext highlighter-rouge">executeUserOp</code> calls, for execution hooks associated with a selector, accounts MUST send <code class="language-plaintext highlighter-rouge">PackedUserOperation.callData</code> for <code class="language-plaintext highlighter-rouge">executeUserOp</code> calls, excluding <code class="language-plaintext highlighter-rouge">executeUserOp.selector</code> and the rest of the <code class="language-plaintext highlighter-rouge">PackedUserOperation</code>.</li>
+  <li>For <code class="language-plaintext highlighter-rouge">executeWithRuntimeValidation</code> calls, for all execution hooks, accounts MUST send the inner <code class="language-plaintext highlighter-rouge">data</code> field.</li>
+  <li>For all other calls, for execution hooks associated with a selector, accounts MUST send over the full calldata (<code class="language-plaintext highlighter-rouge">msg.data</code> in solidity).</li>
+</ol>
+  
+    <h4 id="hook-execution-order">
+      
+      
+        <a href="#hook-execution-order" class="anchor-link"></a> Hook Execution Order
+      
+      
+    </h4>
+
+<p>It is RECOMMENDED that an account implementer runs hooks in first installed first executed order. However, an account MAY implement a different execution order.</p>
+  
+    <h3 id="validation-call-flow">
+      
+      
+        <a href="#validation-call-flow" class="anchor-link"></a> Validation Call Flow
+      
+      
+    </h3>
+
+<p>Modular accounts support three different calls flows for validation: user op validation, runtime validation, and signature validation. User op validation happens within the account’s implementation of the function <code class="language-plaintext highlighter-rouge">validateUserOp</code>, defined in the ERC-4337 interface <code class="language-plaintext highlighter-rouge">IAccount</code>. Runtime validation happens through the dispatcher function <code class="language-plaintext highlighter-rouge">executeWithRuntimeValidation</code>, or when using <a href="#direct-call-validation">direct call validation</a>. Signature validation happens within the account’s implementation of the function <code class="language-plaintext highlighter-rouge">isValidSignature</code>, defined in ERC-1271.</p>
+
+<p>For each of these validation types, an account implementation MAY specify its own format for selecting which validation function to use, as well as any per-hook data for validation hooks.</p>
+
+<p>Within the implementation of each type of validation function, the modular account MUST check that the provided validation function applies to the given function selector intended to be run (See <a href="#checking-validation-applicability">Checking Validation Applicability</a>). Then, the account MUST execute all validation hooks of the corresponding type associated with the validation function in use. After the execution of validation hooks, the account MUST invoke the validation function of the corresponding type. If any of the validation hooks or the validation function reverts, the account MUST revert. It SHOULD include the module’s revert data within its revert data.</p>
+
+<p>The account MUST define a way to pass data separately for each validation hook and the validation function itself. This data SHOULD be sent as the <code class="language-plaintext highlighter-rouge">userOp.signature</code> field for user op validation, the <code class="language-plaintext highlighter-rouge">authorization</code> field for runtime validation, and the <code class="language-plaintext highlighter-rouge">signature</code> field for signature validation.</p>
+
+<p>The result of user op validation MUST be the intersection of time bounds returned by the validation hooks and the validation function. If any validation hooks or the validation functions returns a value of <code class="language-plaintext highlighter-rouge">1</code> for the authorizer field, indicating a signature verification failure by the ERC-4337 standard, the account MUST return a value of <code class="language-plaintext highlighter-rouge">1</code> for the authorizer portion of the validation data.</p>
+
+<p>The set of validation hooks run MUST be the hooks specified by account state at the start of validation. In other words, if the set of applicable hooks changes during validation, the original set of hooks MUST still run, and only future invocations of the same validation should reflect the changed set of hooks.</p>
+  
+    <h4 id="checking-validation-applicability">
+      
+      
+        <a href="#checking-validation-applicability" class="anchor-link"></a> Checking Validation Applicability
+      
+      
+    </h4>
+
+<p>To enforce module permission isolation, the modular account MUST check validation function applicability as part of each validation function implementation.</p>
+
+<p>User op validation and runtime validation functions have a configurable range of applicability to functions on the account. This can be configured with selectors installed to a validation. Alternatively, a validation installation MAY specify the <code class="language-plaintext highlighter-rouge">isGlobal</code> flag as true, which means the account MUST consider it applicable to any module execution function with the <code class="language-plaintext highlighter-rouge">allowGlobalValidation</code> flag set to true, or for any account native function that the account MAY allow for global validation.</p>
+
+<p>If the selector being checked is <code class="language-plaintext highlighter-rouge">execute</code> or <code class="language-plaintext highlighter-rouge">executeBatch</code>, the modular account MUST perform additional checking. If the target of <code class="language-plaintext highlighter-rouge">execute</code> is the modular account’s own address, or if the target of any <code class="language-plaintext highlighter-rouge">Call</code> within <code class="language-plaintext highlighter-rouge">executeBatch</code> is the account, validation MUST either revert or check that validation applies to the selector(s) being called.</p>
+
+<p>Installed validation functions have two additional flag variables indicating what they may be used for. If a validation function is attempted to be used for user op validation and the flag <code class="language-plaintext highlighter-rouge">isUserOpValidation</code> is set to false, validation MUST revert. If the validation function is attempted to be used for signature validation and the flag <code class="language-plaintext highlighter-rouge">isSignatureValidation</code> is set to false, validation MUST revert.</p>
+  
+    <h4 id="direct-call-validation">
+      
+      
+        <a href="#direct-call-validation" class="anchor-link"></a> Direct Call Validation
+      
+      
+    </h4>
+
+<p>If a validation function is installed with the entity ID of <code class="language-plaintext highlighter-rouge">0xffffffff</code>, it may be used as direct call validation. This occurs when a module or other address calls a function on the modular account, without wrapping its call in the dispatcher function <code class="language-plaintext highlighter-rouge">executeWithRuntimeValidation</code> to use as a selection mechanism for a runtime validation function.</p>
+
+<p>To implement direct call validation, the modular account MUST treat direct function calls that are not from the modular account itself or the <code class="language-plaintext highlighter-rouge">EntryPoint</code> as an attempt to validate using the caller’s address and the entity ID of <code class="language-plaintext highlighter-rouge">0xffffffff</code>. If such a validation function is installed, and applies to the function intended to be called, the modular account MUST allow it to continue, without performing runtime validation. Any validation hooks and execution hooks installed to this validation function MUST still run.</p>
+  
+    <h3 id="execution-call-flow">
+      
+      
+        <a href="#execution-call-flow" class="anchor-link"></a> Execution Call Flow
+      
+      
+    </h3>
+
+<p>For all non-view functions within <code class="language-plaintext highlighter-rouge">IERC6900Account</code> except <code class="language-plaintext highlighter-rouge">executeWithRuntimeValidation</code>, all module-defined execution functions, and any additional native functions that the modular account MAY wish to include, the modular account MUST adhere to these steps during execution:</p>
+
+<p>If the caller is not the <code class="language-plaintext highlighter-rouge">EntryPoint</code> or the account, the account MUST check access control for direct call validation.</p>
+
+<p>Prior to running the target function, the modular account MUST run all pre execution hooks that apply for the current function call. Pre execution hooks apply if they have been installed to the currently running function selector, or if they are installed as an execution hook to the validation function that was used for the current execution. Pre execution hooks MUST run validation-associated hooks first, then selector-associated hooks second.</p>
+
+<p>Next, the modular account MUST run the target function, either an account native function or a module-defined execution function.</p>
+
+<p>After the execution of the target function, the modular account MUST run any post execution hooks. These MUST be run in the reverse order of the pre execution hooks. If a hook is defined to be both a pre and a post execution hook, and the pre execution hook returned a non-empty <code class="language-plaintext highlighter-rouge">bytes</code> value to the account, the account MUST pass that data to the post execution hook.</p>
+
+<p>The set of hooks run for a given target function MUST be the hooks specified by account state at the start of the execution phase. In other words, if the set of applicable hooks changes during execution, the original set of hooks MUST still run, and only future invocations of the same target function should reflect the changed set of hooks.</p>
+
+<p>Module execution functions where the field <code class="language-plaintext highlighter-rouge">skipRuntimeValidation</code> is set to true, as well as native functions without access control, SHOULD omit the runtime validation step, including any runtime validation hooks. Native functions without access control MAY also omit running execution hooks.</p>
+  
+    <h3 id="extension">
+      
+      
+        <a href="#extension" class="anchor-link"></a> Extension
+      
+      
+    </h3>
+  
+    <h4 id="semi-modular-account">
+      
+      
+        <a href="#semi-modular-account" class="anchor-link"></a> Semi-Modular Account
+      
+      
+    </h4>
+
+<p>Account implementers MAY choose to design a semi-modular account, where certain features, such as default validation, are integrated into the core account. This approach SHOULD ensure compatibility with fully modular accounts, as defined in this proposal, to maintain interoperability across different implementations.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>ERC-4337 compatible accounts must implement the <code class="language-plaintext highlighter-rouge">IAccount</code> interface, which consists of only one method that bundles validation with execution: <code class="language-plaintext highlighter-rouge">validateUserOp</code>. A primary design rationale for this proposal is to extend the possible functions for a smart contract account beyond this single method by unbundling these and other functions, while retaining the benefits of account abstraction.</p>
+
+<p>This proposal includes several interfaces that build on ERC-4337. First, we standardize a set of modular functions that allow smart contract developers greater flexibility in bundling validation, execution, and hook logic. We also propose interfaces that provide methods for querying execution functions, validation functions, and hooks on a modular account. The rest of the interfaces describe a module’s methods for exposing its modular functions and desired configuration, and the modular account’s methods for installing and removing modules and allowing execution across modules and external addresses.</p>
+  
+    <h3 id="erc-4337-dependency">
+      
+      
+        <a href="#erc-4337-dependency" class="anchor-link"></a> ERC-4337 Dependency
+      
+      
+    </h3>
+
+<p>ERC-6900’s main objective is to create a secure and interoperable foundation through modular accounts and modules to increase the velocity and security of the smart account ecosystem, and ultimately the wallet ecosystem. Currently, the standard prescribes ERC-4337 for one of its <a href="#overview">modular account call flows</a>. However, this does not dictate that ERC-6900 will continue to be tied to ERC-4337.
+It is likely that smart account builders will want to develop modular accounts that do not use ERC-4337 in the future (e.g., native account abstraction on rollups). Moreover, it is expected that ERC-4337 and its interfaces and contracts will continue to evolve until there is a protocol-level account abstraction.</p>
+
+<p>In the current state of the AA ecosystem, it is tough to predict the direction the builders and industry will take, so ERC-6900 will evolve together with the space’s research, development, and adoption. The standard will do its best to address the objectives and create a secure foundation for modular accounts that may eventually be abstracted away from the infrastructure mechanism used.</p>
+  
+    <h3 id="community-consensus">
+      
+      
+        <a href="#community-consensus" class="anchor-link"></a> Community Consensus
+      
+      
+    </h3>
+
+<p>While this standard has largely been the result of collaboration among the coauthors, there have been noteworthy contributions from others in the community with respect to improvements, education, and experimentation. Thank you to the contributors:</p>
+
+<ul>
+  <li>Gerard Persoon (@gpersoon)</li>
+  <li>Harry Jeon (@sm-stack)</li>
+  <li>Zhiyu Zhang (@ZhiyuCircle)</li>
+  <li>Danilo Neves Cruz (@cruzdanilo)</li>
+  <li>Iván Alberquilla (@ialberquilla)</li>
+</ul>
+
+<p>We host community calls and working groups to discuss standard improvements and invite anyone with questions or contributions into our discussion.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>Existing accounts that are deployed as proxies may have the ability to upgrade account implementations to one that supports this standard for modularity. Depending on implementation logic, existing modules may be wrapped in an adapter contract to adhere to the standard.</p>
+
+<p>The standard also allows for flexibility in account implementations, including accounts that have certain features implemented without modules, so usage of modules may be gradually introduced.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>See <code class="language-plaintext highlighter-rouge">https://github.com/erc6900/reference-implementation</code></p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="walletsdk-developers">
+      
+      
+        <a href="#walletsdk-developers" class="anchor-link"></a> Wallet/SDK Developers
+      
+      
+    </h3>
+
+<p>From the wallet side, there are certain checks that the wallet/SDK should perform on the UI/UX side.</p>
+
+<p>The standard introduces a concept of the execution manifest, which describes the execution functions, interface IDs, and hooks that should be installed on the account from an execution manifest. As part of constructing parameters to <code class="language-plaintext highlighter-rouge">installExecution()</code>, the SDK creates an <code class="language-plaintext highlighter-rouge">executionManifest</code> parameter that will specify the actions of the execution module being installed. SDKs will process the provided <code class="language-plaintext highlighter-rouge">executionManifest()</code> function of the underlying module, but the finished parameter will not necessarily be identical to the module’s return value of <code class="language-plaintext highlighter-rouge">executionManifest()</code>. Furthermore, this parameter is only going through very limited checks on-chain as part of the installation process. Therefore, the <code class="language-plaintext highlighter-rouge">executionManifest</code> parameter needs to be carefully constructed and verified before being used for installations. Furthermore, the <code class="language-plaintext highlighter-rouge">executionManifest</code> parameter of uninstallation should ideally be the same used in installation to not leave residual data.</p>
+
+<p>The standard supports a <code class="language-plaintext highlighter-rouge">isGlobalValidation</code> flag for validation functions, which means that this function is added to a global validation pool and can validate any of the execution functions that expose themselves to global validation via <code class="language-plaintext highlighter-rouge">allowGlobalValidation</code> flag. Depending on the implementation, some, all or none of the native execution functions could be globally validated. Therefore, the wallets should be careful about what validation functions they allow to be installed with global validation enabled, as that would allow these functions to validate the exposed native functions and hence bypass any restrictions that may have been added to protect these native/execution functions. In a sense, these global validation functions could gain root access to the exposed native execution functions and potentially the whole account.</p>
+  
+    <h3 id="module-developers">
+      
+      
+        <a href="#module-developers" class="anchor-link"></a> Module Developers
+      
+      
+    </h3>
+
+<p>The standard does not enforce any rules surrounding what data needs to be installed or uninstalled when a module is added/deleted from the account. Hence the <code class="language-plaintext highlighter-rouge">onUninstall()</code> function in various modules may leave behind residual state data, especially since the external call may not be performed all. Furthermore, execution hooks linked to an uninstalled function may remain configured. This could pose security risks or lead to unexpected behavior in the case where the module is reinstalled with the same <code class="language-plaintext highlighter-rouge">entityId</code>. The danger is that previously set permissions or data may be unintentionally reused. Hence it is a good idea to fully uninstall all data linked to the smart module account including execution hooks.</p>
+  
+    <h3 id="users">
+      
+      
+        <a href="#users" class="anchor-link"></a> Users
+      
+      
+    </h3>
+
+<p>The modular smart contract accounts themselves are trusted components. Installed modules are trusted to varying degrees, as modules can interact with an arbitrarily large or small set of resources on an account. For example, a wide-reaching malicious module could add reverting hooks to native function selectors, bricking the account, or add execution functions that may drain the funds of the account. However, it is also possible to install a module with a very narrow domain, and depend on the correctness of the account behavior to enforce its limited access. Users should, therefore be careful in what modules to add to their account.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Adam Egyed&nbsp;(<a href="https://github.com/adamegyed">@adamegyed</a>), Fangting Liu&nbsp;(<a href="https://github.com/trinity-0111">@trinity-0111</a>), Jay Paik&nbsp;(<a href="https://github.com/jaypaik">@jaypaik</a>), Yoav Weiss&nbsp;(<a href="https://github.com/yoavw">@yoavw</a>), Huawei Gu&nbsp;(<a href="https://github.com/huaweigu">@huaweigu</a>), Daniel Lim&nbsp;(<a href="https://github.com/dlim-circle">@dlim-circle</a>), Ruben Koch&nbsp;(<a href="https://github.com/0xrubes">@0xrubes</a>), David Philipson&nbsp;(<a href="https://github.com/dphilipson">@dphilipson</a>), Howy Ho&nbsp;(<a href="https://github.com/howydev">@howydev</a>), Nikita Belenkov&nbsp;(<a href="https://github.com/nikita-quantstamp">@nikita-quantstamp</a>), zer0dot&nbsp;(<a href="https://github.com/zer0dot">@zer0dot</a>), David Kim&nbsp;(<a href="https://github.com/PowerStream3604">@PowerStream3604</a>), "ERC-6900: Modular Smart Contract Accounts [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 6900, April 2023. Available: https://eips.ethereum.org/EIPS/eip-6900.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-6900: Modular Smart Contract Accounts [DRAFT]",
+    "name": "ERC-6900: Modular Smart Contract Accounts [DRAFT]",
+    "author": "Adam Egyed (@adamegyed), Fangting Liu (@trinity-0111), Jay Paik (@jaypaik), Yoav Weiss (@yoavw), Huawei Gu (@huaweigu), Daniel Lim (@dlim-circle), Ruben Koch (@0xrubes), David Philipson (@dphilipson), Howy Ho (@howydev), Nikita Belenkov (@nikita-quantstamp), zer0dot (@zer0dot), David Kim (@PowerStream3604)",
+    "dateCreated": "2023-04-18",
+    "datePublished": "2023-04-18",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-modular-smart-contract-accounts-and-plugins/13885",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2023"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

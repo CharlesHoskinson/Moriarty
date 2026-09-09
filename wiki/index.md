@@ -10,6 +10,8 @@ tags:
   - navigation
 updated_at: 2026-09-07T18:01:49Z
 sources:
+  - SRC-0106
+  - SRC-0107
   - SRC-0105
   - SRC-0104
   - SRC-0100
@@ -202,3 +204,7 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 ## Modern DeFi taxonomy and standards atlas
 
 [Executive reference](../deliverables/modern-defi-taxonomy-2026-09-08/README.md) · [standards crosswalk](../deliverables/modern-defi-taxonomy-2026-09-08/STANDARDS.md) · [24 cases](../deliverables/modern-defi-taxonomy-2026-09-08/VALIDATION.md) · [interactive graph](../deliverables/modern-defi-taxonomy-2026-09-08/graph.html). SRC-0105 preserves the independently versioned source collection; CLM-0936 records the eight-root research recommendation. Cutoff September 8, 2026; verification September 9 UTC. Complete JSON/CSV and explicit coverage/evidence gaps accompany the report; no language or network acceptance is inferred.
+
+## Report 8: comparison and all named standards
+
+[Comparison](../deliverables/defi-report8-comparison-2026-09-09/README.md) · [40-standard relevance table](../deliverables/defi-report8-comparison-2026-09-09/RELEVANCE.md) · [linked interactive graph](../deliverables/defi-report8-comparison-2026-09-09/graph.html) · [remaining roadmap](../deliverables/defi-report8-comparison-2026-09-09/ROADMAP-REMAINING.md). SRC-0106/SRC-0107, CLM-0937–CLM-0939. Four exact paper captures reused and full80pages re-extracted;40officialstandardpages captured. Research only; no new accepted semantics or network evidence.

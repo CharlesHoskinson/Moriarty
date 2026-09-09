@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-7786: Cross-Chain Messaging Gateway</title>
+      <meta property="og:title" content="ERC-7786: Cross-Chain Messaging Gateway" />
+    
+    <meta name="description" content="An interface for contracts to send and receive cross-chain messages containing arbitrary data." />
+    <meta property="og:description" content="An interface for contracts to send and receive cross-chain messages containing arbitrary data." />
+    <meta name="twitter:description" content="An interface for contracts to send and receive cross-chain messages containing arbitrary data." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7786" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7786" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-7786: Cross-Chain Messaging Gateway
+    <a href="https://ethereum-magicians.org/t/erc-7786-cross-chain-messaging-gateway/21374" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7786.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>An interface for contracts to send and receive cross-chain messages containing arbitrary data.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Francisco Giordano&nbsp;(<a href="https://github.com/frangio">@frangio</a>), Hadrien Croubois&nbsp;(<a href="https://github.com/Amxx">@Amxx</a>), Ernesto García&nbsp;(<a href="https://github.com/ernestognw">@ernestognw</a>), CJ Cobb&nbsp;(<a href="https://github.com/cjcobb23">@cjcobb23</a>), Sergey Gorbunov&nbsp;(<a href="https://github.com/sergeynog">@sergeynog</a>), joxes&nbsp;(<a href="https://github.com/Joxess">@Joxess</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2024-10-14</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-7930">EIP-7930</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#message-field-encoding">Message Field Encoding</a></li>
+      <li><a href="#sending-procedure">Sending Procedure</a></li>
+      <li><a href="#reception-procedure">Reception Procedure</a></li>
+      <li><a href="#properties">Properties</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#handling-addresses">Handling addresses</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This proposal describes an interface, and the corresponding workflow, for smart contracts to send arbitrary data through cross-chain messaging protocols. The end goal of this proposal is to have all such messaging protocols accessible via this interface (natively or using “adapters”) to improve their composability and interoperability. That would allow a new class of cross-chain native smart contracts to emerge while reducing vendor lock-in. This proposal is modular by design, allowing users to leverage bridge-specific features through attributes (structured metadata) while providing simple “universal” access to the simple feature of “just getting a simple message through”.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Cross-chain messaging protocols (or bridges) allow communication between smart contracts deployed on different blockchains. There is a large diversity of such protocols with multiple degrees of decentralization, different architectures, implementing different interfaces, and providing different guarantees to users.</p>
+
+<p>Because almost every protocol implements a different workflow using a specific interface, portability between bridges is currently basically impossible. This also prevents the development of generic contracts that rely on cross chain communication.</p>
+
+<p>The objective of this ERC is to provide a standard interface, and a corresponding workflow, for performing cross-chain communication between contracts. Existing cross-chain communication protocols that do not natively implement this interface should be able to adopt it using adapter gateway contracts.</p>
+
+<p>Compared to previous ERCs in this area, this ERC offers compatibility with chains outside of the Ethereum/EVM ecosystem, and it is extensible to support the different feature sets of various protocols while offering a shared core of standard functionality.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119 and RFC 8174.</p>
+  
+    <h3 id="message-field-encoding">
+      
+      
+        <a href="#message-field-encoding" class="anchor-link"></a> Message Field Encoding
+      
+      
+    </h3>
+
+<p>A cross-chain message consists of a sender, recipient, payload, value (native token), and list of attributes.</p>
+  
+    <h4 id="sender-and-recipient">
+      
+      
+        <a href="#sender-and-recipient" class="anchor-link"></a> Sender and Recipient
+      
+      
+    </h4>
+
+<p>The sender account (in the source chain) and recipient account (in the destination chain) MUST be input in an Interoperable Address binary format, specified in <a href="/EIPS/eip-7930">ERC-7930</a>, which MUST be serialized according to CAIP-350. The recipient field MAY be omitted or zeroed (contain an Interoperable Address with all fields set to zero) to indicate an unspecified destination, such as when a broadcast mode is employed and the final recipients are determined by the protocol itself.</p>
+  
+    <h4 id="payload">
+      
+      
+        <a href="#payload" class="anchor-link"></a> Payload
+      
+      
+    </h4>
+
+<p>The payload is an opaque <code class="language-plaintext highlighter-rouge">bytes</code> value.</p>
+  
+    <h4 id="attributes">
+      
+      
+        <a href="#attributes" class="anchor-link"></a> Attributes
+      
+      
+    </h4>
+
+<p>An attribute is a key-value pair, where the key determines the type and encoding of the value, as well as its meaning and behavior in the gateway.</p>
+
+<p>The set of valid attributes is extensible. It is RECOMMENDED to standardize them and their characteristics by publishing them as ERCs. A gateway MAY support any set of standard or custom attributes.</p>
+
+<p>An attribute key is a 4-byte value (<code class="language-plaintext highlighter-rouge">bytes4</code>). It is RECOMMENDED to define a key as the function selector for a function signature according to Solidity ABI (for example, <code class="language-plaintext highlighter-rouge">minGasLimit(uint256)</code> resulting in the key <code class="language-plaintext highlighter-rouge">39f87ba1</code>), so as to give the key a human-readable name and a standard value encoding corresponding to the ABI-encoding of the function arguments.</p>
+
+<p>An attribute value is byte array (<code class="language-plaintext highlighter-rouge">bytes</code>).</p>
+
+<p>The list of attributes MUST be encoded as <code class="language-plaintext highlighter-rouge">bytes[]</code> (an array of <code class="language-plaintext highlighter-rouge">bytes</code>) where each element is the concatenation of a key and a value. (Note that in the case of keys defined as Solidity function selectors, each element of the array can be encoded by <code class="language-plaintext highlighter-rouge">abi.encodeWithSignature</code>.)</p>
+
+<p>A message with no attributes (an empty attributes list) MUST be considered a valid message.</p>
+  
+    <h3 id="sending-procedure">
+      
+      
+        <a href="#sending-procedure" class="anchor-link"></a> Sending Procedure
+      
+      
+    </h3>
+
+<p>A <strong>Source Gateway</strong> is a contract that offers a protocol to send a message to a recipient on another chain. It MUST implement <code class="language-plaintext highlighter-rouge">IERC7786GatewaySource</code>.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC7786GatewaySource</span> <span class="p">{</span>
+    <span class="k">event</span> <span class="n">MessageSent</span><span class="p">(</span>
+        <span class="kt">bytes32</span> <span class="k">indexed</span> <span class="n">sendId</span><span class="p">,</span>
+        <span class="kt">bytes</span> <span class="n">sender</span><span class="p">,</span>    <span class="c1">// Binary Interoperable Address
+</span>        <span class="kt">bytes</span> <span class="n">recipient</span><span class="p">,</span> <span class="c1">// Binary Interoperable Address
+</span>        <span class="kt">bytes</span> <span class="n">payload</span><span class="p">,</span>
+        <span class="kt">uint256</span> <span class="n">value</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="n">attributes</span>
+    <span class="p">);</span>
+
+    <span class="n">error</span> <span class="n">UnsupportedAttribute</span><span class="p">(</span><span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">);</span>
+
+    <span class="k">function</span> <span class="n">supportsAttribute</span><span class="p">(</span><span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">);</span>
+
+    <span class="k">function</span> <span class="n">sendMessage</span><span class="p">(</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">recipient</span><span class="p">,</span> <span class="c1">// Binary Interoperable Address
+</span>        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">payload</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">attributes</span>
+    <span class="p">)</span> <span class="k">external</span> <span class="k">payable</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes32</span> <span class="n">sendId</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="supportsattribute">
+      
+      
+        <a href="#supportsattribute" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">supportsAttribute</code>
+      
+      
+    </h4>
+
+<p>Returns a boolean indicating whether an attribute (identified by its key) is supported by the gateway.</p>
+
+<p>A gateway MAY be upgraded with support for additional attributes. Once present support for an attribute SHOULD NOT be removed to preserve backwards compatibility with users of the gateway.</p>
+  
+    <h4 id="sendmessage">
+      
+      
+        <a href="#sendmessage" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">sendMessage</code>
+      
+      
+    </h4>
+
+<p>Initiates the sending of a message.</p>
+
+<p>Further action MAY be required by the gateway to make the sending of the message effective, such as providing payment for gas. See Post-processing.</p>
+
+<p>MUST revert with <code class="language-plaintext highlighter-rouge">UnsupportedAttribute</code> if an unsupported attribute is included. MAY revert if an attribute value is not valid for the key.</p>
+
+<p>MAY accept call value (native token) to be sent with the message. MUST revert if call value is included but it is not a feature supported by the gateway. It is unspecified how this value is represented on the destination.</p>
+
+<p>MAY generate and return a unique non-zero <em>send identifier</em>, otherwise returning zero. This identifier can be used to track the lifecycle of the message in the source gateway in events and for post-processing. <em>Note that this identifier MAY be different from the <code class="language-plaintext highlighter-rouge">receiveId</code> that is delivered to the recipient, since that identifier may preferably consist of values like transaction id and log index that are not available in the execution environment.</em></p>
+
+<p>MUST emit a <code class="language-plaintext highlighter-rouge">MessageSent</code> event, including the optional send identifier that is returned by the function.</p>
+  
+    <h4 id="messagesent">
+      
+      
+        <a href="#messagesent" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">MessageSent</code>
+      
+      
+    </h4>
+
+<p>This event signals that a would-be sender has requested a message to be sent.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">sendId</code> is present, post-processing MAY be required to send the message through the cross-chain channel.</p>
+  
+    <h4 id="post-processing">
+      
+      
+        <a href="#post-processing" class="anchor-link"></a> Post-processing
+      
+      
+    </h4>
+
+<p>After a sender has invoked <code class="language-plaintext highlighter-rouge">sendMessage</code>, further action MAY be required by the gateways to make the message effective. This is called <em>post-processing</em>. For example, some payment is typically required to cover the gas of executing the message at the destination.</p>
+
+<p>The exact interface for any such action is out of scope of this ERC.</p>
+  
+    <h3 id="reception-procedure">
+      
+      
+        <a href="#reception-procedure" class="anchor-link"></a> Reception Procedure
+      
+      
+    </h3>
+
+<p>A <strong>Destination Gateway</strong> is a contract that implements a protocol to validate messages sent on other chains. The interface of the destination gateway and how it is invoked is out of scope of this ERC.</p>
+
+<p>The protocol MUST ensure delivery of a sent message to its <strong>recipient</strong> using the <code class="language-plaintext highlighter-rouge">IERC7786Recipient</code> interface (specified below), which the recipient MUST implement.</p>
+
+<p>Once the message can be safely delivered (see Properties), the gateway MUST invoke <code class="language-plaintext highlighter-rouge">receiveMessage</code> with the message identifier and contents, unless the sender or the recipient explicitly requested otherwise.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">receiveId</code> MUST be either empty or unique (for the calling gateway) to the message being relayed. The format of this identifier is not specified, and the gateway can use it at its own discretion. For example it can be an identifier of the <code class="language-plaintext highlighter-rouge">MessagePosted</code> event that created the message.</p>
+
+<p>The gateway MUST verify that <code class="language-plaintext highlighter-rouge">receiveMessage</code> returns the correct value, and MUST revert otherwise.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IERC7786Recipient</span> <span class="p">{</span>
+    <span class="k">function</span> <span class="n">receiveMessage</span><span class="p">(</span>
+        <span class="kt">bytes32</span> <span class="n">receiveId</span><span class="p">,</span>     <span class="c1">// Unique identifier
+</span>        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">sender</span><span class="p">,</span> <span class="c1">// Binary Interoperable Address
+</span>        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">payload</span><span class="p">,</span>
+    <span class="p">)</span> <span class="k">external</span> <span class="k">payable</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes4</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="receivemessage">
+      
+      
+        <a href="#receivemessage" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">receiveMessage</code>
+      
+      
+    </h4>
+
+<p>Delivery of a message sent from another chain.</p>
+
+<p>The recipient MUST validate that the caller of this function is a <strong>known gateway</strong>, i.e., one whose underlying cross-chain messaging protocol it trusts.</p>
+
+<p>MUST return <code class="language-plaintext highlighter-rouge">IERC7786Recipient.receiveMessage.selector</code> (<code class="language-plaintext highlighter-rouge">0x2432ef26</code>).</p>
+  
+    <h4 id="interaction-diagram">
+      
+      
+        <a href="#interaction-diagram" class="anchor-link"></a> Interaction Diagram
+      
+      
+    </h4>
+
+<p><img src="/assets/eip-7786/send-execute.png" alt="" /></p>
+  
+    <h3 id="properties">
+      
+      
+        <a href="#properties" class="anchor-link"></a> Properties
+      
+      
+    </h3>
+
+<p>The protocol underlying a pair of gateways is expected to guarantee a series of properties. For a detailed definition and discussion, we refer to XChain Research’s <em>Cross-chain Interoperability Report</em>.</p>
+
+<ul>
+  <li>The protocol MUST guarantee Safety: A message is delivered at the destination if and only if it was sent at the source. The delivery process must ensure a message is only delivered once the sending transaction is finalized, and not delivered more than once. Note that there can be multiple messages with identical parameters that must be delivered separately.</li>
+  <li>The protocol MUST guarantee Liveness: A sent message is eventually delivered to the destination, assuming Liveness and censorship-resistance of the source and destination chains and that any protocol costs are paid.</li>
+  <li>The protocol SHOULD guarantee Timeliness: A sent message is delivered at the destination within a bounded delivery time, which should be documented.</li>
+  <li>The above properties SHOULD NOT rely on trust in some centralized actor. For example, safety should be guaranteed by some trustless mechanism such as a light client proof or attestations by an open, decentralized validator set. Relaying should be decentralized or permissionless to ensure liveness; a centralized relayer can fail and thus halt the protocol.</li>
+</ul>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>Attributes are designed so that gateways can expose any specific features the bridge offers without having to use a proprietary interface. This should allow contracts to change the gateway they use while continuing to express messages the same way. This portability offers many advantages:</p>
+
+<ul>
+  <li>A contract that relies on a specific gateway for sending messages is vulnerable to the gateway being paused, deprecated, or simply breaking. If the communication between the contract and the gateway is standard, an admin of the contract could update the address (in storage) of the gateway to use. In particular, senders to update to the new gateway when a new version is available.</li>
+  <li>Bridge layering is made easier. In particular, this interface should allow for gateways that route the message through multiple independent bridges. Delivery of the message could require one or multiple of these independent bridges depending on whether improved liveness or safety is desired.</li>
+</ul>
+
+<p>As some cross-chain communication protocols require additional parameters beyond the destination and the payload, and because we want to send messages through those bridges without any knowledge of these additional parameters, a post-processing of the message MAY be required (after <code class="language-plaintext highlighter-rouge">sendMessage</code> is called, and before the message is delivered). The additional parameters MAY be supported through attributes, which would remove the need for a post-processing step. If these additional parameters are not provided through attributes, an additional call to the gateway is REQUIRED for the message to be sent. If possible, the gateway SHOULD be designed so that anyone with an incentive for the message to be delivered can jump in. A malicious actor providing invalid parameters SHOULD NOT prevent the message from being successfully relayed by someone else.</p>
+
+<p>Some protocols gateway support doing arbitrary direct calls on the recipient. In that case, the recipient must detect that they are being called by the gateway to properly identify cross-chain messages. Getters are available on the gateway to figure out where the cross-chain message comes from (source chain and sender address). This approach has the downside that it allows anyone to trigger any call from the gateway to any contract. This is dangerous if the gateway ever holds any assets (<a href="/EIPS/eip-20">ERC-20</a> or similar). The use of a dedicated <code class="language-plaintext highlighter-rouge">receiveMessage</code> function on the recipient protects any assets or permissions held by the gateway against such attacks. If the ability to perform direct calls is desired, this can be implemented as a wrapper on top of any gateway that implements this ERC.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>Existing cross-chain messaging protocols implement proprietary interfaces. We recommend that protocols natively implement the standard interface defined here, and propose the development of standard adapters for those that don’t.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="handling-addresses">
+      
+      
+        <a href="#handling-addresses" class="anchor-link"></a> Handling addresses
+      
+      
+    </h3>
+
+<p>Interoperable Addresses (ERC‑7930) rely on CAIP‑350 serialization. Using non‑canonical encodings can lead to silent delivery failures. Gateways SHOULD reject non‑canonical encodings and MAY normalize them before emission.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Francisco Giordano&nbsp;(<a href="https://github.com/frangio">@frangio</a>), Hadrien Croubois&nbsp;(<a href="https://github.com/Amxx">@Amxx</a>), Ernesto García&nbsp;(<a href="https://github.com/ernestognw">@ernestognw</a>), CJ Cobb&nbsp;(<a href="https://github.com/cjcobb23">@cjcobb23</a>), Sergey Gorbunov&nbsp;(<a href="https://github.com/sergeynog">@sergeynog</a>), joxes&nbsp;(<a href="https://github.com/Joxess">@Joxess</a>), "ERC-7786: Cross-Chain Messaging Gateway," <em>Ethereum Improvement Proposals</em>, no. 7786, October 2024. Available: https://eips.ethereum.org/EIPS/eip-7786.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-7786: Cross-Chain Messaging Gateway",
+    "name": "ERC-7786: Cross-Chain Messaging Gateway",
+    "author": "Francisco Giordano (@frangio), Hadrien Croubois (@Amxx), Ernesto García (@ernestognw), CJ Cobb (@cjcobb23), Sergey Gorbunov (@sergeynog), joxes (@Joxess)",
+    "dateCreated": "2024-10-14",
+    "datePublished": "2024-10-14",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-7786-cross-chain-messaging-gateway/21374",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2024"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

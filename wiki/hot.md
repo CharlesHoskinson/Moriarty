@@ -4,11 +4,13 @@ title: Current research context
 type: overview
 status: active
 created: 2026-09-07
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
 sources:
+  - SRC-0106
+  - SRC-0107
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -37,3 +39,5 @@ The [completion sprints](../openspec/sprints/README.md) are the current delivery
 The [four complete DeFi papers](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) now have page-cited taxonomies and a graph. The [design comparison](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) proposes twelve tests for shares, debt, clocks, atomic repayment, liquidation, requests and authority. Keep orthogonal facets and explicit external assumptions. Use the partial-payment/residual-duty case in the next admitted language/K slice; source intake does not close SP01–SP12.
 
 The [vault report supplement](../deliverables/erc4626-vault-report-2026-09-08/README.md) adds four distinct valuation roles and six unexecuted adversarial tests to the four-paper study. Its external citations and linked atlas are unavailable; use its taxonomy as S2 design input and the pinned local standards for method checks. No source count or report assertion closes financial/K/Preview gates.
+
+Report8 intake: [comparison, full named-source graph and relevance](../deliverables/defi-report8-comparison-2026-09-09/README.md). Coretaxonomy agrees; keep sharper FINboundaries. New8113/8161sourcecases inform bounded cohort accounting and pending-right authority; they do not freezeCore or close a sprint.

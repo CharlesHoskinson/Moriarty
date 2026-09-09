@@ -5,6 +5,8 @@ title: DeFiFormal taxonomy audit and Moriarty mapping
 status: active
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0106
+  - SRC-0107
   - SRC-0105
   - SRC-0104
   - SRC-0100
@@ -225,3 +227,9 @@ Metadata: SRC-0070/SRC-0072; observed 2026-09-07; secondary descriptive synthesi
 **CLM-0936.** The [research reference](../deliverables/modern-defi-taxonomy-2026-09-08/README.md) recommends eight financial-function roots and 23 subcategories, linked to independent mechanism, claim, lifecycle, authority and deployment facets. It includes 47 full standards profiles, 24 source-scoped component cases, 50 terms and a typed graph. Routine vault-share issuance is not automatically capital formation; solver reimbursement is not automatically lending; token locking without security duties is not consensus staking. Source: SRC-0105, member provenance in the dossier source manifest, plus SRC-0100–SRC-0103 paper crosswalk. Normative pins: ethereum/ERCs f4c23717b6a6fc48436bb6778dcecce29cc5345c and ethereum/EIPs 991d932f52a56477753cd9f62114b842cd77275c; cutoff 2026-09-08, verified 2026-09-09 UTC. Evidence kind: source facts plus analyst recommendation; confidence medium for taxonomy, high for inspected metadata. Lifecycle S2; no protocol execution/conformance or language adoption. The report explicitly separates unverified deployment, economic adoption and legal/solvency claims. Existing accepted Moriarty financial families, full ACTUS/DeFi coverage and proof/ledger acceptance gates remain controlling.
 
 The [revision atlas](../deliverables/modern-defi-taxonomy-2026-09-08/STANDARDS-EXECUTION.md) distinguishes ERC-7683's May 2026 resolver redesign from older order/settler implementations. The [coverage ledger](../deliverables/modern-defi-taxonomy-2026-09-08/category-coverage.json) names categories without dedicated benchmark cases; diagrams distinguish documented architecture from unverified live bindings. This is a reusable research recommendation, not a replacement semantic freeze.
+
+## Report 8 and complete named-source intake — 2026-09-09
+
+**CLM-0937.** SRC-0106 substantially matches the existing eight-root financial-function/facet model. Retain FIN identifiers and the capital-formation versus treasury-management boundary; use report FF identifiers as conditional aliases. This is analyst comparison, S2, confidence medium, not proof or language acceptance. [Comparison and linked graph](../deliverables/defi-report8-comparison-2026-09-09/README.md).
+
+**CLM-0938.** The source-led ERC-8161 and ERC-8113 examples add useful tests to investigate: transfer only the authorized pending entitlement, and preserve cohort-specific fee accounting with bounded consolidation. ERC-8113 explicitly declares incompatibility with ERC-4626/7540. Source SRC-0107, captured official8161/8113 text,2026-09-09; source fact plus proposed SP03/SP08/SP10/SP11 research, S2, confidence high for transcription and medium for design. No test execution or standard implementation is implied. [All40 standards and relevance](../deliverables/defi-report8-comparison-2026-09-09/RELEVANCE.md).

@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>EIP-7702: Set Code for EOAs</title>
+      <meta property="og:title" content="EIP-7702: Set Code for EOAs" />
+    
+    <meta name="description" content="Add a new tx type that permanently sets the code for an EOA" />
+    <meta property="og:description" content="Add a new tx type that permanently sets the code for an EOA" />
+    <meta name="twitter:description" content="Add a new tx type that permanently sets the code for an EOA" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7702" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7702" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Improvements requiring a consensus fork, as well as changes that are not necessarily consensus critical but may be relevant to “core dev” discussions." href="../core">Standards Track: Core</a>
+    
+  </span>
+  <h1 class="page-heading">
+    EIP-7702: Set Code for EOAs
+    <a href="https://ethereum-magicians.org/t/eip-set-eoa-account-code-for-one-transaction/19923" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7702.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Add a new tx type that permanently sets the code for an EOA</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Vitalik Buterin&nbsp;(<a href="https://github.com/vbuterin">@vbuterin</a>), Sam Wilson&nbsp;(<a href="https://github.com/SamWilsn">@SamWilsn</a>), Ansgar Dietrichs&nbsp;(<a href="https://github.com/adietrichs">@adietrichs</a>), lightclient&nbsp;(<a href="https://github.com/lightclient">@lightclient</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2024-05-07</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-2">EIP-2</a>, 
+
+  <a href="eip-161">EIP-161</a>, 
+
+  <a href="eip-1052">EIP-1052</a>, 
+
+  <a href="eip-2718">EIP-2718</a>, 
+
+  <a href="eip-2929">EIP-2929</a>, 
+
+  <a href="eip-2930">EIP-2930</a>, 
+
+  <a href="eip-3541">EIP-3541</a>, 
+
+  <a href="eip-3607">EIP-3607</a>, 
+
+  <a href="eip-4844">EIP-4844</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#parameters">Parameters</a></li>
+      <li><a href="#set-code-transaction">Set code transaction</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#general-design-philosophy">General design philosophy</a></li>
+      <li><a href="#rationale-for-technical-details">Rationale for technical details</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#implementation-of-secure-delegate-contracts">Implementation of secure delegate contracts</a></li>
+      <li><a href="#front-running-initialization">Front running initialization</a></li>
+      <li><a href="#storage-management">Storage management</a></li>
+      <li><a href="#setting-code-as-txorigin">Setting code as tx.origin</a></li>
+      <li><a href="#sponsored-transaction-relayers">Sponsored transaction relayers</a></li>
+      <li><a href="#transaction-propagation">Transaction propagation</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>Add a new <a href="/EIPS/eip-2718">EIP-2718</a> transaction type that allows Externally
+Owned Accounts (EOAs) to set the code in their account. This is done by
+attaching a list of authorization tuples – individually formatted as <code class="language-plaintext highlighter-rouge">[chain_id,
+address, nonce, y_parity, r, s]</code> – to the transaction. For each tuple, a
+delegation indicator <code class="language-plaintext highlighter-rouge">(0xef0100 || address)</code> is written to the authorizing
+account’s code. All code executing operations must load and execute the code
+pointed to by the delegation.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Despite great advances in the smart contract wallet ecosystem, EOAs have held
+back broad adoption of UX improvements across applications. This EIP therefore
+focuses on adding short-term functionality improvements to EOAs which will allow
+UX improvements to permeate through the entire application stack. Three
+particular features this EIP is designed around are:</p>
+
+<ul>
+  <li><strong>Batching</strong>: allowing multiple operations from the same user in one atomic
+transaction. One common example is an <a href="/EIPS/eip-20">ERC-20</a> approval followed by
+spending that approval. This is a common workflow in DEXes that requires two
+transactions today. Advanced use cases of batching occasionally involve
+dependencies: the output of the first operation is part of the input to the
+second operation.</li>
+  <li><strong>Sponsorship</strong>: account X pays for a transaction on behalf of account Y.
+Account X could be paid in some other ERC-20 for this service, or it could be an
+application operator including the transactions of its users for free.</li>
+  <li><strong>Privilege de-escalation</strong>: users can sign sub-keys and give them specific
+permissions that are much weaker than global access to the account. For example,
+a permission to spend ERC-20 tokens but not ETH, or to spend up to 1% of the
+total balance per day, or to interact only with a specific application.</li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+  
+    <h3 id="parameters">
+      
+      
+        <a href="#parameters" class="anchor-link"></a> Parameters
+      
+      
+    </h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">SET_CODE_TX_TYPE</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x04</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MAGIC</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x05</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">PER_AUTH_BASE_COST</code></td>
+      <td><code class="language-plaintext highlighter-rouge">12500</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">PER_EMPTY_ACCOUNT_COST</code></td>
+      <td><code class="language-plaintext highlighter-rouge">25000</code></td>
+    </tr>
+  </tbody>
+</table>
+  
+    <h3 id="set-code-transaction">
+      
+      
+        <a href="#set-code-transaction" class="anchor-link"></a> Set code transaction
+      
+      
+    </h3>
+
+<p>A new <a href="/EIPS/eip-2718">EIP-2718</a> transaction known as the “set code transaction”
+is introduced, where the <code class="language-plaintext highlighter-rouge">TransactionType</code> is <code class="language-plaintext highlighter-rouge">SET_CODE_TX_TYPE</code> and the
+<code class="language-plaintext highlighter-rouge">TransactionPayload</code> is the RLP serialization of the following:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit,
+destination, value, data, access_list, authorization_list, signature_y_parity,
+signature_r, signature_s])
+
+authorization_list = [[chain_id, address, nonce, y_parity, r, s], ...]
+</code></pre></div></div>
+
+<p>The fields <code class="language-plaintext highlighter-rouge">chain_id</code>, <code class="language-plaintext highlighter-rouge">nonce</code>, <code class="language-plaintext highlighter-rouge">max_priority_fee_per_gas</code>, <code class="language-plaintext highlighter-rouge">max_fee_per_gas</code>,
+<code class="language-plaintext highlighter-rouge">gas_limit</code>, <code class="language-plaintext highlighter-rouge">destination</code>, <code class="language-plaintext highlighter-rouge">value</code>, <code class="language-plaintext highlighter-rouge">data</code>, and <code class="language-plaintext highlighter-rouge">access_list</code> of the outer
+transaction follow the same semantics as <a href="/EIPS/eip-4844">EIP-4844</a>. <em>Note, this
+implies a null destination is not valid.</em></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">signature_y_parity, signature_r, signature_s</code> elements of this transaction
+represent a secp256k1 signature over <code class="language-plaintext highlighter-rouge">keccak256(SET_CODE_TX_TYPE ||
+TransactionPayload)</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">authorization_list</code> is a list of tuples that indicate what code the signer
+of each tuple desires to execute in the context of their EOA. The transaction is
+considered invalid if the length of <code class="language-plaintext highlighter-rouge">authorization_list</code> is zero.</p>
+
+<p>The transaction is also considered invalid when any field in an authorization
+tuple cannot fit within the following bounds:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">assert</span> <span class="n">auth</span><span class="p">.</span><span class="n">chain_id</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">256</span>
+<span class="k">assert</span> <span class="n">auth</span><span class="p">.</span><span class="n">nonce</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">64</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">auth</span><span class="p">.</span><span class="n">address</span><span class="p">)</span> <span class="o">==</span> <span class="mi">20</span>
+<span class="k">assert</span> <span class="n">auth</span><span class="p">.</span><span class="n">y_parity</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">8</span>
+<span class="k">assert</span> <span class="n">auth</span><span class="p">.</span><span class="n">r</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">256</span>
+<span class="k">assert</span> <span class="n">auth</span><span class="p">.</span><span class="n">s</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">256</span>
+</code></pre></div></div>
+
+<p>The <a href="/EIPS/eip-2718">EIP-2718</a> <code class="language-plaintext highlighter-rouge">ReceiptPayload</code> for this transaction is
+<code class="language-plaintext highlighter-rouge">rlp([status, cumulative_transaction_gas_used, logs_bloom, logs])</code>.</p>
+  
+    <h4 id="behavior">
+      
+      
+        <a href="#behavior" class="anchor-link"></a> Behavior
+      
+      
+    </h4>
+
+<p>The authorization list is processed before the execution portion of the
+transaction begins, but after the sender’s nonce is incremented.</p>
+
+<p>For each <code class="language-plaintext highlighter-rouge">[chain_id, address, nonce, y_parity, r, s]</code> tuple, perform the
+following:</p>
+
+<ol>
+  <li>Verify the chain ID is 0 or the ID of the current chain.</li>
+  <li>Verify the <code class="language-plaintext highlighter-rouge">nonce</code> is less than <code class="language-plaintext highlighter-rouge">2**64 - 1</code>.</li>
+  <li>Let <code class="language-plaintext highlighter-rouge">authority = ecrecover(msg, y_parity, r, s)</code>.
+    <ul>
+      <li>Where <code class="language-plaintext highlighter-rouge">msg = keccak(MAGIC || rlp([chain_id, address, nonce]))</code>.</li>
+      <li>Verify <code class="language-plaintext highlighter-rouge">s</code> is less than or equal to <code class="language-plaintext highlighter-rouge">secp256k1n/2</code>, as specified in
+ <a href="/EIPS/eip-2">EIP-2</a>.</li>
+    </ul>
+  </li>
+  <li>Add <code class="language-plaintext highlighter-rouge">authority</code> to <code class="language-plaintext highlighter-rouge">accessed_addresses</code>, as defined in <a href="/EIPS/eip-2929">EIP-2929</a>.</li>
+  <li>Verify the code of <code class="language-plaintext highlighter-rouge">authority</code> is empty or already delegated.</li>
+  <li>Verify the nonce of <code class="language-plaintext highlighter-rouge">authority</code> is equal to <code class="language-plaintext highlighter-rouge">nonce</code>.</li>
+  <li>Add <code class="language-plaintext highlighter-rouge">PER_EMPTY_ACCOUNT_COST - PER_AUTH_BASE_COST</code> gas to the global refund
+counter if <code class="language-plaintext highlighter-rouge">authority</code> is not empty.</li>
+  <li>Set the code of <code class="language-plaintext highlighter-rouge">authority</code> to be <code class="language-plaintext highlighter-rouge">0xef0100 || address</code>. This is a delegation
+indicator.
+    <ul>
+      <li>If <code class="language-plaintext highlighter-rouge">address</code> is <code class="language-plaintext highlighter-rouge">0x0000000000000000000000000000000000000000</code>, do not write
+ the delegation indicator. Clear the account’s code by resetting the account’s
+ code hash to the empty code hash
+ <code class="language-plaintext highlighter-rouge">0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470</code>.</li>
+    </ul>
+  </li>
+  <li>Increase the nonce of <code class="language-plaintext highlighter-rouge">authority</code> by one.</li>
+</ol>
+
+<p>If any step above fails, immediately stop processing the tuple and continue to
+the next tuple in the list. When multiple tuples from the same authority are
+present, set the code using the address in the last valid occurrence.</p>
+
+<p>Note, if transaction execution results in failure (e.g. any exceptional
+condition or code reverting), the processed delegation indicators is <em>not rolled
+back</em>.</p>
+  
+    <h5 id="delegation-indicator">
+      
+      
+        <a href="#delegation-indicator" class="anchor-link"></a> Delegation indicator
+      
+      
+    </h5>
+
+<p>Delegation indicators use the banned opcode <code class="language-plaintext highlighter-rouge">0xef</code>, defined in
+<a href="/EIPS/eip-3541">EIP-3541</a>, to indicate that the code must be handled differently
+than regular code. The delegation forces all code executing operations to follow
+the address pointer to obtain the code to execute. For example, <code class="language-plaintext highlighter-rouge">CALL</code> loads the
+code at <code class="language-plaintext highlighter-rouge">address</code> and executes it in the context of <code class="language-plaintext highlighter-rouge">authority</code>.</p>
+
+<p>The affected executing operations are:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">CALL</code></li>
+  <li><code class="language-plaintext highlighter-rouge">CALLCODE</code></li>
+  <li><code class="language-plaintext highlighter-rouge">DELEGATECALL</code></li>
+  <li><code class="language-plaintext highlighter-rouge">STATICCALL</code></li>
+  <li>any transaction where <code class="language-plaintext highlighter-rouge">destination</code> points to an address with a delegation
+indicator present</li>
+</ul>
+
+<p>For code reading, only <code class="language-plaintext highlighter-rouge">CODESIZE</code> and <code class="language-plaintext highlighter-rouge">CODECOPY</code> instructions are affected. They
+operate directly on the executing code instead of the delegation. For example,
+when executing a delegated account <code class="language-plaintext highlighter-rouge">EXTCODESIZE</code> returns <code class="language-plaintext highlighter-rouge">23</code> (the size of
+<code class="language-plaintext highlighter-rouge">0xef0100 || address</code>) whereas <code class="language-plaintext highlighter-rouge">CODESIZE</code> returns the size of the code residing
+at <code class="language-plaintext highlighter-rouge">address</code>.</p>
+
+<p><em>Note, this means during delegated execution <code class="language-plaintext highlighter-rouge">CODESIZE</code> and <code class="language-plaintext highlighter-rouge">CODECOPY</code> produce a
+different result compared to calling <code class="language-plaintext highlighter-rouge">EXTCODESIZE</code> and <code class="language-plaintext highlighter-rouge">EXTCODECOPY</code> on the
+authority.</em></p>
+  
+    <h6 id="precompiles">
+      
+      
+        <a href="#precompiles" class="anchor-link"></a> Precompiles
+      
+      
+    </h6>
+
+<p>When a precompile address is the target of a delegation, the retrieved code is
+considered empty and <code class="language-plaintext highlighter-rouge">CALL</code>, <code class="language-plaintext highlighter-rouge">CALLCODE</code>, <code class="language-plaintext highlighter-rouge">STATICCALL</code>, <code class="language-plaintext highlighter-rouge">DELEGATECALL</code>
+instructions targeting this account will execute empty code, and therefore
+succeed with no execution when given enough gas to initiate the call.</p>
+  
+    <h6 id="loops">
+      
+      
+        <a href="#loops" class="anchor-link"></a> Loops
+      
+      
+    </h6>
+
+<p>In case a delegation indicator points to another delegation, creating a
+potential chain or loop of delegations, clients must retrieve only the first
+code and then stop following the delegation chain.</p>
+  
+    <h4 id="gas-costs">
+      
+      
+        <a href="#gas-costs" class="anchor-link"></a> Gas Costs
+      
+      
+    </h4>
+
+<p>The intrinsic cost of the new transaction is inherited from
+<a href="/EIPS/eip-2930">EIP-2930</a>, specifically <code class="language-plaintext highlighter-rouge">21000 + 16 * non-zero calldata bytes +
+4 * zero calldata bytes + 1900 * access list storage key count + 2400 * access
+list address count</code>. Additionally, add a cost of <code class="language-plaintext highlighter-rouge">PER_EMPTY_ACCOUNT_COST *
+authorization list length</code>.</p>
+
+<p>The transaction sender will pay for all authorization tuples, regardless of
+validity or duplication.</p>
+
+<p>If a code executing instruction accesses a cold account during the resolution of
+delegated code, add an additional <a href="/EIPS/eip-2929">EIP-2929</a>
+<code class="language-plaintext highlighter-rouge">COLD_ACCOUNT_READ_COST</code> cost of <code class="language-plaintext highlighter-rouge">2600</code> gas to the normal cost and add the
+account to <code class="language-plaintext highlighter-rouge">accessed_addresses</code>. Otherwise, assess a <code class="language-plaintext highlighter-rouge">WARM_STORAGE_READ_COST</code>
+cost of <code class="language-plaintext highlighter-rouge">100</code>.</p>
+  
+    <h4 id="transaction-origination">
+      
+      
+        <a href="#transaction-origination" class="anchor-link"></a> Transaction origination
+      
+      
+    </h4>
+
+<p>Modify the restriction put in place by <a href="/EIPS/eip-3607">EIP-3607</a> to allow EOAs
+whose code is a valid delegation indicator, i.e. <code class="language-plaintext highlighter-rouge">0xef0100 || address</code>, to
+originate transactions. Accounts with any other code values may not originate
+transactions.</p>
+
+<p>Additionally, if a transaction’s <code class="language-plaintext highlighter-rouge">destination</code> has a delegation indicator, add
+the target of the delegation to <code class="language-plaintext highlighter-rouge">accessed_addresses</code>.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>Below is the rationale for both general design directions of the EIP, as well as
+specific technical choices.</p>
+  
+    <h3 id="general-design-philosophy">
+      
+      
+        <a href="#general-design-philosophy" class="anchor-link"></a> General design philosophy
+      
+      
+    </h3>
+  
+    <h4 id="persistence-of-code-delegation">
+      
+      
+        <a href="#persistence-of-code-delegation" class="anchor-link"></a> Persistence of code delegation
+      
+      
+    </h4>
+
+<p>The first draft of this proposal had a clever idea to avoid disagreement on
+whether in-protocol revocation was needed or not. The idea was to temporarily
+set code in the account with the authorization. After the transaction finished,
+the code would be completely cleared. This was a new design space for enriching
+EOA functionality.</p>
+
+<p>Even this approach was not without its flaws. Fundamentally, there was not much
+friction for users including set code authorizations. This meant that some users
+and applications would opt to treat the extension as more of a scripting
+facility, rather than a full-fledged upgrade to a smart contract wallet. The
+outcome of this would be two somewhat competing workstreams for UX improvements:
+smart contract wallets and EOA scripts.</p>
+
+<p>Previous proposals had been met with similar criticisms. To counteract this,
+persistent delegations were introduced. They create enough friction in
+deployment that users will not deploy new, unique ones regularly. This will
+hopefully unify the workstreams and minimize fragmentation in UX developments.</p>
+  
+    <h4 id="no-initcode">
+      
+      
+        <a href="#no-initcode" class="anchor-link"></a> No initcode
+      
+      
+    </h4>
+
+<p>Running initcode is not desirable for many reasons. It creates a new mode of
+execution that needs extensive testing, and may be used for purposes not
+possible with standard smart contract wallets. It also forces developers to
+perform initialization as a standard call to the EOA after delegation. The lack
+of atomicity in these operations is another factor that will push users to
+complete smart contract wallet solutions, instead of EOA scripts.</p>
+
+<p>Additionally, initcode tends to be propagated inside the transaction calldata.
+This means it would need to be included in the authorization tuple and signed
+over. The minimum initcode is around 15 bytes – it would simply copy the
+contract code from an external address. The total cost would be <code class="language-plaintext highlighter-rouge">16 * 15 = 240</code>
+calldata cost, plus the <a href="/EIPS/eip-3860">EIP-3860</a> cost of <code class="language-plaintext highlighter-rouge">2 * 15 = 30</code>, plus
+the runtime costs of around <code class="language-plaintext highlighter-rouge">150</code>. So nearly <code class="language-plaintext highlighter-rouge">500</code> additional gas would be spent
+preparing the account. Even more likely, 1200+ gas if not copying from an
+external account.</p>
+  
+    <h4 id="creation-by-template">
+      
+      
+        <a href="#creation-by-template" class="anchor-link"></a> Creation by template
+      
+      
+    </h4>
+
+<p>Initcode or not, there is a question of how users should specify the code they
+intend to run in their account. The two main options are to specify the bytecode
+directly in the transaction or to specify a pointer to the code. The simplest
+pointer would just be the address of code deployed on-chain.</p>
+
+<p>The cost analysis makes the answer clear. The smallest proxy would be around 50
+bytes and an address is 20 bytes. The 30 byte difference provides no useful
+additional functionality and will be inefficiently replicated billions of times.</p>
+
+<p>Furthermore, specifying code directly would again make it possible for EOAs to
+have a new, unique ability to execute arbitrary code specified in the
+transaction calldata. It is for these reasons that creation by template is
+chosen.</p>
+  
+    <h4 id="interaction-with-applications-and-wallets">
+      
+      
+        <a href="#interaction-with-applications-and-wallets" class="anchor-link"></a> Interaction with applications and wallets
+      
+      
+    </h4>
+
+<p>While this EIP provides a lot of flexibility to applications and EOAs, there are
+incorrect ways of using it. Applications <strong>must not</strong> expect that they can
+suggest the user sign an authorization, and therefore it is the duty of the
+wallet to not provide an interface to do so.</p>
+
+<p><strong>There is no safe way to provide this interface</strong>. The code specified by an
+authorization has unrestricted access to the account and must always be closely
+audited by the wallet. Few users have the level of sophistication to reasonably
+verify the code they are delegating to.</p>
+
+<p>It is also not possible to implement a system of permissions at this level to
+minimize the risk. If applications require custom wallet functionality, they
+must use standardized extension / module systems built on top of the delegated
+code that correctly implements permissions.</p>
+  
+    <h4 id="forward-compatibility-with-future-account-abstraction">
+      
+      
+        <a href="#forward-compatibility-with-future-account-abstraction" class="anchor-link"></a> Forward-compatibility with future account abstraction
+      
+      
+    </h4>
+
+<p>This EIP is designed to be forward-compatible with endgame account abstraction,
+without over-enshrining any fine-grained details of <a href="/EIPS/eip-4337">ERC-4337</a> or
+RIP-7560.</p>
+
+<p>To start, the <code class="language-plaintext highlighter-rouge">address</code> that users sign could directly point to existing
+ERC-4337 wallet code. This essentially requires the “code pathways” that are
+used are code pathways that would, in most cases, continue to make sense in a
+pure-smart-contract-wallet world. Hence, it avoids the problem of creating two
+separate UX workstreams because, to a large extent, they would be the same
+ecosystem.</p>
+
+<p>There will be some workflows that require kludges under this solution that would
+be better done in some different “more native” under “endgame AA”, but this is
+relatively a small subset. The EIP does not require adding any opcodes, that
+would become dangling and useless in a post-EOA world, and it allows EOAs to
+masquerade as contracts to be included in ERC-4337 bundles, in a way that’s
+compatible with the existing <code class="language-plaintext highlighter-rouge">EntryPoint</code>.</p>
+  
+    <h4 id="self-sponsoring-allowing-txorigin-to-set-code">
+      
+      
+        <a href="#self-sponsoring-allowing-txorigin-to-set-code" class="anchor-link"></a> Self-sponsoring: allowing <code class="language-plaintext highlighter-rouge">tx.origin</code> to set code
+      
+      
+    </h4>
+
+<p>Allowing <code class="language-plaintext highlighter-rouge">tx.origin</code> to set code and execute its own delegated code enables what
+is called self-sponsoring. It allows users to take advantage of EIP-7702 without
+relying on any third party infrastructure.</p>
+
+<p>However, that means the EIP breaks the invariant that <code class="language-plaintext highlighter-rouge">msg.sender == tx.origin</code>
+only happens in the topmost execution frame of a transaction. This will affect
+smart contracts containing <code class="language-plaintext highlighter-rouge">require(msg.sender == tx.origin)</code> style checks. This
+check is used for at least three purposes:</p>
+
+<ol>
+  <li>Ensuring that <code class="language-plaintext highlighter-rouge">msg.sender</code> is an EOA (given that <code class="language-plaintext highlighter-rouge">tx.origin</code> always has to be
+an EOA). This invariant does not depend on the execution layer depth and,
+therefore, is not affected.</li>
+  <li>Protecting against atomic sandwich attacks like flash loans, which rely on
+the ability to modify state before and after the execution of the target
+contract as part of the same atomic transaction. This protection would be broken
+by this EIP. However, relying on <code class="language-plaintext highlighter-rouge">tx.origin</code> in this way is considered bad
+practice, and can already be circumvented by miners conditionally including
+transactions in a block.</li>
+  <li>Preventing reentrancy.</li>
+</ol>
+
+<p>Examples of (1) and (2) can be found in contracts deployed on Ethereum mainnet,
+with (1) being more common (and unaffected by this proposal). On the other hand,
+use case (3) is more severely affected by this proposal, but the authors of this
+EIP did not find any examples of this form of reentrancy protection, though the
+search was non-exhaustive.</p>
+
+<p>This distribution of occurrences—many (1), some (2), and no (3)—is exactly what
+the authors of this EIP expect because:</p>
+
+<ul>
+  <li>Determining if <code class="language-plaintext highlighter-rouge">msg.sender</code> is an EOA without <code class="language-plaintext highlighter-rouge">tx.origin</code> is difficult, if not
+impossible.</li>
+  <li>The only execution context which is safe from atomic sandwich attacks is the
+topmost context, and <code class="language-plaintext highlighter-rouge">tx.origin == msg.sender</code> is the only way to detect that
+context.</li>
+  <li>In contrast, there are many direct and flexible ways of preventing reentrancy
+(e.g., using a transient storage variable). Since <code class="language-plaintext highlighter-rouge">msg.sender == tx.origin</code> is
+only true in the topmost context, it would make an obscure tool for preventing
+reentrancy, rather than other more common approaches.</li>
+</ul>
+
+<p>There are other approaches to mitigate this restriction which do not break the
+invariant:</p>
+
+<ul>
+  <li>Set <code class="language-plaintext highlighter-rouge">tx.origin</code> to a constant <code class="language-plaintext highlighter-rouge">ENTRY_POINT</code> address when using the <code class="language-plaintext highlighter-rouge">CALL*</code>
+instruction in the context of an EOA.</li>
+  <li>Set <code class="language-plaintext highlighter-rouge">tx.origin</code> to a special address derived from the sender or signer
+addresses.</li>
+  <li>Disallow <code class="language-plaintext highlighter-rouge">tx.origin</code> from setting code. This would make the simple batching
+use cases impossible, but could be relaxed in the future.</li>
+</ul>
+  
+    <h3 id="rationale-for-technical-details">
+      
+      
+        <a href="#rationale-for-technical-details" class="anchor-link"></a> Rationale for technical details
+      
+      
+    </h3>
+  
+    <h4 id="cost-of-delegation">
+      
+      
+        <a href="#cost-of-delegation" class="anchor-link"></a> Cost of delegation
+      
+      
+    </h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">PER_AUTH_BASE_COST</code> is the cost to process the authorization tuple and set
+the delegation destination. To compute a fair cost for this operation, the
+authors review its impact on the system:</p>
+
+<ul>
+  <li>ferry 101 bytes of calldata = <code class="language-plaintext highlighter-rouge">101 * non-zero cost (16) = 1616</code></li>
+  <li>recovering the <code class="language-plaintext highlighter-rouge">authority</code> address = <code class="language-plaintext highlighter-rouge">3000</code></li>
+  <li>reading the nonce and code of <code class="language-plaintext highlighter-rouge">authority</code> = <code class="language-plaintext highlighter-rouge">2600</code></li>
+  <li>storing values in already warm account = <code class="language-plaintext highlighter-rouge">200</code></li>
+  <li>cost to deploy code = <code class="language-plaintext highlighter-rouge">200 * 23 = 4600</code></li>
+</ul>
+
+<p>The impact-based assessment identifies <code class="language-plaintext highlighter-rouge">12016</code> gas of comparable computation for
+the operation. It is rounded up to <code class="language-plaintext highlighter-rouge">12500</code> to account for miscellaneous costs
+associated with shuttling data around the state transition.</p>
+  
+    <h4 id="clearing-delegation-indicators">
+      
+      
+        <a href="#clearing-delegation-indicators" class="anchor-link"></a> Clearing delegation indicators
+      
+      
+    </h4>
+
+<p>A general design goal in state transition changes is to minimize the number of
+special cases an EIP has. In early iterations, this EIP resisted a special case
+for clearing an account’s delegation indicator.</p>
+
+<p>For most intents and purposes, an account delegated to <code class="language-plaintext highlighter-rouge">0x0</code> is
+indistinguishable from a true EOA. However, one particular unfortunate case is
+unavoidable. Even if a user has a zeroed out delegation indicator, most
+operations that interact with that account will incur an additional
+<code class="language-plaintext highlighter-rouge">COLD_ACCOUNT_READ_COST</code> upon the first touch caused by attempting to load the
+code at <code class="language-plaintext highlighter-rouge">0x0</code>.</p>
+
+<p>For this reason, the authors have opted to include a special case which allow
+users to restore their EOA to its original purity.</p>
+  
+    <h4 id="lack-of-instruction-prohibition">
+      
+      
+        <a href="#lack-of-instruction-prohibition" class="anchor-link"></a> Lack of instruction prohibition
+      
+      
+    </h4>
+
+<p>Consistency is a valuable property in the EVM, both from an implementation
+perspective and a user-understanding-perspective. Despite considering bans on
+several families of instructions in the context of EOAs, the authors feel there
+is not a compelling reason to do so, as it would cause smart contract wallets
+and EOA smart contract wallets to proceed down distinct UX workstreams.</p>
+
+<p>The main instruction families where a ban was considered were storage related
+and contract creation related. The decision to not ban storage instructions
+hinged mostly on their importance to smart contract wallets. Although it’s
+possible to have an external storage contract that the smart contract wallet
+calls into, it is unnecessarily complicated and inefficient. In the future, new
+state schemes may allow substantially cheaper access to certain storage slots
+within an account. This is something smart contract wallets will want to take
+advantage of that a storage contract wouldn’t support.</p>
+
+<p>Creation instructions were considered for a ban as well on other similar EIPs,
+however because this EIP allows EOAs to spend value intra-transaction, the
+concern with bumping the nonce intra-transaction and invalidating pending
+transactions is not significant.</p>
+  
+    <h4 id="protection-from-malleability-cross-chain">
+      
+      
+        <a href="#protection-from-malleability-cross-chain" class="anchor-link"></a> Protection from malleability cross-chain
+      
+      
+    </h4>
+
+<p>One consideration when signing a code pointer is what code that address points
+to on another chain. While it is possible to create a deterministic deployment,
+i.e. via Nick’s method, verifying such a deployment may not always be desirable.
+In such situations, the chain ID can be set to reduce the scope of the
+authorization. When universal deployment is preferred, simply set chain ID to 0.</p>
+
+<p>An alternative to adding chain ID could be to substitute in the actual code for
+the address in the signature. This seems to have the benefit of both minimizing
+the on-chain size of auth tuples, by continuing to serialize only the address,
+while retaining specificity of the actual code running in the account, by
+pulling in the code for the signature. One unfortunate issue of this format,
+though, is that it imposes a database lookup to determine the signer of each
+auth tuple. This imposition itself seems to create enough complexity in
+transaction propagation that it is decided to avoid and simply sign over the
+address directly.</p>
+  
+    <h4 id="delegation-of-code-execution-only">
+      
+      
+        <a href="#delegation-of-code-execution-only" class="anchor-link"></a> Delegation of code execution only
+      
+      
+    </h4>
+
+<p>Other code retrieving operations like <code class="language-plaintext highlighter-rouge">EXTCODEHASH</code> do not automatically follow
+delegations, they operate on the delegation indicator itself. If instead
+delegations were followed, an account would be able to temporarily masquerade as
+having a particular codehash, which would break contracts that rely on
+codehashes as a definition of possible account behavior. A change of behavior in
+a contract is currently only possible if its code explicitly allows it (in
+particular via <code class="language-plaintext highlighter-rouge">DELEGATECALL</code>), and a change of codehash is only possible in the
+presence of <code class="language-plaintext highlighter-rouge">SELFDESTRUCT</code> (which, as of Cancun, only applies in the same
+transaction as contract creation), so choosing to follow delegations in
+<code class="language-plaintext highlighter-rouge">EXTCODE*</code> opcodes would have created a new type of account breaking prior
+assumptions.</p>
+  
+    <h4 id="charge-maximum-cost-upfront">
+      
+      
+        <a href="#charge-maximum-cost-upfront" class="anchor-link"></a> Charge maximum cost upfront
+      
+      
+    </h4>
+
+<p>While computing the intrinsic gas cost, the transaction is charged the
+worst-case cost for each delegation. Later, while processing the authorization
+list, a refund is issued if the account already exists in state. This mechanism
+is designed to avoid state lookups for each authorization when computing the
+intrinsic gas and can quickly determine the validity of the transaction with
+only a state lookup on the sender’s account.</p>
+  
+    <h4 id="no-blobs-no-contract-creation">
+      
+      
+        <a href="#no-blobs-no-contract-creation" class="anchor-link"></a> No blobs, no contract creation
+      
+      
+    </h4>
+
+<p>Transactions should be thought of as specialized tools and not necessarily a
+one-type-does-all solution. EIP-4844 is treated differently at the p2p level due
+to burden blobs place on a node’s bandwidth. EIP-7702 has different implications
+on transaction gossiping and there is no need to complicate those rules
+unnecessarily by making it a superset of all possible functionality. The authors
+ultimately do not expect there to be much demand for atomic delegation and blob
+submission.</p>
+
+<p>Contract creation is another specialized use case that has been grandfathered
+into several transaction types. It adds complexity to testing, because it is a
+new distinct branch of execution that needs to be tested when any change to the
+EVM occurs and verify the change works as expected in that context.</p>
+
+<p>For these reasons, the authors have chosen to keep the scope of the EIP focused
+on improving UX.</p>
+  
+    <h4 id="disallow-delegation-to-precompiles">
+      
+      
+        <a href="#disallow-delegation-to-precompiles" class="anchor-link"></a> Disallow delegation to precompiles
+      
+      
+    </h4>
+
+<p>Precompiles are themselves edge cases, so allowing delegations to precompiles or
+not requires some focus in implementation. Considering the fact that precompiles
+technically do not have code associated with their accounts, the authors decided
+it would be marginally simpler to not execute the precompile logic when a user
+delegates to one. This is somewhat unintuitive.</p>
+  
+    <h4 id="non-empty-authorization-list-required">
+      
+      
+        <a href="#non-empty-authorization-list-required" class="anchor-link"></a> Non-empty authorization list required
+      
+      
+    </h4>
+
+<p>Set code transactions are required to have at least one authorization to be
+considered valid. This is to disincentivize senders from using type 4
+transactions as a generic transaction format, because this transaction has
+different implications on the transaction pool than, say,
+<a href="/EIPS/eip-1559">EIP-1559</a> transactions.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This EIP breaks a few invariants:</p>
+
+<ul>
+  <li>An account balance can only decrease as a result of a transaction originating
+from that account.
+    <ul>
+      <li>Once an account has been delegated, any call to the account may also cause
+the balance to decrease.</li>
+    </ul>
+  </li>
+  <li>An EOA nonce may not increase after transaction execution has begun.
+    <ul>
+      <li>Once an account has been delegated, the account may call a create operation
+during execution, causing the nonce to increase.</li>
+    </ul>
+  </li>
+  <li><code class="language-plaintext highlighter-rouge">tx.origin == msg.sender</code> can only be true in the topmost frame of execution.
+    <ul>
+      <li>Once an account has been delegated, it can invoke multiple calls per
+transaction.</li>
+    </ul>
+  </li>
+</ul>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="implementation-of-secure-delegate-contracts">
+      
+      
+        <a href="#implementation-of-secure-delegate-contracts" class="anchor-link"></a> Implementation of secure delegate contracts
+      
+      
+    </h3>
+
+<p>The following is a non-exhaustive list of pitfalls that delegate contracts
+<em>should</em> be wary of and require a signature over from the account’s authority:</p>
+
+<ul>
+  <li>Replay protection (e.g., a nonce) should be implemented by the delegate and
+signed over. Without it, a malicious actor can reuse a signature, repeating its
+effects.</li>
+  <li><code class="language-plaintext highlighter-rouge">value</code> – without it, a malicious sponsor could cause unexpected effects in
+the callee.</li>
+  <li><code class="language-plaintext highlighter-rouge">gas</code> – without it, a malicious sponsor could cause the callee to run out of
+gas and fail, griefing the sponsee.</li>
+  <li><code class="language-plaintext highlighter-rouge">target</code> / <code class="language-plaintext highlighter-rouge">calldata</code> – without them, a malicious actor may call arbitrary
+functions in arbitrary contracts.</li>
+</ul>
+
+<p>A poorly implemented delegate can <em>allow a malicious actor to take near complete
+control over a signer’s EOA</em>.</p>
+  
+    <h3 id="front-running-initialization">
+      
+      
+        <a href="#front-running-initialization" class="anchor-link"></a> Front running initialization
+      
+      
+    </h3>
+
+<p>Smart contract wallet developers must consider the implications of setting code
+in an account without execution. Contracts are normally deployed by executing
+initcode to determine the exact code to be placed in the account. This gives
+developers the opportunity to initialize storage slots at the same time. The
+initial values of the account cannot be replaced by an observer, because they
+are either signed over by an EOA in the case of a creation transaction or they
+are committed to by computing the contract’s address deterministically from the
+hash of the initcode.</p>
+
+<p>This EIP does not provide developers the opportunity to run initcode and set
+storage slots during delegation. To secure the account from an observer
+front-running the initialization of the delegation with an account they control,
+smart contract wallet developers must verify the initial calldata to the account
+for setup purposes be signed by the EOA’s key using ecrecover. This ensures the
+account can only be initialized with desirable values.</p>
+  
+    <h3 id="storage-management">
+      
+      
+        <a href="#storage-management" class="anchor-link"></a> Storage management
+      
+      
+    </h3>
+
+<p>Changing an account’s delegation is a security-critical operation that should
+not be done lightly, especially if the newly delegated code is not purposely
+designed and tested as an upgrade to the old one.</p>
+
+<p>In particular, in order to ensure a safe migration of an account from one
+delegate contract to another, it’s important for these contracts to use storage
+in a way that avoids accidental collisions among them. For example, using
+<a href="/EIPS/eip-7201">ERC-7201</a> a contract may root its storage layout at a slot
+dependent on a unique identifier. To simplify this, smart contract languages may
+provide a way of re-rooting the entire storage layout of existing contract
+source code.</p>
+
+<p>If all contracts previously delegated to by the account used the approach
+described above, a migration should not cause any issues. However, if there is
+any doubt, it is recommended to first clear all account storage, an operation
+that is not natively offered by the protocol but that a special-purpose delegate
+contract can be designed to implement.</p>
+  
+    <h3 id="setting-code-as-txorigin">
+      
+      
+        <a href="#setting-code-as-txorigin" class="anchor-link"></a> Setting code as <code class="language-plaintext highlighter-rouge">tx.origin</code>
+      
+      
+    </h3>
+
+<p>Allowing the sender of an EIP-7702 to also set code has the possibility to:</p>
+
+<ul>
+  <li>Break atomic sandwich protections which rely on <code class="language-plaintext highlighter-rouge">tx.origin</code>;</li>
+  <li>Break reentrancy guards of the style <code class="language-plaintext highlighter-rouge">require(tx.origin == msg.sender)</code>.</li>
+</ul>
+
+<p>The authors of this EIP believe the risks of allowing this are acceptable for
+the reasons outlined in the Rationale section.</p>
+  
+    <h3 id="sponsored-transaction-relayers">
+      
+      
+        <a href="#sponsored-transaction-relayers" class="anchor-link"></a> Sponsored transaction relayers
+      
+      
+    </h3>
+
+<p>It is possible for the <code class="language-plaintext highlighter-rouge">authorized</code> account to cause sponsored transaction
+relayers to spend gas without being reimbursed by either invalidating the
+authorization (i.e., increasing the account’s nonce) or by sweeping the relevant
+assets out of the account. Relayers should be designed with these cases in mind,
+possibly by requiring a bond to be deposited or by implementing a reputation
+system.</p>
+  
+    <h3 id="transaction-propagation">
+      
+      
+        <a href="#transaction-propagation" class="anchor-link"></a> Transaction propagation
+      
+      
+    </h3>
+
+<p>Allowing EOAs to behave as smart contracts via the delegation indicator poses
+some challenges for transaction propagation. Traditionally, EOAs have only been
+able to send value via a transaction. This invariant allows nodes to statically
+determine the validity of transactions for that account. In other words, a
+single transaction has only been able to invalidate transactions pending from
+the sender’s account.</p>
+
+<p>With this EIP, it becomes possible to cause transactions from other accounts to
+become stale. This is due to the fact that once an EOA has delegated to code,
+that code can be called by anyone at any point in a transaction. It becomes
+impossible to know if the balance of the account has been swept in a static
+manner.</p>
+
+<p>While there are a few mitigations for this, the authors recommend that clients
+do not accept more than one pending transaction for any EOA with a non-zero
+delegation indicator. This minimizes the number of transactions that can be
+invalidated by a single transaction.</p>
+
+<p>An alternative would be to expand the EIP-7702 transaction with a list of
+accounts the caller wishes to “hydrate” during the transaction. Those accounts
+behave as the delegated code <em>only</em> for EIP-7702 transactions which include them
+in such a list, thus returning to clients the ability to statically analyze and
+reason about pending transactions.</p>
+
+<p>A related issue is that an EOA’s nonce may be incremented more than once per
+transaction. Because clients already need to be robust in a worse scenario
+(described above), it isn’t a major concern. However, clients should be aware
+this behavior is possible and design their transaction propagation accordingly.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Vitalik Buterin&nbsp;(<a href="https://github.com/vbuterin">@vbuterin</a>), Sam Wilson&nbsp;(<a href="https://github.com/SamWilsn">@SamWilsn</a>), Ansgar Dietrichs&nbsp;(<a href="https://github.com/adietrichs">@adietrichs</a>), lightclient&nbsp;(<a href="https://github.com/lightclient">@lightclient</a>), "EIP-7702: Set Code for EOAs," <em>Ethereum Improvement Proposals</em>, no. 7702, May 2024. Available: https://eips.ethereum.org/EIPS/eip-7702.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "EIP-7702: Set Code for EOAs",
+    "name": "EIP-7702: Set Code for EOAs",
+    "author": "Vitalik Buterin (@vbuterin), Sam Wilson (@SamWilsn), Ansgar Dietrichs (@adietrichs), lightclient (@lightclient)",
+    "dateCreated": "2024-05-07",
+    "datePublished": "2024-05-07",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-set-eoa-account-code-for-one-transaction/19923",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2024"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

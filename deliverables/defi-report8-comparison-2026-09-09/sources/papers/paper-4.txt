@@ -1,0 +1,1156 @@
+                                                                           SoK: Decentralized Finance (DeFi)
+                                                          Sam Werner                                     Daniel Perez                                      Lewis Gudgeon
+                                                    Imperial College London                        Imperial College London                            Imperial College London
+
+                                                    Ariah Klages-Mundt                                  Dominik Harz                                 William J. Knottenbelt
+                                                        Cornell University                                   Interlay                                 Imperial College London
+
+                                         ABSTRACT                                                                       (4) Composable: its financial services can be arbitrarily composed
+                                         Decentralized Finance (DeFi), a blockchain powered peer-to-peer                    such that new financial products and services can be created
+                                         financial system, is mushrooming. Two years ago the total value                    (similar to how one is able to conceive new Lego models
+                                                                                                                            based on a few basic building blocks)
+
+
+
+
+arXiv:2101.08778v6 [cs.CR] 15 Sep 2022
+                                         locked in DeFi systems was approximately 700m USD, now, as of
+                                         April 2022, it stands at around 150bn USD. The frenetic evolution            DeFi has grown rapidly, going from around 700m USD in total
+                                         of the ecosystem has created challenges in understanding the basic        value locked (TVL, or analogously “assets under management”) at
+                                         principles of these systems and their security risks. In this Sys-        the start of 2020 to over 150bn USD as of April 2022. Ethereum
+                                         tematization of Knowledge (SoK) we delineate the DeFi ecosystem           alone accounts for 75bn USD in TVL, with the most capitalized use
+                                         along the following axes: its primitives, its operational protocol        cases being collateralized lending, constituting c.54%, of the TVL,
+                                         types and its security. We provide a distinction between technical        and decentralized exchange (DEXs), constituting c.31% of the TVL
+                                         security, which has a healthy literature, and economic security,          as of April 2022 [48]. In turn, this rise led to the 24 hour volume
+                                         which is largely unexplored, connecting the latter with new models        on a decentralized cryptoasset exchange [156], overtaking that of a
+                                         and thereby synthesizing insights from computer science, econom-          major centralized cryptoasset exchange [34] for the first time [69].
+                                         ics and finance. Finally, we outline the open research challenges in         Yet, as with any nascent technology, DeFi is not without its risks.
+                                         the ecosystem across these security types.                                The decentralized nature of DeFi necessarily allows any actor to
+                                                                                                                   write unaudited and even malicious smart contracts, where user
+                                         KEYWORDS                                                                  funds can be lost through programming error or stolen. Moreover,
+                                                                                                                   the audit process itself is no guarantee of safety, with many audited
+                                         Decentralized Finance, DeFi, Ethereum, Blockchain
+                                                                                                                   protocols (e.g., [10, 75, 101, 138, 166]) suffering serious exploits.
+                                                                                                                      This paper. For DeFi to fulfill the vision of the DeFi Optimist,
+                                         1    DEFI: FINANCE 2.0?                                                   it must first be secure. The central contribution of this SoK is to
+                                         Consider two views on the promise of Decentralized Finance (DeFi).        cleanly and exhaustively delineate the DeFi security challenge into
+                                         For the DeFi Optimist, DeFi amounts to a breakthrough techno-             technical security and economic security. The delineation centers
+                                         logical advance, offering a new financial architecture that is non-       on atomicity: whether the attack is near-instantaneous and can
+                                         custodial, permissionless, openly auditable, (pseudo)anonymous,           costlessly fail (and therefore risk-free), or has a non-instantaneous
+                                         and with potentially new capital efficiencies. According to this          duration and where failure comes with a cost. This categorization
+                                         view, DeFi generalizes the promise at the heart of the original Bit-      has the benefit of cleanly mapping different types of models to
+                                         coin whitepaper [109], extending the innovation of non-custodial          each type of security and clarifying previously vague terms of
+                                         transactions to complex financial operations. In contrast, the DeFi       “economic risk” that have been commonly misapplied to exploits
+                                         Pessimist is concerned that, inter alia, the unregulated, hack-prone      that are better understood as technical in nature (e.g., DEX sandwich
+                                         DeFi ecosystem serves to facilitate unfettered and novel forms of fi-     attacks). Prior to this paper, economic security risks were largely
+                                         nancial crime. The pseudo-anonymous nature of DeFi permits cryp-          unexplored, in part because they require synthesizing insights from
+                                         tocurrency attackers, scammers, and money launderers to move,             across computer science, economics, and finance.
+                                         clean, and earn interest on capital. A critical part of the debate           This SoK is structured as follows. We outline DeFi primitives
+                                         between the DeFi Optimist and the DeFi Pessimist, but outside of          in Sec. 2 and systematize existing DeFi protocols by six types of
+                                         the scope of this paper, is moral in nature. This SoK leaves this im-     operations in Sec. 3. We provide a definition of DeFi exploits in
+                                         portant facet aside, focusing instead on synthesizing and evaluating      Section 4. We then define a novel functional categorization of tech-
+                                         the technical innovations of DeFi, seeking to allow newcomers to          nical and economic security risks in DeFi and classify different
+                                         the field to discover the essential features and problems of the DeFi     attacks for each security type in Sections 5 and 6, respectively. We
+                                         terrain.                                                                  then propose a set of six primary open research challenges for DeFi
+                                            DeFi, in its ideal form, exhibits four properties. DeFi is:            going forward that build on these security types in Sec. 7.
+
+                                             (1) Non-custodial: participants have full control over their funds       Related work. Several surveys and other SoKs exist on specific
+                                                 at any point in time                                              DeFi protocol types.1 We direct the reader, when appropriate, to
+                                             (2) Permissionless: anyone can interact with financial services       such SoKs for further material (e.g., [15, 41]). One well-structured
+                                                 without being censored or blocked by a third party                survey on DeFi has been published after our pre-print [144], which
+                                             (3) Openly auditable: anyone can audit the state of the system,
+                                                 e.g., to verify that it is healthy                                1 Most have been pre-printed since our paper was originally released.
+categorizes DeFi protocols but focuses on high level risk and reg-             such complexity brings with it a great burden to understand the
+ulatory challenges. None of these works delineate the new types                emergent security properties of composed smart contracts. We
+of security challenges across DeFi, which is the main focus of our             discuss this in more detail in Sections 5 and 6. One particularly
+SoK.                                                                           common use of smart contracts is to implement tokens, on-chain
+                                                                               assets.
+2     DEFI PRIMITIVES
+DeFi protocols require an underlying distributed ledger such as a                  Transaction Execution. When a blockchain network participant
+blockchain, a peer-to-peer distributed append-only record of trans-            wishes to make a transaction, the details of the unconfirmed trans-
+actions. We take the underlying distributed ledger layer solely                action are first broadcast to a network of peers, validated, and then
+as an input into DeFi and refer the reader to existing work (no-               stored in a waiting area (the mempool of a node). This mempool
+tably [14, 25, 71, 171]) for a fuller exposition of the blockchain layer       is then propagated among the network nodes. Participants of the
+itself. We assume that the ledger has the basic security properties            underlying ledger responsible for ensuring consensus, miners, then
+of consistency, integrity and availability [175]. Without these secu-          choose which transactions to include in a given block, based in part
+rity properties, DeFi protocols built on top of such a ledger would            on the transaction fee attached to each transaction. Transactions in
+themselves become inherently insecure.                                         a block are executed sequentially in the order in which the miner
+   In this section, we draw attention to features of the underlying            of the respective block included them. For a detailed treatment of
+blockchain layer that are most pertinent to DeFi.                              how this process works, we refer the reader to [109, 110, 123, 165].
+                                                                               Miners have the ability to control the sequence in which transac-
+2.1     Smart Contracts and Transactions                                       tions are executed. Hence, miners can order transactions in ways
+   Smart Contracts. The most important provision is that the un-               that will earn them revenues and even insert their own transactions
+derlying ledger offers the ability to use smart contracts, which               to extract further revenues. Miners can even be bribed to under-
+are program objects that live on the blockchain. These are able to             take such transaction re-ordering [107, 164]. The value that miners
+communicate with one-another, via message-calls, within the same               can extract is known as Miner Extractable Value (MEV) [46]. We
+execution context and support atomicity, i.e., a transaction either            consider these issues in detail in Sec. 6.2.
+succeeds fully (state update) or fails entirely (state remains unal-
+tered), such that no execution can result in an invalid state. In some         2.2    Keepers
+cases, bundles of transactions, in which transactions are grouped
+together in a given sequence, can also be executed atomically (e.g.,           Protocols may rely on their on-chain state being continually up-
+[61]).                                                                         dated for their security. In transaction-based systems, updating the
+   Smart contracts rely on blockchains that are transaction-based              on-chain state requires transactions that are triggered externally.
+state machines, whereby an agent can interact with smart contracts             Since smart contracts are not able to create transactions program-
+via transactions. Once a transaction is confirmed, the contract code           matically, protocols must rely on external entities to trigger state
+is run by all nodes in the network and the state is updated. The               updates. These entities, keepers, are generally financially incen-
+underlying cost to state updates comes in the form of transaction              tivized to trigger such state updates. For instance, if for whatever
+fees charged to the sender. For instance, the Ethereum Virtual                 reason a protocol requires a user’s collateral to be automatically
+Machine (EVM) [165] on the Ethereum [27] blockchain is a stack                 liquidated under certain conditions, the protocol will incentivize
+machine which uses a specific set of instructions for task execution.          keepers to initiate transactions to trigger such liquidation.
+The EVM maintains a fixed mapping of how much gas, an Ethereum-
+specific unit that denominates computational cost, is consumed per             2.3    Oracles
+instruction. The total amount of gas consumed by a transaction is
+                                                                               An oracle is a mechanism for importing off-chain data into the
+then paid for by the sender [121, 162].
+                                                                               blockchain virtual machine so that it is readable by smart contracts.
+   In order for DeFi protocols to function on top of them, smart
+                                                                               This includes off-chain asset prices, such as ETH/USD, as well as off-
+contracts must:
+                                                                               chain information needed to verify outcomes of prediction markets.
+      • be expressive enough to encode protocol rules                          Oracles are relied upon by various DeFi protocols (e.g. [2, 97, 104,
+      • allow conditional execution and bounded iteration                      125, 146]).
+      • be able to communicate with one-another, via message-calls,               Oracle mechanisms differ by design and their risks, as discussed
+        within the same execution context (typically a transaction)            in [90, 100]. A centralized oracle requires trust in the data provider
+      • support atomicity, i.e., a transaction either succeeds fully           and bears the risk that the provider behaves dishonestly should
+        (state update) or fails entirely (state remains unaltered), such       the reward from supplying manipulated data be more profitable
+        that no execution can result in an invalid state                       than from behaving honestly. Decentralized oracles offer an alterna-
+These properties provide composability, where smart contracts can              tive. As the correctness of off-chain data is not verifiable on-chain,
+be snapped together like Lego bricks (“Money Lego" [47]), with                 decentralized oracles tend to rely on incentives for accurate and
+the possibility of building complex financial architectures. This              honest reporting of off-chain data. However, they come with their
+is similar to as was envisaged in [82]. While promising, the side-             own shortcomings. We provide a detailed overview of oracle manip-
+effects of smart contracts interactions and the space of all possible          ulation risks and on the shortcomings of on and off-chain oracles
+interactions is vast. In a setting focused on financial applications,          in Sections 5.2 and 6.4.
+                                                                           2
+2.4    Governance
+Governance refers to the process through which a system is able
+to effect change to the parameters which establish the terms on                                                      Distributed
+                                                                                                                       Ledger
+
+which interactions between participants within the system take
+place [90]. Such changes can be performed either algorithmically or
+by agents. While there is existing work on governance in relation to              Collateral
+                                                                                                          Smart Contracts        Token(s)
+blockchains more broadly (e.g. [16, 94, 130]), there is still a limited
+understanding of the properties of different mechanisms that can
+                                                                                Liquid Markets
+be used both for blockchains and DeFi.                                                                                                                         B
+
+    Presently, a common design pattern for governance schemes is                                 Market Mechanism      Oracle           Governance
+                                                                                                                                                         A
+
+
+for a DeFi protocol to be instantiated with a benevolent dictator                 Arbitrage                                                              Asset
+                                                                                                                                                       Exchange
+                                                                                                                                                                     Loanable Funds
+                                                                                                                                                                        Markets
+—sometimes distributing power over a small council or “multisig”—
+who has control over governance parameters, with a promise made
+                                                                                 Liquidations
+by the protocol to eventually decentralize its governance process.                                                                                     Stablecoins     Portfolio
+                                                                                                                                                                      Management
+Such decentralization of the governance process is most commonly                                     Protocol         Protocol              Protocol
+
+
+pursued through the issuance of a governance token (e.g. [13, 36, 44,
+105]), an ERC-20 token which entitles token holders to participate
+                                                                                                                                                       Derivatives      Mixers
+in protocol governance via voting on and possibly proposing pro-
+tocol updates. This token represents ownership in a decentralized                                                   Composability
+
+autonomous organization (DAO) that is taksed with stewardship of
+the protocol.
+    Protocol upgrades in the DAO setting come through proposals
+in the form of executable code, on which governance token holders             Figure 1: A conceptual overview of the different constructs within
+vote. In order to propose protocol updates, the proposer has to hold          the DeFi ecosystem.
+or have been delegated a threshold number of governance tokens.
+For a protocol upgrade to be executed, a minimum number of votes
+is required, which is commonly called a “quorum” in this setting.
+                                                                              allow anyone to become a market maker, even if the market making
+3     DEFI PROTOCOLS                                                          returns are suboptimal, (3) AMM pools can be separately useful as
+                                                                              automatically rebalancing portfolios, (4) maintaining an order book
+We now present DeFi protocols categorized by the type of operation            on-chain is inefficient.
+they provide (for an illustration see Fig. 1).                                   In an AMM liquidity pool, reserves for two or more assets are
+                                                                              locked into a smart contract, where for a given pool, each liquidity
+3.1    On-chain Asset Exchange                                                provider receives newly minted liquidity tokens to represent the
+Decentralized exchanges (DEXs) [81, 99] are a class of DeFi protocol          share of liquidity they have provided. A trade is then performed
+that facilitate the non-custodial exchange of digital assets, where all       by trading against a smart contract’s liquidity reserve for an as-
+trades are settled on-chain and thus publicly verifiable. While DEXs          set, whereby liquidity is added to the reserves of one token and
+initially only supported assets native to the chain on which they             withdrawn from the reserves of one or more other pool tokens. A
+operate, wrapped tokens, such as wBTC [21] (wrapped Bitcoin), and             trading fee is retained by a liquidity pool and paid out proportion-
+novel cross chain solutions [52, 167, 171, 172] have enabled DEXs to          ally to the amount of liquidity provided by each liquidity token
+overcome this limitation. Today, based on the mechanism for price             holder. Liquidity providers are required to give up their liquidity
+discovery, DEXs come in different variants, such as order book DEXs           tokens in order to redeem their share of liquidity and accrued fees.
+(including individual [80, 161] and batch settlement [17, 68], see               With an AMM, the price of an asset is deterministic and decided
+Appendix C for the latter) and automated market makers (AMMs)                 by a formula, not an order book, and thus depends on the relative
+(e.g., [54, 106, 157]). Due to their widespread adoption and novelty          sizes of the provided liquidity on each side of a currency pair. If
+in DeFi, we specifically focus on AMMs.                                       the liquidity is thin, a single trade can cause a significant fluctua-
+   In traditional finance, market makers are liquidity providers that         tion in asset prices relative to the overall market, and arbitrageurs
+both quote a bid and ask price, selling from their own book, while            can profit by closing the spread. Arbitrage refers to the process
+making a profit from the bid-ask spread. Optimal market making                of buying or selling the same asset in different markets to profit
+strategies quickly become sophisticated optimization problems. In             from differences in price. Parties who undertake this process are
+contrast, AMMs provide liquidity algorithmically through simple               arbitrageurs, and play a critical role in DeFi protocols. Arbitrage
+pricing rules with on-chain liquidity pools in place of order books           is used to ensure that the price for an asset on an AMM is at par-
+and have been previously studied in algorithmic game theory, e.g.,            ity with the price on the open market. Note that as the reserve
+logarithmic market scoring rule (LMSR) [73] in prediction markets.            ratios for a pool’s assets change as liquidity is added and with-
+While they have largely remained unimplemented in traditional                 drawn, a liquidity provider may receive a different token ratio upon
+finance, they have become popular in DeFi for a several reasons:              withdrawing his liquidity share compared to the ratio he initially
+(1) they allow easy provision of liquidity on minor assets, (2) they          deposited. For a more focused and formal analysis of AMM design
+                                                                          3
+and the underlying market making mechanism, we direct the reader                      the collateral was created to be collateral or implicit (e.g.,
+to [3–6, 176].                                                                        Nubits [95]), where the design lacks an explicit store of col-
+                                                                                      lateral.
+3.2     Loanable Funds Markets for On-chain                                         • Agents. Agents form at least two roles in a non-custodial
+        Assets                                                                        stablecoin: (1) risk absorption, for instance by providing col-
+                                                                                      lateral that is intended to absorb price risk, and (2) stablecoin
+Lending and borrowing of on-chain assets is facilitated through
+                                                                                      users.
+protocols for loanable funds (PLFs) [72], which refer to DeFi lending
+                                                                                    • Governance. A mechanism and set of parameters that gov-
+protocols that establish distributed ledger-based markets for loan-
+                                                                                      erns the protocol as a whole (either performed by agents or
+able funds of cryptoassets by pooling deposited funds in a smart
+                                                                                      algorithmically).
+contract. In the context of a PLF, a market refers to the total sup-
+                                                                                    • Issuance. A mechanism to control the issuance of stablecoins
+plied and total borrowed amounts of a token, where the available
+                                                                                      against or using the collateral (either performed by agents
+deposits make up a market’s liquidity. An agent may directly bor-
+                                                                                      or algorithmically).
+row against the smart contract reserves, assuming the market for
+                                                                                    • Oracles. A mechanism to import data external to the blockchain
+the token is sufficiently liquid, where the cost of borrowing is given
+                                                                                      onto the blockchain, such as price-feeds.
+by the market’s interest rate.
+   On PLFs, loans are generally of two forms: over-collateralized             See [90, 177] for a more complete discussion of stablecoin designs,
+loans and flash loans. With an over-collateralized loan, a borrower is        models, and challenges.
+required to post collateral, i.e., provide something of value as secu-
+rity to cover the value of the debt, where the value of the collateral        3.4      Portfolio Management
+posted exceeds the value of the debt. In this way, collateralization          For liquidity providers seeking to maximize their returns, liquidity
+simultaneously ensures that the lender (likely a smart contract)              allocation can be an onerous task given the complex and expansive
+can recover their loaned value and provides the borrower with an              space of yield-generating options. The management of on-chain
+incentive to repay the loan. In case the value of the locked collateral       assets can thus be automated through DeFi protocols which serve
+falls below some liquidation threshold, so-called liquidators, a type         as decentralized investment funds, where tokens are deposited into
+of keeper, are able to purchase the locked collateral at a discount           a smart contract and an investment strategy that entails transacting
+and close the borrower’s debt position [122].                                 with other DeFi protocols (e.g., PLFs) is encoded in the contract.
+   An alternative to over-collateralized loans are flash loans. These         Yield in DeFi is generated through interest (including accrued fees
+are uncollateralized loans for the duration of a single transaction,          earned) and token rewards. For the latter, a protocol (e.g., PLF or
+requiring the borrower to repay the full borrowed amount plus inter-          AMM) distributes native tokens to its liquidity providers and/or
+est by the end of the transaction. Flash loans leverage a blockchain’s        users as rewards for the provision of deposits and/or protocol adop-
+atomicity (i.e., the transaction fails if the loan is not repaid in the       tion. These protocol-native token rewards are similar to equity in
+same transaction) and offer several use cases, such as decentralized          the sense that they serve as a right to participate in the protocol’s
+exchange arbitrage and collateral swaps. However, they can also               governance, as well as often represent a claim on protocol-generated
+be used in attacks [127]. For a more detailed discussion and formal           earnings. The distribution model for token rewards in exchange
+analysis of PLFs, we direct the reader to [15, 72].                           for supplied liquidity may vary across protocols, yet is commonly
+                                                                              proportional to how much liquidity an agent has supplied on a pro-
+3.3     Stablecoins                                                           tocol. Therefore, smart contract-encoded investment strategies of
+Non-custodial stablecoins are cryptoassets which aim to be price              on-chain assets are tailored around yield generating mechanisms of
+stable relative to a target currency, commonly the USD, and seek              different protocols with the sole aim of yield aggregation and maxi-
+to achieve this via additional economic mechanisms. Note that                 mization. In practice, on-chain management of assets may range
+custodial stablecoins, such as USDT [98] are not within the scope of          from automatic rebalancing of a token portfolio [59] to complex
+DeFi, since these principally rely on a trusted third-party to operate,       yield aggregating strategies [42].
+though they may be among the assets used in other DeFi protocols.
+   In the decentralized setting, the challenge for the protocol de-           3.5      Derivatives
+signer is to construct a stablecoin which achieves price stability in
+                                                                              Derivatives are financial contracts which derive their value from the
+an economically secure and stable way and wherein all required
+                                                                              performance of underlying assets. As of March 2022, the derivatives
+parties can profitably continue to participate [90]. Price-stability is
+                                                                              market represents about 62% of the entire cryptoassets trading
+pursued via the use of on-chain collateral, providing a foundation
+                                                                              market [43]. While about 99% of the derivative trading volume is
+of secured loans from which the stablecoin derives its economic
+                                                                              achieved on centralized exchanges, a number of DeFi protocols have
+value.
+                                                                              emerged which provide similar functionality [53, 113, 113, 163],
+   The core components of a non-custodial stablecoin are as fol-
+                                                                              with a particular focus on synthetic assets, futures, perpetual swaps
+lows [90].
+                                                                              and options. We lay out the adoption four different basic types of
+      • Collateral. This is the store of primary value for a stable-          derivatives popular in the cryptoasset space2 :
+        coin. Collateral can be exogenous (e.g., ETH in Maker [105]),
+        where the collateral is primarily used externally to the sta-
+        blecoin, endogenous (e.g., SNX in Synthetix [147]), where             2 For an introduction to derivatives, we refer the reader to [78]
+
+                                                                          4
+   (1) Synthetic assets. In DeFi, synthetic assets typically repli-             additionally as a piece that could be included within other DeFi
+       cate off-chain assets on-chain (e.g., the USD in protocols like          protocols.
+       Maker and Synthetix [147]). Though less used at present,
+       another mechanism for constructing synthetic assets is to                4    WHAT IS A DEFI EXPLOIT?
+       use AMMs that enact dynamic portfolio rebalancing strate-                We define what we consider an exploit to be in the DeFi context.
+       gies to replicate derivative payoffs. These bear a resemblance           To do this, we first need to set out a taxonomy of blockchain in-
+       to synthetic portfolio insurance (see Ch. 13 in [78]) in tra-            formation. Let 𝑡 denote the ordering of events. At any point 𝑡 in
+       ditional finance and have been explored more specifically                this sequence of events, there are three categories of information
+       using constant product market makers in [33, 57].                        relevant to a DeFi protocol:
+   (2) Futures. Futures have seen little adoption in DeFi yet. Likely                • Off-chain ground truth, denoted G𝑡𝑂𝐹 𝐹 . For example, true
+       this is caused by the high volatility of the underlying cryp-                   wind speed or the true equilibrium prices of assets traded in
+       toassets making it hard to determine the risk taken by traders                  off-chain venues;
+       writing the futures.                                                          • On-chain ground truth, denoted G𝑡𝑂𝑁 . For example, on-chain
+   (3) Perpetual Swaps. These are similar to futures, however,                         asset ownership;
+       they have no set expiry date or settlement and were specifi-                  • On-chain estimates of off-chain ground truth, denoted Ĝ𝑡𝑂𝐹 𝐹 .
+       cally created and popularized for cryptoasset markets [22].                     For example, oracle reported prices.
+       Perpetuals allow traders to decide (typically on a daily ba-                 A smart contract only has access to G𝑡𝑂𝑁 and Ĝ𝑡𝑂𝐹 𝐹 . Now con-
+       sis, e.g., [53]) to keep the position by providing a funding             sider that a set of smart contracts (e.g., constituting a DeFi protocol),
+       transaction in case their position is underfunded. Due to                𝑆, has a set of intended properties, 𝑃 𝑆 . Each intended property is
+       the frequent price discovery, the price of perpetuals trades             a function of the information up until the current state in the se-
+       typically closer to the underlying in comparison to futures.             quence such that
+       Moreover, perpetuals are more capital efficient than trading                                 n                                          o
+       the underlying itself since platforms require less than 100%              𝑃 𝑆 G𝑡𝑂𝑁 , G𝑡𝑂𝐹 𝐹 = 𝑃0𝑆 G𝑡𝑂𝑁 , G𝑡𝑂𝐹 𝐹 , . . . , 𝑃𝑛𝑆 G𝑡𝑂𝑁 , G𝑡𝑂𝐹 𝐹 .
+       collateral be posted by traders.
+                                                                                For a particular property, it can either hold or not hold at any given
+   (4) Options. Currently, the DeFi market for options is very early
+                                                                                state, as intended, such that the properties are Boolean. Some ex-
+       with basic call and put options (e.g., [113, 163]). The cause for
+                                                                                amples of these properties include the achievement of an invariant
+       the limited adoption of options is three-fold. First, current
+                                                                                rule for an AMM or ensuring that debt positions remaining over-
+       option platforms are at least 100% collateralized. In compari-
+                                                                                collateralized in accordance with a collateral factor in a Protocol
+       son to their centralized counter-parts, this represents large
+                                                                                for Loanable Funds (PLF).
+       capital inefficiency. Second, derivatives with set expiry dates
+                                                                                   For a smart contract to execute as intended, first, the smart-
+       like futures and options are hard to price on AMMs. Most
+                                                                                contract program must actually implement the intended logic (i.e.,
+       AMM platforms (e.g., Uniswap [156]) do not account for a
+                                                                                it must be free of implementation bugs). Second, since smart con-
+       time dimension in the asset. This causes an issue specifically
+                                                                                tracts often heavily depend on G𝑡𝑂𝐹 𝐹 , on-chain estimates of off-
+       with option trading since the value of the option is subject
+                                                                                chain information, Ĝ𝑡𝑂𝐹 𝐹 , must be sufficiently accurate to ensure
+       to time decay. Possible remedies are more nuanced AMM
+       designs like [111] that aim to incorporate such a time di-               that 𝑃𝑖 (G𝑡𝑂𝑁 , G𝑡𝑂𝐹 𝐹 ) = 𝑃𝑖 (G𝑡𝑂𝑁 , Ĝ𝑡𝑂𝐹 𝐹 ). Such estimates can be ma-
+       mension. Also, complex value functions in the AMM like                   nipulated: for example, smart contract states can experience ‘flash’
+       Balancer [13] allow replicating strategies that combine the              manipulation, where an artificial state is set up at the beginning
+       underlying and a derivative into a single asset [57]. Third,             of a transaction and unwound at the end of a transaction. Such
+       options require a liquid market for efficient price discovery.           manipulation can result in G𝑡𝑂𝐹 𝐹 and Ĝ𝑡𝑂𝐹 𝐹 diverging.
+       Adoption will require solving the above problems to boot-                   The different categories of exploit now follow from this state-
+       strap the required liquidity that allows efficient pricing of            ment of what is required for a smart contract to reliably execute as
+       those options.                                                           intended. An exploit can arise from an attacker gaining, or seeking
+                                                                                to gain from:
+3.6    Privacy-preserving Mixers                                                    (1) Seizing upon a difference between the actual implementation
+Mixers are methods to prevent the tracing of cryptocurrency trans-                      of a smart contract and the intended implementation. See
+actions. These are important to preserve user privacy, as the trans-                    Section 5.1.
+action ledger is otherwise public information; however, this also                   (2) Seizing upon an incidental difference between G𝑡𝑂𝐹 𝐹 and
+means they could be used to obscure the source of illicit funds. Mix-                   Ĝ𝑡𝑂𝐹 𝐹 . For example, in November 2020 an incidental devia-
+ers work by developing a “shielded pool” of assets that are difficult                   tion in the Dai price reported by Coinbase triggered liquida-
+to trace back before entering the pool. They typically take one of                      tions on Compound[35].3
+two forms: (1) mixing funds from a number of sources so that indi-                  (3) Creating a deliberate difference between G𝑡𝑂𝐹 𝐹 and Ĝ𝑡𝑂𝐹 𝐹 .
+vidual coins can’t easily be traced back to address individually (also                  For examples, see 5.2 and 5.3.
+called a “coinjoin”, e.g., [159]), or (2) directly shielding the contents       3 Where such incidental differences are not seized upon this might more properly
+of transactions using zero knowledge proofs of transaction validity             be considered a system failure, but we group these together as both are relevant for
+(e.g., [153, 173]). Mixers serve as a DeFi-like application itself and          analyzing protocol security
+                                                                            5
+In exploits of types (2) and (3), a protocol’s operation is made to                In current blockchain implementations, this coincides with (1)
+deviate from its intended properties, i.e., for some 𝑖, 𝑡,                      manipulating an on-chain system within a single transaction, which
+                                                                            is risk-free for anyone, and (2) manipulating transactions within
+               𝑃𝑖 G𝑡𝑂𝑁 , G𝑡𝑂𝐹 𝐹 ≠ 𝑃𝑖 G𝑡𝑂𝑁 , Ĝ𝑡𝑂𝐹 𝐹 .                           the same block, which is risk-free for the miner generating that
+                                                                                block or for an attacker who creates a bundle of transactions that
+    Note the importance of the notion of intention in this delineation          are required to execute atomically in the order given. By exploiting
+of exploit types. For example, when prices on an AMM and prices                 technical structure, the underlying blockchain system allows no
+off-chain differ, this does not amount to an exploit because an                 opportunity for markets or other agents to react in the course of
+intended property of an AMM is that arbitrage will rebalance the                such exploits (when such reaction is possible, we enter the domain
+AMM pool according to the AMM’s pricing rule. However, when a                   of economic security problems in the next section). When there is
+protocol uses an AMM price as a price oracle, its operation is relying          competition to perform these exploits, they will factor into the game
+on information from Ĝ𝑡𝑂𝐹 𝐹 . When this information is significantly            theory of blockchain mining (e.g., [20]) as part of MEV extraction
+different from the true information in G𝑡𝑂𝐹 𝐹 (e.g., if an attacker             (as discussed in [46]); however, attempting these exploits will be
+manipulates the oracle price), this can cause the protocol to behave            risk-free (minus potential gas fees) for any attacker. We identify
+in unintended ways, which would amount to an exploit.                           three categories of attacks that fall within technical security risks
+    Exploits are usually worrisome when they are either profitable              of DeFi protocols: attacks exploiting smart contract vulnerabilities,
+(i.e., an attacker can get more assets out of the exploit than they             attacks relying on the execution order of transactions in a block,
+are spending to execute the exploit, usually from stealing assets) or           as well as attacks which are executed within a single transaction.
+when they cause high losses for protocols or users for low cost of              These security risks are often addressable with program analysis
+execution (which itself is often profitable by short selling the token          and formal models to specify protocols, although these problems
+of a protocol to be exploited).                                                 can quickly become complex to formulate and computationally
+    In the following two sections we delineate between two general              hard.
+types of exploits in a novel way that simultaneously distinguishes               Technical Security
+how the exploit is performed, the type of risks taken on by an
+                                                                                 A DeFi protocol is technically secure if it is not possible for an
+attacker, and the types of tools and models required to analyze se-
+                                                                                 attacker to atomically exploit the protocol at the expense of value
+curity in the two contexts. Note that some attacks on DeFi protocols
+                                                                                 held by the protocol or its users. Due to atomicity, these attacks
+may not be categorized as security exploits at all. For example, the
+                                                                                 can generate risk-free profit. A common property of technical ex-
+collapse of the Terra stablecoin [24] (and related collapses like the
+                                                                                 ploits is that they occur within a single transaction or a bundle of
+Iron stablecoin before it [49]) may be better described as currency
+                                                                                 transactions in a block.
+runs/attacks as opposed to security exploits considering that they
+result from breaching the economic limits of a mechanism without                   Examples of past DeFi protocol exploits that fall into the pre-
+necessarily exploiting the formal properties of smart contracts.                sented attack categories of technical security are given in Table 1
+                                                                                in Appendix A.
+5    TECHNICAL SECURITY
+We define a DeFi security risk to be technical if an agent can atomi-           5.1    Smart Contract Vulnerabilities
+cally exploit a protocol. In a technical exploit, an attacker effectively       Smart contract vulnerabilities have been extensively discussed in
+finds a sequence of contract calls, whether in a single transaction or          the literature [8, 120, 155] and we will therefore not give an exten-
+a bundle of transactions, that leads to a profit through a violation            sive list of all the known vulnerabilities but rather focus on the one
+of a protocol’s intended properties (as visualized in Fig. 2). Such             which have already been exploited in the DeFi context.
+exploits can be performed risk-free (and often in a sense ‘instanta-
+                                                                                Reentrancy. A contract is potentially vulnerable to a reentrancy
+neously’) because the outcomes for the attacker are binary: either
+                                                                                attack if it delegates control to an untrusted contract, by calling
+the attack is successful and the attacker profits or the transaction
+                                                                                it with a large enough gas limit, while its state is partially modi-
+reverts (effectively the attack doesn’t happen) and the attacker only
+                                                                                fied [140]. A trivial example is a contract with a withdraw function
+loses some gas fees.
+                                                                                that checks for the internal balance of a user, sends them money
+                                                                                and updates the balance. If the receiver is a contract, it can then re-
+                                                                                peatedly re-enter the victim’s contract to drain the funds. Although
+                $$                                                              this attack is already very well-known, it has been successfully
+                          Contract 1                   Contract 2
+                                                                                used several times against DeFi protocols[40, 51].
+                                                                                   In practice, reentrancy vulnerabilities are generally simple to
+                                                                                detect and fix by using static analysis tools [103, 155]. There are
+                                                                                two main ways to prevent this vulnerability: (1) using a reentrancy
+                                                                                guard that prevents any call to a given function until the end of
+                         Contract N                    Contract 3               its execution or (2) finalizing all the state updates before passing
+                                                                                execution control to an untrusted contract.
+                                                                                Integer Manipulation. Almost every DeFi application manipu-
+              Figure 2: Diagram of a technical exploit.                         lates monetary amounts in some way or another. This often involves
+                                                                            6
+not only adding and subtracting to balances but also converting             instantaneously and other participants have a chance to react. How-
+into different units or to different currencies. We present the two         ever, as we will see in the economic security section, this often does
+most common types of integer manipulation issues.                           not solve the incentive issues completely, it just resolves the techni-
+   The first issue, which has been extensively studied in the liter-        cal issue.
+ature [86, 154], is integer over- and underflow. As the Ethereum
+                                                                            Single Transaction Sandwich Attacks. In a single transaction
+Virtual Machine (EVM) [165] does not raise any exception in case
+                                                                            sandwich attack, an attacker manipulates an instantaneous AMM
+of over- or underflow, this will often result in failed transactions
+                                                                            price in order to exploit a smart contract that uses that price. An
+and cause the smart contract to misbehave [120].
+                                                                            attacker first creates an imbalance in an AMM, exploits composable
+   The second issue is unit error during integer manipulation. The
+                                                                            contracts which rely on the manipulated price, and then reverses
+main language used to develop DeFi applications on Ethereum at
+                                                                            the imbalance to cancel out the cost of the first step. The whole
+the time of writing is Solidity [62], which has a limited type system
+                                                                            sequence can be performed atomically in a single transaction risk-
+and no support for operator overloading. In addition, the EVM
+                                                                            free. Creating an imbalance typically requires access to a large
+only supports a single type, 32 byte integers, and has no built-in
+                                                                            amount of capital. In a system with flash loans/minting, all agents
+support for fixed-point numbers. To work around this limitation,
+                                                                            effectively have such access, although we stress that these attacks
+each protocol decides on an arbitrary power of 10 to use as its base
+                                                                            are still possible for large capital holders regardless of whether
+unit, often 1018 , and all the computations are performed in terms of
+                                                                            flash loans/minting are widespread. In practice, this type of attack
+this unit. However, given the limitations of the type-system, most
+                                                                            has occurred multiple times [118, 131]. One of the most prominent
+programs elect to use exclusively 32 byte integers. Arithmetic on
+                                                                            single transaction sandwich attacks in terms of seized funds was
+two units accidentally on different scales would not be caught by
+                                                                            performed against the Harvest protocol [56]. The attacker took out
+the compiler.
+                                                                            a $50m USDT flash loan from Uniswap and used part of the funds to
+Logical Bugs. There are a large number of exploits that are rooted          create an imbalance in the liquidity reserves of USDC and USDT on
+in simple programming errors in the smart contracts. While logical          Curve [44] (an AMM) to increase the AMM’s virtual price of USDT.
+bugs are by no means unique to smart contracts, but common to               As the price of USDT on Curve was used as an on-chain oracle
+any type of software, the consequences for smart contracts, where           by the Harvest protocol, the attacker was able to mint Harvest
+immutability underpins the system, can be much more severe than             LP tokens (i.e., tokens a liquidity provider receives in exchange
+for many other genres of software and result in unrecoverable               for depositing funds into a protocol) by depositing 60.6m USDT,
+financial losses.                                                           before reversing the imbalance on Curve and withdrawing 61.1m
+   A large share of the bugs found in Table 1 are also very sim-            USDT from Harvest. The attacker was able to withdraw more USDT
+ple mistakes that have been overlooked in both the development              than deposited, as at the time of the withdrawal, the USDT price
+process and professional contract audits. We discuss in Section 7           given by Curve was less than the deposit price, and therefore one
+potential mitigation techniques to these issues.                            Harvest LP token was worth more USDT during withdrawal. The
+                                                                            attacker repeated this attack 32 times, draining a total of $33.8m of
+                                                                            the protocol’s funds.
+5.2    Single Transaction Attacks                                              To protect against such manipulations, AMMs include a limit
+We refer to attacks which can be successfully executed, independent         amount (or maximum slippage) that a trade can incur, though this
+of knowing about some other pending transaction, as single trans-           only prevents manipulations above this amount.
+action attacks. This category of attack is leveraging transaction
+atomicity and composability of smart contracts.                             5.3    Transaction Ordering Attacks
+Governance Attacks. Protocols that implement decentralized gov-             In traditional finance, the act of front-running refers to taking prof-
+ernance mechanisms tend to rely upon governance tokens, which               itable actions based on non-public information on upcoming trades
+empower token holders to propose and vote on protocol upgrades.             in a market. In the context of blockchain, front-running a transac-
+The technical structure of these governance mechanisms can some-            tion refers to submitting a transaction which is solely intended to
+times be exploited. For instance, many governance designs allow             be executed before some other pending transaction [55]. As trans-
+updates to be instantaneously proposed and approved and the pro-            actions are executed sequentially according to how they have been
+tocol code upgraded within a single transaction. In this setting, an        ordered in a block, an agent may financially benefit from front-
+attacker may obtain an amount of governance tokens sufficient to            running one or more transactions, by having their transaction exe-
+propose and execute malicious contract code and steal a contract’s          cuted before a victim transaction. Similarly, an agent may pursue
+funds, all while circumventing the usual governance process in              back-running, whereby a transaction is intended to be executed
+which other participants can react [70]. The attacker may even              after some designated transaction. As the majority of Ethereum
+obtain the share of governance tokens instantaneously within the            miners order transactions by their gas price [179], an agent can set
+same transaction (i.e., they may not be a long-term participant)            a higher or lower gas price relative to some target transaction, in
+through flash loans from PLFs and swaps from AMMs. In fact, large           order to have his transaction executed before or after the target, re-
+quantities of governance tokens can be obtained easily in these             spectively. In the case of multiple agents attempting to front-run the
+ways today, and such attacks have been executed in practice [102].          same transaction, front-running results in priority gas auctions [46],
+   The direct problem can usually be sorted by applying a timelock          i.e. the competitive bidding of transaction fees to obtain execution
+to the governance process so that updates cannot be performed               priority.
+                                                                        7
+   We refer to attacks which involve front- and/or back-running               Protocol          Loss   Audit Attack          Date           Ref.
+within a single block, thereby undermining the technical security
+of DeFi protocols, as transaction ordering attacks. Note that an at-          bZx            0.35m         ✓ TX sandwich Feb-15-2020 [65]
+tacker does not need to be a miner in order to execute the following          bZx            0.63m         ✓ TX sandwich Feb-18-2020 [11]
+attacks but such attacks can be undertaken risk-free if the attacker          Uniswap        0.30m         ✓ Reentrancy Apr-18-2020 [40]
+is a miner.                                                                   dForce        25.00m         ✗ Reentrancy Apr-19-2020 [64]
+                                                                              Hegic          0.05m         ✗ Logical bug Apr-25-2020 [148]
+Displacement Attacks. In a displacement attack, an attacker front-            Balancer       0.50m         ✓ TX sandwich Jun-28-2020   [1]
+runs some target transaction, where the success of the attack does            Opyn           0.37m         ✓ Logical bug Aug-04-2020 [114]
+not depend on whether the target transaction is executed after-               Yam            0.75m         ✗ Logical bug Aug-12-2020 [32]
+wards [55]. A simple example of such an attack would be an attacker           bZx            8.10m         ✓ Logical bug Sep-14-2020 [10]
+front-running a transaction that registers a domain name [85]. A              Eminence      15.00m         ✗ TX sandwich Sep-29-2020 [74]
+more severe risk comes in the form of generalized front-runners [139],        MakerDAO            -        ✓ Governance Oct-26-2020 [102]
+which are bots that parse all unconfirmed transactions in the mem-            Harvest       33.80m         ✓ TX sandwich Oct-26-2020 [75]
+pool, trying to identify, duplicate, modify and lastly front-run any          Percent        0.97m         ✓ Logical bug Nov-04-2020 [119]
+transaction which would result in a financial profit to the front-            Cheese Bank     3.3m         ✓ TX sandwich Nov-06-2020 [126]
+runner. Examples of transactions vulnerable to generalized front-             Akropolis      2.00m         ✓ Reentrancy Nov-12-2020 [166]
+runners would be reporting a bug as part of a bug bounty scheme to            Value DeFi     7.00m         ✗ TX sandwich Nov-14-2020 [118]
+claim a reward [26] and trying to ‘rescue’ funds from an exploitable          Origin         7.00m         ✓ Reentrancy Nov-17-2020 [101]
+smart contract [139, 143].                                                    88mph          0.01m         ✓ Logical bug Nov-17-2020 [116]
+Multi-transaction Sandwich Attacks. In a “sandwich attack", an                Pickle        19.70m         ✗ Logical bug Nov-21-2020 [149]
+attacker alters the deterministic price on an AMM prior to and after          Compounder 10.80m            ✓ Logical bug Dec-02-2020 [63]
+some other target transaction has been executed in order to profit            Warp Finance 7.80m           ✓ TX sandwich Dec-18-2020 [132]
+from temporary imbalances in the AMM’s liquidity reserves. In                 Cover          9.40m         ✓ Logical bug Dec-28-2020 [138]
+simple cases (e.g., Uniswap), the instantaneous AMM price is simply           Yearn         11.00m         ✗ TX sandwich Feb-05-2021 [137]
+a ratio of AMM reserves and imbalances can be created simply                  Growth DeFi    1.30m         ✓ Logical bug Feb-09-2021 [133]
+by changing this ratio (e.g., by providing single-sided liquidity or          Meerkat       32.00m         ✗ Logical bug Mar-04-2021 [135]
+performing a large swap through the AMM). This is how these                   Paid Network 27.00m          ✗ Logical bug Mar-05-2021 [136]
+AMMs are designed to work: swaps create imbalances, which, if left            DODO           2.00m         ✗ Logical bug Mar-09-2021 [134]
+unbalanced, incentivize arbitrageurs to perform the reverse actions           Cream        130.00m         ✓ TX sandwich Oct-27-2021 [170]
+to balance the AMM pool.                                                     Table 1: An overview of empirical technical security exploits in DeFi
+   An attacker may target another user’s transaction (e.g., to profit        protocols for the period February 2020 to March 2021. The included
+from triggering large slippage in another user’s swap) by trying to          exploits are explicitly limited to technical exploits and exclude any
+place adjacent transactions that set up the imbalance right before           deliberate protocol scams that may have occurred. Note that the
+the swap and close out the imbalance right after the swap [145, 179].        amount of funds seized per exploit is denominated in USD as of the
+This can be achieved through front-running the user’s swap trans-            time of the exploit and does not account for any losses that may
+action by setting a higher gas price on the transaction creating the         have been recovered.
+imbalance. By setting a lower gas price on the transaction closing
+the imbalance, the attacker can back-run the user’s transaction and
+complete the attack. Note that setting high and low transaction fees
+does not guarantee the attack to succeed, as ultimately it is up to a        the transaction sequence but doesn’t control what happens between
+transaction’s miner to determine the order of execution.                     their actions in the sequence, which means that there is no guaran-
+   A variant of this attack [179] can be performed if instead of             tee that the final action is profitable (as visualized in Fig 3 and in
+being a liquidity taker, the attacker is a liquidity provider for the        comparison to the technical exploit in Fig 2). Economic security is
+respective AMM. The attacker can front-run a victim transaction              effectively about an exploiting agent who tries to manipulate a mar-
+that swaps token 𝐴 for token 𝐵 and remove liquidity, exposing                ket or incentive structure over some time period (even if short, it is
+the victim to higher slippage. Subsequently, the attacker can back-          not instantaneous). Compared to technical exploits, since economic
+run the victim transaction, and resupply the previously withdrawn            exploits are non-atomic, they come with upfront tangible costs,
+liquidity. In a third transaction that swaps 𝐵 for 𝐴, the attacker           a probability of attack failure and risk related to mis-estimating
+obtains a profit in 𝐵. A formal analysis of sandwich attacks is given        the market response. Thus they are not risk-free and commonly
+in [179].                                                                    involve manipulations over many transactions or blocks.
+                                                                                In addition to comparing the structures in Figures 2 and 3, we
+6   ECONOMIC SECURITY                                                        provide a simple example to help illustrate the distinction between
+We define a DeFi security risk to be economic if an attacker can             technical and economic security. Consider a protocol that uses an
+perform a strictly non-atomic exploit to realize a profit at the ex-         instantaneous AMM price as an oracle. An attacker can perform a
+pense of value held by the protocol or its users. In an economic             (atomic) sandwich attack to steal assets, which amounts to a tech-
+exploit, an attacker performs multiple actions at different places in        nical exploit. If instead the protocol used a time-weighted average
+                                                                         8
+                                                                                  player 𝑖 strictly dominates another strategy 𝑠 2,𝑖 ∈ §𝑖 if regardless
+   t=0                           Contract 1              Contract N
+                                                                                  of the actions of other agents, strategy 𝑠 1,𝑖 will always result in a
+                                                                                  higher payoff to the agent. Economic rationality is then defined as
+                                                                                  follows.
+     ...                                                                           Economic Rationality
+                         Market conditions change
+                                                                                   An agent is rational iff they will never play a strictly dominated
+                                                                                   strategy (i.e., they are profit optimizing).
+   t=i
+                          $$ ?                            Contract 2                 Moreover, common knowledge of rationality means that all
+                                 Contract 1
+                                                                                  agents know no agent will play a strictly dominated strategy.
+                                                                                     While most economic security analysis ought to consider attack-
+                                                                                  ers who have profit-maximizing objectives, it can also be important
+                                                          Contract 3              to consider attackers with other objectives. For instance, an attacker
+                                 Contract N                                       who wishes to shut down the system may decide to attack as long as
+                                                                                  the cost is of a moderate level. In this sense, the economic security
+             Figure 3: Diagram of an economic exploit.                            depends on system interruptions being too costly to effect.
+                                                                                  Incentive Compatibility. Incentive compatibility is originally a
+                                                                                  concept from game theory (e.g., [141], but as a concept has seen
+AMM price as an oracle, then the attacker could manipulate this                   some adaption in the context of cryptoeconomics and in particular
+price over time (non-atomically) and may still be able to steal assets,           DeFi.
+which would amount to an economic exploit.                                           In the cryptoeconomic setting, a mechanism is defined as incen-
+    Economic risks are inherently a problem of economic design                    tive compatible if agents are incentivized to execute the mechanism
+and cannot be solved by technical means alone. To illustrate, while               as intended (see e.g. [142]).
+these attacks could be performed atomically (and risk-free) in a
+                                                                                   Cryptoeconomic Incentive Compatibility
+very poorly constructed system that allowed it, they are not solved,
+for example, just by adding a time delay that ensures they are not                 A mechanism (or protocol) is incentive compatible iff agents are
+executed in the same block. Even if all technical issues are sorted,               incentivized to execute the game as intended by the protocol
+we are often left with remaining economic problems about how                       designer.
+markets or other incentive structures could be manipulated over
+                                                                                     A central question in the context of incentive compatibility, con-
+time to exploit protocols. From a practical perspective, progress on
+                                                                                  sidered in [90], is the sustainability of the mechanism implemented
+these economic problems inherently requires economic models of
+                                                                                  by a system (i.e., will the incentives arising from the system allow
+these market equilibria and the design of better protocol incentive
+                                                                                  the system to be economically secure and stable long-term). In
+structures. These models differ considerably from traditional secu-
+                                                                                  [90], for stablecoins, this is separated into a question of incentive
+rity models and are sparsely studied. As a result, defensive measures
+                                                                                  security, which is included in our concept of economic security,
+for economic security risks are also not as well established.
+                                                                                  and a question of economic stability, which is a further question of
+    In this way also, technical security must be a first bar: if a protocol
+                                                                                  whether an economically secure system actually plays out to the
+is not technically secure, then it will break in the presence of rational
+                                                                                  desired equilibrium envisioned by the designers.
+agents. Economic security only makes sense if technical security
+                                                                                     We primarily focus on the direct security questions in this paper;
+is achieved. For instance, if a protocol’s funds can be exploited
+                                                                                  however, similar questions to economic stability apply to protocols
+because it is not technically secure, then in an economic sense no
+                                                                                  other than stablecoins as well. For instance, when designing syn-
+rational agents should participate.
+                                                                                  thetic derivatives built using dynamic portfolios (and implemented
+ Economic Security                                                                as AMM pools), a lingering question is how well these designs
+ A DeFi protocol is economically secure if it is economically infeasible          can replicate the derivative payoffs under extreme conditions. As a
+ (e.g., unprofitable) for an attacker to perform exploits that are                comparison, synthetic portfolio insurance in traditional markets
+ strictly non-atomic at the expense of value held by the protocol                 can break down when markets move too fast for the strategy to
+ or its users. As economic exploits are non-atomic (or else they are              rebalance (See Ch. 13 in [78]). AMM pools aim to rebalance over
+ better described as technical), they are not risk-free.                          much shorter timescales, and so may have an advantage here, but
+                                                                                  are also suboptimal in other areas of rebalancing.
+Economic Rationality. A central assumption in considering the
+class of economic security attacks is that of economic rationality.               6.1    Overcollateralization as Security
+Following the standard game theoretic approach, we denote the                     Collateralization is one of the primary devices to ensure economic
+strategy for player 𝑖 as 𝑠𝑖 . A strategy is a plan for what to do at              security in a protocol. In general, collateral serves as a potential
+each decision node (equivalently, information set) that the agent                 repercussion against misbehaving agents [76] and allows creat-
+is aware they might reach. For example, a strategy would define                   ing protocols such as stablecoins, loanable funds, or decentralized
+what action an agent would take in the event that it finds itself in a            cross-chain protocols. As asset prices evolve over time, these sys-
+protocol that becomes undercollateralized. A strategy 𝑠 1,𝑖 ∈ §𝑖 for              tems generally allow automated deleveraging: if an agent’s level
+                                                                              9
+of collateralization (value of collateral / value of borrowing) falls             The practicality of MEV threats have been highlighted in [46],
+below a protocol-defined threshold, an arbitrager in the system can            where the prevalent dangers of undercutting and time-bandit attacks
+reduce the agent’s borrowing exposure in return for a portion of               are presented. In an undercutting attack [29], an adversarial miner
+their collateral at a discounted valuation. This aims to keep the              would fork off a block with high MEV, while holding back some of
+system fully collateralized.                                                   the extractable value in order to incentivize other miners to direct
+    Overcollateralization is not without risks, however. For instance,         their computational efforts towards the adversary’s chain. In a time-
+as explored in [70, 87], times of financial crisis (wherein there are          bandit attack [46], an attacker forks from some previous block and
+persistent negative shocks to collateral asset prices) can result in           sources expected MEV to increase his computational power and
+thin, illiquid markets, in which loans may become undercollateral-             pursue a 51% attack until the expected MEV is realized. Hence,
+ized despite an automated deleveraging process. In such settings, it           time-bandit attacks are a consensus layer risk and can be a direct
+can become unprofitable for liquidators, a type of keeper, to initiate         consequence of historic on-chain actions which could profit a miner
+liquidations. Should this occur, rational agents will leave their debt         at some later point. A further threat is that miners could collude to
+unpaid as that results in a greater payoff.                                    set up more MEV opportunities over time, for instance by censoring
+    Another form of deleveraging risk arises when the borrowed                 transactions to top up collateral in crises and thus creating more
+asset has endogenous price effects, for instance when its price is             liquidation events, as discussed in [91]. This is very similar to events
+affected by other agents’ decisions in the system or when it is ma-            on Black Thursday, in which mempool manipulations contributed
+nipulable. This is the case in non-custodial stablecoins like Dai that         to inefficient liquidation auctions in Maker [23].
+are based on leverage markets (Dai is created by “borrowing” it
+against collateral and similarly must be returned to later release             6.3     Governance Risks and Governance
+the collateral). As explored in [91, 92], such stablecoins can have                    Extractable Value
+deleveraging feedback effects that lead to volatility in the stablecoin
+                                                                               Protocol governance often introduces means to update system pa-
+itself. In regions of instability, the stablecoin will tend to become
+                                                                               rameters and even redefine entire contracts. In many cases, this
+illiquid and appreciate in price (more so as they need to be pur-
+                                                                               may be a necessary component for the system to evolve over time.
+chased for liquidations), which can force speculative agents who
+                                                                               However, governance can also introduce manipulation vectors that
+have leveraged their positions to pay premium prices to delever-
+                                                                               affect security. Governance of a DeFi protocol is typically tied to
+age. This causes their collateral to drawdown faster than may be
+                                                                               holders of governance tokens, which can often be thought of as
+expected, which makes the system in total less healthy and may
+                                                                               shares in the protocol. In systems where there is large flexibility
+lead to shortfalls in collateralization. This was later directly ob-
+                                                                               for governance to change the system, an important question is
+served in Dai on “Black Thursday” [66]. As further discussed in
+                                                                               where governance token value comes from. A typical aim is for
+[92], such a stablecoin requires uncorrelated collateral assets to be
+                                                                               the protocol to incentivize good stewardship from its governance
+fully stabilized from such deleveraging effects as stable regions are
+                                                                               token holders by compensating governance with cashflows from
+related to submartingales (i.e., agents expect collateral asset prices
+                                                                               the system. In this case, governance token value is derived from
+to appreciate). However, current uncorrelated assets are primarily
+                                                                               future discounted cashflows. Another possibility is that governance
+centralized/custodial, which poses a challenge for non-custodial
+                                                                               is directly aligned with underlying users–e.g., because they are the
+designs.
+                                                                               same.
+                                                                                  However, if these incentives are not of sufficient size, then it may
+6.2    Threats from Miner Extractable Value                                    be more profitable for governance token holders to extract value
+                                                                               in less desirable ways, which we term governance extractable value
+An assumption by many blockchain protocols is that the block
+                                                                               (GEV).4 An example of GEV is for governors to effect changes to
+reward is sufficient to incentivize “correct" miner behavior. How-
+                                                                               the protocol in ways that provide outside benefits to themselves
+ever, there are consensus layer risks should the MEV exceed the
+                                                                               but may be harmful to the overall system health. For instance,
+block reward. The simplest example of MEV is double spending
+                                                                               the Cream protocol governance added high levels of very risky
+of coins, which is commonly considered in base layer incentives.
+                                                                               collateral assets that they had an outside stake in, arguably to their
+DeFi applications give rise to many new sources of MEV. For in-
+                                                                               benefit but against the interests of the protocol [129].
+stance, (1) DEXs present atomic arbitrage opportunities between
+                                                                                  GEV also includes explicit governance attacks. An instance of an
+different trading pairs, as explored in [46], and (2) stablecoins built
+                                                                               explicit attack was the governance takeover of the Build Finance
+on leverage markets (like Dai) present arbitrage opportunities in
+                                                                               DAO, where a malicious actor passed a proposal to take control of
+liquidating leveraged positions, as explored in [91]. Similarly, other
+                                                                               the Build token contract and was thereby not only able to drain
+protocols, like PLFs, that utilize liquidation mechanisms also create
+                                                                               various AMM pools by minting and swapping Build tokens, but
+MEV opportunities. Further, MEV can arise when miners are in-
+                                                                               to ultimately remove the DAO from any form of control over the
+centivized to re-order or exclude transactions based on cross-chain
+                                                                               core protocol [60]. A hypothetical GEV attack to indirectly extract
+payments happening on other chains [83].
+                                                                               collateral value is described in [89]. In cases like these, governance
+    These are not exhaustive; there are additionally many other ways
+                                                                               may not be incentive compatible. And if the value of governance
+in which miners could manipulate DeFi protocols to extract value.
+                                                                               tokens from incentive compatible sources crashes, the region of
+It’s worth noting that these are not just hypothetical concerns,
+they have actually been observed–e.g., [12, 23]–and shown to be                4 GEV may be interpreted as a generalization of MEV with miners being a specific type
+sufficiently profitable, e.g., [178].                                          of governor tasked with ordering transactions on the base layer.
+                                                                          10
+incentive compatibility also shrinks, and it may become profitable            lower, respectively. An instance of this form of market manipula-
+for a new coalition of governors to form to attack the protocol.              tion was seen with Inverse Finance, where a malicious actor first
+This is increasingly problematic given the ease and low cost with             manipulated the used Sushiswap price oracle to quote a higher
+which governance tokens may be obtained via flash loans and PLFs.             price for the Inverse token, only to exploit the protocol a block
+Other complications arise in the need to protect minority rights              later by borrowing various assets against the Inverse token using
+within the protocol–e.g., building in limitations so that a majority          the manipulated price before MEV bots arbitraged the manipulated
+of governors cannot unilaterally change the game to, for instance,            price back [19]. A further example of such an attack would be to
+steal all value of the other minority or users. See [96] for further          trigger liquidations by manipulating an asset’s price, as discussed
+discussion of GEV.                                                            in the context of stablecoins in [91]. An attacker could profit either
+   There is limited literature in modeling GEV incentives in the              by purchasing liquidated collateral at a discount or shorting the
+DeFi setting (as opposed to modeling governance in the underlying             collateral asset by speculating on a liquidation spiral. Such attacks
+blockchain itself). The capital structure-like models developed in            are similar to short-squeezes in traditional markets. However, un-
+[79, 90] can be applied more generally to DeFi protocols to model             like with single transaction sandwich attacks, the aforementioned
+governance security and incentive compatibility around these is-              attack is not risk-free and could bring substantial losses to the at-
+sues. As can be understood in those models, these issues essentially          tacker should it fail. In particular, markets and agents may react to
+arise because there may not be outside recourse (e.g., legal) in the          such attacks in unpredictable ways.
+pseudo-anonymous setting to disincentivize attacks and manipula-                  To illustrate the potential of such attacks, the stablecoin DAI,
+tions compared to the (idealized) traditional finance setup. Further,         which historically has thin liquidity, traded at a temporary price of
+[90] conjectures that in the case of a fully decentralized stablecoin         $1.30 over a course of about 20 minutes on Coinbase Pro, a major
+with multiple classes of interested parties and with a high degree of         centralized cryptoasset exchange, before returning to its intended
+flexibility for governance design, there exists no long-term incen-           $1 peg [88]. As a result, the Compound Open Price Feed [37], a
+tive compatible equilibrium. Intuitively, there are resulting costs of        cryptoasset price oracle which is in part based on prices signed
+anarchy in such systems, which can be too much to bear. In such               by Coinbase, reported a DAI price of $1.23 to Compound for a
+a case, rational agents would choose not to participate. However,             short period of time. This incident triggered (arguably wrongful)
+they also conjecture that other DeFi systems, such as DEXs, may               liquidations on collateral worth approximately $89m, costing the
+have wider incentive compatibility in similar situations due to the           liquidated Compound borrowers 23% (from the imbalanced DAI
+different structure of such systems. These models have inspired               price) plus an additional 5% (the Compound liquidation incentive,
+new mechanisms such as Optimistic Approval [96], which provides               i.e., the discount at which collateral is sold at during a liquidation)
+an optional veto over governance updates to protocol users, as a              on their liquidated assets.
+new defensive measure to to reduce costs of anarchy and GEV.
+
+6.4    Market and Oracle Manipulation                                         Oracle Manipulation. Centralized oracles serve as a single point
+As the suppliers of off-chain information, oracles pose a fundamen-           of failure and despite trusted execution environments [174] they re-
+tal component of DeFi protocols, particularly for sourcing price              main vulnerable to the provider behaving maliciously if incentives
+feeds [84]. However, it is important to distinguish between (1) a             are sufficient for manipulating the source of a data feed. Decentral-
+price that is manipulated yet correctly supplied by an oracle and             ized price oracles may use on-chain data, most notably on DEXs
+(2) an oracle itself being manipulated. While we present each form            (specifically AMMs) for crypto-to-crypto price data. However, as
+of manipulation, note that the latter can be essentially modeled as           outlined in Section 5.2, prices may be manipulable through inten-
+a separate governance-type risk as discussed in [90].                         tionally created imbalances and thinly traded markets. Furthermore,
+                                                                              on-chain DEX oracles inherently can not price off-chain assets and
+Market Manipulation. We wish to quantify economic risks stem-
+                                                                              fiat currencies.
+ming from price manipulations in underlying markets while as-
+                                                                                 As discussed in [90], decentralized oracle solutions for off-chain
+suming the oracle follows a best practice implementation and is
+                                                                              data exist. However, they are yet imperfect solutions, tending to rely
+non-malicious. An adversary may manipulate the market price (on-
+                                                                              on Schelling point games, in which agents vote on the correct price
+chain or off-chain) of an asset over a certain time period if a profit
+                                                                              values and are incentivized against having their stake slashed if their
+can be realized as a consequence of the price manipulation–e.g.,
+                                                                              vote deviates from the consensus. Tying incentives to consensus,
+by taking positions in a DeFi protocol that uses that market price
+                                                                              when the correctness of the consensus decision is not objectively
+as an oracle. As discussed in the Section 5, instantaneous AMM
+                                                                              verifiable (as in this case), paves a vector for game theoretic attacks,
+prices are easily manipulable with near zero cost and, as a result,
+                                                                              like in Keynesian beauty contests.
+should not be used as price oracles. Market manipulation problems
+persist even when we assume the oracle is not an instantaneous
+AMM price. In this case, there is a cost to market manipulation
+related to maintaining a market imbalance over time, whether in
+an AMM (e.g., to manipulate a time-weighted average price) or                 7    OPEN RESEARCH CHALLENGES
+through filling unfilled orders in an order book. Depending on                There are many open research challenges in DeFi stemming from
+whether the market for an asset is thick or thin, the cost for an             the technical and economic security issues presented in Sections 5
+attacker to significantly change the asset’s price will be higher or          and 6.
+                                                                         11
+7.1    Composability Risks                                                    and (2) from an economic security point of view, incentive com-
+Cryptoassets can be easily and repeatedly tokenized and inter-                patibility is further complicated by the borrowing of governance
+changed between DeFi protocols in a manner akin to rehypotheca-               tokens.
+tion. This offers the potential to construct complex, inter-connected
+financial systems, yet bears the danger of exposing agents to com-
+                                                                              7.3    Oracles
+posability risks, which are as of yet mostly unquantified. An exam-
+ple of composability risk is the use of flash loans for manipulating          We highlight a few open challenges about oracle design and security.
+instantaneous AMMs and financially exploiting protocols that use              Note that, in many cases, the oracle problem can also be directly
+those AMMs as price feeds. This has repeatedly been exploited in              related to the governance problem, as governors are often tasked
+past attacks (e.g. [75, 126, 150]). However, the breadth of compos-           with choosing the oracles that are used.
+ability risks spans far beyond the negative externalities stemming               A more general open challenge lies in how to structure oracle
+from instantaneous AMM manipulations. For instance, there re-                 incentives to maintain incentive compatibility to report correct
+main open questions about the consequences of the following types             prices. This is similar to governance design in some ways and needs
+of exploitations on connecting systems: the accumulation of gov-              to take into account the possible game theoretic manipulations that
+ernance tokens to execute malicious protocol updates, the failure             could be profitable.
+of non-custodial stablecoin incentives to ensure price stability, and            We identify a further research opportunity in designing and eval-
+failure of PLF systems to remain solvent. Note, however, that this            uating the security of various oracle strengthening methods. While
+list is far from exhaustive. These become increasingly important              there exist several works examining oracle designs on both a gen-
+issues as more complex token wrapping structures [158] stimulate              eral and empirical basis–e.g. [84, 100]– a formal security analysis
+higher degrees of protocol interconnectedness. For example, the               of, e.g., medianizers, reputation systems, and grounding reported
+use of PLF deposit tokens (as opposed to the tokens in their original         prices based on on-chain verifiable metrics is yet to be done.
+forms) within AMM pools and strategies to earn yield on underly-
+ing assets through leverage by borrowing non-custodial stablecoins
+                                                                              7.4    Miner Extractable Value
+and depositing into PLFs or AMMs.
+    Recent works [72, 108] begin to explore protocol interdepen-              While research on MEV and the extraction of it is being put for-
+dence, while [152] propose a process-algebraic technique that al-             ward [46], methodologies to quantify negative externalities of MEV–
+lows for property verification by modeling DeFi protocols in a                e.g., from wasted gas per block, upward gas price pressure–and
+compositional manner. Nonetheless, a critical gap in DeFi research            the full extent of MEV opportunities remain scarce. For the latter,
+toward taxonimizing and formalizing models to quantify compos-                we conjecture that the miner’s problem to optimize the MEV they
+ability risks remains. This problem is elevated as a holistic view            extract in a block is NP-hard and additionally hard to approximate.
+on the integrated protocols is necessary: failures might arise from           To support this, it is quite easy to reduce a simplified version of
+both technical and economic risks. Ensuring safety of protocol com-           the problem, in which the MEV of each transaction is fixed, to the
+position will be close to impossible for any protocol designer and            knapsack problem. Note that while the knapsack problem is NP-
+forms a major challenge for DeFi going forward.                               hard, it is easy to approximate. In fact, we expect a more realistic
+                                                                              version of the miner’s problem to be harder than knapsack because
+                                                                              the transaction ordering the miner chooses also changes the MEV
+7.2    Governance                                                             of the transactions (i.e., swapping two elements might change their
+We identify important research directions in governance and GEV.              weight in knapsack).
+A general direction is modeling incentive compatibility of gover-                 With regards to quantifying extractable value, [9] introduce
+nance in various systems with GEV. For instance, setting up models,           Clockwork Finance Framework, a novel framework that applies
+finding equilibria, and understanding how other agents in the sys-            formal verification to reason about DeFi security properties with
+tem respond. The models in [90] get this started in the context of            respect to the profit that is extractable by an actor in a given system.
+stablecoins and additionally discuss how to extend to other DeFi              It should be noted that the definition of economic security as defined
+protocols. There is moreover a range of discussions around sim-               in [9] would be closer to what we refer to as technical security or
+ulating and formalizing governance incentives through tools like              atomic MEV and that modeling non-atomic MEV requires economic
+cadCAD [112].                                                                 models of the underlying markets, as discussed in Section 6.
+   There remain unanswered questions with regards to the general                  There are interesting questions regarding how the emergence of
+design of governance incentives. For instance, how to structure               MEV opportunities endogenously affects agents’ behavior within
+governance incentives to reward good stewardship: e.g., intrinsic             DeFi protocols. Models for this are started in the context of stable-
+vs. monetary reward, reward per vote vs. reward per token holder,             coins in [90].
+and measures of good stewardship. Furthermore, there lies potential               A further open challenge remains with respect to designing pro-
+in formally evaluating protection of minority agents in systems               tective mechanisms against (1) consensus layer instability risks that
+with flexible governance and large GEV.                                       are induced by high MEV incentives and (2) time bandit attacks that
+   For systems utilizing governance tokens, we identify research              seek to rewrite the recent transaction history–for example, which
+gaps rooted in security risks of the ability to borrow governance to-         could aim to trigger and profit from increased protocol liquidations.
+kens via flash loans and PLFs. Specifically, we identify opportunities        On this point, [91] suggests that oracle price validity could be tied
+to formally explore how (1) technical security can be compromised             to recent block hashes to prevent such reorderings from extracting
+                                                                         12
+the protocol value, though potentially with costs to the economic            of DeFi systematically. First, we laid out the primitives for DeFi
+security of the protocol in other ways.                                      before categorizing DeFi protocols by the type of operation they
+                                                                             provide. After distinguishing between different types of information
+7.5    Program Analysis                                                      relevant to a DeFi protocol, we provided a working definition of
+There exists a large amount of work [77], both in academia [103,             an exploit. We established economic security on the same level as
+124, 155] and industry [39, 58], to analyze smart contract bugs and          technical security and created a novel functional categorization
+vulnerabilities. While smart contracts analysis tools keep improving,        of the different types of risk therein. Further, we provided clear
+the number and scale of smart contract exploits are showing no               definitions of these risks as well as insights into the types of models
+sign of decrease and are, on the contrary, becoming more frequent.           that are needed to understand and defend against these risks. Finally,
+Although program analysis tools are no silver bullet and cannot              we drew the attention to open research challenges that require a
+prevent all exploits, Table 1 and the discussed exploits in Section 5        holistic understanding of both the technical and economic risks.
+and in Appendix B hint that there are some recurring patterns that              While DeFi may have the potential to creating a permissionless
+could be automatically detected and prevented.                               and non-custodial financial system, the opinion put forward by the
+   Current program analysis tools can mainly be divided into two             DeFi optimist, the open technical and economic security challenges
+categories: (1) fully automatic tools checking for program invariants        remain strong. The DeFi pessimist is, at least for now, on firm
+and (2) semi-automated verification tools checking for user-defined          ground: solving these challenges in a robust and scalable way is
+properties [7, 31, 124]. While the latter allows to verify business          a central challenge for researchers and DeFi practitioners. In the
+logic in ways that are not fully automatable, they are typically             end, however, it is the blend between promise and challenge —
+non-trivial to setup and require knowledge of software verification,         the tension between the views of the DeFi optimist and the DeFi
+which limits their use to projects with enough resources. On the             pessimist — that makes DeFi a worthwhile and exciting area for
+other hand, fully automatic tools, which can be very easily setup            research.
+and ran, usually focus on checking properties of a single contract in
+isolation [38, 58, 154, 155], such as unchecked exceptions or integer        ACKNOWLEDGMENTS
+overflows. However, they have not evolved yet to embrace the                 We thank the anonymous reviewers for their feedback and sugges-
+composable nature of smart contracts, which makes it impossible              tions. This project received partial funding from EPSRC Standard
+for such tools to reason about scenarios where the issue happens             Research Studentship (DTP) (EP/R513052/1), the Ethereum Foun-
+due to a change in something external to the smart contracts, such as        dation, the Brevan Howard Centre for Financial Analysis, Smart
+a sudden change in a price returned by an oracle. Further, most tools        Contract Research Forum, and a Bloomberg Fellowship.
+reason very little about semantic properties of the smart contracts,
+such as how a particular execution path can influence ERC-20                 REFERENCES
+token balances. We believe that improvements in these areas will               [1] 1inch: Balancer pool with sta deflationary token incident (2020), https://1inch-
+allow auditors and developers to analyze and deploy their contracts                exchange.medium.com/balancer-hack-2020-a8f7131c980e
+                                                                               [2] AAVE: Aave: Protocol whitepaper v1.0 (2020), https://github.com/aave/aave-
+with more confidence, reducing the number of technical security                    protocol/blob/master/docs/Aave_Protocol_Whitepaper_v1_0.pdf, accessed:
+exploits.                                                                          13-08-2020
+                                                                               [3] Angeris, G., Chitra, T.: Improved price oracles: Constant function market makers.
+                                                                                   Proceedings of the 2nd ACM Conference on Advances in Financial Technologies
+7.6    Anonymity and Privacy                                                       (2020)
+The anonymity and privacy of DeFi protocols is at present a signifi-           [4] Angeris, G., Evans, A., Chitra, T.: When does the tail wag the dog? Curvature
+                                                                                   and market making. arXiv preprint arXiv:2012.08040 (2020)
+cantly understudied area. There is a tension between user’s privacy            [5] Angeris, G., Evans, A., Chitra, T.: Replicating market makers. arXiv preprint
+being valuable in itself, while at the same time helping malicious                 arXiv:2103.14769 (2021)
+                                                                               [6] Angeris, G., Kao, H.T., Chiang, R., Noyes, C., Chitra, T.: An analysis of uniswap
+users to escape the consequences of their actions. At present, a                   markets. Cryptoeconomic Systems Journal (2019)
+large proportion of DeFi transactions occurs in protocols built on             [7] Annenkov, D., Spitters, B.: Towards a smart contract verification framework in
+Ethereum, wherein agents at best have pseudoanonymity. This                        coq. arXiv preprint arXiv:1907.10674 (2019)
+                                                                               [8] Atzei, N., Bartoletti, M., Cimoli, T.: A survey of attacks on ethereum smart
+means that if an agent’s real-world identity can be linked to an on-               contracts (sok). In: International conference on principles of security and trust.
+chain address, all the actions undertaken by the agent through that                pp. 164–186. Springer (2017)
+address are observable. While recent advances in zero-knowledge                [9] Babel, K., Daian, P., Kelkar, M., Juels, A.: Clockwork finance: Automated analysis
+                                                                                   of economic security in smart contracts. arXiv preprint arXiv:2109.04347 (2021)
+proofs [115, 160] and multi-party computations [18, 128] hold many            [10] Baker, P.: Defi lender bzx loses $8m in third attack this year. CoinDesk (2020),
+promises, these technologies are yet to gain traction in the context               https://www.coindesk.com/defi-lender-bzx-third-attack
+                                                                              [11] Baker, P.: Defi project bzx exploited for second time in a week, loses $630k in
+of DeFi. One of the main friction points is the large computational                ether. CoinDesk (2020), https://www.coindesk.com/defi-project-bzx-exploited-
+cost of these technologies, which make them very expensive to use                  for-second-time-in-a-week-loses-630k-in-ether
+and deploy in the context of DeFi. A decrease of computational cost           [12] Baker, P.: Miners trick stablecoin protocol pegnet, turning 11 into almost 7m
+                                                                                   hoard. CoinDesk (2020), https://www.coindesk.com/miners-trick-stablecoin-
+of the underlying blockchain will be key to how widely privacy-                    protocol-pegnet-turning-11-into-almost-7m-hoard
+preserving technologies can be deployed by DeFi protocols.                    [13] Balancer Labs: BAL – balancer governance token (2020), https://docs.balancer.
+                                                                                   finance/protocol/bal-balancer-governance-token, accessed: 20-08-2020.
+                                                                              [14] Bano, S., Sonnino, A., Al-Bassam, M., Azouvi, S., McCorry, P., Meiklejohn, S.,
+8     CONCLUSION                                                                   Danezis, G.: Sok: Consensus in the age of blockchains. In: Proceedings of the 1st
+                                                                                   ACM Conference on Advances in Financial Technologies. pp. 183–198 (2019)
+In this SoK we have considered DeFi from two points of view, the              [15] Bartoletti, M., Chiang, J.H.y., Lluch-Lafuente, A.: Sok: Lending pools in decen-
+DeFi Optimist and the DeFi Pessimist, and examined the workings                    tralized finance. arXiv preprint arXiv:2012.13230 (2020)
+                                                                        13
+[16] Beck, R., Müller-Bloch, C., King, J.L.: Governance in the blockchain economy:               [51] dForce: dforce (2020), https://dforce.network/
+     A framework and research agenda. Journal of the Association for Information                 [52] Dubovitskaya, A., Ackerer, D., Xu, J.: A game-theoretic analysis of cross-ledger
+     Systems 19(10), 1 (2018)                                                                         swaps with packetized payments (2021)
+[17] Beneš, N.: Introducing the dutchx (2017), https://blog.gnosis.pm/introducing-               [53] dYdX: dydx (2019), https://dydx.exchange/
+     the-gnosis-dutch-exchange-53bd3d51f9b2                                                      [54] Egorov, M.: Stableswap - efficient mechanism for stablecoin liquidity (2019),
+[18] Benhamouda, F., Halevi, S., Halevi, T.: Supporting private data on hyperledger                   https://www.curve.fi/stableswap-paper.pdf
+     fabric with secure multiparty computation. IBM Journal of Research and Devel-               [55] Eskandari, S., Moosavi, S., Clark, J.: Sok: Transparent dishonesty: front-running
+     opment 63(2/3), 3–1 (2019)                                                                       attacks on blockchain. In: International Conference on Financial Cryptography
+[19] bertcmiller: Tweet (2 April 2022), https://twitter.com/bertcmiller/status/1510249                and Data Security. pp. 170–189. Springer (2019)
+     220967739398?t=Cf2PvmdsWyraKHNqOzYhwQ&s=19                                                  [56] ETH Tx Decoder: Transaction analysis (2020), https://ethtx.info/mainnet/0x9d0
+[20] Biais, B., Bisiere, C., Bouvard, M., Casamatta, C.: The blockchain folk theorem.                 93325272701d63fdafb0af2d89c7e23eaf18be1a51c580d9bce89987a2dc1, accessed:
+     The Review of Financial Studies 32(5), 1662–1715 (2019)                                          13-01-2021.
+[21] Bitcoin, W.: Wbtc wrapped bitcoin an erc20 token backed 1:1 with bitcoin (2020),            [57] Evans, A.: Liquidity provider returns in geometric mean markets. arXiv preprint
+     https://wbtc.network/                                                                            arXiv:2006.08806 (2020)
+[22] BitMEX: Bitmex perpetual contracts guide (2020), https://www.bitmex.com/app                 [58] Feist, J.: Slither – a solidity static analysis framework (2018), https://blog.trailof
+     /perpetualContractsGuide                                                                         bits.com/2018/10/19/slither-a-solidity-static-analysis-framework/
+[23] Blocknative: Evidence of mempool manipulation on black thursday: Ham-                       [59] Feng, F., Weickmann, B.: Set: A protocol for baskets of tokenized assets (2019),
+     merbots, mempool compression, and spontaneous stuck transactions (2020),                         https://www.setprotocol.com/pdf/set_protocol_whitepaper.pdf
+     https://www.blocknative.com/blog/mempool-forensics                                          [60] Finance, B.: Tweet (14 February 2022), https://twitter.com/finance_build/status/
+[24] Bloomberg: How $60 Billion in Terra Coins Went Up in Algorithmic Smoke.                          1493223330685591558
+     https://www.bloomberg.com/graphics/2022-crypto-luna-terra-stablecoin-                       [61] Flashbots: Flashbots Docs: Understanding Bundles. https://docs.flashbots.net/f
+     explainer/ (20 May 2022)                                                                         lashbots-auction/searchers/advanced/understanding-bundles (2022)
+[25] Bonneau, J., Miller, A., Clark, J., Narayanan, A., Kroll, J.A., Felten, E.W.: Sok:          [62] Foundation, E.: Solidity v0.8.0 documentation (2020), https://docs.soliditylang.
+     Research perspectives and challenges for bitcoin and cryptocurrencies. In: 2015                  org/en/v0.8.0/index.html, accessed: 12-01-2020.
+     IEEE symposium on security and privacy. pp. 104–121. IEEE (2015)                            [63] Foxley, W.: $10.8m stolen, developers implicated in alleged smart contract ‘rug
+[26] Breidenbach, L., Daian, P., Tramèr, F., Juels, A.: Enter the hydra: Towards prin-                pull’. CoinDesk (2020), https://www.coindesk.com/compounder-developers-
+     cipled bug bounties and exploit-resistant smart contracts. In: 27th {USENIX }                    implicated-alleged-smart-contract-rug-pull
+     Security Symposium ( {USENIX } Security 18). pp. 1335–1352 (2018)                           [64] Foxley, W., De, N.: Weekend attack drains decentralized protocol dforce of $25m
+[27] Buterin, V.: A next-generation smart contract and decentralized application                      in crypto. CoinDesk (2020), https://www.coindesk.com/attacker- drains-
+     platform. white paper 3(37) (2014)                                                               decentralized-protocol-dforce-of-25m-in-weekend-attack
+[28] bZx Network: bZx, The most powerful open finance protocol (2020), https:                    [65] Foxley, W.: Exploit during ethdenver reveals experimental nature of decentral-
+     //bzx.network/                                                                                   ized finance. CoinDesk (2020), https://www.coindesk.com/exploit-during-
+[29] Carlsten, M., Kalodner, H., Weinberg, S.M., Narayanan, A.: On the instability                    ethdenver-reveals-experimental-nature-of-decentralized-finance
+     of bitcoin without the block reward. In: Proceedings of the 2016 ACM SIGSAC                 [66] Frangella, E.: Crypto black thursday: The good, the bad, and the ugly. https:
+     Conference on Computer and Communications Security. pp. 154–167 (2016)                           //medium.com/aave/crypto-black-thursday-the-good-the-bad-and-the-ugly-
+[30] CertiK: Yam finance smart contract bug analysis & future prevention (2020),                      7f2acebf2b83 (2020), accessed: 20-01-2021.
+     https://certik.io/blog/technology/yam-finance-smart-contract-bug-analysis-                  [67] Gnosis: API3 IDO incident - post mortem (2020), https://hackmd.io/@n6YCqow
+     future-prevention                                                                                rQduQ5u25wSoRXw/Hylnk7SjD
+[31] Chen, X., Park, D., Roşu, G.: A language-independent approach to smart contract             [68] Gnosis: Introduction to gnosis protocol (2020), https://docs.gnosis.io/protocol/
+     verification. In: International Symposium on Leveraging Applications of Formal                   docs/introduction1/
+     Methods. pp. 405–413. Springer (2018)                                                       [69] Godbole, O.: Defi flippening comes to exchanges as uniswap topples coinbase in
+[32] Claburn, T.: Single-line software bug causes fledgling yam cryptocurrency to                     trading volume. CoinDesk (2020), https://www.coindesk.com/defi-flippening-
+     implode just two days after launch (2020), https://www.theregister.com/2020/0                    uniswap-topples-coinbase-trading-volume
+     8/13/yam_cryptocurrency_bug_governance/                                                     [70] Gudgeon, L., Perez, D., Harz, D., Livshits, B., Gervais, A.: The decentralized
+[33] Clark, J.: The replicating portfolio of a constant product market. Available at                  financial crisis. In: 2020 Crypto Valley Conference on Blockchain Technology
+     SSRN 3550601 (2020)                                                                              (CVCBT). pp. 1–15 (2020)
+[34] Coinbase: Coinbase (2020), https://www.coinbase.com/                                        [71] Gudgeon, L., Moreno-Sanchez, P., Roos, S., McCorry, P., Gervais, A.: Sok: Off
+[35] Cointelegraph: Compound liquidator makes $4m as oracles post inflated dai                        the chain transactions. IACR Cryptol. ePrint Arch. 2019, 360 (2019)
+     price (2020), https://cointelegraph.com/news/compound-liquidator-makes-4m-                  [72] Gudgeon, L., Werner, S.M., Perez, D., Knottenbelt, W.J.: Defi protocols for loan-
+     as-oracles-post-inflated-dai-price                                                               able funds: Interest rates, liquidity and market efficiency. In: Proceedings of the
+[36] Compound: Compound finance (2019), https://compound.finance/                                     2nd ACM Conference on Advances in Financial Technologies. p. 92–112 (2020)
+[37] Compound: Open price feed (2020), https://compound.finance/prices, accessed:                [73] Hanson, R.: Combinatorial information market design. Information Systems
+     06-12-2020.                                                                                      Frontiers 5(1), 107–119 (2003)
+[38] ConsenSys: Mythril (2021), https://github.com/ConsenSys/mythril                             [74] Harper, C.: Defi degens hit hard by eminence exploit will be partially compen-
+[39] Consensys: Mythx: Smart contract security service for ethereum (2021), https:                    sated. CoinDesk (2020), https://www.coindesk.com/eminence-exploit-defi-
+     //mythx.io/                                                                                      compensated
+[40] Cooper, T.: imbtc uniswap pool drained for ∼$300k in eth (2020), https://defirat            [75] Harvest Finance: Harvest flashloan economic attack post-mortem (2020), https:
+     e.com/imbtc-uniswap-hack/, accessed: 20-01-2021.                                                 //medium.com/harvest-finance/harvest-flashloan-economic-attack-post-
+[41] Cousaert, S., Xu, J., Matsui, T.: Sok: Yield aggregators in defi. arXiv preprint                 mortem-3cf900d65217, accessed: 29-12-2020.
+     arXiv:2105.13891 (2021)                                                                     [76] Harz, D., Gudgeon, L., Gervais, A., Knottenbelt, W.J.: Balance: Dynamic adjust-
+[42] Cronje, A.: yEARN (2020), https://yearn.finance                                                  ment of cryptocurrency deposits. In: Proceedings of the 2019 ACM SIGSAC
+[43] CryptoCompare: Cryptocompare exchange review, march 2022 (2022), https:                          Conference on Computer and Communications Security. pp. 1485–1502 (2019)
+     //www.cryptocompare.com/media/40124872/cryptocompare_exchange_revie                         [77] Harz, D., Knottenbelt, W.: Towards safer smart contracts: A survey of languages
+     w_2022_03_vf2.pdf                                                                                and verification methods. arXiv preprint arXiv:1809.09805 (2018)
+[44] Curve Finance: Curve.fi (2020), https://www.curve.fi/, accessed: 20-08-2020.                [78] Hull, J., et al.: Options, futures and other derivatives/John C. Hull. Upper Saddle
+[45] Dafflon, J., Baylina, J., Shababi, T.: Eip-777: Erc777 token standard (2017), https:             River, NJ: Prentice Hall, (2009)
+     //eips.ethereum.org/EIPS/eip-777                                                            [79] Huo, L., Klages-Mundt, A., Minca, A., Munter, F., Wind, M.: Decentralized Gov-
+[46] Daian, P., Goldfeder, S., Kell, T., Li, Y., Zhao, X., Bentov, I., Breidenbach, L.,               ernance of Stablecoins with Closed Form Valuation. In Mathematical Research
+     Juels, A.: Flash boys 2.0: Frontrunning, transaction reordering, and consensus                   for Blockchain Economy. https://arxiv.org/abs/2109.08939 (2022)
+     instability in decentralized exchanges. arXiv preprint arXiv:1904.05234 (2019)              [80] IDEX: Idex 2.0: The next generation ofnon-custodial trading. URL:
+[47] DeFi Pulse: What is defi? (2019), https://defipulse.com/blog/what-is-defi/                       https://idex.io/document/IDEX-2-0-Whitepaper-2019-10-31.pdf (2019)
+[48] DeFi Pulse: The decentralized finance leaderboard at defi pulse (2020), https:              [81] Index: Index: A comprehensive list of decentralized exchanges (dex)., https:
+     //defipulse.com/                                                                                 //distribuyed.github.io/index/
+[49] Defiant: Iron Finance Implodes After ‘Bank Run’. https://thedefiant.io/iron-                [82] Jones, S.P., Eber, J.M., Seward, J.: Composing contracts: an adventure in financial
+     finance-implodes-after-bank-run (17 June 2021)                                                   engineering. ACM SIG-PLAN Notices 35(9), 280–292 (2000)
+[50] Defiant, T.: Bsc’s venus protocol left with bad debt after liquidations (May 20,            [83] Judmayer, A., Stifter, N., Zamyatin, A., Tsabary, I., Eyal, I., Gazi, P., Meiklejohn, S.,
+     2021), https://thedefiant.io/bscs-venus-protocol-left-with-bad-debt-af ter-                      Weippl, E.: Pay to win: Cheap, crowdfundable, cross-chain algorithmic incentive
+     liquidations/                                                                                    manipulation attacks on pow cryptocurrencies. Cryptology ePrint Archive,
+                                                                                            14
+      Report 2019/775 (2019), https://eprint.iacr.org/2019/775                                     [117] PeckShield: bzx hack full disclosure (with detailed profit analysis) (2020), https:
+ [84] Kaleem, M., Shi, W.: Demystifying pythia: A survey of chainlink oracles usage                      //medium.com/@peckshield/bzx-hack-full-disclosure-with-detailed-profit-
+      on ethereum. arXiv preprint arXiv:2101.06781 (2021)                                                analysis-e6b1fa9b18fc
+ [85] Kalodner, H.A., Carlsten, M., Ellenbogen, P., Bonneau, J., Narayanan, A.: An                 [118] Peckshield: Value defi incident: Root cause analysis (2020), https://peckshield.m
+      empirical study of namecoin and lessons for decentralized namespace design.                        edium.com/value-defi-incident-root-cause-analysis-fbab71faf373, accessed:
+      In: WEIS. Citeseer (2015)                                                                          13-01-2021.
+ [86] Kalra, S., Goel, S., Dhawan, M., Sharma, S.: ZEUS: analyzing safety of smart                 [119] Percent Finance: Important announcement (2020), https://percent-finance.med
+      contracts. In: 25th Annual Network and Distributed System Security Symposium,                      ium.com/important-announcement-d35f9a0df112
+      NDSS 2018, San Diego, California, USA, February 18-21, 2018. The Internet                    [120] Perez, D., Livshits, B.: Smart contract vulnerabilities: Does anyone care? arXiv
+      Society (2018), http://wp.internetsociety.org/ndss/wp-content/uploads/sites/25                     preprint arXiv:1902.06710 (2019)
+      /2018/02/ndss2018_09-1_Kalra_paper.pdf                                                       [121] Perez, D., Livshits, B.: Broken metre: Attacking resource metering in EVM. In:
+ [87] Kao, H.T., Chitra, T., Chiang, R., Morrow, J.: An analysis of the market risk to                   27th Annual Network and Distributed System Security Symposium, NDSS 2020,
+      participants in the compound protocol. In: Third International Symposium on                        San Diego, California, USA, February 23-26, 2020. The Internet Society (2020),
+      Foundations and Applications of Blockchains (2020)                                                 https://www.ndss- symposium.org/ndss- paper/broken- metre- attacking-
+ [88] Khatri, Y.: Dai price increase led to a massive $88 million worth of liquidations                  resource-metering-in-evm/
+      at defi protocol compound (2020), https://www.theblockcrypto.com/post/85850/                 [122] Perez, D., Werner, S.M., Xu, J., Livshits, B.: Liquidations: Defi on a knife-edge.
+      dai-compound-dydx-liquidations-defi, accessed: 14-01-2021.                                         arXiv preprint arXiv:2009.13235 (2020)
+ [89] Klages-Mundt, A.: Vulnerabilities in maker: oracle-governance attacks, attack                [123] Perez, D., Xu, J., Livshits, B.: Revisiting transactional statistics of high-scalability
+      daos, and (de)centralization (Nov 14, 2019), https://link.medium.com/VZG64f                        blockchains. p. 535–550. IMC ’20, Association for Computing Machinery, New
+      hmr6                                                                                               York, NY, USA (2020). https://doi.org/10.1145/3419394.3423628, https://doi.org/
+ [90] Klages-Mundt, A., Harz, D., Gudgeon, L., Liu, J.Y., Minca, A.: Stablecoins 2.0:                    10.1145/3419394.3423628
+      Economic foundations and risk-based models. In: Proceedings of the 2nd ACM                   [124] Permenev, A., Dimitrov, D., Tsankov, P., Drachsler-Cohen, D., Vechev, M.: Verx:
+      Conference on Advances in Financial Technologies. pp. 59–79 (2020)                                 Safety verification of smart contracts. In: 2020 IEEE Symposium on Security
+ [91] Klages-Mundt, A., Minca, A.: (in) stability for the blockchain: Deleveraging                       and Privacy, SP. pp. 18–20 (2020)
+      spirals and stablecoin attacks. Cryptoeconomic Systems (2021)                                [125] Peterson, J., Krug, J.: Augur: a decentralized, open-source platform for prediction
+ [92] Klages-Mundt, A., Minca, A.: While stability lasts: A stochastic model of non-                     markets. arXiv preprint arXiv:1501.01042 (2015)
+      custodial stablecoins. Mathematical Finance (2022)                                           [126] Pirus, B.: Cheese bank’s multi-million-dollar hack explained by security firm
+ [93] Koeppelmann, M.: Tweet (18 July 2020), https://twitter.com/koeppelmann/stat                        (2020), https://cointelegraph.com/news/cheese-bank-s-multi-million-dollar-
+      us/1284502534208528385                                                                             hack-explained-by-security-firm, accessed: 29-12-2020.
+ [94] Lee, B.E., Moroz, D.J., Parkes, D.C.: The political economy of blockchain gover-             [127] Qin, K., Zhou, L., Livshits, B., Gervais, A.: Attacking the defi ecosystem with
+      nance. Available at SSRN 3537314 (2020)                                                            flash loans for fun and profit (2020)
+ [95] Lee, J.: Nubits (2014), https://nubits.com/NuWhitepaper.pdf                                  [128] Raman, R.K., Vaculin, R., Hind, M., Remy, S.L., Pissadaki, E.K., Bore, N.K.,
+ [96] Lee, L., Klages-Mundt, A.: Governance extractable value (Apr 23, 2021), https:                     Daneshvar, R., Srivastava, B., Varshney, K.R.: Trusted multi-party computa-
+      //ournetwork.substack.com/p/our-network-deep-dive-2                                                tion and verifiable simulations: A scalable blockchain approach. arXiv preprint
+ [97] Leshner, R., Hayes, G.: Compound: The money market protocol (2019), https:                         arXiv:1809.08438 (2018)
+      //compound.finance/documents/Compound.Whitepaper.pdf                                         [129] Rate, D.: Cream finance partially delists ftt amidst governance contention (2021),
+ [98] Limited, T.: Tether: Fiat currencies on the bitcoin blockchain (2016), https:                      https://defirate.com/cream-ftt-delisting/
+      //tether.to/wp-content/uploads/2016/06/TetherWhitePaper.pdf, accessed:                       [130] Reijers, W., O’Brolcháin, F., Haynes, P.: Governance in blockchain technologies
+      08-06-2020                                                                                         & social contract theories. Ledger 1, 134–151 (2016)
+ [99] Lin, L.X., Budish, E., Cong, L.W., He, Z., Bergquist, J.H., Panesir, M.S., Kelly, J.,        [131] Rekt: Harvest finance - rekt (2020), https://rekt.ghost.io/harvest-finance-rekt/
+      Lauer, M., Prinster, R., Zhang, S., et al.: Deconstructing decentralized exchanges.          [132] Rekt: Warp finance - rekt (2020), https://rekt.eth.link/warp-finance-rekt/
+      Stanford Journal of Blockchain Law & Policy (2019)                                           [133] Rekt: The big combo (growth defi - rekt) (2021), https://rekt.eth.link/the-big-
+[100] Liu, B., Szalachowski, P.: A first look into defi oracles (2020)                                   combo/
+[101] Liu, M.: Urgent: Ousd was hacked and there has been a loss of funds (2020),                  [134] Rekt: Dodo - rekt (2021), https://rekt.eth.link/au-dodo-rekt/
+      https://medium.com/originprotocol/urgent-ousd-has-hacked-and-there-has-                      [135] Rekt: Meerkat finance - bsc - rekt (2021), https://rekt.eth.link/meerkat-finance-
+      been-a-loss-of-funds-7b8c4a7d534c, accessed: 29-12-2020.                                           bsc-rekt/
+[102] LongForWisdom: [urgent] flash loans and securing the maker protocol (2020),                  [136] Rekt: Paid network - rekt (2021), https://rekt.eth.link/paid-rekt/
+      https://forum.makerdao.com/t/urgent-flash-loans-and-securing-the-maker-                      [137] Rekt: Yearn - rekt (2021), https://rekt.eth.link/yearn-rekt/
+      protocol/490                                                                                 [138] Reynolds, K., Pan, D.: Cover protocol attack perpetrated by ‘white hat,’ funds
+[103] Luu, L., Chu, D.H., Olickel, H., Saxena, P., Hobor, A.: Making smart contracts                     returned, hacker claims. CoinDesk (2020), https://www.coindesk.com/cover-
+      smarter. In: Proceedings of the 2016 ACM SIGSAC conference on computer and                         protocol-attack-perpetrated-by-white-hat-all-funds-returned-hacker-claims
+      communications security. pp. 254–269 (2016)                                                  [139] Robinson, D.: Etherum is a dark forest (2020), https://medium.com/@danrobins
+[104] Maker: The maker protocol: Makerdao’s multi-collateral dai (mcd) system, https:                    on/ethereum-is-a-dark-forest-ecc5f0505dff, accessed: 24-11-2020.
+      //makerdao.com/en/whitepaper/, accessed: 08-06-2020                                          [140] Rodler, M., Li, W., Karame, G.O., Davi, L.: Sereum: Protecting existing smart
+[105] MakerDAO: Makerdao (2019), https://makerdao.com/en/                                                contracts against re-entrancy attacks. In: Proceedings of 26th Annual Network
+[106] Martinelli, F., Mushegian, N.: Balancer whitepaper: A non-custodial portfolio                      & Distributed System Security Symposium (NDSS) (February 2019), http://tubi
+      manager, liquidity provider, and price sensor. (2019), https://balancer.finance/w                  blio.ulb.tu-darmstadt.de/111410/
+      hitepaper/, accessed: 26-08-2020.                                                            [141] Roughgarden, T.: Algorithmic game theory. Communications of the ACM 53(7),
+[107] McCorry, P., Hicks, A., Meiklejohn, S.: Smart contracts for bribing miners. In:                    78–86 (2010)
+      International Conference on Financial Cryptography and Data Security. pp.                    [142] Roughgarden, T.: Transaction fee mechanism design for the ethereum
+      3–18. Springer (2018)                                                                              blockchain: An economic analysis of eip-1559. arXiv preprint arXiv:2012.00854
+[108] Nadler, M., Schär, F.: Decentralized finance, centralized ownership? an itera-                     (2020)
+      tive mapping process to measure protocol token distribution. arXiv preprint                  [143] samczsun: Escaping the dark forest (2020), https://samczsun.com/escaping-the-
+      arXiv:2012.09306 (2020)                                                                            dark-forest, accessed: 24-11-2020.
+[109] Nakamoto, S.: Bitcoin: A peer-to-peer electronic cash system (2008)                          [144] Schär, F.: Decentralized finance: On blockchain-and smart contract-based finan-
+[110] Narayanan, A., Bonneau, J., Felten, E., Miller, A., Goldfeder, S.: Bitcoin and cryp-               cial markets. FRB of St. Louis Review (2021)
+      tocurrency technologies: a comprehensive introduction. Princeton University                  [145] Swende, M.: Blockchain frontrunning (2017), https://swende.se/blog/Frontrunn
+      Press (2016)                                                                                       ing.html
+[111] Niemerg, A., Robinson, D., Livnev, L.: Yieldspace. https://yield.is/YieldSpace.pdf           [146] Synthetix: Litepaper (2020), https://docs.synthetix.io/litepaper/, accessed:
+      (2020)                                                                                             06-12-2020
+[112] OpenCollective: cadcad (2020), https://cadcad.org/                                           [147] Synthetix: Synthetix | decentralised synthetic assets (2020), https://www.synthe
+[113] Opyn: Opyn (2020), https://opyn.co/#/                                                              tix.io
+[114] opyn: Opyn eth put exploit (2020), https://medium.com/opyn/opyn-eth-put-                     [148] Tarasov, A.: Millions lost: The top 19 defi cryptocurrency hacks of 2020 (2020),
+      exploit-c5565c528ad2                                                                               https://cryptobriefing.com/50-million-lost-the-top-19-defi-cryptocurrency-
+[115] Panja, S., Roy, B.K.: A secure end-to-end verifiable e-voting system using zero                    hacks-2020/
+      knowledge based blockchain. IACR Cryptol. ePrint Arch. 2018, 466 (2018)                      [149] Thompson, P.: Defi project pickle finance exploited for $20 million (2020), https:
+[116] PeckShield: 88mph incident: Root cause analysis (2020), https://peckshield.med                     //coingeek.com/defi-project-pickle-finance-exploited-for-20-million/
+      ium.com/88mph-incident-root-cause-analysis-ce477e00a74d
+                                                                                              15
+[150] Thurman, A.: Value defi protocol suffers $6 million flash loan exploit (2020),                [166] Wright, T.: Akropolis defi protocol ‘paused’ as hackers get away with $2m in
+      https://cointelegraph.com/news/value-defi-protocol-suffers-6-million-flash-                         dai (2020), https://cointelegraph.com/news/akropolis-defi-protocol-paused-as-
+      loan-exploit, accessed: 29-12-2020.                                                                 hackers-get-away-with-2m-in-dai, accessed: 29-12-2020.
+[151] Tokenlon: imbtc (2020), https://tokenlon.im/imBTC#/                                           [167] Xu, J., Ackerer, D., Dubovitskaya, A.: A game-theoretic analysis of cross-chain
+[152] Tolmach, P., Li, Y., Lin, S.W., Liu, Y.: Formal analysis of composable defi protocols.              atomic swaps with htlcs (2020)
+      arXiv preprint arXiv:2103.00540 (2021)                                                        [168] YAM: Yam finance (2020), https://yam.finance/
+[153] Tornado: Tornado (2021), https://tornado.cash/                                                [169] YAM Finance: Yam post-rescue attempt update (2020), https://medium.com/@y
+[154] Torres, C.F., Schütte, J., State, R.: Osiris: Hunting for integer bugs in ethereum                  amfinance/yam-post-rescue-attempt-update-c9c90c05953f
+      smart contracts. In: Proceedings of the 34th Annual Computer Security Ap-                     [170] yearn: Incident disclosure 2021-10-27. https://github.com/yearn/yearn-security
+      plications Conference. p. 664–676. ACSAC ’18, Association for Computing                             /blob/master/disclosures/2021-10-27.md (Oct 27, 2021)
+      Machinery, New York, NY, USA (2018). https://doi.org/10.1145/3274694.3274737,                 [171] Zamyatin, A., Al-Bassam, M., Zindros, D., Kokoris-Kogias, E., Moreno-Sanchez,
+      https://doi.org/10.1145/3274694.3274737                                                             P., Kiayias, A., Knottenbelt, W.J.: Sok: communication across distributed ledgers.
+[155] Tsankov, P., Dan, A., Drachsler-Cohen, D., Gervais, A., Buenzli, F., Vechev, M.:                    IACR Cryptol. ePrint Arch. (2020)
+      Securify: Practical security analysis of smart contracts. In: Proceedings of the              [172] Zamyatin, A., Harz, D., Lind, J., Panayiotou, P., Gervais, A., Knottenbelt, W.:
+      2018 ACM SIGSAC Conference on Computer and Communications Security. pp.                             Xclaim: Trustless, interoperable, cryptocurrency-backed assets. In: 2019 IEEE
+      67–82 (2018)                                                                                        Symposium on Security and Privacy (SP). pp. 193–210. IEEE (2019)
+[156] Uniswap: Uniswap (2020), https://app.uniswap.org/#/swap                                       [173] Zcash: Zcash (2021), https://z.cash/
+[157] Uniswap: Uniswap whitepaper (2020), https://hackmd.io/@HaydenAdams/HJ9                        [174] Zhang, F., Cecchetti, E., Croman, K., Juels, A., Shi, E.: Town crier: An authenti-
+      jLsfTz#%F0%9F%A6%84-Uniswap-Whitepaper, accessed: 26-08-2020.                                       cated data feed for smart contracts. In: Proceedings of the 2016 aCM sIGSAC
+[158] von Wachter, V., Jensen, J.R., Ross, O.: Measuring asset composability as a proxy                   conference on computer and communications security. pp. 270–282 (2016)
+      for ecosystem integration. arXiv preprint arXiv:2102.04227 (2021)                             [175] Zhang, R., Xue, R., Liu, L.: Security and privacy on blockchain. ACM Computing
+[159] Wallet, W.: Wasabi wallet (2021), https://wasabiwallet.io/                                          Surveys (CSUR) 52(3), 1–34 (2019)
+[160] Wang, Y., Kogan, A.: Designing confidentiality-preserving blockchain-based                    [176] Zhang, Y., Chen, X., Park, D.: Formal specification of constant product (xy= k)
+      transaction processing systems. International Journal of Accounting Information                     market maker model and implementation (2018), https://github.com/runtimeve
+      Systems 30, 1–18 (2018)                                                                             rification/verified-smart-contracts/blob/uniswap/uniswap/x-y-k.pdf
+[161] Warren, W., Bandeali, A.: 0x: An open protocol for decentralized exchange on                  [177] Zhao, W., Li, H., Yuan, Y.: Understand volatility of algorithmic stablecoin: Mod-
+      the ethereum blockchain. URL: https://github.com/0xProject/whitepaper (2017)                        eling, verification and empirical analysis. arXiv preprint arXiv:2101.08423 (2021)
+[162] Werner, S.M., Pritz, P.J., Perez, D.: Step on the gas? A better approach for rec-             [178] Zhou, L., Qin, K., Cully, A., Livshits, B., Gervais, A.: On the just-in-time
+      ommending the ethereum gas price. arXiv preprint arXiv:2003.03479 (2020)                            discovery of profit-generating transactions in defi protocols. arXiv preprint
+[163] Wintermute, M.: Hegic: On-chain options trading protocol on ethereum powered                        arXiv:2103.02228 (2021)
+      by hedge contracts and liquidity pools (2020), https://ipfs.io/ipfs/QmWy8x6vE                 [179] Zhou, L., Qin, K., Torres, C.F., Le, D.V., Gervais, A.: High-frequency trading on
+      unH4gD2gWT4Bt4bBwWX2KAEUov46tCLvMRcME, accessed: 13-11-2020.                                        decentralized on-chain exchanges. arXiv preprint arXiv:2009.14021 (2020)
+[164] Winzer, F., Herd, B., Faust, S.: Temporary censorship attacks in the presence of
+      rational miners. In: 2019 IEEE European Symposium on Security and Privacy
+      Workshops (EuroS&PW). pp. 357–366. IEEE (2019)
+[165] Wood, G., et al.: Ethereum: A secure decentralised generalised transaction ledger.
+      Ethereum project yellow paper 151(2014), 1–32 (2014)
+
+
+
+
+                                                                                               16
+A    DEFI PROTOCOLS                                                                  short period of time, realized that there was an arithmetic-
+                                                                                     related bug.Two integers scaled to their base unit were mul-
+Table 2: DeFi Protocols: A selection of prominent DeFi protocols                     tiplied and the result not scaled back, making the result
+classified according to the proposed protocol types.                                 orders of magnitude too large [30, 32].This prevented the
+                                                                                     governance to reach quorum and locked all the funds in the
+ Exchanges     PLFs          Stablecoins Portfolio       Derivatives                 protocol’s treasury contract, effectively locking over 750 000
+                                         Managers                                    USD worth of tokens [169] indefinitely.
+ Curve         Compound      Maker         Harvest       Opyn                 Logical Bug Exploits.
+ Uniswap       Aave          Unit          Yearn         Hegic                   • bZx: In September 2020, the bZx protocol [28], a lending
+ Sushiswap     dYdX          Reflexer      Set           Synthetix                  protocol, suffered a loss of over 8 million USD due to a trivial
+ Balancer      Cream         Fei           Alpha                                    logic error [117], despite having been through two indepen-
+ Bancor                                                                             dent audits. The bZx protocol uses its own ERC-20 tokens,
+ 1inch                                                                              which are minted by locking collateral and repaid to redeem
+                                                                                    the locked collateral. As other ERC-20 tokens, bZx tokens
+                                                                                    allow users to transfer the tokens. However, due to a logi-
+                                                                                    cal bug, when a user transferred tokens to themselves, the
+B    EMPIRICAL EXPLOITS
+                                                                                    amount transferred would effectively only be added to their
+There have been a range of exploits in DeFi applications. This is                   balance, and not correctly subtract from it, allowing a user
+a non-exhaustive list of some of the exploits and vulnerabilities                   to double his amount of tokens at will. The tokens created
+referenced in Sections 5 and 6.                                                     could then be used to withdraw funds that the attacker never
+Reentrancy Exploits.                                                                owned or locked.
+     • dForce: One of the most prominent examples of this ex-                 Market Manipulation.
+       ploit was against the dForce protocol [51], which features
+                                                                                 • Venus: Since pre-printing this paper, a clear exploit that ma-
+       a PLF, in April 2020 to drain around 25 million USD worth
+                                                                                   nipulated this market structure was performed on the Venus
+       of funds [64].The attacker used imBTC [151], which is an
+                                                                                   protocol [50]. In this exploit, the attacker manipulated the
+       ERC-777 token [45], to perform the attack. A particularity of
+                                                                                   thinly traded XVS market and borrowed large amounts of
+       ERC-777 tokens, as opposed to ERC-20 tokens, is that they
+                                                                                   BTC against XVS collateral at the manipulated high prices.
+       have a hook calling the receiver when the receiver receives
+                                                                                   This led to $100m of bad debt (effectively, the profit for the
+       funds. This means that any ERC-777 tokens will indirectly
+                                                                                   attacker) in the protocol when the XVS market equilibrated
+       result in the receiver having control of the execution. In the
+                                                                                   to normal pricing.
+       dForce attack, the attacker used this reentrancy pattern to
+       repeatedly increase their ability to borrow without enough             C    BATCH SETTLEMENT SYSTEMS
+       collateral to back up their borrow position, effectively drain-
+       ing the protocol’s funds.                                              In Gnosis exchange [68], trades are matched algorithmically in peri-
+     • imBTC Uniswap Pool: Despite the fact that Uniswap does not             odic batches maintained by decentralized keepers. Keepers compete
+       support ERC-777 tokens [157], an imBTC Uniswap [156] pool              to solve a complicated matching problem. They submit solutions
+       worth roughly 300 000 USD was drained using the reentrancy             on-chain, from which the protocol executes the best solution, by
+       attack.                                                                some metric. If this keeper market is competitive, trades should
+                                                                              be settled at fair prices, though issues can arise when the keeper
+Integer Manipulation Exploits.                                                market is not competitive [93] or if the method for choosing the
+    • YAM: In August 2020, the YAM protocol [168], which had                  best keeper solution can be gamed [67].
+      locked almost 500 million USD worth of tokens in a very
+
+
+
+
+                                                                         17
+

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-7802: Token With Mint/Burn Access Across Chains</title>
+      <meta property="og:title" content="ERC-7802: Token With Mint/Burn Access Across Chains" />
+    
+    <meta name="description" content="Allow authorized contracts to mint and burn token representations during crosschain transfers" />
+    <meta property="og:description" content="Allow authorized contracts to mint and burn token representations during crosschain transfers" />
+    <meta name="twitter:description" content="Allow authorized contracts to mint and burn token representations during crosschain transfers" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7802" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7802" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-7802: Token With Mint/Burn Access Across Chains
+    <a href="https://ethereum-magicians.org/t/erc-7802-crosschain-token-interface/21508" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7802.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Allow authorized contracts to mint and burn token representations during crosschain transfers</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>skeletor&nbsp;(<a href="https://github.com/skeletor-spaceman">@skeletor-spaceman</a>), parti&nbsp;(<a href="https://github.com/0xParticle">@0xParticle</a>), joxes&nbsp;(<a href="https://github.com/Joxess">@Joxess</a>), ng&nbsp;(<a href="https://github.com/0xng">@0xng</a>), agus duha&nbsp;(<a href="https://github.com/agusduha">@agusduha</a>), disco&nbsp;(<a href="https://github.com/0xDiscotech">@0xDiscotech</a>), gotzen&nbsp;&lt;<a href="mailto:gotzen@defi.sucks">gotzen@defi.sucks</a>&gt;, 0age&nbsp;&lt;<a href="mailto:0age@uniswap.org">0age@uniswap.org</a>&gt;, Mark Tyneway&nbsp;&lt;<a href="mailto:mark@oplabs.co">mark@oplabs.co</a>&gt;, Zain Bacchus&nbsp;&lt;<a href="mailto:zain@oplabs.co">zain@oplabs.co</a>&gt;, Matt Solomon&nbsp;&lt;<a href="mailto:msolomon@oplabs.co">msolomon@oplabs.co</a>&gt;, Maurelian&nbsp;&lt;<a href="mailto:maurelian@protonmail.ch">maurelian@protonmail.ch</a>&gt;, Blaine Malone&nbsp;(<a href="https://github.com/blmalone">@blmalone</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2024-10-30</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/erc-7802-crosschain-token-interface/21508" target="_blank" rel="noopener">https://ethereum-magicians.org/t/erc-7802-crosschain-token-interface/21508</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-165">EIP-165</a>, 
+
+  <a href="eip-5679">EIP-5679</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#interface-identification">Interface Identification</a></li>
+      <li><a href="#methods">Methods</a></li>
+      <li><a href="#events">Events</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#design-philosophy">Design philosophy</a></li>
+      <li><a href="#separation-of-local-and-crosschain-mintingburning">Separation of Local and crosschain Minting/Burning</a></li>
+      <li><a href="#erc-165-interface">ERC-165 Interface</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#permissions">Permissions</a></li>
+      <li><a href="#wrapped-native-tokens">Wrapped Native Tokens</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This standard introduces a minimal and extensible interface, <code class="language-plaintext highlighter-rouge">IERC7802</code>, for tokens to enable standardized crosschain communication. The interface consists of two functions, <code class="language-plaintext highlighter-rouge">crosschainMint</code> and <code class="language-plaintext highlighter-rouge">crosschainBurn</code>, which allow authorized bridge contracts to mint and burn token representations during crosschain transfers. These functions serve as the entry points for bridge logic, enabling consistent handling of token supply across chains.</p>
+
+<p>The interface also defines two standardized events, <code class="language-plaintext highlighter-rouge">CrosschainMint</code> and <code class="language-plaintext highlighter-rouge">CrosschainBurn</code>, which emit metadata, including the target address, token amount, and caller. These events facilitate deterministic indexing and monitoring of crosschain activities by off-chain agents, such as indexers, analytics tools, and auditors.</p>
+
+<p><code class="language-plaintext highlighter-rouge">IERC7802</code> is intentionally lightweight, ensuring minimal overhead for implementation. Its modular design enables extensibility, allowing additional features—such as mint/burn limits, transfer fees, or bridge-specific access control mechanisms—to be layered on top without modifying the base interface.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>All rollups and multiple important sidechains implement canonical bridges that embed their security into some part of the network’s core architecture. These bridges do not have mint/burn rights over original tokens, so they usually lock (unlock) liquidity on the native chain and then mint (burn) a non-equivalent representation on the other. Mint/burn is used because the native token is non-existent on that side, so they must create a new representation. However, each bridge implements a different interface for minting/burning on non-native chains.</p>
+
+<p>This interface fragmentation is a massive issue in crosschain communication among chains via third-party bridges or future canonical solutions. At this point, it is clear that every bridge would benefit from a standardized interface for minted/burnt tokens.</p>
+
+<p>There have been different attempts in the past to standardize token-bridging interfaces. However, third-party providers are also developing crosschain token frameworks. Each framework defines its features, like rate limits and fee switches, and implements its mint and burn versions. The resultant interfaces become highly specific, lacking naming conventions and structures.</p>
+
+<p>The proposed interface includes the most relevant and minimal set of actions used by most of these standards. These actions also do not require any governance or owner participation, in contrast, for instance, to set rate limits.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>This ERC introduces the <code class="language-plaintext highlighter-rouge">IERC7802</code> interface.</p>
+  
+    <h3 id="interface-identification">
+      
+      
+        <a href="#interface-identification" class="anchor-link"></a> Interface Identification
+      
+      
+    </h3>
+
+<p>The interface identifier for <code class="language-plaintext highlighter-rouge">IERC7802</code> is <strong><code class="language-plaintext highlighter-rouge">0x33331994</code></strong>, calculated according to <a href="/EIPS/eip-165">ERC-165</a> as the XOR of the function selectors of the two functions in the interface:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">bytes4</span> <span class="k">constant</span> <span class="n">INTERFACE_ID_IERC7802</span> <span class="o">=</span> 
+        <span class="kt">bytes4</span><span class="p">(</span><span class="nb">keccak256</span><span class="p">(</span><span class="s">"crosschainMint(address,uint256)"</span><span class="p">))</span> <span class="o">^</span>
+        <span class="kt">bytes4</span><span class="p">(</span><span class="nb">keccak256</span><span class="p">(</span><span class="s">"crosschainBurn(address,uint256)"</span><span class="p">));</span>
+</code></pre></div></div>
+
+<p>or via Solidity as</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="p">(</span><span class="n">IERC7802</span><span class="p">).</span><span class="n">interfaceId</span>
+</code></pre></div></div>
+
+<p>Implementors MUST ensure that the <code class="language-plaintext highlighter-rouge">supportsInterface</code> method of ERC-165 returns true for this interface ID to indicate support for <code class="language-plaintext highlighter-rouge">IERC7802</code>.</p>
+  
+    <h3 id="methods">
+      
+      
+        <a href="#methods" class="anchor-link"></a> Methods
+      
+      
+    </h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">crosschainMint</code></strong></p>
+
+<p>Mints <code class="language-plaintext highlighter-rouge">_amount</code> of token to address <code class="language-plaintext highlighter-rouge">_account</code>.</p>
+
+<p>This function works as the minting entry point for bridge contracts.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">crosschainMint</span><span class="p">(</span><span class="kt">address</span> <span class="n">_account</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Implementations SHOULD emit <code class="language-plaintext highlighter-rouge">Transfer(address(0), _to, _amount)</code> on calls to <code class="language-plaintext highlighter-rouge">crosschainMint</code> to be compliant with <a href="/EIPS/eip-20">ERC-20</a> invariants on token creation.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">crosschainBurn</code></strong></p>
+
+<p>Burns <code class="language-plaintext highlighter-rouge">_amount</code> of token from address <code class="language-plaintext highlighter-rouge">_account</code>.</p>
+
+<p>This function works as the burning entry point for bridge contracts.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">crosschainBurn</span><span class="p">(</span><span class="kt">address</span> <span class="n">_account</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Implementations might consider emitting <code class="language-plaintext highlighter-rouge">Transfer(_from, address(0), _amount)</code> on calls to <code class="language-plaintext highlighter-rouge">crosschainBurn</code> to be compliant with <a href="/EIPS/eip-5679">ERC-5679</a>.</p>
+  
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">CrosschainMint</code></strong></p>
+
+<p>MUST trigger when <code class="language-plaintext highlighter-rouge">crosschainMint</code> is successfully called. 
+The <code class="language-plaintext highlighter-rouge">_sender</code> parameter MUST be set to the msg.sender at the time the function is called.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">event</span> <span class="n">CrosschainMint</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_to</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_sender</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><strong><code class="language-plaintext highlighter-rouge">CrosschainBurn</code></strong></p>
+
+<p>MUST trigger when <code class="language-plaintext highlighter-rouge">crosschainBurn</code> is successfully called.
+The <code class="language-plaintext highlighter-rouge">_sender</code> parameter MUST be set to the msg.sender at the time the function is called.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">event</span> <span class="n">CrosschainBurn</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_from</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_sender</span><span class="p">)</span>
+</code></pre></div></div>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="design-philosophy">
+      
+      
+        <a href="#design-philosophy" class="anchor-link"></a> Design philosophy
+      
+      
+    </h3>
+<p>The core design decisions behind this minimal interface are</p>
+
+<ul>
+  <li>Bridge agnosticism.</li>
+  <li>Extensibility.</li>
+</ul>
+
+<p><strong>Bridge agnosticism</strong>
+This interface is designed so bridges, not tokens, contain the logic to process crosschain actions. By maintaining this separation of concerns, token contracts remain simple, reducing their attack surface and easing auditing and upgradability. Offloading crosschain complexities to bridge contracts ensures that tokens do not embed specific bridge logic.</p>
+
+<p>By implementing the proposed interface, tokens can be supported by different bridge designs:</p>
+
+<ul>
+  <li>Lock/unlock bridges can still operate and do not require any token modification.</li>
+  <li>Burn/mint bridges can now use a universal and minimal token interface, so they will not need to introduce bridge-specific representations, improving crosschain fungibility.</li>
+</ul>
+
+<p><strong>Extensibility</strong>
+The minimal interface serves as a foundational layer upon which other standards can be built.
+Token issuers or bridge contracts can extend functionality by adding features such as mint/burn limits, crosschain transfer fees, and more without altering the core interface.</p>
+
+<p>The interface is intentionally neutral and does not impose conditions on:</p>
+
+<ul>
+  <li><strong>Access Control</strong>: Token issuers determine who is authorized to call <code class="language-plaintext highlighter-rouge">crosschainMint()</code> and <code class="language-plaintext highlighter-rouge">crosschainBurn()</code>.</li>
+  <li><strong>Zero Amount Calls</strong>: Token issuers decide whether to allow or revert calls with zero amounts.</li>
+</ul>
+  
+    <h3 id="separation-of-local-and-crosschain-mintingburning">
+      
+      
+        <a href="#separation-of-local-and-crosschain-mintingburning" class="anchor-link"></a> Separation of Local and crosschain Minting/Burning
+      
+      
+    </h3>
+
+<p><strong>Different actions</strong></p>
+
+<p>Local minting and burning are fundamentally different from crosschain minting and burning.</p>
+
+<ul>
+  <li>In crosschain operations, the total circulating supply across all chains is expected to remain constant, as tokens are transferred between chains rather than created or destroyed in isolation.</li>
+  <li>Agents that mint and burn tokens in crosschain transfer fundamentally differ from token owners. It make sense for the two actors to have different permissions.</li>
+</ul>
+
+<p>Therefore, it is reasonable to have different checks, access controls, and logic (such as mint/burn limits) for crosschain actions.</p>
+
+<p><strong>Separation of concerns</strong></p>
+
+<p>Merging local and crosschain minting/burning into the same functions can lead to complex implementations that intertwine different operational logic. 
+By splitting into two, concerns remain separate, making the codebase cleaner and more maintainable.</p>
+
+<p>This separation of concerns is particularly relevant for</p>
+
+<ul>
+  <li>Upgrades: Any changes in access control, limits, or logic will only affect the separate crosschain functions (<code class="language-plaintext highlighter-rouge">crosschainMint</code> and <code class="language-plaintext highlighter-rouge">crosschainBurn</code>) without altering the standard local mint and burn implementations.</li>
+  <li>Integrations with Different Chains: To make an <a href="/EIPS/eip-20">ERC-20</a> crosschain compatible,
+issuers simply need to implement the <a href="/EIPS/eip-7802">ERC-7802</a> extension with the corresponding access controls for each chain. 
+For example, when integrating with Optimism, the ERC-20 would grant access to the Optimism bridge; when integrating with Arbitrum, it would grant access to the Arbitrum bridge. 
+The local mint and burn functions remain unchanged. 
+Using dedicated functions for crosschain operations provides a more modular approach, avoiding the need to modify the base implementation for each chain.</li>
+</ul>
+
+<p><strong>Dedicated events</strong></p>
+
+<p>A similar reasoning applies to having dedicated crosschain-specific events. The separation significantly facilitates the work of indexers, analytics tools, and auditors. It allows for straightforward tracking of crosschain activities, detecting anomalies, and monitoring bridge operations. If crosschain and local events are indistinguishable, off-chain agents must implement complex logic to differentiate them, increasing the potential for errors and inefficiencies.</p>
+  
+    <h3 id="erc-165-interface">
+      
+      
+        <a href="#erc-165-interface" class="anchor-link"></a> ERC-165 Interface
+      
+      
+    </h3>
+
+<p>The inclusion of ERC-165 provides an additional security check for integrators. By providing the interface identifier through the <code class="language-plaintext highlighter-rouge">supportsInterface</code> method, callers can programmatically confirm that the token adheres to the <code class="language-plaintext highlighter-rouge">IERC7802</code> interface. 
+This verification ensures that the token supports both <code class="language-plaintext highlighter-rouge">crosschainMint</code> and <code class="language-plaintext highlighter-rouge">crosschainBurn</code> functions, preventing scenarios where only one function is implemented. Such incomplete implementations could lead to issues like users burning tokens to bridge out but being unable to mint them upon return, resulting in failed crosschain actions.</p>
+
+<p>It is important to note that this check can only be performed locally on the chain where the token contract resides. There is no inherent guarantee that the token on the receiving chain also supports the <code class="language-plaintext highlighter-rouge">IERC7802</code> interface. Ensuring crosschain consistency of interface support is the responsibility of the bridge implementation.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This proposal is fully backwards compatible with <a href="/EIPS/eip-20">ERC-20</a>.</p>
+
+<p>As discussed in the Motivation section, a minimal, flexible crosschain standard interface is necessary. The problem becomes larger as more tokens are deployed without a standardized format.</p>
+
+<ul>
+  <li>Upgradable tokens can be upgraded to implement the new interface.</li>
+  <li>Non-upgradable tokens cannot implement the interface on the token itself. They can still migrate to a standard-compliant version using a lockbox mechanism, as proposed by xERC-20. The idea is to lock non-mintable tokens and mint the same amount of interface-compliant tokens. The bridge contract can act as a lockbox on the native chain.</li>
+</ul>
+
+<p>Bridge contracts will also need an upgrade to integrate with the interface.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// SPDX-License-Identifier: CC0-1.0
+</span><span class="k">pragma</span> <span class="n">solidity</span> <span class="mf">0.8</span><span class="p">.</span><span class="mi">25</span><span class="p">;</span>
+
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/token/ERC20/ERC20.sol"</span><span class="p">;</span>
+<span class="k">import</span> <span class="s">"@openzeppelin/contracts/utils/introspection/IERC165.sol"</span><span class="p">;</span>
+
+
+<span class="c1">/// @title IERC7802
+/// @notice Defines the interface for crosschain ERC20 transfers.
+</span><span class="k">interface</span> <span class="n">IERC7802</span> <span class="k">is</span> <span class="n">IERC165</span> <span class="p">{</span>
+    <span class="c1">/// @notice Emitted when a crosschain transfer mints tokens.
+</span>    <span class="c1">/// @param to       Address of the account tokens are being minted for.
+</span>    <span class="c1">/// @param amount   Amount of tokens minted.
+</span>    <span class="c1">/// @param sender   Address of the caller (msg.sender) who invoked crosschainMint.
+</span>    <span class="k">event</span> <span class="n">CrosschainMint</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">to</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">sender</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Emitted when a crosschain transfer burns tokens.
+</span>    <span class="c1">/// @param from     Address of the account tokens are being burned from.
+</span>    <span class="c1">/// @param amount   Amount of tokens burned.
+</span>    <span class="c1">/// @param sender   Address of the caller (msg.sender) who invoked crosschainBurn.
+</span>    <span class="k">event</span> <span class="n">CrosschainBurn</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">from</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">amount</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">sender</span><span class="p">);</span>
+
+    <span class="c1">/// @notice Mint tokens through a crosschain transfer.
+</span>    <span class="c1">/// @param _to     Address to mint tokens to.
+</span>    <span class="c1">/// @param _amount Amount of tokens to mint.
+</span>    <span class="k">function</span> <span class="n">crosschainMint</span><span class="p">(</span><span class="kt">address</span> <span class="n">_to</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Burn tokens through a crosschain transfer.
+</span>    <span class="c1">/// @param _from   Address to burn tokens from.
+</span>    <span class="c1">/// @param _amount Amount of tokens to burn.
+</span>    <span class="k">function</span> <span class="n">crosschainBurn</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">contract</span> <span class="n">CrosschainERC20</span> <span class="k">is</span> <span class="n">ERC20</span><span class="p">,</span> <span class="n">IERC7802</span> <span class="p">{</span>
+    <span class="c1">/// @notice Address of the TOKEN_BRIDGE contract that is allowed to mint/burn tokens.
+</span>    <span class="kt">address</span> <span class="k">public</span> <span class="kr">immutable</span> <span class="n">TOKEN_BRIDGE</span><span class="p">;</span>
+
+    <span class="c1">/// @notice Custom error for unauthorized access.
+</span>    <span class="n">error</span> <span class="n">Unauthorized</span><span class="p">();</span>
+
+    <span class="c1">/// @notice Constructor to set the TOKEN_BRIDGE address.
+</span>    <span class="c1">/// @param _tokenBridge Address of the TOKEN_BRIDGE.
+</span>    <span class="k">constructor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_tokenBridge</span><span class="p">,</span> <span class="kt">string</span> <span class="k">memory</span> <span class="n">name</span><span class="p">,</span> <span class="kt">string</span> <span class="k">memory</span> <span class="n">symbol</span><span class="p">)</span> <span class="n">ERC20</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">symbol</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">_tokenBridge</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="s">"Invalid TOKEN_BRIDGE address"</span><span class="p">);</span>
+        <span class="n">TOKEN_BRIDGE</span> <span class="o">=</span> <span class="n">_tokenBridge</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">/// @notice A modifier that only allows the TOKEN_BRIDGE to call
+</span>    <span class="k">modifier</span> <span class="n">onlyTokenBridge</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="n">TOKEN_BRIDGE</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">Unauthorized</span><span class="p">();</span>
+        <span class="n">_</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">/// @notice Allows the TOKEN_BRIDGE to mint tokens.
+</span>    <span class="c1">/// @param _to     Address to mint tokens to.
+</span>    <span class="c1">/// @param _amount Amount of tokens to mint.
+</span>    <span class="k">function</span> <span class="n">crosschainMint</span><span class="p">(</span><span class="kt">address</span> <span class="n">_to</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span> <span class="n">onlyTokenBridge</span> <span class="p">{</span>
+        <span class="n">_mint</span><span class="p">(</span><span class="n">_to</span><span class="p">,</span> <span class="n">_amount</span><span class="p">);</span>
+        <span class="k">emit</span> <span class="n">CrosschainMint</span><span class="p">(</span><span class="n">_to</span><span class="p">,</span> <span class="n">_amount</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="c1">/// @notice Allows the TOKEN_BRIDGE to burn tokens.
+</span>    <span class="c1">/// @param _from   Address to burn tokens from.
+</span>    <span class="c1">/// @param _amount Amount of tokens to burn.
+</span>    <span class="k">function</span> <span class="n">crosschainBurn</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">)</span> <span class="k">external</span> <span class="n">onlyTokenBridge</span> <span class="p">{</span>
+        <span class="n">_burn</span><span class="p">(</span><span class="n">_from</span><span class="p">,</span> <span class="n">_amount</span><span class="p">);</span>
+        <span class="k">emit</span> <span class="n">CrosschainBurn</span><span class="p">(</span><span class="n">_from</span><span class="p">,</span> <span class="n">_amount</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">supportsInterface</span><span class="p">(</span><span class="kt">bytes4</span> <span class="n">interfaceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">pure</span> <span class="k">override</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">interfaceId</span> <span class="o">==</span> <span class="k">type</span><span class="p">(</span><span class="n">IERC7802</span><span class="p">).</span><span class="n">interfaceId</span> <span class="o">||</span> <span class="n">interfaceId</span> <span class="o">==</span> <span class="k">type</span><span class="p">(</span><span class="n">IERC165</span><span class="p">).</span><span class="n">interfaceId</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="permissions">
+      
+      
+        <a href="#permissions" class="anchor-link"></a> Permissions
+      
+      
+    </h3>
+<p>Token issuers are responsible for controlling which contracts are authorized to call the <code class="language-plaintext highlighter-rouge">crosschainMint()</code> and <code class="language-plaintext highlighter-rouge">crosschainBurn()</code> functions. A buggy or malicious authorized caller could mint or burn tokens improperly, damaging token holders and disrupting integrations.</p>
+
+<p>One method to minimize potential losses is introducing mint/burn limits, as proposed by xERC-20. These features are fully compatible with the proposed interface.</p>
+  
+    <h3 id="wrapped-native-tokens">
+      
+      
+        <a href="#wrapped-native-tokens" class="anchor-link"></a> Wrapped Native Tokens
+      
+      
+    </h3>
+<p>This standard should not be used for wrapped native tokens like WETH, as it can lead to uncollateralized minting if the bridge does not control the underlying asset.</p>
+
+<p>The only safe exception is when the bridge can burn and mint the native token symmetrically on both chains, ensuring proper collateralization.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>skeletor&nbsp;(<a href="https://github.com/skeletor-spaceman">@skeletor-spaceman</a>), parti&nbsp;(<a href="https://github.com/0xParticle">@0xParticle</a>), joxes&nbsp;(<a href="https://github.com/Joxess">@Joxess</a>), ng&nbsp;(<a href="https://github.com/0xng">@0xng</a>), agus duha&nbsp;(<a href="https://github.com/agusduha">@agusduha</a>), disco&nbsp;(<a href="https://github.com/0xDiscotech">@0xDiscotech</a>), gotzen&nbsp;&lt;<a href="mailto:gotzen@defi.sucks">gotzen@defi.sucks</a>&gt;, 0age&nbsp;&lt;<a href="mailto:0age@uniswap.org">0age@uniswap.org</a>&gt;, Mark Tyneway&nbsp;&lt;<a href="mailto:mark@oplabs.co">mark@oplabs.co</a>&gt;, Zain Bacchus&nbsp;&lt;<a href="mailto:zain@oplabs.co">zain@oplabs.co</a>&gt;, Matt Solomon&nbsp;&lt;<a href="mailto:msolomon@oplabs.co">msolomon@oplabs.co</a>&gt;, Maurelian&nbsp;&lt;<a href="mailto:maurelian@protonmail.ch">maurelian@protonmail.ch</a>&gt;, Blaine Malone&nbsp;(<a href="https://github.com/blmalone">@blmalone</a>), "ERC-7802: Token With Mint/Burn Access Across Chains [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 7802, October 2024. Available: https://eips.ethereum.org/EIPS/eip-7802.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-7802: Token With Mint/Burn Access Across Chains [DRAFT]",
+    "name": "ERC-7802: Token With Mint/Burn Access Across Chains [DRAFT]",
+    "author": "skeletor (@skeletor-spaceman), parti (@0xParticle), joxes (@Joxess), ng (@0xng), agus duha (@agusduha), disco (@0xDiscotech), gotzen <gotzen@defi.sucks>, 0age <0age@uniswap.org>, Mark Tyneway <mark@oplabs.co>, Zain Bacchus <zain@oplabs.co>, Matt Solomon <msolomon@oplabs.co>, Maurelian <maurelian@protonmail.ch>, Blaine Malone (@blmalone)",
+    "dateCreated": "2024-10-30",
+    "datePublished": "2024-10-30",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-7802-crosschain-token-interface/21508",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2024"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

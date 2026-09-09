@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-5095: Principal Token</title>
+      <meta property="og:title" content="ERC-5095: Principal Token" />
+    
+    <meta name="description" content="Principal tokens (zero-coupon tokens) are redeemable for a single underlying EIP-20 token at a future timestamp." />
+    <meta property="og:description" content="Principal tokens (zero-coupon tokens) are redeemable for a single underlying EIP-20 token at a future timestamp." />
+    <meta name="twitter:description" content="Principal tokens (zero-coupon tokens) are redeemable for a single underlying EIP-20 token at a future timestamp." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-5095" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-5095" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+      <span class="badge text-light bg-danger" data-bs-toggle="tooltip" data-bs-title="This EIP had no activity for at least 6 months. This EIP should not be used.">🚧 Stagnant</span>
+    
+    
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-5095: Principal Token
+    <a href="https://ethereum-magicians.org/t/eip-5095-principal-token-standard/9259" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-5095.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Principal tokens (zero-coupon tokens) are redeemable for a single underlying EIP-20 token at a future timestamp.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Julian Traversa&nbsp;(<a href="https://github.com/JTraversa">@JTraversa</a>), Robert Robbins&nbsp;(<a href="https://github.com/robrobbins">@robrobbins</a>), Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2022-05-01</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/eip-5095-principal-token-standard/9259" target="_blank" rel="noopener">https://ethereum-magicians.org/t/eip-5095-principal-token-standard/9259</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-20">EIP-20</a>, 
+
+  <a href="eip-2612">EIP-2612</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definitions">Definitions:</a></li>
+      <li><a href="#methods">Methods</a></li>
+      <li><a href="#events">Events</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>Principal tokens represent ownership of an underlying <a href="/EIPS/eip-20">EIP-20</a> token at a future timestamp.</p>
+
+<p>This specification is an extension on the <a href="/EIPS/eip-20">EIP-20</a> token that provides basic functionality for depositing
+and withdrawing tokens and reading balances and the <a href="/EIPS/eip-2612">EIP-2612</a> specification that provides
+<a href="/EIPS/eip-712">EIP-712</a> signature based approvals.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Principal tokens lack standardization which has led to a difficult to navigate development space and diverse implementation
+schemes.</p>
+
+<p>The primary examples include yield tokenization platforms which strip future yield leaving a principal
+token behind, as well as fixed-rate money-markets which utilize principal tokens as a medium
+to lend/borrow.</p>
+
+<p>This inconsistency in implementation makes integration difficult at the application layer as well as
+wallet layer which are key catalysts for the space’s growth. 
+Developers are currently expected to implement individual adapters for each principal token, as well as adapters for
+their pool contracts, and many times adapters for their custodial contracts as well, wasting significant developer resources.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>All Principal Tokens (PTs) MUST implement <a href="/EIPS/eip-20">EIP-20</a> to represent ownership of future underlying redemption.
+If a PT is to be non-transferrable, it MAY revert on calls to <code class="language-plaintext highlighter-rouge">transfer</code> or <code class="language-plaintext highlighter-rouge">transferFrom</code>.
+The <a href="/EIPS/eip-20">EIP-20</a> operations <code class="language-plaintext highlighter-rouge">balanceOf</code>, <code class="language-plaintext highlighter-rouge">transfer</code>, <code class="language-plaintext highlighter-rouge">totalSupply</code>, etc. operate on the Principal Token balance.</p>
+
+<p>All Principal Tokens MUST implement <a href="/EIPS/eip-20">EIP-20</a>’s optional metadata extensions.
+The <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">symbol</code> functions SHOULD reflect the underlying token’s <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">symbol</code> in some way, as well as the origination protocol, and in the case of yield tokenization protocols, the origination money-market.</p>
+
+<p>All Principal Tokens MAY implement <a href="/EIPS/eip-2612">EIP-2612</a> to improve the UX of approving PTs on various integrations.</p>
+  
+    <h3 id="definitions">
+      
+      
+        <a href="#definitions" class="anchor-link"></a> Definitions:
+      
+      
+    </h3>
+
+<ul>
+  <li>underlying: The token that Principal Tokens are redeemable for at maturity.
+Has units defined by the corresponding <a href="/EIPS/eip-20">EIP-20</a> contract.</li>
+  <li>maturity: The timestamp (unix) at which a Principal Token matures. Principal Tokens become redeemable for underlying at or after this timestamp.</li>
+  <li>fee: An amount of underlying or Principal Token charged to the user by the Principal Token. Fees can exist on redemption or post-maturity yield.</li>
+  <li>slippage: Any difference between advertised redemption value and economic realities of PT redemption, which is not accounted by fees.</li>
+</ul>
+  
+    <h3 id="methods">
+      
+      
+        <a href="#methods" class="anchor-link"></a> Methods
+      
+      
+    </h3>
+  
+    <h4 id="underlying">
+      
+      
+        <a href="#underlying" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">underlying</code>
+      
+      
+    </h4>
+
+<p>The address of the underlying token used by the Principal Token for accounting, and redeeming.</p>
+
+<p>MUST be an EIP-20 token contract.</p>
+
+<p>MUST <em>NOT</em> revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlying</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span> <span class="pi">[]</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAddress</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+</code></pre></div></div>
+  
+    <h4 id="maturity">
+      
+      
+        <a href="#maturity" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">maturity</code>
+      
+      
+    </h4>
+
+<p>The unix timestamp (uint256) at or after which Principal Tokens can be redeemed for their underlying deposit.</p>
+
+<p>MUST <em>NOT</em> revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maturity</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span> <span class="pi">[]</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">timestamp</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="converttounderlying">
+      
+      
+        <a href="#converttounderlying" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">convertToUnderlying</code>
+      
+      
+    </h4>
+
+<p>The amount of underlying that would be exchanged for the amount of PTs provided, in an ideal scenario where all the conditions are met.</p>
+
+<p>Before maturity, the amount of underlying returned is as if the PTs would be at maturity.</p>
+
+<p>MUST NOT be inclusive of any fees that are charged against redemptions.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT reflect slippage or other on-chain conditions, when performing the actual redemption.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<p>MUST round down towards 0.</p>
+
+<p>This calculation MAY NOT reflect the “per-user” price-per-principal-token, and instead should reflect the “average-user’s” price-per-principal-token, meaning what the average user should expect to see when exchanging to and from.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">convertToUnderlying</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="converttoprincipal">
+      
+      
+        <a href="#converttoprincipal" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">convertToPrincipal</code>
+      
+      
+    </h4>
+
+<p>The amount of principal tokens that the principal token contract would request for redemption in order to provide the amount of underlying specified, in an ideal scenario where all the conditions are met.</p>
+
+<p>MUST NOT be inclusive of any fees.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT reflect slippage or other on-chain conditions, when performing the actual exchange.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<p>MUST round down towards 0.</p>
+
+<p>This calculation MAY NOT reflect the “per-user” price-per-principal-token, and instead should reflect the “average-user’s” price-per-principal-token, meaning what the average user should expect to see when redeeming.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">convertToPrincipal</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxredeem">
+      
+      
+        <a href="#maxredeem" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">maxRedeem</code>
+      
+      
+    </h4>
+
+<p>Maximum amount of principal tokens that can be redeemed from the <code class="language-plaintext highlighter-rouge">holder</code> balance, through a <code class="language-plaintext highlighter-rouge">redeem</code> call.</p>
+
+<p>MUST return the maximum amount of principal tokens that could be transferred from <code class="language-plaintext highlighter-rouge">holder</code> through <code class="language-plaintext highlighter-rouge">redeem</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary).</p>
+
+<p>MUST factor in both global and user-specific limits, like if redemption is entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxRedeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">holder</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxPrincipalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewredeem">
+      
+      
+        <a href="#previewredeem" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">previewRedeem</code>
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no more than the exact amount of underliyng that would be obtained in a <code class="language-plaintext highlighter-rouge">redeem</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">redeem</code> should return the same or more <code class="language-plaintext highlighter-rouge">underlyingAmount</code> as <code class="language-plaintext highlighter-rouge">previewRedeem</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for redemption limits like those returned from maxRedeem and should always act as though the redemption would be accepted, regardless if the user has enough principal tokens, etc.</p>
+
+<p>MUST be inclusive of redemption fees. Integrators should be aware of the existence of redemption fees.</p>
+
+<p>MUST NOT revert due to principal token contract specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">redeem</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToUnderlying</code> and <code class="language-plaintext highlighter-rouge">previewRedeem</code> SHOULD be considered slippage in price-per-principal-token or some other type of condition.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewRedeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="redeem">
+      
+      
+        <a href="#redeem" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">redeem</code>
+      
+      
+    </h4>
+
+<p>At or after maturity, burns exactly <code class="language-plaintext highlighter-rouge">principalAmount</code> of Principal Tokens from <code class="language-plaintext highlighter-rouge">from</code> and sends <code class="language-plaintext highlighter-rouge">underlyingAmount</code> of underlying tokens to <code class="language-plaintext highlighter-rouge">to</code>.</p>
+
+<p>Interfaces and other contracts MUST NOT expect fund custody to be present. While custodial redemption of Principal Tokens through the Principal Token contract is extremely useful for integrators, some protocols may find giving the Principal Token itself custody breaks their backwards compatibility.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Redeem</code> event.</p>
+
+<p>MUST support a redeem flow where the Principal Tokens are burned from <code class="language-plaintext highlighter-rouge">holder</code> directly where <code class="language-plaintext highlighter-rouge">holder</code> is <code class="language-plaintext highlighter-rouge">msg.sender</code> or <code class="language-plaintext highlighter-rouge">msg.sender</code> has EIP-20 approval over the principal tokens of <code class="language-plaintext highlighter-rouge">holder</code>.
+MAY support an additional flow in which the principal tokens are transferred to the Principal Token contract before the <code class="language-plaintext highlighter-rouge">redeem</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">redeem</code>.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">principalAmount</code> cannot be redeemed (due to withdrawal limit being reached, slippage, the holder not having enough Principal Tokens, etc).</p>
+
+<p>Note that some implementations will require pre-requesting to the Principal Token before a withdrawal may be performed. Those methods should be performed separately.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">redeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">to</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">from</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxwithdraw">
+      
+      
+        <a href="#maxwithdraw" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">maxWithdraw</code>
+      
+      
+    </h4>
+
+<p>Maximum amount of the underlying asset that can be redeemed from the <code class="language-plaintext highlighter-rouge">holder</code> principal token balance, through a <code class="language-plaintext highlighter-rouge">withdraw</code> call.</p>
+
+<p>MUST return the maximum amount of underlying tokens that could be redeemed from <code class="language-plaintext highlighter-rouge">holder</code> through <code class="language-plaintext highlighter-rouge">withdraw</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary).</p>
+
+<p>MUST factor in both global and user-specific limits, like if withdrawals are entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxWithdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">holder</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxUnderlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewwithdraw">
+      
+      
+        <a href="#previewwithdraw" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">previewWithdraw</code>
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no fewer than the exact amount of principal tokens that would be burned in a <code class="language-plaintext highlighter-rouge">withdraw</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">withdraw</code> should return the same or fewer <code class="language-plaintext highlighter-rouge">principalAmount</code> as <code class="language-plaintext highlighter-rouge">previewWithdraw</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for withdrawal limits like those returned from maxWithdraw and should always act as though the withdrawal would be accepted, regardless if the user has enough principal tokens, etc.</p>
+
+<p>MUST be inclusive of withdrawal fees. Integrators should be aware of the existence of withdrawal fees.</p>
+
+<p>MUST NOT revert due to principal token contract specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">withdraw</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToPrincipal</code> and <code class="language-plaintext highlighter-rouge">previewWithdraw</code> SHOULD be considered slippage in price-per-principal-token or some other type of condition.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewWithdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="withdraw">
+      
+      
+        <a href="#withdraw" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">withdraw</code>
+      
+      
+    </h4>
+
+<p>Burns <code class="language-plaintext highlighter-rouge">principalAmount</code> from <code class="language-plaintext highlighter-rouge">holder</code> and sends exactly <code class="language-plaintext highlighter-rouge">underlyingAmount</code> of underlying tokens to <code class="language-plaintext highlighter-rouge">receiver</code>.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Redeem</code> event.</p>
+
+<p>MUST support a withdraw flow where the principal tokens are burned from <code class="language-plaintext highlighter-rouge">holder</code> directly where <code class="language-plaintext highlighter-rouge">holder</code> is <code class="language-plaintext highlighter-rouge">msg.sender</code> or <code class="language-plaintext highlighter-rouge">msg.sender</code> has <a href="/EIPS/eip-20">EIP-20</a> approval over the principal tokens of <code class="language-plaintext highlighter-rouge">holder</code>.
+ MAY support an additional flow in which the principal tokens are transferred to the principal token contract before the <code class="language-plaintext highlighter-rouge">withdraw</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">underlyingAmount</code> cannot be withdrawn (due to withdrawal limit being reached, slippage, the holder not having enough principal tokens, etc).</p>
+
+<p>Note that some implementations will require pre-requesting to the principal token contract before a withdrawal may be performed. Those methods should be performed separately.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">withdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">underlyingAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">holder</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">principalAmount</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+  
+    <h4 id="redeem-1">
+      
+      
+        <a href="#redeem-1" class="anchor-link"></a> Redeem
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">from</code> has exchanged <code class="language-plaintext highlighter-rouge">principalAmount</code> of Principal Tokens for <code class="language-plaintext highlighter-rouge">underlyingAmount</code> of underlying, and transferred that underlying to <code class="language-plaintext highlighter-rouge">to</code>.</p>
+
+<p>MUST be emitted when Principal Tokens are burnt and underlying is withdrawn from the contract in the <code class="language-plaintext highlighter-rouge">EIP5095.redeem</code> method.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Redeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">from</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">to</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">amount</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The Principal Token interface is designed to be optimized for integrators with a core minimal interface alongside optional interfaces to enable backwards compatibility. Details such as accounting and management of underlying are intentionally not specified, as Principal Tokens are expected to be treated as black boxes on-chain and inspected off-chain before use.</p>
+
+<p><a href="/EIPS/eip-20">EIP-20</a> is enforced as implementation details such as token approval and balance calculation directly carry over. This standardization makes Principal Tokens immediately compatible with all <a href="/EIPS/eip-20">EIP-20</a> use cases in addition to EIP-5095.</p>
+
+<p>All principal tokens are redeemable upon maturity, with the only variance being whether further yield is generated post-maturity. Given the ubiquity of redemption, the presence of <code class="language-plaintext highlighter-rouge">redeem</code> allows integrators to purchase Principal Tokens on an open market, and them later redeem them for a fixed-yield solely knowing the address of the Principal Token itself.</p>
+
+<p>This EIP draws heavily on the design of <a href="/EIPS/eip-4626">EIP-4626</a> because technically Principal Tokens could be described as a subset of Yield Bearing Vaults, extended with a <code class="language-plaintext highlighter-rouge">maturity</code> variable and restrictions on the implementation. However, extending <a href="/EIPS/eip-4626">EIP-4626</a> would force PT implementations to include methods (namely, <code class="language-plaintext highlighter-rouge">mint</code> and <code class="language-plaintext highlighter-rouge">deposit</code>) that are not necessary to the business case that PTs solve. It can also be argued that partial redemptions (implemented via <code class="language-plaintext highlighter-rouge">withdraw</code>) are rare for PTs.</p>
+
+<p>PTs mature at a precise second, but given the reactive nature of smart contracts, there can’t be an event marking maturity, because there is no guarantee of any activity at or after maturity. Emitting an event to notify of maturity in the first transaction after maturity would be imprecise and expensive. Instead, integrators are recommended to either use the first <code class="language-plaintext highlighter-rouge">Redeem</code> event, or to track themselves when each PT is expected to have matured.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This EIP is fully backward compatible with the <a href="/EIPS/eip-20">EIP-20</a> specification and has no known compatibility issues with other standards.
+For production implementations of Principal Tokens which do not use EIP-5095, wrapper adapters can be developed and used, or wrapped tokens can be implemented.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// SPDX-License-Identifier: MIT
+pragma solidity 0.8.14;
+
+import {ERC20} from "yield-utils-v2/contracts/token/ERC20.sol";
+import {MinimalTransferHelper} from "yield-utils-v2/contracts/token/MinimalTransferHelper.sol";
+
+contract ERC5095 is ERC20 {
+    using MinimalTransferHelper for ERC20;
+
+    /* EVENTS
+     *****************************************************************************************************************/
+
+    event Redeem(address indexed from, address indexed to, uint256 underlyingAmount);
+
+    /* MODIFIERS
+     *****************************************************************************************************************/
+
+    /// @notice A modifier that ensures the current block timestamp is at or after maturity.
+    modifier afterMaturity() virtual {
+        require(block.timestamp &gt;= maturity, "BEFORE_MATURITY");
+        _;
+    }
+
+    /* IMMUTABLES
+     *****************************************************************************************************************/
+
+    ERC20 public immutable underlying;
+    uint256 public immutable maturity;
+
+    /* CONSTRUCTOR
+     *****************************************************************************************************************/
+
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        ERC20 underlying_,
+        uint256 maturity_
+    ) ERC20(name_, symbol_, decimals_) {
+        underlying = underlying_;
+        maturity = maturity_;
+    }
+
+    /* CORE FUNCTIONS
+     *****************************************************************************************************************/
+
+    /// @notice Burns an exact amount of principal tokens in exchange for an amount of underlying.
+    /// @dev This reverts if before maturity.
+    /// @param principalAmount The exact amount of principal tokens to be burned.
+    /// @param from The owner of the principal tokens to be redeemed.  If not msg.sender then must have prior approval.
+    /// @param to The address to send the underlying tokens.
+    /// @return underlyingAmount The total amount of underlying tokens sent.
+    function redeem(
+        uint256 principalAmount,
+        address from,
+        address to
+    ) public virtual afterMaturity returns (uint256 underlyingAmount) {
+        _decreaseAllowance(from, principalAmount);
+
+        // Check for rounding error since we round down in previewRedeem.
+        require((underlyingAmount = _previewRedeem(principalAmount)) != 0, "ZERO_ASSETS");
+
+        _burn(from, principalAmount);
+
+        emit Redeem(from, to, principalAmount);
+
+        _transferOut(to, underlyingAmount);
+    }
+
+    /// @notice Burns a calculated amount of principal tokens in exchange for an exact amount of underlying.
+    /// @dev This reverts if before maturity.
+    /// @param underlyingAmount The exact amount of underlying tokens to be received.
+    /// @param from The owner of the principal tokens to be redeemed.  If not msg.sender then must have prior approval.
+    /// @param to The address to send the underlying tokens.
+    /// @return principalAmount The total amount of underlying tokens redeemed.
+    function withdraw(
+        uint256 underlyingAmount,
+        address from,
+        address to
+    ) public virtual afterMaturity returns (uint256 principalAmount) {
+        principalAmount = _previewWithdraw(underlyingAmount); // No need to check for rounding error, previewWithdraw rounds up.
+
+        _decreaseAllowance(from, principalAmount);
+
+        _burn(from, principalAmount);
+
+        emit Redeem(from, to, principalAmount);
+
+        _transferOut(to, underlyingAmount);
+    }
+
+    /// @notice An internal, overridable transfer function.
+    /// @dev Reverts on failed transfer.
+    /// @param to The recipient of the transfer.
+    /// @param amount The amount of the transfer.
+    function _transferOut(address to, uint256 amount) internal virtual {
+        underlying.safeTransfer(to, amount);
+    }
+
+    /* ACCOUNTING FUNCTIONS
+     *****************************************************************************************************************/
+
+    /// @notice Calculates the amount of underlying tokens that would be exchanged for a given amount of principal tokens.
+    /// @dev Before maturity, it converts to underlying as if at maturity.
+    /// @param principalAmount The amount principal on which to calculate conversion.
+    /// @return underlyingAmount The total amount of underlying that would be received for the given principal amount..
+    function convertToUnderlying(uint256 principalAmount) external view returns (uint256 underlyingAmount) {
+        return _convertToUnderlying(principalAmount);
+    }
+
+    function _convertToUnderlying(uint256 principalAmount) internal view virtual returns (uint256 underlyingAmount) {
+        return principalAmount;
+    }
+
+    /// @notice Converts a given amount of underlying tokens to principal exclusive of fees.
+    /// @dev Before maturity, it converts to principal as if at maturity.
+    /// @param underlyingAmount The total amount of underlying on which to calculate the conversion.
+    /// @return principalAmount The amount principal tokens required to provide the given amount of underlying.
+    function convertToPrincipal(uint256 underlyingAmount) external view returns (uint256 principalAmount) {
+        return _convertToPrincipal(underlyingAmount);
+    }
+
+    function _convertToPrincipal(uint256 underlyingAmount) internal view virtual returns (uint256 principalAmount) {
+        return underlyingAmount;
+    }
+
+    /// @notice Allows user to simulate redemption of a given amount of principal tokens, inclusive of fees and other
+    /// current block conditions.
+    /// @dev This reverts if before maturity.
+    /// @param principalAmount The amount of principal that would be redeemed.
+    /// @return underlyingAmount The amount of underlying that would be received.
+    function previewRedeem(uint256 principalAmount) external view afterMaturity returns (uint256 underlyingAmount) {
+        return _previewRedeem(principalAmount);
+    }
+
+    function _previewRedeem(uint256 principalAmount) internal view virtual returns (uint256 underlyingAmount) {
+        return _convertToUnderlying(principalAmount); // should include fees/slippage
+    }
+
+    /// @notice Calculates the maximum amount of principal tokens that an owner could redeem.
+    /// @dev This returns 0 if before maturity.
+    /// @param owner The address for which the redemption is being calculated.
+    /// @return maxPrincipalAmount The maximum amount of principal tokens that can be redeemed by the given owner.
+    function maxRedeem(address owner) public view returns (uint256 maxPrincipalAmount) {
+        return block.timestamp &gt;= maturity ? _balanceOf[owner] : 0;
+    }
+
+    /// @notice Allows user to simulate withdraw of a given amount of underlying tokens.
+    /// @dev This reverts if before maturity.
+    /// @param underlyingAmount The amount of underlying tokens that would be withdrawn.
+    /// @return principalAmount The amount of principal tokens that would be redeemed.
+    function previewWithdraw(uint256 underlyingAmount) external view afterMaturity returns (uint256 principalAmount) {
+        return _previewWithdraw(underlyingAmount);
+    }
+
+    function _previewWithdraw(uint256 underlyingAmount) internal view virtual returns (uint256 principalAmount) {
+        return _convertToPrincipal(underlyingAmount); // should include fees/slippage
+    }
+
+    /// @notice Calculates the maximum amount of underlying tokens that can be withdrawn by a given owner.
+    /// @dev This returns 0 if before maturity.
+    /// @param owner The address for which the withdraw is being calculated.
+    /// @return maxUnderlyingAmount The maximum amount of underlying tokens that can be withdrawn by a given owner.
+    function maxWithdraw(address owner) public view returns (uint256 maxUnderlyingAmount) {
+        return _previewWithdraw(maxRedeem(owner));
+    }
+}
+
+</code></pre></div></div>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>Fully permissionless use cases could fall prey to malicious implementations which only conform to the interface in this EIP but not the specification, failing to implement proper custodial functionality but offering the ability to purchase Principal Tokens through secondary markets.</p>
+
+<p>It is recommended that all integrators review each implementation for potential ways of losing user deposits before integrating.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">convertToUnderlying</code> method is an estimate useful for display purposes,
+and do <em>not</em> have to confer the <em>exact</em> amount of underlying assets their context suggests.</p>
+
+<p>As is common across many standards, it is strongly recommended to mirror the underlying token’s <code class="language-plaintext highlighter-rouge">decimals</code> if at all possible, to eliminate possible sources of confusion and simplify integration across front-ends and for other off-chain users.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Julian Traversa&nbsp;(<a href="https://github.com/JTraversa">@JTraversa</a>), Robert Robbins&nbsp;(<a href="https://github.com/robrobbins">@robrobbins</a>), Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>), "ERC-5095: Principal Token [STAGNANT]," <em>Ethereum Improvement Proposals</em>, no. 5095, May 2022. Available: https://eips.ethereum.org/EIPS/eip-5095.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-5095: Principal Token [STAGNANT]",
+    "name": "ERC-5095: Principal Token [STAGNANT]",
+    "author": "Julian Traversa (@JTraversa), Robert Robbins (@robrobbins), Alberto Cuesta Cañada (@alcueca)",
+    "dateCreated": "2022-05-01",
+    "datePublished": "2022-05-01",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-5095-principal-token-standard/9259",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2022"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

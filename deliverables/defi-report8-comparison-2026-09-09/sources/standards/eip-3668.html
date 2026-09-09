@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-3668: CCIP Read—Secure offchain data retrieval</title>
+      <meta property="og:title" content="ERC-3668: CCIP Read—Secure offchain data retrieval" />
+    
+    <meta name="description" content="CCIP Read provides a mechanism to allow a contract to fetch external data." />
+    <meta property="og:description" content="CCIP Read provides a mechanism to allow a contract to fetch external data." />
+    <meta name="twitter:description" content="CCIP Read provides a mechanism to allow a contract to fetch external data." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-3668" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-3668" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-3668: CCIP Read—Secure offchain data retrieval
+    <a href="https://ethereum-magicians.org/t/durin-secure-offchain-data-retrieval/6728" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3668.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>CCIP Read provides a mechanism to allow a contract to fetch external data.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Nick Johnson&nbsp;(<a href="https://github.com/arachnid">@arachnid</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2020-07-19</td>
+        </tr>
+      
+      
+             
+      
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#contract-interface">Contract interface</a></li>
+      <li><a href="#gateway-interface">Gateway Interface</a></li>
+      <li><a href="#client-lookup-protocol">Client Lookup Protocol</a></li>
+      <li><a href="#use-of-ccip-read-for-transactions">Use of CCIP read for transactions</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#use-of-revert-to-convey-call-information">Use of revert to convey call information</a></li>
+      <li><a href="#passing-contract-address-to-the-gateway-service">Passing contract address to the gateway service</a></li>
+      <li><a href="#existence-of-extradata-argument">Existence of extraData argument</a></li>
+      <li><a href="#use-of-get-and-post-requests-for-the-gateway-interface">Use of GET and POST requests for the gateway interface</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#gateway-response-data-validation">Gateway Response Data Validation</a></li>
+      <li><a href="#client-extra-data-validation">Client Extra Data Validation</a></li>
+      <li><a href="#http-requests-and-fingerprinting-attacks">HTTP requests and fingerprinting attacks</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+<p>Contracts wishing to support lookup of data from external sources may, instead of returning the data directly, revert using <code class="language-plaintext highlighter-rouge">OffchainLookup(address sender, string[] urls, bytes callData, bytes4 callbackFunction, bytes extraData)</code>. Clients supporting this specification then make an RPC call to a URL from <code class="language-plaintext highlighter-rouge">urls</code>, supplying <code class="language-plaintext highlighter-rouge">callData</code>, and getting back an opaque byte string <code class="language-plaintext highlighter-rouge">response</code>. Finally, clients call the function specified by <code class="language-plaintext highlighter-rouge">callbackFunction</code> on the contract, providing <code class="language-plaintext highlighter-rouge">response</code> and <code class="language-plaintext highlighter-rouge">extraData</code>. The contract can then decode and verify the returned data using an implementation-specific method.</p>
+
+<p>This mechanism allows for offchain lookups of data in a way that is transparent to clients, and allows contract authors to implement whatever validation is necessary; in many cases this can be provided without any additional trust assumptions over and above those required if data is stored onchain.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+<p>Minimising storage and transaction costs on Ethereum has driven contract authors to adopt a variety of techniques for moving data offchain, including hashing, recursive hashing (eg Merkle Trees/Tries) and L2 solutions. While each solution has unique constraints and parameters, they all share in common the fact that enough information is stored onchain to validate the externally stored data when required.</p>
+
+<p>Thus far, applications have tended to devise bespoke solutions rather than trying to define a universal standard. This is practical - although inefficient - when a single offchain data storage solution suffices, but rapidly becomes impractical in a system where multiple end-users may wish to make use of different data storage and availability solutions based on what suits their needs.</p>
+
+<p>By defining a common specification allowing smart contract to fetch data from offchain, we facilitate writing clients that are entirely agnostic to the storage solution being used, which enables new applications that can operate without knowing about the underlying storage details of the contracts they interact with.</p>
+
+<p>Examples of this include:</p>
+<ul>
+  <li>Interacting with ‘airdrop’ contracts that store a list of recipients offchain in a merkle trie.</li>
+  <li>Viewing token information for tokens stored on an L2 solution as if they were native L1 tokens.</li>
+  <li>Allowing delegation of data such as ENS domains to various L2 solutions, without requiring clients to support each solution individually.</li>
+  <li>Allowing contracts to proactively request external data to complete a call, without requiring the caller to be aware of the details of that data.</li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+  
+    <h3 id="overview">
+      
+      
+        <a href="#overview" class="anchor-link"></a> Overview
+      
+      
+    </h3>
+<p>Answering a query via CCIP read takes place in three steps:</p>
+
+<ol>
+  <li>Querying the contract.</li>
+  <li>Querying the gateway using the URL provided in (1).</li>
+  <li>Querying or sending a transaction to the contract using the data from (1) and (2).</li>
+</ol>
+
+<p>In step 1, a standard blockchain call operation is made to the contract. The contract reverts with an error that specifies the data to complete the call can be found offchain, and provides the url to a service that can provide the answer, along with additional contextual information required for the call in step (3).</p>
+
+<p>In step 2, the client calls the gateway service with the <code class="language-plaintext highlighter-rouge">callData</code> from the revert message in step (1). The gateway responds with an answer <code class="language-plaintext highlighter-rouge">response</code>, whose content is opaque to the client.</p>
+
+<p>In step 3, the client calls the original contract, supplying the <code class="language-plaintext highlighter-rouge">response</code> from step (2) and the <code class="language-plaintext highlighter-rouge">extraData</code> returned by the contract in step (1). The contract decodes the provided data and uses it to validate the response and act on it - by returning information to the client or by making changes in a transaction. The contract could also revert with a new error to initiate another lookup, in which case the protocol starts again at step 1.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌──────┐                                          ┌────────┐ ┌─────────────┐
+│Client│                                          │Contract│ │Gateway @ url│
+└──┬───┘                                          └───┬────┘ └──────┬──────┘
+   │                                                  │             │
+   │ somefunc(...)                                    │             │
+   ├─────────────────────────────────────────────────►│             │
+   │                                                  │             │
+   │ revert OffchainLookup(sender, urls, callData,    │             │
+   │                     callbackFunction, extraData) │             │
+   │◄─────────────────────────────────────────────────┤             │
+   │                                                  │             │
+   │ HTTP request (sender, callData)                  │             │
+   ├──────────────────────────────────────────────────┼────────────►│
+   │                                                  │             │
+   │ Response (result)                                │             │
+   │◄─────────────────────────────────────────────────┼─────────────┤
+   │                                                  │             │
+   │ callbackFunction(result, extraData)              │             │
+   ├─────────────────────────────────────────────────►│             │
+   │                                                  │             │
+   │ answer                                           │             │
+   │◄─────────────────────────────────────────────────┤             │
+   │                                                  │             │
+</code></pre></div></div>
+  
+    <h3 id="contract-interface">
+      
+      
+        <a href="#contract-interface" class="anchor-link"></a> Contract interface
+      
+      
+    </h3>
+
+<p>A CCIP read enabled contract MUST revert with the following error whenever a function that requires offchain data is called:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">error</span> <span class="n">OffchainLookup</span><span class="p">(</span><span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">string</span><span class="p">[]</span> <span class="n">urls</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">callData</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="n">callbackFunction</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">extraData</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">sender</code> is the address of the contract that raised the error, and is used to determine if the error was thrown by the contract the client called, or ‘bubbled up’ from a nested call.</p>
+
+<p><code class="language-plaintext highlighter-rouge">urls</code> specifies a list of URL templates to services (known as gateways) that implement the CCIP read protocol and can formulate an answer to the query. <code class="language-plaintext highlighter-rouge">urls</code> can be the empty list <code class="language-plaintext highlighter-rouge">[]</code>, in which case the client MUST specify the URL template. The order in which URLs are tried is up to the client, but contracts SHOULD return them in order of priority, with the most important entry first.</p>
+
+<p>Each URL may include two substitution parameters, <code class="language-plaintext highlighter-rouge">{sender}</code> and <code class="language-plaintext highlighter-rouge">{data}</code>. Before a call is made to the URL, <code class="language-plaintext highlighter-rouge">sender</code> is replaced with the lowercase 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">sender</code> parameter, and <code class="language-plaintext highlighter-rouge">data</code> is replaced by the 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">callData</code> parameter.</p>
+
+<p><code class="language-plaintext highlighter-rouge">callData</code> specifies the data to call the gateway with. This value is opaque to the client. Typically this will be ABI-encoded, but this is an implementation detail that contracts and gateways can standardise on as desired.</p>
+
+<p><code class="language-plaintext highlighter-rouge">callbackFunction</code> is the 4-byte function selector for a function on the original contract to which a callback should be sent.</p>
+
+<p><code class="language-plaintext highlighter-rouge">extraData</code> is additional data that is required by the callback, and MUST be retained by the client and provided unmodified to the callback function. This value is opaque to the client.</p>
+
+<p>The contract MUST also implement a callback method for decoding and validating the data returned by the gateway. The name of this method is implementation-specific, but it MUST have the signature <code class="language-plaintext highlighter-rouge">(bytes response, bytes extraData)</code>, and MUST have the same return type as the function that reverted with <code class="language-plaintext highlighter-rouge">OffchainLookup</code>.</p>
+
+<p>If the client successfully calls the gateway, the callback function specified in the <code class="language-plaintext highlighter-rouge">OffchainLookup</code> error will be invoked by the client, with <code class="language-plaintext highlighter-rouge">response</code> set to the value returned by the gateway, and <code class="language-plaintext highlighter-rouge">extraData</code> set to the value returned in the contract’s <code class="language-plaintext highlighter-rouge">OffchainLookup</code> error. The contract MAY initiate another CCIP read lookup in this callback, though authors should bear in mind that the limits on number of recursive invocations will vary from client to client.</p>
+
+<p>In a call context (as opposed to a transaction), the return data from this call will be returned to the user as if it was returned by the function that was originally invoked.</p>
+  
+    <h4 id="example">
+      
+      
+        <a href="#example" class="anchor-link"></a> Example
+      
+      
+    </h4>
+
+<p>Suppose a contract has the following method:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span> <span class="n">addr</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">uint</span> <span class="nb">balance</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Data for these queries is stored offchain in some kind of hashed data structure, the details of which are not important for this example. The contract author wants the gateway to fetch the proof information for this query and call the following function with it:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">balanceOfWithProof</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">response</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">extraData</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">uint</span> <span class="nb">balance</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>One example of a valid implementation of <code class="language-plaintext highlighter-rouge">balanceOf</code> would thus be:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span> <span class="n">addr</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">uint</span> <span class="nb">balance</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">revert</span> <span class="n">OffchainLookup</span><span class="p">(</span>
+        <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+        <span class="p">[</span><span class="n">url</span><span class="p">],</span>
+        <span class="n">abi</span><span class="p">.</span><span class="n">encodeWithSelector</span><span class="p">(</span><span class="n">Gateway</span><span class="p">.</span><span class="n">getSignedBalance</span><span class="p">.</span><span class="nb">selector</span><span class="p">,</span> <span class="n">addr</span><span class="p">),</span>
+        <span class="n">ContractName</span><span class="p">.</span><span class="n">balanceOfWithProof</span><span class="p">.</span><span class="nb">selector</span><span class="p">,</span>
+        <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span>
+    <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Note that in this example the contract is returning <code class="language-plaintext highlighter-rouge">addr</code> in both <code class="language-plaintext highlighter-rouge">callData</code> and <code class="language-plaintext highlighter-rouge">extraData</code>, because it is required both by the gateway (in order to look up the data) and the callback function (in order to verify it). The contract cannot simply pass it to the gateway and rely on it being returned in the response, as this would give the gateway an opportunity to respond with an answer to a different query than the one that was initially issued.</p>
+  
+    <h4 id="recursive-calls-in-ccip-aware-contracts">
+      
+      
+        <a href="#recursive-calls-in-ccip-aware-contracts" class="anchor-link"></a> Recursive calls in CCIP-aware contracts
+      
+      
+    </h4>
+
+<p>When a CCIP-aware contract wishes to make a call to another contract, and the possibility exists that the callee may implement CCIP read, the calling contract MUST catch all <code class="language-plaintext highlighter-rouge">OffchainLookup</code> errors thrown by the callee, and revert with a different error if the <code class="language-plaintext highlighter-rouge">sender</code> field of the error does not match the callee address.</p>
+
+<p>The contract MAY choose to replace all <code class="language-plaintext highlighter-rouge">OffchainLookup</code> errors with a different error. Doing so avoids the complexity of implementing support for nested CCIP read calls, but renders them impossible.</p>
+
+<p>Where the possibility exists that a callee implements CCIP read, a CCIP-aware contract MUST NOT allow the default solidity behaviour of bubbling up reverts from nested calls. This is to prevent the following situation:</p>
+
+<ol>
+  <li>Contract A calls non-CCIP-aware contract B.</li>
+  <li>Contract B calls back to A.</li>
+  <li>In the nested call, A reverts with <code class="language-plaintext highlighter-rouge">OffchainLookup</code>.</li>
+  <li>Contract B does not understand CCIP read and propagates the <code class="language-plaintext highlighter-rouge">OffchainLookup</code> to its caller.</li>
+  <li>Contract A also propagates the <code class="language-plaintext highlighter-rouge">OffchainLookup</code> to its caller.</li>
+</ol>
+
+<p>The result of this sequence of operations would be an <code class="language-plaintext highlighter-rouge">OffchainLookup</code> that looks valid to the client, as the <code class="language-plaintext highlighter-rouge">sender</code> field matches the address of the contract that was called, but does not execute correctly, as it only completes a nested invocation.</p>
+  
+    <h4 id="example-1">
+      
+      
+        <a href="#example-1" class="anchor-link"></a> Example
+      
+      
+    </h4>
+
+<p>The code below demonstrates one way that a contract may support nested CCIP read invocations. For simplicity this is shown using Solidity’s try/catch syntax, although as of this writing it does not yet support catching custom errors.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">contract</span> <span class="n">NestedLookup</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="n">InvalidOperation</span><span class="p">();</span>
+    <span class="n">error</span> <span class="n">OffchainLookup</span><span class="p">(</span><span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">string</span><span class="p">[]</span> <span class="n">urls</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">callData</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="n">callbackFunction</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">extraData</span><span class="p">);</span>
+
+    <span class="k">function</span> <span class="n">a</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">try</span> <span class="n">target</span><span class="p">.</span><span class="n">b</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">catch</span> <span class="n">OffchainLookup</span><span class="p">(</span><span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">string</span><span class="p">[]</span> <span class="n">urls</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">callData</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="n">callbackFunction</span><span class="p">,</span> <span class="kt">bytes</span> <span class="n">extraData</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">sender</span> <span class="o">!=</span> <span class="kt">address</span><span class="p">(</span><span class="n">target</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nb">revert</span> <span class="n">InvalidOperation</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="nb">revert</span> <span class="n">OffchainLookup</span><span class="p">(</span>
+                <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span>
+                <span class="n">urls</span><span class="p">,</span>
+                <span class="n">callData</span><span class="p">,</span>
+                <span class="n">NestedLookup</span><span class="p">.</span><span class="n">aCallback</span><span class="p">.</span><span class="nb">selector</span><span class="p">,</span>
+                <span class="n">abi</span><span class="p">.</span><span class="n">encode</span><span class="p">(</span><span class="kt">address</span><span class="p">(</span><span class="n">target</span><span class="p">),</span> <span class="n">callbackFunction</span><span class="p">,</span> <span class="n">extraData</span><span class="p">)</span>
+            <span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">aCallback</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">response</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">extraData</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">(</span><span class="kt">address</span> <span class="n">inner</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="n">innerCallbackFunction</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">innerExtraData</span><span class="p">)</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="n">extraData</span><span class="p">,</span> <span class="p">(</span><span class="kt">address</span><span class="p">,</span> <span class="kt">bytes4</span><span class="p">,</span> <span class="kt">bytes</span><span class="p">));</span>
+        <span class="k">return</span> <span class="n">abi</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="n">inner</span><span class="p">.</span><span class="nb">call</span><span class="p">(</span><span class="n">abi</span><span class="p">.</span><span class="n">encodeWithSelector</span><span class="p">(</span><span class="n">innerCallbackFunction</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">innerExtraData</span><span class="p">)),</span> <span class="p">(</span><span class="kt">bytes</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h3 id="gateway-interface">
+      
+      
+        <a href="#gateway-interface" class="anchor-link"></a> Gateway Interface
+      
+      
+    </h3>
+<p>The URLs returned by a contract may be of any schema, but this specification only defines how clients should handle HTTPS URLs.</p>
+
+<p>Given a URL template returned in an <code class="language-plaintext highlighter-rouge">OffchainLookup</code>, the URL to query is composed by replacing  <code class="language-plaintext highlighter-rouge">sender</code> with the lowercase 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">sender</code> parameter, and replacing <code class="language-plaintext highlighter-rouge">data</code> with the 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">callData</code> parameter.</p>
+
+<p>For example, if a contract returns the following data in an <code class="language-plaintext highlighter-rouge">OffchainLookup</code>:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>urls = ["https://example.com/gateway/{sender}/{data}.json"]
+sender = "0xaabbccddeeaabbccddeeaabbccddeeaabbccddee"
+callData = "0x00112233"
+</code></pre></div></div>
+
+<p>The request URL to query is <code class="language-plaintext highlighter-rouge">https://example.com/gateway/0xaabbccddeeaabbccddeeaabbccddeeaabbccddee/0x00112233.json</code>.</p>
+
+<p>If the URL template contains the <code class="language-plaintext highlighter-rouge">{data}</code> substitution parameter, the client MUST send a GET request after replacing the substitution parameters as described above.</p>
+
+<p>If the URL template does not contain the <code class="language-plaintext highlighter-rouge">{data}</code> substitution parameter, the client MUST send a POST request after replacing the substitution parameters as described above. The POST request MUST be sent with a Content-Type of <code class="language-plaintext highlighter-rouge">application/json</code>, and a payload matching the following schema:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "string",
+            "description": "0x-prefixed hex string containing the `callData` from the contract"
+        },
+        "sender": {
+            "type": "string",
+            "description": "0x-prefixed hex string containing the `sender` parameter from the contract"
+        }
+    }
+}
+</code></pre></div></div>
+
+<p>Compliant gateways MUST respond with a Content-Type of <code class="language-plaintext highlighter-rouge">application/json</code>, with the body adhering to the following JSON schema:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+    "type": "object",
+    "properties": {
+        "data": {
+            "type": "string",
+            "description: "0x-prefixed hex string containing the result data."
+        }
+    }
+}
+</code></pre></div></div>
+
+<p>Unsuccessful requests MUST return the appropriate HTTP status code - for example, 404 if the <code class="language-plaintext highlighter-rouge">sender</code> address is not supported by this gateway, 400 if the <code class="language-plaintext highlighter-rouge">callData</code> is in an invalid format, 500 if the server encountered an internal error, and so forth. If the Content-Type of a 4xx or 5xx response is <code class="language-plaintext highlighter-rouge">application/json</code>, it MUST adhere to the following JSON schema:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+    "type": "object",
+    "properties": {
+        "message": {
+            "type": "string",
+            "description: "A human-readable error message."
+        }
+    }
+}
+</code></pre></div></div>
+  
+    <h4 id="examples">
+      
+      
+        <a href="#examples" class="anchor-link"></a> Examples
+      
+      
+    </h4>
+
+<p><strong><em>GET request</em></strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Client returned a URL template `https://example.com/gateway/{sender}/{data}.json`
+# Request
+curl -D - https://example.com/gateway/0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8/0xd5fa2b00.json
+
+# Successful result
+    HTTP/2 200
+    content-type: application/json; charset=UTF-8
+    ...
+    
+    {"data": "0xdeadbeefdecafbad"}
+
+# Error result
+    HTTP/2 404
+    content-type: application/json; charset=UTF-8
+    ...
+
+    {"message": "Gateway address not supported."}
+}
+</code></pre></div></div>
+
+<p><strong><em>POST request</em></strong></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Client returned a URL template `https://example.com/gateway/{sender}.json`
+# Request
+curl -D - -X POST -H "Content-Type: application/json" --data '{"data":"0xd5fa2b00","sender":"0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8"}' https://example.com/gateway/0x226159d592E2b063810a10Ebf6dcbADA94Ed68b8.json
+
+# Successful result
+    HTTP/2 200
+    content-type: application/json; charset=UTF-8
+    ...
+    
+    {"data": "0xdeadbeefdecafbad"}
+
+# Error result
+    HTTP/2 404
+    content-type: application/json; charset=UTF-8
+    ...
+
+    {"message": "Gateway address not supported."}
+}
+</code></pre></div></div>
+
+<p>Clients MUST support both GET and POST requests. Gateways may implement either or both as needed.</p>
+  
+    <h3 id="client-lookup-protocol">
+      
+      
+        <a href="#client-lookup-protocol" class="anchor-link"></a> Client Lookup Protocol
+      
+      
+    </h3>
+
+<p>A client that supports CCIP read MUST make contract calls using the following process:</p>
+
+<ol>
+  <li>Set <code class="language-plaintext highlighter-rouge">data</code> to the call data to supply to the contract, and <code class="language-plaintext highlighter-rouge">to</code> to the address of the contract to call.</li>
+  <li>Call the contract at address <code class="language-plaintext highlighter-rouge">to</code> function normally, supplying <code class="language-plaintext highlighter-rouge">data</code> as the input data. If the function returns a successful result, return it to the caller and stop.</li>
+  <li>If the function returns an error other than <code class="language-plaintext highlighter-rouge">OffchainLookup</code>, return it to the caller in the usual fashion.</li>
+  <li>Otherwise, decode the <code class="language-plaintext highlighter-rouge">sender</code>, <code class="language-plaintext highlighter-rouge">urls</code>, <code class="language-plaintext highlighter-rouge">callData</code>, <code class="language-plaintext highlighter-rouge">callbackFunction</code> and <code class="language-plaintext highlighter-rouge">extraData</code> arguments from the <code class="language-plaintext highlighter-rouge">OffchainLookup</code> error.</li>
+  <li>If the <code class="language-plaintext highlighter-rouge">sender</code> field does not match the address of the contract that was called, return an error to the caller and stop.</li>
+  <li>Construct a request URL by replacing <code class="language-plaintext highlighter-rouge">sender</code> with the lowercase 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">sender</code> parameter, and replacing <code class="language-plaintext highlighter-rouge">data</code> with the 0x-prefixed hexadecimal formatted <code class="language-plaintext highlighter-rouge">callData</code> parameter. The client may choose which URLs to try in which order, but SHOULD prioritise URLs earlier in the list over those later in the list.</li>
+  <li>Make an HTTP GET request to the request URL.</li>
+  <li>If the response code from step (7) is in the range 400-499, return an error to the caller and stop.</li>
+  <li>If the response code from step (7) is in the range 500-599, go back to step (5) and pick a different URL, or stop if there are no further URLs to try.</li>
+  <li>Otherwise, replace <code class="language-plaintext highlighter-rouge">data</code> with an ABI-encoded call to the contract function specified by the 4-byte selector <code class="language-plaintext highlighter-rouge">callbackFunction</code>, supplying the data returned from step (7) and <code class="language-plaintext highlighter-rouge">extraData</code> from step (4), and return to step (1).</li>
+</ol>
+
+<p>Clients MUST handle HTTP status codes appropriately, employing best practices for error reporting and retries.</p>
+
+<p>Clients MUST handle HTTP 4xx and 5xx error responses that have a content type other than application/json appropriately; they MUST NOT attempt to parse the response body as JSON.</p>
+
+<p>This protocol can result in multiple lookups being requested by the same contract. Clients MUST implement a limit on the number of lookups they permit for a single contract call, and this limit SHOULD be at least 4.</p>
+
+<p>The lookup protocol for a client is described with the following pseudocode:</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">async</span> <span class="kd">function</span> <span class="nx">httpcall</span><span class="p">(</span><span class="nx">urls</span><span class="p">,</span> <span class="nx">to</span><span class="p">,</span> <span class="nx">callData</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">args</span> <span class="o">=</span> <span class="p">{</span><span class="na">sender</span><span class="p">:</span> <span class="nx">to</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">(),</span> <span class="na">data</span><span class="p">:</span> <span class="nx">callData</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">()};</span>
+    <span class="k">for</span><span class="p">(</span><span class="kd">const</span> <span class="nx">url</span> <span class="k">of</span> <span class="nx">urls</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">queryUrl</span> <span class="o">=</span> <span class="nx">url</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/</span><span class="se">\{([^</span><span class="sr">}</span><span class="se">]</span><span class="sr">*</span><span class="se">)\}</span><span class="sr">/g</span><span class="p">,</span> <span class="p">(</span><span class="nx">match</span><span class="p">,</span> <span class="nx">p1</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">args</span><span class="p">[</span><span class="nx">p1</span><span class="p">]);</span>
+        <span class="c1">// First argument is URL to fetch, second is optional data for a POST request.</span>
+        <span class="kd">const</span> <span class="nx">response</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">fetch</span><span class="p">(</span><span class="nx">queryUrl</span><span class="p">,</span> <span class="nx">url</span><span class="p">.</span><span class="nx">includes</span><span class="p">(</span><span class="dl">'</span><span class="s1">{data}</span><span class="dl">'</span><span class="p">)</span> <span class="p">?</span> <span class="kc">undefined</span> <span class="p">:</span> <span class="nx">args</span><span class="p">);</span>
+        <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">response</span><span class="p">.</span><span class="nx">text</span><span class="p">();</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">statusCode</span> <span class="o">&gt;=</span> <span class="mi">400</span> <span class="o">&amp;&amp;</span> <span class="nx">result</span><span class="p">.</span><span class="nx">statusCode</span> <span class="o">&lt;=</span> <span class="mi">499</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">statusCode</span> <span class="o">&gt;=</span> <span class="mi">200</span> <span class="o">&amp;&amp;</span> <span class="nx">result</span><span class="p">.</span><span class="nx">statusCode</span> <span class="o">&lt;=</span> <span class="mi">299</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">result</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nx">durin_call</span><span class="p">(</span><span class="nx">provider</span><span class="p">,</span> <span class="nx">to</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">for</span><span class="p">(</span><span class="kd">let</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">try</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="nx">provider</span><span class="p">.</span><span class="nx">call</span><span class="p">(</span><span class="nx">to</span><span class="p">,</span> <span class="nx">data</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">error</span><span class="p">.</span><span class="nx">code</span> <span class="o">!==</span> <span class="dl">"</span><span class="s2">CALL_EXCEPTION</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">throw</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="kd">const</span> <span class="p">{</span><span class="nx">sender</span><span class="p">,</span> <span class="nx">urls</span><span class="p">,</span> <span class="nx">callData</span><span class="p">,</span> <span class="nx">callbackFunction</span><span class="p">,</span> <span class="nx">extraData</span><span class="p">}</span> <span class="o">=</span> <span class="nx">error</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">sender</span> <span class="o">!==</span> <span class="nx">to</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">"</span><span class="s2">Cannot handle OffchainLookup raised inside nested call</span><span class="dl">"</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">httpcall</span><span class="p">(</span><span class="nx">urls</span><span class="p">,</span> <span class="nx">to</span><span class="p">,</span> <span class="nx">callData</span><span class="p">);</span>
+            <span class="nx">data</span> <span class="o">=</span> <span class="nx">abi</span><span class="p">.</span><span class="nx">encodeWithSelector</span><span class="p">(</span><span class="nx">callbackFunction</span><span class="p">,</span> <span class="nx">result</span><span class="p">,</span> <span class="nx">extraData</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">"</span><span class="s2">Too many CCIP read redirects</span><span class="dl">"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Where:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">provider</code> is a provider object that facilitates Ethereum blockchain function calls.</li>
+  <li><code class="language-plaintext highlighter-rouge">to</code> is the address of the contract to call.</li>
+  <li><code class="language-plaintext highlighter-rouge">data</code> is the call data for the contract.</li>
+</ul>
+
+<p>If the function being called is a standard contract function, the process terminates after the original call, returning the same result as for a regular call. Otherwise, a gateway from <code class="language-plaintext highlighter-rouge">urls</code> is called with the <code class="language-plaintext highlighter-rouge">callData</code> returned by the <code class="language-plaintext highlighter-rouge">OffchainLookup</code> error, and is expected to return a valid response. The response and the <code class="language-plaintext highlighter-rouge">extraData</code> are then passed to the specified callback function. This process can be repeated if the callback function returns another <code class="language-plaintext highlighter-rouge">OffchainLookup</code> error.</p>
+  
+    <h3 id="use-of-ccip-read-for-transactions">
+      
+      
+        <a href="#use-of-ccip-read-for-transactions" class="anchor-link"></a> Use of CCIP read for transactions
+      
+      
+    </h3>
+<p>While the specification above is for read-only contract calls (eg, <code class="language-plaintext highlighter-rouge">eth_call</code>), it is simple to use this method for sending transactions (eg, <code class="language-plaintext highlighter-rouge">eth_sendTransaction</code> or <code class="language-plaintext highlighter-rouge">eth_sendRawTransaction</code>) that require offchain data. While ‘preflighting’ a transaction using <code class="language-plaintext highlighter-rouge">eth_estimateGas</code> or <code class="language-plaintext highlighter-rouge">eth_call</code>, a client that receives an <code class="language-plaintext highlighter-rouge">OffchainLookup</code> revert can follow the procedure described above in <a href="#client-lookup-protocol">Client lookup protocol</a>, substituting a transaction for the call in the last step. This functionality is ideal for applications such as making onchain claims supported by offchain proof data.</p>
+  
+    <h3 id="glossary">
+      
+      
+        <a href="#glossary" class="anchor-link"></a> Glossary
+      
+      
+    </h3>
+<ul>
+  <li>Client: A process, such as JavaScript executing in a web browser, or a backend service, that wishes to query a blockchain for data. The client understands how to fetch data using CCIP read.</li>
+  <li>Contract: A smart contract existing on Ethereum or another blockchain.</li>
+  <li>Gateway: A service that answers application-specific CCIP read queries, usually over HTTPS.</li>
+</ul>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="use-of-revert-to-convey-call-information">
+      
+      
+        <a href="#use-of-revert-to-convey-call-information" class="anchor-link"></a> Use of <code class="language-plaintext highlighter-rouge">revert</code> to convey call information
+      
+      
+    </h3>
+<p>For offchain data lookup to function as desired, clients must either have some way to know that a function depends on this specification for functionality - such as a specifier in the ABI for the function - or else there must be a way for the contract to signal to the client that data needs to be fetched from elsewhere.</p>
+
+<p>While specifying the call type in the ABI is a possible solution, this makes retrofitting existing interfaces to support offchain data awkward, and either results in contracts with the same name and arguments as the original specification, but with different return data - which will cause decoding errors for clients that do not expect this - or duplicating every function that needs support for offchain data with a different name (eg, <code class="language-plaintext highlighter-rouge">balanceOf -&gt; offchainBalanceOf</code>). Neither solutions is particularly satisfactory.</p>
+
+<p>Using a revert, and conveying the required information in the revert data, allows any function to be retrofitted to support lookups via CCIP read so long as the client understands the specification, and so facilitates translation of existing specifications to use offchain data.</p>
+  
+    <h3 id="passing-contract-address-to-the-gateway-service">
+      
+      
+        <a href="#passing-contract-address-to-the-gateway-service" class="anchor-link"></a> Passing contract address to the gateway service
+      
+      
+    </h3>
+<p><code class="language-plaintext highlighter-rouge">address</code> is passed to the gateway in order to facilitate the writing of generic gateways, thus reducing the burden on contract authors to provide their own gateway implementations. Supplying <code class="language-plaintext highlighter-rouge">address</code> allows the gateway to perform lookups to the original contract for information needed to assist with resolution, making it possible to operate one gateway for any number of contracts implementing the same interface.</p>
+  
+    <h3 id="existence-of-extradata-argument">
+      
+      
+        <a href="#existence-of-extradata-argument" class="anchor-link"></a> Existence of <code class="language-plaintext highlighter-rouge">extraData</code> argument
+      
+      
+    </h3>
+<p><code class="language-plaintext highlighter-rouge">extraData</code> allows the original contract function to pass information to a subsequent invocation. Since contracts are not persistent, without this data a contract has no state from the previous invocation. Aside from allowing arbitrary contextual information to be propagated between the two calls, this also allows the contract to verify that the query the gateway answered is in fact the one the contract originally requested.</p>
+  
+    <h3 id="use-of-get-and-post-requests-for-the-gateway-interface">
+      
+      
+        <a href="#use-of-get-and-post-requests-for-the-gateway-interface" class="anchor-link"></a> Use of GET and POST requests for the gateway interface
+      
+      
+    </h3>
+<p>Using a GET request, with query data encoded in the URL, minimises complexity and enables entirely static implementations of gateways - in some applications a gateway can simply be an HTTP server or IPFS instance with a static set of responses in text files.</p>
+
+<p>However, URLs are limited to 2 kilobytes in size, which will impose issues for more complex uses of CCIP read. Thus, we provide for an option to use POST data. This is made at the contract’s discretion (via the choice of URL template) in order to preserve the ability to have a static gateway operating exclusively using GET when desired.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+<p>Existing contracts that do not wish to use this specification are unaffected. Clients can add support for CCIP read to all contract calls without introducing any new overhead or incompatibilities.</p>
+
+<p>Contracts that require CCIP read will not function in conjunction with clients that do not implement this specification. Attempts to call these contracts from non-compliant clients will result in the contract throwing an exception that is propagaged to the user.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="gateway-response-data-validation">
+      
+      
+        <a href="#gateway-response-data-validation" class="anchor-link"></a> Gateway Response Data Validation
+      
+      
+    </h3>
+<p>In order to prevent a malicious gateway from causing unintended side-effects or faulty results, contracts MUST include sufficient information in the <code class="language-plaintext highlighter-rouge">extraData</code> argument to allow them to verify the relevance and validity of the gateway’s response. For example, if the contract is requesting information based on an <code class="language-plaintext highlighter-rouge">address</code> supplied to the original call, it MUST include that address in the <code class="language-plaintext highlighter-rouge">extraData</code> so that the callback can verify the gateway is not providing the answer to a different query.</p>
+
+<p>Contracts must also implement sufficient validation of the data returned by the gateway to ensure it is valid. The validation required is application-specific and cannot be specified on a global basis. Examples would include verifying a Merkle proof of inclusion for an L2 or other Merkleized state, or verifying a signature by a trusted signer over the response data.</p>
+  
+    <h3 id="client-extra-data-validation">
+      
+      
+        <a href="#client-extra-data-validation" class="anchor-link"></a> Client Extra Data Validation
+      
+      
+    </h3>
+<p>In order to prevent a malicious client from causing unintended effects when making transactions using CCIP read, contracts MUST implement appropriate checks on the <code class="language-plaintext highlighter-rouge">extraData</code> returned to them in the callback. Any sanity/permission checks performed on input data for the initial call MUST be repeated on the data passed through the <code class="language-plaintext highlighter-rouge">extraData</code> field in the callback. For example, if a transaction should only be executable by an authorised account, that authorisation check MUST be done in the callback; it is not sufficient to perform it with the initial call and embed the authorised address in the <code class="language-plaintext highlighter-rouge">extraData</code>.</p>
+  
+    <h3 id="http-requests-and-fingerprinting-attacks">
+      
+      
+        <a href="#http-requests-and-fingerprinting-attacks" class="anchor-link"></a> HTTP requests and fingerprinting attacks
+      
+      
+    </h3>
+<p>Because CCIP read can cause a user’s browser to make HTTP requests to an address controlled by the contract, there is the potential for this to be used to identify users - for example, to associate their wallet address with their IP address.</p>
+
+<p>The impact of this is application-specific; fingerprinting a user when they resolve an ENS domain may have little privacy impact, as the attacker will not learn the user’s wallet address, only the fact that the user is resolving a given ENS name from a given IP address - information they can also learn from running a DNS server. On the other hand, fingerprinting a user when they attempt a transaction to transfer an NFT may give an attacker everything they need to identify the IP address of a user’s wallet.</p>
+
+<p>To minimise the security impact of this, we make the following recommendations:</p>
+
+<ol>
+  <li>Client libraries should provide clients with a hook to override CCIP read calls - either by rewriting them to use a proxy service, or by denying them entirely. This mechanism or another should be written so as to easily facilitate adding domains to allowlists or blocklists.</li>
+  <li>Client libraries should disable CCIP read for transactions (but not for calls) by default, and require the caller to explicitly enable this functionality. Enablement should be possible both on a per-contract, per-domain, or global basis.</li>
+  <li>App authors should not supply a ‘from’ address for contract calls (‘view’ operations) where the call could execute untrusted code (that is, code not authored or trusted by the application author). As a precuationary principle it is safest to not supply this parameter at all unless the author is certain that no attacker-determined smart contract code will be executed.</li>
+  <li>Wallet authors that are responsible for fetching user information - for example, by querying token contracts - should either ensure CCIP read is disabled for transactions, and that no contract calls are made with a ‘from’ address supplied, or operate a proxy on their users’ behalf, rewriting all CCIP read calls to take place via the proxy, or both.</li>
+</ol>
+
+<p>We encourage client library authors and wallet authors not to disable CCIP read by default, as many applications can be transparently enhanced with this functionality, which is quite safe if the above precautions are observed.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Nick Johnson&nbsp;(<a href="https://github.com/arachnid">@arachnid</a>), "ERC-3668: CCIP Read—Secure offchain data retrieval," <em>Ethereum Improvement Proposals</em>, no. 3668, July 2020. Available: https://eips.ethereum.org/EIPS/eip-3668.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-3668: CCIP Read—Secure offchain data retrieval",
+    "name": "ERC-3668: CCIP Read—Secure offchain data retrieval",
+    "author": "Nick Johnson (@arachnid)",
+    "dateCreated": "2020-07-19",
+    "datePublished": "2020-07-19",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/durin-secure-offchain-data-retrieval/6728",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2020"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

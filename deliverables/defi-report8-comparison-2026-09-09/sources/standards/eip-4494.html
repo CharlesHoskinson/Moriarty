@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-4494: Permit for ERC-721 NFTs</title>
+      <meta property="og:title" content="ERC-4494: Permit for ERC-721 NFTs" />
+    
+    <meta name="description" content="ERC-712-singed approvals for ERC-721 NFTs" />
+    <meta property="og:description" content="ERC-712-singed approvals for ERC-721 NFTs" />
+    <meta name="twitter:description" content="ERC-712-singed approvals for ERC-721 NFTs" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-4494" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-4494" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+      <span class="badge text-light bg-danger" data-bs-toggle="tooltip" data-bs-title="This EIP had no activity for at least 6 months. This EIP should not be used.">🚧 Stagnant</span>
+    
+    
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-4494: Permit for ERC-721 NFTs
+    <a href="https://ethereum-magicians.org/t/eip-extending-erc2612-style-permits-to-erc721-nfts/7519/2" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4494.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>ERC-712-singed approvals for ERC-721 NFTs</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Simon Fremaux&nbsp;(<a href="https://github.com/dievardump">@dievardump</a>), William Schwab&nbsp;(<a href="https://github.com/wschwab">@wschwab</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2021-11-25</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/eip-extending-erc2612-style-permits-to-erc721-nfts/7519/2" target="_blank" rel="noopener">https://ethereum-magicians.org/t/eip-extending-erc2612-style-permits-to-erc721-nfts/7519/2</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-165">EIP-165</a>, 
+
+  <a href="eip-712">EIP-712</a>, 
+
+  <a href="eip-721">EIP-721</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a></li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#test-cases">Test Cases</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+<p>The “Permit” approval flow outlined in <a href="/EIPS/eip-2612">ERC-2612</a> has proven a very valuable advancement in UX by creating gasless approvals for ERC20 tokens. This EIP extends the pattern to ERC-721 NFTs. This EIP borrows heavily from ERC-2612.</p>
+
+<p>This requires a separate EIP due to the difference in structure between ERC-20 and ERC-721 tokens. While ERC-20 permits use value (the amount of the ERC-20 token being approved) and a nonce based on the owner’s address, ERC-721 permits focus on the <code class="language-plaintext highlighter-rouge">tokenId</code> of the NFT and increment nonce based on the transfers of the NFT.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+<p>The permit structure outlined in <a href="/EIPS/eip-2612">ERC-2612</a> allows for a signed message (structured as outlined in <a href="/EIPS/eip-712">ERC-712</a>) to be used in order to create an approval. Whereas the normal approval-based pull flow generally involves two transactions, one to approve a contract and a second for the contract to pull the asset, which is poor UX and often confuses new users, a permit-style flow only requires signing a message and a transaction. Additional information can be found in <a href="/EIPS/eip-2612">ERC-2612</a>.</p>
+
+<p><a href="/EIPS/eip-2612">ERC-2612</a> only outlines a permit architecture for ERC-20 tokens. This ERC proposes an architecture for ERC-721 NFTs, which also contain an approve architecture that would benefit from a signed message-based approval flow.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.</p>
+
+<p>Three new functions MUST be added to <a href="/EIPS/eip-721">ERC-721</a>:</p>
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pragma</span> <span class="n">solidity</span> <span class="mf">0.8</span><span class="p">.</span><span class="mi">10</span><span class="p">;</span>
+
+<span class="k">import</span> <span class="s">"./IERC165.sol"</span><span class="p">;</span>
+
+<span class="c1">///
+/// @dev Interface for token permits for ERC-721
+///
+</span><span class="k">interface</span> <span class="n">IERC4494</span> <span class="k">is</span> <span class="n">IERC165</span> <span class="p">{</span>
+  <span class="c1">/// ERC165 bytes to add to interface array - set in parent contract
+</span>  <span class="c1">///
+</span>  <span class="c1">/// _INTERFACE_ID_ERC4494 = 0x5604e225
+</span>
+  <span class="c1">/// @notice Function to approve by way of owner signature
+</span>  <span class="c1">/// @param spender the address to approve
+</span>  <span class="c1">/// @param tokenId the index of the NFT to approve the spender on
+</span>  <span class="c1">/// @param deadline a timestamp expiry for the permit
+</span>  <span class="c1">/// @param sig a traditional or EIP-2098 signature
+</span>  <span class="k">function</span> <span class="n">permit</span><span class="p">(</span><span class="kt">address</span> <span class="n">spender</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">tokenId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">deadline</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">sig</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+  <span class="c1">/// @notice Returns the nonce of an NFT - useful for creating permits
+</span>  <span class="c1">/// @param tokenId the index of the NFT to get the nonce of
+</span>  <span class="c1">/// @return the uint256 representation of the nonce
+</span>  <span class="k">function</span> <span class="n">nonces</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">tokenId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+  <span class="c1">/// @notice Returns the domain separator used in the encoding of the signature for permits, as defined by EIP-712
+</span>  <span class="c1">/// @return the bytes32 domain separator
+</span>  <span class="k">function</span> <span class="n">DOMAIN_SEPARATOR</span><span class="p">()</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span><span class="p">(</span><span class="kt">bytes32</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>The semantics of which are as follows:</p>
+
+<p>For all addresses <code class="language-plaintext highlighter-rouge">spender</code>, <code class="language-plaintext highlighter-rouge">uint256</code>s <code class="language-plaintext highlighter-rouge">tokenId</code>, <code class="language-plaintext highlighter-rouge">deadline</code>, and <code class="language-plaintext highlighter-rouge">nonce</code>, and <code class="language-plaintext highlighter-rouge">bytes</code> <code class="language-plaintext highlighter-rouge">sig</code>, a call to <code class="language-plaintext highlighter-rouge">permit(spender, tokenId, deadline, sig)</code> MUST set <code class="language-plaintext highlighter-rouge">spender</code> as approved on <code class="language-plaintext highlighter-rouge">tokenId</code> as long as the owner of <code class="language-plaintext highlighter-rouge">tokenId</code> remains in possession of it, and MUST emit a corresponding <code class="language-plaintext highlighter-rouge">Approval</code> event, if and only if the following conditions are met:</p>
+
+<ul>
+  <li>the current blocktime is less than or equal to <code class="language-plaintext highlighter-rouge">deadline</code></li>
+  <li>the owner of the <code class="language-plaintext highlighter-rouge">tokenId</code> is not the zero address</li>
+  <li><code class="language-plaintext highlighter-rouge">nonces[tokenId]</code> is equal to <code class="language-plaintext highlighter-rouge">nonce</code></li>
+  <li><code class="language-plaintext highlighter-rouge">sig</code> is a valid <code class="language-plaintext highlighter-rouge">secp256k1</code> or <a href="/EIPS/eip-2098">EIP-2098</a> signature from owner of the <code class="language-plaintext highlighter-rouge">tokenId</code>:
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keccak256(abi.encodePacked(
+ hex"1901",
+ DOMAIN_SEPARATOR,
+ keccak256(abi.encode(
+          keccak256("Permit(address spender,uint256 tokenId,uint256 nonce,uint256 deadline)"),
+          spender,
+          tokenId,
+          nonce,
+          deadline))
+));
+</code></pre></div>    </div>
+    <p>where <code class="language-plaintext highlighter-rouge">DOMAIN_SEPARATOR</code> MUST be defined according to <a href="/EIPS/eip-712">EIP-712</a>. The <code class="language-plaintext highlighter-rouge">DOMAIN_SEPARATOR</code> should be unique to the contract and chain to prevent replay attacks from other domains, and satisfy the requirements of EIP-712, but is otherwise unconstrained. A common choice for <code class="language-plaintext highlighter-rouge">DOMAIN_SEPARATOR</code> is:</p>
+    <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>DOMAIN_SEPARATOR = keccak256(
+  abi.encode(
+      keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+      keccak256(bytes(name)),
+      keccak256(bytes(version)),
+      chainid,
+      address(this)
+));
+</code></pre></div>    </div>
+    <p>In other words, the message is the following ERC-712 typed structure:</p>
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+</span><span class="nl">"types"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nl">"EIP712Domain"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"name"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"version"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chainId"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uint256"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"verifyingContract"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"address"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"Permit"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"spender"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"address"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tokenId"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uint256"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nonce"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uint256"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deadline"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"uint256"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"primaryType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Permit"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"domain"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="err">erc</span><span class="mi">721</span><span class="err">name</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="err">version</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"chainId"</span><span class="p">:</span><span class="w"> </span><span class="err">chainid</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"verifyingContract"</span><span class="p">:</span><span class="w"> </span><span class="err">tokenAddress</span><span class="w">
+</span><span class="p">},</span><span class="w">
+</span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nl">"spender"</span><span class="p">:</span><span class="w"> </span><span class="err">spender</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"value"</span><span class="p">:</span><span class="w"> </span><span class="err">value</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"nonce"</span><span class="p">:</span><span class="w"> </span><span class="err">nonce</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"deadline"</span><span class="p">:</span><span class="w"> </span><span class="err">deadline</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span><span class="p">}}</span><span class="w">
+</span></code></pre></div>    </div>
+    <p>In addition:</p>
+  </li>
+  <li>the <code class="language-plaintext highlighter-rouge">nonce</code> of a particular <code class="language-plaintext highlighter-rouge">tokenId</code> (<code class="language-plaintext highlighter-rouge">nonces[tokenId]</code>) MUST be incremented upon any transfer of the <code class="language-plaintext highlighter-rouge">tokenId</code></li>
+  <li>the <code class="language-plaintext highlighter-rouge">permit</code> function MUST check that the signer is not the zero address</li>
+</ul>
+
+<p>Note that nowhere in this definition do we refer to <code class="language-plaintext highlighter-rouge">msg.sender</code>. The caller of the <code class="language-plaintext highlighter-rouge">permit</code> function can be any address.</p>
+
+<p>This EIP requires <a href="/EIPS/eip-165">EIP-165</a>. EIP165 is already required in <a href="/EIPS/eip-721">ERC-721</a>, but is further necessary here in order to register the interface of this EIP. Doing so will allow easy verification if an NFT contract has implemented this EIP or not, enabling them to interact accordingly. The interface of this EIP (as defined in EIP-165) is <code class="language-plaintext highlighter-rouge">0x5604e225</code>. Contracts implementing this EIP MUST have the <code class="language-plaintext highlighter-rouge">supportsInterface</code> function return <code class="language-plaintext highlighter-rouge">true</code> when called with <code class="language-plaintext highlighter-rouge">0x5604e225</code>.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+<p>The <code class="language-plaintext highlighter-rouge">permit</code> function is sufficient for enabling a <code class="language-plaintext highlighter-rouge">safeTransferFrom</code> transaction to be made without the need for an additional transaction.</p>
+
+<p>The format avoids any calls to unknown code.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">nonces</code> mapping is given for replay protection.</p>
+
+<p>A common use case of permit has a relayer submit a Permit on behalf of the owner. In this scenario, the relaying party is essentially given a free option to submit or withhold the Permit. If this is a cause of concern, the owner can limit the time a Permit is valid for by setting deadline to a value in the near future. The deadline argument can be set to uint(-1) to create Permits that effectively never expire.</p>
+
+<p>ERC-712 typed messages are included because of its use in <a href="/EIPS/eip-2612">ERC-2612</a>, which in turn cites widespread adoption in many wallet providers.</p>
+
+<p>While ERC-2612 focuses on the value being approved, this EIP focuses on the <code class="language-plaintext highlighter-rouge">tokenId</code> of the NFT being approved via <code class="language-plaintext highlighter-rouge">permit</code>. This enables a flexibility that cannot be achieved with ERC-20 (or even <a href="/EIPS/eip-1155">ERC-1155</a>) tokens, enabling a single owner to give multiple permits on the same NFT. This is possible since each ERC-721 token is discrete (oftentimes referred to as non-fungible), which allows assertion that this token is still in the possession of the <code class="language-plaintext highlighter-rouge">owner</code> simply and conclusively.</p>
+
+<p>Whereas ERC-2612 splits signatures into their <code class="language-plaintext highlighter-rouge">v,r,s</code> components, this EIP opts to instead take a <code class="language-plaintext highlighter-rouge">bytes</code> array of variable length in order to support <a href="./eip-2098">EIP-2098</a> signatures (64 bytes), which cannot be easily separated or reconstructed from <code class="language-plaintext highlighter-rouge">r,s,v</code> components (65 bytes).</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+<p>There are already some ERC-721 contracts implementing a <code class="language-plaintext highlighter-rouge">permit</code>-style architecture, most notably Uniswap v3.</p>
+
+<p>Their implementation differs from the specification here in that:</p>
+<ul>
+  <li>the <code class="language-plaintext highlighter-rouge">permit</code> architecture is based on <code class="language-plaintext highlighter-rouge">owner</code></li>
+  <li>the <code class="language-plaintext highlighter-rouge">nonce</code> is incremented at the time the <code class="language-plaintext highlighter-rouge">permit</code> is created</li>
+  <li>the <code class="language-plaintext highlighter-rouge">permit</code> function must be called by the NFT owner, who is set as the <code class="language-plaintext highlighter-rouge">owner</code></li>
+  <li>the signature is split into <code class="language-plaintext highlighter-rouge">r,s,v</code> instead of <code class="language-plaintext highlighter-rouge">bytes</code></li>
+</ul>
+
+<p>Rationale for differing on design decisions is detailed above.</p>
+  
+    <h2 id="test-cases">
+      
+      
+        <a href="#test-cases" class="anchor-link"></a> Test Cases
+      
+      
+    </h2>
+
+<p>Basic test cases for the reference implementation can be found <a href="https://github.com/dievardump/erc721-with-permits/tree/main/test">here</a>.</p>
+
+<p>In general, test suites should assert at least the following about any implementation of this EIP:</p>
+<ul>
+  <li>the nonce is incremented after each transfer</li>
+  <li><code class="language-plaintext highlighter-rouge">permit</code> approves the <code class="language-plaintext highlighter-rouge">spender</code> on the correct <code class="language-plaintext highlighter-rouge">tokenId</code></li>
+  <li>the permit cannot be used after the NFT is transferred</li>
+  <li>an expired permit cannot be used</li>
+</ul>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>A reference implementation has been set up <a href="https://github.com/dievardump/erc721-with-permits">here</a>.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>Extra care should be taken when creating transfer functions in which <code class="language-plaintext highlighter-rouge">permit</code> and a transfer function can be used in one function to make sure that invalid permits cannot be used in any way. This is especially relevant for automated NFT platforms, in which a careless implementation can result in the compromise of a number of user assets.</p>
+
+<p>The remaining considerations have been copied from <a href="/EIPS/eip-2612">ERC-2612</a> with minor adaptation, and are equally relevant here:</p>
+
+<p>Though the signer of a <code class="language-plaintext highlighter-rouge">Permit</code> may have a certain party in mind to submit their transaction, another party can always front run this transaction and call <code class="language-plaintext highlighter-rouge">permit</code> before the intended party. The end result is the same for the <code class="language-plaintext highlighter-rouge">Permit</code> signer, however.</p>
+
+<p>Since the ecrecover precompile fails silently and just returns the zero address as <code class="language-plaintext highlighter-rouge">signer</code> when given malformed messages, it is important to ensure <code class="language-plaintext highlighter-rouge">ownerOf(tokenId) != address(0)</code> to avoid <code class="language-plaintext highlighter-rouge">permit</code> from creating an approval to any <code class="language-plaintext highlighter-rouge">tokenId</code> which does not have an approval set.</p>
+
+<p>Signed <code class="language-plaintext highlighter-rouge">Permit</code> messages are censorable. The relaying party can always choose to not submit the <code class="language-plaintext highlighter-rouge">Permit</code> after having received it, withholding the option to submit it. The <code class="language-plaintext highlighter-rouge">deadline</code> parameter is one mitigation to this. If the signing party holds ETH they can also just submit the <code class="language-plaintext highlighter-rouge">Permit</code> themselves, which can render previously signed <code class="language-plaintext highlighter-rouge">Permit</code>s invalid.</p>
+
+<p>The standard <a href="https://swcregistry.io/docs/SWC-114">ERC-20 race condition for approvals</a> applies to <code class="language-plaintext highlighter-rouge">permit</code> as well.</p>
+
+<p>If the <code class="language-plaintext highlighter-rouge">DOMAIN_SEPARATOR</code> contains the <code class="language-plaintext highlighter-rouge">chainId</code> and is defined at contract deployment instead of reconstructed for every signature, there is a risk of possible replay attacks between chains in the event of a future chain split.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Simon Fremaux&nbsp;(<a href="https://github.com/dievardump">@dievardump</a>), William Schwab&nbsp;(<a href="https://github.com/wschwab">@wschwab</a>), "ERC-4494: Permit for ERC-721 NFTs [STAGNANT]," <em>Ethereum Improvement Proposals</em>, no. 4494, November 2021. Available: https://eips.ethereum.org/EIPS/eip-4494.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-4494: Permit for ERC-721 NFTs [STAGNANT]",
+    "name": "ERC-4494: Permit for ERC-721 NFTs [STAGNANT]",
+    "author": "Simon Fremaux (@dievardump), William Schwab (@wschwab)",
+    "dateCreated": "2021-11-25",
+    "datePublished": "2021-11-25",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-extending-erc2612-style-permits-to-erc721-nfts/7519/2",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2021"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-6492: Signature Validation for Predeploy Contracts</title>
+      <meta property="og:title" content="ERC-6492: Signature Validation for Predeploy Contracts" />
+    
+    <meta name="description" content="A way to verify a signature when the account is a smart contract that has not been deployed yet" />
+    <meta property="og:description" content="A way to verify a signature when the account is a smart contract that has not been deployed yet" />
+    <meta name="twitter:description" content="A way to verify a signature when the account is a smart contract that has not been deployed yet" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-6492" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-6492" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-6492: Signature Validation for Predeploy Contracts
+    <a href="https://ethereum-magicians.org/t/eip-6492-signature-validation-for-pre-deploy-contracts/12903" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-6492.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>A way to verify a signature when the account is a smart contract that has not been deployed yet</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Ivo Georgiev&nbsp;(<a href="https://github.com/Ivshti">@Ivshti</a>), Agustin Aguilar&nbsp;(<a href="https://github.com/Agusx1211">@Agusx1211</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2023-02-10</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-1271">EIP-1271</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#signer-side">Signer side</a></li>
+      <li><a href="#verifier-side">Verifier side</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a>
+    <ul>
+      <li><a href="#using-erc-6492-for-regular-contract-signatures">Using ERC-6492 for regular contract signatures</a></li>
+    </ul>
+  </li>
+  <li><a href="#reference-implementation">Reference Implementation</a>
+    <ul>
+      <li><a href="#on-chain-validation">On-chain validation</a></li>
+      <li><a href="#off-chain-validation">Off-chain validation</a></li>
+    </ul>
+  </li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>Contracts can sign verifiable messages via <a href="/EIPS/eip-1271">ERC-1271</a>.</p>
+
+<p>However, if the contract is not deployed yet, <a href="/EIPS/eip-1271">ERC-1271</a> verification is impossible, as you can’t call the <code class="language-plaintext highlighter-rouge">isValidSignature</code> function on said contract.</p>
+
+<p>We propose a standard way for any contract or off-chain actor to verify whether a signature on behalf of a given counterfactual contract (that is not deployed yet) is valid. This standard way extends <a href="/EIPS/eip-1271">ERC-1271</a>.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>With the rising popularity of account abstraction, we often find that the best user experience for contract wallets is to defer contract deployment until the first user transaction, therefore not burdening the user with an additional deploy step before they can use their account. However, at the same time, many dApps expect signatures, not only for interactions, but also just for logging in.</p>
+
+<p>As such, contract wallets have been limited in their ability to sign messages before their de-facto deployment, which is often done on the first transaction.</p>
+
+<p>Furthermore, not being able to sign messages from counterfactual contracts has always been a limitation of <a href="/EIPS/eip-1271">ERC-1271</a>.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.</p>
+
+<p>The words “validation” and “verification” are used interchangeably.</p>
+
+<p>Quoting <a href="/EIPS/eip-1271">ERC-1271</a>,</p>
+<blockquote>
+  <p><code class="language-plaintext highlighter-rouge">isValidSignature</code> can call arbitrary methods to validate a given signature, which could be context dependent (e.g. time based or state based), EOA dependent (e.g. signers authorization level within smart wallet), signature scheme Dependent (e.g. ECDSA, multisig, BLS), etc.</p>
+
+  <p>This function should be implemented by contracts which desire to sign messages (e.g. smart contract wallets, DAOs, multisignature wallets, etc.) Applications wanting to support contract signatures should call this method if the signer is a contract.</p>
+</blockquote>
+
+<p>We use the same <code class="language-plaintext highlighter-rouge">isValidSignature</code> function, but we add a new wrapper signature format, that signing contracts MAY use before they’re deployed, in order to allow support for verification.</p>
+
+<p>The signature verifier MUST perform a contract deployment before attempting to call <code class="language-plaintext highlighter-rouge">isValidSignature</code> if the wrapper signature format is detected.</p>
+
+<p>The wrapper format is detected by checking if the signature ends in <code class="language-plaintext highlighter-rouge">magicBytes</code>, which MUST be defined as <code class="language-plaintext highlighter-rouge">0x6492649264926492649264926492649264926492649264926492649264926492</code>.</p>
+
+<p>It is RECOMMENDED to use this ERC with CREATE2 contracts, as their deploy address is always predictable.</p>
+  
+    <h3 id="signer-side">
+      
+      
+        <a href="#signer-side" class="anchor-link"></a> Signer side
+      
+      
+    </h3>
+
+<p>The signing contract will normally be a contract wallet, but it could be any contract that implements <a href="/EIPS/eip-1271">ERC-1271</a> and is deployed counterfactually.</p>
+
+<ul>
+  <li>If the contract is deployed, produce a normal <a href="/EIPS/eip-1271">ERC-1271</a> signature</li>
+  <li>If the contract is not deployed yet, wrap the signature as follows: <code class="language-plaintext highlighter-rouge">concat(abi.encode((create2Factory, factoryCalldata, originalERC1271Signature), (address, bytes, bytes)), magicBytes)</code></li>
+  <li>If the contract is deployed but not ready to verify using <a href="/EIPS/eip-1271">ERC-1271</a>, wrap the signature as follows: <code class="language-plaintext highlighter-rouge">concat(abi.encode((prepareTo, prepareData, originalERC1271Signature), (address, bytes, bytes)), magicBytes)</code>; <code class="language-plaintext highlighter-rouge">prepareTo</code> and <code class="language-plaintext highlighter-rouge">prepareData</code> must contain the necessary transaction that will make the contract ready to verify using <a href="/EIPS/eip-1271">ERC-1271</a> (e.g. a call to <code class="language-plaintext highlighter-rouge">migrate</code> or <code class="language-plaintext highlighter-rouge">update</code>)</li>
+</ul>
+
+<p>Note that we’re passing <code class="language-plaintext highlighter-rouge">factoryCalldata</code> instead of <code class="language-plaintext highlighter-rouge">salt</code> and <code class="language-plaintext highlighter-rouge">bytecode</code>. We do this in order to make verification compliant with any factory interface. We do not need to calculate the address based on  <code class="language-plaintext highlighter-rouge">create2Factory</code>/<code class="language-plaintext highlighter-rouge">salt</code>/<code class="language-plaintext highlighter-rouge">bytecode</code>, because <a href="/EIPS/eip-1271">ERC-1271</a> verification presumes we already know the account address we’re verifying the signature for.</p>
+  
+    <h3 id="verifier-side">
+      
+      
+        <a href="#verifier-side" class="anchor-link"></a> Verifier side
+      
+      
+    </h3>
+
+<p>Full signature verification MUST be performed in the following order:</p>
+
+<ul>
+  <li>check if the signature ends with magic bytes, in which case do an <code class="language-plaintext highlighter-rouge">eth_call</code> to a multicall contract that will call the factory first with the <code class="language-plaintext highlighter-rouge">factoryCalldata</code> and deploy the contract if it isn’t already deployed; Then, call <code class="language-plaintext highlighter-rouge">contract.isValidSignature</code> as usual with the unwrapped signature</li>
+  <li>check if there’s contract code at the address. If so perform <a href="/EIPS/eip-1271">ERC-1271</a> verification as usual by invoking <code class="language-plaintext highlighter-rouge">isValidSignature</code></li>
+  <li>if the <a href="/EIPS/eip-1271">ERC-1271</a> verification fails, and the deploy call to the <code class="language-plaintext highlighter-rouge">factory</code> was skipped due to the wallet already having code, execute the <code class="language-plaintext highlighter-rouge">factoryCalldata</code> transaction and try <code class="language-plaintext highlighter-rouge">isValidSignature</code> again</li>
+  <li>if there is no contract code at the address, try <code class="language-plaintext highlighter-rouge">ecrecover</code> verification</li>
+</ul>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>We believe that wrapping the signature in a way that allows to pass the deploy data is the only clean way to implement this, as it’s completely contract agnostic, but also easy to verify.</p>
+
+<p>The wrapper format ends in <code class="language-plaintext highlighter-rouge">magicBytes</code>, which ends with a <code class="language-plaintext highlighter-rouge">0x92</code>, which makes it is impossible for it to collide with a valid <code class="language-plaintext highlighter-rouge">ecrecover</code> signature if packed in the <code class="language-plaintext highlighter-rouge">r,s,v</code> format, as <code class="language-plaintext highlighter-rouge">0x92</code> is not a valid value for <code class="language-plaintext highlighter-rouge">v</code>. To avoid collisions with normal <a href="/EIPS/eip-1271">ERC-1271</a>, <code class="language-plaintext highlighter-rouge">magicBytes</code> itself is also quite long (<code class="language-plaintext highlighter-rouge">bytes32</code>).</p>
+
+<p>The order to ensure correct verification is based on the following rules:</p>
+
+<ul>
+  <li>checking for <code class="language-plaintext highlighter-rouge">magicBytes</code> MUST happen before the usual <a href="/EIPS/eip-1271">ERC-1271</a> check in order to allow counterfactual signatures to be valid even after contract deployment</li>
+  <li>checking for <code class="language-plaintext highlighter-rouge">magicBytes</code> MUST happen before <code class="language-plaintext highlighter-rouge">ecrecover</code> in order to avoid trying to verify a counterfactual contract signature via <code class="language-plaintext highlighter-rouge">ecrecover</code> if such is clearly identifiable</li>
+  <li>checking <code class="language-plaintext highlighter-rouge">ecrecover</code> MUST NOT happen before <a href="/EIPS/eip-1271">ERC-1271</a> verification, because a contract may use a signature format that also happens to be a valid <code class="language-plaintext highlighter-rouge">ecrecover</code> signature for an EOA with a different address. One such example is a contract that’s a wallet controlled by said EOA.</li>
+</ul>
+
+<p>We can’t determine the reason why a signature was encoded with a “deploy prefix” when the corresponding wallet already has code. It could be due to the signature being created before the contract was deployed, or it could be because the contract was deployed but not ready to verify signatures yet. As such, we need to try both options.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This ERC is backward compatible with previous work on signature validation, including <a href="/EIPS/eip-1271">ERC-1271</a> and allows for easy verification of all signature types, including EOA signatures and typed data (<a href="/EIPS/eip-712">EIP-712</a>).</p>
+  
+    <h3 id="using-erc-6492-for-regular-contract-signatures">
+      
+      
+        <a href="#using-erc-6492-for-regular-contract-signatures" class="anchor-link"></a> Using <a href="/EIPS/eip-6492">ERC-6492</a> for regular contract signatures
+      
+      
+    </h3>
+
+<p>The wrapper format described in this ERC can be used for all contract signatures, instead of plain <a href="/EIPS/eip-1271">ERC-1271</a>. This provides several advantages:</p>
+
+<ul>
+  <li>allows quick recognition of the signature type: thanks to the magic bytes, you can immediately know whether the signature is a contract signature without checking the blockchain</li>
+  <li>allows recovery of address: you can get the address only from the signature using <code class="language-plaintext highlighter-rouge">create2Factory</code> and <code class="language-plaintext highlighter-rouge">factoryCalldata</code>, just like <code class="language-plaintext highlighter-rouge">ecrecover</code></li>
+</ul>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>Below you can find an implementation of a universal verification contract that can be used both on-chain and off-chain, intended to be deployed as a singleton. It can validate signatures signed with this ERC, <a href="/EIPS/eip-1271">ERC-1271</a> and traditional <code class="language-plaintext highlighter-rouge">ecrecover</code>. <a href="/EIPS/eip-712">EIP-712</a> is also supported by extension, as we validate the final digest (<code class="language-plaintext highlighter-rouge">_hash</code>).</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// As per ERC-1271
+</span><span class="k">interface</span> <span class="n">IERC1271Wallet</span> <span class="p">{</span>
+  <span class="k">function</span> <span class="n">isValidSignature</span><span class="p">(</span><span class="kt">bytes32</span> <span class="n">hash</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">signature</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes4</span> <span class="n">magicValue</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">error</span> <span class="n">ERC1271Revert</span><span class="p">(</span><span class="kt">bytes</span> <span class="n">error</span><span class="p">);</span>
+<span class="n">error</span> <span class="n">ERC6492DeployFailed</span><span class="p">(</span><span class="kt">bytes</span> <span class="n">error</span><span class="p">);</span>
+
+<span class="k">contract</span> <span class="n">UniversalSigValidator</span> <span class="p">{</span>
+  <span class="kt">bytes32</span> <span class="k">private</span> <span class="k">constant</span> <span class="n">ERC6492_DETECTION_SUFFIX</span> <span class="o">=</span> <span class="mh">0x6492649264926492649264926492649264926492649264926492649264926492</span><span class="p">;</span>
+  <span class="kt">bytes4</span> <span class="k">private</span> <span class="k">constant</span> <span class="n">ERC1271_SUCCESS</span> <span class="o">=</span> <span class="mh">0x1626ba7e</span><span class="p">;</span>
+
+  <span class="k">function</span> <span class="n">isValidSigImpl</span><span class="p">(</span>
+    <span class="kt">address</span> <span class="n">_signer</span><span class="p">,</span>
+    <span class="kt">bytes32</span> <span class="n">_hash</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">_signature</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">allowSideEffects</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">tryPrepare</span>
+  <span class="p">)</span> <span class="k">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint</span> <span class="n">contractCodeLen</span> <span class="o">=</span> <span class="kt">address</span><span class="p">(</span><span class="n">_signer</span><span class="p">).</span><span class="n">code</span><span class="p">.</span><span class="n">length</span><span class="p">;</span>
+    <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">sigToValidate</span><span class="p">;</span>
+    <span class="c1">// The order here is strictly defined in https://eips.ethereum.org/EIPS/eip-6492
+</span>    <span class="c1">// - ERC-6492 suffix check and verification first, while being permissive in case the contract is already deployed; if the contract is deployed we will check the sig against the deployed version, this allows 6492 signatures to still be validated while taking into account potential key rotation
+</span>    <span class="c1">// - ERC-1271 verification if there's contract code
+</span>    <span class="c1">// - finally, ecrecover
+</span>    <span class="kt">bool</span> <span class="n">isCounterfactual</span> <span class="o">=</span> <span class="kt">bytes32</span><span class="p">(</span><span class="n">_signature</span><span class="p">[</span><span class="n">_signature</span><span class="p">.</span><span class="n">length</span><span class="o">-</span><span class="mi">32</span><span class="o">:</span><span class="n">_signature</span><span class="p">.</span><span class="n">length</span><span class="p">])</span> <span class="o">==</span> <span class="n">ERC6492_DETECTION_SUFFIX</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">isCounterfactual</span><span class="p">)</span> <span class="p">{</span>
+      <span class="kt">address</span> <span class="n">create2Factory</span><span class="p">;</span>
+      <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">factoryCalldata</span><span class="p">;</span>
+      <span class="p">(</span><span class="n">create2Factory</span><span class="p">,</span> <span class="n">factoryCalldata</span><span class="p">,</span> <span class="n">sigToValidate</span><span class="p">)</span> <span class="o">=</span> <span class="n">abi</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="n">_signature</span><span class="p">[</span><span class="mi">0</span><span class="o">:</span><span class="n">_signature</span><span class="p">.</span><span class="n">length</span><span class="o">-</span><span class="mi">32</span><span class="p">],</span> <span class="p">(</span><span class="kt">address</span><span class="p">,</span> <span class="kt">bytes</span><span class="p">,</span> <span class="kt">bytes</span><span class="p">));</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">contractCodeLen</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">tryPrepare</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">(</span><span class="kt">bool</span> <span class="n">success</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">err</span><span class="p">)</span> <span class="o">=</span> <span class="n">create2Factory</span><span class="p">.</span><span class="nb">call</span><span class="p">(</span><span class="n">factoryCalldata</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">success</span><span class="p">)</span> <span class="nb">revert</span> <span class="n">ERC6492DeployFailed</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="n">sigToValidate</span> <span class="o">=</span> <span class="n">_signature</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Try ERC-1271 verification
+</span>    <span class="k">if</span> <span class="p">(</span><span class="n">isCounterfactual</span> <span class="o">||</span> <span class="n">contractCodeLen</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">try</span> <span class="n">IERC1271Wallet</span><span class="p">(</span><span class="n">_signer</span><span class="p">).</span><span class="n">isValidSignature</span><span class="p">(</span><span class="n">_hash</span><span class="p">,</span> <span class="n">sigToValidate</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes4</span> <span class="n">magicValue</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">bool</span> <span class="n">isValid</span> <span class="o">=</span> <span class="n">magicValue</span> <span class="o">==</span> <span class="n">ERC1271_SUCCESS</span><span class="p">;</span>
+
+        <span class="c1">// retry, but this time assume the prefix is a prepare call
+</span>        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">isValid</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">tryPrepare</span> <span class="o">&amp;&amp;</span> <span class="n">contractCodeLen</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">return</span> <span class="n">isValidSigImpl</span><span class="p">(</span><span class="n">_signer</span><span class="p">,</span> <span class="n">_hash</span><span class="p">,</span> <span class="n">_signature</span><span class="p">,</span> <span class="n">allowSideEffects</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">contractCodeLen</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">isCounterfactual</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">allowSideEffects</span><span class="p">)</span> <span class="p">{</span>
+          <span class="c1">// if the call had side effects we need to return the
+</span>          <span class="c1">// result using a `revert` (to undo the state changes)
+</span>          <span class="k">assembly</span> <span class="p">{</span>
+           <span class="n">mstore</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">isValid</span><span class="p">)</span>
+           <span class="nb">revert</span><span class="p">(</span><span class="mi">31</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">isValid</span><span class="p">;</span>
+      <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// retry, but this time assume the prefix is a prepare call
+</span>        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">tryPrepare</span> <span class="o">&amp;&amp;</span> <span class="n">contractCodeLen</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+          <span class="k">return</span> <span class="n">isValidSigImpl</span><span class="p">(</span><span class="n">_signer</span><span class="p">,</span> <span class="n">_hash</span><span class="p">,</span> <span class="n">_signature</span><span class="p">,</span> <span class="n">allowSideEffects</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="nb">revert</span> <span class="n">ERC1271Revert</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// ecrecover verification
+</span>    <span class="nb">require</span><span class="p">(</span><span class="n">_signature</span><span class="p">.</span><span class="n">length</span> <span class="o">==</span> <span class="mi">65</span><span class="p">,</span> <span class="s">'SignatureValidator#recoverSigner: invalid signature length'</span><span class="p">);</span>
+    <span class="kt">bytes32</span> <span class="n">r</span> <span class="o">=</span> <span class="kt">bytes32</span><span class="p">(</span><span class="n">_signature</span><span class="p">[</span><span class="mi">0</span><span class="o">:</span><span class="mi">32</span><span class="p">]);</span>
+    <span class="kt">bytes32</span> <span class="n">s</span> <span class="o">=</span> <span class="kt">bytes32</span><span class="p">(</span><span class="n">_signature</span><span class="p">[</span><span class="mi">32</span><span class="o">:</span><span class="mi">64</span><span class="p">]);</span>
+    <span class="kt">uint8</span> <span class="n">v</span> <span class="o">=</span> <span class="kt">uint8</span><span class="p">(</span><span class="n">_signature</span><span class="p">[</span><span class="mi">64</span><span class="p">]);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">!=</span> <span class="mi">27</span> <span class="o">&amp;&amp;</span> <span class="n">v</span> <span class="o">!=</span> <span class="mi">28</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nb">revert</span><span class="p">(</span><span class="s">'SignatureValidator: invalid signature v value'</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nb">ecrecover</span><span class="p">(</span><span class="n">_hash</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="o">==</span> <span class="n">_signer</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">function</span> <span class="n">isValidSigWithSideEffects</span><span class="p">(</span><span class="kt">address</span> <span class="n">_signer</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">_hash</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">_signature</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="k">return</span> <span class="nb">this</span><span class="p">.</span><span class="n">isValidSigImpl</span><span class="p">(</span><span class="n">_signer</span><span class="p">,</span> <span class="n">_hash</span><span class="p">,</span> <span class="n">_signature</span><span class="p">,</span> <span class="nb">true</span><span class="p">,</span> <span class="nb">false</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">function</span> <span class="n">isValidSig</span><span class="p">(</span><span class="kt">address</span> <span class="n">_signer</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">_hash</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">_signature</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">)</span>
+  <span class="p">{</span>
+    <span class="k">try</span> <span class="nb">this</span><span class="p">.</span><span class="n">isValidSigImpl</span><span class="p">(</span><span class="n">_signer</span><span class="p">,</span> <span class="n">_hash</span><span class="p">,</span> <span class="n">_signature</span><span class="p">,</span> <span class="nb">false</span><span class="p">,</span> <span class="nb">false</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span> <span class="n">isValid</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="n">isValid</span><span class="p">;</span> <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">error</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// in order to avoid side effects from the contract getting deployed, the entire call will revert with a single byte result
+</span>      <span class="kt">uint</span> <span class="n">len</span> <span class="o">=</span> <span class="n">error</span><span class="p">.</span><span class="n">length</span><span class="p">;</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">len</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="k">return</span> <span class="n">error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mh">0x01</span><span class="p">;</span>
+      <span class="c1">// all other errors are simply forwarded, but in custom formats so that nothing else can revert with a single byte in the call
+</span>      <span class="k">else</span> <span class="k">assembly</span> <span class="p">{</span> <span class="nb">revert</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span> <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// this is a helper so we can perform validation in a single eth_call without pre-deploying a singleton
+</span><span class="k">contract</span> <span class="n">ValidateSigOffchain</span> <span class="p">{</span>
+  <span class="k">constructor</span> <span class="p">(</span><span class="kt">address</span> <span class="n">_signer</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">_hash</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">memory</span> <span class="n">_signature</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">UniversalSigValidator</span> <span class="n">validator</span> <span class="o">=</span> <span class="k">new</span> <span class="n">UniversalSigValidator</span><span class="p">();</span>
+    <span class="kt">bool</span> <span class="n">isValidSig</span> <span class="o">=</span> <span class="n">validator</span><span class="p">.</span><span class="n">isValidSigWithSideEffects</span><span class="p">(</span><span class="n">_signer</span><span class="p">,</span> <span class="n">_hash</span><span class="p">,</span> <span class="n">_signature</span><span class="p">);</span>
+    <span class="k">assembly</span> <span class="p">{</span>
+      <span class="n">mstore</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">isValidSig</span><span class="p">)</span>
+      <span class="k">return</span><span class="p">(</span><span class="mi">31</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h3 id="on-chain-validation">
+      
+      
+        <a href="#on-chain-validation" class="anchor-link"></a> On-chain validation
+      
+      
+    </h3>
+
+<p>For on-chain validation, you could use two separate methods:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">UniversalSigValidator.isValidSig(_signer, _hash, _signature)</code>: returns a bool of whether the signature is valid or not; this is reentrancy-safe</li>
+  <li><code class="language-plaintext highlighter-rouge">UniversalSigValidator.isValidSigWithSideEffects(_signer, _hash, _signature)</code>: this is equivalent to the former - it is not reentrancy-safe but it is more gas-efficient in certain cases</li>
+</ul>
+
+<p>Both methods may revert if the underlying calls revert.</p>
+  
+    <h3 id="off-chain-validation">
+      
+      
+        <a href="#off-chain-validation" class="anchor-link"></a> Off-chain validation
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">ValidateSigOffchain</code> helper allows you to perform the universal validation in one <code class="language-plaintext highlighter-rouge">eth_call</code>, without any pre-deployed contracts.</p>
+
+<p>Here’s example of how to do this with the <code class="language-plaintext highlighter-rouge">ethers</code> library:</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">isValidSignature</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">0x01</span><span class="dl">'</span> <span class="o">===</span> <span class="k">await</span> <span class="nx">provider</span><span class="p">.</span><span class="nx">call</span><span class="p">({</span>
+  <span class="na">data</span><span class="p">:</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">utils</span><span class="p">.</span><span class="nx">concat</span><span class="p">([</span>
+    <span class="nx">validateSigOffchainBytecode</span><span class="p">,</span>
+    <span class="p">(</span><span class="k">new</span> <span class="nx">ethers</span><span class="p">.</span><span class="nx">utils</span><span class="p">.</span><span class="nx">AbiCoder</span><span class="p">()).</span><span class="nx">encode</span><span class="p">([</span><span class="dl">'</span><span class="s1">address</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">bytes32</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">bytes</span><span class="dl">'</span><span class="p">],</span> <span class="p">[</span><span class="nx">signer</span><span class="p">,</span> <span class="nx">hash</span><span class="p">,</span> <span class="nx">signature</span><span class="p">])</span>
+  <span class="p">])</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>You may also use a library to perform the universal signature validation, such as Ambire’s <code class="language-plaintext highlighter-rouge">signature-validator</code>.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>The same considerations as <a href="/EIPS/eip-1271">ERC-1271</a> apply.</p>
+
+<p>However, deploying a contract requires a <code class="language-plaintext highlighter-rouge">CALL</code> rather than a <code class="language-plaintext highlighter-rouge">STATICCALL</code>, which introduces reentrancy concerns. This is mitigated in the reference implementation by having the validation method always revert if there are side-effects, and capturing its actual result from the revert data. For use cases where reentrancy is not a concern, we have provided the <code class="language-plaintext highlighter-rouge">isValidSigWithSideEffects</code> method.</p>
+
+<p>Furthermore, it is likely that this ERC will be more frequently used for off-chain validation, as in many cases, validating a signature on-chain presumes the wallet has been already deployed.</p>
+
+<p>One out-of-scope security consideration worth mentioning is whether the contract is going to be set-up with the correct permissions at deploy time, in order to allow for meaningful signature verification. By design, this is up to the implementation, but it’s worth noting that thanks to how CREATE2 works, changing the bytecode or contructor callcode in the signature will not allow you to escalate permissions as it will change the deploy address and therefore make verification fail.</p>
+
+<p>It must be noted that contract accounts can dynamically change their methods of authentication. This issue is mitigated by design in this EIP - even when validating counterfactual signatures, if the contract is already deployed, we will still call it, checking against the current live version of the contract.</p>
+
+<p>As per usual with signatures, replay protection should be implemented in most use cases. This proposal adds an extra dimension to this, because it may be possible to validate a signature that has been rendered invalid (by changing the authorized keys) on a different network as long as 1) the signature was valid at the time of deployment 2) the wallet can be deployed with the same factory address/bytecode on this different network.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Ivo Georgiev&nbsp;(<a href="https://github.com/Ivshti">@Ivshti</a>), Agustin Aguilar&nbsp;(<a href="https://github.com/Agusx1211">@Agusx1211</a>), "ERC-6492: Signature Validation for Predeploy Contracts," <em>Ethereum Improvement Proposals</em>, no. 6492, February 2023. Available: https://eips.ethereum.org/EIPS/eip-6492.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-6492: Signature Validation for Predeploy Contracts",
+    "name": "ERC-6492: Signature Validation for Predeploy Contracts",
+    "author": "Ivo Georgiev (@Ivshti), Agustin Aguilar (@Agusx1211)",
+    "dateCreated": "2023-02-10",
+    "datePublished": "2023-02-10",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-6492-signature-validation-for-pre-deploy-contracts/12903",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2023"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

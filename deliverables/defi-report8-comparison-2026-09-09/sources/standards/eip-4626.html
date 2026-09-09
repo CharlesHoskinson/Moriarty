@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-4626: Tokenized Vaults</title>
+      <meta property="og:title" content="ERC-4626: Tokenized Vaults" />
+    
+    <meta name="description" content="Tokenized Vaults with a single underlying EIP-20 token." />
+    <meta property="og:description" content="Tokenized Vaults with a single underlying EIP-20 token." />
+    <meta name="twitter:description" content="Tokenized Vaults with a single underlying EIP-20 token." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-4626" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-4626" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-4626: Tokenized Vaults
+    <a href="https://ethereum-magicians.org/t/eip-4626-yield-bearing-vault-standard/7900" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4626.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Tokenized Vaults with a single underlying EIP-20 token.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Joey Santoro&nbsp;(<a href="https://github.com/joeysantoro">@joeysantoro</a>), t11s&nbsp;(<a href="https://github.com/transmissions11">@transmissions11</a>), Jet Jadeja&nbsp;(<a href="https://github.com/JetJadeja">@JetJadeja</a>), Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>), Señor Doggo&nbsp;(<a href="https://github.com/fubuloubu">@fubuloubu</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2021-12-22</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-20">EIP-20</a>, 
+
+  <a href="eip-2612">EIP-2612</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definitions">Definitions:</a></li>
+      <li><a href="#methods">Methods</a></li>
+      <li><a href="#events">Events</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>The following standard allows for the implementation of a standard API for tokenized Vaults
+representing shares of a single underlying <a href="/EIPS/eip-20">EIP-20</a> token.
+This standard is an extension on the EIP-20 token that provides basic functionality for depositing
+and withdrawing tokens and reading balances.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Tokenized Vaults have a lack of standardization leading to diverse implementation details.
+Some various examples include lending markets, aggregators, and intrinsically interest bearing tokens.
+This makes integration difficult at the aggregator or plugin layer for protocols which need to conform to many standards, and forces each protocol to implement their own adapters which are error prone and waste development resources.</p>
+
+<p>A standard for tokenized Vaults will lower the integration effort for yield-bearing vaults, while creating more consistent and robust implementation patterns.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>All <a href="/EIPS/eip-4626">EIP-4626</a> tokenized Vaults MUST implement EIP-20 to represent shares.
+If a Vault is to be non-transferrable, it MAY revert on calls to <code class="language-plaintext highlighter-rouge">transfer</code> or <code class="language-plaintext highlighter-rouge">transferFrom</code>.
+The EIP-20 operations <code class="language-plaintext highlighter-rouge">balanceOf</code>, <code class="language-plaintext highlighter-rouge">transfer</code>, <code class="language-plaintext highlighter-rouge">totalSupply</code>, etc. operate on the Vault “shares”
+which represent a claim to ownership on a fraction of the Vault’s underlying holdings.</p>
+
+<p>All EIP-4626 tokenized Vaults MUST implement EIP-20’s optional metadata extensions.
+The <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">symbol</code> functions SHOULD reflect the underlying token’s <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">symbol</code> in some way.</p>
+
+<p>EIP-4626 tokenized Vaults MAY implement <a href="/EIPS/eip-2612">EIP-2612</a> to improve the UX of approving shares on various integrations.</p>
+  
+    <h3 id="definitions">
+      
+      
+        <a href="#definitions" class="anchor-link"></a> Definitions:
+      
+      
+    </h3>
+
+<ul>
+  <li>asset: The underlying token managed by the Vault.
+Has units defined by the corresponding EIP-20 contract.</li>
+  <li>share: The token of the Vault. Has a ratio of underlying assets
+exchanged on mint/deposit/withdraw/redeem (as defined by the Vault).</li>
+  <li>fee: An amount of assets or shares charged to the user by the Vault. Fees can exists for
+deposits, yield, AUM, withdrawals, or anything else prescribed by the Vault.</li>
+  <li>slippage: Any difference between advertised share price and economic realities of
+deposit to or withdrawal from the Vault, which is not accounted by fees.</li>
+</ul>
+  
+    <h3 id="methods">
+      
+      
+        <a href="#methods" class="anchor-link"></a> Methods
+      
+      
+    </h3>
+  
+    <h4 id="asset">
+      
+      
+        <a href="#asset" class="anchor-link"></a> asset
+      
+      
+    </h4>
+
+<p>The address of the underlying token used for the Vault for accounting, depositing, and withdrawing.</p>
+
+<p>MUST be an EIP-20 token contract.</p>
+
+<p>MUST <em>NOT</em> revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">asset</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span> <span class="pi">[]</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assetTokenAddress</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+</code></pre></div></div>
+  
+    <h4 id="totalassets">
+      
+      
+        <a href="#totalassets" class="anchor-link"></a> totalAssets
+      
+      
+    </h4>
+
+<p>Total amount of the underlying asset that is “managed” by Vault.</p>
+
+<p>SHOULD include any compounding that occurs from yield.</p>
+
+<p>MUST be inclusive of any fees that are charged against assets in the Vault.</p>
+
+<p>MUST <em>NOT</em> revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">totalAssets</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span> <span class="pi">[]</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">totalManagedAssets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="converttoshares">
+      
+      
+        <a href="#converttoshares" class="anchor-link"></a> convertToShares
+      
+      
+    </h4>
+
+<p>The amount of shares that the Vault would exchange for the amount of assets provided, in an ideal scenario where all the conditions are met.</p>
+
+<p>MUST NOT be inclusive of any fees that are charged against assets in the Vault.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT reflect slippage or other on-chain conditions, when performing the actual exchange.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<p>MUST round down towards 0.</p>
+
+<p>This calculation MAY NOT reflect the “per-user” price-per-share, and instead should reflect the “average-user’s” price-per-share, meaning what the average user should expect to see when exchanging to and from.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">convertToShares</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="converttoassets">
+      
+      
+        <a href="#converttoassets" class="anchor-link"></a> convertToAssets
+      
+      
+    </h4>
+
+<p>The amount of assets that the Vault would exchange for the amount of shares provided, in an ideal scenario where all the conditions are met.</p>
+
+<p>MUST NOT be inclusive of any fees that are charged against assets in the Vault.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT reflect slippage or other on-chain conditions, when performing the actual exchange.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<p>MUST round down towards 0.</p>
+
+<p>This calculation MAY NOT reflect the “per-user” price-per-share, and instead should reflect the “average-user’s” price-per-share, meaning what the average user should expect to see when exchanging to and from.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">convertToAssets</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxdeposit">
+      
+      
+        <a href="#maxdeposit" class="anchor-link"></a> maxDeposit
+      
+      
+    </h4>
+
+<p>Maximum amount of the underlying asset that can be deposited into the Vault for the <code class="language-plaintext highlighter-rouge">receiver</code>, through a <code class="language-plaintext highlighter-rouge">deposit</code> call.</p>
+
+<p>MUST return the maximum amount of assets <code class="language-plaintext highlighter-rouge">deposit</code> would allow to be deposited for <code class="language-plaintext highlighter-rouge">receiver</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary). This assumes that the user has infinite assets, i.e. MUST NOT rely on <code class="language-plaintext highlighter-rouge">balanceOf</code> of <code class="language-plaintext highlighter-rouge">asset</code>.</p>
+
+<p>MUST factor in both global and user-specific limits, like if deposits are entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST return <code class="language-plaintext highlighter-rouge">2 ** 256 - 1</code> if there is no limit on the maximum amount of assets that may be deposited.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxDeposit</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxAssets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewdeposit">
+      
+      
+        <a href="#previewdeposit" class="anchor-link"></a> previewDeposit
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no more than the exact amount of Vault shares that would be minted in a <code class="language-plaintext highlighter-rouge">deposit</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">deposit</code> should return the same or more <code class="language-plaintext highlighter-rouge">shares</code> as <code class="language-plaintext highlighter-rouge">previewDeposit</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for deposit limits like those returned from maxDeposit and should always act as though the deposit would be accepted, regardless if the user has enough tokens approved, etc.</p>
+
+<p>MUST be inclusive of deposit fees. Integrators should be aware of the existence of deposit fees.</p>
+
+<p>MUST NOT revert due to vault specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">deposit</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToShares</code> and <code class="language-plaintext highlighter-rouge">previewDeposit</code> SHOULD be considered slippage in share price or some other type of condition, meaning the depositor will lose assets by depositing.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewDeposit</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="deposit">
+      
+      
+        <a href="#deposit" class="anchor-link"></a> deposit
+      
+      
+    </h4>
+
+<p>Mints <code class="language-plaintext highlighter-rouge">shares</code> Vault shares to <code class="language-plaintext highlighter-rouge">receiver</code> by depositing exactly <code class="language-plaintext highlighter-rouge">assets</code> of underlying tokens.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Deposit</code> event.</p>
+
+<p>MUST support EIP-20 <code class="language-plaintext highlighter-rouge">approve</code> / <code class="language-plaintext highlighter-rouge">transferFrom</code> on <code class="language-plaintext highlighter-rouge">asset</code> as a deposit flow.
+MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the <code class="language-plaintext highlighter-rouge">deposit</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">deposit</code>.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">assets</code> cannot be deposited (due to deposit limit being reached, slippage, the user not approving enough underlying tokens to the Vault contract, etc).</p>
+
+<p>Note that most implementations will require pre-approval of the Vault with the Vault’s underlying <code class="language-plaintext highlighter-rouge">asset</code> token.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">deposit</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxmint">
+      
+      
+        <a href="#maxmint" class="anchor-link"></a> maxMint
+      
+      
+    </h4>
+
+<p>Maximum amount of shares that can be minted from the Vault for the <code class="language-plaintext highlighter-rouge">receiver</code>, through a <code class="language-plaintext highlighter-rouge">mint</code> call.</p>
+
+<p>MUST return the maximum amount of shares <code class="language-plaintext highlighter-rouge">mint</code> would allow to be deposited to <code class="language-plaintext highlighter-rouge">receiver</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary). This assumes that the user has infinite assets, i.e. MUST NOT rely on <code class="language-plaintext highlighter-rouge">balanceOf</code> of <code class="language-plaintext highlighter-rouge">asset</code>.</p>
+
+<p>MUST factor in both global and user-specific limits, like if mints are entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST return <code class="language-plaintext highlighter-rouge">2 ** 256 - 1</code> if there is no limit on the maximum amount of shares that may be minted.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxMint</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxShares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewmint">
+      
+      
+        <a href="#previewmint" class="anchor-link"></a> previewMint
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their mint at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no fewer than the exact amount of assets that would be deposited in a <code class="language-plaintext highlighter-rouge">mint</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">mint</code> should return the same or fewer <code class="language-plaintext highlighter-rouge">assets</code> as <code class="language-plaintext highlighter-rouge">previewMint</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for mint limits like those returned from maxMint and should always act as though the mint would be accepted, regardless if the user has enough tokens approved, etc.</p>
+
+<p>MUST be inclusive of deposit fees. Integrators should be aware of the existence of deposit fees.</p>
+
+<p>MUST NOT revert due to vault specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">mint</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToAssets</code> and <code class="language-plaintext highlighter-rouge">previewMint</code> SHOULD be considered slippage in share price or some other type of condition, meaning the depositor will lose assets by minting.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewMint</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="mint">
+      
+      
+        <a href="#mint" class="anchor-link"></a> mint
+      
+      
+    </h4>
+
+<p>Mints exactly <code class="language-plaintext highlighter-rouge">shares</code> Vault shares to <code class="language-plaintext highlighter-rouge">receiver</code> by depositing <code class="language-plaintext highlighter-rouge">assets</code> of underlying tokens.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Deposit</code> event.</p>
+
+<p>MUST support EIP-20 <code class="language-plaintext highlighter-rouge">approve</code> / <code class="language-plaintext highlighter-rouge">transferFrom</code> on <code class="language-plaintext highlighter-rouge">asset</code> as a mint flow.
+MAY support an additional flow in which the underlying tokens are owned by the Vault contract before the <code class="language-plaintext highlighter-rouge">mint</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">mint</code>.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">shares</code> cannot be minted (due to deposit limit being reached, slippage, the user not approving enough underlying tokens to the Vault contract, etc).</p>
+
+<p>Note that most implementations will require pre-approval of the Vault with the Vault’s underlying <code class="language-plaintext highlighter-rouge">asset</code> token.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">mint</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxwithdraw">
+      
+      
+        <a href="#maxwithdraw" class="anchor-link"></a> maxWithdraw
+      
+      
+    </h4>
+
+<p>Maximum amount of the underlying asset that can be withdrawn from the <code class="language-plaintext highlighter-rouge">owner</code> balance in the Vault, through a <code class="language-plaintext highlighter-rouge">withdraw</code> call.</p>
+
+<p>MUST return the maximum amount of assets that could be transferred from <code class="language-plaintext highlighter-rouge">owner</code> through <code class="language-plaintext highlighter-rouge">withdraw</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary).</p>
+
+<p>MUST factor in both global and user-specific limits, like if withdrawals are entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxWithdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxAssets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewwithdraw">
+      
+      
+        <a href="#previewwithdraw" class="anchor-link"></a> previewWithdraw
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no fewer than the exact amount of Vault shares that would be burned in a <code class="language-plaintext highlighter-rouge">withdraw</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">withdraw</code> should return the same or fewer <code class="language-plaintext highlighter-rouge">shares</code> as <code class="language-plaintext highlighter-rouge">previewWithdraw</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for withdrawal limits like those returned from maxWithdraw and should always act as though the withdrawal would be accepted, regardless if the user has enough shares, etc.</p>
+
+<p>MUST be inclusive of withdrawal fees. Integrators should be aware of the existence of withdrawal fees.</p>
+
+<p>MUST NOT revert due to vault specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">withdraw</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToShares</code> and <code class="language-plaintext highlighter-rouge">previewWithdraw</code> SHOULD be considered slippage in share price or some other type of condition, meaning the depositor will lose assets by depositing.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewWithdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="withdraw">
+      
+      
+        <a href="#withdraw" class="anchor-link"></a> withdraw
+      
+      
+    </h4>
+
+<p>Burns <code class="language-plaintext highlighter-rouge">shares</code> from <code class="language-plaintext highlighter-rouge">owner</code> and sends exactly <code class="language-plaintext highlighter-rouge">assets</code> of underlying tokens to <code class="language-plaintext highlighter-rouge">receiver</code>.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Withdraw</code> event.</p>
+
+<p>MUST support a withdraw flow where the shares are burned from <code class="language-plaintext highlighter-rouge">owner</code> directly where <code class="language-plaintext highlighter-rouge">owner</code> is <code class="language-plaintext highlighter-rouge">msg.sender</code>.</p>
+
+<p>MUST support a withdraw flow where the shares are burned from <code class="language-plaintext highlighter-rouge">owner</code> directly where <code class="language-plaintext highlighter-rouge">msg.sender</code> has EIP-20 approval over the shares of <code class="language-plaintext highlighter-rouge">owner</code>.</p>
+
+<p>MAY support an additional flow in which the shares are transferred to the Vault contract before the <code class="language-plaintext highlighter-rouge">withdraw</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>SHOULD check <code class="language-plaintext highlighter-rouge">msg.sender</code> can spend owner funds, assets needs to be converted to shares and shares should be checked for allowance.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">assets</code> cannot be withdrawn (due to withdrawal limit being reached, slippage, the owner not having enough shares, etc).</p>
+
+<p>Note that some implementations will require pre-requesting to the Vault before a withdrawal may be performed. Those methods should be performed separately.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">withdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="maxredeem">
+      
+      
+        <a href="#maxredeem" class="anchor-link"></a> maxRedeem
+      
+      
+    </h4>
+
+<p>Maximum amount of Vault shares that can be redeemed from the <code class="language-plaintext highlighter-rouge">owner</code> balance in the Vault, through a <code class="language-plaintext highlighter-rouge">redeem</code> call.</p>
+
+<p>MUST return the maximum amount of shares that could be transferred from <code class="language-plaintext highlighter-rouge">owner</code> through <code class="language-plaintext highlighter-rouge">redeem</code> and not cause a revert, which MUST NOT be higher than the actual maximum that would be accepted (it should underestimate if necessary).</p>
+
+<p>MUST factor in both global and user-specific limits, like if redemption is entirely disabled (even temporarily) it MUST return 0.</p>
+
+<p>MUST NOT revert.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxRedeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">maxShares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="previewredeem">
+      
+      
+        <a href="#previewredeem" class="anchor-link"></a> previewRedeem
+      
+      
+    </h4>
+
+<p>Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.</p>
+
+<p>MUST return as close to and no more than the exact amount of assets that would be withdrawn in a <code class="language-plaintext highlighter-rouge">redeem</code> call in the same transaction. I.e. <code class="language-plaintext highlighter-rouge">redeem</code> should return the same or more <code class="language-plaintext highlighter-rouge">assets</code> as <code class="language-plaintext highlighter-rouge">previewRedeem</code> if called in the same transaction.</p>
+
+<p>MUST NOT account for redemption limits like those returned from maxRedeem and should always act as though the redemption would be accepted, regardless if the user has enough shares, etc.</p>
+
+<p>MUST be inclusive of withdrawal fees. Integrators should be aware of the existence of withdrawal fees.</p>
+
+<p>MUST NOT revert due to vault specific user/global limits. MAY revert due to other conditions that would also cause <code class="language-plaintext highlighter-rouge">redeem</code> to revert.</p>
+
+<p>Note that any unfavorable discrepancy between <code class="language-plaintext highlighter-rouge">convertToAssets</code> and <code class="language-plaintext highlighter-rouge">previewRedeem</code> SHOULD be considered slippage in share price or some other type of condition, meaning the depositor will lose assets by redeeming.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">previewRedeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="redeem">
+      
+      
+        <a href="#redeem" class="anchor-link"></a> redeem
+      
+      
+    </h4>
+
+<p>Burns exactly <code class="language-plaintext highlighter-rouge">shares</code> from <code class="language-plaintext highlighter-rouge">owner</code> and sends <code class="language-plaintext highlighter-rouge">assets</code> of underlying tokens to <code class="language-plaintext highlighter-rouge">receiver</code>.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">Withdraw</code> event.</p>
+
+<p>MUST support a redeem flow where the shares are burned from <code class="language-plaintext highlighter-rouge">owner</code> directly where <code class="language-plaintext highlighter-rouge">owner</code> is <code class="language-plaintext highlighter-rouge">msg.sender</code>.</p>
+
+<p>MUST support a redeem flow where the shares are burned from <code class="language-plaintext highlighter-rouge">owner</code> directly where <code class="language-plaintext highlighter-rouge">msg.sender</code> has EIP-20 approval over the shares of <code class="language-plaintext highlighter-rouge">owner</code>.</p>
+
+<p>MAY support an additional flow in which the shares are transferred to the Vault contract before the <code class="language-plaintext highlighter-rouge">redeem</code> execution, and are accounted for during <code class="language-plaintext highlighter-rouge">redeem</code>.</p>
+
+<p>SHOULD check <code class="language-plaintext highlighter-rouge">msg.sender</code> can spend owner funds using allowance.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">shares</code> cannot be redeemed (due to withdrawal limit being reached, slippage, the owner not having enough shares, etc).</p>
+
+<p>Note that some implementations will require pre-requesting to the Vault before a withdrawal may be performed. Those methods should be performed separately.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">redeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+  
+    <h4 id="deposit-1">
+      
+      
+        <a href="#deposit-1" class="anchor-link"></a> Deposit
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">sender</code> has exchanged <code class="language-plaintext highlighter-rouge">assets</code> for <code class="language-plaintext highlighter-rouge">shares</code>, and transferred those <code class="language-plaintext highlighter-rouge">shares</code> to <code class="language-plaintext highlighter-rouge">owner</code>.</p>
+
+<p>MUST be emitted when tokens are deposited into the Vault via the <code class="language-plaintext highlighter-rouge">mint</code> and <code class="language-plaintext highlighter-rouge">deposit</code> methods.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Deposit</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">sender</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="withdraw-1">
+      
+      
+        <a href="#withdraw-1" class="anchor-link"></a> Withdraw
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">sender</code> has exchanged <code class="language-plaintext highlighter-rouge">shares</code>, owned by <code class="language-plaintext highlighter-rouge">owner</code>, for <code class="language-plaintext highlighter-rouge">assets</code>, and transferred those <code class="language-plaintext highlighter-rouge">assets</code> to <code class="language-plaintext highlighter-rouge">receiver</code>.</p>
+
+<p>MUST be emitted when shares are withdrawn from the Vault in <code class="language-plaintext highlighter-rouge">EIP-4626.redeem</code> or <code class="language-plaintext highlighter-rouge">EIP-4626.withdraw</code> methods.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Withdraw</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">sender</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">receiver</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The Vault interface is designed to be optimized for integrators with a feature complete yet minimal interface.
+Details such as accounting and allocation of deposited tokens are intentionally not specified,
+as Vaults are expected to be treated as black boxes on-chain and inspected off-chain before use.</p>
+
+<p>EIP-20 is enforced because implementation details like token approval
+and balance calculation directly carry over to the shares accounting.
+This standardization makes the Vaults immediately compatible with all EIP-20 use cases in addition to EIP-4626.</p>
+
+<p>The mint method was included for symmetry and feature completeness.
+Most current use cases of share-based Vaults do not ascribe special meaning to the shares such that
+a user would optimize for a specific number of shares (<code class="language-plaintext highlighter-rouge">mint</code>) rather than specific amount of underlying (<code class="language-plaintext highlighter-rouge">deposit</code>).
+However, it is easy to imagine future Vault strategies which would have unique and independently useful share representations.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">convertTo</code> functions serve as rough estimates that do not account for operation specific details like withdrawal fees, etc.
+They were included for frontends and applications that need an average value of shares or assets, not an exact value possibly including slippage or other fees.
+For applications that need an exact value that attempts to account for fees and slippage we have included a corresponding <code class="language-plaintext highlighter-rouge">preview</code> function to match each mutable function. These functions must not account for deposit or withdrawal limits, to ensure they are easily composable, the <code class="language-plaintext highlighter-rouge">max</code> functions are provided for that purpose.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>EIP-4626 is fully backward compatible with the EIP-20 standard and has no known compatibility issues with other standards.
+For production implementations of Vaults which do not use EIP-4626, wrapper adapters can be developed and used.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<p>See <a href="https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC4626.sol">Solmate EIP-4626</a>:
+a minimal and opinionated implementation of the standard with hooks for developers to easily insert custom logic into deposits and withdrawals.</p>
+
+<p>See <a href="https://github.com/fubuloubu/ERC4626">Vyper EIP-4626</a>:
+a demo implementation of the standard in Vyper, with hooks for share price manipulation and other testing needs.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>Fully permissionless use cases could fall prey to malicious implementations which only conform to the interface but not the specification.
+It is recommended that all integrators review the implementation for potential ways of losing user deposits before integrating.</p>
+
+<p>If implementors intend to support EOA account access directly, they should consider adding an additional function call for <code class="language-plaintext highlighter-rouge">deposit</code>/<code class="language-plaintext highlighter-rouge">mint</code>/<code class="language-plaintext highlighter-rouge">withdraw</code>/<code class="language-plaintext highlighter-rouge">redeem</code> with the means to accommodate slippage loss or unexpected deposit/withdrawal limits, since they have no other means to revert the transaction if the exact output amount is not achieved.</p>
+
+<p>The methods <code class="language-plaintext highlighter-rouge">totalAssets</code>, <code class="language-plaintext highlighter-rouge">convertToShares</code> and <code class="language-plaintext highlighter-rouge">convertToAssets</code> are estimates useful for display purposes,
+and do <em>not</em> have to confer the <em>exact</em> amount of underlying assets their context suggests.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">preview</code> methods return values that are as close as possible to exact as possible. For that reason, they are manipulable by altering the on-chain conditions and are not always safe to be used as price oracles. This specification includes <code class="language-plaintext highlighter-rouge">convert</code> methods that are allowed to be inexact and therefore can be implemented as robust price oracles. For example, it would be correct to implement the <code class="language-plaintext highlighter-rouge">convert</code> methods as using a time-weighted average price in converting between assets and shares.</p>
+
+<p>Integrators of EIP-4626 Vaults should be aware of the difference between these view methods when integrating with this standard. Additionally, note that the amount of underlying assets a user may receive from redeeming their Vault shares (<code class="language-plaintext highlighter-rouge">previewRedeem</code>) can be significantly different than the amount that would be taken from them when minting the same quantity of shares (<code class="language-plaintext highlighter-rouge">previewMint</code>). The differences may be small (like if due to rounding error), or very significant (like if a Vault implements withdrawal or deposit fees, etc). Therefore integrators should always take care to use the preview function most relevant to their use case, and never assume they are interchangeable.</p>
+
+<p>Finally, EIP-4626 Vault implementers should be aware of the need for specific, opposing rounding directions across the different mutable and view methods, as it is considered most secure to favor the Vault itself during calculations over its users:</p>
+
+<ul>
+  <li>
+    <p>If (1) it’s calculating how many shares to issue to a user for a certain amount of the underlying tokens they provide or (2) it’s determining the amount of the underlying tokens to transfer to them for returning a certain amount of shares, it should round <em>down</em>.</p>
+  </li>
+  <li>
+    <p>If (1) it’s calculating the amount of shares a user has to supply to receive a given amount of the underlying tokens or (2) it’s calculating the amount of underlying tokens a user has to provide to receive a certain amount of shares, it should round <em>up</em>.</p>
+  </li>
+</ul>
+
+<p>The only functions where the preferred rounding direction would be ambiguous are the <code class="language-plaintext highlighter-rouge">convertTo</code> functions. To ensure consistency across all EIP-4626 Vault implementations it is specified that these functions MUST both always round <em>down</em>. Integrators may wish to mimic rounding up versions of these functions themselves, like by adding 1 wei to the result.</p>
+
+<p>Although the <code class="language-plaintext highlighter-rouge">convertTo</code> functions should eliminate the need for any use of an EIP-4626 Vault’s <code class="language-plaintext highlighter-rouge">decimals</code> variable, it is still strongly recommended to mirror
+the underlying token’s <code class="language-plaintext highlighter-rouge">decimals</code> if at all possible, to eliminate possible sources of confusion and simplify integration across front-ends and for other off-chain users.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Joey Santoro&nbsp;(<a href="https://github.com/joeysantoro">@joeysantoro</a>), t11s&nbsp;(<a href="https://github.com/transmissions11">@transmissions11</a>), Jet Jadeja&nbsp;(<a href="https://github.com/JetJadeja">@JetJadeja</a>), Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>), Señor Doggo&nbsp;(<a href="https://github.com/fubuloubu">@fubuloubu</a>), "ERC-4626: Tokenized Vaults," <em>Ethereum Improvement Proposals</em>, no. 4626, December 2021. Available: https://eips.ethereum.org/EIPS/eip-4626.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-4626: Tokenized Vaults",
+    "name": "ERC-4626: Tokenized Vaults",
+    "author": "Joey Santoro (@joeysantoro), t11s (@transmissions11), Jet Jadeja (@JetJadeja), Alberto Cuesta Cañada (@alcueca), Señor Doggo (@fubuloubu)",
+    "dateCreated": "2021-12-22",
+    "datePublished": "2021-12-22",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-4626-yield-bearing-vault-standard/7900",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2021"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

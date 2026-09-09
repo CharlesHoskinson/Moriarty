@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>EIP-1: EIP Purpose and Guidelines</title>
+      <meta property="og:title" content="EIP-1: EIP Purpose and Guidelines" />
+    
+    <meta name="description" content="" />
+    <meta property="og:description" content="" />
+    <meta name="twitter:description" content="" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-1" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-1" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is Living and accepts infrequent updates. "> 🎉 Living</span>
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Describes a process surrounding Ethereum or proposes a change to (or an event in) a process. " href="../meta">Meta</a>
+    
+  </span>
+  <h1 class="page-heading">
+    EIP-1: EIP Purpose and Guidelines
+    <a href="" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3></h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Martin Becze&nbsp;&lt;<a href="mailto:mb@ethereum.org">mb@ethereum.org</a>&gt;, Hudson Jameson&nbsp;&lt;<a href="mailto:hudson@ethereum.org">hudson@ethereum.org</a>&gt;,  et al.</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2015-10-27</td>
+        </tr>
+      
+      
+             
+      
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#what-is-an-eip">What is an EIP?</a></li>
+  <li><a href="#eip-rationale">EIP Rationale</a></li>
+  <li><a href="#eip-types">EIP Types</a>
+    <ul>
+      <li><a href="#special-requirements-for-core-eips">Special requirements for Core EIPs</a></li>
+    </ul>
+  </li>
+  <li><a href="#eip-work-flow">EIP Work Flow</a>
+    <ul>
+      <li><a href="#shepherding-an-eip">Shepherding an EIP</a></li>
+      <li><a href="#core-eips">Core EIPs</a></li>
+      <li><a href="#eip-process">EIP Process</a></li>
+    </ul>
+  </li>
+  <li><a href="#what-belongs-in-a-successful-eip">What belongs in a successful EIP?</a></li>
+  <li><a href="#eip-formats-and-templates">EIP Formats and Templates</a></li>
+  <li><a href="#eip-header-preamble">EIP Header Preamble</a>
+    <ul>
+      <li><a href="#author-header">author header</a></li>
+      <li><a href="#discussions-to-header">discussions-to header</a></li>
+      <li><a href="#type-header">type header</a></li>
+      <li><a href="#category-header">category header</a></li>
+      <li><a href="#created-header">created header</a></li>
+      <li><a href="#requires-header">requires header</a></li>
+    </ul>
+  </li>
+  <li><a href="#linking-to-external-resources">Linking to External Resources</a>
+    <ul>
+      <li><a href="#execution-client-specifications">Execution Client Specifications</a></li>
+      <li><a href="#ethereum-system-contract-implementations">Ethereum System Contract Implementations</a></li>
+      <li><a href="#execution-specification-tests">Execution Specification Tests</a></li>
+      <li><a href="#consensus-layer-specifications">Consensus Layer Specifications</a></li>
+      <li><a href="#networking-specifications">Networking Specifications</a></li>
+      <li><a href="#portal-specifications">Portal Specifications</a></li>
+      <li><a href="#world-wide-web-consortium-w3c">World Wide Web Consortium (W3C)</a></li>
+      <li><a href="#web-hypertext-application-technology-working-group-whatwg">Web Hypertext Application Technology Working Group (WHATWG)</a></li>
+      <li><a href="#internet-engineering-task-force-ietf">Internet Engineering Task Force (IETF)</a></li>
+      <li><a href="#bitcoin-improvement-proposal">Bitcoin Improvement Proposal</a></li>
+      <li><a href="#national-vulnerability-database-nvd">National Vulnerability Database (NVD)</a></li>
+      <li><a href="#chain-agnostic-improvement-proposals-caips">Chain Agnostic Improvement Proposals (CAIPs)</a></li>
+      <li><a href="#ethereum-yellow-paper">Ethereum Yellow Paper</a></li>
+      <li><a href="#execution-client-specification-tests">Execution Client Specification Tests</a></li>
+      <li><a href="#digital-object-identifier-system">Digital Object Identifier System</a></li>
+      <li><a href="#execution-api-specification">Execution API Specification</a></li>
+      <li><a href="#unicode-technical-standards-uts">Unicode Technical Standards (UTS)</a></li>
+    </ul>
+  </li>
+  <li><a href="#linking-to-other-eips">Linking to other EIPs</a></li>
+  <li><a href="#auxiliary-files">Auxiliary Files</a></li>
+  <li><a href="#transferring-eip-ownership">Transferring EIP Ownership</a></li>
+  <li><a href="#eip-editors">EIP Editors</a></li>
+  <li><a href="#eip-editor-responsibilities">EIP Editor Responsibilities</a></li>
+  <li><a href="#style-guide">Style Guide</a>
+    <ul>
+      <li><a href="#titles">Titles</a></li>
+      <li><a href="#descriptions">Descriptions</a></li>
+      <li><a href="#eip-numbers">EIP numbers</a></li>
+      <li><a href="#rfc-2119-and-rfc-8174">RFC 2119 and RFC 8174</a></li>
+    </ul>
+  </li>
+  <li><a href="#history">History</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="what-is-an-eip">
+      
+      
+        <a href="#what-is-an-eip" class="anchor-link"></a> What is an EIP?
+      
+      
+    </h2>
+
+<p>EIP stands for Ethereum Improvement Proposal. An EIP is a design document providing information to the Ethereum community, or describing a new feature for Ethereum or its processes or environment. The EIP should provide a concise technical specification of the feature and a rationale for the feature. The EIP author is responsible for building consensus within the community and documenting dissenting opinions.</p>
+  
+    <h2 id="eip-rationale">
+      
+      
+        <a href="#eip-rationale" class="anchor-link"></a> EIP Rationale
+      
+      
+    </h2>
+
+<p>We intend EIPs to be the primary mechanisms for proposing new features, for collecting community technical input on an issue, and for documenting the design decisions that have gone into Ethereum. Because the EIPs are maintained as text files in a versioned repository, their revision history is the historical record of the feature proposal.</p>
+
+<p>For Ethereum implementers, EIPs are a convenient way to track the progress of their implementation. Ideally, each implementation maintainer would list the EIPs that they have implemented. This will give end users a convenient way to know the current status of a given implementation or library.</p>
+  
+    <h2 id="eip-types">
+      
+      
+        <a href="#eip-types" class="anchor-link"></a> EIP Types
+      
+      
+    </h2>
+
+<p>There are three types of EIP:</p>
+
+<ul>
+  <li>A <strong>Standards Track EIP</strong> describes any change that affects most or all Ethereum implementations, such as: a change to the network protocol, a change in block or transaction validity rules, proposed application standards/conventions, or any change or addition that affects the interoperability of applications using Ethereum. Standards Track EIPs consist of three parts—a design document, an implementation, and (if warranted) an update to the <a href="https://github.com/ethereum/yellowpaper">formal specification</a>. Furthermore, Standards Track EIPs can be broken down into the following categories:
+    <ul>
+      <li><strong>Core</strong>: improvements requiring a consensus fork (e.g. <a href="/EIPS/eip-5">EIP-5</a>, <a href="/EIPS/eip-101">EIP-101</a>), as well as changes that are not necessarily consensus critical but may be relevant to <a href="https://github.com/ethereum/pm">“core dev” discussions</a> (for example, [EIP-90], and the miner/node strategy changes 2, 3, and 4 of <a href="/EIPS/eip-86">EIP-86</a>).</li>
+      <li><strong>Networking</strong>: includes improvements around <a href="https://github.com/ethereum/devp2p/blob/readme-spec-links/rlpx.md">devp2p</a> (<a href="/EIPS/eip-8">EIP-8</a>) and <a href="https://ethereum.org/en/developers/docs/nodes-and-clients/#light-node">Light Ethereum Subprotocol</a>, as well as proposed improvements to network protocol specifications of <a href="https://github.com/ethereum/go-ethereum/issues/16013#issuecomment-364639309">whisper</a> and <a href="https://github.com/ethereum/go-ethereum/pull/2959">swarm</a>.</li>
+      <li><strong>Interface</strong>: includes improvements around language-level standards like method names (<a href="/EIPS/eip-6">EIP-6</a>) and <a href="https://docs.soliditylang.org/en/develop/abi-spec.html">contract ABIs</a>.</li>
+      <li><strong>ERC</strong>: application-level standards and conventions, including contract standards such as token standards (<a href="/EIPS/eip-20">ERC-20</a>), name registries (<a href="/EIPS/eip-137">ERC-137</a>), URI schemes, library/package formats, and wallet formats.</li>
+    </ul>
+  </li>
+  <li>
+    <p>A <strong>Meta EIP</strong> describes a process surrounding Ethereum or proposes a change to (or an event in) a process. Process EIPs are like Standards Track EIPs but apply to areas other than the Ethereum protocol itself. They may propose an implementation, but not to Ethereum’s codebase; they often require community consensus; unlike Informational EIPs, they are more than recommendations, and users are typically not free to ignore them. Examples include procedures, guidelines, changes to the decision-making process, and changes to the tools or environment used in Ethereum development. Any meta-EIP is also considered a Process EIP.</p>
+  </li>
+  <li>An <strong>Informational EIP</strong> describes an Ethereum design issue, or provides general guidelines or information to the Ethereum community, but does not propose a new feature. Informational EIPs do not necessarily represent Ethereum community consensus or a recommendation, so users and implementers are free to ignore Informational EIPs or follow their advice.</li>
+</ul>
+
+<p>It is highly recommended that a single EIP contain a single key proposal or new idea. The more focused the EIP, the more successful it tends to be. A change to one client doesn’t require an EIP; a change that affects multiple clients, or defines a standard for multiple apps to use, does.</p>
+
+<p>An EIP must meet certain minimum criteria. It must be a clear and complete description of the proposed enhancement. The enhancement must represent a net improvement. The proposed implementation, if applicable, must be solid and must not complicate the protocol unduly.</p>
+  
+    <h3 id="special-requirements-for-core-eips">
+      
+      
+        <a href="#special-requirements-for-core-eips" class="anchor-link"></a> Special requirements for Core EIPs
+      
+      
+    </h3>
+
+<p>If a <strong>Core</strong> EIP mentions or proposes changes to the EVM (Ethereum Virtual Machine), it should refer to the instructions by their mnemonics and define the opcodes of those mnemonics at least once. A preferred way is the following:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>REVERT (0xfe)
+</code></pre></div></div>
+  
+    <h2 id="eip-work-flow">
+      
+      
+        <a href="#eip-work-flow" class="anchor-link"></a> EIP Work Flow
+      
+      
+    </h2>
+  
+    <h3 id="shepherding-an-eip">
+      
+      
+        <a href="#shepherding-an-eip" class="anchor-link"></a> Shepherding an EIP
+      
+      
+    </h3>
+
+<p>Parties involved in the process are you, the champion or <em>EIP author</em>, the <a href="#eip-editors"><em>EIP editors</em></a>, and the <a href="https://github.com/ethereum/pm"><em>Ethereum Core Developers</em></a>.</p>
+
+<p>Before you begin writing a formal EIP, you should vet your idea. Ask the Ethereum community first if an idea is original to avoid wasting time on something that will be rejected based on prior research. It is thus recommended to open a discussion thread on <a href="https://ethereum-magicians.org/">the Ethereum Magicians forum</a> to do this.</p>
+
+<p>Once the idea has been vetted, your next responsibility will be to present (by means of an EIP) the idea to the reviewers and all interested parties, invite editors, developers, and the community to give feedback on the aforementioned channels. You should try and gauge whether the interest in your EIP is commensurate with both the work involved in implementing it and how many parties will have to conform to it. For example, the work required for implementing a Core EIP will be much greater than for an ERC and the EIP will need sufficient interest from the Ethereum client teams. Negative community feedback will be taken into consideration and may prevent your EIP from moving past the Draft stage.</p>
+  
+    <h3 id="core-eips">
+      
+      
+        <a href="#core-eips" class="anchor-link"></a> Core EIPs
+      
+      
+    </h3>
+
+<p>For Core EIPs, given that they require client implementations to be considered <strong>Final</strong> (see “EIPs Process” below), you will need to either provide an implementation for clients or convince clients to implement your EIP.</p>
+
+<p>The best way to get client implementers to review your EIP is to present it on an AllCoreDevs call. You can request to do so by posting a comment linking your EIP on an <a href="https://github.com/ethereum/pm/issues">AllCoreDevs agenda GitHub Issue</a>.</p>
+
+<p>The AllCoreDevs call serves as a way for client implementers to do three things. First, to discuss the technical merits of EIPs. Second, to gauge what other clients will be implementing. Third, to coordinate EIP implementation for network upgrades.</p>
+
+<p>These calls generally result in a “rough consensus” around what EIPs should be implemented. This “rough consensus” rests on the assumptions that EIPs are not contentious enough to cause a network split and that they are technically sound.</p>
+
+<p>:warning: The EIPs process and AllCoreDevs call were not designed to address contentious non-technical issues, but, due to the lack of other ways to address these, often end up entangled in them. This puts the burden on client implementers to try and gauge community sentiment, which hinders the technical coordination function of EIPs and AllCoreDevs calls. If you are shepherding an EIP, you can make the process of building community consensus easier by making sure that <a href="https://ethereum-magicians.org/">the Ethereum Magicians forum</a> thread for your EIP includes or links to as much of the community discussion as possible and that various stakeholders are well-represented.</p>
+
+<p><em>In short, your role as the champion is to write the EIP using the style and format described below, shepherd the discussions in the appropriate forums, and build community consensus around the idea.</em></p>
+  
+    <h3 id="eip-process">
+      
+      
+        <a href="#eip-process" class="anchor-link"></a> EIP Process
+      
+      
+    </h3>
+
+<p>The following is the standardization process for all EIPs in all tracks:</p>
+
+<p><img src="/assets/eip-1/EIP-process-update.jpg" alt="EIP Status Diagram" /></p>
+
+<p><strong>Idea</strong> - An idea that is pre-draft. This is not tracked within the EIP Repository.</p>
+
+<p><strong>Draft</strong> - The first formally tracked stage of an EIP in development. An EIP is merged by an EIP Editor into the EIP repository when properly formatted.</p>
+
+<p><strong>Review</strong> - An EIP Author marks an EIP as ready for and requesting Peer Review.</p>
+
+<p><strong>Last Call</strong> - This is the final review window for an EIP before it is moved to <code class="language-plaintext highlighter-rouge">Final</code>. An EIP enters <code class="language-plaintext highlighter-rouge">Last Call</code> when the specification is stable and the author opens a PR with a review end date (<code class="language-plaintext highlighter-rouge">last-call-deadline</code>), typically 14 days later.</p>
+
+<p>If this period results in necessary normative changes it will revert the EIP to <code class="language-plaintext highlighter-rouge">Review</code>.</p>
+
+<p><strong>Final</strong> - This EIP represents the final standard. A Final EIP exists in a state of finality and should only be updated to correct errata and add non-normative clarifications.</p>
+
+<p>A PR moving an EIP from Last Call to Final SHOULD contain no changes other than the status update. Any content or editorial proposed change SHOULD be separate from this status-updating PR and committed prior to it.</p>
+
+<p><strong>Stagnant</strong> - Any EIP in <code class="language-plaintext highlighter-rouge">Draft</code> or <code class="language-plaintext highlighter-rouge">Review</code> or <code class="language-plaintext highlighter-rouge">Last Call</code> if inactive for a period of 6 months or greater is moved to <code class="language-plaintext highlighter-rouge">Stagnant</code>. An EIP may be resurrected from this state by Authors or EIP Editors through moving it back to <code class="language-plaintext highlighter-rouge">Draft</code> or its earlier status. If not resurrected, a proposal may stay forever in this status.</p>
+
+<blockquote>
+  <p><em>EIP Authors are notified of any algorithmic change to the status of their EIP</em></p>
+</blockquote>
+
+<p><strong>Withdrawn</strong> - The EIP Author(s) have withdrawn the proposed EIP. This state has finality and can no longer be resurrected using this EIP number. If the idea is pursued at a later date, it is considered a new proposal.</p>
+
+<p><strong>Living</strong> - A special status for EIPs that are designed to be continually updated and not reach a state of finality. This includes most notably EIP-1.</p>
+  
+    <h2 id="what-belongs-in-a-successful-eip">
+      
+      
+        <a href="#what-belongs-in-a-successful-eip" class="anchor-link"></a> What belongs in a successful EIP?
+      
+      
+    </h2>
+
+<p>Each EIP should have the following parts:</p>
+
+<ul>
+  <li>Preamble - RFC 822 style headers containing metadata about the EIP, including the EIP number, a short descriptive title (limited to a maximum of 44 characters), a description (limited to a maximum of 140 characters), and the author details. Irrespective of the category, the title and description should not include EIP number. See <a href="/EIPS/eip-1#eip-header-preamble">below</a> for details.</li>
+  <li>Abstract - Abstract is a multi-sentence (short paragraph) technical summary. This should be a very terse and human-readable version of the specification section. Someone should be able to read only the abstract to get the gist of what this specification does.</li>
+  <li>Motivation <em>(optional)</em> - A motivation section is critical for EIPs that want to change the Ethereum protocol. It should clearly explain why the existing protocol specification is inadequate to address the problem that the EIP solves. This section may be omitted if the motivation is evident.</li>
+  <li>Specification - The technical specification should describe the syntax and semantics of any new feature. The specification should be detailed enough to allow competing, interoperable implementations for any of the current Ethereum platforms (besu, erigon, ethereumjs, go-ethereum, nethermind, or others).</li>
+  <li>Rationale - The rationale fleshes out the specification by describing what motivated the design and why particular design decisions were made. It should describe alternate designs that were considered and related work, e.g. how the feature is supported in other languages. The rationale should discuss important objections or concerns raised during discussion around the EIP.</li>
+  <li>Backwards Compatibility <em>(optional)</em> - All EIPs that introduce backwards incompatibilities must include a section describing these incompatibilities and their consequences. The EIP must explain how the author proposes to deal with these incompatibilities. This section may be omitted if the proposal does not introduce any backward incompatibilities, but this section must be included if backward incompatibilities exist.</li>
+  <li>Test Cases <em>(optional)</em> - Test cases for an implementation are mandatory for EIPs that are affecting consensus changes. Tests should either be inlined in the EIP as data (such as input/expected output pairs) or included in <code class="language-plaintext highlighter-rouge">../assets/eip-###/&lt;filename&gt;</code>. This section may be omitted for non-Core proposals.</li>
+  <li>Reference Implementation <em>(optional)</em> - An optional section that contains a reference/example implementation that people can use to assist in understanding or implementing this specification. This section may be omitted for all EIPs.</li>
+  <li>Security Considerations - All EIPs must contain a section that discusses the security implications/considerations relevant to the proposed change. Include information that might be important for security discussions, surfaces risks and can be used throughout the life-cycle of the proposal. E.g., include security-relevant design decisions, concerns, important discussions, implementation-specific guidance and pitfalls, an outline of threats and risks and how they are being addressed. EIP submissions missing the “Security Considerations” section will be rejected. An EIP cannot proceed to status “Final” without a Security Considerations discussion deemed sufficient by the reviewers.</li>
+  <li>Copyright Waiver - All EIPs must be in the public domain. The copyright waiver MUST link to the license file and use the following wording: <code class="language-plaintext highlighter-rouge">Copyright and related rights waived via [CC0](/LICENSE).</code></li>
+</ul>
+  
+    <h2 id="eip-formats-and-templates">
+      
+      
+        <a href="#eip-formats-and-templates" class="anchor-link"></a> EIP Formats and Templates
+      
+      
+    </h2>
+
+<p>EIPs should be written in <a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">markdown</a> format. There is a <a href="https://github.com/ethereum/EIPs/blob/master/eip-template.md">template</a> and <a href="https://github.com/ethereum/EIPs/blob/master/CONTRIBUTING.md">contributor</a> guidelines to follow.</p>
+  
+    <h2 id="eip-header-preamble">
+      
+      
+        <a href="#eip-header-preamble" class="anchor-link"></a> EIP Header Preamble
+      
+      
+    </h2>
+
+<p>Each EIP must begin with an <a href="https://www.ietf.org/rfc/rfc822.txt">RFC 822</a> style header preamble, preceded and followed by three hyphens (<code class="language-plaintext highlighter-rouge">---</code>). This header is also termed <a href="https://jekyllrb.com/docs/front-matter/">“front matter” by Jekyll</a>. The headers must appear in the following order.</p>
+
+<p><code class="language-plaintext highlighter-rouge">eip</code>: <em>EIP number</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">title</code>: <em>The EIP title is a few words, not a complete sentence</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">description</code>: <em>Description is one full (short) sentence</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">author</code>: <em>The list of the author’s or authors’ name(s) and/or username(s), or name(s) and email(s). Details are below.</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">discussions-to</code>: <em>The url pointing to the official discussion thread</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">status</code>: <em>Draft, Review, Last Call, Final, Stagnant, Withdrawn, Living</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">last-call-deadline</code>: <em>The date last call period ends on</em> (Optional field, only needed when status is <code class="language-plaintext highlighter-rouge">Last Call</code>)</p>
+
+<p><code class="language-plaintext highlighter-rouge">type</code>: <em>One of <code class="language-plaintext highlighter-rouge">Standards Track</code>, <code class="language-plaintext highlighter-rouge">Meta</code>, or <code class="language-plaintext highlighter-rouge">Informational</code></em></p>
+
+<p><code class="language-plaintext highlighter-rouge">category</code>: <em>One of <code class="language-plaintext highlighter-rouge">Core</code>, <code class="language-plaintext highlighter-rouge">Networking</code>, <code class="language-plaintext highlighter-rouge">Interface</code>, or <code class="language-plaintext highlighter-rouge">ERC</code></em> (Optional field, only needed for <code class="language-plaintext highlighter-rouge">Standards Track</code> EIPs)</p>
+
+<p><code class="language-plaintext highlighter-rouge">created</code>: <em>Date the EIP was created on</em></p>
+
+<p><code class="language-plaintext highlighter-rouge">requires</code>: <em>EIP number(s)</em> (Optional field)</p>
+
+<p><code class="language-plaintext highlighter-rouge">withdrawal-reason</code>: <em>A sentence explaining why the EIP was withdrawn.</em> (Optional field, only needed when status is <code class="language-plaintext highlighter-rouge">Withdrawn</code>)</p>
+
+<p>Headers that permit lists must separate elements with commas.</p>
+
+<p>Headers requiring dates will always do so in the format of ISO 8601 (yyyy-mm-dd).</p>
+  
+    <h3 id="author-header">
+      
+      
+        <a href="#author-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">author</code> header
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">author</code> header lists the names, email addresses or usernames of the authors/owners of the EIP. Those who prefer anonymity may use a username only, or a first name and a username. The format of the <code class="language-plaintext highlighter-rouge">author</code> header value must be:</p>
+
+<blockquote>
+  <p>Random J. User &lt;address@dom.ain&gt;</p>
+</blockquote>
+
+<p>or</p>
+
+<blockquote>
+  <p>Random J. User (@username)</p>
+</blockquote>
+
+<p>or</p>
+
+<blockquote>
+  <p>Random J. User (@username) &lt;address@dom.ain&gt;</p>
+</blockquote>
+
+<p>if the email address and/or GitHub username is included, and</p>
+
+<blockquote>
+  <p>Random J. User</p>
+</blockquote>
+
+<p>if neither the email address nor the GitHub username are given.</p>
+
+<p>At least one author must use a GitHub username, in order to get notified on change requests and have the capability to approve or reject them.</p>
+  
+    <h3 id="discussions-to-header">
+      
+      
+        <a href="#discussions-to-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">discussions-to</code> header
+      
+      
+    </h3>
+
+<p>While an EIP is a draft, a <code class="language-plaintext highlighter-rouge">discussions-to</code> header will indicate the URL where the EIP is being discussed.</p>
+
+<p>The preferred discussion URL is a topic on <a href="https://ethereum-magicians.org/">Ethereum Magicians</a>. The URL cannot point to Github pull requests, any URL which is ephemeral, and any URL which can get locked over time (i.e. Reddit topics).</p>
+  
+    <h3 id="type-header">
+      
+      
+        <a href="#type-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">type</code> header
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">type</code> header specifies the type of EIP: Standards Track, Meta, or Informational. If the track is Standards please include the subcategory (core, networking, interface, or ERC).</p>
+  
+    <h3 id="category-header">
+      
+      
+        <a href="#category-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">category</code> header
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">category</code> header specifies the EIP’s category. This is required for standards-track EIPs only.</p>
+  
+    <h3 id="created-header">
+      
+      
+        <a href="#created-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">created</code> header
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">created</code> header records the date that the EIP was assigned a number. Both headers should be in yyyy-mm-dd format, e.g. 2001-08-14.</p>
+  
+    <h3 id="requires-header">
+      
+      
+        <a href="#requires-header" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">requires</code> header
+      
+      
+    </h3>
+
+<p>EIPs may have a <code class="language-plaintext highlighter-rouge">requires</code> header, indicating the EIP numbers that this EIP depends on. If such a dependency exists, this field is required.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">requires</code> dependency is created when the current EIP cannot be understood or implemented without a concept or technical element from another EIP. Merely mentioning another EIP does not necessarily create such a dependency.</p>
+  
+    <h2 id="linking-to-external-resources">
+      
+      
+        <a href="#linking-to-external-resources" class="anchor-link"></a> Linking to External Resources
+      
+      
+    </h2>
+
+<p>Other than the specific exceptions listed below, links to external resources <strong>SHOULD NOT</strong> be included. External resources may disappear, move, or change unexpectedly.</p>
+
+<p>The process governing permitted external resources is described in <a href="/EIPS/eip-5757">EIP-5757</a>.</p>
+  
+    <h3 id="execution-client-specifications">
+      
+      
+        <a href="#execution-client-specifications" class="anchor-link"></a> Execution Client Specifications
+      
+      
+    </h3>
+
+<p>Links to the Ethereum Execution Client Specifications may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Execution Client Specifications</span><span class="p">](</span><span class="sx">https://github.com/ethereum/execution-specs/blob/9a1f22311f517401fed6c939a159b55600c454af/README.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/execution-specs/blob/9a1f22311f517401fed6c939a159b55600c454af/README.md">Ethereum Execution Client Specifications</a></p>
+
+<p>Permitted Execution Client Specifications URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/ethereum/execution-specs/(blob|commit)/[0-9a-f]{40}/.*|https://github.com/ethereum/execution-specs/tree/[0-9a-f]{40}/.*)$
+</code></pre>
+  
+    <h3 id="ethereum-system-contract-implementations">
+      
+      
+        <a href="#ethereum-system-contract-implementations" class="anchor-link"></a> Ethereum System Contract Implementations
+      
+      
+    </h3>
+
+<p>Links to the Ethereum System Contract Implementations repository may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum System Contract Implementations</span><span class="p">](</span><span class="sx">https://github.com/ethereum/sys-asm/blob/83f9801245ff56878a450b5625801101b9a225a1/README.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/sys-asm/blob/83f9801245ff56878a450b5625801101b9a225a1/README.md">Ethereum System Contract Implementations</a></p>
+
+<p>Permitted URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/ethereum/sys-asm/(blob|commit)/[0-9a-f]{40}/.*|https://github.com/ethereum/sys-asm/tree/[0-9a-f]{40}/.*)$
+</code></pre>
+  
+    <h3 id="execution-specification-tests">
+      
+      
+        <a href="#execution-specification-tests" class="anchor-link"></a> Execution Specification Tests
+      
+      
+    </h3>
+
+<p>Links to the Ethereum Execution Specification Tests (EEST) may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Execution Specification Tests</span><span class="p">](</span><span class="sx">https://github.com/ethereum/execution-spec-tests/blob/c9b9307ff320c9bb0ecb9a951aeab0da4d9d1684/README.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/execution-spec-tests/blob/c9b9307ff320c9bb0ecb9a951aeab0da4d9d1684/README.md">Ethereum Execution Specification Tests</a></p>
+
+<p>Permitted Execution Specification Tests URLs must anchor to a specific commit, and so must match one of these regular expressions:</p>
+
+<pre><code class="language-regex">^https://(www\.)?github\.com/ethereum/execution-spec-tests/(blob|tree)/[a-f0-9]{40}/.+$
+</code></pre>
+
+<pre><code class="language-regex">^https://(www\.)?github\.com/ethereum/execution-spec-tests/commit/[a-f0-9]{40}$
+</code></pre>
+  
+    <h3 id="consensus-layer-specifications">
+      
+      
+        <a href="#consensus-layer-specifications" class="anchor-link"></a> Consensus Layer Specifications
+      
+      
+    </h3>
+
+<p>Links to specific commits of files within the Ethereum Consensus Layer Specifications may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Beacon Chain</span><span class="p">](</span><span class="sx">https://github.com/ethereum/consensus-specs/blob/26695a9fdb747ecbe4f0bb9812fedbc402e5e18c/specs/sharding/beacon-chain.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/consensus-specs/blob/26695a9fdb747ecbe4f0bb9812fedbc402e5e18c/specs/sharding/beacon-chain.md">Beacon Chain</a></p>
+
+<p>Permitted Consensus Layer Specifications URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^https://github.com/ethereum/consensus-specs/(blob|commit)/[0-9a-f]{40}/.*$
+</code></pre>
+  
+    <h3 id="networking-specifications">
+      
+      
+        <a href="#networking-specifications" class="anchor-link"></a> Networking Specifications
+      
+      
+    </h3>
+
+<p>Links to specific commits of files within the Ethereum Networking Specifications may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Wire Protocol</span><span class="p">](</span><span class="sx">https://github.com/ethereum/devp2p/blob/40ab248bf7e017e83cc9812a4e048446709623e8/caps/eth.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders as:</p>
+
+<p><a href="https://github.com/ethereum/devp2p/blob/40ab248bf7e017e83cc9812a4e048446709623e8/caps/eth.md">Ethereum Wire Protocol</a></p>
+
+<p>Permitted Networking Specifications URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^https://github.com/ethereum/devp2p/(blob|commit)/[0-9a-f]{40}/.*$
+</code></pre>
+  
+    <h3 id="portal-specifications">
+      
+      
+        <a href="#portal-specifications" class="anchor-link"></a> Portal Specifications
+      
+      
+    </h3>
+
+<p>Links to specific commits of files within the Ethereum Portal Specifications may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Portal Wire Protocol</span><span class="p">](</span><span class="sx">https://github.com/ethereum/portal-network-specs/blob/5e321567b67bded7527355be714993c24371de1a/portal-wire-protocol.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders as:</p>
+
+<p><a href="https://github.com/ethereum/portal-network-specs/blob/5e321567b67bded7527355be714993c24371de1a/portal-wire-protocol.md">Portal Wire Protocol</a></p>
+
+<p>Permitted Networking Specifications URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^https://github.com/ethereum/portal-network-specs/(blob|commit)/[0-9a-f]{40}/.*$
+</code></pre>
+  
+    <h3 id="world-wide-web-consortium-w3c">
+      
+      
+        <a href="#world-wide-web-consortium-w3c" class="anchor-link"></a> World Wide Web Consortium (W3C)
+      
+      
+    </h3>
+
+<p>Links to a W3C “Recommendation” status specification may be included using normal markdown syntax. For example, the following link would be allowed:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Secure Contexts</span><span class="p">](</span><span class="sx">https://www.w3.org/TR/2021/CRD-secure-contexts-20210918/</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders as:</p>
+
+<p><a href="https://www.w3.org/TR/2021/CRD-secure-contexts-20210918/">Secure Contexts</a></p>
+
+<p>Permitted W3C recommendation URLs MUST anchor to a specification in the technical reports namespace with a date, and so MUST match this regular expression:</p>
+
+<pre><code class="language-regex">^https://www\.w3\.org/TR/[0-9][0-9][0-9][0-9]/.*$
+</code></pre>
+  
+    <h3 id="web-hypertext-application-technology-working-group-whatwg">
+      
+      
+        <a href="#web-hypertext-application-technology-working-group-whatwg" class="anchor-link"></a> Web Hypertext Application Technology Working Group (WHATWG)
+      
+      
+    </h3>
+
+<p>Links to WHATWG specifications may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">HTML</span><span class="p">](</span><span class="sx">https://html.spec.whatwg.org/commit-snapshots/578def68a9735a1e36610a6789245ddfc13d24e0/</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders as:</p>
+
+<p><a href="https://html.spec.whatwg.org/commit-snapshots/578def68a9735a1e36610a6789245ddfc13d24e0/">HTML</a></p>
+
+<p>Permitted WHATWG specification URLs must anchor to a specification defined in the <code class="language-plaintext highlighter-rouge">spec</code> subdomain (idea specifications are not allowed) and to a commit snapshot, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^https:\/\/[a-z]*\.spec\.whatwg\.org/commit-snapshots/[0-9a-f]{40}/$
+</code></pre>
+
+<p>Although not recommended by WHATWG, EIPs must anchor to a particular commit so that future readers can refer to the exact version of the living standard that existed at the time the EIP was finalized. This gives readers sufficient information to maintain compatibility, if they so choose, with the version referenced by the EIP and the current living standard.</p>
+  
+    <h3 id="internet-engineering-task-force-ietf">
+      
+      
+        <a href="#internet-engineering-task-force-ietf" class="anchor-link"></a> Internet Engineering Task Force (IETF)
+      
+      
+    </h3>
+
+<p>Links to an IETF Request For Comment (RFC) specification may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">RFC 8446</span><span class="p">](</span><span class="sx">https://www.rfc-editor.org/rfc/rfc8446</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders as:</p>
+
+<p><a href="https://www.rfc-editor.org/rfc/rfc8446">RFC 8446</a></p>
+
+<p>Permitted IETF specification URLs MUST anchor to a specification with an assigned RFC number (meaning cannot reference internet drafts), and so MUST match this regular expression:</p>
+
+<pre><code class="language-regex">^https:\/\/www.rfc-editor.org\/rfc\/.*$
+</code></pre>
+  
+    <h3 id="bitcoin-improvement-proposal">
+      
+      
+        <a href="#bitcoin-improvement-proposal" class="anchor-link"></a> Bitcoin Improvement Proposal
+      
+      
+    </h3>
+
+<p>Links to Bitcoin Improvement Proposals may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">BIP 38</span><span class="p">](</span><span class="sx">https://github.com/bitcoin/bips/blob/3db736243cd01389a4dfd98738204df1856dc5b9/bip-0038.mediawiki</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/bitcoin/bips/blob/3db736243cd01389a4dfd98738204df1856dc5b9/bip-0038.mediawiki">BIP 38</a></p>
+
+<p>Permitted Bitcoin Improvement Proposal URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/bitcoin/bips/blob/[0-9a-f]{40}/bip-[0-9]+\.mediawiki)$
+</code></pre>
+  
+    <h3 id="national-vulnerability-database-nvd">
+      
+      
+        <a href="#national-vulnerability-database-nvd" class="anchor-link"></a> National Vulnerability Database (NVD)
+      
+      
+    </h3>
+
+<p>Links to the Common Vulnerabilities and Exposures (CVE) system as published by the National Institute of Standards and Technology (NIST) may be included, provided they are qualified by the date of the most recent change, using the following syntax:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">CVE-2023-29638 (2023-10-17T10:14:15)</span><span class="p">](</span><span class="sx">https://nvd.nist.gov/vuln/detail/CVE-2023-29638</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://nvd.nist.gov/vuln/detail/CVE-2023-29638">CVE-2023-29638 (2023-10-17T10:14:15)</a></p>
+  
+    <h3 id="chain-agnostic-improvement-proposals-caips">
+      
+      
+        <a href="#chain-agnostic-improvement-proposals-caips" class="anchor-link"></a> Chain Agnostic Improvement Proposals (CAIPs)
+      
+      
+    </h3>
+
+<p>Links to a Chain Agnostic Improvement Proposals (CAIPs) specification may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">CAIP 10</span><span class="p">](</span><span class="sx">https://github.com/ChainAgnostic/CAIPs/blob/5dd3a2f541d399a82bb32590b52ca4340b09f08b/CAIPs/caip-10.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ChainAgnostic/CAIPs/blob/5dd3a2f541d399a82bb32590b52ca4340b09f08b/CAIPs/caip-10.md">CAIP 10</a></p>
+
+<p>Permitted Chain Agnostic URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/ChainAgnostic/CAIPs/blob/[0-9a-f]{40}/CAIPs/caip-[0-9]+\.md)$
+</code></pre>
+  
+    <h3 id="ethereum-yellow-paper">
+      
+      
+        <a href="#ethereum-yellow-paper" class="anchor-link"></a> Ethereum Yellow Paper
+      
+      
+    </h3>
+
+<p>Links to the Ethereum Yellow Paper may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Yellow Paper</span><span class="p">](</span><span class="sx">https://github.com/ethereum/yellowpaper/blob/9c601d6a58c44928d4f2b837c0350cec9d9259ed/paper.pdf</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/yellowpaper/blob/9c601d6a58c44928d4f2b837c0350cec9d9259ed/paper.pdf">Ethereum Yellow Paper</a></p>
+
+<p>Permitted Yellow Paper URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github\.com/ethereum/yellowpaper/blob/[0-9a-f]{40}/paper\.pdf)$
+</code></pre>
+  
+    <h3 id="execution-client-specification-tests">
+      
+      
+        <a href="#execution-client-specification-tests" class="anchor-link"></a> Execution Client Specification Tests
+      
+      
+    </h3>
+
+<p>Links to the Ethereum Execution Client Specification Tests may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Execution Client Specification Tests</span><span class="p">](</span><span class="sx">https://github.com/ethereum/execution-spec-tests/blob/d5a3188f122912e137aa2e21ed2a1403e806e424/README.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/execution-spec-tests/blob/d5a3188f122912e137aa2e21ed2a1403e806e424/README.md">Ethereum Execution Client Specification Tests</a></p>
+
+<p>Permitted Execution Client Specification Tests URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/ethereum/execution-spec-tests/(blob|commit)/[0-9a-f]{40}/.*|https://github.com/ethereum/execution-spec-tests/tree/[0-9a-f]{40}/.*)$
+</code></pre>
+  
+    <h3 id="digital-object-identifier-system">
+      
+      
+        <a href="#digital-object-identifier-system" class="anchor-link"></a> Digital Object Identifier System
+      
+      
+    </h3>
+
+<p>Links qualified with a Digital Object Identifier (DOI) may be included using the following syntax:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code>This is a sentence with a footnote.[^1]
+
+<span class="p">[</span><span class="ss">^1</span><span class="p">]:</span><span class="err">
+</span>    <span class="sx">```csl-json</span>
+    {
+      "type": "article",
+      "id": 1,
+      "author": [
+        {
+          "family": "Jameson",
+          "given": "Hudson"
+        }
+      ],
+      "DOI": "00.0000/a00000-000-0000-y",
+      "title": "An Interesting Article",
+      "original-date": {
+        "date-parts": [
+          [2022, 12, 31]
+        ]
+      },
+      "URL": "https://sly-hub.invalid/00.0000/a00000-000-0000-y",
+      "custom": {
+        "additional-urls": [
+          "https://example.com/an-interesting-article.pdf"
+        ]
+      }
+    }
+    <span class="p">```</span><span class="nl">
+</span></code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable code-block-style -->
+
+<p>This is a sentence with a footnote.<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup></p>
+
+<!-- markdownlint-restore -->
+
+<p>See the <a href="https://resource.citationstyles.org/schema/v1.0/input/json/csl-data.json">Citation Style Language Schema</a> for the supported fields. In addition to passing validation against that schema, references must include a DOI and at least one URL.</p>
+
+<p>The top-level URL field must resolve to a copy of the referenced document which can be viewed at zero cost. Values under <code class="language-plaintext highlighter-rouge">additional-urls</code> must also resolve to a copy of the referenced document, but may charge a fee.</p>
+  
+    <h3 id="execution-api-specification">
+      
+      
+        <a href="#execution-api-specification" class="anchor-link"></a> Execution API Specification
+      
+      
+    </h3>
+
+<p>Links to the Ethereum Execution API Specification may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">Ethereum Execution API Specification</span><span class="p">](</span><span class="sx">https://github.com/ethereum/execution-apis/blob/dd00287101e368752ba264950585dde4b61cdc17/README.md</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://github.com/ethereum/execution-apis/blob/dd00287101e368752ba264950585dde4b61cdc17/README.md">Ethereum Execution API Specification</a></p>
+
+<p>Permitted Execution API Specification URLs must anchor to a specific commit, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^(https://github.com/ethereum/execution-apis/(blob|commit)/[0-9a-f]{40}/.*|https://github.com/ethereum/execution-apis/tree/[0-9a-f]{40}/.*)$
+</code></pre>
+  
+    <h3 id="unicode-technical-standards-uts">
+      
+      
+        <a href="#unicode-technical-standards-uts" class="anchor-link"></a> Unicode Technical Standards (UTS)
+      
+      
+    </h3>
+
+<p>Links to Unicode Technical Standards may be included using normal markdown syntax, such as:</p>
+
+<div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="nv">UTS #46</span><span class="p">](</span><span class="sx">https://www.unicode.org/reports/tr46/tr46-35.html</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Which renders to:</p>
+
+<p><a href="https://www.unicode.org/reports/tr46/tr46-35.html">UTS #46</a></p>
+
+<p>Permitted UTS URLs must anchor to a specific version, and so must match this regular expression:</p>
+
+<pre><code class="language-regex">^https://www\.unicode\.org/reports/tr[0-9]+/tr[0-9]+-[0-9]+\.html$
+</code></pre>
+  
+    <h2 id="linking-to-other-eips">
+      
+      
+        <a href="#linking-to-other-eips" class="anchor-link"></a> Linking to other EIPs
+      
+      
+    </h2>
+
+<p>References to other EIPs should follow the format <code class="language-plaintext highlighter-rouge">EIP-N</code> where <code class="language-plaintext highlighter-rouge">N</code> is the EIP number you are referring to.  Each EIP that is referenced in an EIP <strong>MUST</strong> be accompanied by a relative markdown link the first time it is referenced, and <strong>MAY</strong> be accompanied by a link on subsequent references.  The link <strong>MUST</strong> always be done via relative paths so that the links work in this GitHub repository, forks of this repository, the main EIPs site, mirrors of the main EIP site, etc.  For example, you would link to this EIP as <code class="language-plaintext highlighter-rouge">./eip-1.md</code>.</p>
+  
+    <h2 id="auxiliary-files">
+      
+      
+        <a href="#auxiliary-files" class="anchor-link"></a> Auxiliary Files
+      
+      
+    </h2>
+
+<p>Images, diagrams and auxiliary files should be included in a subdirectory of the <code class="language-plaintext highlighter-rouge">assets</code> folder for that EIP as follows: <code class="language-plaintext highlighter-rouge">assets/eip-N</code> (where <strong>N</strong> is to be replaced with the EIP number). When linking to an image in the EIP, use relative links such as <code class="language-plaintext highlighter-rouge">../assets/eip-1/image.png</code>. Prefer SVG diagrams, then PNG, and finally everything else.</p>
+  
+    <h2 id="transferring-eip-ownership">
+      
+      
+        <a href="#transferring-eip-ownership" class="anchor-link"></a> Transferring EIP Ownership
+      
+      
+    </h2>
+
+<p>It occasionally becomes necessary to transfer ownership of EIPs to a new champion. In general, we’d like to retain the original author as a co-author of the transferred EIP, but that’s really up to the original author. A good reason to transfer ownership is because the original author no longer has the time or interest in updating it or following through with the EIP process, or has fallen off the face of the ‘net (i.e. is unreachable or isn’t responding to email). A bad reason to transfer ownership is because you don’t agree with the direction of the EIP. We try to build consensus around an EIP, but if that’s not possible, you can always submit a competing EIP.</p>
+
+<p>If you are interested in assuming ownership of an EIP, send a message asking to take over, addressed to both the original author and the EIP editor. If the original author doesn’t respond to the email in a timely manner, the EIP editor will make a unilateral decision (it’s not like such decisions can’t be reversed :)).</p>
+  
+    <h2 id="eip-editors">
+      
+      
+        <a href="#eip-editors" class="anchor-link"></a> EIP Editors
+      
+      
+    </h2>
+
+<p>The current EIP editors are</p>
+
+<ul>
+  <li>Matt Garnett (@lightclient)</li>
+  <li>Sam Wilson (@SamWilsn)</li>
+  <li>Zainan Victor Zhou (@xinbenlv)</li>
+  <li>Gajinder Singh (@g11tech)</li>
+  <li>Jochem Brouwer (@jochem-brouwer)</li>
+</ul>
+
+<p>Emeritus EIP editors are</p>
+
+<ul>
+  <li>Alex Beregszaszi (@axic)</li>
+  <li>Casey Detrio (@cdetrio)</li>
+  <li>Gavin John (@Pandapip1)</li>
+  <li>Greg Colvin (@gcolvin)</li>
+  <li>Hudson Jameson (@Souptacular)</li>
+  <li>Martin Becze (@wanderer)</li>
+  <li>Micah Zoltu (@MicahZoltu)</li>
+  <li>Nick Johnson (@arachnid)</li>
+  <li>Nick Savers (@nicksavers)</li>
+  <li>Vitalik Buterin (@vbuterin)</li>
+</ul>
+
+<p>If you would like to become an EIP editor, please check <a href="/EIPS/eip-5069">EIP-5069</a>.</p>
+  
+    <h2 id="eip-editor-responsibilities">
+      
+      
+        <a href="#eip-editor-responsibilities" class="anchor-link"></a> EIP Editor Responsibilities
+      
+      
+    </h2>
+
+<p>For each new EIP that comes in, an editor does the following:</p>
+
+<ul>
+  <li>Read the EIP to check if it is ready: sound and complete. The ideas must make technical sense, even if they don’t seem likely to get to final status.</li>
+  <li>The title should accurately describe the content.</li>
+  <li>Check the EIP for language (spelling, grammar, sentence structure, etc.), markup (GitHub flavored Markdown), code style</li>
+</ul>
+
+<p>If the EIP isn’t ready, the editor will send it back to the author for revision, with specific instructions.</p>
+
+<p>Once the EIP is ready for the repository, the EIP editor will:</p>
+
+<ul>
+  <li>Assign an EIP number (generally incremental; editors can reassign if number sniping is suspected)</li>
+  <li>Merge the corresponding <a href="https://github.com/ethereum/EIPs/pulls">pull request</a></li>
+  <li>Send a message back to the EIP author with the next step.</li>
+</ul>
+
+<p>Many EIPs are written and maintained by developers with write access to the Ethereum codebase. The EIP editors monitor EIP changes, and correct any structure, grammar, spelling, or markup mistakes we see.</p>
+
+<p>The editors don’t pass judgment on EIPs. We merely do the administrative &amp; editorial part.</p>
+  
+    <h2 id="style-guide">
+      
+      
+        <a href="#style-guide" class="anchor-link"></a> Style Guide
+      
+      
+    </h2>
+  
+    <h3 id="titles">
+      
+      
+        <a href="#titles" class="anchor-link"></a> Titles
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">title</code> field in the preamble:</p>
+
+<ul>
+  <li>Should be in title case.</li>
+  <li>Should not include the word “standard” or any variation thereof; and</li>
+  <li>Should not include the EIP’s number.</li>
+</ul>
+  
+    <h3 id="descriptions">
+      
+      
+        <a href="#descriptions" class="anchor-link"></a> Descriptions
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">description</code> field in the preamble:</p>
+
+<ul>
+  <li>Should be in sentence case.</li>
+  <li>Should not include the word “standard” or any variation thereof; and</li>
+  <li>Should not include the EIP’s number.</li>
+</ul>
+  
+    <h3 id="eip-numbers">
+      
+      
+        <a href="#eip-numbers" class="anchor-link"></a> EIP numbers
+      
+      
+    </h3>
+
+<p>When referring to an EIP with a <code class="language-plaintext highlighter-rouge">category</code> of <code class="language-plaintext highlighter-rouge">ERC</code>, it must be written in the hyphenated form <code class="language-plaintext highlighter-rouge">ERC-X</code> where <code class="language-plaintext highlighter-rouge">X</code> is that EIP’s assigned number. When referring to EIPs with any other <code class="language-plaintext highlighter-rouge">category</code>, it must be written in the hyphenated form <code class="language-plaintext highlighter-rouge">EIP-X</code> where <code class="language-plaintext highlighter-rouge">X</code> is that EIP’s assigned number.</p>
+  
+    <h3 id="rfc-2119-and-rfc-8174">
+      
+      
+        <a href="#rfc-2119-and-rfc-8174" class="anchor-link"></a> RFC 2119 and RFC 8174
+      
+      
+    </h3>
+
+<p>EIPs are encouraged to follow <a href="https://www.ietf.org/rfc/rfc2119.html">RFC 2119</a> and <a href="https://www.ietf.org/rfc/rfc8174.html">RFC 8174</a> for terminology and to insert the following at the beginning of the Specification section:</p>
+
+<blockquote>
+  <p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119 and RFC 8174.</p>
+</blockquote>
+
+<p>Don’t use RFC 2119 keywords (all-caps SHOULD/MUST/etc.) outside of the specification section.</p>
+  
+    <h2 id="history">
+      
+      
+        <a href="#history" class="anchor-link"></a> History
+      
+      
+    </h2>
+
+<p>This document was derived heavily from <a href="https://github.com/bitcoin/bips">Bitcoin’s BIP-0001</a> written by Amir Taaki which in turn was derived from <a href="https://peps.python.org/">Python’s PEP-0001</a>. In many places text was simply copied and modified. Although the PEP-0001 text was written by Barry Warsaw, Jeremy Hylton, and David Goodger, they are not responsible for its use in the Ethereum Improvement Process, and should not be bothered with technical questions specific to Ethereum or the EIP. Please direct all comments to the EIP editors.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+
+      <pre><code class="language-csl-json">{
+  "type": "article",
+  "id": 1,
+  "author": [
+    {
+      "family": "Jameson",
+      "given": "Hudson"
+    }
+  ],
+  "DOI": "00.0000/a00000-000-0000-y",
+  "title": "An Interesting Article",
+  "original-date": {
+    "date-parts": [
+      [2022, 12, 31]
+    ]
+  },
+  "URL": "https://sly-hub.invalid/00.0000/a00000-000-0000-y",
+  "custom": {
+    "additional-urls": [
+      "https://example.com/an-interesting-article.pdf"
+    ]
+  }
+}
+</code></pre>
+      <p><a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Martin Becze&nbsp;&lt;<a href="mailto:mb@ethereum.org">mb@ethereum.org</a>&gt;, Hudson Jameson&nbsp;&lt;<a href="mailto:hudson@ethereum.org">hudson@ethereum.org</a>&gt;,  et al., "EIP-1: EIP Purpose and Guidelines," <em>Ethereum Improvement Proposals</em>, no. 1, October 2015. Available: https://eips.ethereum.org/EIPS/eip-1.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "EIP-1: EIP Purpose and Guidelines",
+    "name": "EIP-1: EIP Purpose and Guidelines",
+    "author": "Martin Becze <mb@ethereum.org>, Hudson Jameson <hudson@ethereum.org>, et al.",
+    "dateCreated": "2015-10-27",
+    "datePublished": "2015-10-27",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2015"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

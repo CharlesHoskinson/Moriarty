@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-8113: Series Accounting for Incentivized Vaults</title>
+      <meta property="og:title" content="ERC-8113: Series Accounting for Incentivized Vaults" />
+    
+    <meta name="description" content="Series Accounting method for collecting performance fees in ERC-7540 type vaults." />
+    <meta property="og:description" content="Series Accounting method for collecting performance fees in ERC-7540 type vaults." />
+    <meta name="twitter:description" content="Series Accounting method for collecting performance fees in ERC-7540 type vaults." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-8113" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-8113" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-8113: Series Accounting for Incentivized Vaults
+    <a href="https://ethereum-magicians.org/t/erc-8113-series-accounting-for-incentivized-vaults/27306" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-8113.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Series Accounting method for collecting performance fees in ERC-7540 type vaults.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Yash Saraswat&nbsp;(<a href="https://github.com/0xpanicError">@0xpanicError</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2025-12-25</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/erc-8113-series-accounting-for-incentivized-vaults/27306" target="_blank" rel="noopener">https://ethereum-magicians.org/t/erc-8113-series-accounting-for-incentivized-vaults/27306</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-4626">EIP-4626</a>, 
+
+  <a href="eip-7540">EIP-7540</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definitions">Definitions</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#using-assets-instead-of-shares-for-redemption">Using “assets” instead of “shares” for redemption</a></li>
+      <li><a href="#consolidating-series">Consolidating Series</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>The following standard formalizes the Series Accounting Method for <a href="/EIPS/eip-7540">ERC-7540</a> and <a href="/EIPS/eip-4626">ERC-4626</a> type vaults, enabling them to collect performance fees on yields without introducing the free-rider problem.</p>
+
+<p>It defines the necessary architectural specification for implementing Series Accounting by requiring an independent Series to track each batch of claimed deposit requests within the vault with its unique <code class="language-plaintext highlighter-rouge">totalAssets</code>, <code class="language-plaintext highlighter-rouge">totalShares</code>,  <code class="language-plaintext highlighter-rouge">sharesOf</code> and <code class="language-plaintext highlighter-rouge">highwaterMark</code> values.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Current vault implementations typically implement a Highwater Mark based on the highest recorded price-per-share (the ratio of total assets to total shares of the vault) to ensure performance fees are not collected for recovering losses. But relying on a single vault-wide highwater mark introduces the free-rider problem.</p>
+
+<p>A free-rider occurs when a user’s deposit is claimed at a price-per-share below the vault’s current highwater mark. When the vault later reaches a new highwater mark, the user doesn’t pay a performance fee on all yield accrued between their initial entry price and the new highwater mark, effectively diminishing returns for existing users.</p>
+
+<p>This standard implements the series accounting method where all batches of deposit requests are claimed in a series which maintains a unique highwater mark for those deposits. This allows for the protocol to accurately account for performance fees across all user deposits fairly. The “free-ride” problem is prevalent in vaults that derive their yields from RWAs. Reflecting performance from off-chain assets like hedge or liquid fund portfolios can vary drastically from each rebalancing/settlement cycle.</p>
+
+<p>This can cause large fluctuations in exchange rates (price-per-share) of a vault resulting in inaccurate performance fee collection from users. Series Accounting is a very common and standard method of accounting portfolios in traditional funds but lacks any formal implementation in DeFi.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “NOT RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in <a href="https://www.rfc-editor.org/rfc/rfc2119">RFC 2119</a> and <a href="https://www.rfc-editor.org/rfc/rfc8174">RFC 8174</a>.</p>
+
+<p>The general architecture of a vault remains the same. This standard can be used with both rebalancing type and async type vaults. For ERC-4626 type vaults which rebalances price-per-share periodically, all deposits made within a rebalancing period can be considered as a batch (all “settled” with same price-per-share). For ERC-7540 async type vaults, the user flows remain the same:</p>
+<ul>
+  <li>users requiring to submit a request to enter or exit the vault</li>
+  <li>vault implementing a method to move request from “pending” to “claimable” state</li>
+</ul>
+
+<p>However, the structure in which <code class="language-plaintext highlighter-rouge">assets</code> and <code class="language-plaintext highlighter-rouge">shares</code> are maintained in the vault is altered to accommodate for series accounting. Traditionally, the vault will store a global value for <code class="language-plaintext highlighter-rouge">totalAssets</code> and <code class="language-plaintext highlighter-rouge">totalShares</code>, but to follow this specification, the following state variables MUST be maintained individually for each series:</p>
+<ul>
+  <li>total assets</li>
+  <li>total shares</li>
+  <li>shares of users</li>
+  <li>list of users</li>
+  <li>highwater mark</li>
+</ul>
+  
+    <h3 id="definitions">
+      
+      
+        <a href="#definitions" class="anchor-link"></a> Definitions
+      
+      
+    </h3>
+
+<ul>
+  <li>series: a series is like a sub-vault where a set of all deposit requests that are claimed together are accounted for.</li>
+  <li>price-per-share: ratio of total assets to total shares in a series.</li>
+  <li>highwater mark: the highest price-per-share (also referred as exchange price) of a given series.</li>
+  <li>oracle: the entity responsible for setting the price-per-share of the vault.</li>
+  <li>settle: the act of rebalancing the vault or claiming the deposit requests performed by the oracle in a series id, determined by the logic specified in this standard.</li>
+  <li>lead series: each vault has a default series called the lead series where the first set of deposit requests will be claimed.</li>
+  <li>outstanding series: a series apart from the lead series which contains user shares.</li>
+  <li>consolidation: the process where all user shares are transferred from outstanding series to the lead series.</li>
+  <li>consolidated series: an empty series from which user shares were transferred during consolidation.</li>
+</ul>
+  
+    <h4 id="deposit-flow">
+      
+      
+        <a href="#deposit-flow" class="anchor-link"></a> Deposit Flow
+      
+      
+    </h4>
+
+<p>For ERC-4626 type vaults, when the <code class="language-plaintext highlighter-rouge">oracle</code> provides the price-per-share for rebalancing, all deposits that will follow in that rebalancing period will be considered as a batch and MUST <code class="language-plaintext highlighter-rouge">settle</code> in the same series id. For ERC-7540 type vaults, when the <code class="language-plaintext highlighter-rouge">oracle</code> provides the price-per-share at which the deposits are to be claimed, all deposits MUST <code class="language-plaintext highlighter-rouge">settle</code> in the same series id. The standard defines in which series id the deposits SHOULD be <code class="language-plaintext highlighter-rouge">settled</code> as follows:</p>
+
+<ul>
+  <li><strong>if the current highwater mark of the lead series is greater than the price-per-share of the lead series</strong>
+    <ul>
+      <li>MUST create a new series with a unique series ID.</li>
+      <li>MUST settle all pending deposit requests in this new series.</li>
+    </ul>
+  </li>
+  <li><strong>else (if the highwater mark is less than or equal to the price-per-share):</strong>
+    <ul>
+      <li>MUST settle all pending deposit requests in the lead series.</li>
+      <li>If the number of outstanding series is greater than zero:
+        <ul>
+          <li>MUST consolidate all outstanding series into the lead series.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+  
+    <h4 id="redeem-flow">
+      
+      
+        <a href="#redeem-flow" class="anchor-link"></a> Redeem Flow
+      
+      
+    </h4>
+
+<p><a href="/EIPS/eip-8113">ERC-8113</a> vaults MUST allow users to redeem (or request a redeem) by providing <code class="language-plaintext highlighter-rouge">assets</code> instead of <code class="language-plaintext highlighter-rouge">shares</code> as input.</p>
+
+<p>The vault is RECOMMENDED to store the proportion of total <code class="language-plaintext highlighter-rouge">assets</code> for that user in the redeem request.</p>
+
+<p>When the request is to be settled, the redemption MAY follow the FIFO method. At the time of settling a redeem request for a given price-per-share, the amount is to be redeemed from the lead series first. If the total user assets in lead series is not sufficient to fulfill the request, the remaining amount should be redeemed from the outstanding series with the lowest series Id. This process must be continued until the entire request is fulfilled. The portion of redemption that takes place in a given series is called a Redeem Slice.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="using-assets-instead-of-shares-for-redemption">
+      
+      
+        <a href="#using-assets-instead-of-shares-for-redemption" class="anchor-link"></a> Using “assets” instead of “shares” for redemption
+      
+      
+    </h3>
+
+<p>We cannot use <code class="language-plaintext highlighter-rouge">shares</code> to specify the amount a user wishes to redeem because shares are non-fungible across series. A user who can have assets across multiple series cannot specify a single share value in the request to represent all user assets.</p>
+
+<p>If requests are made for a given series, <code class="language-plaintext highlighter-rouge">shares</code> can be used but then:</p>
+<ul>
+  <li>user must make multiple requests if they wish to redeem more than what they own in a given series</li>
+  <li>if the series gets consolidated (in case of async vaults), the redemption may take place from lead series but price-per-share information must be stored which makes implementation very complicated and can introduce security risks</li>
+</ul>
+
+<p>The best solution presented to be users specifying <code class="language-plaintext highlighter-rouge">assets</code> instead of <code class="language-plaintext highlighter-rouge">shares</code> when making a redeem request. While processing the request, the implementation can store the proportion of total user assets across all series that they wish to redeem.</p>
+
+<p>This solves the issues of non-fungible shares and accounting across multiple series.</p>
+  
+    <h3 id="consolidating-series">
+      
+      
+        <a href="#consolidating-series" class="anchor-link"></a> Consolidating Series
+      
+      
+    </h3>
+
+<p>Each new set of deposit requests may require its own series. This can cause the number of outstanding series to increase in number drastically if vault periodically has periods of poor performance.</p>
+
+<p>This can cause following problems:</p>
+<ul>
+  <li>having many outstanding series may result in any implementation processing them to exceed the block gas limit eventually which can render the vault unusable.</li>
+  <li>traditional fund managers that expect to fetch vault data for their accounting reports are not pleased with having bloated Net Asset Vaule (NAV)/Assets Under Management (AUM) sheets with multiple series.</li>
+</ul>
+
+<p>After the lead series reaches a new highwater mark, all subsequent outstanding series also reach new highwater marks. When this happens, each existing user has paid their fair share of performance and there no longer exists a need to maintain these deposits separately.</p>
+
+<p>Hence, consolidating all outstanding series during this point can help a vault never exceed block gas limit and also keeps accounting reports for traditional managers clean and concise.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>Note that ERC-8113 is not backwards compatible with ERC-7540 or ERC-4626.</p>
+
+<p>The incompatibilties with ERC-4626 are as follows:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">totalAssets</code> would require additional input <code class="language-plaintext highlighter-rouge">seriesId</code></li>
+  <li><code class="language-plaintext highlighter-rouge">convertToShares</code> would require additional input <code class="language-plaintext highlighter-rouge">seriesId</code></li>
+  <li><code class="language-plaintext highlighter-rouge">convertToAssets</code> would require additional input <code class="language-plaintext highlighter-rouge">seriesId</code></li>
+  <li><code class="language-plaintext highlighter-rouge">redeem</code> would need to replace input <code class="language-plaintext highlighter-rouge">shares</code> with <code class="language-plaintext highlighter-rouge">assets</code></li>
+</ul>
+
+<p>The incompatibilities with ERC-7540 are as follows:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">requestRedeem</code> would need to replace input <code class="language-plaintext highlighter-rouge">shares</code> with <code class="language-plaintext highlighter-rouge">assets</code></li>
+</ul>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>The fee calculation for yield bearing vaults can be complex as there can be multiple fixed and variable charges applied before performance fee. This can cause mismatch from expected and realised fee collections.</p>
+
+<p>Protocols must be careful and thoroughly analyze the accounting resulting from their implementations to ensure they match expectations, and should provide clear documentation of all fee calculations.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Yash Saraswat&nbsp;(<a href="https://github.com/0xpanicError">@0xpanicError</a>), "ERC-8113: Series Accounting for Incentivized Vaults [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 8113, December 2025. Available: https://eips.ethereum.org/EIPS/eip-8113.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-8113: Series Accounting for Incentivized Vaults [DRAFT]",
+    "name": "ERC-8113: Series Accounting for Incentivized Vaults [DRAFT]",
+    "author": "Yash Saraswat (@0xpanicError)",
+    "dateCreated": "2025-12-25",
+    "datePublished": "2025-12-25",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-8113-series-accounting-for-incentivized-vaults/27306",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2025"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

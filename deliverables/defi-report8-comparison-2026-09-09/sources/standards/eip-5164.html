@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-5164: Cross-Chain Execution</title>
+      <meta property="og:title" content="ERC-5164: Cross-Chain Execution" />
+    
+    <meta name="description" content="Defines an interface that supports execution across EVM networks." />
+    <meta property="og:description" content="Defines an interface that supports execution across EVM networks." />
+    <meta name="twitter:description" content="Defines an interface that supports execution across EVM networks." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-5164" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-5164" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is in the last call for review stage. The authors wish to finalize the EIP and ask you to provide feedback.">📢 Last Call</span>
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-5164: Cross-Chain Execution
+    <a href="https://ethereum-magicians.org/t/eip-5164-cross-chain-execution/9658" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-5164.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Defines an interface that supports execution across EVM networks.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Brendan Asselstine&nbsp;(<a href="https://github.com/asselstine">@asselstine</a>), Pierrick Turelier&nbsp;(<a href="https://github.com/PierrickGT">@PierrickGT</a>), Chris Whinfrey&nbsp;(<a href="https://github.com/cwhinfrey">@cwhinfrey</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2022-06-14</td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Last Call Deadline</th>
+          <td>2023-11-15</td>
+        </tr>
+      
+             
+      
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+    <div class="alert alert-primary d-flex align-items-center" role="alert">
+      <svg class="bi flex-shrink-0 me-2" role="img" aria-label="Info:" style="width:2.5em;height:2.5em;"><use xlink:href="#bi-megaphone-fill"/></svg>
+      <div class="text-center w-100">
+        <a href="https://ethereum-magicians.org/t/eip-5164-cross-chain-execution/9658" target="_blank" rel="noopener">This EIP is in the process of being peer-reviewed. If you are interested in this EIP, please participate using this discussion link.</a>
+      </div>
+    </div>
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#messagedispatcher">MessageDispatcher</a></li>
+      <li><a href="#messageexecutor">MessageExecutor</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This specification defines a cross-chain execution interface for EVM-based blockchains. Implementations of this specification will allow contracts on one chain to call contracts on another by sending a cross-chain message.</p>
+
+<p>The specification defines two components: the “Message Dispatcher” and the “Message Executor”. The Message Dispatcher lives on the calling side, and the executor lives on the receiving side. When a message is sent, a Message Dispatcher will move the message through a transport layer to a Message Executor, where they are executed. Implementations of this specification must implement both components.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Many Ethereum protocols need to coordinate state changes across multiple EVM-based blockchains. These chains often have native or third-party bridges that allow Ethereum contracts to execute code. However, bridges have different APIs so bridge integrations are custom. Each one affords different properties; with varying degrees of security, speed, and control. Defining a simple, common specification will increase code re-use and allow us to use common bridge implementations.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.</p>
+
+<p>This specification allows contracts on one chain to send messages to contracts on another chain. There are two key interfaces that needs to be implemented:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">MessageDispatcher</code></li>
+  <li><code class="language-plaintext highlighter-rouge">MessageExecutor</code></li>
+</ul>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageDispatcher</code> lives on the origin chain and dispatches messages to the <code class="language-plaintext highlighter-rouge">MessageExecutor</code> for execution. The <code class="language-plaintext highlighter-rouge">MessageExecutor</code> lives on the destination chain and executes dispatched messages.</p>
+  
+    <h3 id="messagedispatcher">
+      
+      
+        <a href="#messagedispatcher" class="anchor-link"></a> MessageDispatcher
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageDispatcher</code> lives on the chain from which messages are sent. The Dispatcher’s job is to broadcast messages through a transport layer to one or more <code class="language-plaintext highlighter-rouge">MessageExecutor</code> contracts.</p>
+
+<p>A unique <code class="language-plaintext highlighter-rouge">messageId</code> MUST be generated for each message or message batch. The message identifier MUST be unique across chains and dispatchers.  This can be achieved by hashing a tuple of <code class="language-plaintext highlighter-rouge">chainId, dispatcherAddress, messageNonce</code> where messageNonce is a monotonically increasing integer per message.</p>
+  
+    <h4 id="messagedispatcher-methods">
+      
+      
+        <a href="#messagedispatcher-methods" class="anchor-link"></a> MessageDispatcher Methods
+      
+      
+    </h4>
+
+<p><strong>dispatchMessage</strong></p>
+
+<p>Will dispatch a message to be executed by the <code class="language-plaintext highlighter-rouge">MessageExecutor</code> on the destination chain specified by <code class="language-plaintext highlighter-rouge">toChainId</code>.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MUST emit the <code class="language-plaintext highlighter-rouge">MessageDispatched</code> event when a message is dispatched.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MUST revert if <code class="language-plaintext highlighter-rouge">toChainId</code> is not supported.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MUST forward the message to a <code class="language-plaintext highlighter-rouge">MessageExecutor</code> on the <code class="language-plaintext highlighter-rouge">toChainId</code>.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MUST use a unique <code class="language-plaintext highlighter-rouge">messageId</code> for each message.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MUST return the <code class="language-plaintext highlighter-rouge">messageId</code> to allow the message sender to track the message.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageDispatcher</code>s MAY require payment.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">MessageDispatcher</span> <span class="p">{</span>
+  <span class="k">function</span> <span class="n">dispatchMessage</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">toChainId</span><span class="p">,</span> <span class="kt">address</span> <span class="n">to</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">)</span> <span class="k">external</span> <span class="k">payable</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes32</span> <span class="n">messageId</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">dispatchMessage</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">payable</span>
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">toChainId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">to</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">data</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes</span>
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">messageId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes32</span>
+</code></pre></div></div>
+  
+    <h4 id="messagedispatcher-events">
+      
+      
+        <a href="#messagedispatcher-events" class="anchor-link"></a> MessageDispatcher Events
+      
+      
+    </h4>
+
+<p><strong>MessageDispatched</strong></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageDispatched</code> event MUST be emitted by the <code class="language-plaintext highlighter-rouge">MessageDispatcher</code> when an individual message is dispatched.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">MessageDispatcher</span> <span class="p">{</span>
+  <span class="k">event</span> <span class="n">MessageDispatched</span><span class="p">(</span>
+    <span class="kt">bytes32</span> <span class="k">indexed</span> <span class="n">messageId</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="k">indexed</span> <span class="n">from</span><span class="p">,</span>
+    <span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">toChainId</span><span class="p">,</span>
+    <span class="kt">address</span> <span class="n">to</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="n">data</span><span class="p">,</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">MessageDispatched</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">messageId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes32</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">from</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">toChainId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">to</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">data</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes</span>
+</code></pre></div></div>
+  
+    <h3 id="messageexecutor">
+      
+      
+        <a href="#messageexecutor" class="anchor-link"></a> MessageExecutor
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageExecutor</code> executes dispatched messages and message batches. Developers must implement a <code class="language-plaintext highlighter-rouge">MessageExecutor</code> in order to execute messages on the receiving chain.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageExecutor</code> will execute a messageId only once, but may execute messageIds in any order. This specification makes no ordering guarantees, because messages and message batches may travel non-sequentially through the transport layer.</p>
+  
+    <h4 id="execution">
+      
+      
+        <a href="#execution" class="anchor-link"></a> Execution
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s SHOULD verify all message data with the bridge transport layer.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s MUST NOT successfully execute a message more than once.</p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s MUST revert the transaction when a message fails to be executed allowing the message to be retried at a later time.</p>
+
+<p><strong>Calldata</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s MUST append the ABI-packed (<code class="language-plaintext highlighter-rouge">messageId</code>, <code class="language-plaintext highlighter-rouge">fromChainId</code>, <code class="language-plaintext highlighter-rouge">from</code>) to the calldata for each message being executed. This allows the receiver of the message to verify the cross-chain sender and the chain that the message is coming from.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">to</span><span class="p">.</span><span class="nb">call</span><span class="p">(</span><span class="n">abi</span><span class="p">.</span><span class="n">encodePacked</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">messageId</span><span class="p">,</span> <span class="n">fromChainId</span><span class="p">,</span> <span class="n">from</span><span class="p">));</span>
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">calldata</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">bytes</span>
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">data</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">messageId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes32</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">fromChainId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">from</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+</code></pre></div></div>
+  
+    <h4 id="messageexecutor-events">
+      
+      
+        <a href="#messageexecutor-events" class="anchor-link"></a> MessageExecutor Events
+      
+      
+    </h4>
+
+<p><strong>MessageIdExecuted</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageIdExecuted</code> MUST be emitted once a message or message batch has been executed.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">MessageExecutor</span> <span class="p">{</span>
+  <span class="k">event</span> <span class="n">MessageIdExecuted</span><span class="p">(</span>
+    <span class="kt">uint256</span> <span class="k">indexed</span> <span class="n">fromChainId</span><span class="p">,</span>
+    <span class="kt">bytes32</span> <span class="k">indexed</span> <span class="n">messageId</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">MessageIdExecuted</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">fromChainId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">messageId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bytes32</span>
+</code></pre></div></div>
+  
+    <h4 id="messageexecutor-errors">
+      
+      
+        <a href="#messageexecutor-errors" class="anchor-link"></a> MessageExecutor Errors
+      
+      
+    </h4>
+
+<p><strong>MessageAlreadyExecuted</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s MUST revert if a messageId has already been executed and SHOULD emit a <code class="language-plaintext highlighter-rouge">MessageIdAlreadyExecuted</code> custom error.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">MessageExecutor</span> <span class="p">{</span>
+  <span class="n">error</span> <span class="n">MessageIdAlreadyExecuted</span><span class="p">(</span>
+    <span class="kt">bytes32</span> <span class="n">messageId</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>MessageFailure</strong></p>
+
+<p><code class="language-plaintext highlighter-rouge">MessageExecutor</code>s MUST revert if an individual message fails and SHOULD emit a <code class="language-plaintext highlighter-rouge">MessageFailure</code> custom error.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">MessageExecutor</span> <span class="p">{</span>
+  <span class="n">error</span> <span class="n">MessageFailure</span><span class="p">(</span>
+    <span class="kt">bytes32</span> <span class="n">messageId</span><span class="p">,</span>
+    <span class="kt">bytes</span> <span class="n">errorData</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">MessageDispatcher</code> can be coupled to one or more <code class="language-plaintext highlighter-rouge">MessageExecutor</code>. It is up to bridges to decide how to couple the two. Users can easily bridge a message by calling <code class="language-plaintext highlighter-rouge">dispatchMessage</code> without being aware of the <code class="language-plaintext highlighter-rouge">MessageExecutor</code> address. Messages can also be traced by a client using the data logged by the <code class="language-plaintext highlighter-rouge">MessageIdExecuted</code> event.</p>
+
+<p>Some bridges may require payment in the native currency, so the <code class="language-plaintext highlighter-rouge">dispatchMessage</code> function is payable.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This specification is compatible with existing governance systems as it offers simple cross-chain execution.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>Bridge trust profiles are variable, so users must understand that bridge security depends on the implementation.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Brendan Asselstine&nbsp;(<a href="https://github.com/asselstine">@asselstine</a>), Pierrick Turelier&nbsp;(<a href="https://github.com/PierrickGT">@PierrickGT</a>), Chris Whinfrey&nbsp;(<a href="https://github.com/cwhinfrey">@cwhinfrey</a>), "ERC-5164: Cross-Chain Execution [LAST CALL]," <em>Ethereum Improvement Proposals</em>, no. 5164, June 2022. Available: https://eips.ethereum.org/EIPS/eip-5164.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-5164: Cross-Chain Execution [LAST CALL]",
+    "name": "ERC-5164: Cross-Chain Execution [LAST CALL]",
+    "author": "Brendan Asselstine (@asselstine), Pierrick Turelier (@PierrickGT), Chris Whinfrey (@cwhinfrey)",
+    "dateCreated": "2022-06-14",
+    "datePublished": "2022-06-14",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-5164-cross-chain-execution/9658",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2022"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

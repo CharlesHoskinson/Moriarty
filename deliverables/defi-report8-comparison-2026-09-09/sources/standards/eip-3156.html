@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-3156: Flash Loans</title>
+      <meta property="og:title" content="ERC-3156: Flash Loans" />
+    
+    <meta name="description" content="" />
+    <meta property="og:description" content="" />
+    <meta name="twitter:description" content="" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-3156" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-3156" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-3156: Flash Loans
+    <a href="https://ethereum-magicians.org/t/erc-3156-flash-loans-review-discussion/5077" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3156.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3></h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>), Fiona Kobayashi&nbsp;(<a href="https://github.com/fifikobayashi">@fifikobayashi</a>), fubuloubu&nbsp;(<a href="https://github.com/fubuloubu">@fubuloubu</a>), Austin Williams&nbsp;(<a href="https://github.com/onewayfunction">@onewayfunction</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2020-11-15</td>
+        </tr>
+      
+      
+             
+      
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#simple-summary">Simple Summary</a></li>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#lender-specification">Lender Specification</a></li>
+      <li><a href="#receiver-specification">Receiver Specification</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a></li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#implementation">Implementation</a>
+    <ul>
+      <li><a href="#flash-borrower-reference-implementation">Flash Borrower Reference Implementation</a></li>
+      <li><a href="#flash-mint-reference-implementation">Flash Mint Reference Implementation</a></li>
+      <li><a href="#flash-loan-reference-implementation">Flash Loan Reference Implementation</a></li>
+    </ul>
+  </li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#verification-of-callback-arguments">Verification of callback arguments</a></li>
+      <li><a href="#flash-lending-security-considerations">Flash lending security considerations</a></li>
+      <li><a href="#flash-minting-external-security-considerations">Flash minting external security considerations</a></li>
+      <li><a href="#flash-minting-internal-security-considerations">Flash minting internal security considerations</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="simple-summary">
+      
+      
+        <a href="#simple-summary" class="anchor-link"></a> Simple Summary
+      
+      
+    </h2>
+
+<p>This ERC provides standard interfaces and processes for single-asset flash loans.</p>
+  
+    <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>A flash loan is a smart contract transaction in which a lender smart contract lends assets to a borrower smart contract with the condition that the assets are returned, plus an optional fee, before the end of the transaction. This ERC specifies interfaces for lenders to accept flash loan requests, and for borrowers to take temporary control of the transaction within the lender execution. The process for the safe execution of flash loans is also specified.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Flash loans allow smart contracts to lend an amount of tokens without a requirement for collateral, with the condition that they must be returned within the same transaction.</p>
+
+<p>Early adopters of the flash loan pattern have produced different interfaces and different use patterns. The diversification is expected to intensify, and with it the technical debt required to integrate with diverse flash lending patterns.</p>
+
+<p>Some of the high level differences in the approaches across the protocols include:</p>
+<ul>
+  <li>Repayment approaches at the end of the transaction, where some pull the principal plus the fee from the loan receiver, and others where the loan receiver needs to manually return the principal and the fee to the lender.</li>
+  <li>Some lenders offer the ability to repay the loan using a token that is different to what was originally borrowed, which can reduce the overall complexity of the flash transaction and gas fees.</li>
+  <li>Some lenders offer a single entry point into the protocol regardless of whether you’re buying, selling, depositing or chaining them together as a flash loan, whereas other protocols offer discrete entry points.</li>
+  <li>Some lenders allow to flash mint any amount of their native token without charging a fee, effectively allowing flash loans bounded by computational constraints instead of asset ownership constraints.</li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>A flash lending feature integrates two smart contracts using a callback pattern. These are called the LENDER and the RECEIVER in this EIP.</p>
+  
+    <h3 id="lender-specification">
+      
+      
+        <a href="#lender-specification" class="anchor-link"></a> Lender Specification
+      
+      
+    </h3>
+
+<p>A <code class="language-plaintext highlighter-rouge">lender</code> MUST implement the IERC3156FlashLender interface.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pragma solidity ^0.7.0 || ^0.8.0;
+import "./IERC3156FlashBorrower.sol";
+
+
+interface IERC3156FlashLender {
+
+    /**
+     * @dev The amount of currency available to be lent.
+     * @param token The loan currency.
+     * @return The amount of `token` that can be borrowed.
+     */
+    function maxFlashLoan(
+        address token
+    ) external view returns (uint256);
+
+    /**
+     * @dev The fee to be charged for a given loan.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function flashFee(
+        address token,
+        uint256 amount
+    ) external view returns (uint256);
+
+    /**
+     * @dev Initiate a flash loan.
+     * @param receiver The receiver of the tokens in the loan, and the receiver of the callback.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @param data Arbitrary data structure, intended to contain user-defined parameters.
+     */
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external returns (bool);
+}
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">maxFlashLoan</code> function MUST return the maximum loan possible for <code class="language-plaintext highlighter-rouge">token</code>. If a <code class="language-plaintext highlighter-rouge">token</code> is not currently supported <code class="language-plaintext highlighter-rouge">maxFlashLoan</code> MUST return 0, instead of reverting.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashFee</code> function MUST return the fee charged for a loan of <code class="language-plaintext highlighter-rouge">amount</code> <code class="language-plaintext highlighter-rouge">token</code>. If the token is not supported <code class="language-plaintext highlighter-rouge">flashFee</code> MUST revert.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST include a callback to the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> function in a <code class="language-plaintext highlighter-rouge">IERC3156FlashBorrower</code> contract.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function flashLoan(
+    IERC3156FlashBorrower receiver,
+    address token,
+    uint256 amount,
+    bytes calldata data
+) external returns (bool) {
+  ...
+  require(
+      receiver.onFlashLoan(msg.sender, token, amount, fee, data) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
+      "IERC3156: Callback failed"
+  );
+  ...
+}
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST transfer <code class="language-plaintext highlighter-rouge">amount</code> of <code class="language-plaintext highlighter-rouge">token</code> to <code class="language-plaintext highlighter-rouge">receiver</code> before the callback to the receiver.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST include <code class="language-plaintext highlighter-rouge">msg.sender</code> as the <code class="language-plaintext highlighter-rouge">initiator</code> to <code class="language-plaintext highlighter-rouge">onFlashLoan</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST NOT modify the <code class="language-plaintext highlighter-rouge">token</code>, <code class="language-plaintext highlighter-rouge">amount</code> and <code class="language-plaintext highlighter-rouge">data</code> parameter received, and MUST pass them on to <code class="language-plaintext highlighter-rouge">onFlashLoan</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST include a <code class="language-plaintext highlighter-rouge">fee</code> argument to <code class="language-plaintext highlighter-rouge">onFlashLoan</code> with the fee to pay for the loan on top of the principal, ensuring that <code class="language-plaintext highlighter-rouge">fee == flashFee(token, amount)</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">lender</code> MUST verify that the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> callback returns the keccak256 hash of “ERC3156FlashBorrower.onFlashLoan”.</p>
+
+<p>After the callback, the <code class="language-plaintext highlighter-rouge">flashLoan</code> function MUST take the <code class="language-plaintext highlighter-rouge">amount + fee</code> <code class="language-plaintext highlighter-rouge">token</code> from the <code class="language-plaintext highlighter-rouge">receiver</code>, or revert if this is not successful.</p>
+
+<p>If successful, <code class="language-plaintext highlighter-rouge">flashLoan</code> MUST return <code class="language-plaintext highlighter-rouge">true</code>.</p>
+  
+    <h3 id="receiver-specification">
+      
+      
+        <a href="#receiver-specification" class="anchor-link"></a> Receiver Specification
+      
+      
+    </h3>
+
+<p>A <code class="language-plaintext highlighter-rouge">receiver</code> of flash loans MUST implement the IERC3156FlashBorrower interface:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pragma solidity ^0.7.0 || ^0.8.0;
+
+
+interface IERC3156FlashBorrower {
+
+    /**
+     * @dev Receive a flash loan.
+     * @param initiator The initiator of the loan.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @param fee The additional amount of tokens to repay.
+     * @param data Arbitrary data structure, intended to contain user-defined parameters.
+     * @return The keccak256 hash of "ERC3156FlashBorrower.onFlashLoan"
+     */
+    function onFlashLoan(
+        address initiator,
+        address token,
+        uint256 amount,
+        uint256 fee,
+        bytes calldata data
+    ) external returns (bytes32);
+}
+</code></pre></div></div>
+
+<p>For the transaction to not revert, <code class="language-plaintext highlighter-rouge">receiver</code> MUST approve <code class="language-plaintext highlighter-rouge">amount + fee</code> of <code class="language-plaintext highlighter-rouge">token</code> to be taken by <code class="language-plaintext highlighter-rouge">msg.sender</code> before the end of <code class="language-plaintext highlighter-rouge">onFlashLoan</code>.</p>
+
+<p>If successful, <code class="language-plaintext highlighter-rouge">onFlashLoan</code> MUST return the keccak256 hash of “ERC3156FlashBorrower.onFlashLoan”.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The interfaces described in this ERC have been chosen as to cover the known flash lending use cases, while allowing for safe and gas efficient implementations.</p>
+
+<p><code class="language-plaintext highlighter-rouge">flashFee</code> reverts on unsupported tokens, because returning a numerical value would be incorrect.</p>
+
+<p><code class="language-plaintext highlighter-rouge">flashLoan</code> has been chosen as a function name as descriptive enough, unlikely to clash with other functions in the lender, and including both the use cases in which the tokens lent are held or minted by the lender.</p>
+
+<p><code class="language-plaintext highlighter-rouge">receiver</code> is taken as a parameter to allow flexibility on the implementation of separate loan initiators and receivers.</p>
+
+<p>Existing flash lenders all provide flash loans of several token types from the same contract. Providing a <code class="language-plaintext highlighter-rouge">token</code> parameter in both the <code class="language-plaintext highlighter-rouge">flashLoan</code> and <code class="language-plaintext highlighter-rouge">onFlashLoan</code> functions matches closely the observed functionality.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">bytes calldata data</code> parameter is included for the caller to pass arbitrary information to the <code class="language-plaintext highlighter-rouge">receiver</code>, without impacting the utility of the <code class="language-plaintext highlighter-rouge">flashLoan</code> standard.</p>
+
+<p><code class="language-plaintext highlighter-rouge">onFlashLoan</code> has been chosen as a function name as descriptive enough, unlikely to clash with other functions in the <code class="language-plaintext highlighter-rouge">receiver</code>, and following the <code class="language-plaintext highlighter-rouge">onAction</code> naming pattern used as well in EIP-667.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">initiator</code> will often be required in the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> function, which the lender knows as <code class="language-plaintext highlighter-rouge">msg.sender</code>. An alternative implementation which would embed the <code class="language-plaintext highlighter-rouge">initiator</code> in the <code class="language-plaintext highlighter-rouge">data</code> parameter by the caller would require an additional mechanism for the receiver to verify its accuracy, and is not advisable.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">amount</code> will be required in the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> function, which the lender took as a parameter. An alternative implementation which would embed the <code class="language-plaintext highlighter-rouge">amount</code> in the <code class="language-plaintext highlighter-rouge">data</code> parameter by the caller would require an additional mechanism for the receiver to verify its accuracy, and is not advisable.</p>
+
+<p>A <code class="language-plaintext highlighter-rouge">fee</code> will often be calculated in the <code class="language-plaintext highlighter-rouge">flashLoan</code> function, which the <code class="language-plaintext highlighter-rouge">receiver</code> must be aware of for repayment. Passing the <code class="language-plaintext highlighter-rouge">fee</code> as a parameter instead of appended to <code class="language-plaintext highlighter-rouge">data</code> is simple and effective.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">amount + fee</code> are pulled from the <code class="language-plaintext highlighter-rouge">receiver</code> to allow the <code class="language-plaintext highlighter-rouge">lender</code> to implement other features that depend on using <code class="language-plaintext highlighter-rouge">transferFrom</code>, without having to lock them for the duration of a flash loan. An alternative implementation where the repayment is transferred to the <code class="language-plaintext highlighter-rouge">lender</code> is also possible, but would need all other features in the lender to be also based in using <code class="language-plaintext highlighter-rouge">transfer</code> instead of <code class="language-plaintext highlighter-rouge">transferFrom</code>. Given the lower complexity and prevalence of a “pull” architecture over a “push” architecture, “pull” was chosen.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>No backwards compatibility issues identified.</p>
+  
+    <h2 id="implementation">
+      
+      
+        <a href="#implementation" class="anchor-link"></a> Implementation
+      
+      
+    </h2>
+  
+    <h3 id="flash-borrower-reference-implementation">
+      
+      
+        <a href="#flash-borrower-reference-implementation" class="anchor-link"></a> Flash Borrower Reference Implementation
+      
+      
+    </h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pragma solidity ^0.8.0;
+
+import "./interfaces/IERC20.sol";
+import "./interfaces/IERC3156FlashBorrower.sol";
+import "./interfaces/IERC3156FlashLender.sol";
+
+
+contract FlashBorrower is IERC3156FlashBorrower {
+    enum Action {NORMAL, OTHER}
+
+    IERC3156FlashLender lender;
+
+    constructor (
+        IERC3156FlashLender lender_
+    ) {
+        lender = lender_;
+    }
+
+    /// @dev ERC-3156 Flash loan callback
+    function onFlashLoan(
+        address initiator,
+        address token,
+        uint256 amount,
+        uint256 fee,
+        bytes calldata data
+    ) external override returns(bytes32) {
+        require(
+            msg.sender == address(lender),
+            "FlashBorrower: Untrusted lender"
+        );
+        require(
+            initiator == address(this),
+            "FlashBorrower: Untrusted loan initiator"
+        );
+        (Action action) = abi.decode(data, (Action));
+        if (action == Action.NORMAL) {
+            // do one thing
+        } else if (action == Action.OTHER) {
+            // do another
+        }
+        return keccak256("ERC3156FlashBorrower.onFlashLoan");
+    }
+
+    /// @dev Initiate a flash loan
+    function flashBorrow(
+        address token,
+        uint256 amount
+    ) public {
+        bytes memory data = abi.encode(Action.NORMAL);
+        uint256 _allowance = IERC20(token).allowance(address(this), address(lender));
+        uint256 _fee = lender.flashFee(token, amount);
+        uint256 _repayment = amount + _fee;
+        IERC20(token).approve(address(lender), _allowance + _repayment);
+        lender.flashLoan(this, token, amount, data);
+    }
+}
+</code></pre></div></div>
+  
+    <h3 id="flash-mint-reference-implementation">
+      
+      
+        <a href="#flash-mint-reference-implementation" class="anchor-link"></a> Flash Mint Reference Implementation
+      
+      
+    </h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pragma solidity ^0.8.0;
+
+import "../ERC20.sol";
+import "../interfaces/IERC20.sol";
+import "../interfaces/IERC3156FlashBorrower.sol";
+import "../interfaces/IERC3156FlashLender.sol";
+
+
+/**
+ * @author Alberto Cuesta Cañada
+ * @dev Extension of {ERC20} that allows flash minting.
+ */
+contract FlashMinter is ERC20, IERC3156FlashLender {
+
+    bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
+    uint256 public fee; //  1 == 0.01 %.
+
+    /**
+     * @param fee_ The percentage of the loan `amount` that needs to be repaid, in addition to `amount`.
+     */
+    constructor (
+        string memory name,
+        string memory symbol,
+        uint256 fee_
+    ) ERC20(name, symbol) {
+        fee = fee_;
+    }
+
+    /**
+     * @dev The amount of currency available to be lent.
+     * @param token The loan currency.
+     * @return The amount of `token` that can be borrowed.
+     */
+    function maxFlashLoan(
+        address token
+    ) external view override returns (uint256) {
+        return type(uint256).max - totalSupply();
+    }
+
+    /**
+     * @dev The fee to be charged for a given loan.
+     * @param token The loan currency. Must match the address of this contract.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function flashFee(
+        address token,
+        uint256 amount
+    ) external view override returns (uint256) {
+        require(
+            token == address(this),
+            "FlashMinter: Unsupported currency"
+        );
+        return _flashFee(token, amount);
+    }
+
+    /**
+     * @dev Loan `amount` tokens to `receiver`, and takes it back plus a `flashFee` after the ERC3156 callback.
+     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
+     * @param token The loan currency. Must match the address of this contract.
+     * @param amount The amount of tokens lent.
+     * @param data A data parameter to be passed on to the `receiver` for any custom use.
+     */
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns (bool){
+        require(
+            token == address(this),
+            "FlashMinter: Unsupported currency"
+        );
+        uint256 fee = _flashFee(token, amount);
+        _mint(address(receiver), amount);
+        require(
+            receiver.onFlashLoan(msg.sender, token, amount, fee, data) == CALLBACK_SUCCESS,
+            "FlashMinter: Callback failed"
+        );
+        uint256 _allowance = allowance(address(receiver), address(this));
+        require(
+            _allowance &gt;= (amount + fee),
+            "FlashMinter: Repay not approved"
+        );
+        _approve(address(receiver), address(this), _allowance - (amount + fee));
+        _burn(address(receiver), amount + fee);
+        return true;
+    }
+
+    /**
+     * @dev The fee to be charged for a given loan. Internal function with no checks.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function _flashFee(
+        address token,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return amount * fee / 10000;
+    }
+}
+</code></pre></div></div>
+  
+    <h3 id="flash-loan-reference-implementation">
+      
+      
+        <a href="#flash-loan-reference-implementation" class="anchor-link"></a> Flash Loan Reference Implementation
+      
+      
+    </h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pragma solidity ^0.8.0;
+
+import "../interfaces/IERC20.sol";
+import "../interfaces/IERC3156FlashBorrower.sol";
+import "../interfaces/IERC3156FlashLender.sol";
+
+
+/**
+ * @author Alberto Cuesta Cañada
+ * @dev Extension of {ERC20} that allows flash lending.
+ */
+contract FlashLender is IERC3156FlashLender {
+
+    bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
+    mapping(address =&gt; bool) public supportedTokens;
+    uint256 public fee; //  1 == 0.01 %.
+
+
+    /**
+     * @param supportedTokens_ Token contracts supported for flash lending.
+     * @param fee_ The percentage of the loan `amount` that needs to be repaid, in addition to `amount`.
+     */
+    constructor(
+        address[] memory supportedTokens_,
+        uint256 fee_
+    ) {
+        for (uint256 i = 0; i &lt; supportedTokens_.length; i++) {
+            supportedTokens[supportedTokens_[i]] = true;
+        }
+        fee = fee_;
+    }
+
+    /**
+     * @dev Loan `amount` tokens to `receiver`, and takes it back plus a `flashFee` after the callback.
+     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @param data A data parameter to be passed on to the `receiver` for any custom use.
+     */
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns(bool) {
+        require(
+            supportedTokens[token],
+            "FlashLender: Unsupported currency"
+        );
+        uint256 fee = _flashFee(token, amount);
+        require(
+            IERC20(token).transfer(address(receiver), amount),
+            "FlashLender: Transfer failed"
+        );
+        require(
+            receiver.onFlashLoan(msg.sender, token, amount, fee, data) == CALLBACK_SUCCESS,
+            "FlashLender: Callback failed"
+        );
+        require(
+            IERC20(token).transferFrom(address(receiver), address(this), amount + fee),
+            "FlashLender: Repay failed"
+        );
+        return true;
+    }
+
+    /**
+     * @dev The fee to be charged for a given loan.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function flashFee(
+        address token,
+        uint256 amount
+    ) external view override returns (uint256) {
+        require(
+            supportedTokens[token],
+            "FlashLender: Unsupported currency"
+        );
+        return _flashFee(token, amount);
+    }
+
+    /**
+     * @dev The fee to be charged for a given loan. Internal function with no checks.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @return The amount of `token` to be charged for the loan, on top of the returned principal.
+     */
+    function _flashFee(
+        address token,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return amount * fee / 10000;
+    }
+
+    /**
+     * @dev The amount of currency available to be lent.
+     * @param token The loan currency.
+     * @return The amount of `token` that can be borrowed.
+     */
+    function maxFlashLoan(
+        address token
+    ) external view override returns (uint256) {
+        return supportedTokens[token] ? IERC20(token).balanceOf(address(this)) : 0;
+    }
+}
+
+</code></pre></div></div>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="verification-of-callback-arguments">
+      
+      
+        <a href="#verification-of-callback-arguments" class="anchor-link"></a> Verification of callback arguments
+      
+      
+    </h3>
+
+<p>The arguments of <code class="language-plaintext highlighter-rouge">onFlashLoan</code> are expected to reflect the conditions of the flash loan, but cannot be trusted unconditionally. They can be divided in two groups, that require different checks before they can be trusted to be genuine.</p>
+
+<ol>
+  <li>No arguments can be assumed to be genuine without some kind of verification. <code class="language-plaintext highlighter-rouge">initiator</code>, <code class="language-plaintext highlighter-rouge">token</code> and <code class="language-plaintext highlighter-rouge">amount</code> refer to a past transaction that might not have happened if the caller of <code class="language-plaintext highlighter-rouge">onFlashLoan</code> decides to lie. <code class="language-plaintext highlighter-rouge">fee</code> might be false or calculated incorrectly. <code class="language-plaintext highlighter-rouge">data</code> might have been manipulated by the caller.</li>
+  <li>To trust that the value of <code class="language-plaintext highlighter-rouge">initiator</code>, <code class="language-plaintext highlighter-rouge">token</code>, <code class="language-plaintext highlighter-rouge">amount</code> and <code class="language-plaintext highlighter-rouge">fee</code> are genuine a reasonable pattern is to verify that the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> caller is in a whitelist of verified flash lenders. Since often the caller of <code class="language-plaintext highlighter-rouge">flashLoan</code> will also be receiving the <code class="language-plaintext highlighter-rouge">onFlashLoan</code> callback this will be trivial. In all other cases flash lenders will need to be approved if the arguments in <code class="language-plaintext highlighter-rouge">onFlashLoan</code> are to be trusted.</li>
+  <li>To trust that the value of <code class="language-plaintext highlighter-rouge">data</code> is genuine, in addition to the check in point 1, it is recommended to verify that the <code class="language-plaintext highlighter-rouge">initiator</code> belongs to a group of trusted addresses. Trusting the <code class="language-plaintext highlighter-rouge">lender</code> and the <code class="language-plaintext highlighter-rouge">initiator</code> is enough to trust that the contents of <code class="language-plaintext highlighter-rouge">data</code> are genuine.</li>
+</ol>
+  
+    <h3 id="flash-lending-security-considerations">
+      
+      
+        <a href="#flash-lending-security-considerations" class="anchor-link"></a> Flash lending security considerations
+      
+      
+    </h3>
+  
+    <h4 id="automatic-approvals">
+      
+      
+        <a href="#automatic-approvals" class="anchor-link"></a> Automatic approvals
+      
+      
+    </h4>
+<p>The safest approach is to implement an approval for <code class="language-plaintext highlighter-rouge">amount+fee</code> before the <code class="language-plaintext highlighter-rouge">flashLoan</code> is executed.</p>
+
+<p>Any <code class="language-plaintext highlighter-rouge">receiver</code> that keeps an approval for a given <code class="language-plaintext highlighter-rouge">lender</code> needs to include in <code class="language-plaintext highlighter-rouge">onFlashLoan</code> a mechanism to verify that the initiator is trusted.</p>
+
+<p>Any <code class="language-plaintext highlighter-rouge">receiver</code> that includes in <code class="language-plaintext highlighter-rouge">onFlashLoan</code> the approval for the <code class="language-plaintext highlighter-rouge">lender</code> to take the <code class="language-plaintext highlighter-rouge">amount + fee</code> needs to be combined with a mechanism to verify that the initiator is trusted.</p>
+
+<p>If an unsuspecting contract with a non-reverting fallback function, or an EOA, would approve a <code class="language-plaintext highlighter-rouge">lender</code> implementing ERC3156, and not immediately use the approval, and if the <code class="language-plaintext highlighter-rouge">lender</code> would not verify the return value of <code class="language-plaintext highlighter-rouge">onFlashLoan</code>, then the unsuspecting contract or EOA could be drained of funds up to their allowance or balance limit. This would be executed by an <code class="language-plaintext highlighter-rouge">initiator</code> calling <code class="language-plaintext highlighter-rouge">flashLoan</code> on the victim. The flash loan would be executed and repaid, plus any fees, which would be accumulated by the <code class="language-plaintext highlighter-rouge">lender</code>. For this reason, it is important that the <code class="language-plaintext highlighter-rouge">lender</code> implements the specification in full and reverts if <code class="language-plaintext highlighter-rouge">onFlashLoan</code> doesn’t return the keccak256 hash for “ERC3156FlashBorrower.onFlashLoan”.</p>
+  
+    <h3 id="flash-minting-external-security-considerations">
+      
+      
+        <a href="#flash-minting-external-security-considerations" class="anchor-link"></a> Flash minting external security considerations
+      
+      
+    </h3>
+
+<p>The typical quantum of tokens involved in flash mint transactions will give rise to new innovative attack vectors.</p>
+  
+    <h4 id="example-1---interest-rate-attack">
+      
+      
+        <a href="#example-1---interest-rate-attack" class="anchor-link"></a> Example 1 - interest rate attack
+      
+      
+    </h4>
+<p>If there exists a lending protocol that offers stable interests rates, but it does not have floor/ceiling rate limits and it does not rebalance the fixed rate based on flash-induced liquidity changes, then it could be susceptible to the following scenario:</p>
+
+<p>FreeLoanAttack.sol</p>
+<ol>
+  <li>Flash mint 1 quintillion STAB</li>
+  <li>Deposit the 1 quintillion STAB + $1.5 million worth of ETH collateral</li>
+  <li>The quantum of your total deposit now pushes the stable interest rate down to 0.00001% stable interest rate</li>
+  <li>Borrow 1 million STAB on 0.00001% stable interest rate based on the 1.5M ETH collateral</li>
+  <li>Withdraw and burn the 1 quint STAB to close the original flash mint</li>
+  <li>You now have a 1 million STAB loan that is practically interest free for perpetuity ($0.10 / year in interest)</li>
+</ol>
+
+<p>The key takeaway being the obvious need to implement a flat floor/ceiling rate limit and to rebalance the rate based on short term liquidity changes.</p>
+  
+    <h4 id="example-2---arithmetic-overflow-and-underflow">
+      
+      
+        <a href="#example-2---arithmetic-overflow-and-underflow" class="anchor-link"></a> Example 2 - arithmetic overflow and underflow
+      
+      
+    </h4>
+<p>If the flash mint provider does not place any limits on the amount of flash mintable tokens in a transaction, then anyone can flash mint 2^256-1 amount of tokens.</p>
+
+<p>The protocols on the receiving end of the flash mints will need to ensure their contracts can handle this, either by using a compiler that embeds overflow protection in the smart contract bytecode, or by setting explicit checks.</p>
+  
+    <h3 id="flash-minting-internal-security-considerations">
+      
+      
+        <a href="#flash-minting-internal-security-considerations" class="anchor-link"></a> Flash minting internal security considerations
+      
+      
+    </h3>
+
+<p>The coupling of flash minting with business specific features in the same platform can easily lead to unintended consequences.</p>
+  
+    <h4 id="example---treasury-draining">
+      
+      
+        <a href="#example---treasury-draining" class="anchor-link"></a> Example - Treasury draining
+      
+      
+    </h4>
+<p>Assume a smart contract that flash lends its native token. The same smart contract borrows from a third party when users burn the native token. This pattern would be used to aggregate in the smart contract the collateralized debt of several users into a single account in the third party. The flash mint could be used to cause the lender to borrow to its limit, and then pushing interest rates in the underlying lender, liquidate the flash lender:</p>
+<ol>
+  <li>Flash mint from <code class="language-plaintext highlighter-rouge">lender</code> a very large amount of FOO.</li>
+  <li>Redeem FOO for BAR, causing <code class="language-plaintext highlighter-rouge">lender</code> to borrow from <code class="language-plaintext highlighter-rouge">underwriter</code> all the way to its borrowing limit.</li>
+  <li>Trigger a debt rate increase in <code class="language-plaintext highlighter-rouge">underwriter</code>, making <code class="language-plaintext highlighter-rouge">lender</code> undercollateralized.</li>
+  <li>Liquidate the <code class="language-plaintext highlighter-rouge">lender</code> for profit.</li>
+</ol>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Alberto Cuesta Cañada&nbsp;(<a href="https://github.com/alcueca">@alcueca</a>), Fiona Kobayashi&nbsp;(<a href="https://github.com/fifikobayashi">@fifikobayashi</a>), fubuloubu&nbsp;(<a href="https://github.com/fubuloubu">@fubuloubu</a>), Austin Williams&nbsp;(<a href="https://github.com/onewayfunction">@onewayfunction</a>), "ERC-3156: Flash Loans," <em>Ethereum Improvement Proposals</em>, no. 3156, November 2020. Available: https://eips.ethereum.org/EIPS/eip-3156.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-3156: Flash Loans",
+    "name": "ERC-3156: Flash Loans",
+    "author": "Alberto Cuesta Cañada (@alcueca), Fiona Kobayashi (@fifikobayashi), fubuloubu (@fubuloubu), Austin Williams (@onewayfunction)",
+    "dateCreated": "2020-11-15",
+    "datePublished": "2020-11-15",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-3156-flash-loans-review-discussion/5077",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2020"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-7540: Asynchronous ERC-4626 Tokenized Vaults</title>
+      <meta property="og:title" content="ERC-7540: Asynchronous ERC-4626 Tokenized Vaults" />
+    
+    <meta name="description" content="Extension of ERC-4626 with asynchronous deposit and redemption support" />
+    <meta property="og:description" content="Extension of ERC-4626 with asynchronous deposit and redemption support" />
+    <meta name="twitter:description" content="Extension of ERC-4626 with asynchronous deposit and redemption support" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7540" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7540" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-7540: Asynchronous ERC-4626 Tokenized Vaults
+    <a href="https://ethereum-magicians.org/t/eip-7540-asynchronous-erc-4626-tokenized-vaults/16153" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7540.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Extension of ERC-4626 with asynchronous deposit and redemption support</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Jeroen Offerijns&nbsp;(<a href="https://github.com/hieronx">@hieronx</a>), Alina Sinelnikova&nbsp;(<a href="https://github.com/ilinzweilin">@ilinzweilin</a>), Vikram Arun&nbsp;(<a href="https://github.com/vikramarun">@vikramarun</a>), Joey Santoro&nbsp;(<a href="https://github.com/joeysantoro">@joeysantoro</a>), Farhaan Ali&nbsp;(<a href="https://github.com/0xfarhaan">@0xfarhaan</a>), João Martins&nbsp;(<a href="https://github.com/0xTimepunk">@0xTimepunk</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2023-10-18</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-20">EIP-20</a>, 
+
+  <a href="eip-165">EIP-165</a>, 
+
+  <a href="eip-4626">EIP-4626</a>, 
+
+  <a href="eip-7575">EIP-7575</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definitions">Definitions:</a></li>
+      <li><a href="#request-flows">Request Flows</a></li>
+      <li><a href="#request-lifecycle">Request Lifecycle</a></li>
+      <li><a href="#request-ids">Request Ids</a></li>
+      <li><a href="#methods">Methods</a></li>
+      <li><a href="#events">Events</a></li>
+      <li><a href="#erc-165-support">ERC-165 support</a></li>
+      <li><a href="#erc-7575-support">ERC-7575 support</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#including-request-ids-but-not-including-a-claim-by-id-method">Including Request IDs but not including a Claim by ID method</a></li>
+      <li><a href="#symmetry-and-non-inclusion-of-requestwithdraw-and-requestmint">Symmetry and Non-inclusion of requestWithdraw and requestMint</a></li>
+      <li><a href="#optionality-of-flows">Optionality of Flows</a></li>
+      <li><a href="#non-inclusion-of-a-request-cancelation-flow">Non-inclusion of a Request Cancelation Flow</a></li>
+      <li><a href="#request-implementation-flexibility">Request Implementation Flexibility</a></li>
+      <li><a href="#not-allowing-short-circuiting-for-claims">Not Allowing Short-circuiting for Claims</a></li>
+      <li><a href="#no-outputs-for-request-functions">No Outputs for Request Functions</a></li>
+      <li><a href="#no-event-for-claimable-state">No Event for Claimable State</a></li>
+      <li><a href="#reversion-of-preview-functions-in-async-request-flows">Reversion of Preview Functions in Async Request Flows</a></li>
+      <li><a href="#mandated-support-for-erc-165">Mandated Support for ERC-165</a></li>
+      <li><a href="#not-allowing-pending-claims-to-be-fungible">Not Allowing Pending Claims to be Fungible</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#operators">Operators</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>The following standard extends <a href="/EIPS/eip-4626">ERC-4626</a> by adding support for asynchronous deposit and redemption flows. The async flows are called Requests.</p>
+
+<p>New methods are added to asynchronously Request a deposit or redemption, and view the status of the Request. The existing <code class="language-plaintext highlighter-rouge">deposit</code>, <code class="language-plaintext highlighter-rouge">mint</code>, <code class="language-plaintext highlighter-rouge">withdraw</code>, and <code class="language-plaintext highlighter-rouge">redeem</code> ERC-4626 methods are used for executing Claimable Requests.</p>
+
+<p>Implementations can choose whether to add asynchronous flows for deposits, redemptions, or both.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>The ERC-4626 Tokenized Vaults standard has helped to make yield-bearing tokens more composable across decentralized finance. The standard is optimized for atomic deposits and redemptions up to a limit. If the limit is reached, no new deposits or redemptions can be submitted.</p>
+
+<p>This limitation does not work well for any smart contract system with asynchronous actions or delays as a prerequisite for interfacing with the Vault (e.g. real-world asset protocols, undercollateralized lending protocols, cross-chain lending protocols, liquid staking tokens, or insurance safety modules).</p>
+
+<p>This standard expands the utility of ERC-4626 Vaults for asynchronous use cases. The existing Vault interface (<code class="language-plaintext highlighter-rouge">deposit</code>/<code class="language-plaintext highlighter-rouge">withdraw</code>/<code class="language-plaintext highlighter-rouge">mint</code>/<code class="language-plaintext highlighter-rouge">redeem</code>) is fully utilized to claim asynchronous Requests.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+  
+    <h3 id="definitions">
+      
+      
+        <a href="#definitions" class="anchor-link"></a> Definitions:
+      
+      
+    </h3>
+
+<p>The existing definitions from <a href="/EIPS/eip-4626">ERC-4626</a> apply. In addition, this spec defines:</p>
+
+<ul>
+  <li>Request: a request to enter (<code class="language-plaintext highlighter-rouge">requestDeposit</code>) or exit (<code class="language-plaintext highlighter-rouge">requestRedeem</code>) the Vault</li>
+  <li>Pending: the state where a Request has been made but is not yet Claimable</li>
+  <li>Claimable: the state where a Request is processed by the Vault enabling the user to claim corresponding <code class="language-plaintext highlighter-rouge">shares</code> (for async deposit) or <code class="language-plaintext highlighter-rouge">assets</code> (for async redeem)</li>
+  <li>Claimed: the state where a Request is finalized by the user and the user receives the output token (e.g. <code class="language-plaintext highlighter-rouge">shares</code> for a deposit Request)</li>
+  <li>Claim function: the corresponding Vault method to bring a Request to Claimed state (e.g. <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code> claims <code class="language-plaintext highlighter-rouge">shares</code> from <code class="language-plaintext highlighter-rouge">requestDeposit</code>). Lowercase claim always describes the verb action of calling a Claim function.</li>
+  <li>asynchronous deposit Vault: a Vault that implements asynchronous Requests for deposit flows</li>
+  <li>asynchronous redemption Vault: a Vault that implements asynchronous Requests for redemption flows</li>
+  <li>fully asynchronous Vault: a Vault that implements asynchronous Requests for both deposit and redemption flows</li>
+  <li>controller: owner of the Request, who can manage any actions related to the Request including claiming the <code class="language-plaintext highlighter-rouge">assets</code> or <code class="language-plaintext highlighter-rouge">shares</code></li>
+  <li>operator: an account that can manage Requests on behalf of another account.</li>
+</ul>
+  
+    <h3 id="request-flows">
+      
+      
+        <a href="#request-flows" class="anchor-link"></a> Request Flows
+      
+      
+    </h3>
+
+<p><a href="/EIPS/eip-7540">ERC-7540 Vaults</a> MUST implement one or both of asynchronous deposit and redemption Request flows. If either flow is not implemented in a Request pattern, it MUST use the ERC-4626 standard synchronous interaction pattern.</p>
+
+<p>All ERC-7540 asynchronous tokenized Vaults MUST implement ERC-4626 with overrides for certain behavior described below.</p>
+
+<p>Asynchronous deposit Vaults MUST override the ERC-4626 specification as follows:</p>
+
+<ol>
+  <li>The <code class="language-plaintext highlighter-rouge">deposit</code> and <code class="language-plaintext highlighter-rouge">mint</code> methods do not transfer <code class="language-plaintext highlighter-rouge">assets</code> to the Vault, because this already happened on <code class="language-plaintext highlighter-rouge">requestDeposit</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">previewDeposit</code> and <code class="language-plaintext highlighter-rouge">previewMint</code> MUST revert for all callers and inputs.</li>
+</ol>
+
+<p>Asynchronous redeem Vaults MUST override the ERC-4626 specification as follows:</p>
+
+<ol>
+  <li>The <code class="language-plaintext highlighter-rouge">redeem</code> and <code class="language-plaintext highlighter-rouge">withdraw</code> methods do not transfer <code class="language-plaintext highlighter-rouge">shares</code> to the Vault, because this already happened on <code class="language-plaintext highlighter-rouge">requestRedeem</code>.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">owner</code> field of <code class="language-plaintext highlighter-rouge">redeem</code> and <code class="language-plaintext highlighter-rouge">withdraw</code> SHOULD be renamed to <code class="language-plaintext highlighter-rouge">controller</code>, and the controller MUST be <code class="language-plaintext highlighter-rouge">msg.sender</code> unless the <code class="language-plaintext highlighter-rouge">controller</code> has approved the <code class="language-plaintext highlighter-rouge">msg.sender</code> as an operator.</li>
+  <li><code class="language-plaintext highlighter-rouge">previewRedeem</code> and <code class="language-plaintext highlighter-rouge">previewWithdraw</code> MUST revert for all callers and inputs.</li>
+</ol>
+  
+    <h3 id="request-lifecycle">
+      
+      
+        <a href="#request-lifecycle" class="anchor-link"></a> Request Lifecycle
+      
+      
+    </h3>
+
+<p>After submission, Requests go through Pending, Claimable, and Claimed stages. An example lifecycle for a deposit Request is visualized in the table below.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>State</strong></th>
+      <th><strong>User</strong></th>
+      <th><strong>Vault</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Pending</td>
+      <td><code class="language-plaintext highlighter-rouge">requestDeposit(assets, controller, owner)</code></td>
+      <td><code class="language-plaintext highlighter-rouge">asset.transferFrom(owner, vault, assets)</code>; <code class="language-plaintext highlighter-rouge">pendingDepositRequest[controller] += assets</code></td>
+    </tr>
+    <tr>
+      <td>Claimable</td>
+      <td> </td>
+      <td><em>Internal Request fulfillment</em>:  <code class="language-plaintext highlighter-rouge">pendingDepositRequest[controller] -= assets</code>; <code class="language-plaintext highlighter-rouge">claimableDepositRequest[controller] += assets</code></td>
+    </tr>
+    <tr>
+      <td>Claimed</td>
+      <td><code class="language-plaintext highlighter-rouge">deposit(assets, receiver, controller)</code></td>
+      <td><code class="language-plaintext highlighter-rouge">claimableDepositRequest[controller] -= assets</code>; <code class="language-plaintext highlighter-rouge">vault.balanceOf[receiver] += shares</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Note that <code class="language-plaintext highlighter-rouge">maxDeposit</code> increases and decreases in sync with <code class="language-plaintext highlighter-rouge">claimableDepositRequest</code>.</p>
+
+<p>Requests MUST NOT skip or otherwise short-circuit the Claim state. In other words, to initiate and claim a Request, a user MUST call both request* and the corresponding Claim function separately, even in the same block. Vaults MUST NOT “push” tokens onto the user after a Request, users MUST “pull” the tokens via the Claim function.</p>
+
+<p>For asynchronous Vaults, the exchange rate between <code class="language-plaintext highlighter-rouge">shares</code> and <code class="language-plaintext highlighter-rouge">assets</code> including fees and yield is up to the Vault implementation. In other words, pending redemption Requests MAY NOT be yield-bearing and MAY NOT have a fixed exchange rate.</p>
+  
+    <h3 id="request-ids">
+      
+      
+        <a href="#request-ids" class="anchor-link"></a> Request Ids
+      
+      
+    </h3>
+<p>The request ID (<code class="language-plaintext highlighter-rouge">requestId</code>) of a request is returned by the corresponding <code class="language-plaintext highlighter-rouge">requestDeposit</code> and <code class="language-plaintext highlighter-rouge">requestRedeem</code> functions.</p>
+
+<p>Multiple requests may have the same <code class="language-plaintext highlighter-rouge">requestId</code>, so a given Request is discriminated by both the <code class="language-plaintext highlighter-rouge">requestId</code> and the <code class="language-plaintext highlighter-rouge">controller</code>.</p>
+
+<p>Requests of the same <code class="language-plaintext highlighter-rouge">requestId</code> MUST be fungible with each other (except in the special case <code class="language-plaintext highlighter-rouge">requestId == 0</code> described below). I.e. all Requests with the same <code class="language-plaintext highlighter-rouge">requestId</code> MUST transition from Pending to Claimable at the same time and receive the same exchange rate between <code class="language-plaintext highlighter-rouge">assets</code> and <code class="language-plaintext highlighter-rouge">shares</code>. If a Request with <code class="language-plaintext highlighter-rouge">requestId != 0</code> becomes partially claimable, all requests of the same <code class="language-plaintext highlighter-rouge">requestId</code> MUST become claimable at the same pro-rata rate.</p>
+
+<p>There are no assumptions or requirements of requests with different <code class="language-plaintext highlighter-rouge">requestId</code>. I.e. they MAY transition to Claimable at different times and exchange rates with no ordering or correlation enforced in any way.</p>
+
+<p>When <code class="language-plaintext highlighter-rouge">requestId==0</code>, the Vault MUST use purely the <code class="language-plaintext highlighter-rouge">controller</code> to discriminate the request state. The Pending and Claimable state of multiple requests from the same <code class="language-plaintext highlighter-rouge">controller</code> would be aggregated. If a Vault returns <code class="language-plaintext highlighter-rouge">0</code> for the <code class="language-plaintext highlighter-rouge">requestId</code> of any request, it MUST return <code class="language-plaintext highlighter-rouge">0</code> for all requests.</p>
+  
+    <h3 id="methods">
+      
+      
+        <a href="#methods" class="anchor-link"></a> Methods
+      
+      
+    </h3>
+  
+    <h4 id="requestdeposit">
+      
+      
+        <a href="#requestdeposit" class="anchor-link"></a> requestDeposit
+      
+      
+    </h4>
+
+<p>Transfers <code class="language-plaintext highlighter-rouge">assets</code> from <code class="language-plaintext highlighter-rouge">owner</code> into the Vault and submits a Request for asynchronous <code class="language-plaintext highlighter-rouge">deposit</code>. This places the Request in Pending state, with a corresponding increase in <code class="language-plaintext highlighter-rouge">pendingDepositRequest</code> for the amount <code class="language-plaintext highlighter-rouge">assets</code>.</p>
+
+<p>The output <code class="language-plaintext highlighter-rouge">requestId</code> is used to partially discriminate the request along with the <code class="language-plaintext highlighter-rouge">controller</code>. See <a href="#request-ids">Request Ids</a> section for more info.</p>
+
+<p>When the Request is Claimable, <code class="language-plaintext highlighter-rouge">claimableDepositRequest</code> will be increased for the <code class="language-plaintext highlighter-rouge">controller</code>. <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code> can subsequently be called by <code class="language-plaintext highlighter-rouge">controller</code> to receive <code class="language-plaintext highlighter-rouge">shares</code>. A Request MAY transition straight to Claimable state but MUST NOT skip the Claimable state.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">shares</code> that will be received on <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code> MAY NOT be equivalent to the value of <code class="language-plaintext highlighter-rouge">convertToShares(assets)</code> at the time of Request, as the price can change between Request and Claim.</p>
+
+<p>MUST support <a href="/EIPS/eip-20">ERC-20</a> <code class="language-plaintext highlighter-rouge">approve</code> / <code class="language-plaintext highlighter-rouge">transferFrom</code> on <code class="language-plaintext highlighter-rouge">asset</code> as a deposit Request flow.</p>
+
+<p><code class="language-plaintext highlighter-rouge">owner</code> MUST equal <code class="language-plaintext highlighter-rouge">msg.sender</code> unless the <code class="language-plaintext highlighter-rouge">owner</code> has approved the <code class="language-plaintext highlighter-rouge">msg.sender</code> as an operator.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">assets</code> cannot be requested for <code class="language-plaintext highlighter-rouge">deposit</code>/<code class="language-plaintext highlighter-rouge">mint</code> (due to deposit limit being reached, slippage, the user not approving enough underlying tokens to the Vault contract, etc).</p>
+
+<p>Note that most implementations will require pre-approval of the Vault with the Vault’s underlying <code class="language-plaintext highlighter-rouge">asset</code> token.</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">DepositRequest</code> event.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestDeposit</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="pendingdepositrequest">
+      
+      
+        <a href="#pendingdepositrequest" class="anchor-link"></a> pendingDepositRequest
+      
+      
+    </h4>
+
+<p>The amount of requested <code class="language-plaintext highlighter-rouge">assets</code> in Pending state for the <code class="language-plaintext highlighter-rouge">controller</code> with the given <code class="language-plaintext highlighter-rouge">requestId</code> to <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code>.</p>
+
+<p>MUST NOT include any <code class="language-plaintext highlighter-rouge">assets</code> in Claimable state for <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code>.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">pendingDepositRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="claimabledepositrequest">
+      
+      
+        <a href="#claimabledepositrequest" class="anchor-link"></a> claimableDepositRequest
+      
+      
+    </h4>
+
+<p>The amount of requested <code class="language-plaintext highlighter-rouge">assets</code> in Claimable state for the <code class="language-plaintext highlighter-rouge">controller</code> with the given <code class="language-plaintext highlighter-rouge">requestId</code> to <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code>.</p>
+
+<p>MUST NOT include any <code class="language-plaintext highlighter-rouge">assets</code> in Pending state for <code class="language-plaintext highlighter-rouge">deposit</code> or <code class="language-plaintext highlighter-rouge">mint</code>.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">claimableDepositRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="requestredeem">
+      
+      
+        <a href="#requestredeem" class="anchor-link"></a> requestRedeem
+      
+      
+    </h4>
+
+<p>Assumes control of <code class="language-plaintext highlighter-rouge">shares</code> from <code class="language-plaintext highlighter-rouge">owner</code> and submits a Request for asynchronous <code class="language-plaintext highlighter-rouge">redeem</code>. This places the Request in Pending state, with a corresponding increase in <code class="language-plaintext highlighter-rouge">pendingRedeemRequest</code> for the amount <code class="language-plaintext highlighter-rouge">shares</code>.</p>
+
+<p>The output <code class="language-plaintext highlighter-rouge">requestId</code> is used to discriminate the request along with the <code class="language-plaintext highlighter-rouge">controller</code>. See <a href="#request-ids">Request Ids</a> section for more info.</p>
+
+<p><code class="language-plaintext highlighter-rouge">shares</code> MAY be temporarily locked in the Vault until the Claimable or Claimed state for accounting purposes, or they MAY be burned immediately upon <code class="language-plaintext highlighter-rouge">requestRedeem</code>.</p>
+
+<p>In either case, the <code class="language-plaintext highlighter-rouge">shares</code> MUST be removed from the custody of <code class="language-plaintext highlighter-rouge">owner</code> upon <code class="language-plaintext highlighter-rouge">requestRedeem</code> and burned by the time the request is Claimed.</p>
+
+<p>Redeem Request approval of <code class="language-plaintext highlighter-rouge">shares</code> for a <code class="language-plaintext highlighter-rouge">msg.sender</code> NOT equal to <code class="language-plaintext highlighter-rouge">owner</code> may come either from ERC-20 approval over the <code class="language-plaintext highlighter-rouge">shares</code> of <code class="language-plaintext highlighter-rouge">owner</code> or if the <code class="language-plaintext highlighter-rouge">owner</code> has approved the <code class="language-plaintext highlighter-rouge">msg.sender</code> as an operator. This MUST be consistent with similar behaviour pointed out in <a href="/EIPS/eip-6909">ERC-6909</a>, within “Approvals and Operators” section: “In accordance with the transferFrom method, spenders with operator permission are not subject to allowance restrictions, spenders with infinite approvals SHOULD NOT have their allowance deducted on delegated transfers, but spenders with non-infinite approvals MUST have their balance deducted on delegated transfers.”</p>
+
+<p>When the Request is Claimable, <code class="language-plaintext highlighter-rouge">claimableRedeemRequest</code> will be increased for the <code class="language-plaintext highlighter-rouge">controller</code>. <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code> can subsequently be called by <code class="language-plaintext highlighter-rouge">controller</code> to receive <code class="language-plaintext highlighter-rouge">assets</code>. A Request MAY transition straight to Claimable state but MUST NOT skip the Claimable state.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">assets</code> that will be received on <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code> MAY NOT be equivalent to the value of <code class="language-plaintext highlighter-rouge">convertToAssets(shares)</code> at the time of Request, as the price can change between Pending and Claimed.</p>
+
+<p>MUST revert if all of <code class="language-plaintext highlighter-rouge">shares</code> cannot be requested for <code class="language-plaintext highlighter-rouge">redeem</code> / <code class="language-plaintext highlighter-rouge">withdraw</code> (due to withdrawal limit being reached, slippage, the owner not having enough shares, etc).</p>
+
+<p>MUST emit the <code class="language-plaintext highlighter-rouge">RedeemRequest</code> event.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestRedeem</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+    <span class="pi">-</span> <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="pendingredeemrequest">
+      
+      
+        <a href="#pendingredeemrequest" class="anchor-link"></a> pendingRedeemRequest
+      
+      
+    </h4>
+
+<p>The amount of requested <code class="language-plaintext highlighter-rouge">shares</code> in Pending state for the <code class="language-plaintext highlighter-rouge">controller</code> with the given <code class="language-plaintext highlighter-rouge">requestId</code> to <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>MUST NOT include any <code class="language-plaintext highlighter-rouge">shares</code> in Claimable state for <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">pendingRedeemRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="claimableredeemrequest">
+      
+      
+        <a href="#claimableredeemrequest" class="anchor-link"></a> claimableRedeemRequest
+      
+      
+    </h4>
+
+<p>The amount of requested <code class="language-plaintext highlighter-rouge">shares</code> in Claimable state for the <code class="language-plaintext highlighter-rouge">controller</code> with the given <code class="language-plaintext highlighter-rouge">requestId</code> to <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>MUST NOT include any <code class="language-plaintext highlighter-rouge">shares</code> in Pending state for <code class="language-plaintext highlighter-rouge">redeem</code> or <code class="language-plaintext highlighter-rouge">withdraw</code>.</p>
+
+<p>MUST NOT show any variations depending on the caller.</p>
+
+<p>MUST NOT revert unless due to integer overflow caused by an unreasonably large input.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">claimableRedeemRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="isoperator">
+      
+      
+        <a href="#isoperator" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">isOperator</code>
+      
+      
+    </h4>
+
+<p>Returns <code class="language-plaintext highlighter-rouge">true</code> if the <code class="language-plaintext highlighter-rouge">operator</code> is approved as an operator for a <code class="language-plaintext highlighter-rouge">controller</code>.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">isOperator</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">view</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">operator</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">status</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bool</span>
+</code></pre></div></div>
+  
+    <h4 id="setoperator">
+      
+      
+        <a href="#setoperator" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">setOperator</code>
+      
+      
+    </h4>
+
+<p>Grants or revokes permissions for <code class="language-plaintext highlighter-rouge">operator</code> to manage Requests on behalf of the <code class="language-plaintext highlighter-rouge">msg.sender</code>.</p>
+
+<p>MUST set the operator status to the <code class="language-plaintext highlighter-rouge">approved</code> value.</p>
+
+<p>MUST log the <code class="language-plaintext highlighter-rouge">OperatorSet</code> event.</p>
+
+<p>MUST return True.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">setOperator</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">function</span>
+  <span class="na">stateMutability</span><span class="pi">:</span> <span class="s">nonpayable</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">operator</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">approved</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bool</span>
+
+  <span class="na">outputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">success</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bool</span>
+</code></pre></div></div>
+  
+    <h4 id="deposit-and-mint-overloaded-methods">
+      
+      
+        <a href="#deposit-and-mint-overloaded-methods" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">deposit</code> and <code class="language-plaintext highlighter-rouge">mint</code> overloaded methods
+      
+      
+    </h4>
+
+<p>Implementations MUST support an additional overloaded <code class="language-plaintext highlighter-rouge">deposit</code> and <code class="language-plaintext highlighter-rouge">mint</code> method on the specification from <a href="/EIPS/eip-4626">ERC-4626</a>, with an additional <code class="language-plaintext highlighter-rouge">controller</code> input of type <code class="language-plaintext highlighter-rouge">address</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">deposit(uint256 assets, address receiver, address controller)</code></li>
+  <li><code class="language-plaintext highlighter-rouge">mint(uint256 shares, address receiver, address controller)</code></li>
+</ul>
+
+<p>Calls MUST revert unless <code class="language-plaintext highlighter-rouge">msg.sender</code> is either equal to <code class="language-plaintext highlighter-rouge">controller</code> or an operator approved by <code class="language-plaintext highlighter-rouge">controller</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">controller</code> field is used to discriminate the Request for which the <code class="language-plaintext highlighter-rouge">assets</code> should be claimed in the case where <code class="language-plaintext highlighter-rouge">msg.sender</code> is NOT <code class="language-plaintext highlighter-rouge">controller</code>.</p>
+
+<p>When the <code class="language-plaintext highlighter-rouge">Deposit</code> event is emitted, the first parameter MUST be the <code class="language-plaintext highlighter-rouge">controller</code>, and the second parameter MUST be the <code class="language-plaintext highlighter-rouge">receiver</code>.</p>
+  
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+  
+    <h4 id="depositrequest">
+      
+      
+        <a href="#depositrequest" class="anchor-link"></a> DepositRequest
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">owner</code> has locked <code class="language-plaintext highlighter-rouge">assets</code> in the Vault to Request a deposit with request ID <code class="language-plaintext highlighter-rouge">requestId</code>. <code class="language-plaintext highlighter-rouge">controller</code> controls this Request. <code class="language-plaintext highlighter-rouge">sender</code> is the caller of the <code class="language-plaintext highlighter-rouge">requestDeposit</code> which may not be equal to the <code class="language-plaintext highlighter-rouge">owner</code>.</p>
+
+<p>MUST be emitted when a deposit Request is submitted using the <code class="language-plaintext highlighter-rouge">requestDeposit</code> method.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">DepositRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">sender</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">assets</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="redeemrequest">
+      
+      
+        <a href="#redeemrequest" class="anchor-link"></a> RedeemRequest
+      
+      
+    </h4>
+
+<p><code class="language-plaintext highlighter-rouge">sender</code> has locked <code class="language-plaintext highlighter-rouge">shares</code>, owned by <code class="language-plaintext highlighter-rouge">owner</code>, in the Vault to Request a redemption. <code class="language-plaintext highlighter-rouge">controller</code> controls this Request, but is not necessarily the <code class="language-plaintext highlighter-rouge">owner</code>.</p>
+
+<p>MUST be emitted when a redemption Request is submitted using the <code class="language-plaintext highlighter-rouge">requestRedeem</code> method.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">RedeemRequest</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">owner</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">requestId</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">sender</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">shares</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">uint256</span>
+</code></pre></div></div>
+  
+    <h4 id="operatorset">
+      
+      
+        <a href="#operatorset" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">OperatorSet</code>
+      
+      
+    </h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">controller</code> has set the <code class="language-plaintext highlighter-rouge">approved</code> status to an <code class="language-plaintext highlighter-rouge">operator</code>.</p>
+
+<p>MUST be logged when the operator status is set.</p>
+
+<p>MAY be logged when the operator status is set to the same status it was before the current call.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">OperatorSet</span>
+  <span class="na">type</span><span class="pi">:</span> <span class="s">event</span>
+
+  <span class="na">inputs</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">controller</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">operator</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">address</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">approved</span>
+      <span class="na">indexed</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bool</span>
+</code></pre></div></div>
+  
+    <h3 id="erc-165-support">
+      
+      
+        <a href="#erc-165-support" class="anchor-link"></a> <a href="/EIPS/eip-165">ERC-165</a> support
+      
+      
+    </h3>
+
+<p>Smart contracts implementing this Vault standard MUST implement the <a href="/EIPS/eip-165">ERC-165</a> <code class="language-plaintext highlighter-rouge">supportsInterface</code> function.</p>
+
+<p>All asynchronous Vaults MUST return the constant value <code class="language-plaintext highlighter-rouge">true</code> if either <code class="language-plaintext highlighter-rouge">0xe3bc4e65</code> (representing the operator methods that all ERC-7540 Vaults implement) or <code class="language-plaintext highlighter-rouge">0x2f0a18c5</code> (representing the <a href="/EIPS/eip-7575">ERC-7575</a> interface) is passed through the <code class="language-plaintext highlighter-rouge">interfaceID</code> argument.</p>
+
+<p>Asynchronous deposit Vaults MUST return the constant value <code class="language-plaintext highlighter-rouge">true</code> if <code class="language-plaintext highlighter-rouge">0xce3bbe50</code> is passed through the <code class="language-plaintext highlighter-rouge">interfaceID</code> argument.</p>
+
+<p>Asynchronous redemption Vaults MUST return the constant value <code class="language-plaintext highlighter-rouge">true</code> if <code class="language-plaintext highlighter-rouge">0x620ee8e4</code> is passed through the <code class="language-plaintext highlighter-rouge">interfaceID</code> argument.</p>
+  
+    <h3 id="erc-7575-support">
+      
+      
+        <a href="#erc-7575-support" class="anchor-link"></a> <a href="/EIPS/eip-7575">ERC-7575</a> support
+      
+      
+    </h3>
+
+<p>Smart contracts implementing this Vault standard MUST implement the <a href="/EIPS/eip-7575">ERC-7575</a> standard (in particular the <code class="language-plaintext highlighter-rouge">share</code> method).</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="including-request-ids-but-not-including-a-claim-by-id-method">
+      
+      
+        <a href="#including-request-ids-but-not-including-a-claim-by-id-method" class="anchor-link"></a> Including Request IDs but not including a Claim by ID method
+      
+      
+    </h3>
+<p>Requests in an Asynchronous Vault have properties of NFTs or Semi-Fungible tokens due to their asynchronicity. However, trying to pigeonhole all ERC-7540 Vaults into supporting <a href="./eip-721">ERC-721</a> or <a href="./eip-1155">ERC-1155</a> for Requests would create too much interface bloat.</p>
+
+<p>Using both an id and address to discriminate Requests allows for any of these use cases to be developed at an external layer without adding too much complexity to the core interface.</p>
+
+<p>Certain Vaults, especially <code class="language-plaintext highlighter-rouge">requestId==0</code> cases, benefit from using the underlying <a href="./eip-4626">ERC-4626</a> methods for claiming because there is no discrimination at the <code class="language-plaintext highlighter-rouge">requestId</code> level. This standard is written primarily with those use cases in mind. A future standard can optimize for nonzero request ID with support for claiming and transferring requests discriminated also with a <code class="language-plaintext highlighter-rouge">requestId</code>.</p>
+  
+    <h3 id="symmetry-and-non-inclusion-of-requestwithdraw-and-requestmint">
+      
+      
+        <a href="#symmetry-and-non-inclusion-of-requestwithdraw-and-requestmint" class="anchor-link"></a> Symmetry and Non-inclusion of requestWithdraw and requestMint
+      
+      
+    </h3>
+
+<p>In ERC-4626, the spec was written to be fully symmetrical with respect to converting <code class="language-plaintext highlighter-rouge">assets</code> and <code class="language-plaintext highlighter-rouge">shares</code> by including deposit/withdraw and mint/redeem.</p>
+
+<p>Due to the nature of Requests, asynchronous Vaults can only operate with certainty on the quantity that is fully known at the time of the Request (<code class="language-plaintext highlighter-rouge">assets</code> for <code class="language-plaintext highlighter-rouge">deposit</code> and <code class="language-plaintext highlighter-rouge">shares</code> for <code class="language-plaintext highlighter-rouge">redeem</code>). Therefore the deposit Request flow cannot work with a <code class="language-plaintext highlighter-rouge">mint</code> call, because the amount of <code class="language-plaintext highlighter-rouge">assets</code> for the requested <code class="language-plaintext highlighter-rouge">shares</code> amount may fluctuate before the fulfillment of the Request. Likewise, the redemption Request flow cannot work with a <code class="language-plaintext highlighter-rouge">withdraw</code> call.</p>
+  
+    <h3 id="optionality-of-flows">
+      
+      
+        <a href="#optionality-of-flows" class="anchor-link"></a> Optionality of Flows
+      
+      
+    </h3>
+
+<p>Certain use cases are only asynchronous on one side of the deposit or redeem Request flow. A good example of an asynchronous redemption Vault is a liquid staking token. The unstaking period necessitates support for asynchronous withdrawals, however, deposits can be fully synchronous.</p>
+  
+    <h3 id="non-inclusion-of-a-request-cancelation-flow">
+      
+      
+        <a href="#non-inclusion-of-a-request-cancelation-flow" class="anchor-link"></a> Non-inclusion of a Request Cancelation Flow
+      
+      
+    </h3>
+
+<p>In many cases, canceling a Request may not be straightforward or even technically feasible. The state transition of cancelations could be synchronous or asynchronous, and the way to claim a cancelation interfaces with the remaining Vault functionality in complex ways.</p>
+
+<p>A separate EIP should be developed to standardize the behavior of cancelling a pending Request. Defining the cancel flow is still important for certain classes of use cases for which the fulfillment of a Request can take a considerable amount of time.</p>
+  
+    <h3 id="request-implementation-flexibility">
+      
+      
+        <a href="#request-implementation-flexibility" class="anchor-link"></a> Request Implementation Flexibility
+      
+      
+    </h3>
+
+<p>The standard is flexible enough to support a wide range of interaction patterns for Request flows. Pending Requests can be handled via internal accounting, globally or on per-user levels, use ERC-20 or <a href="/EIPS/eip-721">ERC-721</a>, etc.</p>
+
+<p>Likewise yield on redemption Requests can accrue or not, and the exchange rate of any Request may be fixed or variable depending on the implementation.</p>
+  
+    <h3 id="not-allowing-short-circuiting-for-claims">
+      
+      
+        <a href="#not-allowing-short-circuiting-for-claims" class="anchor-link"></a> Not Allowing Short-circuiting for Claims
+      
+      
+    </h3>
+
+<p>If claims can short-circuit, this creates ambiguity for integrators and complicates the interface with overloaded behavior on Request functions.</p>
+
+<p>An example of a short-circuiting Request flow could be as follows: user triggers a Request which enters Pending state. When the Vault fulfills the Request, the corresponding <code class="language-plaintext highlighter-rouge">assets/shares</code> are pushed straight to the user. This requires only 1 step on the user’s behalf.</p>
+
+<p>This approach has a few issues:</p>
+<ul>
+  <li>cost/lack of scalability: as the number of vault users grows it can become intractably expensive to offload the Claim costs to the Vault operator</li>
+  <li>hinders integration potential: Vault integrators would need to handle both the 2-step and 1-step cases, with the 1-step pushing arbitrary tokens in from an unknown Request at an unknown time. This pushes complexity out onto integrators and reduces the standard’s utility.</li>
+</ul>
+
+<p>The 2-step approach used in the standard may be abstracted into a 1-step approach from the user perspective through the use of routers, relayers, message signing, or account abstraction.</p>
+
+<p>In the case where a Request may become Claimable immediately in the same block, there can be router contracts that atomically check for Claimable amounts immediately upon Request. Frontends can dynamically route Requests in this way depending on the state and implementation of the Vault to handle this edge case.</p>
+  
+    <h3 id="no-outputs-for-request-functions">
+      
+      
+        <a href="#no-outputs-for-request-functions" class="anchor-link"></a> No Outputs for Request Functions
+      
+      
+    </h3>
+
+<p><code class="language-plaintext highlighter-rouge">requestDeposit</code> and <code class="language-plaintext highlighter-rouge">requestRedeem</code> may not have a known exchange rate that will happen when the Request becomes Claimed. Returning the corresponding <code class="language-plaintext highlighter-rouge">assets</code> or <code class="language-plaintext highlighter-rouge">shares</code> could not work in this case.</p>
+
+<p>The Requests could also output a timestamp representing the minimum amount of time expected for the Request to become Claimable, however, not all Vaults will be able to return a reliable timestamp.</p>
+  
+    <h3 id="no-event-for-claimable-state">
+      
+      
+        <a href="#no-event-for-claimable-state" class="anchor-link"></a> No Event for Claimable State
+      
+      
+    </h3>
+
+<p>The state transition of a Request from Pending to Claimable happens at the Vault implementation level and is not specified in the standard. Requests may be batched into the Claimable state, or the state may transition automatically after a timestamp has passed. It is impractical to require an event to emit after a Request becomes Claimable at the user or batch level.</p>
+  
+    <h3 id="reversion-of-preview-functions-in-async-request-flows">
+      
+      
+        <a href="#reversion-of-preview-functions-in-async-request-flows" class="anchor-link"></a> Reversion of Preview Functions in Async Request Flows
+      
+      
+    </h3>
+
+<p>The preview functions do not take an address parameter, therefore the only way to discriminate discrepancies in the exchange rate is via the <code class="language-plaintext highlighter-rouge">msg.sender</code>. However, this could lead to integration/implementation complexities where support contracts cannot determine the output of a claim on behalf of a <code class="language-plaintext highlighter-rouge">controller</code>.</p>
+
+<p>In addition, there is no on-chain benefit to previewing the Claim step as the only valid state transition is to Claim anyway. If the output of a Claim is undesirable for any reason, the calling contract can revert on the output of that function call.</p>
+
+<p>It reduces code and implementation complexity at little to no cost to simply mandate reversion for the preview functions of an async flow.</p>
+  
+    <h3 id="mandated-support-for-erc-165">
+      
+      
+        <a href="#mandated-support-for-erc-165" class="anchor-link"></a> Mandated Support for <a href="/EIPS/eip-165">ERC-165</a>
+      
+      
+    </h3>
+
+<p>Implementing support for <a href="/EIPS/eip-165">ERC-165</a> is mandated because of the <a href="#optionality-of-flows">optionality of flows</a>. Integrations can use the <code class="language-plaintext highlighter-rouge">supportsInterface</code> method to check whether a vault is fully asynchronous, partially asynchronous, or fully synchronous (for which it is just following the <a href="./eip-4626">ERC-4626</a>), and use a single contract to support all cases.</p>
+  
+    <h3 id="not-allowing-pending-claims-to-be-fungible">
+      
+      
+        <a href="#not-allowing-pending-claims-to-be-fungible" class="anchor-link"></a> Not Allowing Pending Claims to be Fungible
+      
+      
+    </h3>
+<p>The async pending claims represent a sort of semi-fungible intermediate share class. Vaults can elect to wrap these claims in any token standard they like, for example, ERC-20, <a href="/EIPS/eip-1155">ERC-1155</a>, or ERC-721 depending on the use case. This is intentionally left out of the spec to provide flexibility to implementers.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>The interface is fully backward compatible with <a href="/EIPS/eip-4626">ERC-4626</a>. The specification of the <code class="language-plaintext highlighter-rouge">deposit</code>, <code class="language-plaintext highlighter-rouge">mint</code>, <code class="language-plaintext highlighter-rouge">redeem</code>, and <code class="language-plaintext highlighter-rouge">withdraw</code> methods is different as described in <a href="#specification">Specification</a>.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">// This code snippet is incomplete pseudocode used for example only and is no way intended to be used in production or guaranteed to be secure
+</span>
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">uint256</span><span class="p">)</span> <span class="k">public</span> <span class="n">pendingDepositRequest</span><span class="p">;</span>
+    
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="o">=&gt;</span> <span class="kt">uint256</span><span class="p">)</span> <span class="k">public</span> <span class="n">claimableDepositRequest</span><span class="p">;</span>
+
+    <span class="k">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="n">controller</span> <span class="o">=&gt;</span> <span class="k">mapping</span><span class="p">(</span><span class="kt">address</span> <span class="n">operator</span> <span class="o">=&gt;</span> <span class="kt">bool</span><span class="p">))</span> <span class="k">public</span> <span class="n">isOperator</span><span class="p">;</span>
+
+    <span class="k">function</span> <span class="n">requestDeposit</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">assets</span><span class="p">,</span> <span class="kt">address</span> <span class="n">controller</span><span class="p">,</span> <span class="kt">address</span> <span class="n">owner</span><span class="p">)</span> <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">requestId</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">assets</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">owner</span> <span class="o">==</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">||</span> <span class="n">isOperator</span><span class="p">[</span><span class="n">owner</span><span class="p">][</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">]);</span>
+
+        <span class="n">requestId</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// no requestId associated with this request
+</span>
+        <span class="n">asset</span><span class="p">.</span><span class="n">safeTransferFrom</span><span class="p">(</span><span class="n">owner</span><span class="p">,</span> <span class="kt">address</span><span class="p">(</span><span class="nb">this</span><span class="p">),</span> <span class="n">assets</span><span class="p">);</span> <span class="c1">// asset here is the Vault underlying asset
+</span>
+        <span class="n">pendingDepositRequest</span><span class="p">[</span><span class="n">controller</span><span class="p">]</span> <span class="o">+=</span> <span class="n">assets</span><span class="p">;</span>
+
+        <span class="k">emit</span> <span class="n">DepositRequest</span><span class="p">(</span><span class="n">controller</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">requestId</span><span class="p">,</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">assets</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">requestId</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/**
+     * Include some arbitrary transition logic here from Pending to Claimable
+     */</span>
+
+    <span class="k">function</span> <span class="n">deposit</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">assets</span><span class="p">,</span> <span class="kt">address</span> <span class="n">receiver</span><span class="p">,</span> <span class="kt">address</span> <span class="n">controller</span><span class="p">)</span> <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">shares</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">assets</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="nb">require</span><span class="p">(</span><span class="n">controller</span> <span class="o">==</span> <span class="n">msg</span><span class="p">.</span><span class="n">sender</span> <span class="o">||</span> <span class="n">isOperator</span><span class="p">[</span><span class="n">controller</span><span class="p">][</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">]);</span>
+
+        <span class="n">claimableDepositRequest</span><span class="p">[</span><span class="n">controller</span><span class="p">]</span> <span class="o">-=</span> <span class="n">assets</span><span class="p">;</span> <span class="c1">// underflow would revert if not enough claimable assets
+</span>
+        <span class="n">shares</span> <span class="o">=</span> <span class="n">convertToShares</span><span class="p">(</span><span class="n">assets</span><span class="p">);</span> <span class="c1">// this naive example uses the instantaneous exchange rate. It may be more common to use the rate locked in upon Claimable stage.
+</span>
+        <span class="n">balanceOf</span><span class="p">[</span><span class="n">receiver</span><span class="p">]</span> <span class="o">+=</span> <span class="n">shares</span><span class="p">;</span>
+
+        <span class="k">emit</span> <span class="n">Deposit</span><span class="p">(</span><span class="n">controller</span><span class="p">,</span> <span class="n">receiver</span><span class="p">,</span> <span class="n">assets</span><span class="p">,</span> <span class="n">shares</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">setOperator</span><span class="p">(</span><span class="kt">address</span> <span class="n">operator</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">approved</span><span class="p">)</span> <span class="k">public</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">isOperator</span><span class="p">[</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">][</span><span class="n">operator</span><span class="p">]</span> <span class="o">=</span> <span class="n">approved</span><span class="p">;</span>
+        <span class="k">emit</span> <span class="n">OperatorSet</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">operator</span><span class="p">,</span> <span class="n">approved</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+
+</code></pre></div></div>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>In general, asynchronicity concerns make state transitions in the Vault much more complex and vulnerable to security risks. Access control on Vault operations, clear documentation of state transitions, and invariant checks should all be performed to mitigate these risks. For example:</p>
+
+<ul>
+  <li>The view methods for viewing Pending and Claimable request states (e.g. pendingDepositRequest) are estimates useful for display purposes but can be outdated. The inability to know the final exchange rate on any Request requires users to trust the implementation of the asynchronous Vault in the computation of the exchange rate and fulfillment of their Request.</li>
+  <li>Shares or assets locked for Requests can be stuck in the Pending state. Vaults may elect to allow for the fungibility of pending claims or implement some cancellation functionality to protect users.</li>
+</ul>
+  
+    <h3 id="operators">
+      
+      
+        <a href="#operators" class="anchor-link"></a> Operators
+      
+      
+    </h3>
+
+<p>An operator has the ability to transfer the <code class="language-plaintext highlighter-rouge">asset</code> of the vault from the approver to any address, and simultaneously grants control over the <code class="language-plaintext highlighter-rouge">share</code> of the vault.</p>
+
+<p>Any user approving an operator must trust that operator with both the <code class="language-plaintext highlighter-rouge">asset</code> and <code class="language-plaintext highlighter-rouge">share</code> of the Vault.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Jeroen Offerijns&nbsp;(<a href="https://github.com/hieronx">@hieronx</a>), Alina Sinelnikova&nbsp;(<a href="https://github.com/ilinzweilin">@ilinzweilin</a>), Vikram Arun&nbsp;(<a href="https://github.com/vikramarun">@vikramarun</a>), Joey Santoro&nbsp;(<a href="https://github.com/joeysantoro">@joeysantoro</a>), Farhaan Ali&nbsp;(<a href="https://github.com/0xfarhaan">@0xfarhaan</a>), João Martins&nbsp;(<a href="https://github.com/0xTimepunk">@0xTimepunk</a>), "ERC-7540: Asynchronous ERC-4626 Tokenized Vaults," <em>Ethereum Improvement Proposals</em>, no. 7540, October 2023. Available: https://eips.ethereum.org/EIPS/eip-7540.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-7540: Asynchronous ERC-4626 Tokenized Vaults",
+    "name": "ERC-7540: Asynchronous ERC-4626 Tokenized Vaults",
+    "author": "Jeroen Offerijns (@hieronx), Alina Sinelnikova (@ilinzweilin), Vikram Arun (@vikramarun), Joey Santoro (@joeysantoro), Farhaan Ali (@0xfarhaan), João Martins (@0xTimepunk)",
+    "dateCreated": "2023-10-18",
+    "datePublished": "2023-10-18",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-7540-asynchronous-erc-4626-tokenized-vaults/16153",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2023"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

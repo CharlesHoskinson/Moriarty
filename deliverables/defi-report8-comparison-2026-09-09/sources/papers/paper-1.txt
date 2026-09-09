@@ -1,0 +1,1379 @@
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks
+
+KRZYSZTOF GOGOL, Department of Informatics IfI, University of Zurich UZH, Switzerland
+CHRISTIAN KILLER, Department of Informatics IfI, University of Zurich UZH, Switzerland
+MALTE SCHLOSSER, Department of Banking and Finance DBF, University of Zurich UZH, Switzerland
+THOMAS BOCEK, Axelra, Switzerland
+BURKHARD STILLER, Department of Informatics IfI, University of Zurich UZH, Switzerland
+Financial services that are not only related to crypto-currencies but rely on blockchain for security and integrity are jointly referred to
+as Decentralized Fiance (DeFi) and are evolving rapidly. Given their novel applications of DLT and sophistical economical designs, the
+distinction between DeFi services and understanding the involved risk are often complex.
+    This paper systematically studies the major classes of DeFi protocols, including risk and security. The selection of DeFi categories is
+based on a quantitative approach, covering over 80% of total value locked (TVL) in DeFi. Further, a structured methodology is provided
+to differentiate between DeFi protocols based on the algorithmic design and blockchain-network architecture. The findings indicate
+that every DeFi protocol falls into one of the three classes of DeFi algorithms: liquidity pool, synthetic asset or aggregator protocol.
+This work concludes with the risk analysis that is derived from the DeFi protocol, underlying tokens and agents. Certain DeFi assets,
+such as crypto-backed stablecoins, liquid staking tokens, and wrapped tokens of bridges, are synthetic assets, similar to derivatives in
+traditional finance, and bore similar risk exposure.
+
+Additional Key Words and Phrases: Decentralized Finance, DeFi, Blockchain, SoK
+
+ACM Reference Format:
+Krzysztof Gogol, Christian Killer, Malte Schlosser, Thomas Bocek, and Burkhard Stiller. 2023. SoK: Decentralized Finance (DeFi) -
+Fundamentals, Taxonomy and Risks. 1, 1 (June 2023), 29 pages. https://doi.org/10.1145/nnnnnnn.nnnnnnn
+
+
+1    INTRODUCTION
+In 2008 the Global Financial Crisis put the financial markets in turmoil. In the same year, a pseudonym Satoshi Nakamoto,
+an anonymous author or a group of authors, proposed a new decentralized payments system and called it - Bitcoin[114].
+Unlike the Traditional Financial system (TradFi), Bitcoin does not depend on any centralized and legal entity, such
+as a bank acting as a financial intermediary. Sparked by Bitcoin, a myriad of new Blockchain (BC) projects and
+cryptocurrencies emerged, and the total market cap of Bitcoin reached over USD 1 trillion in 2021 [23]. With the launch
+of the Ethereum BC [65] in 2015, a new generation of BCs emerged. In contrast to Bitcoin and its forks, those BCs
+allowed for the execution of turing complete Smart Contacts (SC), executed within the virtual machine hosted by the
+
+Authors’ addresses: Krzysztof Gogol, gogol@ifi.uzh.ch, Department of Informatics IfI, University of Zurich UZH, Binzmühlestrasse 14, Zürich, Switzerland,
+CH—8050; Christian Killer, killer@ifi.uzh.ch, Department of Informatics IfI, University of Zurich UZH, Binzmühlestrasse 14, Zürich, Switzerland,
+CH—8050; Malte Schlosser, malte.schlosser@bf.uzh.ch, Department of Banking and Finance DBF, University of Zurich UZH, Plattenstrasse 32, Zürich,
+Switzerland, CH—8032 Zürich,; Thomas Bocek, thomas.bocek@axelra.com, Axelra, Hagenholzstrasse 83, Zürich, Switzerland, CH—8050; Burkhard Stiller,
+stiller@ifi.uzh.ch, Department of Informatics IfI, University of Zurich UZH, Binzmühlestrasse 14, Zürich, Switzerland, CH—8050.
+
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for components
+of this work owned by others than ACM must be honored. Abstracting with credit is permitted. To copy otherwise, or republish, to post on servers or to
+redistribute to lists, requires prior specific permission and/or a fee. Request permissions from permissions@acm.org.
+© 2023 Association for Computing Machinery.
+Manuscript submitted to ACM
+
+
+Manuscript submitted to ACM                                                                                                                             1
+2                                                                                                      Gogol, Killer, et al.
+
+
+decentralized BC network. To further advance decentralization, the concept of Decentralized Exchange (DEX) with
+Automated Market Maker (AMM) emerged in 2016 [66]. Unlike traditional stock exchanges, the AMM-based DEX
+does not rely on a centralized order book. This idea was successfully implemented in 2017 by Uniswap[52], the first
+DEX. MakerDAO[108] and Compound[121] followed with the first decentralized stablecoin and decentralized lending
+protocol, respectively. In 2016 perpetuals were introduced by BitMEX[53], however, still relying on intermediaries.
+Perpetuals resemble traditional futures contracts without a fixed expiration date to enable derivatives amrkets for
+illiquid assets. Based on AMMs and collateralized vaults, perpetuals without relying on intermediaries emerged in mid
+2020 with MCDEX[37], the Perpetual Protocol[41], or GMX[33].
+    DeFi, as enabled by public and permissionless distributed ledger, differs from TradFi in various dimensions. First,
+(i) the lack of intermediaries allow parties in DeFi protocols to interact with each other instantly via SCs deployed on
+BCs. Consequently, the transaction settlement occurs within seconds, 24/7, contrary to days in TradeFi, and is more
+cost-efficient. Second, (ii) the permissionless nature means that any counter-party can interact with the SC, deploy
+its own SC, and all transactions and SCs are publicly verifiable. For example, any BC reserves or treasuries of DeFi
+protocols can be instantly audited. Third (iii), the immutability of the SCs and the BC imply that code is law and that
+nothing can be changed or altered. It should be noted that certain protocols have upgradable SCs, where a certain
+amount of people are required to perform updates, or Decentralized Autonomous Organizations (DAOs) are voting on
+specific adaptions. Consequently, DeFi increases efficiency, transparency and accessibility of the financial services[125].
+Furthermore, the source code of DeFi protocols is often open-source and the governance is executed via DAOs, allowing
+arbitrary stakeholders to participate in the decision-making process[94].
+
+
+
+
+                                               Fig. 1. DeFi Value Proposition
+
+
+    With general-purpose and programmable BCs (e.g., Ethereum[65], Solana[21], BSC[8]), it became possible to provide
+advanced financial services and products without relying on intermediaries for operations, settlement or execution. DeFi
+applications, called DeFi protocols, allow swapping, lending, margin trading, and borrowing tokens directly within the
+BC, as depicted in figure 1. Tokens, referred to as digital assets, can cryptographically prove ownership of the real-world
+asset (e.g., art, real estate, and financial products), be linked to other tokens or exist purely digitally for governance,
+utility, social or other purposes. Another popular process is yield farming. It describes the liquidity provisions to DeFi
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                            3
+
+
+protocols to enable its operations in exchange for participation in the charged fees and thus serves a similar role as
+market-making in TradFi. The Total Value Locked (TVL), a value representing the value of digital assets locked in yield
+farming or other DeFi protocols as collateral, grew from zero to USD 200 billion in just two years[11] and over five
+million BC wallet addresses interacted with DeFi protocols[24].
+     The rapid adoption of the DeFi protocols quickly revealed shortcomings of both protocols and underlying BCs.
+High transaction costs were the main factor hindering the winder DeFi adoption on the Ethereum BC. Still, Ethereum
+comprises today 58.5% of total TVL in DeFi, followed by Tron[47] (11.0%) and BSC[8] (10.6%) [13]. Layer 2 BCs on top
+of Ethereum, e.g., Polygon[42], Optimisms[39], zkSynz[25], starknet[22], emerged as scaling solutions that leverage the
+security of Ethereum and optimize the transaction costs by taking the calculation off-chain.
+
+1.1     Motivation and Contribution
+Numerous SoK and surveys on DeFi and BC exist, however, this work offers novel perspectives. First, related works
+mostly provide a high-level overview of DeFi and, second, these works arbitrarily mention selected categories of
+DeFi protocols[58, 68, 85, 95, 125, 132, 140]. Another group of research papers focuses on the vertical analysis of
+specific DeFi protocols, e.g., decentralized exchanges with automated market making[134], yield farming[76, 133] or
+stablecoins[64, 113]. Thus, this work presents the first Systematization of knowledge (SoK) that (i) applies a data-driven
+approach for the selection of DeFi protocols’ categories, and (ii) combines the vertical and horizontal research, in order
+to present a comprehensive overview of DeFi.
+     This work analyses the major, in terms of TVL, classes of DeFi protocols. The initial classification and TVL measures
+are derived from DeFi Llama[12] database. Only DeFi categories, which have TVL above five billion US dollars, are
+included in the analysis. Those categories represent over 89.09% of TVL in DeFi as of 18.12.2022 and are listed in the
+table 1. For the purpose of completeness, we also consider DEX aggregators and algorithmic stablecoins. TVL measure
+does not apply to DEX aggregators and algorithmic stablecoins. However, DEX aggregators initiate 25% daily traded
+volume via DEXs[12]. When discussing crypto-backed stablecoins, we introduce and classify all other stablecoins -
+fiat-backed and algorithmic. Perpetual protocols, with two billion US dollars TVL, are the largest DeFi category that
+does not meet the indicated treshold.
+                   Table 1. Categories of DeFi protocols[12] with Total Value Locked (TVL) denominated in USD
+
+    DeFi Protocol Category                                                                              Protocols       TVL
+    DEX                                                                                                     648        15.86b
+    Lending, Interest-rate Protocols                                                                        196        10.83b
+    Liquid Staking                                                                                           60         8.63b
+    CDP, Crypto-backed Stablecoins                                                                           60         7.92b
+    Bridge                                                                                                   36         7.81b
+    Yield, yield farming                                                                                    364         5.3b
+    Other                                                                                                   656        7.18b
+
+
+
+2     FUNDAMENTALS
+The general design principles for blockchains and Distributed Ledger Technology (DLT) and their implications for
+activities in financial services have been widely studied [95]. This section introduces the necessary blockchain definitions
+that are later used in the paper.
+                                                                                                     Manuscript submitted to ACM
+4                                                                                                        Gogol, Killer, et al.
+
+                                              Table 2. Terminology used in this work
+
+
+    Abbreviation      Term                          Definition
+    BC                Blockchain                    Public data storage executing a permissionless consensus protocol in
+                                                    a decentralized deployment [? ]
+    SC                Smart Contract                Digital protocol implemented in software, executing the terms of a
+                                                    contract agreed between two or more parties without the need of an
+                                                    intermediary [? ]
+    L1                Layer 1                       BC with its own independent network executing a consensus protocol
+                                                    security (e.g., BC with its own set of validators or miners)
+    L2                Layer 2                       An overlay network that relies on other BC for the security (e.g.,
+                                                    immutability)
+    DeFi              Decentralized Finance         Financial applications that rely on BC for their security and integrity
+                                                    (cf., Tab. 3)
+    CeFi              Centralized Finance           Financial applications that are hosted outside of BC, but involve BC in
+                                                    their business model (cf., Tab. 3)
+    TradFi            Traditional Finance           The traditional financial system, unrelated to BC or DeFi (cf., Tab. 3)
+    CEX               Centralized Exchange          Exchange that allows swapping fiat currency to cryptocurrencies and
+                                                    tokens
+    DEX               Decentralize Exchange         Exchange that operates entirely on the BC and allows to swap cryp-
+                                                    tocurrencies and tokens
+    AMM               Automated Market Model        Mathematical formula used to determine the exchange rate between
+                                                    tokens
+
+
+
+2.1      Blockchain
+A blockchain (BC) is a computer network that maintains a distributed database. This network only allows appending
+new transactions and forbids deleting or updating any transactions. Transactions are grouped into blocks and block
+order in the database is maintained, and verifiable, using cryptographic hash functions and digital signatures. BCs
+can be classified as permissioned and permissionless. Permissionless BCs are open (public) networks accessible by all.
+Permissioned BCs can be accessed only by external parties recognized by the system administrator [99]. For this paper,
+we define a BC as a public - trustless and permissionless - distributed ledger. Consequently, DeFi applications are also
+trustless - do not depend on any centralized entity - and permissionless - open to use by any BC wallet.
+     A network consensus mechanism defines the rules, for what constitutes a legitimate transaction and block. The
+dominant consensus mechanisms are proof-of-work (PoW) and proof-of-stake (PoS). The consensus mechanism
+economically incentives network participants - miners in PoW and validators in PoS blockchains - to promote network
+security. In PoW BCs, miners, to append a new block to the ledger, are required to solve the cryptographic puzzle in a
+process that requires electricity[114]. In PoS BCs, validators, to append a new block, must pledge ("stake") a certain
+amount of native tokens of the underlying BC. In exchange for appending a new block, validators receive a reward. In
+case of malicious behavior, validators are punished, in a process called slashing by a fee from the staked tokens. Staking
+is the process of providing BC native tokens to validators to participate in profits from the block rewards. By design,
+PoS blockchain requires validators and stakers to freeze their tokens for a period of time that may vary from days to
+years. Gas fee is paid to miners and validators for appending the transaction to the BC.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       5
+
+
+2.2   Layer-1 vs Layer-2
+According to blockchain trilemma, the blockchain network can only prioritize two features between three: decen-
+tralization, security or scalability[75]. As security is an absolute requirement and decentralization is a promise of
+BC, scalability has remained a challenge, resulting in low transaction rates and high transaction processing latencies.
+Layer-1 is the blockchain with its own, independent trust assumptions: the network of nodes, and consensus mechanism
+[84]. Layer-1 solutions target the improvements of the core elements of blockchain design, e.g., block data, consensus
+mechanisms, or sharding the network. Layer-2 solutions aim to scale the BC without modifying the underlying trust
+assumptions. Layer-2 protocols are built on top of layer-1 BCs. Roll-ups are the most common scaling solutions for DeFi
+protocols deployed to Ethereum[17]. They aim to reduce the load of the main chain by taking the transaction execution
+off the chain in batches and bundling them together for on-chain verification. Depending on the verification process,
+roll-ups can be divided into two groups: optimistic roll-ups, e.g., Arbitrum[6], Optimism[39], and zero-knowledge (zk)
+roll-ups, e.g., zkSync[25], starknet[22]. Table 2 summarizes critical definitions and abbreviations used in the paper.
+
+
+2.3   DeFi vs CeFi
+Decentralized Fiance (DeFi) is a general term that refers to all financial applications that rely on blockchain for their
+security and integrity. Centralized Finance (CeFi) describes the financial applications that are hosted outside of BC, but
+involve digital assets in their business. An example of such CeFi application is centralized exchange CEX e.g., Binance
+[7] or Kraken[16], which allows exchanging the fiat currency (USD, EUR, CHF, etc) into cryptocurrencies. Those
+cryptocurrencies purchased at CEX can be further transferred to the crypto wallet on BC or remain in the custody of
+CEX. Traditional Finance (TradFi) refers to the traditional finance system that does not involve digital asset-related
+activities or products.
+
+
+                                    Table 3. Comparison of DeFi, CeFi, and TradFi [119],
+                                      = Yes, = No, = depends on the specific protocol
+
+                                     BC            BC           Non             DAO
+                                   Related     Settlement     Custodial      Governance
+                               DeFi
+                               CeFi
+                               TradFi
+
+
+
+  Boundaries between CeFi and DeFi are not always clear and the work [118] provides a structured methodology
+for differentiation. If the user is not in control of the tokens (e.g., does not retain custody, cannot transfer the assets
+without the financial intermediary), the financial application classifies as CeFi. CeFi applications may operate with BC
+settlement or not. In November 2022, FTX, the second largest CEX in the world collapsed, leaving its customers without
+access to their cryptocurrencies[14]. If the user is in control of the digital assets, but the financial intermediary can
+censor the transaction, such application classifies as CeFi with the BC settlement. Examples include USDT and USDC -
+stablecoins that are backed by fiat money. The issuer of USDT destroyed 44M of blacklisted USDT[118]. DeFi protocols
+can be further classified by their governance model: centrally governed and DAO. Centrally governed DeFi protocols
+are governed from outside of the BC. In the DAO model, decisions are made by holders of governance tokens via voting.
+                                                                                                  Manuscript submitted to ACM
+6                                                                                                        Gogol, Killer, et al.
+
+                                        Table 4. DeFi stakeholders, based on [58, 95]
+
+        Stakeholder                         Role                                   Incentive
+        Service Customers                   Interacts with the DeFi protocol       Profit, credit, liquidity mining
+        Liquidity Providers                 Provides capital to DeFi protocols     Protocol fee profit participation,
+                                            to ensure sufficient liquidity for     liquidity mining
+                                            financial services
+        Arbitrageurs                        Eliminate the market inefficien-       Arbitrage Profits
+                                            cies between different DeFi pro-
+                                            tocols
+        Governance Users                    Design, develop and maintain the       Governance token appreciation
+                                            DeFi protocol
+
+
+2.4   DeFi Stakeholders
+Blockchain is a decentralized network, in which its stakeholders (nodes, validators) operate in peer-to-peer model,
+without any system administrators or centralized entity. DeFi protocols are smart contracts deployed to BC and DeFi
+users interact with those smart contracts. Liquidity pool is a smart contract that holds tokens deposited in a DeFi
+protocol by liquidity providers (LPs) [93] in order to facilitate financial services (e.g., borrowing, token swapping). LPs
+thus fulfill a similar role to that of market makers in TradFi. DeFi stakeholders - service customers of DeFi protocols, LPs,
+arbitrageurs, and governance users (e.g., founders, developers, investors) interact with the liquidity pools, operating in
+peer-to-pool model[58, 95]. DeFi stakeholders have different incentives and roles in DeFi, and consequently are exposed
+to various risks. The table 4 summarizes the DeFi stakeholders and risk analysis follows in the further sections.
+    Liquidity mining is a process of interacting with a DeFi protocol to collect its governance tokens or other rewards.
+The process is not related to mining in PoW BCs[93]. The prime objective of liquidity mining is to attract new users
+and LPs to DeFi protocols.
+
+2.5   DeFi Value Proposition
+As summarized in figure 1, DeFi protocols provide various value propositions to users - trading, lending, asset manage-
+ment and BC interoperability - and extend the initial objective of BCs: a decentralized payment system and store of
+value[114].
+
+2.5.1 Trading. Decentralized Exchanges (DEXs), e.g., UniSwap[52], allow DeFi users to swap between two tokens with
+the settlement occurring directly on the blockchain. Compared to Centralized Exchanges (CEXs), DEXs offer higher
+diversity of tradeable tokens and higher security of transactions. DEX Aggregators, e.g., 0x[131], are DeFi protocols
+that collect exchange rates from various DEXs and the best execution options. The major risks of DEXs for DeFi users
+include slippage risk and MEV attacks. Slippage cost refers to the difference between the price quoted by the DEX and
+the executed price. The MEV (maximum extractable values) attacks are executed by miners or validators that re-order
+transactions for their profits, leaving the DeFi user with higher slippage costs.
+
+2.5.2 Lending. Lending Protocols allow DeFi users to borrow tokens against collateral. Interest rate protocols, such as
+Compound[121], and Aave[2], create pools of tokens that can be lent and borrowed, thus they are also referred to as
+protocols for loanable funds. Depending on token supply and demand, the protocols automatically adjust interest rates.
+Another mechanism for on-chain lending is provided by crypto-backed stablecoin protocols, such as MakerDAO[108],
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       7
+
+
+and Liquity[35]. Stablecoins are tokens that hold their value pegged to the fiat currency, typically US dollar. In order to
+hold the peg to the reference value, crypto-backed stablecoin holds collateral of other crypto tokens to ensure that the
+circulating token has a redemption value. Any DeFi user can borrow stablecoins directly from the stablecoin protocols
+by proving crypto collateral. In such a case, a collateralized debt position (CDP) is created. The major risk of DeFi
+lending is the liquidation risk of the underlying collateral. The liquidation occurs when the collateral value descends
+behind the minimum over-collateralization threshold. The dep-peg risk refers to the circumstances when stablecoin
+fails to hold the reference value.
+
+2.5.3 Asset Management. The DeFi Protocols in asset management allow DeFi users to generate additional yield on
+their tokens. Yield farming is a process of providing liquidity capital to DeFi protocols in exchange for fee participation
+rewards[133][134], similarly to market making in traditional finance. Impermanent Loss is a major economic risk
+associated with yield farming, caused by the high volatility of the crypto-tokens. Liquid staking refers to DeFi protocols
+that accumulate rewards from staking without locking the tokens. The staking process at PoS BCs supports the security
+of the underlying BC, but requires locking staked tokens for a defined period to collect the staking reward. De-Peg risks
+is the major risk related to liquid staking.
+
+2.5.4 Blockchain Interoperability. Blockchains, by design, are siloed computer networks that do not communicate with
+each other. Bridges allow DeFi users to (i) transfer tokens between blockchains without employing any CEX, and (ii)
+and to hold exposure to the tokens from other blockchains, e.g., exposure to Bitcoin on the Ethereum chain. To achieve
+this objective, bridge protocols create wrapped tokens - tokens with the value pegged to the tokens at other blockchains,
+e.g., wrapped Bitcoin[50] on the Ethereum chain. Wrapped tokens are exposed to the de-peg risk.
+
+
+3     DEFI PROTOCOLS
+This section presents the mechanics behind the major DeFi categories: decentralized exchanges (DEXs) and their
+aggregators, lending protocols (also referred to as interest-rate protocols or protocols for loanable funds), crypto-backed
+stablecoins (also referred to as collateralized debt positions) with other classes of stablecoins, bridges (wrapped tokens)
+and liquid staking protocol (liquid staking tokens/derivatives).
+
+
+3.1    Decentralized Exchanges
+Decentralized Exchange (DEX) is a class of DeFi Protocols that facilitates the non-custodial swap of digital assets with
+on-chain settlement [132] [104] and is the largest in terms of TVL class of DeFi protocols[12]. Depending on the price
+discovery mechanism, DEXs can be further classified into one of two models: central limit order book (CLOB)-based
+DEX and liquidity pool based DEX, [95]. While most DEXs support swap of digital assets within one BC, the new class
+of DEXs - multi-chain DEX - support swap of digital asset between BCs [132].
+    The first implementations of DEXs were based on CLOB, similar to the exchange mechanism in centralized exchanges
+(CEX) and traditional finance. CLOB matches buyers with sellers - peer-to-peer model - and the swap price is the last
+matched price. This design however proved to be infeasible and expensive at scale on BC. Storing even a small amount
+of data on BC is expensive, which, combined with complex order-matching algorithms, leads to excessive fees [95]. The
+current CLOB DEX implementations solve this issue by implementing its own Layer1 or Layer2 BC, e.g., dYdX[96],
+or moving the storage of CLOB outside of BC (off-chain order book), e.g., 0x Order Book[131]. Off-chain order-book
+changes may be classified as belonging to CeFi with on-chain settlement, rather than to DeFi [118].
+                                                                                                  Manuscript submitted to ACM
+8                                                                                                         Gogol, Killer, et al.
+
+
+    In contrast to the CLOB-based DEX, liquidity pool-based DEX does not store bids and ask orders at all. Instead, it
+employs reserves of two or more tokens, called liquidity pools. Liquidity pools provide counterparty tokens to swap
+against - peer-to-pool/peer-to-(smart) contract model - and the swap price is determined algorithmically by the pricing
+rules called automated market maker (AMM). Liquidity pool-based DEX, also referred as AMM-based DEX, became
+dominant in DeFi for several of reasons: 1) liquidity pools can be created easily for any pairs of digital asset, including
+new and minor tokens 2) anyone can provide capital to liquidity pools 3) liquidity pools and AMMs are more efficient
+compared to CLOB [132].
+    Depositors that seed liquidity pools with capital in return for swap fees, are referred to as liquidity providers (LPs).
+The trading fees are distributed to LPs proportionally to the capital provided to the liquidity pool. The process of
+providing liquidity to the DEX, or other class of DeFi protocols, in return for profit, is called yield farming and is similar
+to market making in traditional finance. Market makers in traditional finance provide both bid and ask orders from
+their own book and make a profit from the bid-ask spread.
+    Arbitrageurs buy and sell the same asset at various exchanges to profit from the price differences. Even though small
+liquidity pools may lead to significant fluctuations in the swap prices, arbitrageurs ensure that the swap price at the
+DEX is at parity with the market. The next section presents the most used AMM.
+
+
+3.1.1 Automated Market Maker (AMM). : An AMM is a mathematical function that algorithmically determines the
+swap price between tokens in the liquidity pool via a scoring rule. The most popular scoring rule is the logarithmic
+market scoring rule from Robin Hanson [87]. In recent years new AMMs emerged in the field of decentralized finance,
+the constant function market makers (CFMM). A CFMM is a trading function 𝜑 : R𝑛+ → R, often called conservation
+function or reserve curve, that maps the token reserves 𝑅𝑖 to an constant 𝑘, often referred to as invariant. Therefore, the
+conservation function is a relational function between an invariant 𝑘 and token reserves 𝑅𝑖 . In addition, the conservation
+function is always concave, nonnegative, and nondecreasing[54] and the spot price is given by the slope of the curve
+                                          𝜕𝜑   𝜕𝜑
+at the current reserves level 𝑝𝑅𝑖 ,𝑅 𝑗 = 𝜕𝑅𝑖 / 𝜕𝑅 𝑗 . If the liquidity pool contains only two tokens, the two reserves are
+typically referred to as 𝑥 and 𝑦. Various AMM formulas are currently in use by DEXs. The most popular AMMs fall into
+the category of constant function market making (CFMM), and include the following reserve curves [115, 134]:
+
+
+3.1.2   Constant Sum Market Maker.
+                                                          𝑥 +𝑦 = 𝑘
+The constant Sum Market Maker (CSMM) is the simplest form of an AMM. It sums over all reserves and the sum is
+defined as the invariant 𝑘, resulting in a swap exchange rate of 1. This means that a small deviation from the price will
+lead to arbitrage and one token reserve will be completely drained. Therefore, this AMM is unsuitable as a standalone
+solution for DEXs.
+
+
+3.1.3   Constant Product Market Maker.
+                                                          𝑥 ·𝑦 = 𝑘
+The Constant Product Market Maker (CPMM) is the most known DeFi AMM and became popular through its use in
+Uniswap v2. The function defines the interaction of two token reserves and the invariant by a simple product of the
+two reserves. In a swap operation, this always remains the constant 𝑘, so Δ𝑥 of 𝑥 can be swapped for Δ𝑦 of 𝑦, resulting
+in (𝑥 + Δ𝑥 )(𝑦 − Δ𝑦 ) = 𝑘 and a spot exchange rate of 𝑝𝑥,𝑦 = 𝑥𝑦 .
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                                9
+
+
+3.1.4   Constant Mean Market Maker.
+                                                            𝑛
+                                                            Ö
+                                                                  𝑅𝑖𝑤𝑖
+                                                            𝑘=1
+The Constant Mean Market Maker (CMMM) is the extension of the CPMM. This AMM includes more than 2 token
+reserves 𝑅𝑖 and weights them with 𝑤𝑘 and was first introduced by Balancer in 2019[109]. It results in an spot exchange
+                 𝑅 ·𝑤
+rate of 𝑝𝑖,𝑗 = 𝑅𝑖𝑗 ·𝑤𝑗𝑖 .
+
+3.1.5   Stableswap Invariant.
+                                                   𝑛
+                                                  ∑︁                          𝑘 𝑛+1
+                                       𝐴 · 𝑛𝑛 ·       𝑅𝑖 + 𝑘 = 𝐴 · 𝑘 · 𝑛𝑛 + 𝑛 Î𝑛
+                                                  𝑖=1
+                                                                           𝑛     𝑖=1 𝑅𝑖
+The Stableswap Invariant[80], often also referred to as Curve AMM, mixes the behavior of the CPMM and CSMM and
+is mostly meant for Stablecoins. The conservation function includes a leverage/amplification coefficient 𝐴 ∈ R+ which
+describes how strongly the function follows a CPMM or CSMM. For 𝐴 → 0 the function behaves like the CPMM, for
+𝐴 → ∞ like the CSMM. The spot exchange price is given by
+                                                          Î𝑛         𝑛+1
+                                           𝑅𝑖 · (𝐴 · 𝑅 𝑗 · 𝑙=1 𝑅𝑙 + 𝑘𝑛𝑛 )
+                                    𝑝𝑖,𝑗 =                Î𝑛         𝑛+1
+                                           𝑅 𝑗 · (𝐴 · 𝑅𝑖 · 𝑙=1 𝑅𝑙 + 𝑘𝑛𝑛 )
+   Figure 2 gives a graphical representation for each of these conservation functions.
+
+
+
+
+Fig. 2. Graphical representation of the AMM conservation                 Fig. 3. Concentrated liquidity and virtual reserves, based on
+functions for two tokens with CMMM weights 𝑤𝑥 = 1, 𝑤𝑦 =                  [52]
+2 and a stableswap leverage coefficient of 𝐴 = 10
+
+
+
+
+3.1.6 Concentrated Liquidity. Concentrated Liquidity AMM (CLAMM) is an enhancement to AMM that increases
+capital efficiency in liquidity pools[4]. It was first proposed by UniSwap v3[52] and allows LPs to define the price
+range, for which liquidity is provided. LPs profit from swap fees when the price remains in the defined interval[4].
+Consequently, there is a trade-off between larger (less risky, less efficient) intervals and (more risky, efficient) smaller
+intervals. Consider a liquidity range interval [𝑝𝑎 , 𝑝𝑏 ] around the current spot price 𝑝𝑐 , then 𝑥𝑟𝑒𝑎𝑙 and 𝑦𝑟𝑒𝑎𝑙 denotes the
+position real reserves. As soon as the price moves outside the range, a reserve of the liquidity provider is completely
+used up. Consequently, CLAMM requires active management and accepting higher financial risk, compared to AMM
+                                                                         √
+[90]. The liquidity provided is measured by the invariant L, which equals 𝑘 in the CPMM setting. The real reserves of
+                                                                                                          Manuscript submitted to ACM
+10                                                                                                           Gogol, Killer, et al.
+
+
+a position are described by a translation of the standard CPMM formula:
+                                                       𝐿         √
+                                                 (𝑥 + √ )(𝑦 + 𝐿 · 𝑝𝑎 ) = 𝐿 2
+                                                       𝑝𝑏
+Therefore, the spot exchange rate is identical to the CPMM case (𝑝𝑥,𝑦 = 𝑥𝑦 ). Figure 3 shows the real and virtual reserves
+and the shift in the curve.
+
+3.1.7 Risks. The major risks for the participants of AMM-based DEX include 1) slippage cost for traders, 2) impermanent
+loss for LPs 2) and transaction-ordering attacks. Those risks come additionally to the explicit costs of DEX - swap fees
+and gas fees. Transaction reordering, or MEV-attack, is further discussed in this work, as it poses a risk for many classes
+of DeFi protocol.
+     Slippage is the difference between the spot price, presented by the DEX, and the actually realized swap price. The
+difference is caused by AMM and the reserve curves. The realized price diverges from the spot price for larger swapped
+amounts and the divergence is further amplified by smaller liquidity pools. Swap transactions at AMM DEX are set
+with the slippage tolerance. Slippage tolerance restricts losses from the MEV attacks.
+     Impermanent loss is the difference between holding tokens in the wallet and allocating them to the liquidity pool.
+Every swap transaction alters the liquidity pool’s composition, increasing the value-losing token’s reserve. Impermanent
+loss can be eliminated by providing liquidity for stablecoin pairs [106] or mitigated by including stablecoin in the token
+pair [91]. The impact of impermanent loss has been widely studied across various AMMs[98, 128].
+
+
+3.2    DEX Aggregators
+The rise of DEXs on the same blockchain provides more competitive options for DeFi users, but also leads to fragmented
+liquidity among various AMM pools and requires arbitrageurs for price synchronization. DEX arbitrage and trade
+routing can be done efficiently on-chain within smart contracts[138]. DEX aggregators provide the optimal routing of
+trade orders across multiple DEXs [55]. Around 21.5% of DEX volume is initiated by aggregators[30].
+
+
+3.3    Interest-rate protocols
+Interest rate protocols, also referred to as lending protocols, facilitate borrowing and lending of digital assets [74, 102, 122].
+Lenders - liquidity providers (LPs), provide capital to the protocol’s pool - lending pool, from which it is distributed to
+borrowers. The interest rate mechanism seeks for equilibrium between the demand and supply of the capital [86]. DeFi
+lending protocols are thus not decentralized peer-to-peer lending strategies with direct relations between borrowers and
+lenders. Instead, they operates in a peer-to-pool model that avoids individual matching. Thus, the LP has a diversified
+risk across all borrowers of this pool and a utilization rate 𝑈𝑡 can be calculated at time 𝑡. The utilization rate is the ratio
+of the toal amount borrowed at time 𝑡 to the liquidity at time 𝑡, so 𝑈𝑡 := 𝐵𝐿𝑡𝑡 [2]. Liquidity is provided to the lending pool
+managed by the smart contract of the protocol. Thus, the DeFi lending protocols are also referred to as protocols for
+loanable funds (PFLs)[86]. Unlike in traditional banking, DeFi participants are anonymous, preventing assessing the
+risk of borrowers [57]. To mitigate the default risk, DeFi interest-rate protocols are over-collateralized: a borrower is
+required to post collateral covering the value of the debt and the value of the posted collateral must exceed the value of
+the debt. If the value of the locked collateral falls below the liquidation threshold, the collateral can be purchased for a
+discounted value and the debt position is closed [117]. DeFi loans typically have unlimited maturities and the interest
+rate is variable, so it fluctuate from the opening of the loan position and is recalculated constantly. Interest is accrued
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                        11
+
+
+per second and paid per block[86]. Based on the interest rate model, the lending protocol can be classified into three
+major classes: linear, non-linear and kinked rates.
+
+3.3.1 Linear rates. In a linear model, interest is a linear function of the utilization rate. For the borrower, the variable
+interest rate 𝑖𝑏,𝑡 results from:
+                                                        𝑖𝑏,𝑡 = 𝛼 + 𝛽 · 𝑈𝑡 ,
+where 𝛼 is a constant and 𝛽 describes how the interest rate behaves for changes in the utility rate. The lender receives a
+lower saving interest rate 𝑖𝑠,𝑡 = 𝑖𝑏,𝑡 · 𝑈𝑡 which also depends on 𝑈𝑡 [86] For example, the first version of Compound
+used this model, but it has since been replaced by a kinked rate model [121].
+
+3.3.2 Non-linear rates. In a non-linear model interest rates increase with an increasing rate as the utilization grows.
+The interest rate structure was used in the old dYdX layer 1 and DDEX[? ], where the borrowing interest rate is given by
+
+                                             𝑖𝑏,𝑡 = (𝛼 · 𝑈𝑡 ) + (𝛽 · 𝑈𝑡𝑛 ) + (𝛾 · 𝑈𝑡𝑚 ),
+
+with 𝑛, 𝑚 ∈ R The saving interest rate 𝑖𝑠,𝑡 = (1 − 𝜆) · 𝑖𝑏,𝑡 · 𝑈𝑡 includes a reserve factor 𝜆, which puts aside a fraction of
+the earned interest rate for more illiquid periods [86].
+
+3.3.3 Kinked rates. In the kinked model, interest rates increase more sharply above a certain (optimal) utilization rate
+𝑈𝑜𝑝𝑡 , i.e. there is a kink in the interest rate slope. This is used in the current version of AAVE [2] and Compound [121].
+The borrower rate can be characterized by
+                                             
+                                             𝛼 + 𝛽𝑈𝑡
+                                             
+                                                                              , if 𝑈 ≤ 𝑈𝑜𝑝𝑡
+                                    𝑖𝑏,𝑡 =                                                     ,
+                                             𝛼 + 𝛽𝑈𝑜𝑝𝑡 + 𝛾 (𝑈 − 𝑈𝑜𝑝𝑡 )
+                                                                              , if 𝑈 > 𝑈𝑜𝑝𝑡
+                                             
+where 𝛽 describes the interest rate slope up to the optimal utilization rate and 𝛾 >> 𝛽 the slope for a higher utilization.
+
+3.3.4 Total value locked. (TVL) for the interest-rate protocols represents the value of tokens hold by the protocols,
+which is the difference between the supplied and borrowed funds, and the value of the collateral. The major interest-rate
+protocols, Aave[2] and Compound[121] with USD 3.37bn and USD 1.64b TVL respectively[11], are examples of DeFi
+interest-rate protocol with kinked rates. The exchange dYdX[96] implemented non-linear rates to offer loans to its
+users.
+
+3.3.5 Liquidation Risk. In case the value of the collateral drops below the liquidation threshold, the borrower automati-
+cally defaults on its debts, and the collateral is sold off with the discount, in the process referred to as liquidation [117].
+Zero liquidation loans (ZLLs) are the novel approach to mitigate the DeFi liquidation risk by defining the loan tenor
+(duration) [124]. The ZLLs protocols such as [49, 116, 123] offer the borrower an option (but not obligation) to reclaim
+the collateral upon the repayment of the debt and the fees. If a borrower does not repay the debt before the ZLL expires,
+LPs gain the right to liquidate the collateral.
+
+3.3.6 Flash loans. Flash loans are a special class of DeFi loans that allow to borrow without a collateral during a single
+transaction. The debt is protected by the atomicitiy enforced by smart contracts and blockchain: if the loan is not
+repaid with the interest withing the block, the whole transaction with flash loan is reversed[2]. Flash loans increase the
+efficiency of DeFi lending by allowing to purchase any digital assets that can be used as a collateral, including NTF [60],
+as presented in the algorithm 1. The platforms [28, 38] accept certain NFTs as a collateral.
+                                                                                                    Manuscript submitted to ACM
+12                                                                                                     Gogol, Killer, et al.
+
+Algorithm 1 Mortgaging NFT[60]
+ 1: Flash loan 𝑥𝑖 of token 𝑖 to an address holding 𝑦𝑖 of token 𝑖
+ 2: Purchase the NFT for 𝑥𝑖 + 𝑦𝑖 of token 𝑖
+ 3: Deposit the NFT as collateral, with borrowing power of 𝑧𝑖 > 𝑥𝑖
+ 4: Borrow 𝑥𝑖 of token 𝑖 to repay the flash loan
+
+
+
+3.4   Yield Farming
+Yield farming is the process of earning income by providing tokens to DeFi protocols for market-making purposes[77]
+while token providers are referred to as "yield farmers". The yield farming protocols automate the yield farming process
+and can be perceived as algorithmic asset managers that execute the pre-programmed strategy [135]. Technically, yield
+farming protocols are aggregators that automatically deploy tokens to other DeFi protocols [133] and are consequently
+also referred to as "yield aggregators". The income from yield farming activities might be amplified by the participation
+rewards from DeFi protocols, to which tokens are provided. Such participation rewards are typically offered as
+governance tokens. Yield farming protocols may charge management and performance fees.
+
+3.4.1 Simple lending. In this strategy, the tokens are provided to the interest rate protocols (e.g., Compound, Aave),
+which lend them to the borrower. The token provider (supplier) accrues the supply interest. Given the over-collateralization
+required by the interest rate protocols from the borrowers, the strategy is low-risk and losses occur only under extreme
+market conditions. Based on the source of yield, the protocol strategies can be divided into the three groups[77]: (i)
+simple lending, (ii) leverage borrow, (iii) liquidity provision.
+
+Algorithm 2 Simple Lending Yield Farming Strategy[77]
+ 1: Deposit token 𝑖 in a lending protocol
+ 2: Accrue interest of token 𝑖 and collect potential other rewards, e.g. native tokens 𝑧 over time
+ 3: Withdraw deposits with accrued supply interest and other rewards
+
+
+
+
+3.4.2 Leverage borrow. This strategy aims to maximize the yield from lending by leveraging spirals: tokens deposited
+in the interest rates protocols are used as collateral to borrow new tokens. The new tokens are deposited in the interest
+rate protocol and used again as collateral to borrow. The process is repeated multiple times. A high degree of leverage
+can amplify both profits and losses.
+
+Algorithm 3 Leverage Borrow Yield Farming Strategy[77]
+ 1: Deposit token 𝑖 in a lending protocol
+ 2: Borrow token 𝑗 with the deposits as collateral
+ 3: Deposit borrowed token 𝑗 as collateral
+ 4: Repeat steps 2–3 multiple times
+ 5: Accrue interest and collect potential other rewards, e.g. native tokens 𝑧 over time.
+ 6: Swap the native tokens into the assets borrowed
+ 7: Repay loans with accrued borrow interest
+ 8: Withdraw deposits with accrued supply interest and other rewards
+
+
+
+
+3.4.3 Liquidity provision. With this strategy, tokens are provided to liquidity pools (LPs) of AMM DEXs to earn income
+in terms of transaction fees charged by DEXs.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       13
+
+Algorithm 4 Liquidity Provisions Yield Farming Strategy[77]
+ 1: Provide token 𝑖, 𝑗 as liquidity in an AMM pool
+ 2: Collect transaction fees in token 𝑖, 𝑗 and potential other rewards, e.g. native tokens over time
+ 3: Withdraw liquidity, accrued fee participation and other rewards
+
+
+
+
+3.5   Stablecoins
+Stablecoins are tokens, which value is pegged to a fiat currency, typically 1 USD. They provide a way for DeFi users to
+mitigate the volatility of other digital assets, without the need to transfer liquidity outside the blockchain[113]. Holders
+of stablecoins are exposed to the de-peg risk - the risk that the stablecoin will not hold the peg to the target value.
+Stablecoin protocols employ various mechanisms to hold the peg and depending on the collateral type, they can be
+classified into three categories: (i) fiat-backed, (ii) crypto-backed, and (iii) algorithmic stablecoins[64]. The collateral
+ensures that the circulating token has redemption value.
+
+3.5.1 Fiat-backed stablecoins. Fiat-backed stablecoins utilize collateral of a fiat currency or commodity outside the
+blockchain, thus, they are also referred to as off-chain collateralized stablecoins. Given the collateral held outside of the
+blockchain and regulatory restrictions, fiat-backed stablecoins are not considered to be part of DeFi, but CeFi[118].
+
+3.5.2 Crypto-backed stablecoins. Crypto-backed stablecoins maintain the collateral of other crypto tokens on the
+blockchain. They are also referred to as on-chain collateralized or over-collateralized stablecoins. Over-collateralization
+implies that the total value of the collateral is higher than the total value of the circulating stablecoin supply and is
+applied to protect the peg against the volatility of crypto tokens and related sudden price changes of the collateral. Any
+DeFi user can mint the new stablecoins, by providing sufficiently over-collateralized collateral. The process can also be
+seen as borrowing stablecoins with crypto tokens locked as collateral.
+  The borrowing process from the stablecoin protocol is initiated by depositing crypto tokens as collateral. The
+collateralized debt position (CDP) is created. In exchange for the deposit, the depositor receives stablecoins, which are
+minted by the stablecoin protocol. Once the borrower returns the stablecoins, the CDP is closed: the tokens used as
+collateral are returned to the borrower and the stablecoin protocol burns returned stablecoins.
+
+3.5.3 Algorithmic stablecoins. Algorithmic stablecoins maintain their price peg by managing (shrinking or expanding)
+the supply of the token. As they do not employ any collateral, algorithmic stablecoins are also referred to as non-
+collateralized stablecoins. There are two main types of algorithmic stablecoins: seigniorage and rebasing [112]. The
+rebasing coins, such as Ampleforth[27], adjust the balance of coins in the users account, allowing the coin place to
+fluctuate. Consequently, some literature does not consider the rebasing coins to be stablecoins. Seigniorage stablecoin
+protocols, such as Terra[46], make arbitrary decisions on the minting and burning of the coins in the supply in order to
+maintain the peg.
+
+3.5.4 Risks. De-peg risk - the major risk related to the stablecoin - references to the circumstances, in which the
+stablecoin loses the peg to the target value. The stablecoin trilemma indicates that any stablecoin design poses limitations
+related to one of the following risks: (i) hazards of the operating entity, (ii) exposure to the external market risk, or
+(iii) limited coin supply [97]. The major risk of DeFi lending, including borrowing from the stablecoin protocol, is
+the liquidation risk - the risk of liquidating the CDP with the locked collateral. The liquidation occurs when the
+collateral value descends below the minimum over-collateralization threshold. Borrowers are required to monitor the
+                                                                                                   Manuscript submitted to ACM
+14                                                                                                      Gogol, Killer, et al.
+
+
+over-collateralization level of their CDP to avoid liquidations. The automatic detection of the CDP that needs to be
+liquidated and initiating the liquidations are not trivial on the blockchain. Smart contacts, by their design, need to be
+triggered externally and do not support automation.
+
+3.5.5 CBDC. Stablecoins are typically discussed in relation to the topic of Central Bank Digital Currencies (CBDC), as
+a potential implementation of CBDCs. CBDC is a form of digital cash issued by the central bank. CBDC may be but
+does not have to be related to the BC or DLT, as it is the issuer - the central bank - of digital cash that is a defining
+factor of CBDC. CBDCs are further classified as wholesales or retail[70]. The potential CBDC implementation may be
+decentralized or centralized, and may not relay on DLT[70].
+
+3.6   Liquid Staking
+Synthetic assets in DeFi are analogous to derivatives in traditional finance (TradFi) [120]. In TradFi, derivatives allow
+traders to profit from price movements of stocks and bonds they do not own[82]. Synthetic assets are cryptocurrency
+tokens that track the price fluctuations of the target asset[59, 120]. Liquid staking is a synthetic asset that tracks the
+value of the tokens staked in the proof-of-stake blockchains [126]. Liquid staking token is also referred to as liquid
+staking derivative (LSD) and the protocol minting it - liquid staking protocol (LSP). Staking is the process of locking
+tokens in validators for future profit [126]. Validators, network participants in PoS blockchain, put those tokens at stake
+when appending new transactions to the blockchain. For each correctly appended transaction, the validator receives a
+reward, which is redistributed between token providers (stakers). The dishonest behavior is punished by a reduction
+in the staked tokens (slashing). By design, the staked tokens are locked for a specific period, making it impossible to
+use them in other applications, reducing the token liquidity. By tracking the value of the staked assets, liquid staking
+tokens allow participating in the staking benefits. Unlike the staked tokens, liquid staking tokens are not locked but are
+freely traded and used in other DeFi applications. There are three standard LSD models [26, 126]: (i) rebasing tokens,
+(ii) reward-bearing tokens, and (iii) dual-token model.
+
+3.6.1 Rebase Tokens. In this model, the LSP tokens keep the 1:1 peg to the staked tokens and inflate the supply to
+reflect the yield earned from staking. The most popular rebase LSD is stETH, minted by Lido Protocol[3]. Lido every
+day increases the balance of all stETH holders to reflect the additional ETH earned as staking rewards. The advantage
+of rebasing LSP is its simple functionality. The disadvantage is lack of the compatibility with other DeFi protocols, e.g.,
+DEXs or interest rate protocols.
+
+3.6.2 Reward-bearing Token. In this model, the token does not maintain 1:1 peg to the staked native token, but increases
+its value to reflect the staking yields. Consequently, the reward-bearing token grows in value, related to the underlying
+native token. Reward-bearing tokens provide better compatibility with DeFi protocols. Most of LSPs follow this design:
+RocketPool[43], Marinade [36], CoinBase Wrapped Staking [9].
+
+3.6.3 Dual Token. In the dual token model the asset token is split from the staking revenue it yields. For example,
+StakeWise [45] operates in the two token model: sETH2 - with 1:1 peg to ETH - and rETH2 - that reflects the earned
+staking rewards. The disadvantage of this model is the fragmented liquidity between two tokens.
+
+3.6.4 Other Classifications. LSP also varies in the validator selection process: (i) whitelisting reputable validators, (ii)
+credentials-based, (iii) collateral. In the whitelisting model, LSP adds only trusted validators to the pool of validators,
+e.g., Lido[3]. In the credential based-model, the pool of validators is permissionless upon fulling the minimum criteria.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                          15
+
+                                       Table 5. Overview of selected liquid staking tokens
+
+              Tokens                    Protocol                 Blockchain                  Model
+              stETH                     Lido                     Ethereum                    rebasing
+              wstETH                    Lido                     Ethereum                    reward-bearing
+              mSol                      Marinade                 Solana                      reward-bearing
+              rETH                      Rocket Pool              Ethereum                    reward-bearing
+              sETH2, rETH2              StakeWise                Ethereum                    2 tokens
+
+
+In the last model, LSP requires validators to post the collateral to guarantee its performance, e.g., Rocket Pool[43]. The
+collateral model hampers the growth of the validator pools by increasing the minimum threshold for staking.
+
+3.7   Bridges
+DeFi ecosystem has evolved into a multi-chain ecosystem, but each BC is an independent and closed network by design.
+Miners and validators write transactions to the BC according to its consensus mechanism. Fragmentation of DeFi
+protocol and liquidity across various chains hinders DeFi growth and locks DeFi users to a single BC. Blockchain
+interoperability includes the transfer of digital assets, data, and smart contract instructions between BCs, which would
+allow DeFi users to utilize digital assets stored in one BC in DeFi protocols on another BC (cross-chain collateral) and
+execute low-cost and fast transaction of digital assets stored on less scalable BC (efficiency and scalability). For the DeFi
+protocols, blockchain interoperability would allow for more efficient utilization of liquidity, locked across various BCs
+[5]. While Polkadot[19] and Cosmos[10] provide frameworks to develop interoperable BCs, e.g., by sharding, they do
+not facilitate cross-chain communication with networks outside of their BC-framework[136]. Centralized exchanges
+(CEX) can be used to transfer digital assets across blockchains. However, given their centralized nature, they do not
+deliver on BC and DeFi promises of decentralization, permissionless and trustless.
+   Bridges enable the transfer of tokens between BCs [67, 88, 89, 100, 101, 111, 127, 130, 137], e.g., Bitcoin and Ethereum,
+or between layers of the same BC, e.g., Ethereum and its roll-ups. Based on the underlying architecture, bridges can be
+classified as (i) wrapped tokens, (ii) liquidity networks and (iii) hybrid solutions[136].
+
+3.7.1 Wrapped Tokens. Wrapped tokens can be further classified as (i) External Validators and Federations (ii) Light
+Clients and Relayers [61].
+
+3.7.2 Liquidity Networks. Most DEX supports the exchange of digital assets only within the same BC. What is more
+Atomic cross-chain swaps (ACCS) proved to be slow, inefficient, and costly[136].
+
+3.7.3 Other Classifications. The full overview and classification of existing solutions present [18]. Another classification
+of bridges: (i) trusted (ii) Binded (iii) Insured (iv) Trust-less [61].
+
+3.8   Perpetuals
+Perpetual contracts or swaps in DeFi are derivatives that allows to speculate on the price of an underlying asset, such
+as cryptocurrencies, without actually owning the asset. Perpetual contracts resemble traditional futures or options,
+however, they do not have a fixed expiration date. This allows to hold their positions indefinitely, as long as the
+required collateral limits can be maintained. They were first introduced by the centralized exchange BitMEX in 2016
+[53], requiring counter-parties and thus a matching mechanism (similar to CLOB).
+                                                                                                      Manuscript submitted to ACM
+16                                                                                                         Gogol, Killer, et al.
+
+
+     While automatic liquidation of collateral is an essential mechanism for any perpetual, another fundamental DeFi
+mechanism is necessary to remove the need for counter-parties: virtual AMMs (vAMM). A vAMM can use the same
+mathematical principles as an AMM for price determination, which is required for automatic liquidation of collateral
+once the price hits a certain limit, e.g., if the price shifts to your disadvantage, you may require to provide more collateral.
+In case your collateral limit is reached (also depends on your leverage factor), your collateral will be automatically
+liquidated.
+
+
+4     DEFI PROTOCOL TAXONOMY
+DeFi protocols provide various financial services and can be classified based on the value proposition to users: trading,
+lending, asset management, and BC interoperability, as depicted in table 1. This section proposes novel classification
+frameworks. First, we separate the token classification from the taxonomy of DeFi protocols. Next, we classify DeFi
+protocols in two dimensions - algorithm and network (blockchain) architecture. Taxonomy of DeFi algorithms is based
+on the technical and economical design of DeFi protocols. The DeFi algorithm determines how financial services are
+performed on the BC and to which risks DeFi agents are exposed. Taxonomy of DeFi network architecture, refers to
+the number of BCs, on which the protocol operates and the coordination of its work across those BCs. The network
+architecture implies the infrastructure risks. The classifications within those two domains, as well as token taxonomy,
+are straightforward, as the values assigned to each dimension can be traced from the DeFi protocols’ implementations
+and whitepapers that are publicly available.
+
+
+4.1    Token Taxonomy
+There exist multiple extensive token classification frameworks e.g., [56, 58, 83]. Based on the work of [95] and [120] we
+select the two token classification domains: "technology" and "underlying value". Token technology comprises two
+dimensions: BC native tokens (e.g., Bitcoin, Ethereum, Solana) and smart-contract-enabled tokens. The "underlying
+value" dimension comprises three dimensions: asset-backed, network value, and share-like[83]. Asset-backed tokens
+comprise tokens linked to other assets (e.g., tokens confirming participation in liquidity pools), derivative tokens with
+other tokens as underlying (e.g., stablecoins, liquid staking tokens), and real-world assets - tokenized assets from the
+real world. The proposed taxonomy, which combines and simplifies, other classification frameworks [83], emphasizes
+the risk of the token holder. This token classification can help to ensure a consistent view of the different token types
+and the underlying counterparty risk.
+
+      • Native tokens: Layer 1 BC’s native tokens, e.g., Bitcoin, and Ethereum.
+      • Smart contract enabled tokens: Tokens that are created within BC by smart contracts can be further divided
+        into more granular dimensions:
+        – Network Value: the underlying value is represented by the level of trust, e.g., DAO governance tokens or
+           other utility tokens for fee payments within the smart contract applications. Network-driven demand for the
+           token may lead to an increase in value in case of limited supply.
+        – Asset-backed
+           ∗ On-chain Asset: tokens tied to other on-chain tokens, e.g., tokens representing participation in the liquidity
+              pool in yield farming at AMM DEX,
+           ∗ Synthetic Assets: the underlying assets comprise another on-chain asset, e.g., crypto-backed stablecoin,
+              liquid staking token, or wrapped Bitcoin (for bridged tokens),
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                  17
+
+
+
+
+                                                 Fig. 4. Taxonomy of Tokens
+
+
+
+
+         ∗ Real-World Assets: the underlying value is tied to the tokenized real-world assets, e.g., fiat money for
+           fiat-backed stablecoins.
+      – Share-like Tokens: the underlying value is generated by the work of the token holder or 3rd party issuers
+         e.g., NFT representing art ownership.
+
+
+4.2   Taxonomy of DeFi Algorithms
+In the design domain, the DeFi protocol can be classified into three dimensions: (i) liquidity pools (ii) aggregators
+(iii) synthetic tokens, as presented in figure 6. The DeFi protocols are developed on the infrastructure layer of their
+underlying blockchains. The infrastructure layer includes native tokens or staking for proof-of-stake blockchains.
+
+4.2.1 Liquidity Pools. Liquidity pool-based DeFi protocols match the demand and supply using token pools operated by
+smart contracts. The major DeFi liquidity pool-based protocols include decentralized exchanges (DEX) and interest-rate
+protocols. DEXs manage the supply and demand to swap tokens and, depending on the design, can be further classified
+as CLOB or AMM. There are various implementations of AMM, with concentrated liquidity being the latest improvement
+that increases the capital efficiency at AMM DEX. The interest-rate protocol manages the supply and demand for
+borrowing and lending and adjusts interest rates automatically. DeFi liquidity pools protocols and stablecoins are
+referred to as DeFi primitives [77].
+
+4.2.2 Aggregators. The major aggregator protocols facilitate the operations of DEXs and include DEX aggregators and
+yield farming protocols. DEX aggregators allow DEX service customers - traders - to find the best execution rate, and
+sometimes offer protections again MEV attacks, by splitting the transaction into smaller ones. Yield farming protocols
+simplify and increase liquidity efficiency at AMM DEXs.
+                                                                                              Manuscript submitted to ACM
+18                                                                                                    Gogol, Killer, et al.
+
+
+
+
+                                           Fig. 5. Taxonomy of DeFi Algorithms
+
+
+
+
+4.2.3 Synthetic Tokens. Synthetic tokens are similar to derivatives in traditional finance. They employ smart contracts
+to keep the peg to the target value, which might be fiat currency - stablecoins, tokens at other blockchains - wrapped
+tokens of bridges, and staked tokens - liquid staking. The inherent risk of all synthetic tokens is the re-peg risk.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       19
+
+
+4.3    Taxonomy of DeFi Network Architecture
+This dimension indicated whether DeFi protocols operate on a single chain or across multiple chains. Protocols operating
+on multiple networks are in the early stage but they are expected to play a substantial role in DeFi in future[83].
+
+4.3.1 Single Chain. Single-chain protocols are deployed and operate within one BC. Most of DeFi protocols operate on
+single chain[11].
+
+4.3.2 Cross Chain. Cross-chain protocols that operate on multiple BCs and allow the value to cross between BCs.
+Those protocol utilize blockchain interoperability technologies so that the value stored on one BC is transformed into
+value at other BC[105]. The cross-chain protocols include bridges.
+
+4.3.3 Multi Chain. Multi chain protocols are deployed to multiple blockchain, at which they operate independently.
+Contrary to cross-chain protocols, they do not utilize value cross BC, e.g., cross-chain collateral. Example of DeFi
+protocols deployed to multiple chains include Aave[2], Uniswap[52].
+
+4.3.4 App Chain. App-chain (or Solo-chain) is DeFi protocol that developed sovereign BC to optimise its services for
+the specific use cases. Depending on the security model of the sovereign BC, the app-chain can be classified at L1,
+L2 or L3. Cosmos[10] provides SDK for the development of L1 appchain. Polkadot[19] simplifies the development of
+L2 appchains, called parachains by Polkadot. Starknet[22] and zkSync[25] are zero-knowlege rollups (L2) on top of
+Ethereum and offer possibilities to built furhter L3.
+
+
+
+
+                                       Fig. 6. Taxonomy of DeFi Network Architecture
+
+
+
+5     DEFI RISK AND ATTACK CLASSIFICATION
+With the rapid increase of TVL, attacks on DeFi protocols have gradually emerged [71, 103, 139]. In DeFi exploits,
+attackers gain profits from the vulnerability in the technical or economic security of the DeFi protocols [132]. Table 6
+summarizes DeFi risks and their impact on DeFi stakeholders - service customers, liquidity providers (LPs), arbitrageurs,
+or governance users. This section discusses these risks and attacks in detail. As yield farming protocols are aggregators
+that provide liquidity to other DeFi protocols, this category possesses risks of LPs.
+    The blockchain trilemma states that every BC can prioritize only two from three factors: decentralization, security,
+and scalability[75]. The limited scalability of the BC results in network congestion and high transaction fees. A lack of
+decentralization allows for transaction censorship. The security attacks target vulnerabilities in the technical (e.g., smart
+contract, transaction re-ordering) or economical design (e.g., oracle price manipulation) of DeFi protocols and BCs.
+                                                                                                   Manuscript submitted to ACM
+20                                                                                                    Gogol, Killer, et al.
+
+Table 6. DeFi Security Risk Overview.
+C: Service Customers, LP: Liquidity Provider, A: Arbitrageur, G: Governance User
+  = Not Vulnerable, = Vulnerable, = Depends
+
+
+                               CLOB             AMM              Interenst-rate    Stablecoins   Bridges    Liquid
+                               DEX              DEX              Protocols                                  Staking
+                                                   LP
+                               C    LP    A     C           A    C     LP    A     C   A         C    A     C    A      G
+                                                   YF
+ DeFi Risks
+ Rug Pull Attack
+ Slippage
+ Impermanent Loss
+ Liquidation
+ De-peg
+ Infrastructure Attack
+ MEV Attack
+ Blockchain Attack
+ Middle Layer Attack
+ Smart Contract Attack
+ Application Attack
+ Oracle-Attack
+
+
+
+      • Limited Scalability Scalability is the central issue for BC networks[84]. The limited scalability leads to network
+        congestion and spikes in transaction costs. During the network congestion, transactions of arbitrageurs, and
+        other DeFi stakeholders, may not be executed, leading to market inefficiency and information delays[95]. Layer-2
+        solutions aim to scale the underlying main chain at the cost of various security assumptions[84].
+      • Centralization Risk Centralization might affect both the BCs and the DeFi protocols. DeFi Protocols increasingly
+        rely on governance tokens to decentralize the decision-making process[94]. Nonetheless, the distribution of
+        governance tokens may remain concentrated within the small groups of colluding stakeholders, as the distribution
+        of voting powers is a gradual process[129].
+      • Security Threats DeFi Protocols operate on BC as smart contracts and are prone to security attacks on various
+        layers: BC infrastructure, smart contract, and application attacks[134].
+
+5.1    Infrastructure-layer Attacks
+The infrastructure-layer attacks include vulnerabilities in the BC design. They might directly target the BC, its nodes,
+and consensus mechanisms on which DeFi protocols operate (BC Attack) or exploit design faults in processing the
+transaction (MEV Attack).
+
+5.1.1 Blockchain Attacks. The 51% attack allows tampering with the ledger data by controlling over half of the network
+hash rate. Other examples include block timestamp manipulation. DeFi service customers and arbitrageurs are partially
+affected during the BC attacks, as they are only restricted from using the DeFi Protocols. LPs lose all tokens locked
+on the victim BC. Similarly, issuers of stablecoins and liquids staking tokens lose the collateral. The governance users
+are fully affected, as their DeFi protocol is based on the victim BC. The BC attacks might be mitigated by using DeFi
+protocols only from the established BCs with vast networks of nodes and staked assets.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       21
+
+
+5.1.2 Collapse of Terra Blockchain. The Terra blockchain belonged to the ten largest blockchains with a market
+capitalization of over $30bn. Its collapse was caused by the vulnerability in the economical design of its algorithmic
+stablecoin UST, [79], and led to the fall of the DeFi protocols operating on Terra. In infrastructure layer attacks, such as
+the attack on Terra, all DeFi stakeholders - service customers, liquidity providers (LPs), arbitrageurs, and governance
+users - are fully exposed, as the attack ultimately leads to the loss of value of the victim blockchain with all deployed
+smart contracts and tokens.
+
+5.1.3 MEV Attacks. MEV attacks (Miner Extractable Value[78] attacks) refers to miners or validators benefiting from
+their access to information about an upcoming transaction. The traditional financial market has been encountering
+similar cases since the 1970s[81]. The blockchain, by design, allows validators to decide on the order of transactions in
+the block. In MEV attacks, transactions are re-ordered for the benefit of validators at the expense of the initiator of the
+victim transaction. Flash loans additionally increase the arbitrage revenue of the attackers [119]. MEV Attacks affect
+the service customers and arbitrageurs at CLOB and AMM DEXs. Some liquid staking protocols incorporate revenue
+from MEV attacks in the rewards tokens[43]. Depending on the re-ordering strategy, the MEV attacks can be classified
+as follows:
+
+      • Front-running attack - the validator inserts the transaction before the victim transaction; if the victim transaction
+        does not settle, the attack is fatal.
+      • Back-running attack - the validator’s transaction is executed after the victim transaction
+      • Sandwich attack combines front- and back-running, as depicted in algorithms 5, 6.
+
+
+
+Algorithm 5 Sandwich Price Attack[134]
+ 1: 𝑈 𝑠𝑒𝑟 𝐴 sets an order to buy token 𝑖 in exchange of token 𝑗 with current spot price 𝑝𝑖,𝑗 on an AMM with gas fee 𝑔1 .
+ 2: 𝑈 𝑠𝑒𝑟 𝐵 observes the mempool and sees the transaction.
+ 3: 𝑈 𝑠𝑒𝑟 𝐵 front-runs the transaction by buying 𝑥 𝐵 of token 𝑖 with a higher gas fee 𝑔2 > 𝑔1 on the same AMM.
+                                                                                                  𝐵 and 𝑃 𝐴 , pushing XYZ’s
+ 4: 𝑈 𝑠𝑒𝑟 𝐵 and 𝑈 𝑠𝑒𝑟 𝐴 ’s transactions are executed sequentially at respective average price of 𝑝𝑖,𝑗     𝑖,𝑗
+    spot price up to 𝑝𝑖,𝑗∗ , where 𝑝 ∗ > 𝑝 𝐴 > 𝑝 𝐵 > 𝑝 due to slippage.
+
+ 5: 𝑈 𝑠𝑒𝑟 𝐵 back-runs by selling 𝑥 𝐵 of token 𝑖 at an average price of 𝑝 𝐵∗ , with 𝑝 ∗ > 𝑝 𝐵∗ > 𝑝 𝐵 due to slippage
+
+
+
+
+  DeFi protocols cannot prevent MEV attacks, as they are initiated in the blockchain infrastructure layer. Multiple
+approaches to mitigate transaction-ordering attacks have emerged, but all provide unsatisfactory results[92]. Considering
+swap fees, slippage tolerance, and gas fees, MEV attacks are only profitable if the size of the victim transaction exceeds
+a certain threshold[134]. Privacy-preserving blockchains with TEE[141], e.g., Integritee[15] or Secret Network[20],
+prevent the transaction reordering from the infrastructure layer.
+
+
+5.2    Smart-contract Layer-attacks
+Smart contract attacks exploit vulnerabilities in DeFi protocols caused by coding mistakes, unsafe calls to untrusted
+contracts, and access control mistakes. The audit of the DeFi protocol leads to a decrease in the probability of exploitation
+by a factor of four.[139]. Bug bounties - reward programs for identifying software vulnerabilities - are a popular way to
+help to prevent smart contract exploits[62]. Smart-contract Layer attacks affect all DeFi stakeholders.
+                                                                                                   Manuscript submitted to ACM
+22                                                                                                      Gogol, Killer, et al.
+
+Algorithm 6 Sandwich LP Attack[134]
+ 1: 𝑈 𝑠𝑒𝑟 𝐴 places a transaction order to buy 𝑥𝐴 of token 𝑖 in exchange of token 𝑗 with gas fee 𝑔1 on an AMM with
+    reserves 𝑅𝑖 , 𝑅 𝑗 .
+ 2: 𝐿𝑃𝐵 observes the mempool and sees the transaction.
+ 3: 𝐿𝑃𝐵 front-runs by withdrawing liquidity from reserves 𝑅𝑖 and 𝑅 𝑗 with a higher gas fee 𝑔2 > 𝑔1 .
+ 4: 𝐿𝑃𝐵 and 𝑈 𝑠𝑒𝑟 𝐴 ’s transactions are executed sequentially, resulting in a new composition of the pool.
+ 5: 𝐿𝑃𝐵 back-runs by re-providing the liquidity for 𝑅𝑖 and 𝑅 𝑗 . Due to the transaction, the LP needs to provide less of
+      token 𝑗 for the same share in the liquidity pool.
+ 6: 𝐿𝑃𝐵 sells token 𝑗 for some token 𝑖 as profit.
+
+
+
+5.3    Application Layer-attacks
+Application layer attacks seek to exploit to vulnerabilities in the design of the DeFi protocols and affect all DeFi
+stakeholders.
+
+5.3.1 Oracle price manipulation. Oracle is a mechanism to retrieve the off-chain data, e.g., ETH/USD, which can be later
+utilized by DeFi protocols smart contracts[107]. A centralized oracle relies on a trusted third party as a data provider.
+Decentralized oracles seek the information on-chain, e.g., on DEXs, but are prone to price manipulation attacks 7.
+
+Algorithm 7 Flash-loan-funded price oracle attack[134]
+ 1: Take a flash loan to borrow 𝑥𝑖 of token 𝑖 from a lending platform, whose value is equivalent to 𝑥 𝑗 of token 𝑗 at
+      market price.
+ 2: Swap 𝑥𝑖 of token 𝑖 for 𝑥 𝑗 − Δ 𝑗 of token 𝑗 on an AMM, pushing the spot price 𝑝 𝑗,𝑖 down.
+ 3: Borrow 𝑥𝑖 + Δ𝑖 of token 𝑖 with 𝑥 𝑗 − Δ 𝑗 of token 𝑗 as collateral on a lending platform that uses the AMM as their
+      sole price oracle.
+ 4: Repay the flash loan with 𝑥𝑖 of token 𝑖 and gain a profit of Δ𝑖 of token 𝑖.
+
+
+
+
+5.4    DeFi Risks
+DeFi stakeholders 4 are exposed to various DeFi risks, e.g., liquidations, de-peg, impermanent loss, and slippage risk
+3 that are specific to the underlying DeFi algorithm. The risk impact differs between the stakeholders and affects in
+various levels service customers, LPs, arbitragers and governance users. Flash loans further amplify the losses of the
+victim and increase the profits of the attackers.
+
+5.4.1 Rug pull. A rug pull is a malicious activity in which developers abandon the project and use the capital raised
+from the investors as a profit [110]. It affects permissionless DEXs, which do not verify the listed tokens. At the interest
+rate protocols, crypto-backed stablecoins require the DAO vote to register new tokens as collateral, they are resistant to
+rug pull attacks. Bridges and liquid staking protocols depend only on the native tokens, which can not be rug pulled.
+
+5.4.2 Slippage risk. Slippage, the difference between the spot and realized price is a consequence of AMM, and therefore
+occurs only at AMM DEX. Slippage risk affects only users executing trades - service customers and arbitrageurs - and
+does not concern LPs. It depends on the size of AMM pool and affects all token pairs. Slippage losses can be amplified
+by MEV attack.
+
+5.4.3 Impermanent Loss. Impermanent loss is a consequence of AMM. It affects only LPs to AMM DEX and services
+customers of yield farming protocols that employ liquidity provisions to AMM DEX in their strategy. Impermanent loss
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                       23
+
+Algorithm 8 Rug Pull Attack[134]
+    1: Mint a new token 𝑖.
+    2: Create a liquidity pool with 𝑥𝑖 of token 𝑖 and 𝑥 𝑗 of a valuable token 𝑗 on an AMM.
+    3: Attract unwitting traders to buy token 𝑖 with token 𝑗 from the pool, effectively changing the composition of the
+      pool.
+    4: Withdraw liquidity from the pool, and obtain 𝑥𝑖 − Δ𝑖 of token 𝑖 and 𝑥 𝑗 + Δ 𝑗 of token 𝑗 to take a profit of token 𝑗
+      of the valuable token.
+
+
+
+is amplified by crypto-currency volatility and can be avoided by providing liquidity to the token pairs with equal or
+similar values: ısynthetic tokens targeting the same value (e.g., pair of USD stablecoins, SOL wrapped tokens), or (ii)
+synthetic tokens and their target tokens (e.g., native tokens and rebase liquid staking tokens).
+
+5.4.4 Liquidation risk. Liquidation risk affects service customers of DeFi lending protocols - interest rate protocols and
+crypto-backed stablecoin - and is amplified by crypto-currency volatility.
+
+5.4.5 De-peg risk. refers to the circumstances when the synthetic token loses the peg to the reference value. Con-
+sequently. It affects all holders of synthetic tokens - stablecoins, wrapped tokens (bridges) and liquid staking tokens.
+Particularly, it concerns LPs at DEX that provide liquidity for trading synthetic assets.
+
+
+6     DISCUSSION
+This section starts with lessons learned from the analysis of DeFi protocols regarding the TVL measure and differentiation
+between CeFi and DeFi. Further, we present the current trends in DeFi protocol developments and conclude with key
+challenges that need to be addressed before DeFi gains wider DeFi adoption.
+
+
+6.1     Lessons learned
+DeFi stakeholders, especially service customers and LPs need to be aware of the counter-party risk related to the DeFi
+protocols. Clear differentiation between DeFi and CeFi is not straightforward nor clearly communicated by the protocols.
+The DeFi risks - rug pull, slippage, impermanent loss, liquidation, and de-peg - need to be considered. Moreover, the
+following aspects need consideration as well.
+
+6.1.1 TVL as a measure of success. TVL, often used as a success measure in the DeFi, might be misleading for several
+reasons. First, TVL is a measure of market-making capital locked in DeFi, rather than user activity or traded volume.
+Second, some protocols, such as DEX aggregators, do not require locking any capital in order to provide services
+to customers (e.g., optimal exchange prices at DEXs). Last, with the emergence of new algorithms e.g., concentrated
+liquidity AMM, higher trading volumes at DEXs can be achieved with less capital locked in AMM pools.
+
+6.1.2 CeFi vs DeFi. The framework for classification between CeFi or DeFi[118] is not always straightforward to
+apply. Some protocols, e.g., CLOB DEX, fiat-backed stablecoins or tokenized real word assets (RWA), rely both on
+the blockchain security and integrity as well as on off-chain counterparties. Furthermore, some DeFi protocols, e.g.,
+crypto-backed stablecoins rely on the RWA assets and fiat-backed stablecoins, as they are included in the on-chain
+reserves.
+                                                                                                   Manuscript submitted to ACM
+24                                                                                                       Gogol, Killer, et al.
+
+
+6.2   Current trends
+DeFi asset management concentrates on optimizing liquidity provision strategies. AMM DEX migrates to CL AMM
+model for higher capital efficiency. Yield farming protocols look for optimal capital allocation between AMM pools.
+DeFi vaults, also referred to as indexes are the new category of DeFi protocols that allow participants in the token pool,
+allocated by the vault manager.
+
+6.2.1 Concentrated Liquidity AMM. After the introduction of concentrated liquidity AMM, the liquidity provisions
+strategy at CLAMM DEXs has attracted significantly more TVL compared to other yield farming strategies, $5.57b and
+$1.15b respectively [11]. Tokens in a CLAMM DEX are deployed more efficiently, compared to AMM DEX, and allow
+for higher transaction volume with lover TVL. Examples are the two largest DEXs on Solana: the largest DEX in terms
+of transaction volume is the second largest DEX in terms of TVL.
+
+6.2.2 DeFi Asset Management. There are many emerging DeFi protocols in the area of asset management. However,
+their TVL is still low. Two categories worth mentioning included indexes and reserve currencies. The indexes protocols,
+such as SetProtocol[44], Enzyme[31], allow DeFi users to create, manage and allocate tokens to vaults, which are similar
+in their function to the funds and ETF in TradFi. Depositors transfer liquidity into the vault, whereas vault managers
+allocated tokens to various DeFi protocols to generate yield. Reserve currency protocols function similarly. Depositors
+transfer tokens into the managed vault. The difference is the valuation of the vault. In the case of the index protocols,
+the value of the vault is equal to the value of all tokens in the vault. In the case of the reserve currency vault, the value
+is determined by supply and demand.
+
+6.3   Future Challenges
+As presented in the risk sections, there are many open challenges hindering the wider DeFi adoption. Impermanent loss
+makes the liquidity providing for new tokens unattractive and consequently increase the cost of new token launch. The
+major obstacle to the lending protocol is over-collateralization which leads to lower capital efficiency and liquidation
+risk of the collateral.
+
+6.3.1 Impermanent Loss at AMM DEX. AMM-based DEX differentiates by utilizing various reserve curves and swap
+fees, pool weightage, and liquidity mining, mainly in order to mitigate the impermanent loss for the LPs. Liquidity
+mining refers to the process of collecting native tokens of the DeFi protocol in exchange for participating in the liquidity
+pool and is a form of subsidizing AMM pools for the token designers. Most DEXs, like Uniswap[51] or Balancer[109],
+offer 50/50 pool weightage, in which LPs must supply the equal value of each token in the liquidity pool. Whereas
+Balancer[109] offers a variable pool supply criteria. ON Curve[80], the pool weightage is dynamic and does not rebalance
+its pool. Pool weightage impacts impermanent loss. Further research on mitigation of impermanent loss, by applying
+other AMM formula, or using on-chain derives, is required.
+
+6.3.2 Over-collateralized Lending. Although DeFi over-collateralized lending mitigates the risks arising from the
+anonymous borrowers, it exposes the borrower to the liquidation risk and does not allow to use of the digital asset
+locked as collateral. Decentralized prime brokerage and on-chain identity - present alternative models for the DeFi
+undercollateralized lending [60]. Decentralized prime brokerage protocols - Oxygen[40], DeltaPrime[29], Gearbox[32] -
+retain the control over the use of the borrowed funds and identity-based protocols - TrueFi[48], Goldfinch[34] provide
+the mapping between on-chain borrowers and real-world entities.
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                                      25
+
+
+6.3.3 Security vs Credit. Lending protocols compete with the staking process in PoS BC, consequently damaging the
+network security [69, 72, 73]. When the yield provided by the lending protocols is more attractive than the staking rate
+(inflation rate), stakers are incentivized to remove their staked tokens and lend them out, thus reducing the network
+security [72]. MEV-redistribution improves the network security by redistributing MEV revenue and disincentivizing to
+unstake[73]. Some liquid staking protocols, e.g., RocketPool[43], include in their tokens MEV rewards, generated by the
+validators. The risk of liquid staking includes not only slashing risk, typically for staking, but also de-peg risk, inherent
+to the synthetic tokens.
+
+6.3.4 Bridges. Full collateralization of wrapped tokens is inefficient, but over-collateralization is required due to the
+volatility of digital assets [63]. With progress in blockchain interoperability and scalability, multi-chain DEX emerged
+such as THORChain[1]. They offer swaps of digital assets between BCs.
+
+6.3.5 Synthetic assets de-peg. In 2023, the liquid staking protocol Lido[3] overtook the decentralized stablecoin protocol
+MakerDAO [108], and became the largest DeFi protocol in terms of TVL[11]. As indicated in this work, little research
+has been performed on synthetic assets other than stablecoins. Wrapped tokens and liquid staking tokens are gaining
+popularity in DeFi, but are exposed to de-peg risk amond other. The stability of their promised peg, especially the
+inclusion of staking rewards, requires empirical examinations.
+
+7     SUMMARY
+This paper analyzes the major categories of DeFi protocols that represent over 89% of TVL. Both the technical and
+economical design of DeFi protocols are examined. Our analysis shows that any DeFi protocol can be classified into one
+of three classes: (i) liquidity pool protocols (ii) synthetic token protocols or (iii) aggregator. Liquidity pool protocols
+manage the supply and demand sites with smart contracts, e.g., interest rate protocols manage supply and demand for
+loanable funds, and vAMM / AMM DEXs manage supply and demand for tradeable tokens and derivatives. Synthetic
+token protocol issues tokens with a value pegged to the reference value, e.g., stablecoins (peg to the fiat currency),
+wrapped tokens (peg to the tokens on other blockchains), liquid staking tokens (peg to the staked tokens, and staking
+rewards), or index tokens. Aggregators optimize the liquidity provision strategies across DeFi protocols (yield farming
+protocols) or best trade execution at DEX (DEX aggregators). Our taxonomy for the chain architecture of DeFi protocols
+suggests that DeFi cannot be defined as a smart contract-enabled financial application, but a more general definition is
+required that is based on the security and integrity of blockchains. Finally, we showed that the risk in DeFi depends on
+three dimensions: (i) DeFi agents, (ii) DeFi protocols, and (iii) tokens involved. We indicated specifically that service
+customers and LPs are exposed to different risks, and aggregator protocols accumulate the risk of the protocols and
+tokens they utilize.
+
+ACKNOWLEDGEMENTS
+This work was supported partially by (a) the University of Zürich UZH, Switzerland, and (b) DeFiAM, Switzerland. The
+authors thank Narwah, and other digital asset managers for helpful conversations on the topic.
+
+REFERENCES
+    [1] [n. d.]. THORChain. https://docs.thorchain.org/how-it-works/understanding-thorchain
+    [2] 2020. Aave - Protocol Whitepaper V1.0. Technical Report.
+    [3] 2020. Lido: Ethereum Liquid Staking Whitepaper. https://lido.fi/static/Lido:Ethereum-Liquid-Staking.pdf
+    [4] 2021. Programming AMMs on top of UniV3. Technical Report.
+                                                                                                                  Manuscript submitted to ACM
+26                                                                                                                          Gogol, Killer, et al.
+
+
+  [5] 2021. What Are Blockchain Bridges, and Why are they Important for DeFi? https://blog.makerdao.com/what-are-blockchain-bridges-and-why-
+      are-they-important-for-defi/
+  [6] 2022. Arbitrum. https://arbitrum.io/
+  [7] 2022. Binance - Cryptocurrency Exchange. https://www.binance.com/en
+  [8] 2022. Binance Smart Chain. https://www.bnbchain.org/en/smartChain
+  [9] 2022. CoinBase cbETH Whitepaper. https://www.coinbase.com/cbeth/whitepaper
+ [10] 2022. Cosmos. https://cosmos.network/
+ [11] 2022. DeFi Llama. https://defillama.com/
+ [12] 2022. DeFi Llama Categories. https://defillama.com/categories
+ [13] 2022. DeFi Llama Chains. https://defillama.com/chains
+ [14] 2022. FTX Dossier . Crypto Valley Journal (11 2022). https://cvj.ch/en/focus/background/ftx-dossier/
+ [15] 2022. Integritee. https://integritee.network/
+ [16] 2022. Kraken Cryptocurrency Exchange. https://www.kraken.com/
+ [17] 2022. L2Beat Bridges TVL. https://l2beat.com/bridges/tvl
+ [18] 2022. L2Beat Layer2 TVL. https://l2beat.com/scaling/tvl
+ [19] 2022. Polakdot. https://polkadot.network/
+ [20] 2022. Secret Network. https://scrt.network/
+ [21] 2022. Solana. https://solana.com/
+ [22] 2022. starknet. (2022). https://starkware.co/starknet/
+ [23] 2022. Statista. https://www.statista.com/statistics/377382/bitcoin-market-capitalization/
+ [24] 2022. Statista DeFi Users. https://www.statista.com/statistics/1297745/defi-user-number/
+ [25] 2022. zkSync. https://zksync.io/
+ [26] 2023. A wrap-up on designing liquid staking protocols:. https://twitter.com/FigmentCapital/status/1567324278906933250
+ [27] 2023. Ampleforth.
+ [28] 2023. BendDAO. https://www.benddao.xyz/en/
+ [29] 2023. DeltaPrime. https://deltaprime.io/
+ [30] 2023. Dune DEX metrics. https://dune.com/hagaetc/dex-metrics
+ [31] 2023. Enzyme. https://enzyme.finance/
+ [32] 2023. Gearbox. https://gearbox.fi/
+ [33] 2023. GMX. https://gmx.io/#/
+ [34] 2023. Goldfinch.
+ [35] 2023. Liquity. https://www.liquity.org/
+ [36] 2023. Marinade. https://docs.marinade.finance/
+ [37] 2023. MCDEX. https://www.coinbase.com/price/mcdex
+ [38] 2023. NFTFi. https://www.nftfi.com/
+ [39] 2023. Optimism. https://www.optimism.io/
+ [40] 2023. Oxygen. https://www.oxygen.org/
+ [41] 2023. Perpetual Protocol. https://perp.com/
+ [42] 2023. Polygon. https://polygon.technology/
+ [43] 2023. RocketPool. https://docs.rocketpool.net/guides/staking/overview.html
+ [44] 2023. SetProtocol. https://www.tokensets.com/
+ [45] 2023. StakeWise. https://docs.stakewise.io/
+ [46] 2023. Terra. https://www.terra.money/
+ [47] 2023. Tron. https://tron.network/
+ [48] 2023. TrueFi. https://truefi.io/
+ [49] 2023. Vendor Finance. https://docs.vendor.finance/overview/what-is-vendor-finance
+ [50] 2023. Wrapped Bitcoins. https://wbtc.network/
+ [51] Hayden Adams, Noah Zinsmeister, and Dan Robinson. 2020. Uniswap v2 Core. Technical Report.
+ [52] Hayden Adams, Noah Zinsmeister, Moody Salem moody, uniswaporg River Keefer, and Dan Robinson. 2021. Uniswap v3 Core. Technical Report.
+ [53] Carol Alexander, Jaehyuk Choi, Heungju Park, and Sungbin Sohn. 2019. BitMEX Bitcoin Derivatives: Price Discovery, Informational Efficiency and
+      Hedging Effectiveness. Technical Report. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3353583
+ [54] Guillermo Angeris, Alex Evans, and Tarun Chitra. 2021. A Note on Bundle Profit Maximization. Technical Report.
+ [55] Guillermo Angeris, Alex Evans, Tarun Chitra, and Stephen Boyd. 2022. Optimal Routing for Constant Function Market Makers. In EC 2022 -
+      Proceedings of the 23rd ACM Conference on Economics and Computation. Association for Computing Machinery, Inc, 115–128. https://doi.org/10.
+      1145/3490486.3538336
+
+
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                                                      27
+
+
+[56] Thomas Ankenbrand, Denis Bieri, Roland Cortivo, Johannes Hoehener, and Thomas Hardjono. 2020. Proposal for a Comprehensive (Crypto) Asset
+     Taxonomy. In Proceedings - 2020 Crypto Valley Conference on Blockchain Technology, CVCBT 2020. Institute of Electrical and Electronics Engineers
+     Inc., 16–26. https://doi.org/10.1109/CVCBT50464.2020.00006
+[57] Sirio Aramonte, Sebastian Doerr, Wenqian Huang, and Andreas Schrimpf. 2022. BIS Bulletin No 57 DeFi lending: intermediation without information?
+     www.bis.org
+[58] Raphael Auer, Bernhard Haslhofer, Stefan Kitzler, Pietro Saggese, and Friedhelm Victor. 2023. The Technology of Decentralized Finance (DeFi).
+     Technical Report. www.bis.org
+[59] Bajpai P. 2022. Cryptocurrency Future. https://www.investopedia.com/articles/investing/012215/how-invest-bitcoin-exchange-futures.asp
+[60] Baker Lucas. 2022. Paradigms for on chain credit. https://jumpcrypto.com/paradigms-for-on-chain-credit/
+[61] Berenzon D. 2021. Blockchain Bridges: Building Networks of Cryptonetworks. https://medium.com/1kxnetwork/blockchain-bridges-5db6afac44f8
+[62] Lorenz Breidenbach, Florian Tramer, Ari Juels, Cornell Tech, Eth Zürich Philip Daian, Florian Tramèr, and Stanford Ari Juels. 2018. Enter the Hydra:
+     Towards Principled Bug Bounties and Exploit-Resistant Smart Contracts. https://eprint.iacr.org/2017/1090
+[63] Theodore Bugnet and Alexei Zamyatin. 2022. XCC: Theft-Resilient and Collateral-Optimized Cryptocurrency-Backed Assets. Technical Report.
+     https://eprint.iacr.org/2022/113
+[64] Dirk Bullmann, Jonas Klemm, and Andrea Pinna. 2019. Occasional Paper Series In search for stability in crypto-assets: are stablecoins the solution?
+     Technical Report. https://doi.org/10.2866/969389
+[65] Vitalik Buterin. 2014. Ethereum: A Next-Generation Smart Contract and Decentralized Application Platform. Technical Report.
+[66] Buterin V. 2016. Let’s run on-chain decentralized exchanges the way we run prediction markets. https://www.reddit.com/r/ethereum/comments/
+     55m04x/lets_run_onchain_decentralized_exchanges_the_way/
+[67] Giulio Caldarelli. 2022. Wrapping trust for interoperability: A preliminary study of wrapped tokens. https://doi.org/10.3390/info13010006
+[68] Francesca Carapella, Edward Dumas, Jacob Gerszten, Nathan Swem, and Larry Wall. 2022. Decentralized Finance (DeFi): Transformative Potential
+     & Associated Risks. (2022). https://doi.org/10.17016/FEDS.2022.057
+[69] Sylvain Carré and Franck Gabriel. 2022. Security and Credit in Proof-of-Stake DeFi Protocols *. Technical Report. https://ssrn.com/abstract=4307207
+[70] David Chaum, Christian Grothoff, and Thomas Moser. 2021. How to issue a central bank digital currency; How to issue a central bank digital currency.
+     Technical Report.
+[71] Huashan Chen, Marcus Pendleton, Laurent Njilla, and Shouhuai Xu. 2019. A Survey on Ethereum Systems Security: Vulnerabilities, Attacks and
+     Defenses. (8 2019). http://arxiv.org/abs/1908.04507
+[72] Tarun Chitra. 2020. Competitive Equilibria Between Staking and On-chain Lending License. Technical Report. https://cryptoeconomicsystems.
+     pubpub.org/pub/chitra-staking-lending-equilibria/release/6?readingCollection=c65922bd
+[73] Tarun Chitra and Kshitij Kulkarni. 2022. Improving Proof of Stake Economic Security via MEV Redistribution. Technical Report.
+[74] Jonathan Chiu, Emre Ozdenoren, Kathy Yuan, and Shengxing Zhang. 2022. On the Fragility of DeFi Lending. Technical Report. https://g20.org/wp-
+     content/uploads/2022/02/FSB-Report-on-Assessment-of-Risks-to-Financial-
+[75] Mauro Conti, Ankit Gangwal, and Michele Todero. 2019. Blockchain trilemma solver algorand has dilemma over undecidable messages. In ACM
+     International Conference Proceeding Series. Association for Computing Machinery. https://doi.org/10.1145/3339252.3339255
+[76] Simon Cousaert, Jiahua Xu, and Toshiko Matsui. 2021. SoK: Yield Aggregators in DeFi. (5 2021). http://arxiv.org/abs/2105.13891
+[77] Simon Cousaert, Jiahua Xu, and Toshiko Matsui. 2022. SoK: Yield Aggregators in DeFi. In IEEE International Conference on Blockchain and
+     Cryptocurrency, ICBC 2022. Institute of Electrical and Electronics Engineers Inc. https://doi.org/10.1109/ICBC54727.2022.9805523
+[78] Philip Daian, Steven Goldfeder, Tyler Kell, Yunqi Li, Xueyuan Zhao, Iddo Bentov, Lorenz Breidenbach, and Ari Juels. 2019. Flash Boys 2.0:
+     Frontrunning, Transaction Reordering, and Consensus Instability in Decentralized Exchanges. (4 2019). http://arxiv.org/abs/1904.05234
+[79] Adrien D’avernas, Vincent Maurin, Quentin Vandeweyer, Joseph Abadi, Markus Brunnermeier, Darrell Duffie, Fran(c)cois Gourio, Zhiguo He,
+     Jiasun Li, Ye Li, Simon Mayer, Valentin Schubert, Fabrice Tourre, Anton Tsoy, Ganesh Viswanath-Natraj, and Anthony Lee Zhang. 2022. Can
+     Stablecoins be Stable? *. Technical Report. https://bfi.uchicago.edu/wp-content/uploads/2022/09/BFI_WP_2022-131.pdf
+[80] Michael Egorov. 2021. Curve Whitepaper: Automatic market-making with dynamic peg. Technical Report.
+[81] Shayan Eskandari, Seyedehmahsa Moosavi, and Jeremy Clark. 2019. SoK: Transparent Dishonesty: front-running attacks on Blockchain. (2 2019).
+     http://arxiv.org/abs/1902.05164
+[82] Fernando J. 2022. Derivatives: Types, Considerations, and Pros and Cons. https://www.investopedia.com/terms/d/derivative.asp
+[83] Pierluigi Freni, Enrico Ferro, and Roberto Moncada. 2022. Tokenomics and blockchain tokens: A design-oriented morphological framework.
+     Blockchain: Research and Applications 3, 1 (3 2022). https://doi.org/10.1016/j.bcra.2022.100069
+[84] Ankit Gangwal, Haripriya Ravali Gangavalli, and Apoorva Thirupathi. 2022. A Survey of Layer-Two Blockchain Protocols. (4 2022). http:
+     //arxiv.org/abs/2204.08032
+[85] Aaron Green, Christopher Cammilleri, John S Erickson, Oshani Seneviratne, and Kristin P Bennett. 2022. DeFi Survival Analysis: Insights into Risks
+     and User Behaviors The Rensselaer Institute for Data Exploration and Applications Rensselaer Polytechnic Institute. Technical Report. http://idea.rpi.edu
+[86] Lewis Gudgeon, Sam Werner, Daniel Perez, and William J. Knottenbelt. 2020. DeFi Protocols for Loanable Funds: Interest Rates, Liquidity and
+     Market Efficiency. In AFT 2020 - Proceedings of the 2nd ACM Conference on Advances in Financial Technologies. Association for Computing Machinery,
+     Inc, 92–112. https://doi.org/10.1145/3419614.3423254
+[87] Robin Hanson. 2002. Logarithmic Market Scoring Rules for Modular Combinatorial Information Aggregation. Technical Report. http://hanson.gmu.edu
+                                                                                                                             Manuscript submitted to ACM
+28                                                                                                                             Gogol, Killer, et al.
+
+
+ [88] Sakib Haque, Zachary Eberhart, Aakash Bansal, and Collin McMillan. 2022. Semantic Similarity Metrics for Evaluating Source Code Summarization.
+      In IEEE International Conference on Program Comprehension, Vol. 2022-March. IEEE Computer Society, 36–47. https://doi.org/10.1145/nnnnnnn.
+      nnnnnnn
+ [89] Thomas Hardjono. 2021. Blockchain Gateways, Bridges and Delegated Hash-Locks. (2 2021). http://arxiv.org/abs/2102.03933
+ [90] Lioba Heimbach, Eric Schertenleib, and Roger Wattenhofer. 2022. Risks and Returns of Uniswap V3 Liquidity Providers. (5 2022). http:
+      //arxiv.org/abs/2205.08904
+ [91] Lioba Heimbach, Ye Wang, and Roger Wattenhofer. 2021. Behavior of Liquidity Providers in Decentralized Exchanges. (5 2021). http://arxiv.org/
+      abs/2105.13822
+ [92] Lioba Heimbach and Roger Wattenhofer. 2022. SoK: Preventing Transaction Reordering Manipulations in Decentralized Finance. (3 2022).
+      http://arxiv.org/abs/2203.11520
+ [93] Hugo Inzirillo and Stanislas de Quenetain. 2022. Managing Risk in DeFi Portfolios. (5 2022). http://arxiv.org/abs/2205.14699
+ [94] Johannes Rude Jensen and Omri Ross. 2021. HOW DECENTRALIZED IS THE GOVERNANCE OF BLOCKCHAIN-BASED FINANCE? Technical Report.
+      https://arxiv.org/abs/2102.10096
+ [95] Johannes Rude Jensen, Victor Von Wachter, and Omri Ross. 2021. An Introduction to Decentralized Finance (DeFi). (2021). https://doi.org/10.7250/
+      csimq.2021-26.03
+ [96] Antonio Juliano. 2017. dYdX: A Standard for Decentralized Margin Trading and Derivatives. Technical Report. http://www.investopedia.com/ask/
+      answers/052715/how-big-derivatives-market.asp
+ [97] Yujin Kwon, Jihee Kim, Yongdae Kim, Dawn Song, We thank Yang-yim Heo, Hyejin Oh, Kyeong-neung Koo, Soobin Lee, Yonggon Kim, Chanjoong
+      Kwon, Taegyoung Lee, Yonghwan Jo, Francisco Santos, Jack Kim, Hee Su Roh, Yongho Choi, and Seungwon Jeong. 2021. The Trilemma of Stablecoin.
+      Technical Report. https://ssrn.com/abstract=3917430
+ [98] Mauricio Labadie. 2022. Impermanent loss and slippage in Automated Market Makers (AMMs) with constant-product formula. Technical Report.
+      https://ssrn.com/abstract=4053924
+ [99] Olga Labazova. 2019. Towards a Framework for Evaluation of Blockchain. Technical Report. 1 pages.
+[100] Pascal Lafourcade and Marius Lombard-Platet. 2020. About Blockchain Interoperability. Technical Report. https://eprint.iacr.org/2020/643
+[101] Sung-Shine Lee, Alexandr Murashkin, Martin Derka, and Jan Gorzny. 2022. SoK: Not Quite Water Under the Bridge: Review of Cross-Chain Bridge
+      Hacks. (10 2022). http://arxiv.org/abs/2210.16209
+[102] Alfred Lehar and Christine A Parlour. 2022. Systemic Fragility in Decentralized Markets. Technical Report. https://papers.ssrn.com/sol3/papers.
+      cfm?abstract_id=4164833
+[103] Wenkai Li, Jiuyang Bu, Xiaoqi Li, and Xianyi Chen. 2022. Security Analysis of DeFi: Vulnerabilities, Attacks and Advances. (5 2022). http:
+      //arxiv.org/abs/2205.09524
+[104] Lindsay X Lin. 2019. DECONSTRUCTING DECENTRALIZED EXCHANGES. Technical Report. https://www.airswap.io
+[105] Shaofeng Lin, Yihan Kong, and Shaotao Nie. 2021. Overview of Block Chain Cross Chain Technology. In Proceedings - 2021 13th International
+      Conference on Measuring Technology and Mechatronics Automation, ICMTMA 2021. Institute of Electrical and Electronics Engineers Inc., 357–360.
+      https://doi.org/10.1109/ICMTMA52658.2021.00083
+[106] Alex Lipton, Artur Sepp Sila, and Sygnum Bank. 2021. Automated Market-Making for Fiat Currencies. Technical Report. https://defipulse.com/
+      uniswap,
+[107] Bowen Liu, Pawel Szalachowski, and Jianying Zhou. 2020. A First Look into DeFi Oracles. (5 2020). http://arxiv.org/abs/2005.04377
+[108] MakerDAO Team. 2017. The DAI Stablecoin System. Technical Report. https://makerdao.com/
+[109] Mushegia N Martinelli F. 2019. Balancer Whitepaper: A non-custodial portfolio manager, liquidity provider, and price sensor. (2019).
+[110] Bruno Mazorra, Victor Adan, and Vanesa Daza. 2022. Do not rug on me: Zero-dimensional Scam Detection. (1 2022). http://arxiv.org/abs/2201.07220
+[111] Patrick Mccorry, Chris Buckland, Bennet Yee, and Dawn Song. 2021. SoK: Validating Bridges as a Scaling Solution for Blockchains. Technical Report.
+      https://eprint.iacr.org/2021/1589
+[112] Peter Mell. 2022. Understanding Stablecoin Technology and Related Security Considerations. Technical Report. National Institute of Standards and
+      Technology. https://doi.org/10.6028/NIST.IR.8408.ipd
+[113] Amani Moin, Emin Gün Sirer, and Kevin Sekniqi. 2019. A Classification Framework for Stablecoin Designs. (9 2019). http://arxiv.org/abs/1910.10098
+[114] Satoshi Nakamoto. 2008. Bitcoin: A Peer-to-Peer Electronic Cash System. Technical Report. www.bitcoin.org
+[115] Michael Neuder, Rithvik Rao, Daniel J. Moroz, and David C. Parkes. 2021. Strategic Liquidity Provision in Uniswap v3. (6 2021). http:
+      //arxiv.org/abs/2106.12033
+[116] Ricsson Ngo. 2021. Timeswap First Fully Decentralized AMM based Money Market Protocol. Technical Report. https://timeswap.io/whitepaper.pdf
+[117] Daniel Perez, Sam M. Werner, Jiahua Xu, and Benjamin Livshits. 2020. Liquidations: DeFi on a Knife-edge. (9 2020). https://doi.org/10.1007/978-3-
+      662-64331-0{_}24
+[118] Kaihua Qin, Liyi Zhou, Yaroslav Afonin, Ludovico Lazzaretti, and Arthur Gervais. 2021. CeFi vs. DeFi – Comparing Centralized to Decentralized
+      Finance. (6 2021). http://arxiv.org/abs/2106.08157
+[119] Kaihua Qin, Liyi Zhou, Benjamin Livshits, and Arthur Gervais. 2020. Attacking the DeFi Ecosystem with Flash Loans for Fun and Profit. (3 2020).
+      http://arxiv.org/abs/2003.03810
+
+
+Manuscript submitted to ACM
+SoK: Decentralized Finance (DeFi) - Fundamentals, Taxonomy and Risks                                                                                 29
+
+
+[120] Abrar Rahman, Victor Shi, Matthew Ding, and Elliot Choi. 2022. Systematization of Knowledge: Synthetic Assets, Derivatives, and On-Chain
+      Portfolio Management. (9 2022). http://arxiv.org/abs/2209.09958
+[121] Robert Leshner and Geoffrey Hayes. 2019. Compound: The Money Market Protocol. Technical Report. https://docs.google.com/document/d/
+      1KoXEEYg4YAaPacS4dudPuFZwgAX0Swv9Yi7-iE4C5JU/edit#
+[122] Kanis Saengchote. 2022. Decentralized lending and its users: Insights from Compound. Technical Report. https://ssrn.com/abstract=3925344
+[123] Saradon A. 2022. MYSO v1 Core A Trust-Minimized Protocol for Zero-Liquidation Loans. Technical Report. https://github.com/mysofinance/v1-
+      core-whitepaper/blob/main/MYSO_v1___Whitepaper.pdf
+[124] Aetienne Sardon. 2021. Zero-Liquidation Loans: A Structured Product Approach to DeFi Lending. (10 2021). http://arxiv.org/abs/2110.13533
+[125] Fabian Schär. 2021. Decentralized finance: on blockchain-and smart contract-based financial markets. Federal Reserve Bank of St. Louis Review 103,
+      2 (2021), 153–174. https://doi.org/10.20955/r.103.153-74
+[126] Stefan Scharnowski and Hossein Jahanshahloo. 2022. Liquid Staking: Basis Determinants and Price Discovery. Technical Report. https://ssrn.com/
+      abstract=4180341
+[127] Drew Stone. 2021. Trustless, privacy-preserving blockchain bridges. (2 2021). http://arxiv.org/abs/2102.04660
+[128] Neelesh Tiruviluamala, Alexander Port, and Erik Lewis. 2022. A General Framework for Impermanent Loss in Automated Market Makers. (3 2022).
+      http://arxiv.org/abs/2203.11352
+[129] Gerry Tsoukalas and Brett Hemenway Falk. 2020. Token-weighted crowdsourcing. Management Science 66, 9 (9 2020), 3843–3859. https:
+      //doi.org/10.1287/mnsc.2019.3515
+[130] Gang Wang. 2021. SoK: Exploring Blockchains Interoperability. Technical Report. https://eprint.iacr.org/2021/537
+[131] Will Warren and Amir Bandeali. 2017. 0x: An open protocol for decentralized exchange on the Ethereum blockchain. Technical Report.
+[132] Sam M. Werner, Daniel Perez, Lewis Gudgeon, Ariah Klages-Mundt, Dominik Harz, and William J. Knottenbelt. 2021. SoK: Decentralized Finance
+      (DeFi). (1 2021). http://arxiv.org/abs/2101.08778
+[133] Jiahua Xu and Yebo Feng. 2022. Reap the Harvest on Blockchain: A Survey of Yield Farming Protocols. (10 2022). http://arxiv.org/abs/2210.04194
+[134] Jiahua Xu, Krzysztof Paruch, Simon Cousaert, and Yebo Feng. 2021. SoK: Decentralized Exchanges (DEX) with Automated Market Maker (AMM)
+      Protocols. (3 2021). http://arxiv.org/abs/2103.12732
+[135] Teng Andrea Xu and Jiahua Xu. 2022. A Short Survey on Business Models of Decentralized Finance (DeFi) Protocols. (2 2022). http://arxiv.org/abs/
+      2202.07742
+[136] Alexei Zamyatin, Dominik Harz, Joshua Lind, Panayiotis Panayiotou, Arthur Gervais, and William Knottenbelt. 2019. XCLAIM: Trustless,
+      Interoperable, Cryptocurrency-Backed Assets. Technical Report. https://ieeexplore.ieee.org/document/8835387
+[137] Ryan Zarick, Bryan Pellegrino, and Caleb Banister. 2021. Delta: Solving the Bridging Trilemma. Technical Report.
+[138] Liyi Zhou, Kaihua Qin, and Arthur Gervais. 2021. A2MM: Mitigating Frontrunning, Transaction Reordering and Consensus Instability in
+      Decentralized Exchanges. (6 2021). http://arxiv.org/abs/2106.07371
+[139] Liyi Zhou, Xihan Xiong, Jens Ernstberger, Stefanos Chaliasos, Zhipeng Wang, Ye Wang, Kaihua Qin, Roger Wattenhofer, Dawn Song, and Arthur
+      Gervais. 2022. SoK: Decentralized Finance (DeFi) Attacks. (8 2022). http://arxiv.org/abs/2208.13035
+[140] Aneesh Zutshi, Antonio Grilo, and Tahereh Nodehi. 2021. The value proposition of blockchain technologies and its impact on Digital Platforms.
+      Computers and Industrial Engineering 155 (5 2021). https://doi.org/10.1016/j.cie.2021.107187
+[141] Guy Zyskind, Oz Nathan, and Alex Sandy Pentland. 2015. Decentralizing privacy: Using blockchain to protect personal data. In Proceedings - 2015
+      IEEE Security and Privacy Workshops, SPW 2015. Institute of Electrical and Electronics Engineers Inc., 180–184. https://doi.org/10.1109/SPW.2015.27
+
+
+Received 1 June 2023
+
+
+
+
+                                                                                                                         Manuscript submitted to ACM
+

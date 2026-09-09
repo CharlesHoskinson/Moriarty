@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-3475: Abstract Storage Bonds</title>
+      <meta property="og:title" content="ERC-3475: Abstract Storage Bonds" />
+    
+    <meta name="description" content="Interface for creating tokenized obligations with abstract on-chain metadata storage" />
+    <meta property="og:description" content="Interface for creating tokenized obligations with abstract on-chain metadata storage" />
+    <meta name="twitter:description" content="Interface for creating tokenized obligations with abstract on-chain metadata storage" />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-3475" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-3475" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-3475: Abstract Storage Bonds
+    <a href="https://ethereum-magicians.org/t/eip-3475-multiple-callable-bonds-standard/8691" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-3475.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Interface for creating tokenized obligations with abstract on-chain metadata storage</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Yu Liu&nbsp;(<a href="https://github.com/yuliu-debond">@yuliu-debond</a>), Varun Deshpande&nbsp;(<a href="https://github.com/dr-chain">@dr-chain</a>), Cedric Ngakam&nbsp;(<a href="https://github.com/drikssy">@drikssy</a>), Dhruv Malik&nbsp;(<a href="https://github.com/dhruvmalik007">@dhruvmalik007</a>), Samuel Gwlanold Edoumou&nbsp;(<a href="https://github.com/Edoumou">@Edoumou</a>), Toufic Batrice&nbsp;(<a href="https://github.com/toufic0710">@toufic0710</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2021-04-05</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-20">EIP-20</a>, 
+
+  <a href="eip-721">EIP-721</a>, 
+
+  <a href="eip-1155">EIP-1155</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#events">Events</a></li>
+      <li><a href="#1-description">1. Description:</a></li>
+      <li><a href="#2-nonce">2. Nonce:</a></li>
+      <li><a href="#3-class-metadata">3. Class metadata:</a></li>
+      <li><a href="#4-decoding-data">4. Decoding data</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#metadata-structure">Metadata structure</a></li>
+      <li><a href="#batch-function">Batch function</a></li>
+      <li><a href="#amm-optimization">AMM optimization</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#test-cases">Test Cases</a></li>
+  <li><a href="#reference-implementation">Reference Implementation</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<ul>
+  <li>
+    <p>This EIP allows the creation of tokenized obligations with abstract on-chain metadata storage. Issuing bonds with multiple redemption data cannot be achieved with existing token standards.</p>
+  </li>
+  <li>
+    <p>This EIP enables each bond class ID to represent a new configurable token type and corresponding to each class, corresponding bond nonces to represent an issuing condition or any other form of data in uint256. Every single nonce of a bond class can have its metadata, supply, and other redemption conditions.</p>
+  </li>
+  <li>
+    <p>Bonds created by this EIP can also be batched for issuance/redemption conditions for efficiency on gas costs and UX side. And finally, bonds created from this standard can be divided and exchanged in a secondary market.</p>
+  </li>
+</ul>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Current LP (Liquidity Provider) tokens are simple <a href="/EIPS/eip-20">EIP-20</a> tokens with no complex data structure. To allow more complex reward and redemption logic to be stored on-chain, we need a new token standard that:</p>
+
+<ul>
+  <li>Supports multiple token IDs</li>
+  <li>Can store on-chain metadata</li>
+  <li>Doesn’t require a fixed storage pattern</li>
+  <li>Is gas-efficient.</li>
+</ul>
+
+<p>Also Some benefits:</p>
+
+<ul>
+  <li>This EIP allows the creation of any obligation with the same interface.</li>
+  <li>It will enable any 3rd party wallet applications or exchanges to read these tokens’ balance and redemption conditions.</li>
+  <li>These bonds can also be batched as tradeable instruments. Those instruments can then be divided and exchanged in secondary markets.</li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p><strong>Definition</strong></p>
+
+<p>Bank: an entity that issues, redeems, or burns bonds after getting the necessary amount of liquidity. Generally, a single entity with admin access to the pool.</p>
+
+<p><strong>Functions</strong></p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">pragma</span> <span class="n">solidity</span> <span class="o">^</span><span class="mf">0.8</span><span class="p">.</span><span class="mi">0</span><span class="p">;</span>
+
+<span class="cm">/**
+* transferFrom
+* @param _from argument is the address of the bond holder whose balance is about to decrease.
+* @param _to argument is the address of the bond recipient whose balance is about to increase.
+* @param _transactions is the `Transaction[] calldata` (of type ['classId', 'nonceId', '_amountBonds']) structure defined in the rationale section below.
+* @dev transferFrom MUST have the `isApprovedFor(_from, _to, _transactions[i].classId)` approval to transfer `_from` address to `_to` address for given classId (i.e for Transaction tuple corresponding to all nonces).
+e.g:
+* function transferFrom(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, 0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B, [IERC3475.Transaction(1,14,500)]);
+* transfer from `_from` address, to `_to` address, `500000000` bonds of type class`1` and nonce `42`.
+*/</span>
+
+<span class="k">function</span> <span class="n">transferFrom</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span> <span class="kt">address</span> <span class="n">_to</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transactions</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+<span class="cm">/**
+* transferAllowanceFrom
+* @dev allows the transfer of only those bond types and nonces being allotted to the _to address using allowance().
+* @param _from is the address of the holder whose balance is about to decrease.
+* @param _to is the address of the recipient whose balance is about to increase.
+* @param _transactions is the `Transaction[] calldata` structure defined in the section `rationale` below.
+* @dev transferAllowanceFrom MUST have the `allowance(_from, msg.sender, _transactions[i].classId, _transactions[i].nonceId)` (where `i` looping for [ 0 ...Transaction.length - 1] ) 
+e.g:
+* function transferAllowanceFrom(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, 0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B, [IERC3475.Transaction(1,14,500)]);
+* transfer from `_from` address, to `_to` address, `500000000` bonds of type class`1` and nonce `42`.
+*/</span>
+
+<span class="k">function</span> <span class="n">transferAllowanceFrom</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span><span class="kt">address</span> <span class="n">_to</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transactions</span><span class="p">)</span> <span class="k">public</span> <span class="p">;</span>
+
+<span class="cm">/**
+* issue 
+* @dev allows issuing any number of bond types (defined by values in Transaction tuple as param) to an address.
+* @dev it MUST be issued by a single entity (for instance, a role-based ownable contract that has integration with the liquidity pool of the deposited collateral by `_to` address).
+* @param `_to` argument is the address to which the bond will be issued.
+* @param `_transactions` is the `Transaction[] calldata` (ie array of issued bond class, bond nonce and amount of bonds to be issued).
+* @dev transferAllowanceFrom MUST have the `allowance(_from, msg.sender, _transactions[i].classId, _transactions[i].nonceId)` (where `i` looping for [ 0 ...Transaction.length - 1] ) 
+e.g:
+example: issue(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef,[IERC3475.Transaction(1,14,500)]);
+issues `1000` bonds with a class of `0` to address `0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef` with a nonce of `5`.
+*/</span>
+<span class="k">function</span> <span class="n">issue</span><span class="p">(</span><span class="kt">address</span> <span class="n">_to</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transaction</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span> 
+
+<span class="cm">/**
+* redeem
+* @dev permits redemption of bond from an address.
+* @dev the calling of this function needs to be restricted to the bond issuer contract.
+* @param `_from` is the address from which the bond will be redeemed.
+* @param `_transactions` is the `Transaction[] calldata` structure (i.e., array of tuples with the pairs of (class, nonce and amount) of the bonds that are to be redeemed). Further defined in the rationale section.
+* @dev redeem function for a given class, and nonce category MUST BE done after certain conditions for maturity (can be end time, total active liquidity, etc.) are met. 
+* @dev furthermore, it SHOULD ONLY be called by the bank or secondary market maker contract.
+e.g:
+* redeem(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, [IERC3475.Transaction(1,14,500)]);
+means “redeem from wallet address(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef), 500000000 of bond class1 and nonce 42.
+*/</span>
+
+<span class="k">function</span> <span class="n">redeem</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transactions</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span> 
+
+<span class="cm">/**
+* burn
+* @dev permits nullifying of the bonds (or transferring given bonds to address(0)).
+* @dev burn function for given class and nonce MUST BE called by only the controller contract.
+* @param _from is the address of the holder whose bonds are about to burn.
+* @param `_transactions` is the `Transaction[] calldata` structure (i.e., array of tuple with the pairs of (class, nonce and amount) of the bonds that are to be burned). further defined in the rationale.
+* @dev burn function for a given class, and nonce category MUST BE done only after certain conditions for maturity (can be end time, total active liquidity, etc). 
+* @dev furthermore, it SHOULD ONLY be called by the bank or secondary market maker contract.
+* e.g:  
+* burn(0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B,[IERC3475.Transaction(1,14,500)]);
+* means burning 500000000 bonds of class 1 nonce 42 owned by address 0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B.
+*/</span>
+<span class="k">function</span> <span class="n">burn</span><span class="p">(</span><span class="kt">address</span> <span class="n">_from</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transactions</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span> 
+
+<span class="cm">/**
+* approve
+* @dev Allows `_spender` to withdraw from the msg.sender the bonds of `_amount` and type (classId and nonceId).
+* @dev If this function is called again, it overwrites the current allowance with the amount.
+* @dev `approve()` should only be callable by the bank, or the owner of the account.
+* @param `_spender` argument is the address of the user who is approved to transfer the bonds.
+* @param `_transactions` is the `Transaction[] calldata` structure (ie array of tuple with the pairs of (class,nonce, and amount) of the bonds that are to be approved to be spend by _spender). Further defined in the rationale section.
+* e.g: 
+* approve(0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B,[IERC3475.Transaction(1,14,500)]);
+* means owner of address 0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B is approved to manage 500 bonds from class 1 and Nonce 14.
+*/</span>
+
+<span class="k">function</span> <span class="n">approve</span><span class="p">(</span><span class="kt">address</span> <span class="n">_spender</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">_transactions</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+<span class="cm">/**
+* SetApprovalFor
+* @dev enable or disable approval for a third party (“operator”) to manage all the Bonds in the given class of the caller’s bonds.
+* @dev If this function is called again, it overwrites the current allowance with the amount.
+* @dev `approve()` should only be callable by the bank or the owner of the account.
+* @param `_operator` is the address to add to the set of authorized operators.
+* @param `classId` is the class id of the bond.
+* @param `_approved` is true if the operator is approved (based on the conditions provided), false meaning approval is revoked.
+* @dev contract MUST define internal function regarding the conditions for setting approval and should be callable only by bank or owner.
+* e.g: setApprovalFor(0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B,0,true);
+* means that address 0x82a55a613429Aeb3D01fbE6841bE1AcA4fFD5b2B is authorized to transfer bonds from class 0 (across all nonces).
+*/</span>
+
+<span class="k">function</span> <span class="n">setApprovalFor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">_approved</span><span class="p">)</span> <span class="k">external</span> <span class="k">returns</span><span class="p">(</span><span class="kt">bool</span> <span class="n">approved</span><span class="p">);</span>
+
+<span class="cm">/**
+* totalSupply
+* @dev Here, total supply includes burned and redeemed supply.
+* @param classId is the corresponding class Id of the bond.
+* @param nonceId is the nonce Id of the given bond class.
+* @return the supply of the bonds
+* e.g:
+* totalSupply(0, 1);
+* it finds the total supply of the bonds of classid 0 and bond nonce 1.
+*/</span>
+<span class="k">function</span> <span class="n">totalSupply</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/**
+* redeemedSupply
+* @dev Returns the redeemed supply of the bond identified by (classId,nonceId).
+* @param classId is the corresponding class id of the bond.
+* @param nonceId is the nonce id of the given bond class.
+* @return the supply of bonds redeemed.
+*/</span>
+<span class="k">function</span> <span class="n">redeemedSupply</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/**
+* activeSupply
+* @dev Returns the active supply of the bond defined by (classId,NonceId).
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonce id of the given bond class.
+* @return the non-redeemed, active supply. 
+*/</span>
+<span class="k">function</span> <span class="n">activeSupply</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/**
+* burnedSupply
+* @dev Returns the burned supply of the bond in defined by (classId,NonceId).
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonce id of the given bond class.
+* @return gets the supply of bonds for given classId and nonceId that are already burned.
+*/</span>
+<span class="k">function</span> <span class="n">burnedSupply</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/**
+* balanceOf
+* @dev Returns the balance of the bonds (nonReferenced) of given classId and bond nonce held by the address `_account`.
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonce id of the given bond class.
+* @param _account address of the owner whose balance is to be determined.
+* @dev this also consists of bonds that are redeemed.
+*/</span>
+<span class="k">function</span> <span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span> <span class="n">_account</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/**
+* classMetadata
+* @dev Returns the JSON metadata of the classes.
+* @dev The metadata SHOULD follow a set of structures explained later in the metadata.md
+* @param metadataId is the index-id given bond class information.
+* @return the JSON metadata of the nonces. — e.g. `[title, type, description]`.
+*/</span>
+<span class="k">function</span> <span class="n">classMetadata</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">metadataId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Metadata</span> <span class="k">memory</span><span class="p">);</span>
+
+<span class="cm">/**
+* nonceMetadata 
+* @dev Returns the JSON metadata of the nonces.
+* @dev The metadata SHOULD follow a set of structures explained later in metadata.md
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonce id of the given bond class.
+* @param metadataId is the index of the JSON storage for given metadata information. more is defined in metadata.md.
+* @returns the JSON metadata of the nonces. — e.g. `[title, type, description]`.
+*/</span>
+<span class="k">function</span> <span class="n">nonceMetadata</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">metadataId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Metadata</span> <span class="k">memory</span><span class="p">);</span>
+
+<span class="cm">/**
+* classValues
+* @dev allows anyone to read the values (stored in struct Values for different class) for given bond class `classId`.
+* @dev the values SHOULD follow a set of structures as explained in metadata along with correct mapping corresponding to the given metadata structure
+* @param classId is the corresponding classId of the bond.
+* @param metadataId is the index of the JSON storage for given metadata information of all values of given metadata. more is defined in metadata.md.
+* @returns the Values of the class metadata. — e.g. `[string, uint, address]`.
+*/</span>
+<span class="k">function</span> <span class="n">classValues</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">metadataId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Values</span> <span class="k">memory</span><span class="p">);</span>
+
+<span class="cm">/**
+* nonceValues
+* @dev allows anyone to read the values (stored in struct Values for different class) for given bond (`nonceId`,`classId`).
+* @dev the values SHOULD follow a set of structures explained in metadata along with correct mapping corresponding to the given metadata structure
+* @param classId is the corresponding classId of the bond.
+* @param metadataId is the index of the JSON storage for given metadata information of all values of given metadata. More is defined in metadata.md.
+* @returns the Values of the class metadata. — e.g. `[string, uint, address]`.
+*/</span>
+<span class="k">function</span> <span class="n">nonceValues</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">metadataId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Values</span> <span class="k">memory</span><span class="p">);</span>
+
+<span class="cm">/**
+* getProgress
+* @dev Returns the parameters to determine the current status of bonds maturity.
+* @dev the conditions of redemption SHOULD be defined with one or several internal functions. 
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonceId of the given bond class . 
+* @returns progressAchieved defines the metric (either related to % liquidity, time, etc.) that defines the current status of the bond.
+* @returns progressRemaining defines the metric that defines the remaining time/ remaining progress. 
+*/</span>
+<span class="k">function</span> <span class="n">getProgress</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">progressAchieved</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">progressRemaining</span><span class="p">);</span>
+
+<span class="cm">/** 
+* allowance
+* @dev Authorizes to set the allowance for given `_spender` by `_owner` for all bonds identified by (classId, nonceId).
+* @param _owner address of the owner of bond(and also msg.sender).
+* @param _spender is the address authorized to spend the bonds held by _owner of info (classId, nonceId).
+* @param classId is the corresponding classId of the bond.
+* @param nonceId is the nonceId of the given bond class. 
+* @notice Returns the _amount which spender is still allowed to withdraw from _owner.
+*/</span>
+<span class="k">function</span> <span class="n">allowance</span><span class="p">(</span><span class="kt">address</span> <span class="n">_owner</span><span class="p">,</span> <span class="kt">address</span> <span class="n">_spender</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">classId</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">)</span> <span class="k">external</span> <span class="k">returns</span><span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="cm">/** 
+* isApprovedFor
+* @dev returns true if address _operator is approved for managing the account’s bonds class.
+* @notice Queries the approval status of an operator for a given owner.
+* @dev _owner is the owner of bonds. 
+* @dev _operator is the EOA /contract, whose status for approval on bond class for this approval is checked.
+* @returns “true” if the operator is approved, “false” if not.
+*/</span>
+<span class="k">function</span> <span class="n">isApprovedFor</span><span class="p">(</span><span class="kt">address</span> <span class="n">_owner</span><span class="p">,</span> <span class="kt">address</span> <span class="n">_operator</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bool</span><span class="p">);</span>
+</code></pre></div></div>
+  
+    <h3 id="events">
+      
+      
+        <a href="#events" class="anchor-link"></a> Events
+      
+      
+    </h3>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/** 
+* Issue
+* @notice Issue MUST trigger when Bonds are issued. This SHOULD not include zero value Issuing.
+* @dev This SHOULD not include zero value issuing.
+* @dev Issue MUST be triggered when the operator (i.e Bank address) contract issues bonds to the given entity.
+* eg: emit Issue(_operator, 0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef,[IERC3475.Transaction(1,14,500)]); 
+* issue by address(operator) 500 Bonds(nonce14,class 1) to address 0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef.
+*/</span>
+
+<span class="k">event</span> <span class="n">Issue</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_to</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="n">_transactions</span><span class="p">);</span> 
+
+<span class="cm">/** 
+* Redeem
+* @notice Redeem MUST trigger when Bonds are redeemed. This SHOULD not include zero value redemption.
+*e.g: emit Redeem(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef,0x492Af743654549b12b1B807a9E0e8F397E44236E,[IERC3475.Transaction(1,14,500)]);
+* emit event when 5000 bonds of class 1, nonce 14 owned by address 0x492Af743654549b12b1B807a9E0e8F397E44236E are being redeemed by 0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef.
+*/</span>
+
+<span class="k">event</span> <span class="n">Redeem</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_from</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="n">_transactions</span><span class="p">);</span>
+
+
+<span class="cm">/** 
+* Burn.
+* @dev `Burn` MUST trigger when the bonds are being redeemed via staking (or being invalidated) by the bank contract.
+* @dev `Burn` MUST trigger when Bonds are burned. This SHOULD not include zero value burning.
+* e.g : emit Burn(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef,0x492Af743654549b12b1B807a9E0e8F397E44236E,[IERC3475.Transaction(1,14,500)]);
+* emits event when 500 bonds of owner 0x492Af743654549b12b1B807a9E0e8F397E44236E of type (class 1, nonce 14) are burned by operator  0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef.
+*/</span>
+
+<span class="k">event</span> <span class="n">burn</span><span class="p">(</span><span class="kt">address</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">address</span> <span class="n">_owner</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="n">_transactions</span><span class="p">);</span>
+
+<span class="cm">/** 
+* Transfer
+* @dev its emitted when the bond is transferred by address(operator) from owner address(_from) to address(_to) with the bonds transferred, whose params are defined by _transactions struct array. 
+* @dev Transfer MUST trigger when Bonds are transferred. This SHOULD not include zero value transfers.
+* @dev Transfer event with the _from `0x0` MUST not create this event(use `event Issued` instead). 
+* e.g  emit Transfer(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, 0x492Af743654549b12b1B807a9E0e8F397E44236E, _to, [IERC3475.Transaction(1,14,500)]);
+* transfer by address(_operator) amount 500 bonds with (Class 1 and Nonce 14) from 0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, to address(_to).
+*/</span>
+
+<span class="k">event</span> <span class="n">Transfer</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_from</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_to</span><span class="p">,</span> <span class="n">Transaction</span><span class="p">[]</span> <span class="n">_transactions</span><span class="p">);</span>
+
+<span class="cm">/**
+* ApprovalFor
+* @dev its emitted when address(_owner) approves the address(_operator) to transfer his bonds.
+* @notice Approval MUST trigger when bond holders are approving an _operator. This SHOULD not include zero value approval. 
+* eg: emit ApprovalFor(0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef, 0x492Af743654549b12b1B807a9E0e8F397E44236E, true);
+* this means 0x2d03B6C79B75eE7aB35298878D05fe36DC1fE8Ef gives 0x492Af743654549b12b1B807a9E0e8F397E44236E access permission for transfer of its bonds.
+*/</span>
+
+<span class="k">event</span> <span class="n">ApprovalFor</span><span class="p">(</span><span class="kt">address</span> <span class="k">indexed</span> <span class="n">_owner</span><span class="p">,</span> <span class="kt">address</span> <span class="k">indexed</span> <span class="n">_operator</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">_approved</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p><strong>Metadata</strong>:
+The metadata of a bond class or nonce is stored as an array of JSON objects, represented by the following types.</p>
+
+<p><strong>NOTE: all of the metadata schemas are referenced from <a href="/assets/eip-3475/Metadata">here</a></strong></p>
+  
+    <h3 id="1-description">
+      
+      
+        <a href="#1-description" class="anchor-link"></a> 1. Description:
+      
+      
+    </h3>
+
+<p>This defines the additional information about the nature of data being stored in the nonce/class metadata structures. They are defined using the structured explained <a href="/assets/eip-3475/Metadata#1-description-metadata">here</a>. this will then be used by the frontend of the respective entities participating in the bond markets to interpret the data which is compliant with their jurisdiction.</p>
+  
+    <h3 id="2-nonce">
+      
+      
+        <a href="#2-nonce" class="anchor-link"></a> 2. Nonce:
+      
+      
+    </h3>
+
+<p>The key value for indexing the information is the ‘class’ field. Following are the rules:</p>
+
+<ul>
+  <li>The title can be any alphanumeric type that is differentiated by the description of metadata (although it can be dependent on certain jurisdictions).</li>
+  <li>The title SHOULD not be EMPTY.</li>
+</ul>
+
+<p>Some specific examples of metadata can be the localization of bonds, jurisdiction details etc., and they can be found in the <a href="/assets/eip-3475/Metadata">metadata.md</a> example description.</p>
+  
+    <h3 id="3-class-metadata">
+      
+      
+        <a href="#3-class-metadata" class="anchor-link"></a> 3. Class metadata:
+      
+      
+    </h3>
+
+<p>This structure defines the details of the class information (symbol, risk information, etc.). the example is explained <a href="/assets/eip-3475/Metadata">here</a> in the class metadata section.</p>
+  
+    <h3 id="4-decoding-data">
+      
+      
+        <a href="#4-decoding-data" class="anchor-link"></a> 4. Decoding data
+      
+      
+    </h3>
+
+<p>First, the functions for analyzing the metadata (i.e <code class="language-plaintext highlighter-rouge">ClassMetadata</code> and <code class="language-plaintext highlighter-rouge">NonceMetadata</code>) are to be used by the corresponding frontend to decode the information of the bond.</p>
+
+<p>This is done via overriding the function interface for functions <code class="language-plaintext highlighter-rouge">classValues</code> and <code class="language-plaintext highlighter-rouge">nonceValues</code> by defining the key (which SHOULD be an index) to read the corresponding information stored as a JSON object.</p>
+
+<pre><code class="language-JSON">{
+"title": "symbol",
+"_type": "string",
+"description": "defines the unique identifier name in following format: (symbol, bondType, maturity in months)",
+"values": ["Class Name 1","Class Name 2","DBIT Fix 6M"],
+}
+</code></pre>
+
+<p>e.g. In the above example, to get the <code class="language-plaintext highlighter-rouge">symbol</code> of the given class id, we can use the class id as a key to get the <code class="language-plaintext highlighter-rouge">symbol</code> value in the values, which then can be used for fetching the detail for instance.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="metadata-structure">
+      
+      
+        <a href="#metadata-structure" class="anchor-link"></a> Metadata structure
+      
+      
+    </h3>
+
+<p>Instead of storing the details about the class and their issuances to the user (ie nonce) externally, we store the details in the respective structures. Classes represent the different bond types, and nonces represent the various period of issuances. Nonces under the same class share the same metadata. Meanwhile, nonces are non-fungible. Each nonce can store a different set of metadata. Thus, upon transfer of a bond, all the metadata will be transferred to the new owner of the bond.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">struct</span> <span class="n">Values</span><span class="p">{</span>
+ <span class="kt">string</span> <span class="n">stringValue</span><span class="p">;</span>
+ <span class="kt">uint</span> <span class="n">uintValue</span><span class="p">;</span>
+ <span class="kt">address</span> <span class="n">addressValue</span><span class="p">;</span>
+ <span class="kt">bool</span> <span class="n">boolValue</span><span class="p">;</span>
+ <span class="kt">bytes</span> <span class="n">bytesValue</span><span class="p">;</span>
+ <span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">struct</span> <span class="n">Metadata</span> <span class="p">{</span>
+ <span class="kt">string</span> <span class="n">title</span><span class="p">;</span>
+ <span class="kt">string</span> <span class="n">_type</span><span class="p">;</span>
+ <span class="kt">string</span> <span class="n">description</span><span class="p">;</span>
+ <span class="p">}</span>
+</code></pre></div></div>
+  
+    <h3 id="batch-function">
+      
+      
+        <a href="#batch-function" class="anchor-link"></a> Batch function
+      
+      
+    </h3>
+
+<p>This EIP supports batch operations. It allows the user to transfer different bonds along with their metadata to a new address instantaneously in a single transaction. After execution, the new owner holds the right to reclaim the face value of each of the bonds. This mechanism helps with the “packaging” of bonds–helpful in use cases like trades on a secondary market.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">struct</span> <span class="n">Transaction</span> <span class="p">{</span>
+ <span class="kt">uint256</span> <span class="n">classId</span><span class="p">;</span>
+ <span class="kt">uint256</span> <span class="n">nonceId</span><span class="p">;</span>
+ <span class="kt">uint256</span> <span class="n">_amount</span><span class="p">;</span>
+ <span class="p">}</span>
+</code></pre></div></div>
+
+<p>Where:
+The <code class="language-plaintext highlighter-rouge">classId</code> is the class id of the bond.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">nonceId</code> is the nonce id of the given bond class. This param is for distinctions of the issuing conditions of the bond.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">_amount</code> is the amount of the bond for which the spender is approved.</p>
+  
+    <h3 id="amm-optimization">
+      
+      
+        <a href="#amm-optimization" class="anchor-link"></a> AMM optimization
+      
+      
+    </h3>
+
+<p>One of the most obvious use cases of this EIP is the multilayered pool. The early version of AMM uses a separate smart contract and an <a href="/EIPS/eip-20">EIP-20</a> LP token to manage a pair. By doing so, the overall liquidity inside of one pool is significantly reduced and thus generates unnecessary gas spent and slippage. Using this EIP standard, one can build a big liquidity pool with all the pairs inside (thanks to the presence of the data structures consisting of the liquidity corresponding to the given class and nonce of bonds). Thus by knowing the class and nonce of the bonds, the liquidity can be represented as the percentage of a given token pair for the owner of the bond in the given pool. Effectively, the <a href="/EIPS/eip-20">EIP-20</a> LP token (defined by a unique smart contract in the pool factory contract) is aggregated into a single bond and consolidated into a single pool.</p>
+
+<ul>
+  <li>The reason behind the standard’s name (abstract storage bond) is its ability to store all the specifications (metadata/values and transaction as defined in the following sections) without needing external storage on-chain/off-chain.</li>
+</ul>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>Any contract that inherits the interface of this EIP is compatible. This compatibility exists for issuer and receiver of the bonds. Also any client EOA wallet can be compatible with the standard if they are able to sign <code class="language-plaintext highlighter-rouge">issue()</code> and <code class="language-plaintext highlighter-rouge">redeem()</code> commands.</p>
+
+<p>However, any existing <a href="/EIPS/eip-20">EIP-20</a> token contract can issue its bonds by delegating the minting role to a bank contract with the interface of this standard built-in. Check out our reference implementation for the correct interface definition.</p>
+
+<p>To ensure the indexing of transactions throughout the bond lifecycle (i.e “Issue”, “Redeem” and “Transfer” functions), events cited in specification section MUST be emitted when such transaction is passed.</p>
+
+<p><strong>Note that the this standard interface is also compatible with <a href="/EIPS/eip-20">EIP-20</a> and <a href="/EIPS/eip-721">EIP-721</a> and <a href="/EIPS/eip-1155">EIP-1155</a>interface.</strong></p>
+
+<p>However, creating a separate bank contract is recommended for reading the bonds and future upgrade needs.</p>
+
+<p>Acceptable collateral can be in the form of fungible (like <a href="/EIPS/eip-20">EIP-20</a>), non-fungible (<a href="/EIPS/eip-721">EIP-721</a>, <a href="/EIPS/eip-1155">EIP-1155</a>) , or other bonds represented by this standard.</p>
+  
+    <h2 id="test-cases">
+      
+      
+        <a href="#test-cases" class="anchor-link"></a> Test Cases
+      
+      
+    </h2>
+
+<p>Test-case for the minimal reference implementation is <a href="/assets/eip-3475/ERC3475.test.ts">here</a>. Use the Truffle box to compile and test the contracts.</p>
+  
+    <h2 id="reference-implementation">
+      
+      
+        <a href="#reference-implementation" class="anchor-link"></a> Reference Implementation
+      
+      
+    </h2>
+
+<ul>
+  <li>
+    <p><a href="/assets/eip-3475/interfaces/IERC3475.sol">Interface</a>.</p>
+  </li>
+  <li>
+    <p><a href="/assets/eip-3475/ERC3475.sol">Basic Example</a>.</p>
+    <ul>
+      <li>This demonstration shows only minimalist implementation.</li>
+    </ul>
+  </li>
+</ul>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<ul>
+  <li>
+    <p>The <code class="language-plaintext highlighter-rouge">function setApprovalFor(address _operatorAddress)</code> gives the operator role to <code class="language-plaintext highlighter-rouge">_operatorAddress</code>. It has all the permissions to transfer, burn and redeem bonds by default.</p>
+  </li>
+  <li>
+    <p>If the owner wants to give a one-time allocation to an address for specific bonds(classId,bondsId), he should call the <code class="language-plaintext highlighter-rouge">function approve()</code> giving the <code class="language-plaintext highlighter-rouge">Transaction[]</code> allocated rather than approving all the classes using <code class="language-plaintext highlighter-rouge">setApprovalFor</code>.</p>
+  </li>
+</ul>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Yu Liu&nbsp;(<a href="https://github.com/yuliu-debond">@yuliu-debond</a>), Varun Deshpande&nbsp;(<a href="https://github.com/dr-chain">@dr-chain</a>), Cedric Ngakam&nbsp;(<a href="https://github.com/drikssy">@drikssy</a>), Dhruv Malik&nbsp;(<a href="https://github.com/dhruvmalik007">@dhruvmalik007</a>), Samuel Gwlanold Edoumou&nbsp;(<a href="https://github.com/Edoumou">@Edoumou</a>), Toufic Batrice&nbsp;(<a href="https://github.com/toufic0710">@toufic0710</a>), "ERC-3475: Abstract Storage Bonds," <em>Ethereum Improvement Proposals</em>, no. 3475, April 2021. Available: https://eips.ethereum.org/EIPS/eip-3475.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-3475: Abstract Storage Bonds",
+    "name": "ERC-3475: Abstract Storage Bonds",
+    "author": "Yu Liu (@yuliu-debond), Varun Deshpande (@dr-chain), Cedric Ngakam (@drikssy), Dhruv Malik (@dhruvmalik007), Samuel Gwlanold Edoumou (@Edoumou), Toufic Batrice (@toufic0710)",
+    "dateCreated": "2021-04-05",
+    "datePublished": "2021-04-05",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-3475-multiple-callable-bonds-standard/8691",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2021"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

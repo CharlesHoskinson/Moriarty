@@ -10,6 +10,8 @@ tags:
   - navigation
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0106
+  - SRC-0107
   - SRC-0105
   - SRC-0104
   - SRC-0100
@@ -1007,3 +1009,7 @@ Registered SRC-0104 with unchanged full Markdown bytes, all 383 logical lines re
 ## 2026-09-09 UTC — Modern DeFi research through September 8
 
 Added [financial taxonomy and linked standards atlas](../deliverables/modern-defi-taxonomy-2026-09-08/README.md), SRC-0105 and CLM-0936: 31 category records, 47 full standards profiles, 24 source-scoped cases, 253 capability mappings and a 226-node typed graph. Primary registry/code revisions and access-time documentation are distinguished. Independent classifier feedback tightened four boundary rules. Research S2 only; unchanged implementation, proof and financial settlement acceptance gates.
+
+## 2026-09-09 — report 8 and named source graph
+
+Ingested report8 as SRC-0106, captured all40named ERC/EIP pages as SRC-0107, and linked the existing four-paper corpus with verified PDF hashes and refreshed fulltext. Added the model comparison, conditional FF→FIN aliases, per-standard relevance and combined graph. CLM-0937–CLM-0939 retain research scope and source limitations. Retain the existing roadmap; prioritize a source→Core→K/evaluator partial payment. [Deliverable](../deliverables/defi-report8-comparison-2026-09-09/README.md).

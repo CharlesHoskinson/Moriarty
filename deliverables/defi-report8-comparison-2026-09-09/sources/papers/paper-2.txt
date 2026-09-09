@@ -1,0 +1,1197 @@
+SoK: DeFi Lending and Yield Aggregation Protocol
+ Taxonomy, Empirical Measurements, and Security
+                  Challenges
+                        Arad Kotzer, Tom Azoulay, Yoad Abels, Aviv Yaish and Ori Rottenstreich
+
+
+
+   Abstract—Decentralized Finance (DeFi) lending protocols im-          of a single atomic operation only if the borrower proves the
+plement programmable credit markets without intermediaries.             debt can be repaid in full by the end of the operation.
+This paper systematizes the DeFi lending ecosystem, spanning               Despite the popularity of these primitives and related ones
+collateralized lending (including over- and under- collateralized
+designs, and zero-liquidation loans), uncollateralized primitives       in the DeFi ecosystem, the SoK literature covering them is
+(e.g., flashloans), and yield aggregation protocols which allocate      incomplete: (1) Notable SoKs adopt a single methodology, for
+capital across underlying lending platforms. Beyond a taxonomy          example, the elegant formal modeling of collateralized lending
+of mechanisms and comparing protocols, we provide empirical             platforms performed by Bartoletti et al. [9] does not provide
+on-chain measurements of lending activity and user behavior,            empirical data. (2) Previous multi-method SoKs focus on
+using Compound V2 and AAVE V2 as case studies, and connect
+empirical observations to protocol design choices (e.g., interest-      specific types of platforms but do not systematize the lending
+rate models and liquidation incentives). We then characterize vul-      ecosystem at large, e.g., Xu and Vadgama [10] consider yield
+nerabilities that arise due to notable designs, focusing on interest-   aggregators in particular, and Gogol et al. [1] highlight the
+rate setting mechanisms and time-measurement approaches. Fi-            lack of work on undercollateralized lending platforms such
+nally, we outline open questions at the intersection of mechanism       as TrueFi. (3) SoKs that cover attacks involving the lending
+design, empirical measurement and security for future research.
+                                                                        ecosystem tend to discuss manipulations that use loans as a
+                                                                        means to execute attacks on other protocols (e.g., Automated
+  Index Terms—Blockchain, Decentralized Finance (DeFi),                 Market Makers (AMMs) and oracle attacks [11]), without
+Lending, Yield Aggregation.
+                                                                        covering manipulations that target lending platforms and the
+                                                                        protocols they rely on (e.g., interest-rate arbitrage [12], and
+                       I. I NTRODUCTION                                 utilization manipulations [13], [14]). (4) A recent SoK on
+                                                                        AMM impermanent loss which does not focus on lending [15].
+   The Decentralized Finance (DeFi) ecosystem had an esti-              A summary of the related literature is given in Table I.
+mated market size of more than 75 billion USD in 2024 [1],
+and comprises various financial services that run as blockchain         Contributions. In this work, we fill the aforementioned gaps.
+applications [2], [3]. Typical DeFi platforms include decen-            Our main contributions can be summarized as follows:
+tralized exchanges (DEXs) such as Uniswap [4], that allow                 • Lending ecosystem. We systematically examine the
+swapping one token for another (e.g., Ethereum and USDC, a                  ecosystem at large, including (1) collateralized lending
+“stablecoin” designed to maintain a peg with the US Dollar),                pools, (2) flashloan providers, and (3) yield aggregators,
+lending platforms like Compound [5], which allow lending and                and illustrate their relationship with one another.
+borrowing funds, and yield aggregators that manage and invest             • Collateralized lending. We cover the spectrum of col-
+user funds automatically. While these may sound similar to                  lateralized lending platforms, including those providing
+age-old financial institutions, the pseudonymous nature of pop-             over- and under-collateralized loans, and zero liquidation
+ular blockchains and the difficulty in incorporating off-chain              loans. We go over related empirical data, and highlight
+information in on-chain operations imply that experience from               design considerations faced by platforms.
+“traditional” systems may not apply to blockchain equivalents             • Vulnerabilities. We discuss various ways in which ac-
+[6], [7], [8]. For example, consider one crucial question:                  tors could manipulate the ecosystem to their advantage,
+      How can a blockchain lending platform ensure                          including attacks on core lending mechanisms, and also
+      pseudonymous borrowers repay their debt in full?                      vulnerabilities that arise due to the ecosystem’s reliance
+                                                                            on specific blockchain consensus mechanisms.
+   Two popular types of blockchain loans attempt to answer                • Open questions. We identify important open questions
+this question: (1) Overcollateralized loans which require bor-              not fully addressed by the state-of-the-art. In particular,
+rowers to provide assets exceeding in value than the ones                   we shed light on the possibility of modifying existing
+received in return. (2) Flashloans that are granted for the span            attacks and extending them to target new mechanisms.
+  Arad Kotzer, Tom Azoulay, Yoad Abels and Ori Rottenstreich are        Paper organization. We organize the paper bottom-up from
+with the Technion. Aviv Yaish is with Yale University, IC3, and         theoretic mechanisms, to empirical market behavior, and fin-
+Complexity Science Hub, Vienna. (Emails: aradk@campus.technion.ac.il,
+tomazoulay@campus.technion.ac.il,   yoad.abels@campus.technion.ac.il,   ishing with security challenges. We begin by fixing termi-
+or@technion.ac.il, a@yai.sh)                                            nology and actors (in Section II), so that protocol designs
+                                                                    Table I
+                           A SUMMARY OF THE RELATED LITERATURE , COVERING SEVERAL REPRESENTATIVE S O K S AND SURVEYS .
+
+   Work                     Scope                    Methodology         Key Contributions                         Gaps
+   Bartoletti et al. [9]    Collateralized Lending   Formal Modeling     Formalization of desired properties       Lacks empirical measurements, does not cover
+                                                                         and proofs they hold                      yield aggregators
+   Xu & Vadgama [10]        Yield Aggregators        Survey & Taxonomy   A literature review and a characteri-     Treats underlying lending protocols as “black
+                                                                         zation of major platforms                 boxes”
+   Xu et al. [11]           AMMs                     Survey & Taxonomy   A literature review and a characteri-     Does not study overcollateralized lending pro-
+                                                                         zation of major platforms                 tocols, lacks empirical measurements
+   Zhou et al. [16]         DeFi Attacks             Incident Analysis   Quantification of attack losses and       Surveys general exploits (e.g., reentrancy at-
+                                                                         frequency, highlighting gaps in aca-      tacks), lacks details on lending-focused manip-
+                                                                         demic literature                          ulations (e.g., on interest-rate mechanisms)
+   Gogol et al. [1]         DeFi Ecosystem           Taxonomy            Classification of protocols into 3 cat-   Lacks empirical measurements, points to under-
+                                                                         egories, analysis of user risk exposure   collateralized lending as a future challenge
+   Kotzer et al. [15]       AMMs                     Survey & Taxonomy   A literature review and a characteri-     Does not study lending protocols
+                                                                         zation of impermanent loss
+
+
+
+can be expressed in a common model. Then, we develop                                 Lending protocol: A platform comprising one or more smart
+a taxonomy of lending primitives (in Section III), and map                        contracts allowing users to take loans or deposit liquidity.
+specific primitives and their compositions to notable protocols                      Stablecoin: A token that aims to have its value pegged to
+(in Section IV). We proceed by covering design considerations                     another asset. For example, the USDC token strives to main-
+that platforms face and how these impact economic outcomes                        tain a one-to-one exchange rate with the USD. Throughout
+(in Section V). Following this mapping of the design space,                       this work, we use the USD values of tokens (stablecoins or
+we present empirical measurements that quantify how these                         not) to serve as a common point of reference.
+mechanisms are used in practice (in Section VI). Moving                              Loan: A loan is an amount of money borrowed and has to
+upwards, we study yield aggregators (in Section VII), which                       be paid back, usually together with an additional amount of
+compose several underlying lending platforms and automate                         money called interest.
+interactions with them. Finally, we systematize manipulations                        Borrower: An entity receiving a loan in return for interest.
+that apply to studied designs (in Section VIII), present open                        Liquidity provider: An entity providing liquidity to the
+questions driven by our taxonomy and empirical evidence (in                       protocol, typically in exchange for rewards, e.g., interest.
+Section IX), and conclude (in Section X).                                         Often, they are also called lenders.
+                                                                                     Collateral: In collateral-based loans, a collateral is a guaran-
+                           II. S YSTEM M ODEL                                     tee provided by a borrower, which is returned to the borrower
+                                                                                  upon repaying the loan and any associated fees (e.g., interest).
+   To formalize the discussion of the decentralized lending                          Liquidator: Collateralized loan protocols may protect liquid-
+ecosystem, we now provide a system model.                                         ity providers from bad debt by selling a position’s collateral
+   Blockchain: A blockchain is a decentralized ledger, struc-                     if its value falls relative to the borrowed asset. Then, liquida-
+tured as an immutable chain of blocks. Blocks are lists of                        tors can purchase part of the collateral in exchange for the
+transactions and ledger updates that are bundled together.                        corresponding borrowed asset, possibly at a discount.
+Starting from the first block, the genesis block, each block                         Yield aggregator: A platform which automates the process
+includes the output of a cryptographic hash function computed                     of supplying liquidity to DeFi platforms, often with the goal
+over the content of the previous block, making it impossible to                   of maximizing the ex-ante return (yield).
+alter a block without changing all subsequent blocks. Blocks
+are appended to the chain and become available for read-only
+access, and typically cannot be deleted or modified.                                                         III. T YPES OF LOANS
+   Miner: Blocks are created by entities called miners. A miner
+has full control on which transactions to include in its block.                      DeFi lending has emerged in recent years with the ap-
+Some blockchains call entities with the same or similar roles                     pearance of decentralized lending protocols, such as AAVE,
+by other names, such as validators, proposers and builders. For                   Compound, Cream Finance, and MakerDAO 1 . [19], [20],
+simplicity, we only use the term “miner”.                                         [21]. While some DeFi platforms rely on a “permissioned”
+   Smart contract: A program which is specified in code and                       process to accept new customers and assess their credit risk,
+deployed to the blockchain. A user can create a contract,                         e.g., using Know-Your-Customer (KYC) checks [22], leading
+invoke a contract’s functions and even transfer money to a                        lending platforms are permissionless and do not require users
+contract by sending transactions.                                                 to identify themselves using government-issued documents.
+   Transaction execution and fee: A transaction’s creator pays                    Instead, platforms mitigate lending risks using alternative
+a fee for its execution and inclusion in a block [17], which is                   measures, which we now cover (see Table II for a summary).
+proportional to the transaction’s computational complexity as
+                                                                                    1 While the front-end interface was originally named the MakerDAO CDP
+measured in a unit called gas. A transaction can be designed
+                                                                                  Portal and has since been rebranded to Oasis.app and then to Summer.fi,
+to revert operations it performed if specific conditions are met.                 the underlying protocol has always been the Maker Protocol, governed by
+A transaction pays a fee even if its actions are reverted [18].                   MakerDAO. We use the name ’MakerDAO’ to refer to this protocol.
+
+
+                                                                              2
+                                                                             T hreshold
+                            Collateral, Loan request                                                                                                      Loan request
+           Borrower                                                     LendingP rotocol                                       Borrower                                         LendingP rotocol
+
+                                            Loan                                                                                                                Loan
+
+
+     Case I (Repayment):                                  Case II (Liquidation):                                           Case I (Repayment):                               Case II (Non-Repayment):
+     Collateral to loan                                   Collateral to loan
+                                                                                                                           Loan is paid                                      Loan is not paid
+     value stayed over                                    value is under
+                                                                                                                           back immediately                                  back immediately
+     threshold                                            threshold
+
+
+
+
+                         Borrower                                           Borrower                                                    Borrower                              Borrower
+                                                                            Liquidator
+
+
+                                                                                            Collateral -
+                                                                                                                                 Interes
+
+
+                                                                                                                                                                                         Loan canceled
+                  terest
+
+
+                                                          Loan + Interest
+                                                                                                                                        t
+                                 Collate                                                                                                           Loan
+               Loan+In
+                                                                                                                               Loan +
+                                                                                         liquidation penalty
+                                    ral
+
+
+
+              LendingP rotocol                            LendingP rotocol                                                     LendingP rotocol                          LendingP rotocol
+
+                             (a) Overcollateralized loan                                                                                                     (b) Flashloan
+
+Figure 1. Overcollateralized loans (Section III-A) and flashloans (Section III-B), depicted above, form the majority of lending activity.
+
+                                                                            Table II
+                                           N OTABLE CHARACTERISTICS OF THE MAJOR TYPES OF LOANS COVERED IN THIS WORK .
+
+                                                                                                  Collateral-based Loans
+           Characteristic                                                                                                                                                           Flashloans
+                                                    Overcollateralized                            Undercollateralized                       Zero Liquidation
+           Typical use-cases                       Speculation, hedging                                        Financing                 Speculation, hedging            Arbitrage, liquidations
+           Duration                                     Indefinite                                              Fixed                            Fixed                               Immediate
+           Loan funding                            More than loan value                              Less than loan value                More than loan value                                  None
+           Interest rate for borrowers                  Dynamic                                 Fixed when taking loan                  Fixed when taking loan         Fixed before taking loan
+           Interest rate for lenders                    Dynamic                                                Dynamic                       Set by lenders                  Commission-based
+           Leverage obtained                         Less than capital                                     More than capital                Less than capital            All the funds available
+
+
+
+A. Collateral-based Loans                                                                                              be over-collateralized: the collateral provided by a borrower
+                                                                                                                       has to be worth more than the loan that it covers. To avoid
+Overview. A collateral-based loan allows long lending dura-                                                            under-collateralization, lending protocols often define minimal
+tions and is typically financed by interest paid by the borrower                                                       liquidation thresholds (with typical values of 120-300%) for
+to lenders. The interest owed is commonly based on the                                                                 various cryptocurrencies. When the collateral-to-loan ratio
+duration of the loan and market conditions [12], with interest                                                         falls below the threshold, the loan is liquidated and the
+rate curves possibly fixed in advance [20], adjusted as needed                                                         collateral is sold at a discount. This eliminates the need to
+by the platform [23], or set on-the-fly by smart contracts [24].                                                       return the loan and causes a loss for the borrower since the
+As with traditional loans [25], collateral is used as a security                                                       collateral is worth more than the value of the loan. To reduce
+in case a borrower does not return the loan [26], [27]. To                                                             the chances of liquidation, borrowers can provide collateral
+protect lenders from borrowers unwilling or unable to repay                                                            of even higher ratios, or can top-up loans that get close
+their loans, platforms put up bad debt for liquidation [28].                                                           to liquidation [14]. Unfortunately, both options imply low
+   In addition to the regular risk inherent in the ability of                                                          accessibility and high entrance barriers for potential borrowers,
+borrowers to return loans, DeFi lending has another source                                                             who either have to provide a large amount of capital up-front,
+of risk, namely, the volatility of the cryptocurrencies that                                                           or have to continuously monitor their positions.
+are used in the lending process [29]. Thus, the loan-to-
+collateral ratio of a given debt position can fluctuate wildly                                                         Use cases. A collateral-based loan is used to obtain liq-
+when a cryptocurrency is borrowed or used as collateral. This                                                          uidity while speculating on an asset. A borrower holding a
+additional risk is mitigated by requiring debt positions to                                                            cryptocurrency such as ETH and speculating that its value
+
+                                                                                                                   3
+will increase can put the cryptocurrency as collateral. The                                                     Loan (USD)        Liquidation threshold (%)          Collateral to loan (%)
+
+
+
+
+                                                                             Collateral value (USD)
+borrower then takes a loan to have liquidity to perform other                                         140
+
+actions and later pays back the loan and is given the collateral                                      120
+back. The borrower enjoys the liquidity without selling the                                           100
+cryptocurrency used as collateral.
+                                                                                                       80
+                                                                                                                29-10 30-10 31-10 1-11 2-11 3-11 4-11 5-11 6-11 7-11 8-11
+Illustration. A collateral-based loan works in the following                                                                           Date in year 2022
+way. For each type of collateral (a particular cryptocurrency),
+the protocol defines a liquidation threshold that serves as a                                                                     (a) Markets Value.
+lower bound for the ratio between the collateral value and the                                               Supply
+                                                                                                            collateral
+loan value. A potential borrower first supplies some collateral                                                  Loan taken                                                          Liquidation
+                                                                                                                  100 USD
+to the protocol for the right to take loans. The borrower                  Start
+can then ask for a loan up to a certain value based on the                 Loan                                                                                  Loan
+
+liquidation threshold that is defined by the cryptocurrency of                                               29-10 30-10 31-10    1-11   2-11   3-11   4-11   5-11     6-11   7-11    8-11
+the collateral. If a loan is taken, the collateral is locked until
+                                                                                                                                 (b) Time Chronology.
+the loan, including interest, is repaid. As long as the lower
+bound is satisfied, the exact value of the ratio between the             Figure 2. An example of a real-world liquidation event.
+collateral value and the loan value is due to the borrower’s
+choice. If the value of the collateral drops and the ratio of
+collateral to loan goes below the threshold, the collateral              platforms can even opt to cover bad debt themselves when
+is liquidated by the protocol, thereby ending the loan of                market forces are slow to do so [13], [31].
+the borrower. Heimbach and Huang [30] find the average                      We illustrate the process in Fig. 1(a) with the two potential
+collateral to loan ratio is 1.644 and the median is 1.431, when          cases of repayment (left) and liquidation (right). We highlight
+considering all the loans taken between the 1st of January,              the involved entities in different colors: the lending protocol
+2021 to the 31st of March, 2023 from Compound V2, and                    (light blue), the borrower (green) and the liquidator (orange).
+both V1 and V2 of AAVE (combined, these held 80% of all                  Example. To provide real-world grounding, in Fig. 2 we go
+value locked in lending platforms). These ratios are higher              over an actual loan that was taken by a borrower2 on October
+than the platform-imposed limits, suggesting that on average,            29, 2022, and which was liquidated on November 8 of the
+users are conservative when taking loans, trying to avoid the            same year as its collateral-to-loan ratio fell below 111.011%,
+risk of liquidation by providing high collateral.                        the platform’s threshold. Fig. 2(a) shows the daily values of
+   Providing collateral worth more than the loan is required for         the loan (in USD, in black), the liquidation threshold (in %, in
+several reasons. First, it motivates borrowers to return loans to        red) and the collateral to loan ratio (in %, in blue). Fig. 2(b)
+avoid financial losses. Second, it deals with the risk of high           presents the events over the same time period. First, a collateral
+volatility in the value of the collateral. For several reasons,          is supplied on 29-10. A loan of 100 USD is taken on 30-10
+such as network congestion or liquidity, there can be a delay            such that collateral is worth more than 120% the value of
+(as for every transaction) between the decision about the need           the loan. On 8-11, the collateral value decreases below the
+for liquidation and the completion of the liquidation process            liquidation threshold, resulting in liquidation shortly after.
+by the protocol, where Qin et al. [28] find that liquidations
+by the MakerDAO platforms have an expected duration of 2                 Interest-rate. An important component in the design of a
+hours with a standard deviation of 6.4 hours. During this time,          lending platform is its interest rate, paid by its borrowers and
+the value of the collateral may drop even further. To sum up, a          to its liquidity providers. The platform often benefits from
+collateral-based loan ends in a combination of two outcomes:             differences between the rates of these two main players and
+                                                                         from additional fees. Lending platforms typically define two
+   Case I (Repayment): The borrower repays the loan fully
+                                                                         types of interest rates:
+with interest and receives the corresponding collateral back.
+                                                                            (i) Borrow rate: the interest borrowers pay to the platform;
+   Case II (Liquidation): A debt position is put up for liquida-
+tion when the collateral-to-loan ratio falls under the threshold            (ii) Supply rate: the interest rate paid by a platform to those
+upon the occurrence of any of the following scenarios:                   providing liquidity to the protocol.
+                                                                            We denote these two rates by ib and is , respectively.
+  • The collateral’s value decreases                                     Inherently, supply rates are lower than borrow rates to allow
+  • The loaned asset appreciates in value                                financial gains of the platform. A major factor in the borrow
+  • Interest compounds over time, increasing the loan value
+                                                                         and supply rates is the utilization - the ratio of borrowed
+If a position is put for liquidation, entities called liquidators        funds among all available funds in the platform. We denote
+can repay the bad debt. In return, the liquidator receives the           the utilization by U , which has values in [0, 1]. While there
+collateral of the borrower.                                              are protocols with rates that are fixed over time, most models
+   A combination of the above scenarios is also possible.                are influenced by the utilization. Upon low utilization, interest
+Moreover, actors may choose to only partially liquidate a                rates are lowered to attract borrowers. Upon high utilization, a
+position [13], and liquidation opportunities may not always be           high interest rate incentivizes borrowers to reimburse, discour-
+seized by actors if, for example, the entailed costs (e.g., the
+required fees) outweigh the expected profits. In some cases,               2 Address: 0x3087E2A2081C189B40a6938eAA6973FF0FDE9a0F.
+
+
+
+                                                                     4
+ages borrowers from borrowing more funds and encourages                 take advantage of arbitrage across different DEXs [35], [36],
+supplying liquidity to the protocol.                                    to execute liquidations [13], or for attacks and manipulations
+   There are various variants of the rates. The rates can change        that require large amounts of capital [16]. Flash loans are
+dynamically over time (e.g., based on the updated utilization)          also useful for collateral swaps in which borrowers switch the
+or be fixed based on the rates at the time the loan was taken           collateral backing a loan in a lending platform by an alternative
+or liquidity was provided. The dependency of the borrow rate            collateral of a different cryptocurrency [37].
+and supply rate can also have multiple forms: They can have             Illustration. In a flashloan, a potential borrower asks for a
+a fixed ratio between their values or alternatively a ratio that        loan on a protocol allowing flashloans. The platform approves
+is also a function of the utilization U . We detail later in            the loan as long as it has enough funds for such a loan.
+Section IV some particular interest rate functions for major            The borrower then adds additional actions to the transaction
+platforms. We overview here some of their general forms [20].           and sends all the actions he wants to take bundled in one
+Often, there is a factor U between the borrow rate and the              blockchain transaction or a short sequence of transactions. The
+lower supply rate such that is (U ) = ib (U ) · U . Some models         protocol checks whether the loan has been repaid with interest
+employ an additional multiplying factor of (1 − λ) where λ is           by the borrower within the same block. All transactions
+a reserve factor such that is (U ) = ib (U )·U ·(1−λ). The factor       pertaining to the same block have the same timestamp, and
+U allows the lending platform to enjoy the difference between           therefore are considered to have happened simultaneously. If
+the borrow and the lower supply rate. Such a ratio makes it             this is the case, the protocol receives the loan value with its
+relatively more attractive to supply liquidity in times of high         interest. If not, the protocol reverts the transaction and the
+utilization. The value (1 − λ) can be seen as a conservative            loan is canceled. This allows the protocol to return to the state
+mechanism to increase the profit of the lending platform by             before the loan. Flashloans have proved applicable but were
+enhancing the difference between the interest rates, even when          also used in attacks that involve attackers with low funds [34].
+the utilization is high.                                                   In its common form, a flashloan is taken and repaid in the
+   1) Linear curve: Borrow rate ib (U ) = α + β · U . Here, α, β        same cryptocurrency. Uniswap V2 [38] allows for some flex-
+       are some tunable parameters for a base rate and utility          ibility with the participation of a decentralized exchange with
+       multiplier, respectively.                                        a liquidity pool that allows the exchange of two cryptocur-
+   2) Kinked curve: This curve is piecewise linear and has a            rencies. By the common Automated Market Maker (AMM)
+       steeper slope after some predefined optimal utilization          model, such a pool holds a pair of cryptocurrencies and follows
+       value U ∗ . The borrow rate has the form                         the constant product formula:
+                         (
+                           β·U                       U < U∗                                        x · y = k,
+          ib (U ) = α +
+                           β · U ∗ + γ · (U − U ∗ ) U ≥ U ∗
+                                                                        where x is the quantity of the first cryptocurrency in the
+     Here, γ indicates the increase in the slope value.                 pool and y is the quantity of the second cryptocurrency. The
+  3) Non-linear curve: This curve is relatively generic and             formula determines the dynamic exchange rate of the two
+     can have multiple forms such as with borrow rate of                cryptocurrencies based on their current quantity. Uniswap V2
+                                                                        allows the loan to be returned by an alternative cryptocurrency
+                  ib (U ) = α · U + β · U b + γ · U c                   that constitutes a pool with the original cryptocurrency in
+      where b, c can have values of tens, such as 32 and 64.            which the loan was taken. In such a case, the repayment should
+                                                                        include also a swap fee.
+B. Flashloans                                                           Interest rate. Flashloans are taken for the span of a single
+                                                                        transaction, i.e., such a loan is “atomic” and can be thought
+Overview. A flashloan is a type of loan that is taken and               of as being taken for an infinitesimal duration. Due to this,
+returned within a single transaction without collateral [32],           flashloans do not rely on time-based interest rates; instead,
+[33]. We provide an illustration of the process in Fig. 1(b). The       platforms charge borrowers fees as a function of the amount
+debt is protected by the atomicity enforced by smart contracts:         taken. In particular, AAVE V2 charges 0.07%, AAVE V3
+If the loan is not repaid with interest within the block, the           charges 0.05% [39], and the rate in Uniswap V2 is 0.3% [40].
+whole transaction with a flashloan is canceled.
+   Flashloans enjoy three key advantages [34]:                          C. Zero Liquidation Loans
+   • No collateral: The borrower is not required to provide
+                                                                           The so-called zero liquidation loans are proposed by Sar-
+     collateral for taking a loan.
+                                                                        don [43]. Such loans are given for a fixed loan duration,
+   • No default risk: The lender has no concern of potential
+                                                                        and, as in a collateral-based loan, potential borrowers need
+     default of the loan due to the atomicity and the return of
+                                                                        to provide collateral. Given some collateral, a borrower is
+     the loan within the same block.
+                                                                        then able to take a loan of a value that equals some portion
+   • High loan values: Flashloans allow for taking loans of
+                                                                        of the collateral value. The loan is only terminated at the
+     higher values based on liquidity available that can be
+                                                                        end of the set term and cannot be liquidated beforehand,
+     utilized for the time of a single block.
+                                                                        hence the name. Termination proceeds in one of two ways:
+Use cases. Flashloans are popular for obtaining very large              the loan is either repaid fully with interest, or the collateral
+amounts of capital without collateral. They can be used to              is forfeited. Since the value of the collateral may decrease,
+
+                                                                    5
+                                                              Table III
+M AJOR LENDING PLATFORMS DETAILS AS OF JANUARY 2025 [41]. “T OTAL VALUE LOCKED (TVL)”, “C URRENTLY BORROWED FUNDS ” ARE IN USD.
+P ROTOCOLS WERE SELECTED TO COVER THE MAIN LENDING DESIGNS DISCUSSED IN S ECTION IV, WHILE PRIORITIZING ECONOMICALLY SIGNIFICANT
+ONES . W E NOTE THAT WHILE DY D X DISABLED NEW LENDING POSITIONS ON N OV ’21, THE PLATFORM IS STILL OPERATIONAL AND SUPPORTS OTHER
+    OPERATIONS [42]. “–” DENOTES CHARACTERISTICS WHICH ARE IRRELEVANT ( E . G ., LIQUIDATION THRESHOLDS FOR FLASHLOAN PLATFORMS ).
+
+
+  Characteristic              AAVE                Compound              MakerDAO                 dYdX (lending)              Uniswap                Maple                 TrueFi
+  Activity period           Nov ’17 -              Sep ’18 -             Dec ’17 -              Jul ’17 - Nov ’21         Nov ’18 -               May ’21 -              Nov ’20 -
+  Total value locked
+                              $5.58B                $1.85B                 $6.24B                       $0                    $6B                 $490.62M                 $14M
+  (TVL)
+  Number of forks               65                    143                     3                          1                     809                    0                      0
+  TVL of forks                $5.45B                $2.87B                 $0.5B                        $0                    $4.5B                   $0                    $0
+                        Over-collateralized,                         Over-collateralized,       Over-collateralized,
+  Loan types                                   Over-collateralized                                                        Flashloans          Over-collateralized   Under-collateralized
+                            Flashloans                                   Flashloans                 Flashloans
+  Tokens supported              34                     17                     1                          3                       100                  6                      4
+  Notable supported     ETH, DAI, USDC,        ETH, DAI, USDC,                                                         ETH, DAI, USDC,          ETH, USDC,
+                                                                            DAI                 ETH, DAI, USDC                                                        USDC, USDT
+  tokens                     USDT               USDT, WBTC                                                              USDT, WBTC                WBTC
+  Typical liquidation
+                            114-250%               117-167%                 150%                       115%                      –               Time-based             Time-based
+  thresholds
+  Borrowed funds              $2.75B                $0.753B                $4.7B                        $0                        –               $225.35M               $15.01M
+
+
+
+
+in order to ensure security, both the collateral-to-loan value                                  AAVE. AAVE is a decentralized platform that deployed three
+and the interest rate are high in zero liquidation loans. One                                   versions of its platform (AAVE V1, V2, and V3) on eight
+platform offering this type of loan is MYSO [44]. Among the                                     different blockchains. It supports both collateral-based loans
+drawbacks of such a protocol are very high interest rates and                                   and flashloans. For collateral-based loans, AAVE uses kinked
+the potential loss in case of a price drop of the collateral. In                                interest rate curves (see Section III-A).
+such a case, the protocol ends with a collateral value lower                                       AAVE accrues interest according to the time since a debt
+than the loan value, implying a loss to the lending platform.                                   position was created. The platform measures elapsed time
+Zero liquidation loans can be attractive for borrowers due to                                   using the blockchain’s per-block timestamps. Interest accrual
+eliminating the uncertainty in the potential risk of liquidation.                               is “lazy” and performed when a user performs any action that
+A borrower does not have to closely track the value of the                                      reads or modifies its balance [45]. AAVE tokenizes lending
+collateral, and has certainty as to the loan repayment amount.                                  positions by representing them using a derivative “aToken” for
+From the platform’s perspective, the fixed loan term, larger                                    each supported token (e.g., AAVE’s USDC derivative is called
+collateral, and higher interest rates reduce risk. Moreover,                                    aUSDC) [46]. Thus, when a user deposits some amount of a
+based on the estimation of price volatility and the correlation                                 specific token to an AAVE pool, the platform mints an equal
+among cryptocurrencies, the platform can limit the collateral                                   amount of the corresponding aToken, which can be exchanged
+to be in particular cryptocurrencies and request high initial                                   at any time for an equal amount of the original token.
+collateral-to-loan values.                                                                         Lastly, AAVE monitors a position’s solvency using a so-
+                                                                                                called “health score” for each borrower on the platform. When
+                                                                                                a health score is below 1, the position can be liquidated.
+                     IV. D E F I L ENDING P LATFORMS
+                                                                                                Compound. Compound deployed three versions of its plat-
+   Having defined the core lending primitives, we now ex-                                       form (Compound V1, V2 and V3) across three different
+amine how major platforms instantiate and combine them.                                         blockchains. It employs the kinked model for the interest rate
+Decentralized lending platforms offer various services. A small                                 (as defined in Section III-A). To illustrate, the curve of blue
+number of them cover the majority of the total value of the                                     squares in Fig. 3 and Eq. (1) depicts the interest-rate curve
+provided liquidity and borrowed funds. Almost all of these                                      currently used by Compound’s ETH pool [47]. Diving into
+platforms support collateralized loans, and three of them also                                  the technical details, the pool employs an optimal utilization
+support flashloans. Table III details the main characteristics of                               value of U ∗ = 0.9, a base rate equal to α = 3.17 · 10−10 , a
+the lending platforms covered in this section. Table III is not                                 “low” slope of β = 4.91 · 10−10 when utilization is below U ∗ ,
+intended as an exhaustive list of all live lending protocols, but                               and a “high” slope equal to γ = 3.99 · 10−8 . The resulting
+rather to present notable designs, whether due to economic                                      interest rate function is thus:
+significance (e.g., when considering January 2025 TVL for                                                                        (
+protocols deployed on Ethereum, the two leading lending                                                                −10            4.91 · 10−10 · U                           U < 0.9
+                                                                                                ib (U ) = 3.17·10            +
+platforms were AAVE and MakerDAO, Uniswap was the top                                                                                 (4.42 + 399(U − 0.9)) · 10−10              U ≥ 0.9
+decentralized exchange, and, when considering the combined                                                                                                                            (1)
+TVL of all forks, Uniswap and Compound V2 rank first and                                           As discussed in Chaudhary et al. [48], in selecting the
+second) or to cover distinct designs (e.g., dYdX featured non-                                  interest rate model, Compound makes a distinction based
+linear interest rates, while Maple and TrueFi supported under-                                  on the level of risk of cryptocurrencies. An example can
+collateralized loans for institutions).                                                         be six principal cryptocurrencies offered in the Compound
+
+                                                                                            6
+protocol in February 2020: The Stablecoins USDC, Tether                                         160
+and DAI and other cryptocurrencies ETH, ZRX and WBTC.                                           140
+
+
+
+                                                                            interest rate (%)
+                                                                                                            AAVE V2
+While the average slope for stablecoins was 0.07-0.1, for                                       120
+                                                                                                100        Compound V2
+the risky cryptocurrencies, the slope had an average value of                                                 dYdX
+0.3. Accordingly, upon the utilization increases by 1%, for                                      80
+                                                                                                 60
+stablecoins the interest rates increase by 7 to 10 basis points,                                 40
+and by 30 basis points for the risky cryptocurrencies.                                           20
+   Compound calculates accrued interest by measuring elapsed                                      0
+time according to the number of blocks created, under the                                             1 5 10 20 30 40 50 60 70 80 85 90 95 98
+assumption of a fixed inter-block time interval. Wrapping-                                                     Utilization of funds (%)
+up our overview of Compound’s technicalities, we note that
+it allows positions with a low collateral-to-loan ratio to be            Figure 3. The interest rate as a function of utilization in various platforms.
+liquidated by liquidators.
+MakerDAO. MakerDAO facilitates borrowing using collater-                 a pair of cryptocurrencies with an exchange rate determined by
+alized debt positions, or CDPs, in short. To borrow funds, a             their amounts in the pool. Uniswap allows liquidity providers
+user can create a CDP by providing collateral, against which             to provide liquidity to pools and enjoy, in return, revenues from
+the platform creates (mints) new DAI tokens that are given to            their fees. Uniswap supports flashloans. In addition, it also
+the user. As of 2023, the platform is deployed on the Ethereum           supports flashswaps, which, unlike flashloans, the repayment
+and Optimism networks and has outstanding borrow positions               of a loan is done in a possibly different cryptocurrency
+with a value of 1.5 billion USD, backed by collateral worth 4.4          than in which the loan was taken, assuming the availability
+billion USD. The platform enables both collateral-based loans            of a pool connecting the two cryptocurrencies. Similarly to
+and flashloans. To allow flashloans, the platform supports a             flashloans, this is done atomically in a single transaction,
+special action called flash. The user is able to generate DAI            without collateral and is often used to take advantage of
+without collateral but must return it with an interest rate in the       arbitrage opportunities. Uniswap charges a fee of 0.3% on
+same transaction. This platform uses the term “stability fee”            the borrowed amount, in each of its versions V2 and V3.
+to refer to its interest rate. MakerDAO uses the stability fee
+                                                                         Maple. The Maple Finance platform launched in 2021 [50],
+to maintain a dollar peg. Therefore, if DAI is worth less than
+                                                                         initially supporting both over- and under-collateralized loans
+one USD then stability fees increase to refrain from generating
+                                                                         for institutional borrowers. As of 2023, the platform has turned
+more DAI. If the situation is reversed, the stability fee will
+                                                                         its focus to over-collateralized loans [51]. Maple performs
+go down. Unlike the common scenario among platforms, the
+                                                                         KYC checks on new users. Such processes can include the
+stability fee is not predetermined by a known function of
+                                                                         collection of documents for identification, accreditation checks
+the utility, but is rather subject to update on a weekly basis.
+                                                                         and the disclosure of financial information to estimate potential
+Liquidation is performed in an auction approach in which
+                                                                         risk. Maple operates two major pools that support different
+keepers offer a bid on the collateral.
+                                                                         major cryptocurrencies: 1. The “Blue Chip” secured pool,
+dYdX. The dYdX platform deployed two versions of its de-                 where lenders deposit USDC and can provide BTC or SOL
+centralized overcollateralized lending protocol (dYdX V1, V2)            tokens as collateral. 2. The “High Yield” secured pool, which
+on the Ethereum blockchain. The platform disabled collateral-            accepts a wider range of assets and may have higher interest
+based borrowing functions in 2022 due to low utilization                 rates for lenders. In July 2024, Maple Finance launched an-
+of funds that led to unprofitable results. Similar to previous           other service named Syrup that aims to make lending services
+platforms, interest in this platform is based on utilization. The        accessible to individuals. Syrup is permissionless and does not
+platform’s interest rate curves follow the non-linear model              require KYC. To deal with temporary low interest rates, Maple
+introduced in Section III-A. While the platform does not allow           supports open term loans, which can be ongoing but with the
+new lending positions anymore, some of the previous values it            ability of the platform to force a borrower to repay a loan
+used to set the interest rate are still available [49]. When using       within 14-30 days so the loan can be reissued later at better
+the parameters α = 70 · 2−10 , β = 10 · 2−10 , γ = 20 · 2−10 and         conditions for the platform. This allows Maple to support loans
+b = 32, c = 64, we obtain the following interest-rate curve:             with fixed interest rates that are known in advance and not
+        ib (U ) = (70 · U + 10 · U 32 + 20 · U 64 ) · 2−10    (2)        affected by changes in the platform’s utilization.
+                                                                         TrueFi. TrueFi is a decentralized lending platform that con-
+The resulting curve is illustrated in orange circles in Fig. 3,          nects lenders, borrowers such as small businesses, and portfo-
+and as a comparison with the curve of Compound V2 (blue                  lio managers via smart contracts governed by the TRU token.
+squares) shows, it can be seen as a smoothed approximation               The platform facilitates under-loans, allowing borrowers to
+of a kinked curve.                                                       access capital without providing collateral, and lenders to earn
+Uniswap. Uniswap is a decentralized cryptocurrency exchange              returns on their investments. Staking TRU on the protocol
+(DEX) that operates on the Ethereum blockchain, established              enables stakers to govern the protocol by voting on-chain with
+in 2018. As was detailed in Section III-B, Uniswap relies on a           regard to loan requests and the approval of new borrowers.
+model named Automated Market Maker (AMM) with the use                    While voting is based on risk assessment, such staking also
+of liquidity pools to enable trading. Each pool is a collection of       invokes risk, as in the event of a default in one of the
+
+                                                                     7
+DAO pools, a certain percentage of the staked TRU will be                 set. When the collateral-to-loan value is under the threshold
+liquidated and transferred to the central lending pool. TrueFi            the assets of the collateral are eligible for liquidation by
+interest rates are influenced by utilization, with an upper bound         anyone who is willing to repay the loan (including interest). In
+set by the borrower. Lenders earn a dynamic rate based on the             exchange, the liquidator receives a part of the collateral. The
+pool utilization and interest rate curve configuration. Since its         remaining share of the collateral, often called the liquidation
+launch in November 2020, TrueFi has originated more than                  penalty, is kept by the protocol. As liquidation thresholds have
+1.7 billion USD in loans to more than 30 borrowers.                       values larger than one, the collateral’s value is greater than the
+                                                                          loan’s value, allowing the remainder to be divided between
+                V. D ESIGN C ONSIDERATIONS                                the liquidator and the protocol. The threshold typically aims
+   In this section, we study the various design considerations            to reflect the price stability of an asset. Generally, the higher
+of lending platforms. We refer to financial aspects, the engage-          an asset’s price stability, the lower the threshold, as collateral
+ment of important entities, and necessities such as security.             can be sold without expecting a significant loss in value.
+                                                                             To liquidate a loan there exist two alternative processes.
+A. Liquidity Providers                                                    First come, first served. By this process, the first liquidator
+                                                                          to submit an account for liquidation will obtain it. Therefore,
+   A platform’s functionality hinges on the availability of               opportunities are taken very rapidly by bots that optimize the
+funds, enabling borrowing and other activities. The lending               transaction and work in concert with miners to get their trans-
+platforms are funded by investors which are called liquidity              actions included and obtain the liquidation. Some liquidators
+providers, and all the invested money is concentrated in a                do not even own enough funds and rely on flashloans to make
+singular place: the liquidity pool. To incentivize the liquidity          a profit, repaying it with their profits.
+providers to provide the necessary funds, they are rewarded
+with a share of the platform’s profits. Borrowers, in turn,               Auction. In an auction mechanism to liquidate an account,
+contribute to these profits by paying interest.                           an auction is opened. The auction is closed when the time
+   The platform’s interest rates are set according to the uti-            limit is reached, or no new bid is submitted for a long period.
+lization rate of its liquidity pools. Platforms aim to keep it            This approach leads to a slower liquidation process but a
+above a certain level to make reasonable profits but below a              more rewarding one for the protocol because the liquidator
+certain level to not endanger the protocol in case of defaults.           who repays the loan while receiving the minimal part of the
+As presented for borrowers, the higher the utilization of the             collateral wins the auction.
+platform the higher the rewards which attract liquidity. Re-                 Qin et al. [28] looked into the different liquidation pro-
+wards for fidelity are also distributed to provide an additional          cesses. Some of their findings include showing that liquidation
+reward of use. If utilization is too low, the reverse happens.            deeply favors the liquidator to the borrower’s detriment. Liq-
+The rewards are very low so liquidity providers will provide              uidation is an essential process for the health of a platform. If
+fewer funds, reducing the utilization.                                    liquidation is not performed, the value of the collateral may
+                                                                          drop further and end up being lower than the debt. This results
+                                                                          in what is called bad debt of type I. A bad debt of type II
+B. Interest Rate Model and Borrowers                                      relates to another effect. The excess of the collateral compared
+   Interest rates in DeFi lending platforms have two main                 to the loan that the liquidator receives is his gain. This gain
+forms. The interest rate can be fixed at different periods, like in       is sometimes lower than the transaction fee of the liquidation;
+MakerDAO, or dynamically change based on the utilization,                 therefore, the liquidator will not cover the debt because it is not
+and the ratio of borrowed funds among all available funds                 profitable. Since transaction fees are dynamic, this type of bad
+in the platform. The lower the utilization, the lower the                 debt can become profitable again. An additional parameter to
+interest rate to attract borrowers. Upon high utilization, a high         consider is the amount of the discount offered to liquidators on
+interest rate incentives borrowers to reimburse and prevents              the collateral. The trade-off is between how fast the loan can
+borrowers from borrowing more funds. AAVE and Compound                    be liquidated to avoid bad debt versus the amount of money the
+have a slope of interest, which is dependent on utilization.              protocol keeps as a liquidation penalty. Missed opportunities
+They divide the slope into two domains one below optimal                  in liquidation and also borrowing are investigated by Yaish et
+utilization and one above what is named the optimal utilization           al. [13], indicating that liquidators can compete to improve on
+rate. Yearly borrow interest rates are per-assets based, varying          sub-optimal transactions.
+between 0.5-12% in most cases. Fig. 3 shows the slope for
+ETH in three platforms: Compound V2 with blue squares,                        VI. E MPIRICAL OVERVIEW OF C OMPOUND V2 AND
+dYdX with orange circles and AAVE V2 in red diamonds.                                           AAVE V2
+Optimal utilization is different on the platforms as Compound
+                                                                             After describing the theoretical design space, we quantify
+takes a more aggressive approach which causes very high
+                                                                          how these mechanisms behave in real deployments using
+interest rates when that threshold is passed.
+                                                                          real-world data. We review data from The Graph [52] - a
+                                                                          decentralized protocol for indexing and querying blockchain
+C. Liquidation Processes                                                  data across a large number of networks. We focus on two
+   Liquidation is not an automatic process. It is based on a              protocols: Compound V2 and AAVE V2, both implemented
+financial incentive. For each asset, a liquidation threshold is           over Ethereum, based on the indexed subgraphs in The Graph.
+
+                                                                      8
+We focus on these two platforms as examples of major                                                Table IV
+platforms which support over-collateralized loans (see the                      C OMPOUND V2 - D ISTRIBUTION OF LENDING EVENTS .
+TVL value in Table III).
+                                                                          Lending event type              Number   Value (in Billion USD)
+   Note that it is difficult to identify whether a user makes use
+                                                                          Borrow                          219739                     101
+of two account addresses. Accordingly, in the analysis, we use            Repay (Reimbursements)          189566                    96.4
+the term address while potentially one user might hold more               Deposit (Collateral Supply)     948257                   304.9
+than a single address.                                                    Withdraw                        504540                     305
+                                                                          LiquidateBorrow (Liquidation)    18407                      1.1
+
+A. Source of Data and Transaction Types
+                                                                                                     Table V
+   We collect each protocol’s transactions across various con-                     AAVE V2 - D ISTRIBUTION OF LENDING EVENTS
+tracts. In The Graph’s data model, each subgraph exposes
+two event streams and state snapshots. Event entities are an              Lending event type              Number   Value (in Billion USD)
+indexed log of protocol actions where each record represents              Borrow                          252590                    95.6
+an on-chain action with its timestamp, asset and size. The                Repay (Reimbursements)          21197                     4.23
+                                                                          Deposit                         471800                   380.5
+per-address histograms come from grouping borrow events by                Withdraw                        358165                   371.3
+borrower. The token pie charts come from grouping borrow                  LiquidateBorrow (Liquidation)    28972                     1.2
+events (loans) and deposit events (collateral) by asset, by
+number of transactions. We use the different events to build a
+profile for an address with its transaction list.                       B. Lending Protocol Statistics
+   We made this analysis’ code available in [53]. We pulled
+data via GraphQL POST requests to The Graph Gateway                        We present statistics from each of the platforms and high-
+endpoint, iterating month-by-month over the time window and             light some of their similar and different properties. Note that
+paging through each entity list in deterministic order. For             a liquidation event does not refer to particular loans but to a
+both event roots (e.g., borrows, deposits, repays, withdraws,           borrower with its aggregated total updated debt.
+liquidates, and flashloans where available) and snapshot roots             Compound V2. In that platform, we observe a total of
+(e.g., marketDailySnapshots, financialsDailySnapshots, usage-           29768 borrowers. Among them, 4656 (15.64%) were liqui-
+MetricsDailySnapshots), the collector queries are parameter-            dated at least once. The number of liquidations is 18407 with
+ized with a per-month timestamp filter and pagination on the            2923 borrowers being liquidated more than once. Table IV
+entity id, ordered ascending by id. Each request fetches up to          presents the transaction types and their importance in the
+first=1000 rows (one page) at a time. Rows are flattened into           model. The most common event is supply of collateral.
+a stable CSV header and appended to a per-month CSV part;                  Similarly, Fig. 4(a) and Fig. 4(b) represent the distribution
+at the end, the monthly parts are concatenated into a single            of the number of transactions each address performed and the
+file per platform and root for downstream analysis.                     value loaned by an address. Most accounts have a relatively
+   The analyzed events are the following:                               small total number of transactions and borrow a low amount
+   Borrow: whenever an address borrows an asset. The field              of funds. Over the analyzed time period, the average collateral
+named ”account borrows” contains the total amount currently             to debt ratio (i.e., the total collateral value deposited versus
+borrowed (including interest) for the asset.                            the total value loaned) is 348.5%.
+    Repay (Reimbursement): This event mentions the amount                  There is a difference in the distribution of types of cryp-
+paid and the leftover debt of the account (0 in case of full            tocurrencies in which collaterals are provided and in which
+repayment). The payment can be made by any account, not                 loans are taken. Fig. 4(c) shows the cryptocurrencies in which
+necessarily the address that borrowed the asset.                        loans are taken. Similarly, Fig. 4(d) shows those cryptocurren-
+   Deposit (Collateral Supply): Providing coins to the platform         cies in which collateral was provided. While in both the two
+in one of the accepted assets to allow lending at a later time.         most common cryptocurrencies were USDC and DAI, their
+   Withdraw (Collateral): This event represents removing of             portion changes and we also observe major changes in the
+supplied assets that were supplied as collateral from the               ratio of USDT and ETH among the two scenarios.
+protocol. This is not possible if the coins in the base asset              AAVE V2. We observe 53514 borrowers for this platform.
+serve as collateral for an open borrow.                                 Among them, 6042 borrowers (11.29%) were liquidated once
+   LiquidateBorrow (Liquidation): The borrower’s loan is paid           or more and 4299 borrowers were liquidated at least two times.
+back by another address (i.e. liquidator). This liquidator can          The average collateral to debt ratio was similar but slightly
+then claim the borrower’s collateral.                                   lower as 333.3%. Table V shows the distribution of events in
+   The data covers the time period until January 2024. For              the platform, indicating the popularity of the supply collateral
+Compound V2, the data spans block numbers 7710833 (Tue                  event also here. One potential reason for the relatively low
+May 07 2019 01:41:22 GMT) and 19129417 (Wed Jan 31                      number of repay events in AAVE V2 is the gradual launch of
+2024 22:24:47 GMT), roughly 57 months. For AAVE V2,                     AAVE V3 during 2022 and 2023. Fig. 5(a)-Fig. 5(d) present
+the data spans block numbers 11363052 (Mon Nov 30 2020                  the distribution of the number of loans and aggregated values
+23:11:40 GMT) and 19129823 (Wed Jan 31 2024 23:46:47                    of loans per address as well as the distribution of tokens in
+GMT), roughly 38 months.                                                loans and collateral.
+
+                                                                    9
+                            ·104                                                                                                                                            ·104
+
+
+
+
+  Number of addresses                                                                                                                             Number of addresses
+                            22,648                                                                                                                                          45,312
+                        2                                                                                                                                               4
+
+
+                        1                                                                                                                                               2
+                                         3,1812,061                                                                                                                                    3,8382,4071,198
+                                                                  1,105 575 149                    43           6                                                                                                             566 130                 57           6
+                        0                                                                                                                                               0
+
+                              1-5           6-10           -2 0   21
+                                                                        0
+                                                                                -1
+                                                                                    0
+                                                                                         1-
+                                                                                             0           00    00
+                                                                                                                   +                                                          1-5            10        11             -4 0     10            00               00
+                                                                    -4             0       20     1-                                                                                     6-              -2                       0    1-            -1    10
+                                                       11                      41                   10        10                                                                                            0      21        41 -         2             0    00 +
+                                                                                        10      20                                                                                                                                    10           20 1
+
+                                                           Loan number range                                                                                                                               Loan number range
+                                            (a) Number of loans per address.                                                                                                             (a) Number of loans per address
+
+                                                                                                                                                                            ·104
+
+
+
+
+  Number of addresses
+                        8,000
+
+
+
+
+                                                                                                                                                  Number of addresses
+                                                           6,6516,477
+                                                                                                                                                                            19,804
+                        6,000 5,2804,781                                                                                                                                2
+                                                                               4,171
+                        4,000                                                                                                                                                        10,938
+                                                                                         1,739                                                                          1                 8,3866,969
+                        2,000                                                                                                                                                                       3,9482,642
+                                                                                                  528 120 21
+                              0                                                                                                                                                                                                              683 133 11
+                                                                                                                                                                        0
+                                            0       1k        0k          0k        1M    -1            00         -1 B
+                                     0-10       10         1k           -1                  0M            M     1B                                                            00        0-         k                10 0k  00 k
+                                                  0-         -1            0    0k -               -1         0M  -1                                                        0-             1 1k                     1M    -1 M
+                                                                  10                    1M                          0B                                                         1     10         -10k           k- 10    -1 0M
+                                                                     k         10               10        10                                                                                                      1  M -1 00 M
+                                                                                                   M                                                                                                         10    10 0M
+                                                                                                                                                                                                                     1B  -1
+                                                                                                                                                                                                                           -1B
+                                                                                                                                                                                                                            0B
+                                                       Total loan USD value range                                                                                                             Total loan USD value range
+                                        (b) Aggregated values of loans per address.
+                                                                                                                                                                                   (b) Aggregated values of loans per address
+                                  DAI
+                                                                                          DAI                                                                                                        DAI
+                                                                                                                                                                                                                                                                           WETH
+                                                                                                                                                                                                                                             DAI
+                                                                                                                        ETH
+                                                                                                                                                                                             11.7%
+                                                                                                22.5%                                                                                                                                              7.3%
+                                    33.1%
+                                                                                                               23.3%                              USDC                                                        WETH                                                32.1%
+                                                            ETH
+                                                    9.4%                                                                                                                                             11.9%                          USDC                                                SNX
+                                                                                                                                                                             41.3%                                                                                          1.6%        AAVE
+                                                                                                                                                                                                                                             16.5%                           2.2%
+                                                      0.7% UNI                                                         0.4% LINK
+                                                                                                                       1.7%                                                                            1.2%
+                                                      1.0%                                                             1.2%                                                                            1.3%                                                                  2.8%
+                                                      2.3% ZRX                                                        2.0% UNI                                                                                 GUSD                                                                     CRV
+                                                     2.8% other coins                                                 0.7% ZRX                                                                                 sUSD                                                         3.8%
+                            34.5%                                                                                            COMP                                                                     8.3%
+                                                    2.4% BAT                                     37.6%               3.0%                                                                                                                                                           SAI
+                                                                                                                             other coins                                                                                                      5.5%                        5.3%
+                                                                                                                   3.5%     BAT                                                                               other coins
+                                            13.8%          WBTC                                                 4.2%                                                                              1.7%
+  USDC                                                                                                                                                                               19.2%      3.4%                                  USDT          7.7%          11.5%           LINK
+                                                                                                                          WBTC
+                                                                                                                                                                                                        BUSD                                               7.6%
+                                                                                         USDC                          USDT                                                                            WBTC
+                                                    USDT                                                                                                                                                                                   WBTC
+                                                                                                                                                                                                                                                                          other coins
+                                                                                                                                                                                     USDT                                                            stETH
+(c) Token distribution in loans trans-                                              (d) Token distribution in collateral
+actions requests.                                                                   transactions.                                               (c) Token distribution in loans trans-                                          (d) Token distribution in collateral
+                                                                                                                                                actions requests                                                                transactions
+Figure 4. Compound V2 data analysis - Distribution of the number of
+transactions and total values of loans per address.                                                                                             Figure 5. AAVE V2 data analysis - Distribution of the number of transactions
+                                                                                                                                                and total values of loans per address.
+
+
+  High-level comparison. There are many angles by which
+such a simple analysis can show similarity and dissimilarity                                                                                              number of loans per borrower in AAVE V2.
+among the two platforms.                                                                                                                                • Stable coins like USDC, USDT and DAI are common
+        • Overall, for most event types, the total value in USD                                                                                           in both platforms as the cryptocurrency in loans with
+          has the same order of magnitude in both platforms. An                                                                                           variable popularity. In both platforms, ETH (or its form
+          exception is AAVE V2 repayment value, which is low.                                                                                             as WETH) is more than twice as common when used as
+        • In both platforms, a high portion of borrowers perform 1-                                                                                       collateral than as a loan.
+          5 loans with a corresponding ratio of 76.1% in Compound                                                                                       • Another point refers to the distribution of the time be-
+          V2 and a higher ratio of 84.7% in AAVE V2. In both,                                                                                             tween pairs of events performed by the same address.
+          there are roughly 200 borrowers with 100 loans or more.                                                                                         This is summarized in Table VI with units shown in
+        • The total loans value in USD per borrower has a different                                                                                       either days (D), hours (H) or minutes (M). We compare
+          distribution on the two platforms. In Compound V2,                                                                                              the time between deposit and borrow as well as between
+          22.3% of them have a value between 1k-10k USD, and                                                                                              borrow and repay among addresses participating in two
+          17.7% have at most 100 USD. In AAVE V2, only 15.6%                                                                                              such events in that order in the recorded time period.
+          have 1k-10k USD and those with 0-100 USD are frequent                                                                                           In both platforms, the values between deposit and borrow
+          with a ratio of 37%. This aligns with the typically lower                                                                                       are typically lower than between borrow and repay. Intu-
+
+                                                                                                                                           10
+                              Table VI                                      Yield farming offers higher returns compared to traditional
+ S TATISTICS OF TIME DIFFERENCE BETWEEN EVENTS IN C OMPOUND V2           finance, attracting investors seeking to optimize their capital.
+ AND AAVE V2. VALUES APPEAR IN UNITS OF DAYS (D) OR HOURS (H)
+                          OR MINUTES (M).                                Additionally, usually, the yields are reinvested to increase the
+                                                                         revenue even more, performing as a compounding mechanism.
+                 Compound V2                  AAVE V2                    Yield farming was first popularized in 2020 by the leading
+            deposit →  borrow →       deposit → borrow →                 PLF Compound by introducing its governance token COMP
+             borrow       repay        borrow       repay
+                                                                         [54]. Compound participants get rewarded with newly minted
+   Mean      23.36 D       47.45 D      9.95 D      68.80 D              COMP tokens through both lending and borrowing activities,
+   Std       86.32 D      111.03 D     53.49 D     120.95 D
+   10%       1.28 M        6.53 M      0.95 M       12.41 H              which lead to offsetting some loan costs for borrowers and
+   Median    21.84 M        7.01 D     7.06 M       22.89 D              increasing the return for lenders. This incentive scheme was
+   90%       44.00 D      132.65 D      4.25 D     172.22 D              quickly adopted by other protocols such as Uniswap [4] and
+                                                                         Yearn Finance to attract liquidity and participation.
+                                                                            Yield aggregation protocols are designed to simplify and
+     itively, deposit events have the goal to allow borrowing            optimize yield farming. Manual yield farming requires hands-
+     while the loan itself can be taken out for a meaningful             on monitoring and actions by actors, who may pay higher
+     time. Likewise, the median values for the first time                than necessary fees when redeeming their assets. On the other
+     difference are in the scale of minutes and for the second           hand, yield aggregators automate yield farming strategies and
+     time difference are in the scale of days. Interestingly, the        try to reduce transaction fees. Yield aggregators consist of
+     time difference between deposit and borrow is typically             several vaults, where each vault represents a liquidity pool
+     shorter in AAVE V2 than in Compound V2; Values                      that employs automated strategies to optimize returns. Each
+     are lower in Compound V2 compared to AAVE V2 for                    vault uses different strategies to maximize revenue. Investing
+     the time difference between borrow and repay. While                 in a yield aggregator works as follows: First, the investor
+     typically values are at a similar scale, for the second time        chooses a yield aggregator protocol and a vault (or multiple
+     difference, in Compound V2 we observe several very low              vaults). Then, the investor transfers tokens to the desired vault.
+     values bringing the 10% to be in the scale of minutes               The yield of the vault is automatically invested back in the
+     while its scale is in hours for AAVE V2.                            vault, allowing a compound interest. As with traditional yield
+                                                                         farming, re-investing the vault’s yield required initiating a
+                                                                         transaction. Yet, since the vault consists of funds of multiple
+                 VII. Y IELD AGGREGATORS
+                                                                         investors, the transaction fees are split between the investors,
+   In this paper we distinguish between protocol types and user          reducing the fee of each user.
+strategies. DeFi lending protocols implement borrowing and
+lending primitives. They are typically governed by interest-             A. Yield Aggregation Trends
+rate models, and, when collateralized, liquidation mechanisms.
+                                                                            As the DeFi market is relatively new and major changes still
+Yield farming focuses on deploying capital into DeFi protocols
+                                                                         occur on a regular basis, we provide an overview of the trends
+(including lending and DEX liquidity pools) to earn interest,
+                                                                         regarding the top yield aggregators in the market. Xu and Reap
+fees and other rewards. Yield aggregators automate such strate-
+                                                                         [10] performed an analysis of the market share information of
+gies by allocating funds across underlying venues via vaults
+                                                                         the top yield aggregators in August 2022. By that time, the
+that rebalance and compound returns. While the mechanics of
+                                                                         total TVL locked in yield aggregators was around 1.5B USD.
+yield aggregators and lending protocols differ, the two types
+                                                                         In January 2025, this number increased to 2.7B USD. Despite
+of platforms are inherently closely tied together due to the fact
+                                                                         the TVL increase, the market is far beyond its peak of 12.85B
+that aggregation platforms invest in lending protocols.
+                                                                         USD, reached in December 2021.
+   Yield farming is a notable user strategy in Decentralized                Table VII presents the top yield aggregators (in TVL) as
+Finance of providing liquidity to DeFi protocols in exchange             of January 2025 and the top ten in August 2022 presented
+for fee participation rewards or interest [10]. The process              in [10]. The data was taken from DefiLlama 3 . Specifically,
+of yield farming works as follows: First, the investor (yield            for the January 2025 snapshot, we used the DeFiLlama Yield
+farmer) supplies liquidity to a DEX or lending platform by               Aggregator Protocols page (https://defillama.com/protocols/
+depositing a pair of cryptocurrencies or lending its tokens to a         yield-aggregator) and sorted the Protocol Rankings table by
+platform. Once farmers provide liquidity, they usually receive           the TVL column to extract the top ten protocols. The total
+receipt tokens (e.g., LP tokens in AMMs or interest-bearing              TVL of yield aggregators (e.g., 2.7B USD in January 2025)
+tokens in lending protocols) in return. These tokens represent           was taken from DeFiLlama’s Total Value Locked metric for
+their share of the liquidity pool and can be redeemed later to           the full yield-aggregator category (i.e., across all protocols).
+withdraw the original assets and any rewards earned. Rewards                Fig. 6 presents the TVL distribution of the leading yield
+are gained from transaction fees generated by the platform,              aggregators in 2022 and 2025. For each year, a protocol’s mar-
+and can also include interest or governance tokens. Rewards              ket share is computed as its TVL divided by the total category
+can vary depending on the amount of liquidity provided and               TVL reported by DeFiLlama at the same snapshot. As of 2025,
+the demand for liquidity on the platform. When farmers want              the foremost aggregator was DeSyn Liquid Strategy, holding
+to redeem their funds, they initiate a transaction to redeem
+receipt tokens and profits back to the original funds.                     3 https://defillama.com/
+
+
+
+                                                                    11
+                                                               Table VII
+ T HE TOP TEN YIELD AGGREGATORS IN 2022 AND 2025, ACCORDING TO TVL. W HERE NECESSARY, “-” IS USED TO DENOTE THE TVL OF PLATFORMS
+                                      THAT DID NOT EXIST IN 2022 OR STOPPED OPERATING BY 2025.
+
+
+                                                                                           TVL Rank                  TVL (in Million USD)
+                                                Yield Aggregator                                                                              Launch Year
+                                                                                          2025  2022                 2025        2022
+                                                DeSyn Liquid Strategy                          1             –        820            –                 2021
+                                                Beefy                                          2             2        281          303                 2020
+                                                CIAN Yield Layer                               3             –        273            –                 2022
+                                                Yearn Finance                                  4             1        248          652                 2020
+                                                Meteora vaults                                 5             –        156            –                 2022
+                                                Instadapp Lite                                 6             –        154            –                 2019
+                                                Flamincome                                     7             7        139           60                 2020
+                                                Lulo                                           8             –        109            –                 2023
+                                                Superform                                      9             –         71            –                 2024
+                                                AlphaFi Agg                                   10             –         63            –                 2024
+                                                Idle Finance                                  13             3         39          107                 2020
+                                                Badger DAO                                    15             4         31           94                 2020
+                                                Yield Yak                                     16             5         29           72                 2021
+                                                Autofarm                                      22             6         10           65                 2021
+                                                Rari Capital                                  29             8          7           47                 2020
+                                                Vesper Finance                                 –             9          –           43                 2021
+                                                Spool                                          –            10          –           39                 2021
+
+
+                                                                                     Table VIII
+                                                               T HE TOP YIELD AGGREGATOR VAULTS , ACCORDING TO TVL.
+
+                        Yield Aggregator                               Vault Symbol                              TVL (in Million USD)    APY (in % per 30D)      Chain
+                                                                            dwbtc2                                        260.7                  10             Bitlayer
+                        DeSyn Liquid Strategy                              dBFBTC                                         209.2                   5             AILayer
+                                                                            dmbtc2                                        203.1                  15               Mode
+                                                                           BTCLST                                         117                   6.52           Ethereum
+                        CIAN Yield Layer                                    stETH                                         54.5                  14.3           Ethereum
+                                                                            rsETH                                         46.7                  5.89           Ethereum
+                                                                           yvWETH                                         68.7                  2.4            Ethereum
+                        Yearn Finance                                       yvDAI                                          18                   5.4            Ethereum
+                                                                           yvyCRV                                         16.8                  16.4           Ethereum
+                                                                  cbETH-ETH                                               15.2                    6            Ethereum
+                        Beefy                                         BIFI                                                11.6                   9.8           Ethereum
+                                                              wstETH-rETH-sfrxETH                                          6.9                   2.8           Ethereum
+
+
+
+                               Yearn
+                                                              Beefy                              DeSyn
+                                                                                                                        15th in 2025. Additionally, two leading yield aggregators -
+                                                                                                                        Vesper Finance and Spool - who had a total of almost 82M
+                                                                       10.4%
+                       43.5%
+                                                      CIAN
+                                                                                      30.3%                             USD, do not appear in the yield-aggregator rankings page in
+                                                               10.1%
+                                                                                                                        the January 2025 snapshot. Moreover, although the total TVL
+                                       0.9%
+
+   Beefy
+           20.2%                       2.6% Other
+                                      2.9% Spool                9.2%
+                                                                                                                        of yield aggregators increased between 2022 and 2025, the
+                                                                                              14.5%
+                                    3.1%
+                                  4.0%
+                                             Vesper
+                                            Rari
+                                                      Yearn
+                                                                      5.7%                               Other
+                                                                                                                        TVL of some of 2022’s leading aggregators decreased: The
+                 7.1%          4.3%                                                       2.3%
+                      6.2% 4.8%          Flamincome
+                                                        Meteora
+                                                                          5.7%          2.6%
+                                                                                 5.2%4.0%                               TVL of Yearn Finance, 2022’s foremost aggregator, was cut
+            Idle                     Autofarm                                                 AlphaFi
+                 Badger        Yak                            Instadapp
+                                                                   Flamincome           Lulo
+                                                                                            Superform                   by 62%, decreasing from 652M to 248M. The TVL of Beefy
+                   (a) 2022                                                (b) 2025                                     also decreased, reaching 281M in 2025 compared to 303M in
+                                                                                                                        2022. The only aggregator that increased the amount of locked
+Figure 6. The distribution of TVL among yield aggregators in 2022 and 2025.                                             TVL was Flamincome, with 60M in 2022 and 139M in 2025.
+                                                                                                                        This indicates that yield aggregators that were not among the
+                                                                                                                        top ten in 2022 (e.g., DeSyn and CIAN) have taken over the
+820M USD, i.e, 30% of the total market TVL. DeSyn’s                                                                     market since 2022, at the expense of others.
+TVL is also three times that of the second in-line, Beefy.                                                                 While the snapshot-based comparison does not establish
+In comparison, Yearn Finance was 2022’s leading platform,                                                               causality, the shift in market share is consistent with several
+with a TVL of 652M USD, corresponding to more than 43%                                                                  characteristics that may differentiate successful yield aggrega-
+of the market. Three years later, Yearn constitutes less than                                                           tors. First, TVL concentration patterns in Table VIII suggest
+10% of the market, and holds the fourth place with respect to                                                           different vault design choices: DeSyn and CIAN concentrate
+TVL. Only three leading yield aggregators in 2022 remain in                                                             a large fraction of TVL in a small number of large vaults,
+the top ten in 2025: Beefy, Yearn Finance, and Flamincome.                                                              whereas Beefy spreads TVL over many smaller vaults. Second,
+For instance, Badger DAO ranked third in 2022, was ranked                                                               leading platforms appear to emphasize strategy automation
+
+                                                                                                                   12
+and compounding (reducing the per-user gas cost of frequent             also affect yield aggregators which compare platforms that
+rebalancing) and deployment across multiple networks, which             measure time differently, as miners can skew comparisons to
+can broaden the user base. Finally, yield aggregators inherit           inaccurately favor a less profitable lending platform over a
+risks from their underlying venues (DEX pools, lending mar-             better one [13]. For a formalization of protocols susceptible
+kets, bridges, and oracles); thus, perceived risk management            to issues due to inaccurate time measurement, see [56].
+and the robustness of integration choices may also influence
+user preference over time. These hypotheses suggest that fu-            B. Interest-Rate Manipulations
+ture empirical work could relate TVL dynamics to measurable
+                                                                           The aforementioned issues with measuring time in
+platform attributes such as chain coverage, vault concentration,
+                                                                        blockchains can be intentionally manipulated by miners for
+strategy complexity, and dependency footprint.
+                                                                        a profit. Thus, the “stretching and squeezing” attack, which
+                                                                        was formalized and characterized by Yaish et al. [12] allows
+B. Yield Aggregation Revenues                                           malicious miners to influence the block rate by strategically
+   To understand the trends of the main DeFi vaults, Table VIII         turning their mining machines on and off to increase their
+presents the top three vaults (in TVL) of each of the four              profit from lending positions. As the authors’ analysis shows,
+leading yield aggregators: DeSyn, Beefy, CIAN and Yearn. For            the profits from the attack can cover the potential losses from
+each aggregator, we selected the three vaults with the highest          not mining, and, that miners can also avoid such losses by
+TVL as reported by the corresponding source in a January                simply mining other cryptocurrencies instead of turning their
+2025 snapshot. The data of the yield aggregator was taken               machines off. While the previous attack requires potentially
+from several sources: DeSyn data was taken from their official          expensive mining equipment to be executed, Yaish et al. [13]
+website 4 . The data of Beefy was taken from DefiLlama 5 .              formalize utilization-based lending protocols and show that
+For CIAN, the data was collected using the public API 6 ,               liquidity providers can also manipulate interest-rates by ad-
+and for Yearn the data was collected using Dune 7 , a web-              justing their supplied liquidity. As they show, platforms do
+based platform that allows querying public blockchain. TVL              not always quickly recover from sudden liquidity shocks, thus
+and APY values are reported as provided by each source.                 allowing some liquidity providers to increase their absolute
+   DeSyn comprises three main vaults that store more than               profit over relatively long periods of time.
+80% of the platform’s total TVL. Each of these vaults has more
+than 200M USD locked, and operates on a different network.              C. Community Engagement and Associated Risks
+The APY (annual percentage yield) varies from 5% to 15%,
+                                                                           DeFi platforms have a decentralized organization, often
+depending on the vault. Beefy, on the other hand, consists of
+                                                                        called a DAO, that the platform relies on for making decisions
+many small vaults and while the total TVL is 281M USD,
+                                                                        based on the votes of the community members. Decisions can
+the largest vault has 15M USD. The APY of the vaults varies
+                                                                        be very broad and include future developments, strategies, and
+from 2.8% to 9.8%. For CIAN and Yearn, most funds are
+                                                                        compensations distributed to the programmers, users of the
+locked on the Ethereum chain alone. In CIAN, for instance,
+                                                                        platform, or even the appropriate reactions to market change. A
+out of 273M USD, less than 15K USD was locked out of the
+                                                                        decision is typically represented in code that is to be executed
+Ethereum chain. The largest vault is of size 117M USD, and
+                                                                        by the platform if adopted by the DAO. Votes are represented
+the APY varies between 5.89% to 14.3%. Yearn has a large
+                                                                        by tokens, the higher the number of tokens of an account, the
+vault (69M) and some smaller ones with less than 20M, all in
+                                                                        higher the weight of the vote. The community’s engagement
+Ethereum too, APYs ranging from 2.4% to 16.4%.
+                                                                        is twofold. It needs to be informed based on factual criteria
+                                                                        and risk-aware. The community also gains from widening
+       VIII. L ENDING E COSYSTEM V ULNERABILITIES                       prompting for higher quality in smart contracts and faster
+A. Inaccurate Time Measurement                                          development through collaboration. Those structures aim to
+   The ability to accurately measure time is crucial to cor-            be transparent, democratic and decentralized, though it is not
+rectly accrue interest. However, currently popular blockchain           always the case. Although proposals commonly require some
+mechanisms may fall short in this regard. Thus, using block             form of documentation, voters may not be familiar enough
+timestamps for this purpose is well known to be inaccurate              with the corresponding technicalities to fully understand the
+in several major cryptocurrencies, with a formal analysis of            implications of adopting a given proposal. Moreover, the
+this issue given in [55]. On the other hand, measuring elapsed          presence of users with a large amount of tokens or a lack
+time by assuming some average inter-block time may also be              of community involvement implies that the community may
+prone to inaccuracies. For example, the mechanism used by               fail to pass good proposals, or, conversely, adopt bad ones
+Ethereum since its inception and up to September 15, 2022               [57]. This can be an outcome of the popular “airdrop” token
+relied, by design, on a variable block time [12], with the aver-        issuance strategy, where tokens are given to platform users
+age block rate changing over time [55]. These considerations            based on their participation [58], which can result in giving
+                                                                        more power to those who have the cheapest participation
+  4 https://www.desyn.io/#/markets?network=bitlayer
+  5 https://defillama.com/protocol/beefy#yields
+                                                                        costs [22]. These are not necessarily the users that are most
+   6 https://docs.cian.app/getting-started-with-cian/yield-             interested in the platform’s well-being, and, frequently are
+layer/introduction/cian-yield-layer-tech-docs                           operated by for-profit “farming” operations [59]. A study of
+   7 https://dune.com/zootrop/yearn-vaults                              attacks on governance protocols is performed by [60].
+
+                                                                   13
+D. Slow-By-Design Governance Process                                    B. Code Security
+   An example of one decision made by DeFi platform                        Code security is a core component of the lending market.
+governance mechanisms is setting the value of the lending               Since smart contracts are the trusted intermediary, they must be
+parameters for various platform tokens. To illustrate, we go            audited to prevent potential hackers from accessing the locked
+over a case study that took place in the Compound V2 platform           funds. This threat is present with 197M USD being stolen
+[61], where a user proposed to modify an asset’s collateral             from Euler Finance in March 2023. Auditing is becoming stan-
+factor from 73.0% to 70.0%, meaning that given a collateral             dardized in the industry but exploits may still exist prompting
+in this asset, one can only borrow up to 70% of the collateral’s        borrowers to cluster around popular and established platforms.
+value. Although this change implies that the perceived risk                Moreover, price crashes are not uncommon which affects
+of this asset is higher, this particular process lasted a week          the strategies of platforms. An asset that is used as collateral
+before taking effect. This is due to the hard-coded governance          can crash. In this event, the collateral loses value fast and
+process requiring several checks-and-balances to give the               many loans need to be liquidated. The reaction time is crucial
+community enough time to properly evaluate the proposal.                to block the asset as collateral and ensure that the protocol
+Thus, decentralization gives power to many but can hold back            does not end with collateral with no value for the loans. An
+a fast reaction time that is sometimes critical to protect the          additional challenge faced by the platforms is liquidity. When
+protocol. A formal study of this issue is provided by [62].             a loan’s collateral value needs to be liquidated liquidity can
+                                                                        play a crucial role. If the liquidity of the collateral, given in
+E. Governance Token Issuance                                            rewards to a liquidator is low, liquidators may refrain from
+   Dotan et al. [57] discuss the practice of issuing governance         liquidating the loan. Liquidators generally rapidly exchange
+tokens to borrowers and lenders, and show that this can make it         the collateral acquired for a more widely used cryptocurrency.
+profitable to borrow funds, even when considering the interest          Not being able to perform such an exchange weighs on the
+rate paid. This is explored in more detail by Park and Stinner          decision to liquidate. An additional concern for liquidators is
+[63], who focus on a specific strategy which entails depositing         the price change caused by a massive exchange. Acquiring a
+and borrowing funds at the same time, thereby allowing one to           significant market share of a given cryptocurrency means that
+earn rewards for both types of actions. Empirically, their data         exchanging all of it might create a price drop. In such a case,
+indicates that 32% of loaned funds and 18% deposited funds              the value of the collateral might become lower than the amount
+correspond to actors employing strategies in this vein. Dotan et        repaid by the liquidator making the transaction not profitable.
+al. [57] and Feichtinger et al. [60] highlight the possibility          The absence of liquidation creates bad debt for the protocol,
+of actors swaying votes by obtaining governance tokens via              a financial loss for the protocol since the collateral’s value is
+lending platforms, and present a concrete instance of such an           less than the loan’s value.
+attack taking place in 2022 on the Beanstalk lending platform,
+which resulted in losses of 182M USD.
+                                                                        C. Financial Risk and Operational Margin
+                     IX. O PEN Q UESTIONS                                  To be profitable and extract value from their activity, plat-
+   In this section, we overview challenges and open questions           forms face various trade-offs. For instance, when collecting
+that we identify as promising directions for future work.               borrowing fees (the platform’s revenue) a fraction of it is set
+                                                                        aside to serve as the platform’s “reserve”, which is used to
+A. Proof-of-Stake Timing Attacks                                        compensate for losses, e.g., due to bad debt or an attack.
+   While previous work proposed analyzed attacks on lend-               This fraction is called the reserve factor; Intuitively, this is a
+ing pools that operate in so-called Proof-of-Work based                 trade-off between protecting liquidity providers (by choosing
+blockchains which have a variable inter-block time by design            a large factor) and maintaining high revenue (by setting a
+[12], [64], none considered Proof-of-Stake mechanisms that              low factor). A relevant study by Castro-Iragorri et al. [67]
+are supposed to have fixed block rates, like the one used by            estimates the profitability margin for both Compound and
+Ethereum since Sep. 15, 2022. While Ethereum’s mechanism                AAVE at 1%. Another trade-off can be found when choosing
+specifies a block time of exactly 12 seconds, its construction          which tokens to allow using as collateral. Some tokens may
+may technically disregard missing blocks, thus allowing for             be risky, for instance, due to relying on new and not yet well-
+consecutively numbered blocks to have larger time gaps (see             understood and battle-tested mechanisms, or due to having low
+the 24 second gap between blocks 21875905 and 21875906),                liquidity, which implies that the market would have a harder
+and such occurrences are not rare [65]. Thus, interest-rate             time reacting to sudden shocks [13]. This should motivate
+manipulations in the vein of the “stretching and squeezing”             a protocol to list only a selected number of coins. On the
+attack [12], where actors slow down the block rate, are also            other hand, listing the most recent tokens allows a protocol
+viable in such mechanisms. We note that this can be combined            to potentially capture and lock in new market segments of
+to increase the profits from the RANDAO manipulations of                borrowers interested in these tokens. To balance between these
+Alpturer and Weinberg [66], where adversaries intentionally             two considerations, some platforms may choose to gradually
+“miss” blocks, as this can increase the number of future blocks         introduce new tokens. For example, a platform can first require
+that they will create. Given the above, an interesting future           higher overcollateralization for borrowing newly introduced
+direction is to quantify how interest-rate manipulations can            tokens, and then gradually lower this requirement when the
+increase RANDAO manipulations’ profitability.                           token is more battle-tested. Other options include setting high
+
+                                                                   14
+reserve factors for borrowing these tokens, and capping the                            [11] J. Xu, K. Paruch, S. Cousaert, and Y. Feng, “Sok: Decentralized
+total amount of loans collateralized by them. Furthermore,                                  exchanges (DEX) with automated market maker (AMM) protocols,”
+                                                                                            ACM Comput. Surv., vol. 55, no. 11, 2023.
+platforms such as Compound and AAVE even enlist special-                               [12] A. Yaish, S. Tochner, and A. Zohar, “Blockchain stretching & squeezing:
+ized firms to assess the risk of new and existing assets, and                               Manipulating time for your best interest,” in ACM Conference on
+to suggest how to set the aforementioned parameters.                                        Economics and Computation, 2022.
+                                                                                       [13] A. Yaish, M. Dotan, K. Qin, A. Zohar, and A. Gervais, “Suboptimality
+                                                                                            in DeFi,” IACR Cryptol. ePrint Arch., p. 892, 2023.
+D. Revenue-based Financing                                                             [14] J. Halpern, R. Pass, and A. Saraf, “Fair interest rates are impos-
+                                                                                            sible for lending pools: Results from options pricing,” CoRR, vol.
+   A popular approach to loans is extending a loan that is                                  abs/2410.11053, 2024.
+reimbursed by future revenue without the need for collateral.                          [15] A. Kotzer and O. Rottenstreich, “SoK: Impermanent loss, an unavoidable
+The borrower and the liquidity provider agree that after                                    fee or a controlled phenomenon?” in IEEE International Conference on
+                                                                                            Blockchain and Cryptocurrency (ICBC), 2026.
+receiving the loan, a predefined fraction of the borrower’s                            [16] L. Zhou, X. Xiong, J. Ernstberger, S. Chaliasos, Z. Wang, Y. Wang,
+monthly income serves to reimburse the liquidity provider.                                  K. Qin, R. Wattenhofer, D. Song, and A. Gervais, “SoK: Decentralized
+This requires making sure that income is known to the liquidity                             finance (DeFi) attacks,” in IEEE Symposium on Security and Privacy,
+                                                                                            2023.
+provider to recoup the loan. A challenge with this approach                            [17] Y. Gafni and A. Yaish, “Transaction fee mechanisms robust to welfare-
+is the difficulty in assessing the income of the borrower. A                                increasing collusion,” Games and Economic Behavior, 2026.
+malicious borrower could redirect future funds to a different                          [18] A. Yaish, K. Qin, L. Zhou, A. Zohar, and A. Gervais, “Speculative
+                                                                                            denial-of-service attacks in ethereum,” in 33rd USENIX Security Sym-
+account. In this way, the loan is never reimbursed since                                    posium, 2024.
+the revenue of the borrower becomes non-existent. Since no                             [19] J. Xu and N. Vadgama, “From banks to DeFi: The evolution of the
+collateral is provided, the default comes at a great cost for the                           lending market,” CoRR, vol. abs/2104.00970, 2021.
+                                                                                       [20] L. Gudgeon, S. Werner, D. Perez, and W. J. Knottenbelt, “DeFi protocols
+liquidity provider. To the best of our knowledge, this technique                            for loanable funds: Interest rates, liquidity and market efficiency,” in
+is not implemented in an existing platform and it can be                                    ACM Conference on Advances in Financial Technologies, 2020.
+interesting to examine its potential.                                                  [21] S. Werner, D. Perez, L. Gudgeon, A. Klages-Mundt, D. Harz, and W. J.
+                                                                                            Knottenbelt, “SoK: Decentralized finance (DeFi),” in ACM Conference
+                                                                                            on Advances in Financial Technologies (AFT), 2022.
+                 X. C ONCLUSION AND O UTLOOK                                           [22] H. Hałaburda, B. Livshits, and A. Yaish, “Platform building with fake
+   In this SoK, we examine DeFi lending mechanisms and                                      consumers: On double dippers and airdrop farmers,” 2025.
+                                                                                       [23] J. Chiu, E. Ozdenoren, K. Yuan, and S. Zhang, “Cryptocurrency as
+yield aggregators. We describe various major loan types with                                Collateral in DeFi Lending Platforms,” 2022.
+their main characteristics and applications. The DeFi lending                          [24] M. Bastankhah, V. Nadkarni, C. Jin, S. Kulkarni, and P. Viswanath,
+ecosystem relies on smart contracts to operate, making it                                   “Thinking Fast and Slow: Data-Driven Adaptive DeFi Borrow-Lending
+                                                                                            Protocol,” in Advances in Financial Technologies (AFT), 2024.
+accessible and transparent, both technically (e.g., a platform’s                       [25] F. Barbiero, G. Schepens, and J.-D. Sigaux, “Liquidation Value and Loan
+operation is governed by publicly available code), and empir-                               Pricing,” The Journal of Finance, vol. 79, no. 1, pp. 95–128, 2024.
+ically (the public availability of blockchain data allows real-                        [26] T. Azoulay, U. Carl, and O. Rottenstreich, “Allowing blockchain loans
+                                                                                            with low collateral,” in IEEE International Conference on Blockchain
+time tracking of market dynamics and patterns). Moreover, the                               and Cryptocurrency (ICBC), 2023.
+unique features of blockchain networks facilitate the creation                         [27] T. Azoulay and O. Rottenstreich, “Accurate credit scoring for blockchain
+of novel mechanisms, such as flashloans, while also allowing                                lending with conformalized quantile regression,” in International Con-
+                                                                                            ference on Blockchain Computing and Applications (BCCA), 2025.
+for new manipulations that do not apply to traditional systems.                        [28] K. Qin, L. Zhou, P. Gamito, P. Jovanovic, and A. Gervais, “An empirical
+We go over several relevant attacks from the literature. Finally,                           study of DeFi liquidations: Incentives, risks, and instabilities,” in ACM
+we discuss open questions and directions for future work.                                   Internet Measurement Conference, 2021.
+                                                                                       [29] A. Yaish and A. Zohar, “Correct cryptocurrency asic pricing: Are miners
+                                                                                            overpaying?” in Advances in Financial Technologies (AFT), 2023.
+                              R EFERENCES                                              [30] L. Heimbach and W. Huang, “DeFi Leverage,” May 2023.
+ [1] K. Gogol, C. Killer, M. Schlosser, T. Bocek, B. Stiller, and C. J.                [31] L. Heimbach, E. Schertenleib, and R. Wattenhofer, “Short Squeeze
+     Tessone, “SoK: Decentralized finance (DeFi) - Fundamentals, taxonomy                   in DeFi Lending Market: Decentralization in Jeopardy?” in Financial
+     and risks,” CoRR, vol. abs/2404.11281, 2024.                                           Cryptography and Data Security (FC) Workshops, 2023.
+ [2] F. Schär, “Decentralized finance: On blockchain-and smart contract-              [32] P. Daian, S. Goldfeder, T. Kell, Y. Li, X. Zhao, I. Bentov, L. Breidenbach,
+     based financial markets,” FRB of St. Louis Review, 2021.                               and A. Juels, “Flash boys 2.0: Frontrunning in decentralized exchanges,
+ [3] A. Kotzer, D. Gandelman, and O. Rottenstreich, “SoK: Applications of                   miner extractable value, and consensus instability,” in IEEE Symposium
+     sketches and rollups in blockchain networks,” IEEE Trans. Netw. Serv.                  on Security and Privacy (SP), 2020.
+     Manag., vol. 21, no. 3, pp. 3194–3208, 2024.                                      [33] D. Wang, S. Wu, Z. Lin, L. Wu, X. Yuan, Y. Zhou, H. Wang, and K. Ren,
+ [4] [Online]. Available: https://app.uniswap.org                                           “Towards a first step to understand flash loan and its applications in DeFi
+ [5] [Online]. Available: https://compound.finance/markets                                  ecosystem,” in International Workshop on Security in Blockchain and
+ [6] T. J. Rivera, F. Saleh, and Q. Vandeweyer, “Equilibrium in a DeFi                      Cloud Computing, 2021.
+     Lending Market,” 2023.                                                            [34] K. Qin, L. Zhou, B. Livshits, and A. Gervais, “Attacking the DeFi
+ [7] F. Irresberger, K. John, and F. Saleh, “Chapter 2: Decentralized lending,”             ecosystem with flash loans for fun and profit,” in International Con-
+     in The Elgar Companion to Decentralized Finance, Digital Assets, and                   ference on Financial Cryptography and Data Security, 2021.
+     Blockchain Technologies. Edward Elgar Publishing, 2024.                           [35] Y. Wang, Y. Chen, H. Wu, L. Zhou, S. Deng, and R. Wattenhofer, “Cyclic
+ [8] A. Yaish, N. Chemaya, D. Malkhi, and L. W. Cong, “Inequality in the                    arbitrage in decentralized exchanges,” in Companion Proceedings of the
+     age of pseudonymity,” in AAAI Conference on Artificial Intelligence,                   Web Conference (WWW), 2022.
+     2026.                                                                             [36] O. Mazor and O. Rottenstreich, “An empirical study of cross-chain
+ [9] M. Bartoletti, J. H. Chiang, and A. Lluch-Lafuente, “SoK: Lending pools                arbitrage in decentralized exchanges,” in International Conference on
+     in decentralized finance,” in Financial Cryptography and Data Security                 COMmunication Systems & NETworkS (COMSNETS), 2024.
+     (FC) International Workshops, 2021.                                               [37] F. Gronde, “Flash loans and decentralized lending protocols: An in-depth
+[10] J. Xu and Y. Feng, “Reap the harvest on blockchain: A survey of                        analysis,” Master’s thesis, University of Basel, 2021.
+     yield farming protocols,” IEEE Transactions on Network and Service                [38] [Online]. Available: https://blog.uniswap.org/uniswap-v2
+     Management, vol. 20, no. 1, pp. 858–869, 2022.                                    [39] [Online]. Available: https://aave.com/docs/concepts/flash-loans
+
+
+                                                                                  15
+[40] [Online].      Available:    https://docs.uniswap.org/contracts/v2/guides/
+     smart-contract-integration/using-flash-swaps#single-token
+[41] [Online]. Available: https://defillama.com/
+[42] [Online].         Available:         https://help.dydx.exchange/en/articles/
+     5695617-v1-v2-dydx-solo-protocol-layer-1-wind-down
+[43] A. Sardon, “Zero-liquidation loans: A structured product approach to
+     DeFi lending,” arXiv:2110.13533, 2021.
+[44] ——, “Myso v1 core a trust-minimized protocol for zero-liquidation
+     loans,” 2022.
+[45] [Online]. Available: https://github.com/aave-dao/aave-v3-origin/blob/
+     1dab6e/src/contracts/rewards/RewardsDistributor.sol#L473-L474
+[46] [Online]. Available: https://github.com/aave/aave-protocol/blob/4b4545/
+     contracts/tokenization/AToken.sol#L452
+[47] [Online].              Available:                https://etherscan.io/address/
+     0xA17581A9E3356d9A858b789D68B4d866e593aE94
+[48] A. Chaudhary, R. Kozhan, and G. Viswanath-Natraj, “Interest rate rules
+     in decentralized finance: Evidence from Compound,” Open Access Series
+     in Informatics (OASIcs), 2023.
+[49] [Online].              Available:                https://etherscan.io/address/
+     0xaEE83ca85Ad63DFA04993adcd76CB2B3589eCa49
+[50] [Online]. Available: https://maple.finance/
+[51] A. Gilbert, “Why maple is ditching under-collateralised lending: ‘no
+     one’s profitable’,” 2023. [Online]. Available: https://www.dlnews.com/
+     articles/defi/crypto-lender-maple-ditches-under-collateralised-lending/
+[52] [Online]. Available: https://thegraph.com/
+[53] Y. Abels, “DeFi Data Pullers — Aave V2 + Compound V2
+     (Ethereum) via The Graph,” https://github.com/yoadhamagniv/the
+     graph data fetching, 2026.
+[54] [Online].        Available:        https://medium.com/compound-finance/
+     expanding-compound-governance-ce13fcd4fe36
+[55] A. Yaish, G. Stern, and A. Zohar, “Uncle maker: (Time)stamping out
+     the competition in ethereum,” in ACM SIGSAC Conference on Computer
+     and Communications Security (CCS), 2023.
+[56] L. Luu, D.-H. Chu, H. Olickel, P. Saxena, and A. Hobor, “Making smart
+     contracts smarter,” in Proceedings of the ACM SIGSAC Conference on
+     Computer and Communications Security, 2016.
+[57] M. Dotan, A. Yaish, H.-C. Yin, E. Tsytkin, and A. Zohar, “The vulner-
+     able nature of decentralized governance in DeFi,” in ACM Workshop on
+     Decentralized Finance and Security, 2023.
+[58] C. A. Makridis, M. Fröwis, K. Sridhar, and R. Böhme, “The rise of
+     decentralized cryptocurrency exchanges: Evaluating the role of airdrops
+     and governance tokens,” Journal of Corporate Finance, vol. 79, 2023.
+[59] J. Messias, A. Yaish, and B. Livshits, “Airdrops: Giving money away is
+     harder than it seems,” 2023.
+[60] R. Feichtinger, R. Fritsch, L. Heimbach, Y. Vonlanthen, and R. Watten-
+     hofer, “SoK: Attacks on DAOs,” in Advances in Financial Technologies
+     (AFT), 2024.
+[61] [Online]. Available: https://compound.finance/governance/proposals/133
+[62] J. Xu, Y. Feng, D. Perez, and B. Livshits, “Auto.gov: Learning-based
+     governance for decentralized finance (DeFi),” IEEE Transactions on
+     Services Computing, vol. 18, no. 3, pp. 1278–1292, 2025.
+[63] A. Park and J. Stinner, “Phantom Liquidity in Decentralized Lending,”
+     SSRN, vol. 10.2139/ssrn.4489732, 2023.
+[64] A. Yaish, “Incentives in the ether: Practical cryptocurrency economics
+     & security,” in Companion Proceedings of the ACM on Web Conference,
+     2024.
+[65] [Online]. Available: https://beaconscan.com/slots-skipped
+[66] K. Alpturer and S. M. Weinberg, “Optimal RANDAO Manipulation in
+     Ethereum,” in Conference on Advances in Financial Technologies, 2024.
+[67] C. Castro-Iragorri, J. Ramirez, and S. Velez, “Financial intermediation
+     and risk in decentralized lending protocols,” arXiv:2107.14678, 2021.
+
+
+
+
+                                                                                      16
+

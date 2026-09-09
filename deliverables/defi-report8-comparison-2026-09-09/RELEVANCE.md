@@ -1,0 +1,25 @@
+# Moriarty relevance of all 40 named ERCs/EIPs
+
+Independent GPT-6 Astra source analysis, 2026-09-09. The [40-record data file](relevance.json) identifies each current capture, digest, inspected clauses, previous profile and suggested existing sprint owner. This is a relevance review: current headers/abstracts, the existing profiles' purpose/requirements/limits, and selected normative passages were inspected. It is **not an exhaustive new semantic audit of all 40 specifications**, deployment verification, conformance certification or historical-cutoff verification.
+
+**Recommendation: use the standards as financial behavior and architectural references; retain Moriarty's own bounded semantics and mandatory proof acceptance.** All 40 merit a recorded disposition. Twenty-one supply direct semantic lessons, fourteen architectural references, four primarily EVM-specific examples and one process reference. Priority is an analyst assessment of semantic usefulness, not an implementation commitment: 20 high, 13 medium and 7 low.
+
+Thirty-eight already have profiles in the existing 47-standard atlas. The two new profiles worth investigating are ERC-8113 and ERC-8161. No new root taxonomy or EVM backend follows from either.
+
+| New source | Concrete finding | Moriarty consequence |
+|---|---|---|
+| ERC-8113, lines68–73,96–113,130–159 | Per-series assets, shares, users and highwater marks; asset-denominated redemption; explicit incompatibility with ERC-4626/7540. The proposal acknowledges potentially excessive outstanding-series processing. | Model series identity and fee entitlements explicitly. Bound series, users, redemption slices and consolidation work. Consolidation after a new highwater mark is not a worst-case bound: a boundedness argument cannot assume profitable recovery. Investigate under SP01.3/SP03.2/SP08.2/SP11.1. |
+| ERC-8161, lines56–74,175–193,314–343 | Controller or approved operator transfers the entire Pending balance, leaving Claimable balances unchanged; recipient increase may be net of fees. Deposit and redemption transfer support are independently optional. Pending positions have no canonical price. | Preserve identity, quantities, fees, ownership and aggregate entitlement across transfers; reject unauthorized/partial/claimable transfers in a model claiming these semantics. Expose the expanded operator power in signed authority. Investigate under SP08.3/.4/SP10.1/SP11.1. |
+
+The core high-priority references remain:
+
+- **ERC-4626/7540/7575:** nominal asset/share/request units, all four preview bounds, capacity versus permission versus realized exit, explicit pull claims, controller scope and external-share identity. These are already in the SP08 refinement. ERC-7540 preview rejection and ERC-7575 topology are semantic differences, not cosmetic labels.
+- **ERC-7887:** cancellation is another lifecycle, not immediate undo. Current captured text still contains incompatible claim-event names and questionable redemption-unit wording; retain the source discrepancy instead of selecting an unstated universal rule. Route source resolution and modeled races to SP08.3/SP10.1.
+- **EIP-712 and ERC-1271:** use typed/domain-separated commitments and current signer policy as separate ideas. EIP-712 explicitly omits replay protection; ERC-1271 validity can depend on state/time. Ethereum digest bytes, selectors and signing RPC do not define Moriarty's canonical signed encoding. Route to SP01.3/SP08.4/SP09.3.
+- **ERC-777/1363/3156:** retain callback ordering, intermediate effects, initiator authority and repayment/rollback negative controls. ERC-777 hooks can apply on compatible ordinary ERC-20 paths; ERC-1363 uses explicit AndCall paths. Model actual admitted behavior rather than assuming every native Midnight transfer has EVM callbacks.
+- **ERC-5095/5115/7092/6372:** maturity claims, yield/accounting-asset distinctions, explicit financial fields and clock domains can challenge ACTUS/DeFi models. Interface adoption does not discharge event schedules or the full financial denominator.
+- **ERC-7683/3668:** distinguish resolver assumptions from verified intent refinement, and retrieved observations from authenticated economic truth. An acyclic resolver plan is not itself a proof of settlement or a bounded full financial lifecycle.
+
+ERC-4337, EIP-7702, ERC-6492 and ERC-6900 are chiefly **EVM-specific architecture comparisons**. Their useful lessons concern admission, delegated authority, policy changes and validation side effects. EntryPoint, UserOperation, EOA delegation, factories and Ethereum module interfaces are not proposed Moriarty runtime requirements. EIP-7702's retained delegation after execution failure is a useful counterexample to overly broad rollback claims.
+
+Every proposed regression remains specified-only until implemented and checked through the existing source/Core/K/evaluator and applicable proof/ledger paths. No existing syntax, local repayment projection, hello-world receipt or source capture establishes ERC conformance or financial Preview acceptance.
