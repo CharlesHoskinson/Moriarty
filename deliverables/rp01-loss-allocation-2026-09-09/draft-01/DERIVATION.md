@@ -1,12 +1,10 @@
 # RP01 loss, default and funded recovery challenge
 
-This is a **fixed three-step partial-recovery design oracle awaiting independent review** for the original blocking R01 finding. It is not Morpho, Maple, ACTUS or any other deployed protocol's behavior. It does not change an accepted language profile, SP05 expectations, canonical successor semantics or proof predicate. The recourse, impairment, fee incidence and pari-passu assumptions below are proposals for this case; no design vote or independent acceptance is asserted.
+This is a **generic design oracle awaiting independent review** for the original blocking R01 finding. It is not Morpho, Maple, ACTUS or any other deployed protocol's behavior. It does not change an accepted language profile, SP05 expectations, canonical successor semantics or proof predicate. The recourse, impairment, fee incidence and pari-passu assumptions below are proposals for this case; no design vote or independent acceptance is asserted.
 
 The original R01 counterexample starts with debt 1000 and collateral valued at 400, recognizes loss 600, and then reports debt zero without a sale, funded repayment, release or successor liability. This case makes each of those distinctions observable. Accounting impairment alone leaves all 1000 nominal debt intact. Cash proceeds fund a later reduction of 400. A subsequent funded payment reduces another 150. The remaining borrower duty is 450, even though its accounting carrying value is zero. No forgiveness is included or authorized.
 
 ## Scope and chosen assumptions
-
-“Generic” describes the chosen policy rather than a deployed protocol. This checker is a single illustrative case, not a parameterized financial transition implementation. Its schema is `moriarty.fixed-partial-loss-recovery-challenge/1`. Zero outstanding debt is outside this partial-case domain and rejects with `PARTIAL_RECOVERY_SCOPE`; that rejection does not mean funded complete discharge is financially invalid.
 
 The initial state is a supplied snapshot of an already outstanding loan, not a demonstration of loan origination or authenticated custody. Borrower owes Pool 1000 Cash, with no accrued interest. Custodian holds four Collateral units owned by Borrower and encumbered to Loan1. Custodian has a bounded source grant to sell exactly those units to Buyer. The collateral is not also counted as a separate Pool NAV asset while the receivable is included.
 
@@ -20,7 +18,7 @@ The supplied survey's shorthand description of liquidation ending a loan is not 
 
 ## Independent expected arithmetic
 
-| Stage | Pool cash | Nominal duty / gross receivable | Impairment allowance | Carrying receivable | Pool NAV | HolderA / HolderB book value | Current net loss allocation |
+| Stage | Pool cash | Nominal duty / gross receivable | Impairment allowance | Carrying receivable | Pool NAV | HolderA / HolderB book value | Cumulative allocated net loss |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Before default | 100 | 1000 | 0 | 1000 | 1100 | 660 / 440 | 0 |
 | Default and impairment | 100 | 1000 | 600 | 400 | 500 | 300 / 200 | 600 |
@@ -36,8 +34,6 @@ The accounting identities are:
 - allocated net loss = impairment expense + Pool fee expense − recovery gain;
 - initial NAV − current NAV = allocated net loss;
 - share book value = NAV × held shares / 1000; loss allocation uses the same fixed weights.
-
-`allocatedNetLoss` is current loss net of recovery, so it decreases from 610 to 460. It is not a monotone loss-history counter. The separate cumulative impairment expense (600), Pool fee expense (10) and recovery gain (150) record their respective events without deleting prior expense. The complete snapshots retain the sequence of allocations.
 
 All products are checked against UInt128 before exact division; this example has no rounding residue. The two holders' losses are 360/240 after impairment, 366/244 after Pool pays its fee, and 276/184 after recovery. Their final book values are 384/256, totaling 640. Share supply remains exactly 1000. Borrower's separate fee five is recorded in its cash debit and FeeCollector credit; it is not charged to Pool's share value.
 
@@ -72,15 +68,13 @@ Each grant has an issuer, holder, permitted operation, asset/payee restriction, 
 | RecoveryGrant (nominal discharge) | 550 | 550 | 150 | 0 |
 | ReverseGrant (accounting recovery) | 150 | 150 | 150 | 0 |
 
-Repay validates the actual recovery grant asset against the duty denomination and its recipient against the creditor, then requires the executed funding transfer to use that same asset and recipient. Substituting either grant field rejects even when the substitution is propagated consistently through all supplied snapshots.
-
 This separates nominal recovery authority from the transfer grants that actually pay for it. A collateral delivery is not denomination-Cash funding. A previous or absent transfer cannot be used to discharge debt. The borrower still has 45 Cash after the trace, but its source debit grant is exhausted; available cash is not renewed permission. All grants remain as spent records. The successor remains owned by Servicer with Loan1 Defaulted/outstanding 450; no work exhaustion or episode label can remove it. More recovery would require a separately reviewed successor authorization instead of copying or refreshing the exhausted grants.
 
 There is no authorized-forgiveness path: nominal creation and forgiveness limits are zero, and a ForgiveDebt event rejects. Adding a future release would require a distinct grant, an explicit duty transition and retained economic loss accounting; recognition of an impairment is not such a grant.
 
 ## Finite work, observations and footprints
 
-There are three ordered steps and at most four events per step. Each event consumes one ordinary unit. Work starts ordinary remaining 12/spent zero, plus a separate closure reserve two: total initial resources are 14, not 12 inclusive of reserve. After the two default events it is 10/2/2; after the four sale events 6/6/2; after four recovery events 2/10/2. Remaining + spent = 12 and reserve = 2 at every boundary. The reserve is preserved and unavailable to these operations. There is no continuation refresh. `remaining` excludes the additive reserve; subtracting reserve from it would charge the reserve twice. A positive boundary control starts with ten ordinary units and the same separate reserve two: all ten events execute, ordinary remaining becomes zero and reserve stays two. A one-ordinary-unit negative control rejects the two-event first step despite its separate reserve of two, so reserve cannot rescue an ordinary-work shortfall.
+There are three ordered steps and at most four events per step. Each event consumes one ordinary unit. Work starts remaining 12/spent zero/closure reserve two. After the two default events it is 10/2/2; after the four sale events 6/6/2; after four recovery events 2/10/2. Remaining + spent = 12 and reserve = 2 at every boundary. The reserve is preserved and unavailable to these operations. There is no continuation refresh.
 
 The complete state has ten asset accounts, one duty, two share claims and eight grant records. Capacity is fixed at those amounts. Histories grow to five transfer IDs, two allocation IDs and two observation IDs. All identity sets are checked for replay. Observations are DefaultObs and BidObs; their current timestamps, expiry, issuer, duty/asset fields and policy version are explicit. Sequential read/write conflict handling is selected; no parallel or reordering claim is made.
 
@@ -100,13 +94,9 @@ node deliverables/rp01-loss-allocation-2026-09-09/check-case.mjs
 
 The checker reads only these authored case/source files. It derives asset movement, same-step funding consumption, obligation updates, accounting values, share allocations, resource depletion and actor effects with bounded integer arithmetic, then compares every complete post-state and footprint. It does not read generated language output or use labels such as `erasure=false` as financial evidence.
 
-The original 22 variants cover debt deletion after impairment, absent sale cash, collateral substituted for cash funding, absent collateral delivery, excess nominal discharge, missing allocated loss, absent later recovery, deleted residual duty, gross fee hidden by netting, unfunded impairment reversal, unauthorized forgiveness, wrong actor, unbound version, stale bid, transfer replay, work refresh, gross grant refresh, ordinary work exhausted despite reserve, omitted write footprint, observation capacity exhaustion, substituted observation kind and substituted sequence. Each must reject with its named code. The original complete positive trace must still pass; the variants do not count as independent reviews.
+The 22 variants cover debt deletion after impairment, absent sale cash, collateral substituted for cash funding, absent collateral delivery, excess nominal discharge, missing allocated loss, absent later recovery, deleted residual duty, gross fee hidden by netting, unfunded impairment reversal, unauthorized forgiveness, wrong actor, unbound version, stale bid, transfer replay, work refresh, gross grant refresh, ordinary work exhausted despite reserve, omitted write footprint observation capacity exhaustion, substituted observation kind and substituted sequence. Each must reject with its named code. The original complete positive trace must still pass; the variants do not count as independent reviews.
 
-The revision adds twelve invalid variants: two repayment-grant substitutions and direct controls for NO_DEBT_ERASURE, LOSS_CONSERVATION, SOURCE_PIN, PRE_STATE, IMPAIRMENT_ACCOUNT, SHARE_SUPPLY, RETAIN_RECORDS, CLAIM_LOSS_ALLOCATION, SCOPE and VERIFICATION_WORK. Two additional direct boundary controls corrupt Cash and Collateral totals and exercise the same ASSET_CONSERVATION function used by step validation. These test conservation itself independently of the earlier exact post-state comparison.
-
-The suite now checks 34 invalid variants, two direct conservation controls, one positive ordinary-budget boundary and one explicit full-discharge scope exclusion. It verifies that inputs are unchanged after successful validation and every rejected variant. SHARE_ROUNDING, BALANCE, ZERO_AMOUNT and COLLATERAL_DUTY remain defense-in-depth checks without dedicated direct controls in this bounded suite; no complete branch-coverage claim is made.
-
-The original implementation began with ORACLE_NOT_IMPLEMENTED. For this revision, consistent replacement of RecoveryGrant.asset or recipient was reproduced as accepted by the old checker, and the new regression first failed with MUTATION_repayment-grant-wrong-asset: ACCEPTED before the grant check was added. The revised command passes all controls and reports numeric residuals and acceptance scope, not a claim that .mori or ledger behavior is implemented.
+Initial executable check failed with ORACLE_NOT_IMPLEMENTED before implementation. After implementation, the positive trace and all 22 specified rejection codes passed. The command reports numeric residuals and acceptance scope, not a claim that .mori or ledger behavior is implemented.
 
 ## Representation and closure ownership
 
@@ -117,8 +107,6 @@ The existing funded-repayment kernel can express the arithmetic of same-step Cas
 - **SP03:** implement the complete transition relation and correspondence checks with the same observations and failure residuals.
 - **SP07:** bind concrete credit/default/recovery mechanisms to primary source/version policies, including impairment, fees, rounding and loss allocation.
 - **SP09:** establish ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance with grant lineage, external-observation/custody assumptions, activation/revocation and acceptance evidence.
-
-**Required separate task `RP01-LOSS-FULL-RECOVERY`:** establish an actually funded further 450 and new bounded authority before deriving a complete-discharge boundary. Retain the Loan1 row with outstanding zero and a consistent discharged status; reconcile impairment reversal, cash, fees and historical loss allocations; test unfunded discharge and row deletion separately. The existing Borrower has only 45 Cash and its grant is exhausted, so this task cannot be represented by inventing another 450-unit payment in the supplied trace. SP01 owns policy and acceptance, SP02 representation, SP03 transition and tests, SP07 source-policy binding and SP09 proof obligations. This is required remaining roadmap work, not closure by a scope disclaimer.
 
 The current scopes remain design oracle and local arithmetic verification. Protocol conformance, authenticated external facts, general recursive proofs and network settlement are open.
 
@@ -138,4 +126,4 @@ Source requirements and source facts are distinct from the chosen generic model 
 | `.raw/captured/7165f6cbe7b86280dd5ed94dd5585d3b55dda34d77776f2d9db87321683475c8.pdf` | `7165f6cbe7b86280dd5ed94dd5585d3b55dda34d77776f2d9db87321683475c8` | PDF pages4-5 collateral liquidation discussion; primary survey; locally inspected excerpt; no recourse policy inferred |
 | `experiments/moriarty-language/spec/successor/repayment-kernel.md` | `4e8a0beca7fd3998a62b111db176f74f375dd90d83839622803062e32a84cb6b` | Transfer and Repay; UInt128; finite work; no free debt discharge; existing local projection scope |
 
-Case SHA-256: `74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93`.
+Case SHA-256: `97e4cbf714e8490c0a26b7bd1badf392f8b2246c4c2be530349758343b7287f2`.

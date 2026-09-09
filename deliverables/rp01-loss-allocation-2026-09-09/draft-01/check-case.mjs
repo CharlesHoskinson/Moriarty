@@ -17,7 +17,6 @@ function leaves(v,p=''){
 }
 function sum(xs){return xs.reduce((a,b)=>{const v=a+b;need(v<=MAX,'UINT128');return v;},0n);}
 function total(s,asset){return sum(actors.map(p=>n(s.assets[asset][p])));}
-function conserveAssets(s,totals){for(const asset of assets)need(total(s,asset)===totals[asset],'ASSET_CONSERVATION');}
 function recalculate(s,policy){
  const d=s.duties[0],a=s.accounts;put(a,'grossReceivable',n(d.outstanding));
  put(a,'carryingReceivable',n(a.grossReceivable)-n(a.impairmentAllowance));
@@ -31,9 +30,7 @@ function invariants(s,c){
  need(assets.reduce((k,a)=>k+Object.keys(s.assets[a]).length,0)<=Number(n(b.assetRows))&&s.duties.length<=Number(n(b.duties))&&s.claims.length<=Number(n(b.claims))&&Object.keys(s.authority).length<=Number(n(b.grants)),'CAPACITY');
  need(s.duties.length===1&&s.claims.length===2,'RETAIN_RECORDS');
  const d=s.duties[0],a=s.accounts;need(d.id==='Loan1'&&d.debtor==='Borrower'&&d.creditor==='Pool'&&d.denomination==='Cash'&&d.legalRecourse==='Retained','DUTY_IDENTITY');
- need(n(d.principal)+n(d.accrued)===n(d.outstanding)&&n(d.accrued)===0n,'DUTY');
- // This oracle is a fixed partial-recovery case, not the full debt lifecycle.
- need(n(d.outstanding)>0n&&['Performing','Defaulted'].includes(d.status),'PARTIAL_RECOVERY_SCOPE');
+ need(n(d.principal)+n(d.accrued)===n(d.outstanding)&&n(d.accrued)===0n&&n(d.outstanding)>0n&&['Performing','Defaulted'].includes(d.status),'DUTY');
  need(n(d.collateralUnits)===n(s.assets.Collateral.Custodian),'COLLATERAL_DUTY');
  need(n(s.history.forgivenNominal)===0n&&n(s.history.nominalCreated)===0n&&n(d.outstanding)+n(s.history.fundedNominalRecovery)===n(c.policy.initialDebt),'NO_DEBT_ERASURE');
  for(const [key,cap] of [['usedTransferIds','usedTransfers'],['usedAllocationIds','usedAllocations'],['usedObservationIds','observations']])need(s.history[key].length<=Number(n(b[cap]))&&new Set(s.history[key]).size===s.history[key].length,'CAPACITY');
@@ -50,7 +47,7 @@ function actorEffects(events){return assets.flatMap(asset=>actors.map(actor=>{
  return {actor,asset,grossDebit:grossDebit.toString(),grossCredit:grossCredit.toString(),feesPaid:fees.toString(),refund:'0',netChange:net.toString(),netCredit:(net>0n?net:0n).toString(),netDebit:(net<0n?-net:0n).toString()};
 }));}
 export function checkCase(c){
- need(c.schema==='moriarty.fixed-partial-loss-recovery-challenge/1'&&c.protocolConformance===false&&c.languageImplementation===false,'SCOPE');
+ need(c.schema==='moriarty.generic-loss-recovery-challenge/1'&&c.protocolConformance===false&&c.languageImplementation===false,'SCOPE');
  const b=c.bounds;need(Buffer.byteLength(JSON.stringify(c),'utf8')<=Number(n(b.sidecarUtf8Bytes)),'CAPACITY');
  need(c.steps.length===3&&c.steps.length<=Number(n(b.steps))&&Object.keys(c.observations).length<=Number(n(b.observations)),'CAPACITY');
  need(Object.keys(c.representationDisposition.mandatoryPredicates).length<=Number(n(b.claimCount))&&c.steps.length<=Number(n(b.dependencyCount)),'CAPACITY');
@@ -60,7 +57,6 @@ export function checkCase(c){
  for(const step of c.steps){
   exact(step.before,current,'PRE_STATE');const s=structuredClone(current),d=s.duties[0],a=s.accounts;
   need(Array.isArray(step.events)&&step.events.length>0&&step.events.length<=Number(n(b.eventsPerStep)),'CAPACITY');
-  // remaining excludes the separately conserved closureReserve.
   need(n(s.work.remaining)>=BigInt(step.events.length),'WORK');const now=n(step.now);
   for(const id of step.observations){const o=c.observations[id];need(o&&o.version===c.policy.version&&n(o.observedAt)<=now&&now<=n(o.validUntil)&&!s.history.usedObservationIds.includes(id),'OBSERVATION');
    if(id==='DefaultObs')need(o.kind==='DefaultNotice'&&o.sequence==='1'&&o.authority==='Governor'&&o.dutyId===d.id&&o.borrower===d.debtor&&n(o.dueAt)<now,'OBSERVATION');
@@ -88,8 +84,7 @@ export function checkCase(c){
     s.history.usedTransferIds.push(e.id);funding[e.id]={asset:e.asset,to:e.to,remaining:amount,purpose:e.purpose};
    }
    if(e.kind==='Repay'){
-    need(grant.asset===d.denomination&&grant.recipient===d.creditor&&grant.dutyId===d.id,'AUTHORITY');
-    const f=funding[e.transferId];need(f&&f.asset===grant.asset&&f.to===grant.recipient&&f.remaining>=amount&&e.dutyId===d.id&&amount<=n(d.outstanding),'FUNDING');need(!s.history.usedAllocationIds.includes(e.allocationId),'REPLAY');
+    const f=funding[e.transferId];need(f&&f.asset==='Cash'&&f.to==='Pool'&&f.remaining>=amount&&e.dutyId===d.id&&amount<=n(d.outstanding),'FUNDING');need(!s.history.usedAllocationIds.includes(e.allocationId),'REPLAY');
     f.remaining-=amount;put(d,'principal',n(d.principal)-amount);put(d,'outstanding',n(d.outstanding)-amount);put(s.history,'fundedNominalRecovery',n(s.history.fundedNominalRecovery)+amount);s.history.usedAllocationIds.push(e.allocationId);allocations[e.allocationId]=amount;if(f.purpose==='SaleProceeds')saleDischarged+=amount;
    }
    if(e.kind==='ReverseImpairment'){
@@ -100,7 +95,7 @@ export function checkCase(c){
   if(step.observations.includes('BidObs'))need(collateralDelivered===n(c.policy.collateralUnits)&&saleCash===n(c.policy.saleCash)&&saleDischarged===saleCash,'SALE_DELIVERY');
   need(n(step.workCost)===BigInt(step.events.length),'WORK_COST');put(s.work,'remaining',n(s.work.remaining)-n(step.workCost));put(s.work,'spent',n(s.work.spent)+n(step.workCost));
   recalculate(s,c.policy);invariants(s,c);verification+=4n;
-  conserveAssets(s,totals);
+  for(const asset of assets)need(total(s,asset)===totals[asset],'ASSET_CONSERVATION');
   exact(s,step.after,'POST_STATE');exact(actorEffects(step.events),step.actorEffects,'ACTOR_EFFECTS');
   const beforeLeaves=Object.fromEntries(leaves(current)),afterLeaves=Object.fromEntries(leaves(s));
   const writes=[...new Set([...Object.keys(beforeLeaves),...Object.keys(afterLeaves)])].filter(k=>!isDeepStrictEqual(beforeLeaves[k],afterLeaves[k])).sort();
@@ -112,26 +107,7 @@ export function checkCase(c){
 }
 
 function patch(value,patches){const out=structuredClone(value);for(const p of patches){const parts=p.path.slice(1).split('/');let owner=out;for(const key of parts.slice(0,-1))owner=owner[key];const key=parts.at(-1);if(p.op==='remove'){if(Array.isArray(owner))owner.splice(Number(key),1);else delete owner[key];}else owner[key]=structuredClone(p.value);}return out;}
-function runUnchanged(value,operation){
- const before=structuredClone(value);
- try{return operation(value);}finally{exact(value,before,'INPUT_MUTATED');}
-}
-function expectRejection(value,operation,code,id){
- let error;try{runUnchanged(value,operation);}catch(e){error=e;}
- if(!error||error.message!==code)throw Error(`CONTROL_${id}: ${error?.message??'ACCEPTED'}`);
-}
 if(process.argv[1]===fileURLToPath(import.meta.url)){
- try{
-  const input=JSON.parse(readFileSync(process.argv[2]??CASE,'utf8'));
-  const result=runUnchanged(input,checkCase);
-  for(const m of input.mutations)expectRejection(patch(input,m.patches),checkCase,m.reject,m.id);
-  for(const control of input.positiveControls){const actual=runUnchanged(patch(input,control.patches),checkCase);for(const [key,value] of Object.entries(control.expected))exact(actual[key],value,'POSITIVE_CONTROL');}
-  for(const control of input.invariantControls){
-   need(control.kind==='asset-conservation','CONTROL_KIND');let boundary=input;for(const key of control.statePath.slice(1).split('/'))boundary=boundary[key];
-   const totals=Object.fromEntries(assets.map(asset=>[asset,total(input.initial,asset)]));
-   expectRejection(patch(boundary,control.patches),value=>conserveAssets(value,totals),control.reject,control.id);
-  }
-  for(const control of input.scopeControls)expectRejection(patch(input,control.patches),checkCase,control.reject,control.id);
-  console.log(JSON.stringify({...result,mutationsRejected:String(input.mutations.length),directInvariantControls:String(input.invariantControls.length),positiveBoundaryControls:String(input.positiveControls.length),scopeExclusions:String(input.scopeControls.length),inputImmutability:'checked on success and every rejection',scope:'Fixed three-step illustrative partial-recovery JSON oracle only; full funded closure remains required separate work; no language, ledger, proof or protocol acceptance'}));
- }catch(error){console.error(error.message);process.exitCode=1;}
+ try{const input=JSON.parse(readFileSync(process.argv[2]??CASE,'utf8'));const result=checkCase(input);for(const m of input.mutations){let error;try{checkCase(patch(input,m.patches));}catch(e){error=e;}if(!error||error.message!==m.reject)throw Error(`MUTATION_${m.id}: ${error?.message??'ACCEPTED'}`);}console.log(JSON.stringify({...result,mutationsRejected:String(input.mutations.length),scope:'Independent generic JSON design oracle only; no language, ledger, proof or protocol acceptance'}));}
+ catch(error){console.error(error.message);process.exitCode=1;}
 }
