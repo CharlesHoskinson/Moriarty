@@ -1,0 +1,994 @@
+Independently audit this Moriarty full Compact build source and bounded resource proposal. You are a source/resource reviewer, not the author. Return JSON with sourceCandidateSha, verdict APPROVED or REJECTED, sourceFindings, resourceVote APPROVE or REJECT, residualLimits. Judge executable correctness of actual build, exact source/version/asset hashes, persistent one-attempt allocation, skipped/adapter paths cannot claim real proof artifacts, subprocess timeout/cleanup, proposed limits. Existing fixed custody wrappers/kernels already have accepted skip-zk scope, not real proofs. No wallet, proof server or network transaction is requested here. Review content only, do not call tools or pretend to execute tests. Resource proposal is conditional on outer cgroup enforcement plus actual result review, preserve previous resource charges. Do not invent a numerical cost guarantee. Missing launch enforcement must remain a preexecution condition. Require both scoped independent reviews before admission. Sourcecandidate e4d2c4d085d693e374fa717a837639ce4a1959bc482211992647d789c52db1dd.
+
+RESOURCE PROPOSAL
+{
+  "schema": "moriarty.financial-build-resource-proposal/1",
+  "sourceCandidateSha": "e4d2c4d085d693e374fa717a837639ce4a1959bc482211992647d789c52db1dd",
+  "status": "proposed-not-admitted",
+  "cases": [
+    "loan",
+    "swap"
+  ],
+  "maxAttemptsPerCase": 1,
+  "maxCompileMsPerCase": 300000,
+  "maxTotalWallMs": 720000,
+  "memoryMaxBytes": 4294967296,
+  "memorySwapMaxBytes": 0,
+  "maxOutputBytesPerCase": 1073741824,
+  "parallelCompiles": 1,
+  "cleanupReserveMs": 30000,
+  "compilerInvocationsAlreadyMadeForThisProposal": 0,
+  "walletOperations": 0,
+  "transactionProofs": 0,
+  "submissions": 0,
+  "priorCharges": "Preserved unchanged; this proposal neither resets nor spends earlier allocations.",
+  "outerContainment": "Existing systemd user transient service with MemoryMax=4G MemorySwapMax=0 RuntimeMaxSec bound and KillMode=control-group; verify actual cgroup result before acceptance.",
+  "purpose": "Generate actual prover/verifier artifacts for existing fixed custody loan and swap, prerequisite to real Docker financial transactions. Does not admit financial network execution."
+}
+SOURCE MANIFEST
+{
+  "schema": "moriarty.financial-build-sources/1",
+  "files": [
+    {
+      "path": "experiments/moriarty-language/compact/arithmetic.compact",
+      "sha256": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/bound-program.json",
+      "sha256": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/kernel.compact",
+      "sha256": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/metadata.json",
+      "sha256": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/bound-program.json",
+      "sha256": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/kernel.compact",
+      "sha256": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/metadata.json",
+      "sha256": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/examples/loan.mori",
+      "sha256": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/examples/swap.mori",
+      "sha256": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+      "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "sha256": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+      "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/swap.compact",
+      "sha256": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "sha256": "c053c5b219a9d0ede519153c036b10c8e3245b2ad5b1ea63b01a569b499a9d28"
+    }
+  ]
+}
+
+FILE experiments/moriarty-midnight-financial/ledger/build-proven.mjs
+#!/usr/bin/env node
+/** One admitted full Compact build. Import/manifest inspection is inert.
+ * Review digests establish byte/candidate bindings, not auditor independence or votes.
+ * commandAdapter is explicitly synthetic and can never produce a proven manifest.
+ */
+import {spawn} from 'node:child_process';
+import {readFileSync, lstatSync, readdirSync, mkdirSync, writeFileSync, openSync, closeSync, fsyncSync} from 'node:fs';
+import {dirname, join, resolve, relative, isAbsolute, sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {PIN_PATHS, generateWrappers, validatePinnedInputs, sha256, isDirectRun} from '../custody/generate.mjs';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const CUSTODY = 'experiments/moriarty-midnight-financial/custody';
+const BUILDER = 'experiments/moriarty-midnight-financial/ledger/build-proven.mjs';
+const REQUIRED_SOURCES = [...Object.values(PIN_PATHS), BUILDER, `${CUSTODY}/generate.mjs`, `${CUSTODY}/bindings.json`, `${CUSTODY}/loan.compact`, `${CUSTODY}/swap.compact`].sort();
+const CIRCUITS = {loan:['initialize','accrue','settle'],swap:['initialize','swap','close']};
+const VERSIONS = {compiler:'0.31.1',language:'0.23.0',runtime:'0.16.0',compactWrapper:'0.5.2'};
+const HEX = /^[a-f0-9]{64}$/;
+
+function requireThat(value, message) { if (!value) throw new Error(message); }
+function positive(value) { return Number.isSafeInteger(value) && value > 0; }
+function noSymlinks(path, {missingLeaf=false}={}) {
+  const absolute=resolve(path); let current=absolute;
+  while(true) {
+    const stat=lstatSync(current,{throwIfNoEntry:false});
+    if(stat) {
+      requireThat(!stat.isSymbolicLink(),`symlink forbidden: ${current}`);
+      if(current!==absolute) requireThat(stat.isDirectory(),`not a directory: ${current}`);
+    } else requireThat(missingLeaf && current===absolute,`missing parent: ${current}`);
+    const parent=dirname(current);if(parent===current)break;current=parent;
+  }
+  return absolute;
+}
+function checkedFile(path) {
+  noSymlinks(path);requireThat(lstatSync(path).isFile(),`not a regular file: ${path}`);
+  return readFileSync(path);
+}
+function durableExclusive(path, record) {
+  noSymlinks(path,{missingLeaf:true});
+  const fd=openSync(path,'wx',0o600);
+  try {writeFileSync(fd,JSON.stringify(record,null,2)+'\n');fsyncSync(fd);} finally {closeSync(fd);}
+  const dirFd=openSync(dirname(path),'r');try {fsyncSync(dirFd);}finally{closeSync(dirFd);}
+}
+function boundRecord(ref,label) {
+  requireThat(ref && isAbsolute(ref.path??'') && HEX.test(ref.sha256??''),`missing ${label} binding`);
+  const bytes=checkedFile(ref.path);requireThat(sha256(bytes)===ref.sha256,`${label} digest mismatch`);
+  return JSON.parse(bytes.toString('utf8'));
+}
+export function sourceManifestHash(manifest) {return sha256(JSON.stringify(manifest));}
+export function inspectBuildSources() {
+  return {schema:'moriarty.financial-build-sources/1',files:REQUIRED_SOURCES.map(path=>({path,sha256:sha256(checkedFile(join(ROOT,path)))}))};
+}
+function checkSources(manifest) {
+  requireThat(manifest?.schema==='moriarty.financial-build-sources/1' && Array.isArray(manifest.files),'source manifest required');
+  const observed=inspectBuildSources();
+  requireThat(manifest.files.length===observed.files.length,'missing or extra source pin');
+  for(let i=0;i<observed.files.length;i++) {
+    requireThat(manifest.files[i]?.path===observed.files[i].path && manifest.files[i]?.sha256===observed.files[i].sha256,`stale or missing source pin: ${observed.files[i].path}`);
+    requireThat(Object.keys(manifest.files[i]).sort().join(',')==='path,sha256','unknown source pin field');
+  }
+  requireThat(Object.keys(manifest).sort().join(',')==='files,schema','unknown source manifest field');
+}
+
+/** Runs one direct subprocess in its own process group; no shell, retry or install. */
+async function realCommand(argv,{cwd,timeoutMs}) {
+  return new Promise((resolveResult,reject)=>{
+    const child=spawn(argv[0],argv.slice(1),{cwd,detached:true,stdio:['ignore','pipe','pipe']});
+    let stdout='',stderr='',bytes=0,failure=null;
+    const stop=reason=>{failure??=reason;try{process.kill(-child.pid,'SIGKILL');}catch(error){if(error.code!=='ESRCH')failure+='; process-group kill failed';}};
+    const timer=setTimeout(()=>stop('command timeout'),timeoutMs);
+    const append=(which,data)=>{bytes+=data.length;if(bytes>1048576){stop('command output limit');return;}if(which==='stdout')stdout+=data;else stderr+=data;};
+    child.stdout.on('data',d=>append('stdout',d));child.stderr.on('data',d=>append('stderr',d));
+    child.once('error',error=>{clearTimeout(timer);reject(error);});
+    child.once('close',(status,signal)=>{clearTimeout(timer);resolveResult({status,signal,stdout,stderr,error:failure});});
+  });
+}
+function hashAssets(assetsPath,kind) {
+  const artifacts=[];
+  function visit(dir) {
+    noSymlinks(dir);requireThat(lstatSync(dir).isDirectory(),'asset directory required');
+    for(const name of readdirSync(dir).sort()) {
+      const path=join(dir,name);const stat=lstatSync(path);
+      requireThat(!stat.isSymbolicLink(),`asset symlink forbidden: ${path}`);
+      if(stat.isDirectory())visit(path);
+      else {
+        requireThat(stat.isFile() && stat.size>0,`empty or nonregular artifact: ${path}`);
+        artifacts.push({path:relative(assetsPath,path).split(sep).join('/'),sha256:sha256(checkedFile(path)),bytes:stat.size});
+      }
+    }
+  }
+  visit(assetsPath);
+  const required=['contract/index.js','compiler/contract-info.json',...CIRCUITS[kind].flatMap(name=>[`keys/${name}.prover`,`keys/${name}.verifier`,`zkir/${name}.zkir`,`zkir/${name}.bzkir`])];
+  for(const path of required)requireThat(artifacts.some(a=>a.path===path),`missing required artifact: ${path}`);
+  const metadata=JSON.parse(checkedFile(join(assetsPath,'compiler/contract-info.json')));
+  for(const [key,name] of [['compiler-version','compiler'],['language-version','language'],['runtime-version','runtime']])requireThat(metadata[key]===VERSIONS[name],`compiler metadata ${key} mismatch`);
+  requireThat(Array.isArray(metadata.circuits),'compiler metadata circuits missing');
+  const proven=metadata.circuits.filter(c=>c.proof===true && c.pure===false).map(c=>c.name).sort();
+  requireThat(JSON.stringify(proven)===JSON.stringify([...CIRCUITS[kind]].sort()),'compiler metadata proof circuits mismatch');
+  return artifacts;
+}
+
+export async function buildProven(options={}) {
+  const {case:kind,sourceManifest,admission,resourceCounters,commandAdapter}=options;
+  requireThat(Object.hasOwn(CIRCUITS,kind),'case must be loan or swap');
+  requireThat(options.outputDir && isAbsolute(options.outputDir),'absolute outputDir required');
+  const outputDir=resolve(options.outputDir);
+  requireThat(options.outputDir===outputDir,'outputDir must be normalized');
+  requireThat(!lstatSync(outputDir,{throwIfNoEntry:false}),'output already exists');
+  noSymlinks(outputDir,{missingLeaf:true});
+  checkSources(sourceManifest);
+  const candidateHash=sourceManifestHash(sourceManifest);
+  requireThat(admission?.allowFullBuild===true && typeof admission.id==='string' && admission.id.length>0,'full-build admission required');
+  requireThat(admission.candidateHash===candidateHash,'admission candidate mismatch');
+  requireThat(admission.case===kind && admission.outputDir===outputDir,'admission case/output mismatch');
+  requireThat(positive(admission.maxCompileMs) && positive(admission.deadlineMs) && admission.deadlineMs>Date.now(),'invalid timeout/deadline');
+  requireThat(admission.maxAttempts===1,'one compile attempt required');
+  const resource=boundRecord(admission.resourceRecord,'resource');
+  requireThat(resource.id===admission.resourceId && resource.sourceCandidateSha===candidateHash,'resource identity/candidate mismatch');
+  for(const key of ['case','outputDir','maxCompileMs','deadlineMs','maxAttempts'])requireThat(resource[key]===admission[key],`resource ${key} mismatch`);
+  requireThat(isAbsolute(resource.attemptFile??''),'absolute attemptFile required');
+  const attemptFile=noSymlinks(resource.attemptFile,{missingLeaf:true});
+  requireThat(attemptFile===resource.attemptFile && !attemptFile.startsWith(outputDir+sep),'attempt must persist outside output directory');
+  requireThat(!lstatSync(attemptFile,{throwIfNoEntry:false}),'resource attempt already exists');
+  requireThat(Array.isArray(admission.reviews) && admission.reviews.length>0,'review byte bindings required');
+  for(const ref of admission.reviews) {
+    const review=boundRecord(ref,'review');
+    requireThat(review.sourceCandidateSha===candidateHash && review.verdict==='APPROVED','review candidate/verdict mismatch');
+  }
+  requireThat(resourceCounters?.resourceId===resource.id && resourceCounters.maxAttempts===1 && resourceCounters.attempts===0,'resource counters exhausted or mismatched');
+  requireThat(commandAdapter===undefined || typeof commandAdapter==='function','invalid commandAdapter');
+  const bindings=JSON.parse(checkedFile(join(ROOT,CUSTODY,'bindings.json')));
+  for(const [key,name] of [['compilerVersion','compiler'],['languageVersion','language'],['compactRuntimeVersion','runtime'],['compactWrapperVersion','compactWrapper']])requireThat(bindings.toolchain[key]===VERSIONS[name],`toolchain ${key} mismatch`);
+  const runtime=JSON.parse(readFileSync(join(bindings.toolchain.runtimeNodeModules,'@midnight-ntwrk/compact-runtime/package.json'),'utf8'));
+  requireThat(runtime.version===VERSIONS.runtime,'runtime package version mismatch');
+  const pinned=validatePinnedInputs({worktree:ROOT,bindings,readFileSync});
+  const generated=generateWrappers({worktree:ROOT,bindings,readFileSync,pinned});
+  for(const name of ['loan','swap']) requireThat(checkedFile(join(ROOT,CUSTODY,name+'.compact')).equals(Buffer.from(generated[name+'Source'])),`stale wrapper ${name}`);
+
+  // Atomic reservation precedes any version/compile process and survives every outcome.
+  durableExclusive(attemptFile,{schema:'moriarty.financial-build-attempt/1',resourceId:resource.id,admissionId:admission.id,sourceCandidateSha:candidateHash,case:kind,outputDir,attempts:1,startedAt:new Date().toISOString(),synthetic:!!commandAdapter});
+  resourceCounters.attempts=1;
+  mkdirSync(outputDir,{mode:0o700});
+  const assetsPath=join(outputDir,kind),stage=join(outputDir,'stage');
+  const receipt={schema:'moriarty.financial-proven-assets/1',status:'started',case:kind,assetsPath,contractModulePath:join(assetsPath,'contract/index.js'),proven:false,inspectedProofAssets:false,proofsGenerated:false,synthetic:!!commandAdapter,sourceManifestHash:candidateHash,admissionId:admission.id,resourceId:resource.id,attemptFile,resourceRecord:admission.resourceRecord,reviews:admission.reviews,versions:{},commands:[],artifacts:[]};
+  const run=async argv=>{
+    const remaining=admission.deadlineMs-Date.now();requireThat(remaining>0,'build deadline exceeded');
+    const timeoutMs=Math.min(admission.maxCompileMs,remaining);
+    const result=await (commandAdapter??realCommand)(argv,{cwd:ROOT,timeoutMs});
+    const stdout=String(result.stdout??''),stderr=String(result.stderr??'');
+    receipt.commands.push({argv,timeoutMs,exit:result.status,signal:result.signal??null,error:result.error??null,stdoutSha256:sha256(stdout),stderrSha256:sha256(stderr),stdout,stderr});
+    requireThat(result.status===0 && !result.error,`command exit ${result.status}: ${result.error??stderr}`);
+    requireThat(Date.now()<=admission.deadlineMs,'build deadline exceeded');
+    return stdout.trim();
+  };
+  try {
+    const compact=bindings.toolchain.compact;
+    for(const [args,key,expected] of [[['--version'],'compactWrapper','compact '+VERSIONS.compactWrapper],[['compile','--version'],'compiler',VERSIONS.compiler],[['compile','--language-version'],'language',VERSIONS.language],[['compile','--runtime-version'],'runtime',VERSIONS.runtime]]) {
+      const actual=await run([compact,...args]);requireThat(actual===expected,`${key} version mismatch`);receipt.versions[key]=actual;
+    }
+    mkdirSync(stage);
+    writeFileSync(join(stage,'arithmetic.compact'),pinned.arithmetic.bytes,{flag:'wx'});
+    writeFileSync(join(stage,'kernel.compact'),pinned[kind+'Kernel'].bytes,{flag:'wx'});
+    writeFileSync(join(stage,kind+'.compact'),generated[kind+'Source'],{flag:'wx'});
+    await run([compact,'compile','--compact-path',stage,join(stage,kind+'.compact'),assetsPath]);
+    receipt.artifacts=hashAssets(assetsPath,kind);
+    checkSources(sourceManifest);
+    receipt.status=commandAdapter?'source-test-only':'built';
+    receipt.proven=!commandAdapter;receipt.inspectedProofAssets=!commandAdapter;
+  } catch(error) {
+    receipt.status='failed';receipt.error=error.message;throw error;
+  } finally {
+    receipt.finishedAt=new Date().toISOString();
+    durableExclusive(join(outputDir,'build-receipt.json'),receipt);
+  }
+  return receipt;
+}
+
+if(isDirectRun(import.meta.url)) {
+  const args=process.argv.slice(2);
+  requireThat(args.length===2 && args[0]==='--request','usage: build-proven.mjs --request REQUEST.json');
+  const options=JSON.parse(checkedFile(resolve(args[1])).toString('utf8'));
+  requireThat(!Object.hasOwn(options,'commandAdapter'),'CLI cannot inject an adapter');
+  const result=await buildProven(options);
+  process.stdout.write(JSON.stringify(result)+'\n');
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs
+import {test} from 'node:test';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+import {mkdtemp, mkdir, writeFile, readFile, symlink, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {buildProven, inspectBuildSources, sourceManifestHash} from './build-proven.mjs';
+
+async function fixture(t, kind = 'loan') {
+  const dir = await mkdtemp(join(tmpdir(), 'moriarty-build-source-test-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const sourceManifest = inspectBuildSources();
+  const outputDir = join(dir, 'fresh');
+  const calls = [];
+  const options = {
+    case:kind, outputDir, sourceManifest,
+    admission:{id:'test-only-admission',resourceId:'test-only-resource',candidateHash:sourceManifestHash(sourceManifest),case:kind,outputDir,allowFullBuild:true,reviewed:true,maxCompileMs:1000,deadlineMs:Date.now()+30000,maxAttempts:1},
+    resourceCounters:{resourceId:'test-only-resource',attempts:0,maxAttempts:1},
+    commandAdapter: async (argv, context) => {
+      calls.push({argv,context});
+      const flags = argv.slice(1).join(' ');
+      const versions = {'--version':'compact 0.5.2','compile --version':'0.31.1','compile --language-version':'0.23.0','compile --runtime-version':'0.16.0'};
+      if (versions[flags]) return {status:0,stdout:versions[flags],stderr:''};
+      assert.equal(argv[1], 'compile');
+      assert.equal(argv.includes('--skip-zk'),false);
+      const assets = argv.at(-1);
+      const names = kind==='loan'?['initialize','accrue','settle']:['initialize','swap','close'];
+      for (const sub of ['contract','compiler','keys','zkir']) await mkdir(join(assets,sub),{recursive:true});
+      await writeFile(join(assets,'contract/index.js'),'// inert test artifact, not a real contract\n');
+      await writeFile(join(assets,'compiler/contract-info.json'),JSON.stringify({'compiler-version':'0.31.1','language-version':'0.23.0','runtime-version':'0.16.0',circuits:names.map(name=>({name,pure:false,proof:true}))}));
+      for(const name of names) for(const ext of ['prover','verifier','zkir','bzkir']) await writeFile(join(assets,['prover','verifier'].includes(ext)?'keys':'zkir',name+'.'+ext),'inert-'+name+'-'+ext);
+      return {status:0,stdout:'inert compilation only',stderr:''};
+    },
+  };
+  const hash=b=>createHash('sha256').update(b).digest('hex');
+  const record={id:options.admission.resourceId,sourceCandidateSha:options.admission.candidateHash,case:kind,outputDir,maxCompileMs:1000,deadlineMs:options.admission.deadlineMs,maxAttempts:1,attemptFile:join(dir,'resource-attempt.json')};
+  const rp=join(dir,'resource.json');const rb=JSON.stringify(record);await writeFile(rp,rb);
+  const reviewPath=join(dir,'review.json');const reviewBytes=JSON.stringify({sourceCandidateSha:options.admission.candidateHash,verdict:'APPROVED',scope:'inert source-test receipt only'});await writeFile(reviewPath,reviewBytes);
+  options.admission.resourceRecord={path:rp,sha256:hash(rb)};
+  options.admission.reviews=[{path:reviewPath,sha256:hash(reviewBytes)}];
+  return {dir, options, calls};
+}
+
+test('loan complete inert artifacts produce inspected hashes, never a proven build claim',async t=>{
+  const {options,calls}=await fixture(t);
+  const result=await buildProven(options);
+  assert.equal(result.status,'source-test-only'); assert.equal(result.proven,false);
+  assert.equal(result.inspectedProofAssets,false); assert.equal(result.proofsGenerated,false);
+  assert.equal(result.case,'loan'); assert.equal(options.resourceCounters.attempts,1);
+  assert.equal(calls.filter(x=>x.argv.includes('--compact-path')).length,1);
+  assert.equal(result.artifacts.length,14); assert(result.artifacts.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)));
+  assert.equal(result.contractModulePath,join(options.outputDir,'loan/contract/index.js'));
+  const receipt=JSON.parse(await readFile(join(options.outputDir,'build-receipt.json')));
+  assert.equal(receipt.sourceManifestHash,options.admission.candidateHash);
+  assert.equal(receipt.commands.length,5);
+});
+test('swap chooses exact exported circuits',async t=>{
+ const {options}=await fixture(t,'swap'); const r=await buildProven(options);
+ assert(r.artifacts.some(x=>x.path==='keys/close.verifier'));
+ assert(!r.artifacts.some(x=>x.path.includes('settle')));
+});
+for(const [label, mutate] of [
+ ['absent admission',o=>{delete o.admission;}],
+ ['wrong case',o=>{o.case='other';}],
+ ['wrong candidate',o=>{o.admission.candidateHash='0'.repeat(64);}],
+ ['wrong resource',o=>{o.resourceCounters.resourceId='other';}],
+ ['consumed allowance',o=>{o.resourceCounters.attempts=1;}],
+ ['nonfinite timeout',o=>{o.admission.maxCompileMs=Infinity;}],
+ ['expired deadline',o=>{o.admission.deadlineMs=1;}],
+ ['missing source pin',o=>{o.sourceManifest.files.pop();o.admission.candidateHash=sourceManifestHash(o.sourceManifest);}],
+ ['stale source pin',o=>{o.sourceManifest.files[0].sha256='0'.repeat(64);o.admission.candidateHash=sourceManifestHash(o.sourceManifest);}],
+ ['different output',o=>{o.admission.outputDir+='_other';}],
+]) test(label+' rejects before compiler and allocation',async t=>{
+ const {options,calls}=await fixture(t);mutate(options);await assert.rejects(buildProven(options));assert.equal(calls.length,0);
+});
+test('existing output is preserved and rejects',async t=>{
+ const {options,calls}=await fixture(t);await mkdir(options.outputDir);await writeFile(join(options.outputDir,'keep'),'keep');
+ await assert.rejects(buildProven(options),/exist/);assert.equal(calls.length,0);assert.equal(await readFile(join(options.outputDir,'keep'),'utf8'),'keep');
+});
+test('symlink ancestor rejects before compiler',async t=>{
+ const {options,dir,calls}=await fixture(t);await symlink(dir,join(dir,'link')); options.outputDir=join(dir,'link/fresh');options.admission.outputDir=options.outputDir;
+ await assert.rejects(buildProven(options),/symlink/);assert.equal(calls.length,0);
+});
+test('compiler failure preserves charged attempt, partial outputs and diagnostic receipt; no retry',async t=>{
+ const {options,calls}=await fixture(t); const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{if(a.includes('--compact-path')){calls.push({argv:a});await mkdir(a.at(-1));await writeFile(join(a.at(-1),'partial'),'partial');return {status:2,stdout:'',stderr:'inert failure'};}return adapter(a,c);};
+ await assert.rejects(buildProven(options),/exit/);assert.equal(options.resourceCounters.attempts,1);
+ assert.equal(await readFile(join(options.outputDir,'loan/partial'),'utf8'),'partial');
+ assert.equal(JSON.parse(await readFile(join(options.outputDir,'build-receipt.json'))).status,'failed');
+ assert.equal(calls.filter(x=>x.argv.includes('--compact-path')).length,1);
+});
+test('missing proving key rejects despite compiler success',async t=>{
+ const {options}=await fixture(t);const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path'))await rm(join(a.at(-1),'keys/settle.prover'));return r;};
+ await assert.rejects(buildProven(options),/missing.*settle.prover/);
+});
+test('wrong metadata version rejects despite compiler success',async t=>{
+ const {options}=await fixture(t);const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path')){const p=join(a.at(-1),'compiler/contract-info.json');const d=JSON.parse(await readFile(p));d['runtime-version']='other';await writeFile(p,JSON.stringify(d));}return r;};
+ await assert.rejects(buildProven(options),/metadata/);
+});
+test('generated output symlink is rejected, never hashed through',async t=>{
+ const {options,dir}=await fixture(t);const adapter=options.commandAdapter;await writeFile(join(dir,'outside'),'outside');
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path'))await symlink(join(dir,'outside'),join(a.at(-1),'escape'));return r;};
+ await assert.rejects(buildProven(options),/symlink/);
+});
+
+test('consumed on-disk attempt refuses reset counters on later invocation',async t=>{
+ const {options,calls,dir}=await fixture(t);await buildProven(options);options.resourceCounters.attempts=0;
+ await rm(options.outputDir,{recursive:true});const before=calls.length;
+ await assert.rejects(buildProven(options),/attempt|exist/);assert.equal(calls.length,before);
+ assert.equal(JSON.parse(await readFile(join(dir,'resource-attempt.json'))).resourceId,'test-only-resource');
+});
+test('review digest and resource bytes must match immutable admission bindings',async t=>{
+ const {options,calls}=await fixture(t);await writeFile(options.admission.reviews[0].path,'{}');
+ await assert.rejects(buildProven(options),/review|digest/);assert.equal(calls.length,0);
+});
+
+
+FILE experiments/moriarty-midnight-financial/custody/generate.mjs
+#!/usr/bin/env node
+/** Reproducible loan/swap Compact custody wrappers. No wallet SDK, no network. */
+import {createHash} from 'node:crypto';
+import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {dirname, join, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+export const PIN_PATHS = {
+  loanSource: 'experiments/moriarty-language/spec/examples/loan.mori',
+  swapSource: 'experiments/moriarty-language/spec/examples/swap.mori',
+  arithmetic: 'experiments/moriarty-language/compact/arithmetic.compact',
+  loanKernel: 'experiments/moriarty-language/compact/generated/loan/kernel.compact',
+  swapKernel: 'experiments/moriarty-language/compact/generated/swap/kernel.compact',
+  loanMetadata: 'experiments/moriarty-language/compact/generated/loan/metadata.json',
+  swapMetadata: 'experiments/moriarty-language/compact/generated/swap/metadata.json',
+  loanBoundProgram: 'experiments/moriarty-language/compact/generated/loan/bound-program.json',
+  swapBoundProgram: 'experiments/moriarty-language/compact/generated/swap/bound-program.json',
+};
+
+export function sha256(buf) {
+  return createHash('sha256').update(asBuffer(buf)).digest('hex');
+}
+
+export function asBuffer(value) {
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (typeof value === 'string') return Buffer.from(value);
+  throw new Error('expected bytes');
+}
+
+export function isDirectRun(metaUrl, argv1 = process.argv[1]) {
+  if (typeof metaUrl !== 'string' || metaUrl.length === 0) {
+    throw new Error('isDirectRun requires explicit caller module identity');
+  }
+  if (!argv1) return false;
+  return resolve(argv1) === fileURLToPath(metaUrl);
+}
+
+function pad32(ascii) {
+  const b = Buffer.alloc(32);
+  Buffer.from(ascii, 'utf8').copy(b);
+  return b;
+}
+function assertPad(ascii, hex) {
+  const got = pad32(ascii).toString('hex');
+  if (got !== hex) throw new Error(`pad32(${ascii})=${got} != ${hex}`);
+}
+function bytesLiteral(hex) {
+  if (!/^[0-9a-f]{64}$/.test(hex)) throw new Error(`expected 32-byte hex, got ${hex}`);
+  const nums = [];
+  for (let i = 0; i < 64; i += 2) nums.push(String(parseInt(hex.slice(i, i + 2), 16)));
+  return `Bytes[${nums.join(', ')}]`;
+}
+function textId(metadata, text) {
+  const row = metadata.textTable.find((t) => t.text === text);
+  if (!row) throw new Error(`missing text ${text}`);
+  return Number(row.id);
+}
+function fieldOf(metadata, name) {
+  const row = metadata.stateFields.find((f) => f.name === name);
+  if (!row) throw new Error(`missing field ${name}`);
+  return row.field;
+}
+function initialByName(bound) {
+  return Object.fromEntries(bound.manifest.initialState.map((x) => [x.name, x.value.value]));
+}
+function constByName(bound) {
+  return Object.fromEntries(bound.manifest.constants.map((x) => [x.name, x.value.value]));
+}
+function kernelStateLiteral(metadata, bound) {
+  const init = initialByName(bound);
+  return `KernelState { ${metadata.stateFields.map((f) => `${f.field}: ${init[f.name]}`).join(', ')} }`;
+}
+
+export function validatePinnedInputs({worktree, bindings, readFileSync: rf}) {
+  assertPad(bindings.networkTagAscii, bindings.networkTag);
+  assertPad(bindings.loan.borrowerDomainAscii, bindings.loan.borrowerDomain);
+  assertPad(bindings.loan.lenderDomainAscii, bindings.loan.lenderDomain);
+  assertPad(bindings.loan.usdDomainAscii, bindings.loan.usdDomain);
+  assertPad(bindings.swap.traderDomainAscii, bindings.swap.traderDomain);
+  assertPad(bindings.swap.providerDomainAscii, bindings.swap.providerDomain);
+  assertPad(bindings.swap.assetADomainAscii, bindings.swap.assetADomain);
+  assertPad(bindings.swap.assetBDomainAscii, bindings.swap.assetBDomain);
+
+  function pin(key) {
+    const rel = PIN_PATHS[key];
+    const abs = join(worktree, rel);
+    const bytes = asBuffer(rf(abs));
+    const digest = sha256(bytes);
+    const expected = bindings.digests[key];
+    if (digest !== expected) throw new Error(`stale input ${rel}: ${digest} != ${expected}`);
+    return {
+      abs, rel, bytes, digest,
+      json: rel.endsWith('.json') ? JSON.parse(bytes.toString('utf8')) : null,
+    };
+  }
+
+  const loanSource = pin('loanSource');
+  const swapSource = pin('swapSource');
+  const arithmetic = pin('arithmetic');
+  const loanKernel = pin('loanKernel');
+  const swapKernel = pin('swapKernel');
+  const loanMetaPin = pin('loanMetadata');
+  const swapMetaPin = pin('swapMetadata');
+  const loanBoundPin = pin('loanBoundProgram');
+  const swapBoundPin = pin('swapBoundProgram');
+  const loanMeta = loanMetaPin.json;
+  const swapMeta = swapMetaPin.json;
+  const loanBound = loanBoundPin.json;
+  const swapBound = swapBoundPin.json;
+
+  if (loanMeta.programHash !== bindings.digests.loanProgram) throw new Error('loan program hash');
+  if (swapMeta.programHash !== bindings.digests.swapProgram) throw new Error('swap program hash');
+  if (bindings.loan.programDigest !== bindings.digests.loanProgram) throw new Error('loan programDigest != digests.loanProgram');
+  if (bindings.swap.programDigest !== bindings.digests.swapProgram) throw new Error('swap programDigest != digests.swapProgram');
+  if (bindings.loan.programDigest !== loanMeta.programHash) throw new Error('loan programDigest != metadata.programHash');
+  if (bindings.swap.programDigest !== swapMeta.programHash) throw new Error('swap programDigest != metadata.programHash');
+  if (loanMeta.sourceHash !== bindings.digests.loanSource) throw new Error('loan source hash');
+  if (swapMeta.sourceHash !== bindings.digests.swapSource) throw new Error('swap source hash');
+  if (loanMeta.sourceHash !== loanSource.digest) throw new Error('loan metadata.sourceHash != loan.mori bytes');
+  if (swapMeta.sourceHash !== swapSource.digest) throw new Error('swap metadata.sourceHash != swap.mori bytes');
+  if (loanMeta.compactSourceHash !== bindings.digests.loanKernel) throw new Error('loan kernel hash');
+  if (swapMeta.compactSourceHash !== bindings.digests.swapKernel) throw new Error('swap kernel hash');
+  if (loanBound.programHash !== bindings.digests.loanProgram) throw new Error('loan bound program hash');
+  if (swapBound.programHash !== bindings.digests.swapProgram) throw new Error('swap bound program hash');
+  if (loanBound.manifest.profile !== bindings.profile) throw new Error('loan profile');
+  if (swapBound.manifest.profile !== bindings.profile) throw new Error('swap profile');
+
+  return {
+    loanSource, swapSource, arithmetic, loanKernel, swapKernel,
+    loanMeta, swapMeta, loanBound, swapBound,
+    loanMetaPin, swapMetaPin, loanBoundPin, swapBoundPin,
+  };
+}
+
+function header(kind, meta, bindings) {
+  return `pragma language_version >= 0.23 && <= 0.23;
+import CompactStandardLibrary;
+include "kernel";
+// generated custody wrapper kind=${kind}
+// profile=${bindings.profile}
+// sourceHash=${meta.sourceHash}
+// programHash=${meta.programHash}
+// compactSourceHash=${meta.compactSourceHash}
+// metadataHash=${kind === 'loan' ? bindings.digests.loanMetadata : bindings.digests.swapMetadata}
+`;
+}
+
+function timeCircuits() {
+  return `
+circuit capabilityHash(domain: Bytes<32>, network: Bytes<32>, program: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([domain, network, program, secret]);
+}
+
+circuit constrainNow(now: Uint<64>): Uint<128> {
+  const publicNow: Uint<64> = disclose(now);
+  const maxNow: Uint<64> = 18446744073709551315;
+  assert(publicNow <= maxNow, "UINT64_WINDOW_OVERFLOW");
+  const windowEnd: Uint<64> = ((publicNow as Uint<128>) + 300) as Uint<64>;
+  assert(blockTimeGte(publicNow), "BLOCK_TIME_TOO_EARLY");
+  assert(blockTimeLt(windowEnd), "BLOCK_TIME_TOO_LATE");
+  assert(publicNow < 2000000000, "HORIZON_EXPIRED");
+  return publicNow as Uint<128>;
+}
+`;
+}
+
+function envelope(program, network, revision) {
+  return `  assert(${program} == programDigest, "PROGRAM_MISMATCH");
+  assert(${network} == networkTag, "NETWORK_MISMATCH");
+  assert(${revision} == revision, "REVISION_MISMATCH");
+  assert(initialized, "NOT_INITIALIZED");`;
+}
+
+function emitLoan(bindings, pinned) {
+  const m = pinned.loanMeta;
+  const bound = pinned.loanBound;
+  const c = constByName(bound);
+  const borrower = textId(m, 'borrower');
+  const lender = textId(m, 'lender');
+  const usdAsset = textId(m, 'USD_TEST_ASSET');
+  const usdMicro = textId(m, 'USD_micro');
+  const duePr = textId(m, 'lam01:period1:PR');
+  const dueIp = textId(m, 'lam01:period1:IP');
+  const principalDue = c.principal_installment;
+  const interestDue = c.expected_interest;
+  const totalDue = c.expected_total_due;
+  const residual = c.expected_outstanding_notional;
+  const pinnedProgram = bytesLiteral(m.programHash);
+  return `${header('loan', m, bindings)}
+export ledger programDigest: Bytes<32>;
+export ledger networkTag: Bytes<32>;
+export ledger borrowerCapability: Bytes<32>;
+export ledger lenderCapability: Bytes<32>;
+export ledger borrowerAddress: UserAddress;
+export ledger lenderAddress: UserAddress;
+export ledger usdDomain: Bytes<32>;
+export ledger usdColor: Bytes<32>;
+export ledger initialized: Boolean;
+export ledger remaining: Uint<128>;
+export ledger revision: Uint<128>;
+export ledger kernelState: KernelState;
+export ledger lastAccrue: Result0;
+export ledger lastSettle: Result1;
+${timeCircuits()}
+constructor(borrowerSecret: Bytes<32>, lenderSecret: Bytes<32>, borrowerPayout: UserAddress, lenderPayout: UserAddress, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>) {
+  const pinnedProgram: Bytes<32> = ${pinnedProgram};
+  const publicProgram: Bytes<32> = disclose(expectedProgram);
+  assert(publicProgram == pinnedProgram, "PROGRAM_MISMATCH");
+  programDigest = pinnedProgram;
+  networkTag = disclose(expectedNetwork);
+  borrowerAddress = disclose(borrowerPayout);
+  lenderAddress = disclose(lenderPayout);
+  borrowerCapability = disclose(capabilityHash(pad(32, "${bindings.loan.borrowerDomainAscii}"), expectedNetwork, pinnedProgram, borrowerSecret));
+  lenderCapability = disclose(capabilityHash(pad(32, "${bindings.loan.lenderDomainAscii}"), expectedNetwork, pinnedProgram, lenderSecret));
+  usdDomain = pad(32, "${bindings.loan.usdDomainAscii}");
+  initialized = false;
+  remaining = 0;
+  revision = 0;
+}
+
+export circuit initialize(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedActor: Uint<32>, now: Uint<64>): [] {
+  assert(expectedProgram == programDigest, "PROGRAM_MISMATCH");
+  assert(expectedNetwork == networkTag, "NETWORK_MISMATCH");
+  assert(capabilityHash(pad(32, "${bindings.loan.borrowerDomainAscii}"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == ${borrower}, "ACTOR_MAPPING");
+  assert(!initialized, "ALREADY_INITIALIZED");
+  constrainNow(now);
+  kernelState = ${kernelStateLiteral(m, bound)};
+  remaining = ${bound.manifest.lifetime};
+  revision = 0;
+  usdColor = mintUnshieldedToken(usdDomain, ${bindings.loan.mintToBorrower}, right<ContractAddress, UserAddress>(borrowerAddress));
+  initialized = true;
+}
+
+export circuit accrue(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, now: Uint<64>, hints: Hints0): Result0 {
+${envelope('expectedProgram', 'expectedNetwork', 'expectedRevision')}
+  assert(capabilityHash(pad(32, "${bindings.loan.borrowerDomainAscii}"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == ${borrower}, "ACTOR_MAPPING");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result0 = disclose(transition0(kernelState, Arguments0 { a0: expectedActor }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == ${duePr}, "DUE_ID_PR");
+  assert(result.effect0.v1 == ${borrower}, "DUE_PR_DEBTOR");
+  assert(result.effect0.v2 == ${lender}, "DUE_PR_CREDITOR");
+  assert(result.effect0.v3 == ${usdMicro}, "DUE_PR_DENOMINATION");
+  assert(result.effect0.v4 == ${principalDue}, "DUE_PR_AMOUNT");
+  assert(result.effect1.v0 == ${dueIp}, "DUE_ID_IP");
+  assert(result.effect1.v1 == ${borrower}, "DUE_IP_DEBTOR");
+  assert(result.effect1.v2 == ${lender}, "DUE_IP_CREDITOR");
+  assert(result.effect1.v3 == ${usdMicro}, "DUE_IP_DENOMINATION");
+  assert(result.effect1.v4 == ${interestDue}, "DUE_IP_AMOUNT");
+  assert(result.after.${fieldOf(m, 'notional')} == ${residual}, "RESIDUAL_NOTIONAL");
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastAccrue = result;
+  return result;
+}
+
+export circuit settle(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, settlementAsset: Uint<32>, amountDue: Uint<128>, now: Uint<64>, hints: Hints1): Result1 {
+${envelope('expectedProgram', 'expectedNetwork', 'expectedRevision')}
+  assert(capabilityHash(pad(32, "${bindings.loan.borrowerDomainAscii}"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == ${borrower}, "ACTOR_MAPPING");
+  assert(settlementAsset == ${usdAsset}, "SETTLEMENT_ASSET");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result1 = disclose(transition1(kernelState, Arguments1 { a0: expectedActor, a1: settlementAsset, a2: amountDue }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == ${usdAsset}, "TRANSFER_ASSET");
+  assert(result.effect0.v1 == ${borrower}, "TRANSFER_FROM");
+  assert(result.effect0.v2 == ${lender}, "TRANSFER_TO");
+  assert(result.effect0.v3 == ${totalDue}, "TRANSFER_AMOUNT");
+  assert(result.effect1.v0 == ${duePr}, "SETTLED_PR_ID");
+  assert(result.effect1.v1 == ${borrower}, "SETTLED_PR_DEBTOR");
+  assert(result.effect1.v2 == ${lender}, "SETTLED_PR_CREDITOR");
+  assert(result.effect1.v3 == ${usdMicro}, "SETTLED_PR_DENOMINATION");
+  assert(result.effect1.v4 == ${principalDue}, "SETTLED_PR_AMOUNT");
+  assert(result.effect1.v5 == ${usdAsset}, "SETTLED_PR_ASSET");
+  assert(result.effect2.v0 == ${dueIp}, "SETTLED_IP_ID");
+  assert(result.effect2.v1 == ${borrower}, "SETTLED_IP_DEBTOR");
+  assert(result.effect2.v2 == ${lender}, "SETTLED_IP_CREDITOR");
+  assert(result.effect2.v3 == ${usdMicro}, "SETTLED_IP_DENOMINATION");
+  assert(result.effect2.v4 == ${interestDue}, "SETTLED_IP_AMOUNT");
+  assert(result.effect2.v5 == ${usdAsset}, "SETTLED_IP_ASSET");
+  assert(result.after.${fieldOf(m, 'notional')} == ${residual}, "RESIDUAL_NOTIONAL");
+  const entry: Uint<128> = unshieldedBalance(usdColor);
+  const paid: Uint<128> = result.effect0.v3;
+  assert(checkedAdd(entry, paid) >= paid, "SETTLE_IN_CALL_DELTA");
+  receiveUnshielded(usdColor, paid);
+  sendUnshielded(usdColor, paid, right<ContractAddress, UserAddress>(lenderAddress));
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastSettle = result;
+  return result;
+}
+`;
+}
+
+function emitSwap(bindings, pinned) {
+  const m = pinned.swapMeta;
+  const bound = pinned.swapBound;
+  const c = constByName(bound);
+  const trader = textId(m, 'trader');
+  const provider = textId(m, 'provider');
+  const pool = textId(m, 'pool');
+  const assetA = textId(m, 'ASSET_A');
+  const assetB = textId(m, 'ASSET_B');
+  const expectedOut = c.expected_output;
+  const expectedRA = c.expected_reserve_a;
+  const expectedRB = c.expected_reserve_b;
+  const reserveA = fieldOf(m, 'reserve_a');
+  const reserveB = fieldOf(m, 'reserve_b');
+  const pinnedProgram = bytesLiteral(m.programHash);
+  return `${header('swap', m, bindings)}
+export ledger programDigest: Bytes<32>;
+export ledger networkTag: Bytes<32>;
+export ledger traderCapability: Bytes<32>;
+export ledger providerCapability: Bytes<32>;
+export ledger traderAddress: UserAddress;
+export ledger providerAddress: UserAddress;
+export ledger assetADomain: Bytes<32>;
+export ledger assetBDomain: Bytes<32>;
+export ledger colorA: Bytes<32>;
+export ledger colorB: Bytes<32>;
+export ledger initialized: Boolean;
+export ledger remaining: Uint<128>;
+export ledger revision: Uint<128>;
+export ledger kernelState: KernelState;
+export ledger lastSwap: Result0;
+export ledger lastClose: Result1;
+${timeCircuits()}
+constructor(traderSecret: Bytes<32>, providerSecret: Bytes<32>, traderPayout: UserAddress, providerPayout: UserAddress, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>) {
+  const pinnedProgram: Bytes<32> = ${pinnedProgram};
+  const publicProgram: Bytes<32> = disclose(expectedProgram);
+  assert(publicProgram == pinnedProgram, "PROGRAM_MISMATCH");
+  programDigest = pinnedProgram;
+  networkTag = disclose(expectedNetwork);
+  traderAddress = disclose(traderPayout);
+  providerAddress = disclose(providerPayout);
+  traderCapability = disclose(capabilityHash(pad(32, "${bindings.swap.traderDomainAscii}"), expectedNetwork, pinnedProgram, traderSecret));
+  providerCapability = disclose(capabilityHash(pad(32, "${bindings.swap.providerDomainAscii}"), expectedNetwork, pinnedProgram, providerSecret));
+  assetADomain = pad(32, "${bindings.swap.assetADomainAscii}");
+  assetBDomain = pad(32, "${bindings.swap.assetBDomainAscii}");
+  initialized = false;
+  remaining = 0;
+  revision = 0;
+}
+
+export circuit initialize(providerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedActor: Uint<32>, now: Uint<64>): [] {
+  assert(expectedProgram == programDigest, "PROGRAM_MISMATCH");
+  assert(expectedNetwork == networkTag, "NETWORK_MISMATCH");
+  assert(capabilityHash(pad(32, "${bindings.swap.providerDomainAscii}"), networkTag, programDigest, providerSecret) == providerCapability, "PROVIDER_CAPABILITY");
+  assert(expectedActor == ${provider}, "ACTOR_MAPPING");
+  assert(!initialized, "ALREADY_INITIALIZED");
+  constrainNow(now);
+  kernelState = ${kernelStateLiteral(m, bound)};
+  remaining = ${bound.manifest.lifetime};
+  revision = 0;
+  colorA = mintUnshieldedToken(assetADomain, ${bindings.swap.poolA}, left<ContractAddress, UserAddress>(kernel.self()));
+  colorB = mintUnshieldedToken(assetBDomain, ${bindings.swap.poolB}, left<ContractAddress, UserAddress>(kernel.self()));
+  mintUnshieldedToken(assetADomain, ${bindings.swap.traderA}, right<ContractAddress, UserAddress>(traderAddress));
+  initialized = true;
+}
+
+export circuit swap(traderSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, recipient: Uint<32>, assetIn: Uint<32>, assetOut: Uint<32>, amountIn: Uint<128>, minOut: Uint<128>, now: Uint<64>, hints: Hints0): Result0 {
+${envelope('expectedProgram', 'expectedNetwork', 'expectedRevision')}
+  assert(capabilityHash(pad(32, "${bindings.swap.traderDomainAscii}"), networkTag, programDigest, traderSecret) == traderCapability, "TRADER_CAPABILITY");
+  assert(expectedActor == ${trader}, "ACTOR_MAPPING");
+  assert(recipient == ${trader}, "RECIPIENT_MUST_BE_TRADER");
+  assert(assetIn == ${assetA}, "ASSET_IN");
+  assert(assetOut == ${assetB}, "ASSET_OUT");
+  const entryA: Uint<128> = unshieldedBalance(colorA);
+  const entryB: Uint<128> = unshieldedBalance(colorB);
+  assert(entryA == kernelState.${reserveA}, "ENTRY_RESERVE_A_MISMATCH");
+  assert(entryB == kernelState.${reserveB}, "ENTRY_RESERVE_B_MISMATCH");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result0 = disclose(transition0(kernelState, Arguments0 { a0: expectedActor, a1: recipient, a2: assetIn, a3: assetOut, a4: amountIn, a5: minOut }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == ${assetA}, "SWAP_IN_ASSET");
+  assert(result.effect0.v1 == ${trader}, "SWAP_IN_FROM");
+  assert(result.effect0.v2 == ${pool}, "SWAP_IN_TO");
+  assert(result.effect0.v3 == amountIn, "SWAP_IN_AMOUNT");
+  assert(result.effect1.v0 == ${assetB}, "SWAP_OUT_ASSET");
+  assert(result.effect1.v1 == ${pool}, "SWAP_OUT_FROM");
+  assert(result.effect1.v2 == ${trader}, "SWAP_OUT_TO");
+  assert(result.effect1.v3 == ${expectedOut}, "SWAP_OUT_AMOUNT");
+  assert(result.after.${reserveA} == ${expectedRA}, "RESERVE_A");
+  assert(result.after.${reserveB} == ${expectedRB}, "RESERVE_B");
+  assert(unshieldedBalanceGte(colorB, result.effect1.v3), "INSUFFICIENT_ENTRY_RESERVE_B");
+  assert(checkedAdd(entryA, result.effect0.v3) >= result.effect0.v3, "SWAP_IN_CALL_DELTA");
+  assert(entryB >= result.effect1.v3, "SWAP_ENTRY_B_DELTA");
+  assert(checkedAdd(entryA, result.effect0.v3) == result.after.${reserveA}, "RESERVE_A_EFFECT_DELTA");
+  assert(checkedAdd(result.after.${reserveB}, result.effect1.v3) == entryB, "RESERVE_B_EFFECT_DELTA");
+  receiveUnshielded(colorA, result.effect0.v3);
+  sendUnshielded(colorB, result.effect1.v3, right<ContractAddress, UserAddress>(traderAddress));
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastSwap = result;
+  return result;
+}
+
+export circuit close(providerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, now: Uint<64>, hints: Hints1): Result1 {
+${envelope('expectedProgram', 'expectedNetwork', 'expectedRevision')}
+  assert(capabilityHash(pad(32, "${bindings.swap.providerDomainAscii}"), networkTag, programDigest, providerSecret) == providerCapability, "PROVIDER_CAPABILITY");
+  assert(expectedActor == ${provider}, "ACTOR_MAPPING");
+  const entryA: Uint<128> = unshieldedBalance(colorA);
+  const entryB: Uint<128> = unshieldedBalance(colorB);
+  assert(entryA == kernelState.${reserveA}, "ENTRY_RESERVE_A_MISMATCH");
+  assert(entryB == kernelState.${reserveB}, "ENTRY_RESERVE_B_MISMATCH");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result1 = disclose(transition1(kernelState, Arguments1 { a0: expectedActor }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == ${assetA}, "CLOSE_A_ASSET");
+  assert(result.effect0.v1 == ${pool}, "CLOSE_A_FROM");
+  assert(result.effect0.v2 == ${provider}, "CLOSE_A_TO");
+  assert(result.effect1.v0 == ${assetB}, "CLOSE_B_ASSET");
+  assert(result.effect1.v1 == ${pool}, "CLOSE_B_FROM");
+  assert(result.effect1.v2 == ${provider}, "CLOSE_B_TO");
+  assert(unshieldedBalanceGte(colorA, result.effect0.v3), "INSUFFICIENT_ENTRY_RESERVE_A");
+  assert(unshieldedBalanceGte(colorB, result.effect1.v3), "INSUFFICIENT_ENTRY_RESERVE_B");
+  assert(entryA == result.effect0.v3, "CLOSE_SURPLUS_A");
+  assert(entryB == result.effect1.v3, "CLOSE_SURPLUS_B");
+  assert(result.after.${reserveA} == 0, "CLOSE_RESERVE_A_ZERO");
+  assert(result.after.${reserveB} == 0, "CLOSE_RESERVE_B_ZERO");
+  assert(checkedAdd(result.after.${reserveA}, result.effect0.v3) == entryA, "CLOSE_A_EFFECT_DELTA");
+  assert(checkedAdd(result.after.${reserveB}, result.effect1.v3) == entryB, "CLOSE_B_EFFECT_DELTA");
+  sendUnshielded(colorA, result.effect0.v3, right<ContractAddress, UserAddress>(providerAddress));
+  sendUnshielded(colorB, result.effect1.v3, right<ContractAddress, UserAddress>(providerAddress));
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastClose = result;
+  return result;
+}
+`;
+}
+
+export function generateWrappers({worktree, bindings, readFileSync: rf, pinned}) {
+  const p = pinned ?? validatePinnedInputs({worktree, bindings, readFileSync: rf});
+  return {
+    loanSource: emitLoan(bindings, p),
+    swapSource: emitSwap(bindings, p),
+    pinned: p,
+  };
+}
+
+export function runGenerateCli({
+  argv = process.argv,
+  cwd = process.cwd(),
+  env = process.env,
+  writeFileSync: wf = writeFileSync,
+  mkdirSync: mk = mkdirSync,
+  readFileSync: rf = readFileSync,
+} = {}) {
+  const i = argv.indexOf('--output-dir');
+  if (i < 0 || !argv[i + 1]) throw new Error('missing --output-dir');
+  const outputDir = resolve(argv[i + 1]);
+  const bindings = JSON.parse(asBuffer(rf(join(here, 'bindings.json'))).toString('utf8'));
+  const worktree = resolve(here, '../../..');
+  const generated = generateWrappers({worktree, bindings, readFileSync: rf});
+  mk(outputDir, {recursive: true});
+  wf(join(outputDir, 'loan.compact'), generated.loanSource);
+  wf(join(outputDir, 'swap.compact'), generated.swapSource);
+  const files = {
+    'loan.compact': {bytes: Buffer.byteLength(generated.loanSource), sha256: sha256(generated.loanSource)},
+    'swap.compact': {bytes: Buffer.byteLength(generated.swapSource), sha256: sha256(generated.swapSource)},
+  };
+  const report = JSON.stringify({
+    status: 'generated',
+    argv,
+    cwd,
+    envNames: Object.keys(env).sort(),
+    outputDir,
+    files,
+    pinned: {
+      arithmetic: generated.pinned.arithmetic.digest,
+      loanKernel: generated.pinned.loanKernel.digest,
+      swapKernel: generated.pinned.swapKernel.digest,
+      loanSource: generated.pinned.loanSource.digest,
+      swapSource: generated.pinned.swapSource.digest,
+    },
+  }) + '\n';
+  process.stdout.write(report);
+  return {outputDir, files, report};
+}
+
+if (isDirectRun(import.meta.url)) {
+  runGenerateCli();
+}
+
+
+FILE experiments/moriarty-midnight-financial/custody/bindings.json
+{
+  "schema": "moriarty.fixed-kernel-custody-bindings/1",
+  "synthetic": true,
+  "notActualWalletCustody": true,
+  "profile": "moriarty-bounded-atomic/1",
+  "networkTagAscii": "moriarty:sp05:runtime:v1",
+  "networkTag": "6d6f7269617274793a737030353a72756e74696d653a76310000000000000000",
+  "time": {
+    "horizon": "2000000000",
+    "windowSeconds": "300",
+    "uint64Max": "18446744073709551615",
+    "syntheticBlockTime": "1700000000",
+    "syntheticUncertaintySeconds": "0"
+  },
+  "digests": {
+    "loanSource": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "swapSource": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "arithmetic": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "loanKernel": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+    "swapKernel": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+    "loanMetadata": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+    "swapMetadata": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+    "loanBoundProgram": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+    "swapBoundProgram": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
+    "loanProgram": "95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2",
+    "swapProgram": "b00a55b8da611d23c08461a11853151aa50ec7ee8150f9d16afbc66d62e018fa"
+  },
+  "toolchain": {
+    "node": "/usr/local/bin/node",
+    "nodeVersion": "24.18.1",
+    "compact": "/home/charl/.local/bin/compact",
+    "compactWrapperVersion": "0.5.2",
+    "compilerVersion": "0.31.1",
+    "languageVersion": "0.23.0",
+    "compactRuntimeVersion": "0.16.0",
+    "runtimeNodeModules": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules"
+  },
+  "commands": {
+    "cwd": "experiments/moriarty-midnight-financial",
+    "generate": ["node", "custody/generate.mjs", "--output-dir", "DIR"],
+    "build": ["node", "custody/build.mjs", "--output-dir", "DIR", "--skip-zk"],
+    "test": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "custody/runtime.test.mjs"],
+    "testEnv": ["MORIARTY_CUSTODY_ARTIFACTS"]
+  },
+  "loan": {
+    "programDigest": "95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2",
+    "lifetime": "2",
+    "borrowerDomainAscii": "moriarty:sp05:loan:borrower",
+    "lenderDomainAscii": "moriarty:sp05:loan:lender",
+    "borrowerDomain": "6d6f7269617274793a737030353a6c6f616e3a626f72726f7765720000000000",
+    "lenderDomain": "6d6f7269617274793a737030353a6c6f616e3a6c656e64657200000000000000",
+    "usdDomainAscii": "moriarty:sp05:usd:v1",
+    "usdDomain": "6d6f7269617274793a737030353a7573643a7631000000000000000000000000",
+    "borrowerAddress": "b001010101010101010101010101010101010101010101010101010101010101",
+    "lenderAddress": "b002020202020202020202020202020202020202020202020202020202020202",
+    "unit": "USD_micro",
+    "ledgerQuantum": "1",
+    "mintToBorrower": "20000000000",
+    "settleAmount": "533972602",
+    "minOutPositiveUnused": null,
+    "addressesAreSynthetic": true
+  },
+  "swap": {
+    "programDigest": "b00a55b8da611d23c08461a11853151aa50ec7ee8150f9d16afbc66d62e018fa",
+    "lifetime": "8",
+    "traderDomainAscii": "moriarty:sp05:swap:trader",
+    "providerDomainAscii": "moriarty:sp05:swap:provider",
+    "traderDomain": "6d6f7269617274793a737030353a737761703a74726164657200000000000000",
+    "providerDomain": "6d6f7269617274793a737030353a737761703a70726f76696465720000000000",
+    "assetADomainAscii": "moriarty:sp05:asset-a:v1",
+    "assetBDomainAscii": "moriarty:sp05:asset-b:v1",
+    "assetADomain": "6d6f7269617274793a737030353a61737365742d613a76310000000000000000",
+    "assetBDomain": "6d6f7269617274793a737030353a61737365742d623a76310000000000000000",
+    "traderAddress": "b003030303030303030303030303030303030303030303030303030303030303",
+    "providerAddress": "b004040404040404040404040404040404040404040404040404040404040404",
+    "poolA": "1000000",
+    "poolB": "2000000",
+    "traderA": "100000",
+    "swapIn": "10000",
+    "minOutPositive": "19700",
+    "minOutIsolatedFailure": "19744",
+    "expectedOut": "19743",
+    "feeRetainedInGrossInput": "30",
+    "closeBeforeSwapPermittedByPinnedSource": true,
+    "addressesAreSynthetic": true
+  },
+  "deferredLedgerObligations": [
+    "actual-signed-unshielded-offer",
+    "consumed-utxo-ownership",
+    "borrower-trader-debit-payer-attribution",
+    "third-party-payer-negative",
+    "missing-real-funding",
+    "transaction-fees-change-finality",
+    "real-ledger-rollback",
+    "blocked-comparison-utility-not-imported"
+  ],
+  "capabilityPreimage": {
+    "vector": ["roleDomain", "networkTag", "programDigest", "private32ByteRoleSecret"],
+    "storedForm": "disclose(persistentHash(preimage))",
+    "secretsNotInThisFile": true
+  }
+}
+

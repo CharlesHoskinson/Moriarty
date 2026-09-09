@@ -1,0 +1,46 @@
+{
+  "schema": "moriarty.native-effect-representation-refinement/1",
+  "status": "representation-correction-not-economic-rederivation",
+  "original": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/expectations-v1.json",
+    "sha256": "e6f5131b9fecd461d32e9f9c5f18e3886bc34128e87e0c563d376d5143ede1ff"
+  },
+  "corrected": {
+    "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+    "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f"
+  },
+  "finding": "The retained generated mintUnshieldedToken implementation records self-recipient mints in both claimedUnshieldedSpends and unshieldedInputs. The original expectation misclassified the input map as empty.",
+  "authority": "Root inspected the generated self-recipient branch and requested this bounded correction; numeric_audit reported matching actual generated-runtime results. The expectation author independently inspected that same branch.",
+  "source": {
+    "path": "/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/main-integration/swap/contract/index.js",
+    "sha256": "b64d25359576771789782e2d2bd6ad791c2c49c5028813eaf43debe89154e0d8",
+    "lines": "1421-1472",
+    "operation": "recipient is current contract -> add color/amount to query field6 (unshieldedInputs)"
+  },
+  "changedFinancialRepresentation": [
+    {
+      "path": "cases.swap.stages.initialize.nativeEffects.unshieldedInputs.ASSET_A",
+      "before": "0",
+      "after": "1000000"
+    },
+    {
+      "path": "cases.swap.stages.initialize.nativeEffects.unshieldedInputs.ASSET_B",
+      "before": "0",
+      "after": "2000000"
+    }
+  ],
+  "correctReserveEquation": "post contract reserve minus prior reserve = native unshieldedInputs minus native unshieldedOutputs",
+  "signedWalletFunding": "Self-minted native inputs are contract credits, not signed participant UTXO spends. Initialization still has zero participant debit and trader credit100000 A.",
+  "unchanged": [
+    "all kernel state fields",
+    "all current and cumulative result records",
+    "all work/revision/initialization fields",
+    "all economic mint amounts and payout claims",
+    "all participant net deltas",
+    "all contract reserve amounts",
+    "all residual debts and duties",
+    "all stages other than the swap initialize native input representation"
+  ],
+  "checks": "Original bytes preserved before editing. Structural comparison confirms only the two native input quantity leaves and provenance change; tests first failed with AMOUNT_unshieldedInputs under the corrected runtime layout. No new compiler, proof, network or wallet command was run by this agent.",
+  "priorProvenanceDisposition": "The prior local independent-expectations note and original artifact remain retained historical records. Their statements excluding mint-to-self from unshieldedInputs and adding mintToSelf separately to reserve delta are superseded by this refinement; independent financial arithmetic is not superseded."
+}
