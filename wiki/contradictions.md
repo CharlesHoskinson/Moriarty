@@ -4,8 +4,9 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-07T16:50:22.642457+00:00
+updated_at: 2026-09-09T00:00:00Z
 sources:
+  - SRC-0109
   - SRC-0106
   - SRC-0107
   - SRC-0104
@@ -252,3 +253,7 @@ SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the
 ## Report 8 portability and scope — 2026-09-09
 
 **CLM-0939.** SRC-0106 contains opaque citation handles and links to three companion sandbox files not supplied in this intake. Its illustrative classifications are not deployed conformance evidence; its “Morpho Midnight” label does not establish a Midnight blockchain integration. Our SRC-0107 captures independently identify all40 named standards, but do not resolve every original citation or retroactively prove the report cutoff. Source observation and scope inference, S2, confidence high; [comparison](../deliverables/defi-report8-comparison-2026-09-09/README.md).
+
+## Language-design evidence limits
+
+**CLM-0942.** The [paper atlas](../deliverables/language-design-2026-09-09/PAPER-ATLAS.md) preserves positive and negative task findings. U02 Auction/Casino are financial authoring tasks, but not Moriarty evidence; its Auction p-value denominator and harder-task escape-hatch misuse matter. U04 typing benefits vary by task; U05 quiz gains do not establish programming-outcome gains; U06 prose compresses heterogeneous table differences. Unison introductory “unique by name” wording is qualified by its UUID-bearing reference. The [convergence record](../deliverables/language-design-2026-09-09/CONVERGENCE.md) retains withdrawn overclaims and dissent on static conservation, teachability, hash display and permanent database exclusion. SRC-0109; S2, not reproduced; confidence high for the named source qualifications, medium for recommendations.

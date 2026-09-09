@@ -8,8 +8,9 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-07T18:01:49Z
+updated_at: 2026-09-09T00:00:00Z
 sources:
+  - SRC-0109
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -217,3 +218,7 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 ## Report 8: comparison and all named standards
 
 [Comparison](../deliverables/defi-report8-comparison-2026-09-09/README.md) · [40-standard relevance table](../deliverables/defi-report8-comparison-2026-09-09/RELEVANCE.md) · [linked interactive graph](../deliverables/defi-report8-comparison-2026-09-09/graph.html) · [remaining roadmap](../deliverables/defi-report8-comparison-2026-09-09/ROADMAP-REMAINING.md). SRC-0106/SRC-0107, CLM-0937–CLM-0939. Four exact paper captures reused and full80pages re-extracted;40officialstandardpages captured. Research only; no new accepted semantics or network evidence.
+
+## TypeScript-style language accessibility and PL convergence
+
+[Report](../deliverables/language-design-2026-09-09/REPORT.md) · [feature checklist](../deliverables/language-design-2026-09-09/FEATURE-CHECKLIST.md) · [paper atlas](../deliverables/language-design-2026-09-09/PAPER-ATLAS.md) · [typed graph](../deliverables/language-design-2026-09-09/GRAPH.md) · [convergence](../deliverables/language-design-2026-09-09/CONVERGENCE.md). SRC-0109 and CLM-0940–0942 preserve thirteen academic documents, fourteen substantive official pages and twenty recommended labels with amendments/dissent. S2 research; no semantic freeze, participant experiment or proof/financial acceptance.

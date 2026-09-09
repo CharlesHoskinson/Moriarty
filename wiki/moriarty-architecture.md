@@ -3,8 +3,9 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-07T18:43:23Z
+updated_at: 2026-09-09T00:00:00Z
 sources:
+  - SRC-0109
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -37,7 +38,7 @@ sources:
   - SRC-0031
   - SRC-0033
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
@@ -51,7 +52,7 @@ tags:
 
 **CLM-0923.** Resource identity preservation does not establish correct financial amounts or residual-debt preservation. The [semantic proposal](../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md) separates these claims and separates acquisition/authorization expiry, due dates and execution bounds. Sources: SRC-0091, sections 3.2 and 6.2; SRC-0081, sections 3-4; SRC-0092, section 6. Source facts with scoped design inference; consulted 2026-09-07; S2; not reproduced; confidence high for distinctions.
 
-The [surface comparison](../deliverables/defi-language-design-2026-09-07/SYNTAX-COMPARISON.md) is specified-only. Syntax studies inform choices but do not establish that braces, Lisp or layout is universally superior. The `.mori` migration preserves current source bytes; new comments, Boolean precedence, `pre`/`next`/`post` and type extensions require a new profile. K is selected, not implemented; the archived K definition covers ZKIR.
+The [surface comparison](../deliverables/defi-language-design-2026-09-07/SYNTAX-COMPARISON.md) is specified-only. Syntax studies inform choices but do not establish that braces, Lisp or layout is universally superior. The `.mori` migration preserves current source bytes; new comments, Boolean precedence, `pre`/`next`/`post` and type extensions require a new profile. That September 7 description was a historical planning status. The current [bounded Transfer/Repay K result](../deliverables/bounded-k-2026-09-09/README.md) executes the narrow funded-repayment projection; the [README small-step explanation](../README.md) describes its scope. Full successor K semantics and all-layer correspondence remain open; the archived ZKIR definition is separate.
 
 Moriarty is a new bounded financial-agreement language, not a renamed copy of
 Marlowe and not a general-purpose Compact dialect.
@@ -180,3 +181,11 @@ The ISO catalogue metadata is retained in SRC-0098. The Marlowe paper is reused 
 **CLM-0930.** The [four-paper language analysis](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) recommends more precise claim/share, debt, clock, authority and composition semantics within the existing successor direction. Source support: SRC-0100 PDF pp. 10–19 §§3–4; SRC-0101 PDF pp. 3–8 §§III–V; SRC-0102 PDF pp. 3–6,12; SRC-0103 PDF pp. 4–11 §§3–6. Primary descriptive studies, version dates in the [source register](../deliverables/defi-taxonomy-papers-2026-09-08/sources.json); reviewed 2026-09-08; S2 inference, not implementation or proof; confidence medium. SP02 still owns complete lexical/EBNF/static rules; SP03 owns executable bounded Moriarty K semantics. Proposed TX02 makes a partial payment leave an observable obligation across source/Core/K/evaluator; later acceptance must bind complete effects and duties to Midnight. None of the four mandatory proof claims or existing coverage obligations is waived.
 
 The [collateral-vault supplement](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md), CLM-0933 in [[wiki/security|security boundaries]], adds proposed tests for donation, preview authorization, valuation purpose, asynchronous claims and nested exposure. These feed SP02/SP03/SP08–SP11 without creating an Ethereum backend or accepting new syntax. The combined research now specifies eighteen illustrative tests, all unexecuted; complete language/K and actual Midnight evidence remain separate deliverables.
+
+## TypeScript-style language research and PL convergence
+
+**CLM-0940.** The [research report](../deliverables/language-design-2026-09-09/REPORT.md), [recommended checklist](../deliverables/language-design-2026-09-09/FEATURE-CHECKLIST.md) and [PL convergence](../deliverables/language-design-2026-09-09/CONVERGENCE.md) recommend an authoritative `.mori` surface with TypeScript-style declarations. Static inert embedding is deferred; unrestricted TypeScript execution is excluded. Pure pre-state, single-write unreadable `next`, suffix `post`, explicit nominal public types, inferred conservative effect summaries and separately signed quantitative authority remain proposed requirements. Identified unchanged duties carry forward; domain rules and authorized resolution govern changes. No general linear calculus or universal static detection is established. SRC-0109; S2 recommendation, confidence medium; no participant study or full language acceptance.
+
+**CLM-0941.** Current Elm commands/subscriptions differ from historical FRP. Unbounded queues and productive streams do not establish finite financial lifetime work. Unison handlers can resume multiple times, while immutable references do not establish authority or proof validity. Distinct source/Core/build/output/claim/execution identities and bounded dependencies are recommended. The [complete proposed payment data](../deliverables/language-design-2026-09-09/PAYMENT-FIXTURE.md) connects debt, custody, allocation, residual authority/work and prepared status without inventing admitted syntax. SRC-0109; scoped source facts plus S2 inference; no execution reproduced.
+
+Grammar lessons: completeness claims name a profile. [The grammar review](../deliverables/grammar-pl-review-2026-09-09/README.md) records the repository lesson that ISO14977 meta-identifiers use letters/digits (camelCase replaces unsuitable underscores). Check grammar, lexer, parser, formatter and README agreement separately from typing and financial correspondence. The [current README](../README.md) describes the bounded small-step projection; PL-agent votes are expert critique, not developer-usability evidence.
