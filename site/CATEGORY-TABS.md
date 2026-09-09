@@ -6,8 +6,9 @@ present, every one of the 24 action targets appears in exactly one tab, and no
 tab is a stub. A category with less repository evidence gets a shorter tab, not
 a missing one.
 
-**Eight tabs.** Seven economic families plus one cross-cutting tab that carries
-the five orthogonal action targets. Coverage check: DA01–DA24, each exactly once.
+One tab holds each economic family. A final tab holds the cross-cutting targets,
+which are the ones every other family depends on. The build must place every
+action target from DA01 to DA24, and DA12 belongs to two families at once.
 
 | Tab | Label | Action targets | Count |
 |---|---|---|---|
@@ -20,16 +21,17 @@ the five orthogonal action targets. Coverage check: DA01–DA24, each exactly on
 | P  | Prediction markets | DA12 (shared), DA13 | 1 own + 1 shared |
 | ⊥  | Cross-cutting | DA20–DA24 | 5 |
 
-DA12 (`write / exercise / expire contingent claim`) is tagged `F3;P` in the
-source matrix and legitimately appears in both the Derivatives and Prediction
-Markets tabs. Show it in both; mark it as shared so the count still reads 24.
+DA12, `write / exercise / expire contingent claim`, is tagged `F3;P` in the
+source matrix and belongs in both the Derivatives and the Prediction Markets
+tabs. Show it in both, and mark it as shared so it is not read as two separate
+targets.
 
 ---
 
-## Tab structure (identical for all eight)
+## Tab structure
 
-Every tab renders the same six blocks. This regularity is what makes the section
-feel complete rather than assembled.
+Every tab renders the same blocks in the same order. The regularity is what
+makes the section read as one instrument rather than a set of assembled pages.
 
 1. **What this category is** — the financial function, and the boundary that
    excludes neighbours.
@@ -119,8 +121,9 @@ singleton accounting and hook-modified mechanism assumptions.
 
 ## F2 — Credit and collateralized debt
 
-The largest tab: seven action targets. Lending markets, CDPs, debt-backed
-stablecoins and flash loans.
+Lending markets, collateralized debt positions, debt-backed stablecoins and
+flash loans. This is the largest tab, and it is the family the language is
+organized around.
 
 **Function.** Create an obligation to repay, usually secured, and manage it
 through accrual, partial performance, default and discharge.
@@ -486,8 +489,9 @@ carries an identified primary-lifecycle-source gap.
 
 ## ⊥ — Cross-cutting: what makes the other seven composable
 
-Not a leftover tab. These five targets are the machinery every other category
-depends on, and the reason the model is a classification rather than a taxonomy.
+Not a leftover tab. These targets are the machinery every other category
+depends on, and they are the reason the model is a classification rather than a
+list of products.
 
 **Action targets.**
 
@@ -510,16 +514,19 @@ depends on, and the reason the model is a classification rather than a taxonomy.
   *Distinguishing test:* **split partitions work and claims; join cannot
   duplicate resource.**
 
-**The five composition operators.** DA24 names them: **sequence, parallel,
-interleave, synchronize, message.** Each has its own authority rules, duty
-propagation, conflict semantics and fan-in behavior.
+**The composition operators.** DA24 names them: **sequence, parallel,
+interleave, synchronize** and **message**. Each carries its own authority rules,
+its own duty propagation, its own conflict semantics and its own behavior when
+work fans back in.
 
-**The measured result that motivates the whole project.** Over 1,830 eligible
-protocol pairs, 1,645 compose cleanly and 185 fail. **182 of the 185 failures are
-cross-category.** Within-category failure rate 2.10%; cross-category 10.79% — a
-**5.14×** difference. Composition across financial categories is where DeFi
-breaks, and it is exactly what a type system and an operational semantics can
-police. (An earlier informal "sixty times" claim was checked and is wrong.)
+**The measured result that motivates the work.** Of 1,830 eligible protocol
+pairs, 1,645 compose cleanly. The rest fail, and almost all of those failures
+cross a category boundary. Within a category the failure rate is 2.10%. Across
+categories it is 10.79%, which is **5.14 times** as often.
+
+Composition across financial categories is where this breaks, and composition is
+what a type system and an operational semantics can police. An earlier informal
+claim of sixty times was checked against the corpus and is wrong.
 
 **Governance is a financial action.** DA22 is in this tab deliberately. A
 parameter change affects existing positions; it is a bounded administrative
@@ -537,15 +544,20 @@ represent and reject.
 
 ---
 
-## Completeness checks the implementation must satisfy
+## Acceptance criteria
 
-- All eight tabs render, with all six blocks populated. No empty states.
-- Every action target DA01–DA24 appears; DA12 appears twice and is marked shared.
+These are constraints on the build, not sentences for the page. The site must
+satisfy them without ever reporting that it does.
+
+- Every tab renders, and every block in every tab is populated. No empty states.
+- Every action target from DA01 to DA24 appears. DA12 appears in two tabs and is
+  marked shared.
 - Every action target shows its semantic requirement and its distinguishing test.
-- The seven family identifiers and the eight facet names are never abbreviated
-  away or reordered.
-- The five composition operators are always listed as five.
-- Facet profiles cover all eight facets in every tab, including the ones where
-  the honest answer is "none" or "not applicable".
-- Category identifiers are presented as classification labels, never as Moriarty
+- Family identifiers and facet names are never abbreviated away or reordered.
+- Every composition operator named by DA24 is listed.
+- Every facet is answered in every tab, including where the honest answer is
+  "none" or "not applicable".
+- Category identifiers appear as classification labels and never as Moriarty
   source syntax.
+- No tally is displayed to the reader. Coverage is shown by the surface. See
+  [`VOICE.md`](VOICE.md).

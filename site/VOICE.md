@@ -57,6 +57,12 @@ Coverage still matters, and the site still has to be complete. The reader should
 see completeness in the surface rather than read it off a counter. A grid whose
 cells are all filled says more than a line reporting that all of them are.
 
+The rule governs what a reader sees. It does not govern the build. An
+acceptance criterion, a test name or a data comment may state a required count,
+because there it is a constraint on the work rather than a sentence on a page.
+`CATEGORY-TABS.md` may say that every action target must appear. The page built
+from it may not say so.
+
 ## Diction
 
 Concrete nouns and plain verbs. A guard fails. A payment discharges a debt. A

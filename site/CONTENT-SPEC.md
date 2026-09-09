@@ -101,10 +101,10 @@ taxonomies get it wrong:
   **message-verified vs. custodial trust**. Those are different trust
   assumptions, and collapsing them is a category error the site should show.
 
-### 2.3 The 24 action targets
+### 2.3 The action targets
 
-The families are the human-facing map; the action targets are what the language
-must actually execute. This is the real content — `DA01`–`DA24` from
+The families are the human-facing map. The action targets are what the language
+must actually execute, and they are the real content. `DA01` to `DA24` come from
 `deliverables/defi-language-design-2026-09-07/action-targets.csv`. Each row has a
 semantic requirement (what the action must mean) and a **distinguishing test**
 (the case that separates a correct implementation from a plausible-looking wrong
@@ -137,29 +137,28 @@ one). The distinguishing tests are the most persuasive content on the site.
 | DA23 | orthogonal | send / receive / refund pending message | bounded pending commitments and finality evidence | delayed or duplicate delivery; explicit refund duty |
 | DA24 | orthogonal | sequence / parallel / interleave / synchronize / message | operator-specific authority, duties, conflicts and fan-in | split partitions work and claims; join cannot duplicate resource |
 
-The four `orthogonal` rows (DA20–DA24) are the ones that make the others
-composable: observation, authorization, governance, messaging and composition.
-DA24 names the **five composition operators**: sequence, parallel, interleave,
-synchronize, message.
+The `orthogonal` rows are the ones that make the others composable. They carry
+observation, authorization, governance, messaging and composition, and DA24 names
+the operators: **sequence, parallel, interleave, synchronize** and **message**.
 
-### 2.4 The composition result (a real measured number)
+### 2.4 The composition result
 
-From the DeFiFormal audit, independently reproduced locally: over 1,830 eligible
-protocol pairs, 1,645 compose cleanly and 185 fail. Of those failures **182 are
-cross-category and 3 are within-category**. Within-category failure rate 2.10%;
-cross-category 10.79% — a **5.14×** difference.
+From the DeFiFormal audit, reproduced locally: of 1,830 eligible protocol pairs,
+1,645 compose cleanly. The rest fail, and almost every failure crosses a category
+boundary. Within a category the rate is 2.10%. Across categories it is 10.79%,
+which is **5.14 times** as often.
 
-This is the empirical argument for the whole project: *composition across
-financial categories is where DeFi breaks, and that is exactly what a type
-system and an operational semantics can police.* Use the real 5.14× figure. An
-earlier informal claim of "sixty times" was checked and is wrong; do not use it.
+This is the empirical argument for the work. Composition across financial
+categories is where this breaks, and composition is what a type system and an
+operational semantics can police. An earlier informal claim of sixty times was
+checked against the corpus and is wrong.
 
 ---
 
 ## 3. The formalization model
 
 Moriarty source files use the **`.mori`** extension. The specification separates
-what a program looks like from what it means, in five layers.
+what a program looks like from what it means.
 
 | Layer | Specification method | What it fixes |
 |-------|---------------------|---------------|
@@ -254,10 +253,11 @@ semantic validity
 
 ### 4.1 The property inventory
 
-Twelve properties. Each has evidence in the Marlowe/Isabelle lineage
-(reproduced from pinned sources at `marlowe-lang/marlowe`
-`7b5b1e90c171eae2674a6fc08aa7d8caa92b16af`), an assumption that qualifies it,
-and the corresponding Moriarty obligation.
+Each property has evidence in the Marlowe and Isabelle lineage, reproduced from
+pinned sources at `marlowe-lang/marlowe`
+`7b5b1e90c171eae2674a6fc08aa7d8caa92b16af`. Each also has an assumption that
+qualifies that evidence, and an obligation that falls to Moriarty. The three
+never collapse into one.
 
 | Property | Assumption that qualifies it | Moriarty obligation |
 |---|---|---|
@@ -274,10 +274,10 @@ and the corresponding Moriarty obligation.
 | Continuation integrity | hash comparison does not imply availability | bind continuation roots in ZK; specify replicated availability separately |
 | Cross-implementation correspondence | no single theorem covers Isabelle, Agda, Haskell, TypeScript, Plutus | normative Core plus conformance vectors, differential tests, translation validation |
 
-### 4.2 The four mandatory proof claims
+### 4.2 The mandatory proof claims
 
-Every accepted transaction must carry all four. Fixed names, fixed order, none
-optional:
+Every accepted transaction carries all of them. The names are fixed, the order is
+fixed, and none is optional.
 
 1. **ContractInvariant** — the agreement's own rules hold.
 2. **IntentRefinement** — what executed refines what the principal authorized.
@@ -290,9 +290,9 @@ must not be accepted.
 
 ### 4.3 Security and trust boundaries
 
-Thirteen threat rows from `wiki/security.md`, each with attack path, required
-control and **residual risk**. The residual-risk column is the point — it is the
-part nobody publishes. High-value rows for the site:
+The threat rows come from `wiki/security.md`. Each carries an attack path, a
+required control and a **residual risk**, and the residual risk is the point,
+because it is the part nobody publishes. These rows carry the most weight:
 
 | Threat | Required control | Residual risk |
 |---|---|---|
@@ -593,8 +593,10 @@ Concrete milestones already reached, usable as evidence on the site:
   project's actual differentiator and it reads as confidence, not hedging.
 - **No invented verified badges.** Nothing may display a checkmark, "audited",
   "proven" or a green state that the repository does not support.
-- **The five composition operators, the four proof claims, the eight facets, the
-  seven families, the 24 action targets** — these counts are fixed. Do not round
-  them, extend them or drop members.
+- **The fixed sets are fixed.** The composition operators, the proof claims, the
+  facets, the families and the action targets are not rounded off, extended or
+  trimmed. The test at `src/data/completeness.test.mjs` enforces this.
+- **Do not count in prose.** See [`VOICE.md`](VOICE.md). The register and the ban
+  on tallies govern every line of copy on the site.
 - No Claude, AI, agent or model attribution anywhere in the site, its source, its
   comments or its commits.
