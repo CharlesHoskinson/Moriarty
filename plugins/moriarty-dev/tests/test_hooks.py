@@ -32,6 +32,41 @@ class HookContractTestCase(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def test_registered_commands_resolve_native_and_claude_plugin_roots(self):
+        plugin_root = SCRIPTS_DIR.parent
+        config = json.loads((plugin_root / "hooks" / "hooks.json").read_text())
+        # Exercise the registered shell commands: direct hook.py calls cannot
+        # detect a missing host-specific environment variable.
+        with tempfile.TemporaryDirectory(prefix="plugin path ") as directory:
+            spaced_root = Path(directory) / "moriarty plugin"
+            spaced_root.symlink_to(plugin_root, target_is_directory=True)
+            for host in ("codex", "claude", "both"):
+                env = dict(os.environ)
+                env.pop("PLUGIN_ROOT", None)
+                env.pop("CLAUDE_PLUGIN_ROOT", None)
+                if host in ("codex", "both"):
+                    env["PLUGIN_ROOT"] = str(spaced_root)
+                if host in ("claude", "both"):
+                    env["CLAUDE_PLUGIN_ROOT"] = (
+                        "/missing/stale-plugin" if host == "both" else str(spaced_root)
+                    )
+                for event, groups in config["hooks"].items():
+                    for group in groups:
+                        for hook in group["hooks"]:
+                            with self.subTest(host=host, event=event):
+                                proc = subprocess.run(
+                                    ["bash", "-c", hook["command"]],
+                                    input=json.dumps({"cwd": str(self.root)}),
+                                    env=env, capture_output=True, text=True,
+                                    timeout=hook["timeout"],
+                                )
+                                self.assertEqual(proc.returncode, 0, proc.stderr)
+                                self.assertEqual(proc.stderr, "")
+                                self.assertEqual(
+                                    json.loads(proc.stdout)["hookSpecificOutput"]["hookEventName"],
+                                    event,
+                                )
+
     def run_hook(self, event_name, payload):
         cmd = [sys.executable, str(self.hook_py), event_name]
         start = time.time()
