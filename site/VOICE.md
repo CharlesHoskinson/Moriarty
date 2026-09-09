@@ -36,6 +36,24 @@ The measured figures, so nothing here has to be approximated:
   and question marks 0.89, because those are habits of dialogue and this site is
   exposition. Commas run 35.31 and carry the weight instead.
 
+## When the score is off, add short sentences
+
+A measured gap has two remedies and only one of them is honest.
+
+The briefs run a median near 20 words against the register's 11, with a tenth
+of the target's share of short sentences and twice its share of long ones. Read
+carelessly, that says cut the long sentences. Cutting them is the documented
+failure of this whole approach: six lanes once read the summary statistics,
+shortened everything, and produced prose four blind readers called pastiche,
+measuring four times further from the author than the untouched original while
+the scorer reported its best number of the session.
+
+The deficit is short sentences, not excess long ones. The register wants two
+sentences in five under ten words, and the briefs carry one in seven. So the
+remedy is additive. Write the short declarative that states the fact, and let
+the long coordinated sentence that follows do the work it was already doing.
+No long sentence is ever deleted to improve a distribution.
+
 ## The counting rule
 
 Cut the tallies. This is the strongest single instruction in this file, and it
