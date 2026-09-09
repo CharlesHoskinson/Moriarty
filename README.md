@@ -29,7 +29,7 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 | Layer | Specification method | What it defines |
 | --- | --- | --- |
 | Lexical structure | Separate token rules and regular expressions | Identifiers, literals, whitespace, comments and source locations |
-| Syntax | Planned: EBNF using the ISO/IEC 14977 notation | Valid combinations of declarations, actions and expressions |
+| Syntax | EBNF using the ISO/IEC 14977 notation for the provisional successor profile | Valid combinations of declarations, actions and expressions |
 | Static semantics | Typing and scoping judgments, illustrated by `Γ ⊢ e : τ` | Name resolution, asset units, resource use and admissible bounds |
 | Dynamic semantics | Executable operational semantics in the K Framework | State transitions, financial effects, obligations and rejection |
 | Correctness claims | Explicit properties over those semantics | What must be established about an agreement, execution and history |
@@ -38,9 +38,136 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 
 [K](https://kframework.org/docs/user_manual/) describes execution through configurations and rewrite rules. It is the selected framework for Moriarty's formal operational semantics. Typing judgments define admissible programs; contract properties and Hoare-style assertions state claims to prove. Denotational models can support particular financial analyses, but do not replace the execution definition.
 
-The current [experimental grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator are available. Separating the lexical specification, checking exact EBNF conformance and implementing the Moriarty K definition remain planned work. Archived K work describes ZKIR and is not a formal semantics of Moriarty. A K model also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance.
+The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Its grammar is reproduced below. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile.
+
+The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) now executes Transfer followed by Repay. All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
+
+The successor semantic freeze and full SP02/SP03 acceptance remain open. A K definition also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance. Archived ZKIR K work does not establish Moriarty semantics.
+
+### Successor source grammar (EBNF)
+
+This is the complete current [canonical grammar](experiments/moriarty-language/spec/successor/grammar.ebnf), including its admission notes. It uses **Extended Backus–Naur Form (EBNF)**: `=` defines a production, `;` ends it, `,` concatenates, `|` selects an alternative, `[ ... ]` is optional, `{ ... }` repeats zero or more times, and `( ... )` groups. Quoted strings are literal terminals; `? ... ?` names a special sequence supplied by the lexical layer; `(* ... *)` encloses a grammar comment. Quoted braces, parentheses and semicolons are source tokens, not EBNF operators.
+
+```ebnf
+(*
+  ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
+  Specified-only syntax profile. Not a semantic freeze.
+  Concatenation is comma. Alternation is vertical bar.
+  Square brackets are optional. Braces are zero or more repetition.
+  Quoted text is a terminal. A special sequence names a lexical token
+  defined in lexical.md. Every nonterminal used below is defined here
+  or is such a lexical token.
+*)
+
+program = profile_decl, agreement_decl, ? end of file ? ;
+
+profile_decl = "profile", string_token, ";" ;
+
+agreement_decl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unit_decl
+            | party_decl
+            | asset_decl
+            | const_decl
+            | state_decl
+            | action_decl ;
+
+unit_decl = "unit", identifier, ";" ;
+
+party_decl = "party", identifier, ";" ;
+
+asset_decl = "asset", identifier, ":", type, ";" ;
+
+const_decl = "const", identifier, ":", type, "=", expression, ";" ;
+
+state_decl = "state", identifier, ":", type, "=", expression, ";" ;
+
+action_decl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", type, "{", [ effect_fields ], "}", ";" ;
+
+effect_fields = effect_field, { ",", effect_field } ;
+
+effect_field = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ type_args ] ;
+
+type_args = "<", type, { ",", type }, ">" ;
+
+expression = disjunction ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparison_op, sum ] ;
+
+comparison_op = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier } ;
+
+primary = integer_token
+        | string_token
+        | "true"
+        | "false"
+        | identifier, [ "(", [ arguments ], ")" ]
+        | "(", expression, ")" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integer_token = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+string_token = ? JSON string token defined in lexical.md ? ;
+
+(* Grammar interpretation and additional admission constraints:
+   1. The source contains exactly one profile_decl and one agreement_decl.
+   2. The profile string must be the characters moriarty-successor-syntax/0.
+   3. A comparison_op cannot follow a comparison unless the inner comparison
+      is a parenthesized primary. That is chained comparison.
+   4. type_args is nonempty. Foo<> is not a type.
+   5. Parentheses do not create AST nodes. They only group.
+   6. not binds looser than comparison, so not a == b is not (a == b).
+   7. Binary operators associate to the left.
+   8. Call arguments, parameters, and effect fields have no trailing comma.
+   9. function, import, loop, obligation, request, composition, observation,
+      settlement, policy, status, reserve, and effect-schema forms are not
+      productions of this profile.
+  10. Bounds in syntax-profile.json are simultaneous and not part of EBNF.
+*)
+```
+
+The [lexical specification](experiments/moriarty-language/spec/successor/lexical.md) defines the referenced tokens and their source spans. Identifiers match `[A-Za-z][A-Za-z0-9_]*`, are case-sensitive, and cannot be keywords. Integers are canonical unsigned decimals (`0` or a nonzero digit followed by digits); strings use JSON escapes and must decode to Unicode scalar values. Only ASCII space, tab, CR and LF separate tokens as whitespace. Source comments use `//` or non-nesting `/* ... */`; a bare `/` is not an operator. Input must be valid UTF-8, with no BOM stripping or Unicode normalization.
+
+The fixed [syntax bounds](experiments/moriarty-language/spec/successor/syntax-profile.json) apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including `ensures`, and 64 entries per parameter, call-argument or effect-field list. These parser limits are separate from the atomic execution bounds and from financial runtime limits.
+
+Syntax acceptance does not imply execution. The [bounded funded source profile](experiments/moriarty-language/spec/successor/funded-source.md), `moriarty-funded-source/0`, uses this same source header through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit `Transfer` and `Repay` emissions, producing local `Prepared` candidates. It rejects state and const declarations, `requires`, `let`, `next`, `ensures`, projections and operators, although those forms appear in this grammar. Its numeric values are limited to UInt128. The [funded example](experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori) exercises that subset; the separate [syntax-only example](experiments/moriarty-language/spec/successor/examples/partial-payment.mori) does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.
 
 ## What a developer writes
+
+The following examples and local workflow use `moriarty-bounded-atomic/1`; consult the successor profiles above for their separate syntax and funded subset.
 
 An agreement is a source program; a contract instance gives that program its own state and participant bindings. An agreement declares typed state, observations, actions and effects. Actions contain guards, local calculations, state updates and explicit financial effects. Policies associate financial calculations with their rounding rules and required correctness claims.
 

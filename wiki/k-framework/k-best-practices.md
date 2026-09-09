@@ -5,16 +5,54 @@ title: K best practices for the ZKIR definition
 status: active
 updated_at: 2026-09-05T20:15:19Z
 sources:
+  - SRC-0108
   - SRC-0039
   - SRC-0036
 created: 2026-09-05
-updated: 2026-09-07
+updated: 2026-09-09
 tags:
   - moriarty
   - research
 ---
 
 # K Best Practices for the ZKIR Definition
+
+## Bounded Moriarty repayment reference — 2026-09-09
+
+[Current reference review](../../docs/research/2026-09-09-bounded-k-references.md) separates official K source facts from recommendations for the provisional repayment slice. [SRC-0108 collection](../../.raw/captured/4a4d82e309989afd5f30b3132e775a26a3fd81319f11fdea3496fcb23f155b1a.json) preserves nine complete official pages, exact response bytes and selector extracts. This is a dated recapture related to SRC-0039/SRC-0086, not a new independent authority. Review covers selected sections only; the live website is not pinned to the local K 7.1.337 release. No runtime, theorem or financial acceptance result is asserted by intake.
+
+Recommendation (S2; not reproduced): make numeric bounds and rejected-state preservation explicit, distinguish financial transitions from helper functions, and compare complete final configurations with the local evaluator. The linked review names the official sources and scope limits. The ZKIR guidance below remains historical project context, not the specification of this repayment slice.
+
+Source clarification for CLM-0806: the current manual's warning concerns the general problem of proving reachability claims ending in `#Bottom`; it does not say that satisfiability of `#Bottom` itself is generally undecidable. Broader LLVM crash and automatic cross-backend soundness claims have not been reproduced by this intake. Original claim text remains below for provenance.
+
+### Bounded result after the repairs — 2026-09-09
+
+Experiment observation: attempt 03 compiled and executed all 16 frozen cases.
+Every accepted state/effect field and exact rejection code/index matched both
+independent expectations and actual `.mori` source preparation. The suite covers
+six successes and ten financial failures. The [result receipt](../../deliverables/bounded-k-2026-09-09/execution-result.json)
+and [raw observations](../../deliverables/bounded-k-2026-09-09/attempt-03/observations.json)
+record a 34.763-second service run, 418.6 MiB peak memory and zero swap. The
+[offline regression](../../deliverables/bounded-k-2026-09-09/kast-v4-green.txt)
+passed six codec tests, including replay of the exact earlier KAST v4 output.
+
+This later observation supersedes the pending decoder/suite status below while
+preserving both failures. The repair changed the output interface; the financial
+K rules did not change between attempts 02 and 03. Final result audits remain
+pending. Finite agreement does not prove correspondence, cover all branches,
+close SP03, or establish financial settlement on Midnight. The lesson is to
+bind decoder tests to observed installed output before widening execution.
+
+### Observed failures and lessons — 2026-09-09, through attempt 02
+
+This is a provisional session synthesis of retained evidence, not an accepted correctness claim. Observation cutoff: 2026-09-09T16:59:40Z. Later attempts must retain these failures and supersede this dated status explicitly.
+
+- **Observed CLI failure:** attempt 01 rejected `-O0` as an extra positional argument before compiling ([command](../../deliverables/bounded-k-2026-09-09/attempt-01/compile.command.json), [diagnostic](../../deliverables/bounded-k-2026-09-09/attempt-01/compile.stderr)). Earlier help output had not validated ordinary argument parsing; the [repair review](../../deliverables/bounded-k-2026-09-09/k-gpt6-repair02.md) records the distinction. Lesson: use a minimal actual compile-and-run smoke under the admitted resource limit before expanding runtime claims or review scope.
+- **Observed transport mismatch:** attempt 02 compiled successfully and its first `krun` exited zero ([compile receipt](../../deliverables/bounded-k-2026-09-09/attempt-02/compile.command.json), [execution receipt](../../deliverables/bounded-k-2026-09-09/attempt-02/trace-01.command.json)). The [saved output](../../deliverables/bounded-k-2026-09-09/attempt-02/trace-01.stdout) is KAST version 4 with structured `KLabel` and `KSort` objects; the wrapper returned [`K_OUTPUT`](../../deliverables/bounded-k-2026-09-09/attempt-02/execution-02.stdout). A successful child exit therefore did not establish successful decoding or state agreement. Preserve the raw output as an offline codec regression before another admitted K run.
+- **Missed existing evidence:** [[wiki/zkir/midnight-k-tooling|the tooling note]], CLM-0511, already described KAST v4 and a v3/v4 JSON reader. We should have checked that transport-schema evidence before assuming v3 in the new codec. The old note is a discovery lead; its old implementation does not verify the current output or codec.
+- **Keep evidence scopes separate:** the [README review](../../deliverables/bounded-k-2026-09-09/readme-gpt6-audit.md) covers 36 grammar productions and the drift test; SRC-0108 covers nine official documentation captures. Neither establishes runtime behavior. Compare every accepted state/effect field and exact rejection code/index; rejected observations expose no post-state or effects. Keep finite differential agreement distinct from a correspondence theorem, PCD and Preview acceptance. Keep live documentation dates separate from the exact installed K pin.
+
+At this cutoff the two attempt receipts establish a rejected compile invocation, then a successful compile and first execution followed by a wrapper failure. A complete differential result and codec repair acceptance are still unestablished by these receipts. Recommended workflow changes above remain provisional; no new source ID or accepted claim is created by this save.
 
 This document establishes the normative engineering standards and semantic modeling best practices for developing, executing, and formally verifying Zero-Knowledge Intermediate Representation (ZKIR v3) semantics within the K Framework (v7.1.337). Formal semantics developed for zero-knowledge virtual machines must balance two conflicting engineering objectives: high-performance concrete execution via the LLVM backend for simulation and differential fuzzing against native Rust implementations, and clean algebraic properties suitable for symbolic execution, reachability logic theorem proving (`kprove`), and interactive proof manipulation through the `kore-rpc` interface and `pyk`. Adhering to the guidelines documented here ensures that semantic definitions remain mathematically sound, executionally performant, and fully portable across both the concrete LLVM and symbolic Haskell backends.
 

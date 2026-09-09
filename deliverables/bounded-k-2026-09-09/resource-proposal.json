@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "moriarty-bounded-k-resource/1",
+  "campaignId": "sp03-bounded-repayment-k-01",
+  "createdAt": "2026-09-09T16:07:36.079528+00:00",
+  "status": "proposal-awaiting-both-exact-candidate-reviews",
+  "scope": "MC01/SP03.1 bounded local repayment projection experiment only; no stage promotion or proof/native/public dispatch",
+  "delegatedAuthority": "AGENTS.md Autonomous sprint decisions; user explicitly requests bounded K semantics on 2026-09-09",
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp03-bounded-k-20260909-01",
+    "--wait",
+    "--pipe",
+    "--property=MemoryMax=4G",
+    "--property=MemorySwapMax=0",
+    "--property=RuntimeMaxSec=512",
+    "--property=KillMode=control-group",
+    "--property=KillSignal=SIGKILL",
+    "--property=TimeoutStopSec=5",
+    "--property=MemoryAccounting=yes",
+    "--working-directory=/home/charl/Moriarty/.worktrees/sp03-bounded-k",
+    "/usr/bin/flock",
+    "--nonblock",
+    "/tmp/moriarty-bounded-k-heavy.lock",
+    "/usr/bin/python3",
+    "/home/charl/Moriarty/.worktrees/sp03-bounded-k/experiments/moriarty-language/formal/k/run.py",
+    "compile-and-traces",
+    "--all"
+  ],
+  "limits": {
+    "compileAttempts": 1,
+    "compileTimeoutSeconds": 180,
+    "krunInvocations": 16,
+    "krunTimeoutSeconds": 20,
+    "aggregateRuntimeSeconds": 512,
+    "memoryBytes": 4294967296,
+    "swapBytes": 0,
+    "terminationGraceSeconds": 0
+  },
+  "accounting": {
+    "compileAttempts": 0,
+    "krunInvocations": 0,
+    "runtimeSeconds": 0,
+    "historicalCharges": "Preserved unchanged; this is a separate prospective bounded allocation, not a reset"
+  },
+  "containment": "systemd user service control group; memory and outer runtime cover descendants. run.py enforces cumulative deadline and process-group kill. Named unit and nonblocking flock serialize this experiment. Root verifies no existing K/native heavy run before dispatch; no claim of host-wide interception. Runtime expiry sends SIGKILL to the whole cgroup immediately; no TERM grace extends execution.",
+  "stopRule": "First compilation/execution/observation failure or exhausted resource ceiling stops this run; no automatic retries or backend fallback. A changed candidate requires refreshed reviews. A consumed compile attempt is never deleted to retry.",
+  "priorDesignVote": "deliverables/source-core-repayment-2026-09-09/boundary-review.md is historical conditional design only; both current implemented-source/resource reviews are required",
+  "commandsExcluded": [
+    "separate compile/evaluate/traces processes for this initial allocation",
+    "kprove",
+    "native proof",
+    "network acquisition",
+    "installation",
+    "public submission"
+  ]
+}

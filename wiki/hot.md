@@ -9,6 +9,7 @@ tags:
   - moriarty
   - research
 sources:
+  - SRC-0108
   - SRC-0106
   - SRC-0107
   - SRC-0104
@@ -41,3 +42,7 @@ The [four complete DeFi papers](../deliverables/defi-taxonomy-papers-2026-09-08/
 The [vault report supplement](../deliverables/erc4626-vault-report-2026-09-08/README.md) adds four distinct valuation roles and six unexecuted adversarial tests to the four-paper study. Its external citations and linked atlas are unavailable; use its taxonomy as S2 design input and the pinned local standards for method checks. No source count or report assertion closes financial/K/Preview gates.
 
 Report8 intake: [comparison, full named-source graph and relevance](../deliverables/defi-report8-comparison-2026-09-09/README.md). Coretaxonomy agrees; keep sharper FINboundaries. New8113/8161sourcecases inform bounded cohort accounting and pending-right authority; they do not freezeCore or close a sprint.
+
+The [bounded repayment K references](../docs/research/2026-09-09-bounded-k-references.md) distinguish explicit numeric bounds, guarded transitions, helper totality and concrete execution from proof acceptance. SRC-0108 is a dated official-doc recapture; current website prose is not local-toolchain equivalence evidence.
+
+[[wiki/k-framework/k-best-practices|Bounded K result and lessons]]: all 16 cases now match complete source and independent results. Earlier CLI and KAST v4 failures remain recorded. Result audits are pending; finite agreement does not establish correspondence or Preview financial acceptance.

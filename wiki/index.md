@@ -10,6 +10,7 @@ tags:
   - navigation
 updated_at: 2026-09-07T18:01:49Z
 sources:
+  - SRC-0108
   - SRC-0106
   - SRC-0107
   - SRC-0105
@@ -133,6 +134,14 @@ remain historical evidence. The current work is ACTUS/DeFi-led language design:
 - [Candidate A continuation evidence](research-journal.md) —
   admitted A4 source gate and failed-export preservation, successful A5 view
   typecheck, and saved follow-up drafts; exports and verification remain open.
+
+## Current bounded repayment K references
+
+[[wiki/k-framework/k-best-practices|Bounded K result and lessons]]: all 16 frozen K cases match complete source and independent expectations. The earlier failures remain recorded; result audits and full semantic/proof acceptance are separate.
+
+[[wiki/k-framework/k-best-practices|Dated execution lessons]] preserve attempt 01’s CLI rejection and attempt 02’s KAST v4 decoding failure. Raw receipts, prior wiki evidence and provisional recommendations remain separate from correctness acceptance.
+
+[SRC-0108 reference review](../docs/research/2026-09-09-bounded-k-references.md) and [[wiki/k-framework/k-best-practices|K source guidance]] record nine dated official captures and a narrow older-note clarification. Recommendations remain S2; capture does not close SP03 or establish a proof.
 
 ## K Framework and ZKIR semantics
 

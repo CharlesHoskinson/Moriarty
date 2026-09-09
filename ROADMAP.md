@@ -41,7 +41,7 @@ The repository contains an experimental bounded agreement syntax, parser, type c
 
 A [provisional successor syntax profile](experiments/moriarty-language/spec/successor/README.md) now has separate lexical/EBNF files, a bounded parser, canonical formatter and read-only source CLI. Its [checks and independent review](deliverables/successor-syntax-2026-09-09/README.md) cover syntax only. It does not type or execute partial payments, freeze RP01, or close SP02.
 
-A separate [funded repayment projection](deliverables/funded-repayment-2026-09-09/README.md) now moves cash, consumes transfer funding once and retains residual principal and accrued debt. It supplies a local reference transition for SP03.1; it is not connected to `.mori` elaboration, K, authenticated state or Midnight settlement. Full SP03 and RP01 remain open.
+A separate [funded repayment projection](deliverables/funded-repayment-2026-09-09/README.md) now moves cash, consumes transfer funding once and retains residual principal and accrued debt. The [funded source preparation path](deliverables/source-core-repayment-2026-09-09/README.md) connects `.mori` elaboration to this projection. The [bounded K experiment](deliverables/bounded-k-2026-09-09/README.md) executes 16 cases with complete K/source/independent-result agreement. Authenticated state, formal correspondence, full SP03/RP01 and Midnight financial settlement remain open.
 
 The research corpus, source snapshots, target inventories and scoped experimental evidence remain useful inputs. None substitutes for the acceptance results below. Superseded A4/A5 work remains historical and is not an active execution queue.
 

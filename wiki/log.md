@@ -10,6 +10,7 @@ tags:
   - navigation
 updated_at: 2026-09-07T18:43:23Z
 sources:
+  - SRC-0108
   - SRC-0106
   - SRC-0107
   - SRC-0105
@@ -21,6 +22,14 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-09] save | Bounded K result after compatibility repairs
+
+Recorded [[wiki/k-framework/k-best-practices|16 complete K/source/independent matches]] and the captured-output codec regression. Retained both earlier failures and their lessons. Result audits remain pending; no proof, full-sprint or ledger acceptance is inferred.
+
+## [2026-09-09] save | Bounded K execution lessons through attempt 02
+
+Saved [[wiki/k-framework/k-best-practices|observed failures and provisional lessons]] from exact attempt receipts: CLI argument rejection, then successful compilation/execution with KAST v4 decoding failure. Recorded the missed existing schema note, minimal executable smoke, preservation of failures and separation of finite comparisons from proof claims. This selected synthesis contains no private reasoning or transcript; no accepted claim or new source is inferred.
 
 ## [2026-09-04] checkpoint | Complete S01 and begin S02 contract
 
@@ -1013,3 +1022,7 @@ Added [financial taxonomy and linked standards atlas](../deliverables/modern-def
 ## 2026-09-09 — report 8 and named source graph
 
 Ingested report8 as SRC-0106, captured all40named ERC/EIP pages as SRC-0107, and linked the existing four-paper corpus with verified PDF hashes and refreshed fulltext. Added the model comparison, conditional FF→FIN aliases, per-standard relevance and combined graph. CLM-0937–CLM-0939 retain research scope and source limitations. Retain the existing roadmap; prioritize a source→Core→K/evaluator partial payment. [Deliverable](../deliverables/defi-report8-comparison-2026-09-09/README.md).
+
+## [2026-09-09] ingest | Bounded repayment K references
+
+SRC-0108 captures nine official K pages with Scrapling 0.4.15, robots policy, SHA-256 and selected-section review. [Reference review](../docs/research/2026-09-09-bounded-k-references.md) provides S2 implementation recommendations and records the narrow CLM-0806 wording limitation. Older immutable captures and claims are preserved. No K execution, proof, source/Core freeze or Preview acceptance was performed by this intake.
