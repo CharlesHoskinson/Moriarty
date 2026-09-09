@@ -1,0 +1,37 @@
+{
+  "requested_model": "opus",
+  "effort": "medium",
+  "packet_sha256": "d6afefe61a201dddae5530dee1b56fd0f5ae30054828a1dbc2b2af4d455a9acf",
+  "result": "PASS.\n\nReviewer identity for this receipt: Claude Opus 5, resolved canonical model ID `claude-opus-5`, medium effort, invoked as the Opus replacement for the previously routed Claude Fable reviewer per `raw/assignments/moriarty-opus-review-routing-2026-09-09.md`. No substitution occurred and no prior reviewer identity was rewritten.\n\nOn correctness of the supplied grammar and lexical evidence, I found no blocking defect. The EBNF fence embedded in README.md is byte-identical to `experiments/moriarty-language/spec/successor/grammar.ebnf` in the packet, including the header comment, all 36 productions and the ten admission notes; I re-derived the production count independently rather than accepting the reviewers' figure. Every production is defined exactly once, every referenced nonterminal is either defined in the file or is one of the four declared lexical special sequences, and all are reachable from `program`. Meta-identifiers now use letters and digits only, which resolves the ISO/IEC 14977 clause 4.14\u20134.15 defect raised in `formal-review.md`; the rename is bijective and does not touch a single quoted terminal, so no accepted-language change follows from it. The terminal set of the grammar and the keyword list in `lexical.md` correspond exactly in both directions, and the punctuation inventory in the lexical token-priority list covers every punctuation terminal the grammar uses, with no orphans. The admission notes are consistent with the productions: chained comparison is already excluded structurally by `comparison = sum, [ comparisonOp, sum ]`, parenthesized comparisons reach `primary`, and `negation = { \"not\" }, comparison` matches note 6's \"parses as\" wording. Notes 1 and 4 restate constraints the grammar already enforces; that is redundancy, not error. The new EOF section defines the sentinel as zero-width at the source byte length after trailing ignored material, which closes the cross-reference gap that `formal-review.md` finding 2 identified, and the Unicode diagnostic partition now names Mn/Mc, which is what `parser-review.md` finding P3 required and what `parser-final.md` reports re-verified against the implementation.\n\nOn scope honesty I found no overclaim in the three changed files. README localizes its completeness assertion to `moriarty-successor-syntax/0`, states in the same paragraph that the profile omits constructs required by the full roadmap and that the successor semantic contract is unfrozen, and separately says the successor semantic freeze and full SP02/SP03 acceptance remain open. It distinguishes parsing from local preparation from authorization, proof, ledger acceptance and source/Core/K correspondence. Nothing in the changed material asserts roadmap grammar completeness or any semantic result, which matches the constraint you set.\n\nOn consistency, the hash chain closes. The three digests in `candidate.json` match the digests carried in the file headers of the packet and are cited identically in `parser-final.md`, `readme-final.md` and `formal-final.md`; the older digests in `formal-review.md` and `readme-review.md` are the pre-correction base `9157a29`, which is the expected relationship. The three final reviews agree on verdict and each states its own limits without borrowing another's evidence. The DOM metrics in `render-check.json` support the deliverable README's rendering sentences and do not exceed them: desktop `clientWidth` equals `scrollWidth` at 652 supports \"desktop grammar fits\", the mobile pair 324 against 652 with `overflowX: auto` and `pageOverflow: false` supports scrolling confined to the code block, and `notationRows: 9` matches the nine-row notation table I counted in README. The routing text in AGENTS.md matches the September 9 assignment, retains the requirement to record the resolved canonical model, and correctly marks historical identities as preserved.\n\nNon-blocking limitations, recorded rather than waived. First, `render-check.json` carries `status: PASS` alongside the live `blob/main/README.md` URL and a method describing insertion into the live article; read in isolation it could be mistaken for evidence that the candidate is already published. The deliverable README disambiguates this explicitly, so it is not a blocker, but the JSON itself should carry a prepublication flag, since receipts are consumed separately from their prose. Second, `parser-final.md` omits the reviewer-identity line that `formal-final.md` and `readme-final.md` both carry; attribution to GPT-6 Astra survives only through the parent deliverable README and the initial `parser-review.md`. Third, the \"all 236 existing language tests passed\" line in the deliverable README is unattributed, while both `parser-final.md` and `readme-final.md` explicitly decline to relabel that root-reported figure as personally executed; the honest sub-reports save it, but the summary should name the runner. The \"18 focused final checks\" count likewise appears only in the summary and is not stated in `parser-final.md` itself. Fourth, I did not and could not verify from this packet that the README diff was confined to the grammar, notation, Unicode and EOF material; the unrelated strong claims that remain in README, specifically the sixteen frozen K repayment cases and the Preview hello-world settlement, are outside every supplied review's stated scope and are not re-validated by anything in this packet. Fifth, the `>=` type-close split is described as rewriting a token in place without emitting a lexer token while the extra `=` still counts toward the 8192 bound; both statements can be true of the implementation, but the prose does not say whether the bound is evaluated on lexer output or after the split, and that ambiguity is worth one clarifying clause. Sixth, no runtime, K, native-proof or Midnight execution was rerun for this audit, correctly so for documentation-only changes; screenshots were root-inspected and I saw only DOM metrics, so my rendering conclusion rests on those metrics and not on visual inspection. None of these bear on publication of the three reviewed files.",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 21785,
+      "outputTokens": 16,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.021865,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 7817,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 34628,
+      "webSearchRequests": 0,
+      "costUSD": 0.541715,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5820,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false
+}
