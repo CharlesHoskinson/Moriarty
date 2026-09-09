@@ -181,6 +181,66 @@ The fixed [syntax bounds](experiments/moriarty-language/spec/successor/syntax-pr
 
 Syntax acceptance does not imply execution. The [bounded funded source profile](experiments/moriarty-language/spec/successor/funded-source.md), `moriarty-funded-source/0`, uses this same source header through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit `Transfer` and `Repay` emissions, producing local `Prepared` candidates. It rejects state and const declarations, `requires`, `let`, `next`, `ensures`, projections and operators, although those forms appear in this grammar. Its numeric values are limited to UInt128. The [funded example](experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori) exercises that subset; the separate [syntax-only example](experiments/moriarty-language/spec/successor/examples/partial-payment.mori) does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.
 
+### Small-step semantics (implemented repayment subset)
+
+A small-step semantics describes how one machine configuration advances to the next. Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer` followed by one `Repay`. This is a different profile from the successor EBNF above. It is not yet a small-step semantics for every successor source construct.
+
+The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. Within that domain, K performs the financial checks and computes every changed financial amount.
+
+Write `⟨k ; out⟩` for the current computation and output cells. `P` is the admitted packet, `H` its input digest, `s` and `r` the sender/receiver row indices, `κ` the remaining computation, and `ε` an empty computation. `r = -1` denotes an absent receiver row; an absent sender fails a later check. The following rules summarize the actual K control transitions; helper functions compute indices, predicates and arithmetic. `checks` abbreviates the 21 ordered `ensure` terms in the definition, and `F` abbreviates its exact prepared-result fields.
+
+```text
+START
+  ⟨P ; pending⟩
+    → ⟨inspect(P, s, r) ; pending⟩
+
+EXPAND
+  ⟨inspect(P, s, r) ; pending⟩
+    → ⟨checks(P, s, r) ▷ finish(P, s, r) ; pending⟩
+
+CHECK-PASS
+  ⟨ensure(H, true, code, i) ▷ κ ; pending⟩
+    → ⟨κ ; pending⟩
+
+CHECK-FAIL
+  ⟨ensure(H, false, code, i) ▷ κ ; pending⟩
+    → ⟨ε ; rejected(H, code, i)⟩
+
+FINISH
+  ⟨finish(P, s, r) ; pending⟩
+    → ⟨ε ; prepared(H, F(P, s, r))⟩
+```
+
+`▷` means “then execute”; `→` is one displayed control transition. A false check discards the entire continuation, so `finish` is unreachable after any failure. Terminal results have no further control step. The machine checks the packet before producing a financial result; it does not commit a transfer and then attempt repayment.
+
+Checks run in this order, stopping at the first failure. The [K rules](experiments/moriarty-language/formal/k/moriarty.k) give every predicate and diagnostic code.
+
+| Stage | Ordered checks | Error index |
+| --- | --- | --- |
+| State | Distinct balance keys; allowance sum; principal/accrual/outstanding and status; total work including reserve | `-1` (no action index) |
+| Work | At least two ordinary work units remain; spent work can increase by two | `-1` |
+| Transfer | Positive amount; different parties; sender balance exists and is sufficient; matching allowance exists and is sufficient; spent allowance and receiver balance do not overflow | `0` |
+| Repay | Positive nominal amount; matching obligation; outstanding status; payment within debt; same-step transfer ID; matching payer, creditor and asset; sufficient unallocated transfer amount | `1` |
+
+On successful preparation, let `T` be transferred cash, `N` nominal repayment, `p` principal, `a` accrued debt, and `o = p + a` outstanding. Identity conversion makes settlement equal `N`; the checks require `0 < N ≤ T` and `N ≤ o`. Only `N` discharges debt even when `T > N`. Allocation is:
+
+```text
+AccrualFirst:   dischargedPrincipal = N - min(N, a)
+PrincipalFirst: dischargedPrincipal = min(N, p)
+Both rules:    dischargedAccrued   = N - dischargedPrincipal
+
+p' = p - dischargedPrincipal
+a' = a - dischargedAccrued
+o' = o - N
+status' = Settled if o' = 0, otherwise Outstanding
+```
+
+K also subtracts `T` from the sender, adds `T` to the receiver (or creates its missing row), moves `T` from remaining to spent allowance, and moves **two action-work units** from remaining to spent work. The closure reserve stays unchanged. These two work units count the actions, not K rewrite steps. The codec reconstructs unchanged metadata, the ordered Transfer/Repayment effects and used-ID appends from the input and checked K output; that codec remains a trusted, unproved boundary.
+
+For the executed [`principal-partial` fixture](experiments/moriarty-language/formal/k/fixtures/cases.json), cash balances `(100, 0)` become `(70, 30)` after transferring and repaying `30`; principal/outstanding become `70`, the debt remains `Outstanding`, allowance becomes `(remaining: 70, spent: 30)`, and work becomes `(remaining: 98, spent: 2, reserve: 16)`. If a check fails instead, the result exposes a rejection code/index and no proposed state or effects.
+
+The [16-case execution evidence](deliverables/bounded-k-2026-09-09/acceptance.json) checks complete successful results and exact rejections against independent expectations and the source preparation path. It is a finite comparison, not a correspondence theorem. Full successor expression/statement semantics, broader financial actions, mechanized correspondence and mandatory proof-backed ledger settlement remain [SP03/SP09 work](openspec/sprints/README.md). `Prepared` means a local financial proposal; it does not mean authorized, proved or settled on Midnight.
+
 ## What a developer writes
 
 The following examples and local workflow use `moriarty-bounded-atomic/1`; consult the successor profiles above for their separate syntax and funded subset.

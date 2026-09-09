@@ -1,0 +1,37 @@
+{
+  "requested_model": "opus",
+  "effort": "medium",
+  "packet_sha256": "b7f7aae241c3455352bb7eea6734ac73e284aab41ed95c03e8d4e73989ef7633",
+  "result": "# Independent Publication Audit \u2014 README section \"Small-step semantics (implemented repayment subset)\"\n\n**Verdict: PASS** (scoped: this section only; EBNF and remaining README not requalified)\n\n**Reviewer model:** Claude Opus 5 (`claude-opus-5`), plan/read-only mode, no tools invoked, no edits made.\n\n**Provided file hashes (as supplied on stdin; not independently recomputed):**\n- `README.md` \u2014 `007e5c6caec0f5da4dcb0a98adf7001d4f87384b604d63cb1611cde96c49c2d9`\n- `formal/k/moriarty.k` \u2014 `0e695ac53e7daa04de226e4f95a20d1f46bebaee02e89db7977a9b1be314c0cd`\n- `formal/k/README.md` \u2014 `0a98f2d0723ea6e03049cd3d185dd7258664a4dd761d5385b64a371e525dc47a`\n- `deliverables/bounded-k-2026-09-09/acceptance.json` \u2014 `1f089ed3e2011118dbab7507309f7258b80bce1e768b06c0b048113734d2aa02`\n\n## Control rules\n\nAll five displayed transitions correspond to the five top-level rewrite rules in `moriarty.k`. START matches the packet rule, including that `s` and `r` are `indexOf(FROM, TA, ...)` and `indexOf(TO, TA, ...)`. EXPAND matches the `inspect` rule. CHECK-PASS matches `ensure(_, true, _, _) => .K ...` (the K rule ignores the digest and code; the display carries them, which is a faithful readable abstraction). CHECK-FAIL matches `ensure(H, false, CODE, IDX) ~> _REST:K => .K` with `<out> pending => rejected(H, CODE, IDX)`; the claim that \"a false check discards the entire continuation, so `finish` is unreachable after any failure\" is exactly the `~> _REST:K` erasure. FINISH matches the success rule. `\u25b7` for `~>` and `\u03b5` for `.K` are consistently used. No rule is invented, reordered, or omitted at the control level; helper-function evaluation is correctly disclosed as not displayed.\n\n## Guards, stage order, indices\n\nI counted the `ensure` terms in the `inspect` rule: 21 exactly. The stage table maps cleanly and in order:\n\n- State (index `-1`): `DUPLICATE`, allowance-sum `INVARIANT`, principal/accrued/outstanding-and-status `INVARIANT`, work-sum-including-reserve `INVARIANT` \u2014 4 terms, prose matches each.\n- Work (index `-1`): `INSUFFICIENT_WORK` (`WR >= 2`), `OVERFLOW` (`WS + 2`) \u2014 2 terms.\n- Transfer (index `0`): `ZERO_AMOUNT`, `SELF_TRANSFER`, `MISSING_BALANCE` (`SI >= 0`), `INSUFFICIENT_BALANCE`, `MISSING_ALLOWANCE`, `INSUFFICIENT_ALLOWANCE`, spent-allowance `OVERFLOW`, receiver-balance `OVERFLOW` \u2014 8 terms, listed in the same order.\n- Repay (index `1`): `ZERO_AMOUNT`, `MISSING_OBLIGATION`, `NOT_OUTSTANDING`, `EXCEEDS_OUTSTANDING`, `TRANSFER_NOT_IN_STEP`, `TRANSFER_MISMATCH`, `INSUFFICIENT_UNALLOCATED` \u2014 7 terms, same order.\n\n4 + 2 + 8 + 7 = 21. Stage precedence (state \u2192 work \u2192 Transfer \u2192 Repay) and the `-1` null-index encoding agree with the K README. \"Stopping at the first failure\" is correct given CHECK-FAIL.\n\n## Allocation arithmetic\n\n`AccrualFirst: N - min(N, a)` matches `principalPart(\"AccrualFirst\", N, _, I) => N -Int minInt(N, I)`; `PrincipalFirst: min(N, p)` matches. `dischargedAccrued = N - dischargedPrincipal` matches the K output field `I -Int (N -Int principalPart(...))` combined with `a' = a - dischargedAccrued`. `p'`, `a'`, `o' = o - N`, and `statusOf` (Settled at 0, Outstanding above 0) all match. The stated preconditions `0 < N \u2264 T` and `N \u2264 o` correspond to guards 15, 21, and 18, and are what make the subtractions total. \"Only `N` discharges debt even when `T > N`\" is correct: settlement is emitted as `N` under identity conversion.\n\n## Other checked claims\n\nBalance movement (`moved`), row creation on `r = -1` (`appended`), allowance `AR-T`/`AS+T`, and work `WR-2`/`WS+2` all match the `finish` rule. \"The closure reserve stays unchanged\" is correct \u2014 `RES` appears only in invariant 4 and in no output field. The disclaimer that the two work units \"count the actions, not K rewrite steps\" is accurate and is the right guard against a natural misreading. The profile distinction (`moriarty-funded-repayment/0` lowered projection, explicitly not the successor EBNF, not a semantics for every successor construct) is stated correctly and is consistent with the K README. The codec description (bounded UInt128, two balance rows, one allowance, one obligation, empty used-ID lists, identity conversion, `AccrualFirst`/`PrincipalFirst`, out-of-domain input stopping before K) matches the K README's admission section, and the \"trusted, unproved boundary\" wording is retained. No accepted-ledger, correspondence-theorem, or full-semantics claim appears; the closing paragraph correctly reduces `Prepared` to a local financial proposal and the 16 cases to a finite comparison.\n\n## Spot sample: `principal-partial`\n\nWith balances `(100, 0)`, allowance `100/0`, principal 100 / accrued 0 / outstanding 100, work `100/0` with reserve 16, transfer 30 and repay 30: all 21 guards pass; `moved` gives `(70, 30)`; allowance `(70, 30)`; work `(98, 2)` with reserve 16; `principalPart` is 30 under either rule (accrued is 0), so `p' = 70`, `a' = 0`, `o' = 70`, `statusOf(70) = \"Outstanding\"`. This reproduces the expected figures and the README's rendering of them.\n\n## Non-blocking limitations\n\n1. \"`H` its input digest\" could be read as K computing the digest; K only carries and echoes a codec-supplied field. A three-word qualifier would remove the ambiguity.\n2. The reserve's survival is a codec reconstruction \u2014 `prepared(...)` emits no reserve field at all. The text is defensible (\"codec reconstructs unchanged metadata\") but does not say so at the point of the reserve claim.\n3. The prepared tuple's receiver-index field (which identifies an appended row) is not mentioned; `F` is left unenumerated.\n4. The display notation is not explicitly marked as non-K-input syntax. Given the framing, this is a presentational preference, not a defect.\n\nNone of these change a reader's conclusions, and none blocks publication of the section as written.",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 14735,
+      "outputTokens": 18,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.014825,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 7001,
+      "cacheReadInputTokens": 2365,
+      "cacheCreationInputTokens": 21769,
+      "webSearchRequests": 0,
+      "costUSD": 0.3939075,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4475,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false
+}
