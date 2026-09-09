@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Trace</title>
+<style>
+  :root {
+    --paper: #f6f6f4;
+    --paper-2: #ededea;
+    --ink: #17181a;
+    --ink-2: #4a4c50;
+    --muted: #6b6e74;
+    --hair: #d3d4d0;
+    --accent: #2b4f9e;
+    --accent-soft: #dfe6f5;
+    --reject: #8a3b2c;
+    --reject-soft: #f3e2dd;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141517; --paper-2: #1d1e21; --ink: #ececea; --ink-2: #c3c4c1;
+      --muted: #9a9c9a; --hair: #33353a; --accent: #9db5f2; --accent-soft: #1f2a44;
+      --reject: #e39a86; --reject-soft: #3a2521;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141517; --paper-2: #1d1e21; --ink: #ececea; --ink-2: #c3c4c1;
+    --muted: #9a9c9a; --hair: #33353a; --accent: #9db5f2; --accent-soft: #1f2a44;
+    --reject: #e39a86; --reject-soft: #3a2521;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 15px/1.55 var(--sans);
+    padding-inline: 16px; padding-block: 40px 80px;
+  }
+  .wrap { max-width: 1360px; margin: 0 auto; }
+  h1 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 8px; font-weight: 600; }
+  .sub { color: var(--ink-2); margin: 0 0 32px; font-size: 17px; }
+  .sub .num { font-family: var(--mono); color: var(--ink); }
+  code, pre, .mono { font-family: var(--mono); }
+  a { color: var(--accent); }
+
+  /* controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 20px 36px; align-items: flex-end; margin-bottom: 28px; }
+  .group legend, .group .lab { font-size: 12px; text-transform: none; color: var(--muted); margin-bottom: 6px; display: block; }
+  fieldset.group { border: 0; padding: 0; margin: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 4px; overflow: hidden; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .seg span { display: inline-block; padding: 7px 14px; font-size: 14px; color: var(--ink-2); cursor: pointer; border-right: 1px solid var(--hair); }
+  .seg label:last-child span { border-right: 0; }
+  .seg input:checked + span { background: var(--ink); color: var(--paper); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .seg.mono span { font-family: var(--mono); }
+  .btn {
+    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+  }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .btn:active { transform: translateY(1px); }
+  .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  /* rail */
+  .rail-wrap { position: relative; margin-bottom: 8px; }
+  .rail { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; padding-top: 44px; }
+  .rail::before {
+    content: ""; position: absolute; left: 7.14%; right: 7.14%; top: 52px; height: 1px; background: var(--hair);
+  }
+  .rail .done-line {
+    position: absolute; left: 7.14%; top: 52px; height: 1px; background: var(--ink); width: 0;
+    transition: width 380ms cubic-bezier(.16,1,.3,1);
+  }
+  .station {
+    position: relative; background: none; border: 0; padding: 0 6px 6px; cursor: pointer; font: inherit; color: var(--ink-2);
+    text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .station .dot {
+    width: 11px; height: 11px; border-radius: 50%; border: 1px solid var(--ink); background: var(--paper);
+    margin-top: 3px; transition: background 200ms, border-color 200ms;
+  }
+  .station .name { font-size: 13px; line-height: 1.25; max-width: 150px; }
+  .station .idx { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .station[aria-selected="true"] { color: var(--ink); }
+  .station[aria-selected="true"] .name { font-weight: 600; }
+  .station.done .dot { background: var(--ink); }
+  .station[aria-selected="true"] .dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .station.unreached { color: var(--muted); }
+  .station.unreached .dot { border-style: dashed; border-color: var(--muted); }
+  .station.unreached .name::after { content: " not reached"; display: block; font-size: 11px; font-family: var(--mono); color: var(--reject); }
+  .station.rejectat .dot { background: var(--reject); border-color: var(--reject); box-shadow: 0 0 0 4px var(--reject-soft); }
+  .station:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  .chip {
+    position: absolute; top: 0; left: 0; width: 14.2857%; display: flex; justify-content: center;
+    transition: transform 380ms cubic-bezier(.16,1,.3,1); pointer-events: none;
+  }
+  .chip span {
+    font-family: var(--mono); font-size: 12.5px; white-space: nowrap; padding: 5px 10px; border-radius: 4px;
+    background: var(--accent); color: var(--paper); letter-spacing: 0.01em;
+  }
+  .chip.rej span { background: var(--reject); }
+
+  .stepper { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 14px 0 22px; }
+  .stepper .stage-title { font-size: 12px; color: var(--muted); }
+  .stepper .stage-title b { color: var(--ink); font-weight: 600; font-size: 13px; }
+
+  /* panel */
+  .panel { border: 1px solid var(--hair); border-radius: 8px; background: var(--paper-2); padding: 24px 24px 20px; }
+  .panel-head { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; margin-bottom: 18px; }
+  .panel-head h2 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  .panel-head .claim { color: var(--ink-2); font-size: 15px; margin: 0; flex: 1 1 320px; }
+  .panel-head .chip-inline { display: none; }
+  .cols { display: grid; grid-template-columns: 7fr 5fr; gap: 28px; }
+  .cols > * { min-width: 0; }
+  .col h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+  pre.rep {
+    margin: 0; padding: 14px 16px; border: 1px solid var(--hair); border-radius: 4px; background: var(--paper);
+    font-size: 12.5px; line-height: 1.55; overflow-x: auto; white-space: pre; color: var(--ink);
+  }
+  pre.rep .k { color: var(--accent); }
+  pre.rep .c { color: var(--muted); }
+  pre.rep .r { color: var(--reject); font-weight: 600; }
+  pre.rep .h { background: var(--accent-soft); }
+
+  .ladder { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--hair); }
+  .ladder li {
+    display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--hair); font-size: 13.5px;
+  }
+  .ladder li:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ladder .m { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--muted); justify-self: center; transition: background 200ms, border-color 200ms; }
+  .ladder li.owed { color: var(--muted); }
+  .ladder li.here { color: var(--ink); font-weight: 600; }
+  .ladder li.here .m { background: var(--accent); border-color: var(--accent); }
+  .ladder li.earlier { color: var(--ink-2); }
+  .ladder li.earlier .m { background: var(--ink); border-color: var(--ink); }
+  .ladder li.blocked { color: var(--reject); }
+  .ladder li.blocked .m { border-color: var(--reject); border-style: dashed; }
+  .ladder .st { font-family: var(--mono); font-size: 11px; color: inherit; }
+  .residual { margin: 14px 0 0; font-size: 13px; color: var(--ink-2); }
+  .residual b { font-weight: 600; color: var(--ink); }
+
+  .failures { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--hair); }
+  .failures h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 0 0 8px; }
+  .failures ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+  .failures li { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border: 1px solid var(--hair); border-radius: 4px; color: var(--ink-2); background: var(--paper); }
+  .failures li.fired { border-color: var(--reject); color: var(--reject); font-weight: 600; background: var(--reject-soft); }
+
+  .decision { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .decision div { border-left: 2px solid var(--hair); padding-left: 14px; font-size: 13.5px; color: var(--ink-2); }
+  .decision div.chosen { border-left-color: var(--accent); }
+  .decision b { display: block; color: var(--ink); margin-bottom: 4px; font-weight: 600; }
+
+  /* lifetime strip */
+  .life { margin-top: 44px; }
+  .life h2 { font-size: 20px; margin: 0 0 6px; font-weight: 600; letter-spacing: -0.01em; }
+  .life p { margin: 0 0 18px; color: var(--ink-2); max-width: 72ch; }
+  .strip { display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; }
+  .tx {
+    flex: 1 1 120px; max-width: 170px; min-width: 110px; border: 1px solid var(--hair); border-radius: 8px; padding: 10px 12px; background: var(--paper-2);
+    font-size: 11.5px; color: var(--ink-2); position: relative; margin-right: 108px; margin-bottom: 26px;
+  }
+  .tx:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tx .seq { font-family: var(--mono); font-size: 12px; color: var(--ink); display: block; margin-bottom: 4px; }
+  .tx .claims { display: block; font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+  .tx .claims + .claims { margin-top: 6px; }
+  .tx.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .tx.current .seq { color: var(--accent); font-weight: 600; }
+  .tx + .tx::before {
+    content: ""; position: absolute; left: -108px; top: 50%; width: 108px; height: 1px; background: var(--hair);
+  }
+  .tx + .tx::after {
+    content: "HistoryCompliance"; position: absolute; left: -108px; top: calc(50% - 15px); width: 108px; text-align: center;
+    font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+  }
+  .life .cap { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: -8px; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .foot { margin-top: 40px; display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .foot button { font: inherit; background: none; border: 1px solid var(--hair); border-radius: 4px; padding: 4px 10px; color: var(--ink-2); cursor: pointer; }
+
+  @media (max-width: 900px) {
+    .cols { grid-template-columns: 1fr; }
+    .decision { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    .rail-wrap { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
+    .rail { grid-template-columns: repeat(7, 150px); padding-top: 12px; width: max-content; }
+    .rail::before, .rail .done-line { left: 75px; }
+    .rail::before { right: 75px; top: 20px; }
+    .rail .done-line { top: 20px; }
+    .station { scroll-snap-align: center; }
+    .chip { display: none; }
+    .panel-head .chip-inline { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 4px 9px; border-radius: 4px; background: var(--accent); color: var(--paper); }
+    .panel-head .chip-inline.rej { background: var(--reject); }
+    .stepper { flex-direction: column; align-items: stretch; }
+    .stepper .nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stepper .nav .btn { width: 100%; }
+    .panel { padding: 18px 16px; }
+    .strip { padding-left: 28px; }
+    .tx { margin-right: 28px; }
+    .tx + .tx::before { left: -28px; width: 28px; }
+    .tx + .tx::after { content: "HC"; left: -28px; width: 28px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chip, .rail .done-line, .station .dot, .ladder .m { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>One transaction, seven representations, six guarantees.</h1>
+  <p class="sub"><span class="num" id="subnum">10,000 A in. 19,743 B out.</span> Follow the number.</p>
+
+  <div class="controls">
+    <fieldset class="group">
+      <legend>Example</legend>
+      <div class="seg" role="radiogroup">
+        <label><input type="radio" name="ex" value="swap" checked><span>Constant-product swap</span></label>
+        <label><input type="radio" name="ex" value="repay"><span>Interest payment</span></label>
+      </div>
+    </fieldset>
+    <fieldset class="group">
+      <legend id="inputLegend">min_out</legend>
+      <div class="seg mono" role="radiogroup" id="inputSeg">
+        <label><input type="radio" name="inp" value="ok" checked><span id="inpOk">19,743</span></label>
+        <label><input type="radio" name="inp" value="bad"><span id="inpBad">19,744</span></label>
+      </div>
+    </fieldset>
+    <fieldset class="group">
+      <legend>Mode</legend>
+      <div class="seg" role="radiogroup">
+        <label><input type="radio" name="mode" value="build" checked><span>Build</span></label>
+        <label><input type="radio" name="mode" value="verify"><span>Verify</span></label>
+      </div>
+    </fieldset>
+    <div class="group">
+      <span class="lab">Trace</span>
+      <button class="btn" id="run" aria-pressed="false">Run the trace</button>
+    </div>
+  </div>
+
+  <div class="rail-wrap">
+    <div class="rail" role="tablist" aria-label="Pipeline stages" id="rail">
+      <div class="chip" id="chip"><span id="chipText"></span></div>
+      <div class="done-line" id="doneLine"></div>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="stage-title" id="stageTitle"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev">Previous</button>
+      <button class="btn ghost" id="next">Next</button>
+    </div>
+  </div>
+
+  <section class="panel" role="tabpanel" id="panel" aria-labelledby="st-0">
+    <div class="panel-head">
+      <h2 id="pTitle"></h2>
+      <p class="claim" id="pClaim"></p>
+      <span class="chip-inline" id="chipInline"></span>
+    </div>
+    <div class="cols">
+      <div class="col">
+        <h3>Representation at this stage</h3>
+        <pre class="rep" id="rep"></pre>
+        <div id="decision"></div>
+      </div>
+      <div class="col">
+        <h3>Guarantees: fixed here, fixed earlier, still owed</h3>
+        <ul class="ladder" id="ladder"></ul>
+        <p class="residual" id="residual"></p>
+      </div>
+    </div>
+    <div class="failures" id="failures">
+      <h3>Named failures at this stage</h3>
+      <ul id="failList"></ul>
+    </div>
+  </section>
+
+  <section class="life" aria-labelledby="lifeH">
+    <h2 id="lifeH">One agreement, many proofs.</h2>
+    <p>A long-lived agreement is a sequence of bounded one-transition proofs, not one circuit that executes an entire lifetime. Each transition proves its own four claims and that the history it extends is itself compliant. A valid proof against an invalid predecessor is rejected.</p>
+    <div class="strip" id="strip"></div>
+    <p class="cap" id="lifeCap"></p>
+  </section>
+
+  <div class="sr" aria-live="polite" id="live"></div>
+
+  <div class="foot">
+    <span>Every integer above is exact arithmetic on the stated reserves, fee and input.</span>
+    <button id="theme">Toggle theme</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LAYERS = [
+    { id: 'semantic',    name: 'Semantic validity' },
+    { id: 'translation', name: 'Moriarty-to-Compact translation validity' },
+    { id: 'compiler',    name: 'Compact-to-ZKIR compiler correctness' },
+    { id: 'circuit',     name: 'Circuit / proof correctness' },
+    { id: 'ledger',      name: 'Midnight ledger feasibility' },
+    { id: 'wallet',      name: 'Transaction construction and wallet correctness' }
+  ];
+
+  var SWAP_ARITH =
+    'effective_input   = 10,000 × 997                       =              9,970,000\n' +
+    'numerator         = 9,970,000 × 2,000,000              =     19,940,000,000,000\n' +
+    'denominator       = 1,000,000 × 1,000 + 9,970,000      =          1,009,970,000\n' +
+    'output_calculated = floor_div(numerator, denominator)  =                 19,743\n' +
+    'remainder         = 19,940,000,000,000 − 19,743 × 1,009,970,000 =  162,290,000\n' +
+    '                    <span class="c">"unpaid output remains in reserve_b"   (policy swap_output)</span>\n' +
+    'reserve_a after   = 1,000,000 + 10,000                 =              1,010,000\n' +
+    'reserve_b after   = 2,000,000 − 19,743                 =              1,980,257';
+
+  var EXAMPLES = {
+    swap: {
+      chip: 'in 10,000 A · out 19,743 B',
+      sub: '10,000 A in. 19,743 B out.',
+      inputLabel: 'min_out',
+      ok: '19,743', bad: '19,744',
+      guard: 'minimum output not met',
+      rejectAt: 2,
+      stages: [
+        {
+          title: 'Source .mori',
+          claim: 'The developer wrote the fee, the rounding, the guards and the transfers. Nothing is implied.',
+          rep: {
+            build:
+              '<span class="k">action</span> swap(actor: Text, recipient: Text, asset_in: Text, asset_out: Text,\n' +
+              '            amount_in: <span class="k">Amount&lt;AssetA_quantum&gt;</span>, min_out: <span class="k">Amount&lt;AssetB_quantum&gt;</span>) {\n' +
+              '  guard obs.now &lt; uint(2000000000), "horizon expired";\n' +
+              '  guard remaining &gt; uint(1), "final allowance is reserved for closure";\n' +
+              '  guard arg.actor == const.trader, "trader authority required";\n' +
+              '  guard arg.amount_in &lt;= state.trader_a, "insufficient synthetic balance";\n' +
+              '  let effective_input   = arg.amount_in * const.fee_numerator;\n' +
+              '  let numerator         = effective_input * state.reserve_b;\n' +
+              '  let denominator       = state.reserve_a * const.fee_denominator + effective_input;\n' +
+              '<span class="h">  let output_calculated = floor_div(numerator, denominator);</span>\n' +
+              '  guard arg.min_out &lt;= output_calculated, "minimum output not met";\n' +
+              '  guard output_calculated &lt; state.reserve_b, "output would empty reserve";\n' +
+              '  ...\n' +
+              '  emit Transfer { asset: arg.asset_in,  from: const.trader, to: const.pool,    amount: arg.amount_in };\n' +
+              '  emit Transfer { asset: arg.asset_out, from: const.pool,   to: arg.recipient, amount: output_calculated };\n' +
+              '}\n\n' +
+              '<span class="c">reserves 1,000,000 A and 2,000,000 B · fee 997/1000 · amount_in 10,000 A · min_out {MIN}</span>',
+            verify:
+              '<span class="c">profile moriarty-bounded-atomic/1 (implemented)</span>\n' +
+              '<span class="k">policy</span> swap_output targets write(swap, reserve_b), write(swap, trader_b), effect(swap, 1, amount) {\n' +
+              '  unit AssetB_quantum;\n' +
+              '  derivation "floor((amount_in*997)*reserve_b/(reserve_a*1000+amount_in*997))";\n' +
+              '  rounding floor(swap, output_calculated);\n' +
+              '  remainder "unpaid output remains in reserve_b";\n' +
+              '  comparison "exact integer output and reserves";\n' +
+              '  proof "constant_product_exact_input_floor_v1";\n' +
+              '}\n\n' +
+              '<span class="k">action</span> swap(..., amount_in: Amount&lt;AssetA_quantum&gt;, min_out: Amount&lt;AssetB_quantum&gt;) {\n' +
+              '  ...\n' +
+              '<span class="h">  let output_calculated = floor_div(numerator, denominator);</span>\n' +
+              '  guard arg.min_out &lt;= output_calculated, "minimum output not met";\n' +
+              '  guard output_calculated &lt; state.reserve_b, "output would empty reserve";\n' +
+              '  ...\n}\n\n' +
+              '<span class="c">Lexical rules and EBNF (ISO/IEC 14977) fix what this may look like.\n' +
+              'Typing judgments Γ ⊢ e : τ fix which programs are admissible.  min_out {MIN}</span>'
+          },
+          fixed: [],
+          residual: 'Nothing is established yet. The source states the fee, the rounding direction and every rejection by name; the pipeline has to preserve them.',
+          failures: []
+        },
+        {
+          title: 'Typed elaboration and finite resource/lifetime certificate',
+          claim: 'Units are checked, bounds are certified, and every intermediate integer is exact.',
+          rep: {
+            build:
+              '<span class="c">arg.amount_in : Amount&lt;AssetA_quantum&gt;   arg.min_out : Amount&lt;AssetB_quantum&gt;\n' +
+              'Amount&lt;AssetA_quantum&gt; + Amount&lt;AssetB_quantum&gt; does not type-check.</span>\n\n' +
+              SWAP_ARITH + '\n\n' +
+              '<span class="c">certificate: maximum lifetime · maximum transition count · horizon 2000000000\n' +
+              '             maximum accounts/obligations · per-entry-point resource estimates</span>',
+            verify:
+              'Γ ⊢ arg.amount_in : Amount&lt;AssetA_quantum&gt;\n' +
+              'Γ ⊢ arg.min_out   : Amount&lt;AssetB_quantum&gt;\n' +
+              'Γ ⊢ output_calculated : Amount&lt;AssetB_quantum&gt;      <span class="c">(unit follows policy swap_output)</span>\n\n' +
+              SWAP_ARITH + '\n\n' +
+              '<span class="c">finite resource/lifetime certificate:\n' +
+              '  every wait has a finite absolute bound → certified in the manifest\n' +
+              '  surface loops/folds elaborate to finite Core\n' +
+              '  max transitions and per-entry-point resource estimates recorded</span>'
+          },
+          fixed: [],
+          residual: 'Admissibility is fixed: units, resource use and bounds. This is a precondition of semantic validity, not the property itself, so no assurance layer is marked yet.',
+          failures: []
+        },
+        {
+          title: 'Canonical Moriarty Core',
+          claim: 'Everything from the surface has elaborated away. What remains is what gets proved.',
+          rep: {
+            build:
+              '<span class="c">Core retains: finite continuations · explicit actions and waits · accounting ·\n' +
+              'value conservation · explicit timeouts · typed warnings and errors ·\n' +
+              'a decreasing structural measure</span>\n\n' +
+              'guard   arg.min_out &lt;= 19,743                    <span class="c">{VERDICT}</span>\n' +
+              'guard   19,743 &lt; reserve_b (2,000,000)          <span class="c">holds</span>\n' +
+              'write   reserve_a 1,000,000 → 1,010,000\n' +
+              'write   reserve_b 2,000,000 → 1,980,257\n' +
+              'write   trader_b  +19,743\n' +
+              'effect  Transfer ASSET_A trader → pool       10,000\n' +
+              'effect  Transfer ASSET_B pool   → recipient  19,743\n\n' +
+              '<span class="c">conservation: 10,000 A left the trader and entered the pool;\n              19,743 B left the pool and reached the recipient. Nothing else moved.</span>',
+            verify:
+              '<span class="c">K configuration: executable operational semantics; the control layer presented\n' +
+              'as Felleisen-Hieb reduction semantics. Total deterministic step relation,\n' +
+              'canonical input ordering.</span>\n\n' +
+              'datum classification (public | private | committed | revealed) on every value\n' +
+              'guard   arg.min_out &lt;= 19,743                    <span class="c">{VERDICT}</span>\n' +
+              'guard   19,743 &lt; reserve_b                       <span class="c">holds</span>\n' +
+              'write   reserve_a 1,000,000 → 1,010,000\n' +
+              'write   reserve_b 2,000,000 → 1,980,257\n' +
+              'effect  Transfer ASSET_A trader → pool       10,000\n' +
+              'effect  Transfer ASSET_B pool   → recipient  19,743\n\n' +
+              '<span class="c">Core hash recorded. Independent Core interpreter runs the same step.\n' +
+              'Core step decreases a well-founded measure (termination, V1 core only).</span>'
+          },
+          fixed: ['semantic'],
+          residual: 'Semantic validity is a statement about Core. It says nothing yet about the Compact that will be generated from it.',
+          failures: ['horizon expired', 'final allowance is reserved for closure', 'trader authority required', 'insufficient synthetic balance', 'minimum output not met', 'output would empty reserve']
+        },
+        {
+          title: 'Generated Compact and correspondence manifest',
+          claim: 'A reviewable backend artifact, and a record of what it corresponds to.',
+          rep: {
+            build:
+              '<span class="c">readable generated Compact  (reviewable; not reproduced here)</span>\n\n' +
+              'manifest {\n' +
+              '  core_hash               source_hash            compiler_versions\n' +
+              '  maximum_lifetime        maximum_transition_count\n' +
+              '  maximum_accounts_obligations                   continuation_roots\n' +
+              '  visibility_policy       external_capabilities  backend_artifact_hashes\n' +
+              '}\n\n' +
+              '<span class="c">disclose() is generated only from an explicit source visibility transition.\n' +
+              'Compact\'s disclose() authorizes a flow past the privacy analysis; it does not make it safe.\n' +
+              'Token-indexed amounts and distinct time/duration types are checked before lowering; Compact and ZKIR erase some domain distinctions.</span>',
+            verify:
+              'translation validation:\n' +
+              '  independent Core interpreter  vs  generated-Compact trace   <span class="c">differential</span>\n' +
+              '  pinned toolchain\n\n' +
+              'correspondence manifest {\n' +
+              '  core_hash, source_hash, compiler_versions,\n' +
+              '  maximum_lifetime, maximum_transition_count, maximum_accounts_obligations,\n' +
+              '  continuation_roots, visibility_policy, external_capabilities,\n' +
+              '  backend_artifact_hashes\n' +
+              '}\n\n' +
+              '<span class="c">Ahead-of-time specialization: one circuit per entry point, not a universal\n' +
+              'interpreter circuit. The compiler is not silently trusted: translation\n' +
+              'evidence is emitted and validated.</span>'
+          },
+          fixed: ['translation'],
+          residual: 'Compiler mistranslation: compiler and validator bugs until proof coverage is complete. Token or unit confusion: Compact and ZKIR erase some domain distinctions, so the token index is checked before lowering.',
+          failures: []
+        },
+        {
+          title: 'compactc: ZKIR 3, generated TypeScript, proving and verifier artifacts',
+          claim: 'The supported compiler produces the circuit. Direct source-to-ZKIR was deferred on purpose.',
+          rep: {
+            build:
+              'compactc\n' +
+              '  → ZKIR 3                     <span class="c">typed straight-line circuit IR, guarded impacts</span>\n' +
+              '  → generated TypeScript       <span class="c">runtime bindings; witness callbacks are unverified</span>\n' +
+              '  → proving key, verifier key  <span class="c">hashes recorded in the manifest</span>\n\n' +
+              '<span class="c">Every witness result is constrained by the generated circuit.\n' +
+              'The guards above are part of Core, so they are part of what the circuit constrains:\n' +
+              'a client that skips simulation still cannot prove a rejected transition.</span>',
+            verify:
+              'compactc → ZKIR 3 + generated TypeScript + proving/verifier artifacts\n\n' +
+              '<span class="c">ZKIR: typed, straight-line, guarded impacts, no source-level financial\n' +
+              'concepts, ledger-coupled, evolving.\n\n' +
+              'Private witness callbacks are unverified TypeScript. A Moriarty-generated\n' +
+              'circuit must constrain every witness result.\n\n' +
+              'Assurance here rests on the supported compiler and a pinned toolchain;\n' +
+              'circuit/proof correctness is the next separate obligation.</span>'
+          },
+          fixed: ['compiler', 'circuit'],
+          residual: 'Malicious witness: compromised local secrets and selective withholding. Compiler mistranslation: compiler and validator bugs until proof coverage is complete.',
+          failures: [],
+          decision: {
+            deferred: 'Direct source-to-ZKIR generation. ZKIR is a typed straight-line circuit IR with guarded impacts and no source-level financial concepts. It is ledger-coupled and evolving.',
+            chosen: 'Generate Compact. It preserves a reviewable backend artifact and reuses the supported compiler, source maps, runtime bindings and ledger operations.'
+          }
+        },
+        {
+          title: 'Proof of one transition',
+          claim: 'Four claims, fixed names, fixed order, none optional.',
+          rep: {
+            build:
+              'transition  swap   sequence n\n\n' +
+              '1  ContractInvariant    <span class="c">the agreement\'s own rules hold</span>\n' +
+              '2  IntentRefinement     <span class="c">what executed refines what the trader authorized</span>\n' +
+              '3  TransitionValidity   <span class="c">this state transition is legal</span>\n' +
+              '4  HistoryCompliance    <span class="c">the predecessor history this extends is itself compliant</span>\n\n' +
+              '<span class="c">A valid proof of a valid transition against an invalid history must not be accepted.\n' +
+              'The proof covers this one transition. It does not cover the agreement\'s lifetime.</span>',
+            verify:
+              'statement: (ContractInvariant ∧ IntentRefinement ∧ TransitionValidity ∧ HistoryCompliance)\n' +
+              '           for transition n over Core hash, predecessor commitment, public effects\n\n' +
+              '<span class="c">Quiescence and idempotence preserved in Core without one giant circuit\n' +
+              'reducing a whole lifetime. Grouped/split input equivalence reproved around\n' +
+              'atomic action sets. Continuation roots bound in ZK; availability specified\n' +
+              'separately.</span>'
+          },
+          fixed: [],
+          residual: 'Continuation loss: integrity does not create availability. A proof establishes what the circuit constrains; it cannot establish an oracle publisher\'s honesty or a custodian\'s solvency.',
+          failures: []
+        },
+        {
+          title: 'Midnight ledger and wallet',
+          claim: 'Sealed fields, mutable public state, and a signing summary a person can read.',
+          rep: {
+            build:
+              'sealed ledger fields   Core hash · version · parties/capabilities · token policy ·\n' +
+              '                       deadlines · resource limits\n' +
+              'mutable public state   phase · sequence number · accounting/obligation commitments ·\n' +
+              '                       bounded continuation roots\n\n' +
+              'signing summary (derived from the canonical signed meaning)\n' +
+              '  gross debit     10,000 A      <span class="c">fees have their own cap and still consume gross authority</span>\n' +
+              '  net receipt     19,743 B      <span class="c">goals compare net final-minus-initial credits</span>\n' +
+              '  recipients      recipient (must be on the permitted list)\n' +
+              '  validity        notBefore &lt;= now &lt; expiresAt · nonce · domain separator\n' +
+              '  refund          never restores allowance',
+            verify:
+              'sealed:   Core hash, version, parties/capabilities, token policy, deadlines, resource limits\n' +
+              'mutable:  phase, sequence number, accounting/obligation commitments, continuation roots\n\n' +
+              'client recomputes before signing:\n' +
+              '  Core hash · entry point · public effects · destinations · fees · versions · artifact hashes\n\n' +
+              'authority is affine: partial completion consumes it; residual cannot grow or reset an epoch\n' +
+              'asset identity = {domain, issuer, reference, kind}; no ticker aliases\n' +
+              'timeouts are permissionless exported transitions guarded by block-time predicates'
+          },
+          fixed: ['ledger', 'wallet'],
+          residual: 'Runtime substitution: a compromised wallet UI can still deceive the user. Authorization replay: wallet or key compromise. Liveness still depends on a submitter, proof generation, data availability and ledger acceptance.',
+          failures: ['Core hash mismatch', 'entry point mismatch', 'public effects mismatch', 'destination mismatch', 'fee mismatch', 'version mismatch', 'artifact hash mismatch']
+        }
+      ]
+    },
+    repay: {
+      chip: 'interest 10 USD · principal 100 USD → 100 USD',
+      sub: 'Pay 10 USD of interest. Principal stays 100 USD.',
+      inputLabel: 'payment',
+      ok: '10 USD', bad: '11 USD',
+      guard: 'payment <= pre.interest',
+      rejectAt: 2,
+      stages: null   // filled below by cloning the swap stages and swapping stage-specific text
+    }
+  };
+
+  // Repayment example: same seven stations, same ladder, example-specific representation.
+  (function buildRepay() {
+    var r = EXAMPLES.repay;
+    r.stages = EXAMPLES.swap.stages.map(function (s) {
+      return { title: s.title, claim: s.claim, rep: s.rep, fixed: s.fixed, residual: s.residual, failures: s.failures, decision: s.decision };
+    });
+    var src =
+      'profile "moriarty-successor-syntax/0";\n\n' +
+      '<span class="k">agreement</span> PartialPayment {\n' +
+      '  unit USD;\n' +
+      '  party borrower;\n' +
+      '  party lender;\n' +
+      '  state principal: <span class="k">Debt&lt;USD&gt;</span> = debt(100, USD);\n' +
+      '  state interest:  <span class="k">Debt&lt;USD&gt;</span> = debt(10, USD);\n' +
+      '  action payInterest(payment: Debt&lt;USD&gt;) {\n' +
+      '    requires payment &gt; debt(0, USD);\n' +
+      '    requires payment &lt;= pre.interest;\n' +
+      '    next.interest = pre.interest - payment;\n' +
+      '<span class="h">    ensures post.principal == pre.principal;</span>\n' +
+      '  }\n' +
+      '}\n\n' +
+      '<span class="c">payment {MIN}. Debt&lt;USD&gt; is a distinct type from a transferable Amount&lt;USD&gt;.</span>';
+    r.stages[0] = {
+      title: 'Source .mori', claim: 'The invariant is in the source: paying interest must not touch principal.',
+      rep: { build: src, verify: src + '\n<span class="c">requires / next / post: explicit pre- and post-state.</span>' },
+      fixed: [], residual: EXAMPLES.swap.stages[0].residual, failures: []
+    };
+    var arith =
+      'pre.interest      = 10 USD\n' +
+      'payment           = {MIN}\n' +
+      'next.interest     = pre.interest - payment                 <span class="c">{NEXT}</span>\n' +
+      'post.principal    = pre.principal = 100 USD                <span class="c">ensures holds by construction: no write targets principal</span>';
+    r.stages[1] = {
+      title: 'Typed elaboration and finite resource/lifetime certificate',
+      claim: 'Debt<USD> cannot be added to Amount<USD>. Allocation is explicit, not whichever subtraction ran first.',
+      rep: {
+        build: '<span class="c">payment : Debt&lt;USD&gt;    pre.interest : Debt&lt;USD&gt;    pre.principal : Debt&lt;USD&gt;</span>\n\n' + arith,
+        verify: 'Γ ⊢ payment : Debt&lt;USD&gt;\nΓ ⊢ pre.interest - payment : Debt&lt;USD&gt;\n\n' + arith +
+          '\n\n<span class="c">In the funded profile a payment names its transfer, its allocation and the\nobligation it discharges as separate identified objects (Transfer T1, Repay Alloc1 → Due100).\nAllocation policy: AccrualFirst, PrincipalFirst or ProRata; conversion rounding none/floor/ceil.</span>'
+      },
+      fixed: [], residual: EXAMPLES.swap.stages[1].residual, failures: []
+    };
+    var core =
+      'requires  payment &gt; debt(0, USD)        <span class="c">holds</span>\n' +
+      'requires  payment &lt;= pre.interest       <span class="c">{VERDICT}</span>\n' +
+      'write     interest   10 USD → {NEXTV}\n' +
+      'ensures   post.principal == pre.principal   <span class="c">100 USD == 100 USD</span>\n\n' +
+      '<span class="c">The bounded K definition executes Transfer-then-Repay with AccrualFirst /\n' +
+      'PrincipalFirst / ProRata allocation and rejects failure modes by code and\n' +
+      'index: a positive nominal payment converting to zero settlement rejects as DUST;\n' +
+      'converted settlement, not nominal quantity, is checked against the preceding\n' +
+      'transfer\'s funding. Repayment carries 28 guards across its stages.</span>';
+    r.stages[2] = {
+      title: 'Canonical Moriarty Core', claim: EXAMPLES.swap.stages[2].claim,
+      rep: { build: core, verify: core },
+      fixed: ['semantic'], residual: EXAMPLES.swap.stages[2].residual,
+      failures: ['payment > debt(0, USD)', 'payment <= pre.interest', 'DUST', 'episode closure cannot discharge remaining notional']
+    };
+    var wallet =
+      'signing summary\n' +
+      '  gross debit     10 USD to lender          <span class="c">consumes gross authority</span>\n' +
+      '  obligation      interest 10 USD → 0 USD discharged\n' +
+      '  obligation      principal 100 USD retained  <span class="c">a valid proof does not make a stale predecessor live</span>\n' +
+      '  validity        notBefore &lt;= now &lt; expiresAt · nonce · domain separator';
+    r.stages[6] = {
+      title: EXAMPLES.swap.stages[6].title, claim: EXAMPLES.swap.stages[6].claim,
+      rep: { build: EXAMPLES.swap.stages[6].rep.build.split('signing summary')[0] + wallet, verify: EXAMPLES.swap.stages[6].rep.verify },
+      fixed: ['ledger', 'wallet'], residual: EXAMPLES.swap.stages[6].residual, failures: EXAMPLES.swap.stages[6].failures
+    };
+  })();
+
+  // ---------- state ----------
+  var state = { ex: 'swap', input: 'ok', mode: 'build', k: 0, running: false, timer: null };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var rail = $('rail'), chip = $('chip'), chipText = $('chipText'), doneLine = $('doneLine');
+
+  function ex() { return EXAMPLES[state.ex]; }
+  function rejected() { return state.input === 'bad'; }
+  function reachable(i) { return !rejected() || i <= ex().rejectAt; }
+  function terminal() { return rejected() ? ex().rejectAt : 6; }
+
+  // ---------- build rail ----------
+  var stationEls = [];
+  ex().stages.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.className = 'station'; b.type = 'button'; b.role = 'tab'; b.id = 'st-' + i;
+    b.setAttribute('role', 'tab');
+    b.innerHTML = '<span class="dot" aria-hidden="true"></span><span class="idx">' + (i + 1) + ' / 7</span><span class="name"></span>';
+    b.addEventListener('click', function () { stop(); select(i, true); });
+    b.addEventListener('keydown', onRailKey);
+    rail.appendChild(b); stationEls.push(b);
+  });
+
+  function onRailKey(e) {
+    var i = state.k, n = 7;
+    if (e.key === 'ArrowRight') { i = Math.min(n - 1, i + 1); }
+    else if (e.key === 'ArrowLeft') { i = Math.max(0, i - 1); }
+    else if (e.key === 'Home') { i = 0; }
+    else if (e.key === 'End') { i = n - 1; }
+    else if (e.key === 'Escape') { stop(); return; }
+    else return;
+    e.preventDefault(); stop(); select(i, true); stationEls[i].focus();
+  }
+
+  // ---------- render ----------
+  function esc(s) { return s; }
+  function fmtRep(text) {
+    var e = ex();
+    var minv = state.input === 'ok' ? e.ok : e.bad;
+    var verdict, nextv;
+    if (state.ex === 'swap') {
+      verdict = rejected() ? '<span class="r">19,744 &lt;= 19,743 fails: "minimum output not met"</span>' : '19,743 &lt;= 19,743 holds';
+      nextv = '';
+    } else {
+      verdict = rejected() ? '<span class="r">11 USD &lt;= 10 USD fails → rejected</span>' : '10 USD &lt;= 10 USD holds';
+      nextv = rejected() ? '<span class="r">not written</span>' : '0 USD';
+    }
+    return text.replace(/\{MIN\}/g, minv).replace(/\{VERDICT\}/g, verdict).replace(/\{NEXTV\}/g, nextv).replace(/\{NEXT\}/g, rejected() ? 'never evaluated: requires fails first' : '= 0 USD');
+  }
+
+  function render() {
+    var e = ex(), k = state.k, s = e.stages[k];
+    var t = terminal();
+    $('subnum').textContent = e.sub;
+    $('inputLegend').textContent = e.inputLabel;
+    $('inpOk').textContent = e.ok; $('inpBad').textContent = e.bad;
+
+    // rail
+    stationEls.forEach(function (b, i) {
+      b.querySelector('.name').textContent = e.stages[i].title;
+      b.setAttribute('aria-selected', i === k ? 'true' : 'false');
+      b.tabIndex = i === k ? 0 : -1;
+      b.classList.toggle('done', i < k && reachable(i));
+      b.classList.toggle('unreached', !reachable(i));
+      b.classList.toggle('rejectat', rejected() && i === e.rejectAt && k >= e.rejectAt);
+    });
+    var pos = Math.min(k, t);
+    chip.style.transform = 'translateX(' + (pos * 100) + '%)';
+    var rej = rejected() && k >= e.rejectAt;
+    chip.classList.toggle('rej', rej);
+    chipText.textContent = rej ? 'rejected at guard' : e.chip;
+    var ci = $('chipInline'); ci.textContent = chipText.textContent; ci.classList.toggle('rej', rej);
+    doneLine.style.width = (pos / 7 * 85.72) + '%';
+    if (window.innerWidth <= 680) {
+      stationEls[k].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
+    }
+
+    // stepper
+    $('stageTitle').innerHTML = 'Stage <b>' + (k + 1) + ' of 7</b>';
+    $('prev').disabled = k === 0;
+    $('next').disabled = k === 6;
+
+    // panel
+    $('panel').setAttribute('aria-labelledby', 'st-' + k);
+    var unreached = !reachable(k);
+    $('pTitle').textContent = s.title;
+    if (unreached) {
+      $('pClaim').textContent = 'Not reached.';
+      $('rep').innerHTML = '<span class="r">Rejected at stage ' + (e.rejectAt + 1) + ' by ' + (state.ex === 'swap' ? 'guard "minimum output not met"' : 'requires payment <= pre.interest') + '.</span>\n\n' +
+        'No proof is generated for a rejected transition and nothing is submitted.\n' +
+        'The guard is part of Core, so it is also part of what the generated Compact\n' +
+        'and circuit constrain. A client that skips simulation cannot prove it.\n\n' +
+        '<span class="c">Nothing was adjusted silently. The failure has a name.</span>';
+      $('decision').innerHTML = '';
+    } else {
+      $('pClaim').textContent = s.claim;
+      $('rep').innerHTML = fmtRep(s.rep[state.mode]);
+      $('decision').innerHTML = s.decision
+        ? '<div class="decision"><div><b>Deferred</b>' + s.decision.deferred + '</div><div class="chosen"><b>Chosen instead</b>' + s.decision.chosen + '</div></div>'
+        : '';
+    }
+
+    // ladder
+    var fixedBefore = {};
+    for (var i = 0; i < k; i++) { if (reachable(i)) e.stages[i].fixed.forEach(function (l) { fixedBefore[l] = true; }); }
+    var fixedHere = {}; if (!unreached) s.fixed.forEach(function (l) { fixedHere[l] = true; });
+    var ladder = $('ladder'); ladder.innerHTML = '';
+    var owedCount = 0, hereNames = [];
+    LAYERS.forEach(function (L) {
+      var li = document.createElement('li'); li.tabIndex = 0;
+      var st, word;
+      if (fixedHere[L.id]) { st = 'here'; word = 'fixed here'; hereNames.push(L.name); }
+      else if (fixedBefore[L.id]) { st = 'earlier'; word = 'fixed earlier'; }
+      else if (rejected() && k >= e.rejectAt) { st = 'blocked'; word = 'not reached'; }
+      else { st = 'owed'; word = 'owed'; owedCount++; }
+      li.className = st;
+      li.title = L.name + ': ' + word;
+      li.innerHTML = '<span class="m" aria-hidden="true"></span><span>' + L.name + '</span><span class="st">' + word + '</span>';
+      ladder.appendChild(li);
+    });
+    $('residual').innerHTML = unreached ? '' : '<b>Residual.</b> ' + s.residual;
+
+    // failures
+    var fl = $('failList'); fl.innerHTML = '';
+    var fails = unreached ? [] : s.failures;
+    $('failures').style.display = fails.length ? '' : 'none';
+    fails.forEach(function (f) {
+      var li = document.createElement('li'); li.textContent = '"' + f + '"';
+      if (rejected() && k === e.rejectAt && f === e.guard) li.classList.add('fired');
+      fl.appendChild(li);
+    });
+
+    // lifetime strip
+    renderStrip();
+
+    // live
+    var msg;
+    if (unreached) msg = 'Stage ' + (k + 1) + ' of 7, ' + s.title + '. Not reached: rejected at stage ' + (e.rejectAt + 1) + '.';
+    else if (rejected() && k === e.rejectAt) msg = 'Stage ' + (k + 1) + ' of 7, ' + s.title + '. Rejected by ' + e.guard + '. Stages ' + (k + 2) + ' to 7 not reached.';
+    else msg = 'Stage ' + (k + 1) + ' of 7, ' + s.title + '. ' + (hereNames.length ? 'Fixed here: ' + hereNames.join(', ') + '. ' : '') + 'Still owed: ' + owedCount + ' of 6 layers.';
+    $('live').textContent = msg;
+  }
+
+  function renderStrip() {
+    var strip = $('strip'); strip.innerHTML = '';
+    var isSwap = state.ex === 'swap';
+    var labels = isSwap
+      ? ['transition', 'swap (this trace)', 'further bounded transitions', 'closure']
+      : ['payInterest (this trace)', 'further bounded transitions', 'closure'];
+    labels.forEach(function (lab, i) {
+      var d = document.createElement('div'); d.className = 'tx'; d.tabIndex = 0;
+      var cur = lab.indexOf('this trace') >= 0;
+      var more = lab.indexOf('further') === 0;
+      if (cur) d.classList.add('current');
+      var seq = more ? '\u2026' : (lab === 'closure' ? 'n' : String(i + 1));
+      d.setAttribute('aria-label', (more ? 'Further bounded transitions, each with its own proof.' : 'Transition ' + seq + ', ' + lab + '. Four claims. Predecessor bound by HistoryCompliance.'));
+      d.innerHTML = '<span class="seq">' + seq + ' \u00b7 ' + lab + '</span>' +
+        (more ? '<span class="claims">each with its own four claims,<br>up to the declared lifetime</span>'
+              : '<span class="claims">ContractInvariant<br>IntentRefinement<br>TransitionValidity<br>HistoryCompliance</span>');
+      if (cur && rejected()) d.innerHTML += '<span class="claims" style="color:var(--reject)">rejected: no proof, no submission</span>';
+      strip.appendChild(d);
+    });
+    $('lifeCap').textContent = isSwap
+      ? 'lifetime caps the number of transitions and horizon caps absolute time (horizon 2000000000 here). guard remaining > uint(1): the final allowance is reserved for closure.'
+      : 'lifetime and horizon are declared on the agreement as explicit bounds; each payInterest is its own bounded transition.';
+  }
+
+  function select(i, user) {
+    state.k = Math.max(0, Math.min(6, i));
+    render();
+  }
+
+  // ---------- run ----------
+  function stop() {
+    if (state.timer) { clearInterval(state.timer); state.timer = null; }
+    state.running = false; $('run').setAttribute('aria-pressed', 'false'); $('run').textContent = 'Run the trace';
+  }
+  function run() {
+    if (state.running) { stop(); return; }
+    var t = terminal();
+    if (reduce) { select(t); return; }
+    state.running = true; $('run').setAttribute('aria-pressed', 'true'); $('run').textContent = 'Stop';
+    if (state.k >= t) select(0);
+    state.timer = setInterval(function () {
+      if (state.k >= t) { stop(); return; }
+      select(state.k + 1);
+    }, 1100);
+  }
+  $('run').addEventListener('click', run);
+  $('prev').addEventListener('click', function () { stop(); select(state.k - 1); });
+  $('next').addEventListener('click', function () { stop(); select(state.k + 1); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') stop(); });
+
+  // ---------- controls ----------
+  document.querySelectorAll('input[name="ex"]').forEach(function (r) {
+    r.addEventListener('change', function () { stop(); state.ex = r.value; render(); });
+  });
+  document.querySelectorAll('input[name="inp"]').forEach(function (r) {
+    r.addEventListener('change', function () { stop(); state.input = r.value; render(); });
+  });
+  document.querySelectorAll('input[name="mode"]').forEach(function (r) {
+    r.addEventListener('change', function () { state.mode = r.value; render(); });
+  });
+  $('theme').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+  window.addEventListener('resize', function () { render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>

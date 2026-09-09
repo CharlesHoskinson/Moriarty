@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moriarty — the category tabs</title>
+<style>
+/* ------------------------------------------------------------------
+   Tokens. Light is the base; dark redefines the same names.
+   ------------------------------------------------------------------ */
+:root{
+  color-scheme: light;
+  --paper:#f4f1ea;
+  --card:#faf8f3;
+  --ink:#1d1b17;
+  --ink-2:#605b51;
+  --ink-3:#8b857a;
+  --rule:#d9d3c5;
+  --rule-2:#e9e4d8;
+  --mark:rgba(29,27,23,.16);
+  --code-bg:#ebe7dc;
+  --tint-s:38%; --tint-l:91%;
+  --hue-s:42%;  --hue-l:38%;
+  --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --hF1:34; --hF2:10; --hF3:268; --hF4:204; --hF5:158; --hF6:52; --hP:322; --hX:0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#16171a; --card:#1d1f23; --ink:#e8e4da; --ink-2:#aaa398; --ink-3:#7d776c;
+    --rule:#33363c; --rule-2:#26292e; --mark:rgba(232,228,218,.18); --code-bg:#111214;
+    --tint-s:22%; --tint-l:20%; --hue-s:40%; --hue-l:64%;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#16171a; --card:#1d1f23; --ink:#e8e4da; --ink-2:#aaa398; --ink-3:#7d776c;
+  --rule:#33363c; --rule-2:#26292e; --mark:rgba(232,228,218,.18); --code-bg:#111214;
+  --tint-s:22%; --tint-l:20%; --hue-s:40%; --hue-l:64%;
+}
+
+/* ------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------ */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none !important; animation:none !important} }
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:17px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit}
+button{font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+code,pre,.mono{font-family:var(--mono)}
+pre{
+  background:var(--code-bg); border:1px solid var(--rule); border-radius:3px;
+  padding:.9rem 1rem; font-size:12.5px; line-height:1.55; overflow-x:auto; margin:.8rem 0 1.1rem;
+}
+.idl{ /* identifier label style — never the code face */
+  font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.08em; font-weight:600;
+}
+.wrap{max-width:76rem; margin:0 auto; padding-inline:clamp(16px,3vw,40px)}
+h1,h2,h3{font-weight:500; margin:0; letter-spacing:-.005em}
+p{margin:0 0 .9rem}
+
+/* ------------------------------------------------------------------
+   Header + section index + spine
+   ------------------------------------------------------------------ */
+.site{
+  position:sticky; top:0; z-index:30; height:56px; background:var(--paper);
+  border-bottom:1px solid var(--rule); display:flex; align-items:center;
+}
+.site .wrap{display:flex; align-items:center; justify-content:space-between; width:100%; gap:1rem}
+.site .brand{font-size:19px; letter-spacing:.01em}
+.site .index{display:flex; gap:.55rem; font-family:var(--mono); font-size:12px; color:var(--ink-3)}
+.site .index span{width:1.3em; text-align:center; border-bottom:2px solid transparent}
+.site .index span.cur{color:var(--ink); border-color:var(--ink)}
+.site .index span.done{color:var(--ink); background:var(--mark)}
+.site .ctl{display:flex; gap:.6rem; align-items:center}
+.seg{display:inline-flex; border:1px solid var(--rule); border-radius:3px; overflow:hidden; font-family:var(--sans); font-size:12.5px}
+.seg button{padding:.3rem .7rem; color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
+.tbtn{font-family:var(--sans); font-size:12.5px; color:var(--ink-2); border:1px solid var(--rule); border-radius:3px; padding:.3rem .55rem}
+@media (max-width:560px){ .site .index{display:none} }
+
+.spine{
+  position:sticky; top:56px; z-index:25; background:var(--paper); border-bottom:1px solid var(--rule);
+  display:none; padding:.35rem 0;
+}
+.spine.on{display:block}
+.spine .wrap{display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+.spine .segs{display:flex; gap:.6rem; align-items:flex-end; flex:1; min-width:0}
+.spine .sg{display:flex; flex-direction:column; gap:3px; opacity:.5}
+.spine .sg.stand{opacity:1}
+.spine .sg .n{font-family:var(--sans); font-variant-caps:all-small-caps; font-size:11px; letter-spacing:.06em; color:var(--ink-2); line-height:1}
+.spine .sg.stand .n{color:var(--ink)}
+.spine .dots{display:flex; gap:2px}
+.spine .dot{width:11px; height:11px; border:1px solid var(--ink-2); border-radius:1px; display:block}
+.spine .dot.read{background:var(--mark); border-color:var(--ink)}
+.spine .dot.cursor{outline:2px solid var(--ink); outline-offset:1px}
+.spine .dot.shared{border-style:dashed}
+.spine .cnt{font-family:var(--mono); font-size:11.5px; color:var(--ink-2); white-space:nowrap}
+@media (max-width:560px){ .spine .sg .n{display:none} .spine .segs{gap:4px} }
+
+/* ------------------------------------------------------------------
+   Section band
+   ------------------------------------------------------------------ */
+.band{padding-block:3.2rem 1.6rem}
+.eyebrow{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.12em; font-size:13px; color:var(--ink-2); margin-bottom:.9rem}
+.band h1{font-size:clamp(28px,4.4vw,46px); line-height:1.08; max-width:22ch; margin-bottom:1rem}
+.band .sub{font-size:17px; color:var(--ink-2); max-width:62ch}
+
+/* ------------------------------------------------------------------
+   The Register
+   ------------------------------------------------------------------ */
+.regwrap{padding-block:.5rem 1.4rem}
+.reg{
+  --gc: 8.6rem minmax(7rem,3fr) minmax(7rem,6fr) minmax(7rem,2fr) minmax(7rem,2fr) minmax(7rem,1fr) minmax(7rem,3fr) minmax(7rem,2fr) minmax(7rem,4fr);
+  display:grid; grid-template-columns:var(--gc);
+  border-top:2px solid var(--ink); border-bottom:1px solid var(--ink);
+  background:var(--card); position:relative;
+}
+.reg .col{display:contents}
+.reg .corner,.reg .fhead{grid-column:1; font-family:var(--sans); font-size:12px; color:var(--ink-2); padding:.45rem .6rem; border-bottom:1px solid var(--rule-2); border-right:1px solid var(--rule)}
+.reg .corner{grid-row:1 / span 2; display:flex; flex-direction:column; justify-content:flex-end; font-variant-caps:all-small-caps; letter-spacing:.08em; border-bottom:1px solid var(--rule)}
+.reg .fhead{display:flex; align-items:center; text-align:left; width:100%; transition:background .16s}
+.reg .fhead .k{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); width:1.4em}
+.reg .fhead:hover{background:var(--rule-2)}
+.reg .fhead.read{box-shadow:inset 3px 0 0 var(--ink)}
+.reg .fhead.lift{color:var(--ink); font-weight:600}
+
+.reg .colhead{
+  grid-row:1; padding:.55rem .55rem .35rem; border-bottom:1px solid var(--rule-2); border-right:1px solid var(--rule-2);
+  display:flex; flex-direction:column; gap:.15rem; text-align:left; width:100%; transition:background .16s, opacity .16s; min-height:4.4rem;
+}
+.reg .colhead .id{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.1em; font-weight:700; font-size:16px; line-height:1}
+.reg .colhead .lab{font-family:var(--sans); font-size:11px; line-height:1.25; color:var(--ink-2)}
+.reg .colhead .n{font-family:var(--mono); font-size:11px; color:var(--ink-3); margin-top:auto}
+.reg .colhead .n b{color:var(--ink); font-weight:600}
+.reg .rail{grid-row:2; padding:.45rem .5rem .55rem; border-bottom:1px solid var(--rule); border-right:1px solid var(--rule-2); display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; transition:background .16s}
+.chip{
+  font-family:var(--mono); font-size:11px; line-height:1; padding:4px 5px; border:1px solid var(--ink-2); border-radius:2px;
+  color:var(--ink); background:transparent; transition:background .12s, opacity .16s; position:relative;
+}
+.chip .act{display:none}
+.chip.read{background:var(--mark); border-color:var(--ink)}
+.chip.shared{border-style:dashed}
+.chip.cursor{outline:2px solid var(--ink); outline-offset:1px}
+.chip.pair{box-shadow:0 0 0 2px var(--paper), 0 0 0 3px var(--ink-2)}
+.reg .fcell{
+  padding:.38rem .5rem; font-family:var(--sans); font-size:11.5px; line-height:1.3; color:var(--ink-2); overflow-wrap:anywhere;
+  border-bottom:1px solid var(--rule-2); border-right:1px solid var(--rule-2); text-align:left; width:100%;
+  transition:background .16s, opacity .16s, color .16s;
+}
+.reg .fcell::before{display:none}
+.reg .fcell .da{font-family:var(--mono); font-size:10.5px; color:var(--ink); letter-spacing:.02em}
+.reg .fcell.na{font-style:italic; color:var(--ink-3)}
+.reg .fcell.read{box-shadow:inset 2px 0 0 var(--mark)}
+.reg .fcell.cursor{outline:2px solid var(--ink); outline-offset:-2px}
+.reg .fcell:hover{color:var(--ink)}
+.reg .foot{
+  grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:.4rem 1.4rem; align-items:baseline; justify-content:space-between;
+  padding:.55rem .6rem; border-top:1px solid var(--ink); font-family:var(--mono); font-size:12px; color:var(--ink-2);
+}
+.reg .foot .c b{color:var(--ink); font-weight:600}
+.reg .foot .legend{font-family:var(--serif); font-style:italic; font-size:13px; color:var(--ink-3)}
+.reg .foot .clear{font-family:var(--sans); font-size:11.5px; text-decoration:underline; color:var(--ink-2)}
+.reg .lens-line{position:absolute; left:8.6rem; right:0; height:1px; background:var(--ink); transform-origin:left; transform:scaleX(0); transition:transform .24s ease-out; pointer-events:none; display:none}
+.reg .lens-line.on{display:block; transform:scaleX(1)}
+.reg svg.arc{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible}
+.reg svg.arc path{fill:none; stroke:var(--ink-2); stroke-width:1; stroke-dasharray:3 3; opacity:0; transition:opacity .12s}
+.reg svg.arc path.on{opacity:1}
+
+/* standing / receding */
+.reg[data-lens="family"] .col:not(.stand) :is(.colhead,.chip,.fcell){opacity:.58}
+.reg[data-lens="family"] .col.stand :is(.colhead,.rail){background:hsl(var(--h) var(--tint-s) var(--tint-l))}
+.reg[data-lens="family"] .col.stand .colhead{box-shadow:inset 0 3px 0 hsl(var(--h) var(--hue-s) var(--hue-l))}
+.reg[data-lens="facet"] :is(.colhead,.chip){opacity:.45}
+.reg[data-lens="facet"] .fcell{opacity:.4}
+.reg[data-lens="facet"] .fcell.lift{opacity:1; color:var(--ink); background:var(--rule-2)}
+.reg[data-lens="facet"] .fhead:not(.lift){opacity:.5}
+
+.facetpick{display:none}
+
+/* ------------------------------------------------------------------
+   Tablist + panel
+   ------------------------------------------------------------------ */
+.tabs{display:flex; flex-wrap:wrap; gap:0 .2rem; border-bottom:1px solid var(--rule); margin-top:1.2rem}
+.tab{
+  font-family:var(--sans); font-size:12.5px; color:var(--ink-2); padding:.55rem .7rem .5rem; border-bottom:2px solid transparent;
+  display:flex; gap:.45rem; align-items:baseline; margin-bottom:-1px;
+}
+.tab .id{font-variant-caps:all-small-caps; letter-spacing:.1em; font-weight:700; font-size:14px; color:var(--ink)}
+.tab .n{font-family:var(--mono); font-size:11px; color:var(--ink-3)}
+.tab[aria-selected="true"]{color:var(--ink); border-color:hsl(var(--h) var(--hue-s) var(--hue-l))}
+.tab:hover{color:var(--ink)}
+
+.panel{padding-block:1.8rem 4rem}
+.panel .body{border-left:3px solid hsl(var(--h) var(--hue-s) var(--hue-l)); padding-left:clamp(14px,2.5vw,32px); max-width:66rem}
+.panel .body.lens{border-left-color:var(--ink)}
+.panel h2{font-size:clamp(24px,3vw,34px); line-height:1.15; margin-bottom:.35rem}
+.panel .kick{font-family:var(--sans); font-size:13px; color:var(--ink-2); margin-bottom:1.6rem}
+.blk{padding-block:1.2rem 1rem; border-top:1px solid var(--rule)}
+.blk h3{font-size:14px; font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.1em; font-weight:600; color:var(--ink-2); margin-bottom:.8rem; display:flex; gap:.6rem; align-items:baseline}
+.blk h3 .bn{font-family:var(--mono); font-variant-caps:normal; letter-spacing:0; color:var(--ink-3); font-weight:400}
+.blk p{max-width:64ch}
+.aside{border-left:2px solid var(--rule); padding-left:1rem; color:var(--ink-2); margin:.6rem 0 .4rem; max-width:64ch}
+.aside b{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.08em; font-weight:600; color:var(--ink); margin-right:.4rem}
+.fp{display:grid; grid-template-columns:11rem 1fr; gap:0; max-width:64rem; border-top:1px solid var(--rule-2)}
+.fp > div{padding:.45rem .5rem .45rem 0; border-bottom:1px solid var(--rule-2); font-size:15px}
+.fp .fn{font-family:var(--sans); font-size:12.5px; color:var(--ink-2); display:flex; gap:.5rem; align-items:baseline}
+.fp .fn .k{font-family:var(--mono); font-size:10.5px; color:var(--ink-3)}
+.fp .row.hl > div{background:var(--rule-2)}
+.fp .row{display:contents}
+.fp .row.hl .fn{color:var(--ink); font-weight:600}
+.fp .row.hl .fn::before{content:""}
+@media (max-width:560px){ .fp{grid-template-columns:1fr} .fp .fn{padding-bottom:0; border-bottom:0} }
+
+.entries{display:flex; flex-direction:column}
+.entry{padding:1rem 0 1rem; border-top:1px solid var(--rule-2); scroll-margin-top:120px; position:relative}
+.entry:first-child{border-top:0}
+.entry.cursor{box-shadow:inset 3px 0 0 var(--ink); padding-left:1rem}
+.entry .eh{display:flex; gap:.7rem; align-items:baseline; flex-wrap:wrap; margin-bottom:.45rem}
+.entry .eh .id{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.1em; font-weight:700; font-size:15px}
+.entry .eh .act{font-size:19px}
+.entry .eh .flag{font-family:var(--sans); font-size:11px; color:var(--ink-2); border:1px solid var(--rule); border-radius:2px; padding:1px 6px; font-variant-caps:all-small-caps; letter-spacing:.06em}
+.entry .eh .readmark{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); margin-left:auto}
+.entry .eh .readmark.on{color:var(--ink)}
+.entry .lab{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.08em; font-size:12.5px; color:var(--ink-2); display:block; margin-bottom:.1rem}
+.entry .test{font-size:18px; line-height:1.4; margin-bottom:.55rem; max-width:60ch}
+.entry .req{font-size:15px; color:var(--ink-2); margin-bottom:.55rem; max-width:60ch}
+.entry .note{font-size:15px; color:var(--ink-2); font-style:italic; max-width:60ch; margin:0}
+.entry .xlink{font-family:var(--sans); font-size:12.5px; text-decoration:underline; color:var(--ink-2)}
+.srcs{padding-left:1.1rem; margin:0; max-width:64ch; color:var(--ink-2); font-size:15px}
+.srcs li{margin-bottom:.25rem}
+.num{font-family:var(--mono); font-size:.92em}
+
+/* facet lens panel */
+.cmp{display:flex; flex-direction:column; border-top:1px solid var(--rule)}
+.cmp .r{display:grid; grid-template-columns:12rem 1fr auto; gap:1rem; padding:.7rem 0; border-bottom:1px solid var(--rule-2); align-items:baseline}
+.cmp .r .id{font-family:var(--sans); font-variant-caps:all-small-caps; letter-spacing:.1em; font-weight:700; font-size:15px; display:flex; flex-direction:column; gap:.1rem}
+.cmp .r .id small{font-variant-caps:normal; letter-spacing:0; font-weight:400; font-size:11.5px; color:var(--ink-2)}
+.cmp .r .v{font-size:16px}
+.cmp .r .go{font-family:var(--sans); font-size:12px; text-decoration:underline; color:var(--ink-2); white-space:nowrap}
+@media (max-width:640px){ .cmp .r{grid-template-columns:1fr; gap:.3rem} }
+
+/* ------------------------------------------------------------------
+   Narrow: the Register transposes to stacked family blocks
+   ------------------------------------------------------------------ */
+@media (max-width:760px){
+  .reg{display:block; border-top-width:2px}
+  .reg .corner,.reg .fhead,.reg .lens-line,.reg svg.arc{display:none !important}
+  .reg .col{display:block; border-bottom:1px solid var(--rule)}
+  .reg .colhead{min-height:0; flex-direction:row; align-items:baseline; gap:.7rem; padding:.6rem .6rem .3rem; border-right:0}
+  .reg .colhead .n{margin-top:0; margin-left:auto}
+  .reg .rail{border-right:0; border-bottom:0; padding:.3rem .6rem .5rem}
+  .reg .fcell{border-right:0; padding:.3rem .6rem; display:flex; gap:.6rem}
+  .reg .fcell::before{content:attr(data-fname); display:inline-block; min-width:7.6rem; flex:0 0 7.6rem; font-variant-caps:all-small-caps; letter-spacing:.06em; color:var(--ink-3)}
+  .reg .fcell.na{font-style:normal}
+  .reg .fcell.na .t{font-style:italic}
+  .reg[data-lens="family"] .col.stand{background:hsl(var(--h) var(--tint-s) var(--tint-l))}
+  .reg[data-lens="family"] .col.stand :is(.colhead,.rail){background:transparent}
+  .reg[data-lens="facet"] .rail{display:none}
+  .reg[data-lens="facet"] .fcell:not(.lift){display:none}
+  .reg[data-lens="facet"] .fcell.lift{opacity:1}
+  .reg[data-lens="facet"] .colhead{opacity:1}
+  .facetpick{display:flex; flex-wrap:wrap; gap:4px; padding:.5rem 0 .6rem}
+  .facetpick button{font-family:var(--sans); font-size:11.5px; border:1px solid var(--rule); border-radius:2px; padding:3px 7px; color:var(--ink-2)}
+  .facetpick button[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+  .facetpick button.read{box-shadow:inset 0 -2px 0 var(--mark)}
+}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="brand">Moriarty</div>
+    <div class="index" aria-label="Section index"><span>1</span><span>2</span><span class="cur">3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Reader mode">
+        <button id="modeBuild" aria-pressed="true">Build</button>
+        <button id="modeVerify" aria-pressed="false">Verify</button>
+      </div>
+      <button class="tbtn" id="themeBtn" aria-label="Theme">Theme: auto</button>
+    </div>
+  </div>
+</header>
+
+<div class="spine" id="spine" aria-hidden="true">
+  <div class="wrap">
+    <div class="segs" id="spineSegs"></div>
+    <div class="cnt" id="spineCnt"></div>
+  </div>
+</div>
+
+<main>
+  <section class="band wrap" id="s3">
+    <div class="eyebrow">Section 3 · The category tabs</div>
+    <h1>Eight tabs. Twenty-four action targets. Nothing elided.</h1>
+    <p class="sub" id="subline"></p>
+  </section>
+
+  <section class="regwrap wrap" aria-labelledby="regTitle">
+    <h2 id="regTitle" class="eyebrow" style="margin-bottom:.5rem">The Register — seven families, the cross-cutting tab, eight facets, twenty-four targets</h2>
+    <div class="facetpick" id="facetpick" role="group" aria-label="Facet lens"></div>
+    <div class="reg" id="reg" role="grid" aria-label="The Register: one row per tab; each row lists the tab's action targets and its placement on the eight mandatory facets" data-lens="family"></div>
+  </section>
+
+  <section class="wrap">
+    <div class="tabs" id="tabs" role="tablist" aria-label="DeFi category tabs"></div>
+  </section>
+
+  <section class="panel wrap" id="panel"></section>
+</main>
+
+<script>
+/* ==================================================================
+   Data. Everything below traces to CONTENT-SPEC.md and CATEGORY-TABS.md.
+   In the application these are the typed data modules under site/src/data/.
+   ================================================================== */
+const FACETS = [
+  "Execution","Settlement","Custody","Legal dependence",
+  "Collateral and solvency","Oracles","Authorization and mandate","Price discovery"
+];
+
+const TARGETS = {
+  DA01:{fam:["F1"],act:"swap exact input / exact output",req:"asset-indexed exchange; fee and slippage accounting",test:"rounding; reserve safety; net minimum"},
+  DA02:{fam:["F1"],act:"provide / remove liquidity",req:"share mint/burn; reserve contributions",test:"proportional entitlement; donation and zero-supply boundaries",note:"The first depositor and the direct-transfer donation are where share maths breaks."},
+  DA03:{fam:["F1"],act:"open / adjust / close liquidity position",req:"bounded position identity and range",test:"fee allocation and finite tick/range traversal"},
+  DA04:{fam:["F2"],act:"supply / redeem lending claims",req:"claim shares and liquidity-constrained withdrawal",test:"insufficient pool liquidity rejects without erasing claim",note:"Failure to withdraw is not loss of entitlement."},
+  DA05:{fam:["F2"],act:"post / release collateral",req:"encumbrance and debt-dependent release",test:"release cannot violate collateral rule"},
+  DA06:{fam:["F2"],act:"borrow / accrue / repay",req:"nominal debt distinct from transfers; rate/time arithmetic",test:"partial repayment preserves principal and interest allocation",flag:"flagship case"},
+  DA07:{fam:["F2"],act:"liquidate / recognize default",req:"authorized seizure; loss and residual debt allocation",test:"partial liquidation and close factor; maturity before forfeiture"},
+  DA08:{fam:["F2"],act:"flash borrow / repay atomically",req:"atomic multi-leg settlement with fee",test:"every loan repaid within the same atomic transaction",note:"Flash borrowing is a capability with legitimate uses, not a vulnerability."},
+  DA09:{fam:["F2"],act:"refinance / novate / capitalize",req:"workflow over old debt, new debt, collateral and signed liability authority",test:"reject refinance without old-debt discharge; capitalization changes liability"},
+  DA10:{fam:["F2"],act:"issue / burn debt-backed stablecoin",req:"issuance authority plus debt and collateral",test:"burn amount and released collateral obey the specified debt rule"},
+  DA11:{fam:["F3"],act:"open / margin / fund / close derivative",req:"position notional, margin and funding obligations",test:"funding signs; insolvency; precise settlement convention",note:"A funding payment whose direction inverts is a total loss of meaning, and sign errors are invisible in balance-based models."},
+  DA12:{fam:["F3","P"],act:"write / exercise / expire contingent claim",req:"choice authority and exercise/payment dates",test:"expiry does not erase an already exercised payment duty"},
+  DA13:{fam:["P"],act:"split / merge / resolve event claims",req:"outcome-indexed claims; resolution evidence",test:"no duplicate winning claim; invalid resolution rejects"},
+  DA14:{fam:["F4"],act:"stake / account rewards / slash",req:"share-rate or rebase accounting; loss allocation",test:"the same nominal token balance can have changing entitlement",note:"Rebasing (updating quantities) and a fixed share balance with a changing conversion rate are different mechanisms with different integration consequences."},
+  DA15:{fam:["F4"],act:"request unstake / claim exit",req:"pending exit identity; custody; delayed completion",test:"an exit request is not immediate token delivery",note:"One of the targets with an identified primary-lifecycle source gap."},
+  DA16:{fam:["F5"],act:"issue / redeem external claim",req:"attested claim; custody and legal assumptions",test:"missing external settlement evidence cannot discharge the duty",note:"An on-chain burn is not proof that anyone off-chain paid."},
+  DA17:{fam:["F6"],act:"deposit / mint / withdraw / redeem vault shares",req:"asset/share conversions with method-specific rounding",test:"fees, rounding direction, initial donation and zero shares",note:"Four conversion methods, and the correct rounding direction differs between them."},
+  DA18:{fam:["F6"],act:"request / fulfill / claim asynchronous redemption",req:"Pending → Claimable → Claimed; residual request amount",test:"partial claim and changed exchange rate; double claim rejects"},
+  DA19:{fam:["F6"],act:"allocate / harvest / reinvest / unwind / rebalance",req:"bounded workflow of trades, debt, shares and fees",test:"losses and debt persist through unwind; liquidity shortage"},
+  DA20:{fam:["X"],act:"observe price / time / external event",req:"typed observations with provenance, freshness and domain",test:"stale or unauthorized evidence rejects"},
+  DA21:{fam:["X"],act:"authorize exact plan / refine outcome intent",req:"gross debit; net receipt; recipients; calls; new liabilities",test:"refund cannot restore gross capacity; fees count against the net goal"},
+  DA22:{fam:["X"],act:"change parameters / pause / migrate",req:"bounded administrative action under fixed claim policy",test:"cannot downgrade claims or reset work; affects existing positions"},
+  DA23:{fam:["X"],act:"send / receive / refund pending message",req:"bounded pending commitments and finality evidence",test:"delayed or duplicate delivery; explicit refund duty"},
+  DA24:{fam:["X"],act:"sequence / parallel / interleave / synchronize / message",req:"operator-specific authority, duties, conflicts and fan-in",test:"split partitions work and claims; join cannot duplicate resource"}
+};
+
+/* Facet placements: [short cell text, full sentence]. Order follows FACETS. */
+const FAMILIES = [
+ {id:"F1", sym:"F1", label:"Exchange and price discovery", rail:["DA01","DA02","DA03"], order:["DA01","DA02","DA03"],
+  facets:[
+   ["atomic on-chain, or solver-mediated","Atomic on-chain, or intent/solver-mediated."],
+   ["same-domain, immediate","Same-domain, immediate."],
+   ["pool-held during the swap","Pool-held during the swap."],
+   ["none","None."],
+   ["reserves are the backing","Reserves are the backing."],
+   ["usually none — the pool is the price","Usually none for CFMMs — the pool is the price; oracle-dependent for some venues."],
+   ["per-transaction, slippage bounds","Per-transaction, with slippage bounds."],
+   ["produced here","This is the family that produces it."]],
+  fn:"Convert one asset into another and, in doing so, produce a price. Includes constant-function market makers, order books, concentrated-liquidity positions, aggregators and routers.",
+  boundary:"The exchange function is separate from the mechanism that implements it. Uniswap V4's singleton accounting and hooks change the mechanism and the callback assumptions; they do not change the exchange function. Routing and aggregation are execution-facet properties layered on top of F1, not a distinct family.",
+  wrong:"Integer division decides who keeps the remainder. A swap that rounds the wrong way, or a share calculation whose zero-supply case is unguarded, transfers value silently and legally. Reserve safety is not implied by the constant-product identity: an output that empties a reserve satisfies the formula and destroys the pool.",
+  does:[
+   {p:"Rounding is a declared artifact, not a side effect of division. The policy block names the unit, the derivation, the rounding direction, the disposition of the remainder, the comparison basis and the proof obligation:"},
+   {code:`policy swap_output targets write(swap, reserve_b), write(swap, trader_b), effect(swap, 1, amount) {
+  unit AssetB_quantum;
+  derivation "floor((amount_in*997)*reserve_b/(reserve_a*1000+amount_in*997))";
+  rounding floor(swap, output_calculated);
+  remainder "unpaid output remains in reserve_b";
+  comparison "exact integer output and reserves";
+  proof "constant_product_exact_input_floor_v1";
+}`},
+   {p:"Reserve safety and the net minimum are named guards, and a failure is a named rejection rather than a silent adjustment:"},
+   {code:`guard arg.min_out <= output_calculated,      "minimum output not met";
+guard output_calculated < state.reserve_b,   "output would empty reserve";`},
+   {p:"Concrete instance in the repository: reserves <span class=num>1,000,000</span> A and <span class=num>2,000,000</span> B, a <span class=num>997/1000</span> fee, a <span class=num>10,000</span> A input, output exactly <b><span class=num>19,743</span> B</b>. Requesting <span class=num>19,744</span> produces a named slippage failure."}],
+  sources:["AMM literature §§2.3.2, 3.1, 3.3, 4","Uniswap V4 core for singleton accounting and hook-modified mechanism assumptions"]},
+
+ {id:"F2", sym:"F2", label:"Credit and collateralized debt", rail:["DA04","DA05","DA06","DA07","DA08","DA09","DA10"], order:["DA04","DA05","DA06","DA07","DA08","DA09","DA10"],
+  facets:[
+   ["on-chain, often multi-step","On-chain, often multi-step."],
+   ["same-domain; discharge and transfer are separate events","Same-domain, but discharge and transfer are separate events."],
+   ["collateral encumbered, not surrendered","Collateral is encumbered, not surrendered."],
+   ["none on-chain; material for RWA collateral","None on-chain; material for RWA-collateralized variants."],
+   ["the defining facet","The defining facet."],
+   ["required — liquidation depends on price","Required — liquidation depends on external price."],
+   ["borrower and liquidator: different mandates","Borrower authority to draw, liquidator authority to seize, and they are different mandates."],
+   ["consumed, not produced","Consumed, not produced."]],
+  fn:"Create an obligation to repay, usually secured, and manage it through accrual, partial performance, default and discharge. The largest tab: seven action targets. Lending markets, CDPs, debt-backed stablecoins and flash loans.",
+  boundary:"Nominal debt is not a transfer. This distinction is the reason F2 is the family Moriarty is architecturally organized around. A credit system that models debt as a balance rather than an obligation cannot express partial repayment correctly.",
+  wrong:"A repayment reduces a balance without discharging the right obligation. Interest and principal are allocated by whichever subtraction the code happened to perform first. A withdrawal that cannot be funded erases the claim instead of rejecting. A refinance issues new debt without discharging old.",
+  does:[
+   {p:"<code>Debt&lt;T&gt;</code> is a distinct type from <code>Amount&lt;T&gt;</code>. A payment is a transfer <em>plus</em> an allocation against a named obligation, and the allocation policy is explicit — AccrualFirst, PrincipalFirst or ProRata — with explicit none/floor/ceil conversion rounding. The successor profile states the invariant directly in the source:"},
+   {code:`action payInterest(payment: Debt<USD>) {
+  requires payment > debt(0, USD);
+  requires payment <= pre.interest;
+  next.interest = pre.interest - payment;
+  ensures post.principal == pre.principal;
+}`},
+   {p:"<code>ensures post.principal == pre.principal</code> — paying interest may not touch principal. In the funded profile a payment names its transfer, its allocation and the obligation it discharges as separate identified objects:"},
+   {code:`emit Transfer { id: TransferId("T1"), from: Payer, to: Lender,
+                settlementAsset: Cash, amount: cash };
+emit Repay    { allocationId: AllocationId("Alloc1"), transferId: TransferId("T1"),
+                obligationId: ObligationId("Due100"), payer: Payer, nominalAmount: nominal };`},
+   {p:"The bounded K definition executes exactly this and rejects the failure modes by code and index: a positive nominal payment converting to zero settlement rejects as <code>DUST</code>; converted settlement — not nominal quantity — is checked against the preceding transfer's funding; ProRata checks that <code>nominal × principal</code> fits UInt128 before dividing by total debt. Episode closure cannot discharge remaining notional:"},
+   {code:`guard state.notional == const.expected_outstanding_notional,
+      "episode closure cannot discharge remaining notional";`}],
+  sources:["Lending literature §§3.2–3.4","Kotzer §§III-B, III-C, V-C","Werner §3.2","Gogol §IV-A3","ERC-3156 for the flash callback and repayment contract"]},
+
+ {id:"F3", sym:"F3", label:"Derivatives", rail:["DA11","DA12"], order:["DA11","DA12"],
+  facets:[
+   ["continuous margin maintenance","Continuous margin maintenance, not one-shot."],
+   ["periodic funding + terminal, on different clocks","Periodic funding plus terminal settlement, on different clocks."],
+   ["margin posted and at risk","Margin is posted and at risk."],
+   ["none on-chain","None on-chain."],
+   ["margin adequacy and insolvency","Margin adequacy and insolvency handling are the core risk."],
+   ["mandatory and adversarial","Mandatory and adversarial."],
+   ["holder mandate ≠ liquidator mandate","Position-holder mandate distinct from liquidator mandate."],
+   ["consumed; funding feeds back","Consumed; funding rates feed back into it."]],
+  fn:"Payoffs that reference something else — a price, a rate, an event — rather than conveying ownership of it. Perpetuals, futures, options, structured payoffs.",
+  boundary:"\"Synthetic\" is used narrowly here: a reference-dependent payoff without direct asset ownership. Broader historical usage that folds in wrapped, staking and monetary claims is preserved as a source translation, not adopted.",
+  wrong:"Funding sign inversion. Settlement convention ambiguity — whether a position settles at mark, index or last trade, and at which timestamp. An expiry sweep that cancels obligations which were already validly exercised. Insolvency that is recognized after the loss rather than as a state.",
+  does:[
+   {p:"Time and duration are distinct types from amounts, so an exercise date cannot be compared against a quantity. Obligations survive independently of the position that created them — an exercised claim is a <code>Debt</code>-typed duty that expiry cannot silently erase, because erasing it would violate an <code>ensures</code> clause. Observations are typed with provenance, freshness and domain (DA20), so a funding rate carries the feed, unit, timestamp and sequence it was derived from."},
+   {p:"Bounds are declared on the agreement itself — <code>lifetime</code> caps the number of transitions and <code>horizon</code> caps absolute time — so a derivative cannot become an unbounded subscription."}],
+  sources:["Werner §3.5","Gogol §IV-B3"]},
+
+ {id:"F4", sym:"F4", label:"Consensus-position claims", rail:["DA14","DA15"], order:["DA14","DA15"],
+  facets:[
+   ["two-phase, with protocol delay","Two-phase — request then completion — with a protocol-imposed delay."],
+   ["delayed, sometimes queued","Delayed and sometimes queued."],
+   ["delegated to an operator","Delegated to an operator, with operator authority persisting."],
+   ["none","None."],
+   ["slashing is loss allocation, not liquidation","Slashing is loss allocation, not liquidation."],
+   ["internal accounting, externally observable","Reward and penalty accounting is internal but externally observable."],
+   ["delegation is a scoped mandate","Delegation is a mandate with its own scope."],
+   ["consumed","Consumed."]],
+  fn:"Claims whose value derives from participation in consensus: staking, liquid staking, restaking and shared security.",
+  boundary:"Distinguish slashable allocation from ordinary leveraged lending or a token-lock reward. Restaking commits capital to additional security duties; that is a different exposure from lending the same capital.",
+  wrong:"Integrations treat a rebasing balance as a fixed claim, or a fixed share balance as if quantity were entitlement. Exit requests are modelled as instantaneous, so the pending state — during which the capital is still slashable but no longer earning, and the claim is not yet transferable — has no representation at all.",
+  does:[
+   {p:"The pending state is an object with an identity, not a gap between two states. This is the same machinery as DA18's asynchronous redemption lifecycle: a request creates a durable identified obligation, and partial or delayed completion consumes it without resetting it. Affine authority applies — a partially completed exit consumes its authorization and the residual cannot grow."},
+   {p:"Slashing is loss allocation against claims, and the four mandatory proof claims require that the resulting state be a compliant successor of a compliant history, so loss cannot be applied retroactively to a history that did not carry it."}],
+  sources:["Gogol §IV-A1","Pending-workflow analysis for exit lifecycles. DA15 is one of the targets with an identified primary-lifecycle source gap."]},
+
+ {id:"F5", sym:"F5", label:"Tokenized off-chain claims", rail:["DA16"], order:["DA16"],
+  facets:[
+   ["on-chain action, off-chain performance","On-chain action, off-chain performance."],
+   ["split across domains, different finality","Split across domains with different finality."],
+   ["off-chain custodian — the defining facet","An off-chain custodian holds the underlying — this is the defining facet."],
+   ["maximal","Maximal. The claim is only as good as its enforceability."],
+   ["issuer solvency is the risk","Issuer solvency is the risk."],
+   ["attestation is the oracle; the attestor can lie","Attestation is the oracle, and the attestor can lie."],
+   ["institutional, not cryptographic","Issuance authority is institutional, not cryptographic."],
+   ["external; valuation-time gap","External, often with a valuation-time/publication-time gap."]],
+  fn:"On-chain representations of claims that are ultimately enforced off-chain: real-world assets, attested claims, custodial receipts.",
+  boundary:"A representation does not establish a claim's economic substance. A receipt is evidence of a deposit; the redemption right is a separate specification. Identity and compliance controls (ERC-3643, ERC-7943) describe technical transfer policy and do not constitute legal conclusions.",
+  wrong:"The on-chain leg completes and is treated as settlement. The system has no way to represent \"the token was burned and the wire has not arrived\", so it represents it as done. Valuation time, publication time, invalidation and redemption liquidity are collapsed into one NAV number.",
+  does:[
+   {p:"This is the family where the honest architecture matters most, and Moriarty's answer is explicit rather than optimistic: every oracle and external effect has a named capability and an assurance boundary, recorded in the deployable manifest. A typed observation carries source, feed, unit, timestamp, freshness, sequence, bounds and fallback — and the residual risk is stated next to it: <b>the source can still lie.</b>"},
+   {p:"External contract calls are excluded from V0 entirely. Later they require a capability manifest, an allowlist and an effect summary, with separate audit evidence, on the stated principle that <b>external behavior cannot inherit Moriarty guarantees.</b> A duty that depends on off-chain performance stays a duty until evidence of that performance exists."}],
+  sources:["Gogol §§III-B, IV-A2","ERC-3643 and ERC-7943 for transfer control","ERC-8330 for subject-linked NAV observation boundaries","Centrifuge protocol source for cross-domain fund infrastructure"]},
+
+ {id:"F6", sym:"F6", label:"Delegated asset management", rail:["DA17","DA18","DA19"], order:["DA17","DA18","DA19"],
+  facets:[
+   ["synchronous, or an async request lifecycle","Synchronous deposit/withdraw, or an asynchronous request lifecycle."],
+   ["immediate or queued","Immediate or queued."],
+   ["vault holds; strategy may re-delegate","The vault holds; the strategy may re-delegate, producing nested exposure."],
+   ["varies with the underlying","Varies with the underlying."],
+   ["obligations can exceed realizable value","The vault's obligations to depositors can exceed realizable value under stress."],
+   ["valuation is the oracle problem in disguise","Valuation is the oracle problem in disguise."],
+   ["manager mandate; depositor authorized a policy","The manager's mandate has scope and limits, and the depositor authorized a policy, not each trade."],
+   ["NAV is a valuation, not a price","NAV is a valuation, not a realizable price."]],
+  fn:"Someone else allocates your capital. Vaults, yield strategies, allocators, standardized accounting entry points.",
+  boundary:"\"Vault\" is the most overloaded word in the vocabulary — it can mean a debt position, a custody container, an investment vehicle, a strategy adapter or a standardized accounting entry point. Always qualify it. A share is a unit participating in portfolio accounting or a priority-defined claim; it is not automatically legal equity.",
+  wrong:"The donation attack: a direct transfer inflates assets without minting shares, and the first depositor's rounding does the rest. Rounding in the depositor's favour on one method and the vault's on another, applied consistently, drains one side. An asynchronous claim processed twice because the request had no residual amount. An unwind that reports the position closed while its debt persists.",
+  does:[
+   {p:"Direct-transfer and rounding accounting are complete rather than inferred — the <code>policy</code> block requires each conversion to state its rounding direction and remainder disposition, so \"method-specific rounding\" is a declared property that can be checked rather than a convention. Request duties are persistent identified obligations, so Pending, Claimable and Claimed are distinct states and a residual request amount survives a partial claim; a second claim against a consumed allocation has nothing to consume."},
+   {p:"Valuation roles are separated: conversion, preview, limit and execution semantics are distinct, so a preview cannot be mistaken for an authorization. Nested exposure is visible because each delegation is a named capability with its own assurance boundary."}],
+  sources:["ERC-4626 methods and security considerations","ERC-7540 request lifecycle and requestRedeem","ERC-7575 for external share-token topology","Yield literature §§III-A Fig. 2, III-B, V-B","Morpho MetaMorpho source for allocator→market dependencies"]},
+
+ {id:"P", sym:"P", label:"Prediction markets", rail:["DA12","DA13"], order:["DA13","DA12"],
+  facets:[
+   ["mint, trade, resolve","Mint, trade, resolve."],
+   ["after resolution, all at once","After resolution, all at once."],
+   ["collateral held against the full outcome set","Collateral held against the full outcome set."],
+   ["varies by jurisdiction and event type","Varies by jurisdiction and event type."],
+   ["a complete set is always fully collateralized","A complete set must always be fully collateralized."],
+   ["the resolution source is the entire trust model","The resolution source is the entire trust model."],
+   ["who may resolve, under what evidence","Who may resolve, and under what evidence, is the critical mandate."],
+   ["produces probability estimates","Produces probability estimates."]],
+  fn:"Claims indexed by the outcome of an event, resolved by evidence.",
+  boundary:"Held separate from F3 because resolution is evidentiary rather than price-mechanical: the question is not \"what is the number\" but \"what happened, and who says so\". DA12 sits in both families.",
+  wrong:"Split and merge are treated as token operations rather than as conservation-preserving transformations of a claim set, so a merge can duplicate value. Resolution is accepted from a source whose authority was never modelled. An invalid or contested resolution has no rejection path, so the first answer wins.",
+  does:[
+   {p:"Split and merge are exactly the composition operators DA24 names, and the constraint is stated as a conservation property: <b>split partitions work and claims; join cannot duplicate resource.</b> That is checkable against Core's value-conservation property rather than trusted to the token contract."},
+   {p:"Resolution is a typed observation with a named capability — the resolver's authority is part of the agreement, and evidence that does not meet the declared provenance, freshness and domain requirements rejects. The security position is stated plainly: <b>a valid oracle signature does not establish economic truth.</b> Conditional-token split/merge is identified as work belonging to a later composition layer over signed capabilities; it is presented here as architecture rather than as a shipped feature."}],
+  sources:["DeFi report contingent-claim targets","Werner §3.5","DA13 carries an identified primary-lifecycle-source gap."]},
+
+ {id:"X", sym:"⊥", label:"Cross-cutting", rail:["DA20","DA21","DA22","DA23","DA24"], order:["DA20","DA21","DA22","DA23","DA24"],
+  /* The cross-cutting targets instrument facets rather than sit on them.
+     DA21 → Execution (intents are an execution facet, §2.2); DA23 → Settlement
+     (bridges and messaging are a settlement facet, §2.2); DA20 → Oracles and
+     Price discovery (observation); DA21, DA22 → Authorization (authority and
+     governance). The remaining facets are instantiated by the seven families. */
+  facets:[
+   ["DA21","DA21 — intents are an execution facet: a way of authorizing an action, not a kind of financial product."],
+   ["DA23","DA23 — messaging and bridges are a settlement facet; bridges split by message-verified versus custodial trust."],
+   [null,"Instantiated by the seven families; not a placement of the cross-cutting tab."],
+   [null,"Instantiated by the seven families; not a placement of the cross-cutting tab."],
+   [null,"Instantiated by the seven families; not a placement of the cross-cutting tab."],
+   ["DA20","DA20 — typed observation with provenance, freshness and domain."],
+   ["DA21 DA22","DA21 and DA22 — plan/intent authority, and bounded administrative action under a fixed claim policy."],
+   ["DA20","DA20 — observed price is a typed observation; this tab consumes it."]],
+  fn:"What makes the other seven composable. Not a leftover tab. These five targets are the machinery every other category depends on, and the reason the model is a classification rather than a taxonomy.",
+  boundary:"Governance is a financial action. DA22 is in this tab deliberately: a parameter change affects existing positions; it is a bounded administrative action under a fixed claim policy, and it cannot downgrade claims or reset accrued work. Treating governance as outside the financial semantics is how positions get changed retroactively.",
+  wrong:"Messaging is where cross-chain lives. DA23's pending commitments and finality evidence are the same machinery as F4's exit requests and F6's asynchronous redemptions: a durable identified obligation with an explicit refund duty and a delivery that may be delayed or duplicated. Atomicity must be defined per layer and per route; a model that cannot represent — and reject — a trace in which the internal batch succeeds but the bridge withdrawal fails or is rolled back is not modelling cross-chain settlement.",
+  does:[
+   {p:"<b>The five composition operators.</b> DA24 names them: <b>sequence, parallel, interleave, synchronize, message.</b> Each has its own authority rules, duty propagation, conflict semantics and fan-in behavior."},
+   {p:"<b>The measured result that motivates the whole project.</b> Over <span class=num>1,830</span> eligible protocol pairs, <span class=num>1,645</span> compose cleanly and <span class=num>185</span> fail. <span class=num>182</span> of the <span class=num>185</span> failures are cross-category. Within-category failure rate <span class=num>2.10%</span>; cross-category <span class=num>10.79%</span> — a <b><span class=num>5.14×</span></b> difference. Composition across financial categories is where DeFi breaks, and it is exactly what a type system and an operational semantics can police."}],
+  sources:["CONTENT-SPEC §2.4 — the DeFiFormal composition audit, independently reproduced","CONTENT-SPEC §7 — per-layer atomicity, route-specific custody manifests, the bridge-rollback trace"]}
+];
+const FAM = Object.fromEntries(FAMILIES.map(f=>[f.id,f]));
+const TOTAL_TARGETS = 24;
+
+/* ==================================================================
+   State
+   ================================================================== */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = { lens:"family", col:"F1", facet:null, target:null, mode:"build", pinned:false };
+const marks = { read:new Set(), opened:new Set(), compared:new Set() };
+const KEY="moriarty.register.v1";
+try{
+  const s=JSON.parse(localStorage.getItem(KEY)||"{}");
+  (s.read||[]).forEach(x=>marks.read.add(x)); (s.opened||[]).forEach(x=>marks.opened.add(x)); (s.compared||[]).forEach(x=>marks.compared.add(x));
+  if(s.mode==="verify"||s.mode==="build") state.mode=s.mode;
+  if(s.col && FAM[s.col]) state.col=s.col; else state.col = state.mode==="verify"?"X":"F1";
+  if(s.theme) document.documentElement.dataset.theme=s.theme;
+}catch(e){}
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify({
+  read:[...marks.read], opened:[...marks.opened], compared:[...marks.compared], mode:state.mode, col:state.col,
+  theme:document.documentElement.dataset.theme||undefined })); }catch(e){} }
+
+/* ==================================================================
+   Register
+   ================================================================== */
+const reg=document.getElementById("reg");
+const railChips={}; // id -> [chip elements]
+function buildRegister(){
+  reg.innerHTML="";
+  const corner=el("div","corner",""); corner.setAttribute("role","presentation");
+  corner.innerHTML="<span>targets</span><span style='font-size:10.5px;color:var(--ink-3);letter-spacing:.06em'>↓ facets</span>";
+  reg.appendChild(corner);
+  FAMILIES.forEach((f,ci)=>{
+    const col=el("div","col"); col.dataset.fam=f.id; col.style.setProperty("--h","var(--h"+f.id+")"); col.setAttribute("role","row");
+    const head=el("button","colhead"); head.style.gridColumn=ci+2; head.setAttribute("role","rowheader");
+    head.dataset.r=0; head.dataset.c=ci; head.tabIndex=-1;
+    head.setAttribute("aria-label",`${f.sym}, ${f.label}, ${f.rail.length} action target${f.rail.length>1?"s":""}${f.id==="P"?" including one shared":""}`);
+    head.innerHTML=`<span class="id">${f.sym}</span><span class="lab">${f.label}</span><span class="n"><b>${f.rail.length}</b> target${f.rail.length>1?"s":""}${f.id==="P"?" · 1 shared":""}</span>`;
+    head.addEventListener("click",()=>openTab(f.id,{scroll:false}));
+    col.appendChild(head);
+    const rail=el("div","rail"); rail.style.gridColumn=ci+2; rail.setAttribute("role","gridcell");
+    f.rail.forEach((id,i)=>{
+      const t=TARGETS[id]; const shared=t.fam.length>1 && f.id==="P";
+      const chip=el("button","chip"+(shared?" shared":"")); chip.textContent=id;
+      chip.dataset.r=1; chip.dataset.c=ci; chip.dataset.i=i; chip.dataset.id=id; chip.tabIndex=-1;
+      chip.title=`${id} — ${t.act}`;
+      chip.addEventListener("click",()=>focusTarget(id,f.id));
+      chip.addEventListener("mouseenter",()=>pair(id,true)); chip.addEventListener("mouseleave",()=>pair(id,false));
+      chip.addEventListener("focus",()=>pair(id,true)); chip.addEventListener("blur",()=>pair(id,false));
+      (railChips[id]=railChips[id]||[]).push(chip);
+      rail.appendChild(chip);
+    });
+    col.appendChild(rail);
+    f.facets.forEach(([short,long],fi)=>{
+      const c=el("button","fcell"+(short===null?" na":"")); c.style.gridColumn=ci+2; c.style.gridRow=fi+3;
+      c.dataset.r=fi+2; c.dataset.c=ci; c.dataset.facet=fi; c.dataset.fname=FACETS[fi]; c.tabIndex=-1;
+      c.setAttribute("role","gridcell"); c.setAttribute("aria-colindex",fi+3);
+      c.setAttribute("aria-label",`${FACETS[fi]}, ${f.sym}: ${long}`);
+      c.innerHTML = short===null ? `<span class="t">instantiated by the seven families</span>`
+                  : (f.id==="X" ? `<span class="da">${short}</span>` : `<span class="t">${short}</span>`);
+      c.addEventListener("click",()=>{ openTab(f.id,{scroll:false,hlFacet:fi}); });
+      col.appendChild(c);
+    });
+    reg.appendChild(col);
+  });
+  FACETS.forEach((name,fi)=>{
+    const h=el("button","fhead"); h.style.gridRow=fi+3; h.dataset.r=fi+2; h.dataset.c=-1; h.dataset.facet=fi; h.tabIndex=-1;
+    h.setAttribute("aria-label",`${name}: compare across all eight tabs`);
+    h.innerHTML=`<span class="k">${fi+1}</span><span>${name}</span>`;
+    h.addEventListener("click",()=>openFacet(fi));
+    reg.appendChild(h);
+  });
+  const line=el("div","lens-line"); line.id="lensLine"; reg.appendChild(line);
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"); svg.setAttribute("class","arc"); svg.setAttribute("aria-hidden","true");
+  const path=document.createElementNS("http://www.w3.org/2000/svg","path"); path.id="arcPath"; svg.appendChild(path); reg.appendChild(svg);
+  const foot=el("div","foot"); foot.id="foot"; foot.setAttribute("aria-live","polite"); reg.appendChild(foot);
+
+  const fp=document.getElementById("facetpick");
+  FACETS.forEach((name,fi)=>{ const b=el("button",""); b.textContent=name; b.dataset.facet=fi; b.setAttribute("aria-pressed","false");
+    b.addEventListener("click",()=>{ state.lens==="facet"&&state.facet===fi ? openTab(state.col,{scroll:false}) : openFacet(fi); }); fp.appendChild(b); });
+  reg.addEventListener("keydown",onGridKey);
+}
+function el(tag,cls,txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!==undefined) e.textContent=txt; return e; }
+
+function updateRegister(){
+  reg.dataset.lens=state.lens;
+  reg.querySelectorAll(".col").forEach(c=>c.classList.toggle("stand", state.lens==="family" && c.dataset.fam===state.col));
+  reg.querySelectorAll(".fcell").forEach(c=>{
+    c.classList.toggle("lift", state.lens==="facet" && +c.dataset.facet===state.facet);
+    c.classList.toggle("read", marks.opened.has(FAMILIES[+c.dataset.c].id));
+    c.classList.remove("cursor");
+  });
+  reg.querySelectorAll(".fhead").forEach(h=>{ h.classList.toggle("lift", state.lens==="facet"&&+h.dataset.facet===state.facet); h.classList.toggle("read", marks.compared.has(+h.dataset.facet)); });
+  document.querySelectorAll("#facetpick button").forEach(b=>{ b.setAttribute("aria-pressed", String(state.lens==="facet"&&+b.dataset.facet===state.facet)); b.classList.toggle("read",marks.compared.has(+b.dataset.facet)); });
+  Object.entries(railChips).forEach(([id,chips])=>chips.forEach(ch=>{
+    ch.classList.toggle("read",marks.read.has(id)); ch.classList.toggle("cursor",state.target===id);
+    ch.setAttribute("aria-label",`${id}, ${TARGETS[id].act}, ${FAM[FAMILIES[+ch.dataset.c].id].sym}${ch.classList.contains("shared")?", shared with F3":""}, ${marks.read.has(id)?"read":"not read"}`);
+  }));
+  const line=document.getElementById("lensLine");
+  if(state.lens==="facet"){ const h=reg.querySelector(`.fhead[data-facet="${state.facet}"]`); if(h){ line.style.top=(h.offsetTop+h.offsetHeight-1)+"px"; line.classList.add("on"); } }
+  else line.classList.remove("on");
+  updateFoot(); updateSpine(); updateTabs();
+}
+function updateFoot(){
+  const f=document.getElementById("foot");
+  f.innerHTML=`<span class="c">targets read <b>${marks.read.size}</b> / ${TOTAL_TARGETS}</span>
+    <span class="c">tabs opened <b>${marks.opened.size}</b> / 8</span>
+    <span class="c">facets compared <b>${marks.compared.size}</b> / 8</span>
+    <span class="legend">Marks are yours. They record what you have read, not what has been verified.</span>
+    <button class="clear" id="clearMarks">clear marks</button>`;
+  f.querySelector("#clearMarks").addEventListener("click",()=>{ if(confirm("Clear your reading marks?")){ marks.read.clear(); marks.opened.clear(); marks.compared.clear(); if(state.lens==="family") marks.opened.add(state.col); persist(); updateRegister(); renderPanel(); } });
+}
+function pair(id,on){
+  (railChips[id]||[]).forEach(ch=>ch.classList.toggle("pair",on && TARGETS[id].fam.length>1));
+  const p=document.getElementById("arcPath"); if(!p) return;
+  if(on && TARGETS[id].fam.length>1 && matchMedia("(min-width:761px)").matches){
+    const [a,b]=railChips[id]; const R=reg.getBoundingClientRect(), ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect();
+    const x1=ra.left+ra.width/2-R.left, y1=ra.top-R.top, x2=rb.left+rb.width/2-R.left, y2=rb.top-R.top;
+    const lift=Math.min(28,(x2-x1)/6);
+    p.setAttribute("d",`M${x1},${y1} C${x1},${y1-lift} ${x2},${y2-lift} ${x2},${y2}`); p.classList.add("on");
+  } else p.classList.remove("on");
+}
+
+/* keyboard: roving cursor across the grid */
+let cur={r:0,c:0,i:0};
+function cellAt(r,c,i){
+  if(r===0) return reg.querySelector(`.colhead[data-c="${c}"]`);
+  if(r===1){ const chips=reg.querySelectorAll(`.chip[data-c="${c}"]`); return chips[Math.min(i,chips.length-1)]; }
+  if(c===-1) return reg.querySelector(`.fhead[data-facet="${r-2}"]`);
+  return reg.querySelector(`.fcell[data-c="${c}"][data-facet="${r-2}"]`);
+}
+function setCursor(r,c,i,focus=true){
+  reg.querySelectorAll('[tabindex="0"]').forEach(x=>x.tabIndex=-1);
+  const e=cellAt(r,c,i); if(!e) return; cur={r,c,i}; e.tabIndex=0; if(focus) e.focus();
+}
+function onGridKey(ev){
+  const t=ev.target; if(!t.dataset||t.dataset.r===undefined) return;
+  let {r,c,i}=cur; r=+t.dataset.r; c=+t.dataset.c; i=+(t.dataset.i||0);
+  const k=ev.key; let h=true;
+  if(k==="ArrowRight"){ if(r===1){ const chips=[...reg.querySelectorAll(".chip")]; const n=chips.indexOf(t)+1; if(n<chips.length){ r=1; c=+chips[n].dataset.c; i=+chips[n].dataset.i; } } else if(c<7) c++; }
+  else if(k==="ArrowLeft"){ if(r===1){ const chips=[...reg.querySelectorAll(".chip")]; const n=chips.indexOf(t)-1; if(n>=0){ c=+chips[n].dataset.c; i=+chips[n].dataset.i; } } else if(r>=2 && c===0) c=-1; else if(c>0) c--; }
+  else if(k==="ArrowDown"){ if(r<9){ r++; if(c===-1&&r<2) c=0; } }
+  else if(k==="ArrowUp"){ if(r>0){ r--; if(c===-1) c=0; } }
+  else if(k==="Home"){ if(r===1){ c=0;i=0; } else c=(r>=2?-1:0); }
+  else if(k==="End"){ if(r===1){ c=7; i=FAM.X.rail.length-1; } else c=7; }
+  else if(k==="Escape"){ if(state.lens==="facet"){ openTab(state.col,{scroll:false}); } }
+  else h=false;
+  if(h){ ev.preventDefault(); setCursor(r,c,i); }
+}
+
+/* ==================================================================
+   Tabs + panel
+   ================================================================== */
+const tabs=document.getElementById("tabs");
+function buildTabs(){
+  FAMILIES.forEach(f=>{
+    const b=el("button","tab"); b.setAttribute("role","tab"); b.id="tab-"+f.id; b.dataset.fam=f.id; b.style.setProperty("--h","var(--h"+f.id+")");
+    b.innerHTML=`<span class="id">${f.sym}</span><span>${f.label}</span><span class="n">${f.rail.length}${f.id==="P"?"*":""}</span>`;
+    b.addEventListener("click",()=>openTab(f.id,{scroll:false}));
+    b.addEventListener("keydown",ev=>{ const idx=FAMILIES.findIndex(x=>x.id===f.id); let n=null;
+      if(ev.key==="ArrowRight") n=(idx+1)%8; if(ev.key==="ArrowLeft") n=(idx+7)%8; if(ev.key==="Home") n=0; if(ev.key==="End") n=7;
+      if(n!==null){ ev.preventDefault(); openTab(FAMILIES[n].id,{scroll:false}); document.getElementById("tab-"+FAMILIES[n].id).focus(); } });
+    tabs.appendChild(b);
+  });
+}
+function updateTabs(){ tabs.querySelectorAll(".tab").forEach(b=>{ const sel=state.lens==="family"&&b.dataset.fam===state.col; b.setAttribute("aria-selected",String(sel)); b.tabIndex=sel?0:-1; }); if(state.lens==="facet"){ tabs.querySelector(".tab").tabIndex=0; } }
+
+function openTab(id,{scroll=false,hlFacet=null,target=null}={}){
+  state.lens="family"; state.col=id; state.facet=hlFacet; if(target) state.target=target; else if(state.target && !TARGETS[state.target].fam.includes(id)) state.target=null;
+  marks.opened.add(id); persist(); updateRegister(); renderPanel();
+  if(target){ const e=document.getElementById("t-"+target); if(e) e.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}); }
+  else if(scroll){ document.getElementById("panel").scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}); }
+}
+function openFacet(fi){ state.lens="facet"; state.facet=fi; marks.compared.add(fi); persist(); updateRegister(); renderPanel(); }
+function focusTarget(id,fromFam){ const fam = fromFam && TARGETS[id].fam.includes(fromFam) ? fromFam : TARGETS[id].fam[0]; markRead(id); openTab(fam,{target:id}); }
+function markRead(id){ if(!marks.read.has(id)){ marks.read.add(id); persist(); updateRegister(); const rm=document.getElementById("rm-"+id); if(rm){ rm.textContent="read"; rm.classList.add("on"); } } }
+
+const panel=document.getElementById("panel");
+const BLOCKS=["What this category is","Facet profile","Action targets","What goes wrong","What Moriarty does about it","Reference sources"];
+function renderPanel(){
+  panel.innerHTML="";
+  if(state.lens==="facet"){ renderFacetLens(); return; }
+  const f=FAM[state.col]; const build=state.mode==="build";
+  const body=el("div","body"); body.style.setProperty("--h","var(--h"+f.id+")"); body.setAttribute("role","tabpanel"); body.setAttribute("aria-labelledby","tab-"+f.id);
+  body.innerHTML=`<h2><span class="idl">${f.sym}</span> · ${f.label}</h2>
+    <div class="kick">${f.rail.length} action target${f.rail.length>1?"s":""}${f.id==="P"?" (one own, DA12 shared with F3)":""} · six blocks · ${build?"read the distinguishing test first":"requirement, then distinguishing test"}</div>`;
+  // 1
+  body.appendChild(block(1, f.id==="X"?"What makes the other seven composable":BLOCKS[0], `<p>${f.fn}</p><div class="aside"><b>Boundary</b>${f.boundary}</div>`));
+  // 2
+  const fp=el("div","fp");
+  f.facets.forEach(([s,l],fi)=>{ const row=el("div","row"+(state.facet===fi?" hl":"")); row.innerHTML=`<div class="fn"><span class="k">${fi+1}</span>${FACETS[fi]}</div><div>${l}</div>`; fp.appendChild(row); });
+  body.appendChild(block(2, BLOCKS[1]+" — all eight facets", "", fp));
+  // 3
+  const ents=el("div","entries");
+  f.order.forEach(id=>{
+    const t=TARGETS[id]; const shared=t.fam.length>1; const other=shared? t.fam.find(x=>x!==f.id):null;
+    const e=el("article","entry"+(state.target===id?" cursor":"")); e.id="t-"+id; e.dataset.id=id; e.tabIndex=-1;
+    const head=`<div class="eh"><span class="id">${id}</span><span class="act">${t.act}</span>
+      ${t.flag?`<span class="flag">${t.flag}</span>`:""}${shared?`<span class="flag">shared with ${FAM[other].sym}</span>`:""}
+      <span class="readmark${marks.read.has(id)?" on":""}" id="rm-${id}">${marks.read.has(id)?"read":"unread"}</span></div>`;
+    const req=`<span class="lab">${build?"what it must mean":"semantic requirement"}</span><div class="req">${t.req}</div>`;
+    const test=`<span class="lab">${build?"the bug this catches":"distinguishing test"}</span><div class="test">${t.test}</div>`;
+    e.innerHTML = head + (build? test+req : req+test) + (t.note?`<p class="note">${t.note}</p>`:"") +
+      (shared?`<p><button class="xlink" data-go="${other}" data-t="${id}">open ${id} in ${FAM[other].sym} · ${FAM[other].label}</button></p>`:"");
+    ents.appendChild(e);
+  });
+  body.appendChild(block(3, build?"Action targets — the bug each one catches":"Action targets — the conformance surface", "", ents));
+  // 4
+  body.appendChild(block(4, f.id==="X"?"Messaging is where cross-chain lives":BLOCKS[3], `<p>${f.wrong}</p>`));
+  // 5
+  const does=el("div"); f.does.forEach(x=>{ if(x.p){ const p=el("p"); p.innerHTML=x.p; does.appendChild(p);} else { const pre=el("pre"); const c=el("code"); c.textContent=x.code; pre.appendChild(c); does.appendChild(pre);} });
+  body.appendChild(block(5, f.id==="X"?"The operators and the measured result":BLOCKS[4], "", does));
+  // 6
+  const ul=el("ul","srcs"); f.sources.forEach(s=>{ const li=el("li"); li.textContent=s; ul.appendChild(li); });
+  body.appendChild(block(6, BLOCKS[5], "", ul));
+  panel.appendChild(body);
+  panel.querySelectorAll(".xlink").forEach(b=>b.addEventListener("click",()=>{ focusTarget(b.dataset.t,b.dataset.go); }));
+  observeEntries();
+}
+function block(n,title,html,node){ const b=el("section","blk"); b.innerHTML=`<h3><span class="bn">${n}</span>${title}</h3>${html}`; if(node) b.appendChild(node); return b; }
+function renderFacetLens(){
+  const fi=state.facet; const body=el("div","body lens");
+  body.innerHTML=`<h2>${FACETS[fi]} — across all eight tabs</h2><div class="kick">facet ${fi+1} of 8 · the same facet read down the Register · Escape or any tab returns to the family lens</div>`;
+  const cmp=el("div","cmp");
+  FAMILIES.forEach(f=>{ const [s,l]=f.facets[fi]; const r=el("div","r");
+    r.innerHTML=`<div class="id">${f.sym}<small>${f.label}</small></div><div class="v"${s===null?' style="font-style:italic;color:var(--ink-2)"':""}>${l}</div><button class="go" data-fam="${f.id}">open tab</button>`;
+    r.querySelector(".go").addEventListener("click",()=>openTab(f.id,{scroll:false,hlFacet:fi})); cmp.appendChild(r); });
+  body.appendChild(cmp); panel.appendChild(body);
+}
+
+/* reading marks: an entry counts as read after 600 ms on screen */
+let entryObs=null, cursorObs=null; const timers=new Map();
+function observeEntries(){
+  if(entryObs) entryObs.disconnect(); if(cursorObs) cursorObs.disconnect();
+  entryObs=new IntersectionObserver(es=>es.forEach(x=>{ const id=x.target.dataset.id;
+    if(x.intersectionRatio>=0.5){ if(!timers.has(id)) timers.set(id,setTimeout(()=>{ markRead(id); timers.delete(id); },600)); }
+    else if(timers.has(id)){ clearTimeout(timers.get(id)); timers.delete(id); } }),{threshold:[0,0.5,1]});
+  cursorObs=new IntersectionObserver(es=>{ es.forEach(x=>{ if(x.isIntersecting){ const id=x.target.dataset.id; if(state.target!==id){ state.target=id; updateRegister(); panel.querySelectorAll(".entry").forEach(e=>e.classList.toggle("cursor",e.dataset.id===id)); } } }); },{rootMargin:"-110px 0px -75% 0px",threshold:0});
+  panel.querySelectorAll(".entry").forEach(e=>{ entryObs.observe(e); cursorObs.observe(e); });
+}
+
+/* ==================================================================
+   Spine (pinned place-keeper)
+   ================================================================== */
+const spine=document.getElementById("spine");
+function buildSpine(){
+  const s=document.getElementById("spineSegs"); s.innerHTML="";
+  FAMILIES.forEach(f=>{ const g=el("div","sg"); g.dataset.fam=f.id; g.innerHTML=`<span class="n">${f.sym}</span>`; const d=el("div","dots");
+    f.rail.forEach(id=>{ const b=el("button","dot"+(f.id==="P"&&TARGETS[id].fam.length>1?" shared":"")); b.dataset.id=id; b.title=id+" — "+TARGETS[id].act; b.tabIndex=-1; b.addEventListener("click",()=>focusTarget(id,f.id)); d.appendChild(b); });
+    g.appendChild(d); g.addEventListener("click",ev=>{ if(ev.target.classList.contains("dot")) return; openTab(f.id,{scroll:false}); reg.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"}); }); s.appendChild(g); });
+}
+function updateSpine(){
+  spine.querySelectorAll(".sg").forEach(g=>g.classList.toggle("stand",state.lens==="family"&&g.dataset.fam===state.col));
+  spine.querySelectorAll(".dot").forEach(d=>{ d.classList.toggle("read",marks.read.has(d.dataset.id)); d.classList.toggle("cursor",state.target===d.dataset.id); });
+  document.getElementById("spineCnt").textContent=`read ${marks.read.size}/24 · tabs ${marks.opened.size}/8 · facets ${marks.compared.size}/8`;
+}
+new IntersectionObserver(es=>{ const x=es[0]; const below = !x.isIntersecting && x.boundingClientRect.top<0; spine.classList.toggle("on",below); },{rootMargin:"-56px 0px 0px 0px",threshold:0}).observe(reg);
+
+/* ==================================================================
+   Mode, theme, sub-line
+   ================================================================== */
+const SUB={
+  build:"One tab per DeFi category. Each tab says what the category is, where it sits on the eight facets, which actions the language must execute and the bug that tells a correct implementation from a plausible one, what goes wrong, what Moriarty does about it, and where the requirements come from.",
+  verify:"One tab per economic family plus the cross-cutting tab. The twenty-four action targets are the conformance surface; every tab renders the same six blocks; DA12 appears in two tabs and is counted once."
+};
+function setMode(m){ state.mode=m; document.getElementById("modeBuild").setAttribute("aria-pressed",String(m==="build")); document.getElementById("modeVerify").setAttribute("aria-pressed",String(m==="verify")); document.getElementById("subline").textContent=SUB[m]; persist(); renderPanel(); }
+document.getElementById("modeBuild").addEventListener("click",()=>setMode("build"));
+document.getElementById("modeVerify").addEventListener("click",()=>setMode("verify"));
+const themeBtn=document.getElementById("themeBtn");
+function themeLabel(){ themeBtn.textContent="Theme: "+(document.documentElement.dataset.theme||"auto"); }
+themeBtn.addEventListener("click",()=>{ const t=document.documentElement.dataset.theme; const n=!t?"light":t==="light"?"dark":""; if(n) document.documentElement.dataset.theme=n; else delete document.documentElement.dataset.theme; themeLabel(); persist(); });
+
+/* ==================================================================
+   Boot
+   ================================================================== */
+buildRegister(); buildTabs(); buildSpine();
+marks.opened.add(state.col);
+document.getElementById("subline").textContent=SUB[state.mode];
+document.getElementById("modeBuild").setAttribute("aria-pressed",String(state.mode==="build"));
+document.getElementById("modeVerify").setAttribute("aria-pressed",String(state.mode==="verify"));
+themeLabel();
+setCursor(0,FAMILIES.findIndex(f=>f.id===state.col),0,false);
+updateRegister(); renderPanel(); persist();
+addEventListener("resize",()=>{ pair("DA12",false); updateRegister(); });
+</script>
+</body>
+</html>

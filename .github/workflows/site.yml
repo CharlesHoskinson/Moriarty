@@ -1,0 +1,100 @@
+# Build, test and publish the Moriarty site to GitHub Pages.
+#
+# The tests gate the deploy. A page that renders is not the same as a page that
+# is correct, so the browser suite runs against the real build before anything
+# is published, and a failure there stops the release rather than annotating it.
+
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/site.yml'
+  pull_request:
+    paths:
+      - 'site/**'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Check the fixed sets
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the browser
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+
+      - name: Serve the build and drive it
+        run: |
+          python3 -m http.server 8891 --directory dist &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8891/ && break
+            sleep 1
+          done
+          CHROME= SHOTS="${RUNNER_TEMP}/shots" python3 test/site.spec.py
+
+      - name: Keep the captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-captures
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Package the page
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

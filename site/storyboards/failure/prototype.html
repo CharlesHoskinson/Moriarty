@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moriarty: distinguishing tests</title>
+<style>
+  :root {
+    --bg: #f6f7f8;
+    --panel: #ffffff;
+    --ink: #15171b;
+    --ink-2: #4d525b;
+    --ink-3: #737983;
+    --rule: #d9dcE1;
+    --rule-2: #e9ebee;
+    --accent: #1e6b58;
+    --accent-bg: #e6f0ec;
+    --reject: #a8452a;
+    --reject-bg: #f5e8e3;
+    --plaus: #6b7079;
+    --mark: #c9cdd3;
+    --mark-fail: #a8452a;
+    --mark-fail-2: #cf7f68;
+    --focus: #1e6b58;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171b; --panel: #1c1f24; --ink: #e9ebee; --ink-2: #b4b9c2; --ink-3: #8b919b;
+      --rule: #343940; --rule-2: #272b31; --accent: #6fc4a8; --accent-bg: #1d2f2a;
+      --reject: #e08c70; --reject-bg: #3a2620; --plaus: #9aa0a9; --mark: #3a3f47;
+      --mark-fail: #e08c70; --mark-fail-2: #b2654d; --focus: #6fc4a8; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171b; --panel: #1c1f24; --ink: #e9ebee; --ink-2: #b4b9c2; --ink-3: #8b919b;
+    --rule: #343940; --rule-2: #272b31; --accent: #6fc4a8; --accent-bg: #1d2f2a;
+    --reject: #e08c70; --reject-bg: #3a2620; --plaus: #9aa0a9; --mark: #3a3f47;
+    --mark-fail: #e08c70; --mark-fail-2: #b2654d; --focus: #6fc4a8; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    padding: 0 max(16px, 4vw) 96px;
+  }
+  code, .mono, dd, .id, .num, input {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  a { color: var(--accent); }
+  h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.12; max-width: 24ch; }
+  p { margin: 0; max-width: 65ch; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* header */
+  .top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+         padding: 22px 0 18px; border-bottom: 1px solid var(--rule); }
+  .top .brand { font-size: 15px; letter-spacing: 0.02em; }
+  .top .brand span { color: var(--ink-3); margin-left: 12px; font-size: 13px; }
+  .btn { background: var(--panel); color: var(--ink); border: 1px solid var(--rule);
+         border-radius: 2px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .btn:hover { border-color: var(--ink-3); }
+  :is(button, input, [tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .intro { padding: 40px 0 28px; display: grid; gap: 14px; }
+  .intro .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .intro p { color: var(--ink-2); font-size: 16px; }
+
+  /* tab strip */
+  .tabs { display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x proximity;
+          border-bottom: 1px solid var(--rule); padding-bottom: 0; margin-top: 8px; scrollbar-width: thin; }
+  .tab { flex: 0 0 auto; scroll-snap-align: start; background: none; border: 0; border-bottom: 2px solid transparent;
+         margin-bottom: -1px; padding: 10px 12px 12px; font: inherit; font-size: 13px; color: var(--ink-2);
+         cursor: pointer; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; text-align: left;
+         white-space: nowrap; border-radius: 2px 2px 0 0; }
+  .tab .id { font-weight: 600; color: var(--ink); }
+  .tab .n { color: var(--ink-3); grid-column: 1 / -1; font-size: 12px; }
+  .tab[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--ink); }
+  .tab[aria-selected="true"] .id { color: var(--accent); }
+  .count-line { font-size: 12px; color: var(--ink-3); padding: 10px 0 0; }
+
+  /* body grid */
+  .body { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 32px; padding-top: 28px; }
+  @media (max-width: 760px) { .body { grid-template-columns: 1fr; gap: 20px; } }
+
+  .tabintro { grid-column: 1 / -1; color: var(--ink-2); max-width: 72ch; }
+  .tabintro strong { color: var(--ink); font-weight: 600; }
+
+  /* case index */
+  .index { display: grid; gap: 2px; align-content: start; }
+  .case { text-align: left; background: none; border: 0; border-left: 2px solid transparent; padding: 10px 12px;
+          font: inherit; cursor: pointer; color: var(--ink-2); border-radius: 0 2px 2px 0; display: grid; gap: 3px; }
+  .case:hover { background: var(--rule-2); }
+  .case[aria-checked="true"] { border-left-color: var(--accent); background: var(--panel); color: var(--ink); }
+  .case .l1 { display: flex; gap: 8px; align-items: baseline; font-size: 13px; }
+  .case .id { font-weight: 600; }
+  .case .act { color: inherit; }
+  .case .test { font-size: 13px; color: var(--ink); font-style: italic; }
+  .case[aria-checked="true"] .test { color: var(--accent); }
+  .badge { font-size: 11px; color: var(--ink-3); border: 1px solid var(--rule); border-radius: 2px; padding: 0 5px; margin-left: auto; font-style: normal; }
+
+  /* fork */
+  .fork { background: var(--panel); border: 1px solid var(--rule); border-radius: 2px; padding: 22px 24px 20px; min-width: 0; }
+  .fork header { display: grid; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--rule-2); }
+  .fork header .l1 { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+  .fork header .id { font-weight: 600; font-size: 14px; color: var(--accent); }
+  .fork header h3 { font-size: 20px; }
+  .fork header .fam { color: var(--ink-3); font-size: 12px; margin-left: auto; }
+  .meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13.5px; }
+  .meta dt { color: var(--ink-3); }
+  .meta dd { margin: 0; font-family: inherit; }
+  .meta dd.t { font-weight: 600; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; margin-top: 18px; }
+  .col { padding: 14px 16px 14px 0; min-width: 0; }
+  .col + .col { border-left: 1px solid var(--rule-2); padding-left: 16px; }
+  .col h4 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+  .col.plaus h4 { color: var(--plaus); }
+  .col.req h4 { color: var(--accent); }
+  .lines { display: grid; gap: 7px; margin: 0; }
+  .lines dd { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
+  .col.plaus dd { color: var(--plaus); }
+  dd.undef { color: var(--plaus); font-style: italic; cursor: help; }
+  dd.out { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rule-2); font-weight: 600; }
+  dd.out.pre { color: var(--accent); }
+  dd.out.rej { color: var(--reject); }
+  dd.ok { color: var(--accent); }
+  dd.fail { color: var(--reject); }
+  dd.diff { border-left: 2px solid var(--accent); padding-left: 8px; margin-left: -10px; }
+  .col.plaus dd.diff { border-left-color: var(--plaus); }
+  @media (max-width: 760px) {
+    .cols { grid-template-columns: 1fr; }
+    .col { padding: 14px 0; }
+    .col + .col { border-left: 0; border-top: 1px solid var(--rule-2); padding-left: 0; }
+    .fork { padding: 18px 16px; }
+    dd.diff { margin-left: 0; }
+  }
+
+  .field-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .field-row label { color: var(--ink-3); }
+  input[type=number] { width: 9ch; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 2px;
+                       background: var(--bg); color: var(--ink); min-height: 32px; }
+  @media (max-width: 760px) { input[type=number] { min-height: 44px; flex: 1 1 auto; width: auto; } }
+
+  .enforced { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule-2); display: grid;
+              grid-template-columns: max-content 1fr; gap: 14px; font-size: 13.5px; }
+  .enforced .k { color: var(--ink-3); }
+  .enforced .layer { color: var(--ink-3); font-size: 12px; grid-column: 2; }
+
+  /* composition field */
+  .compo { grid-column: 1 / -1; margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--rule); display: grid; gap: 18px; }
+  .compo h3 { font-size: 22px; max-width: 30ch; }
+  .compo .lead { color: var(--ink-2); }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 2px; width: max-content; }
+  .seg button { background: none; border: 0; padding: 6px 12px; font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  .seg button[aria-checked="true"] { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+  .fieldwrap { width: 100%; }
+  .fieldwrap svg { width: 100%; height: auto; display: block; }
+  .caps { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; font-size: 13px; }
+  @media (max-width: 560px) { .caps { grid-template-columns: 1fr; } }
+  .caps .h { font-weight: 600; }
+  .caps .num { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .caps .fail { color: var(--reject); }
+  .ratio { font-size: 15px; }
+  .ratio .num { font-size: 30px; font-weight: 600; margin-right: 8px; }
+  .derive { font-size: 12px; color: var(--ink-3); max-width: 80ch; }
+
+  /* motion, only where it explains */
+  @media (prefers-reduced-motion: no-preference) {
+    .col.plaus.enter, .col.req.enter { animation: rise 240ms cubic-bezier(.2,.7,.2,1) both; }
+    .col.req.enter { animation-delay: 80ms; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    dd.out { transition: color 120ms; }
+    .mark.f { opacity: 0; animation: ink 300ms ease-out forwards; animation-delay: calc(var(--i) * 4ms); }
+    @keyframes ink { to { opacity: 1; } }
+    .field-static .mark.f { animation: none; opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand mono">Moriarty <span>Financial meaning that survives compilation, proof and settlement.</span></div>
+    <button class="btn" id="theme" type="button" aria-pressed="false">Dark theme</button>
+  </div>
+
+  <div class="intro">
+    <div class="eyebrow">Eight categories, twenty-four actions</div>
+    <h1>Every action has one case that tells a correct implementation from a plausible one.</h1>
+    <p>The distinguishing test is the case where a balance-based model and an obligation-based model give different answers. Pick a category, pick an action; the fork shows both answers. Two cases are live: the numbers are computed from the real formula and the real source.</p>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="DeFi categories" id="tabs"></div>
+  <div class="count-line mono" id="countline"></div>
+
+  <div class="body">
+    <p class="tabintro" id="tabintro"></p>
+    <div class="index" role="radiogroup" aria-label="Action targets in this category" id="index"></div>
+    <section class="fork" role="region" aria-labelledby="fork-title" id="fork"></section>
+    <div class="compo" id="compo" hidden></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- data (every string traces to site/CONTENT-SPEC.md or site/CATEGORY-TABS.md) ----------
+  const TABS = [
+    { id: 'F1', name: 'Exchange and price discovery', short: 'Exchange', targets: ['DA01','DA02','DA03'],
+      intro: 'Integer division decides who keeps the remainder. A swap that rounds the wrong way, or a share calculation whose zero-supply case is unguarded, transfers value silently and legally. An output that empties a reserve satisfies the constant-product identity and destroys the pool.' },
+    { id: 'F2', name: 'Credit and collateralized debt', short: 'Credit', targets: ['DA04','DA05','DA06','DA07','DA08','DA09','DA10'],
+      intro: 'Nominal debt is not a transfer. A repayment reduces a balance without discharging the right obligation; interest and principal are allocated by whichever subtraction the code performed first; a withdrawal that cannot be funded erases the claim instead of rejecting; a refinance issues new debt without discharging old.' },
+    { id: 'F3', name: 'Derivatives', short: 'Derivatives', targets: ['DA11','DA12'],
+      intro: 'Funding sign inversion. Settlement convention ambiguity: mark, index or last trade, and at which timestamp. An expiry sweep that cancels obligations which were already validly exercised. Insolvency recognized after the loss rather than as a state.' },
+    { id: 'F4', name: 'Consensus-position claims', short: 'Consensus', targets: ['DA14','DA15'],
+      intro: 'Integrations treat a rebasing balance as a fixed claim, or a fixed share balance as if quantity were entitlement. Exit requests are modelled as instantaneous, so the pending state, still slashable, no longer earning, not yet transferable, has no representation at all.' },
+    { id: 'F5', name: 'Tokenized off-chain claims', short: 'Off-chain', targets: ['DA16'],
+      intro: 'The on-chain leg completes and is treated as settlement. The system has no way to represent "the token was burned and the wire has not arrived", so it represents it as done.' },
+    { id: 'F6', name: 'Delegated asset management', short: 'Delegated', targets: ['DA17','DA18','DA19'],
+      intro: 'The donation attack: a direct transfer inflates assets without minting shares, and the first depositor’s rounding does the rest. An asynchronous claim processed twice because the request had no residual amount. An unwind that reports the position closed while its debt persists.' },
+    { id: 'P',  name: 'Prediction markets', short: 'Prediction', targets: ['DA13','DA12'],
+      intro: 'Split and merge are treated as token operations rather than conservation-preserving transformations of a claim set, so a merge can duplicate value. Resolution is accepted from a source whose authority was never modelled. An invalid resolution has no rejection path, so the first answer wins.' },
+    { id: '⊥', name: 'Cross-cutting', short: 'Cross-cutting', targets: ['DA20','DA21','DA22','DA23','DA24'],
+      intro: 'Not a leftover tab. These five targets are the machinery every other category depends on. Governance is a financial action; messaging is where cross-chain lives; the five composition operators are sequence, parallel, interleave, synchronize and message.' }
+  ];
+
+  const U = 'undefined'; // marker class for lines a balance-based model cannot represent
+  const CASES = {
+    DA01: { fam: ['F1'], action: 'swap exact input / exact output',
+      req: 'asset-indexed exchange; fee and slippage accounting', test: 'rounding; reserve safety; net minimum', live: 'swap',
+      enforced: 'policy swap_output (rounding floor, remainder "unpaid output remains in reserve_b"); guards "minimum output not met" and "output would empty reserve"', layer: 'policy block; named guards in the action' },
+    DA02: { fam: ['F1'], action: 'provide / remove liquidity',
+      req: 'share mint/burn; reserve contributions', test: 'proportional entitlement; donation and zero-supply boundaries',
+      pre: ['pool share supply: 0 (first depositor)', 'a direct transfer into the pool has occurred (donation)', 'deposit requested'],
+      plaus: ['shares minted from the inflated asset/share ratio', ['zero-supply case: unguarded', U], ['who keeps the remainder: whichever way / rounds', U]],
+      reqd: ['entitlement stays proportional to contribution', 'zero-supply and donation are named boundary cases', 'rounding direction and remainder disposition declared'],
+      out: ['preserve', 'preserved: proportional entitlement'],
+      enforced: 'policy block: unit, derivation, rounding direction, remainder, comparison, proof obligation', layer: 'policy block; value conservation in Core' },
+    DA03: { fam: ['F1'], action: 'open / adjust / close liquidity position',
+      req: 'bounded position identity and range', test: 'fee allocation and finite tick/range traversal',
+      pre: ['position with identity and a declared range', 'fees accrued across the range', 'adjust requested'],
+      plaus: [['fee allocation: implicit in balance arithmetic', U], ['tick traversal: unbounded loop', U]],
+      reqd: ['fee allocation is explicit per position', 'tick/range traversal is finite and bounded', 'position identity is bounded'],
+      out: ['preserve', 'preserved: bounded identity, finite traversal'],
+      enforced: 'bounded position identity and range; lifetime caps transitions', layer: 'static semantics (admissible bounds); Core decreasing measure' },
+    DA04: { fam: ['F2'], action: 'supply / redeem lending claims',
+      req: 'claim shares and liquidity-constrained withdrawal', test: 'insufficient pool liquidity rejects without erasing claim',
+      pre: ['supplier holds an identified claim on the pool', 'pool liquidity is insufficient for the withdrawal', 'withdrawal requested'],
+      plaus: ['withdrawal fails', ['claim: erased or written down with the failure', U]],
+      reqd: ['withdrawal rejects', 'claim unchanged: failure to withdraw is not loss of entitlement'],
+      out: ['reject', 'rejects: insufficient pool liquidity; claim preserved'],
+      enforced: 'the claim is an identified obligation; a rejected action leaves state unchanged', layer: 'K rejection rule; obligation identity in Core' },
+    DA05: { fam: ['F2'], action: 'post / release collateral',
+      req: 'encumbrance and debt-dependent release', test: 'release cannot violate collateral rule',
+      pre: ['collateral encumbered against outstanding debt', 'release requested'],
+      plaus: ['collateral transferred on request', ['collateral rule after release: not checked', U]],
+      reqd: ['release evaluated against the collateral rule with the debt still outstanding', 'release that would violate it rejects'],
+      out: ['reject', 'rejects: release would violate the collateral rule'],
+      enforced: 'encumbrance is a state, not a balance; debt-dependent release is a guard', layer: 'named guard; Debt<T> distinct from Amount<T>' },
+    DA06: { fam: ['F2'], action: 'borrow / accrue / repay',
+      req: 'nominal debt distinct from transfers; rate/time arithmetic', test: 'partial repayment preserves principal and interest allocation', live: 'loan',
+      enforced: 'Debt<USD> distinct from Amount<USD>; requires / next / ensures in the action; allocation policy AccrualFirst, PrincipalFirst or ProRata with none/floor/ceil rounding', layer: 'static semantics (types); K allocation rules; ensures as proof obligation' },
+    DA07: { fam: ['F2'], action: 'liquidate / recognize default',
+      req: 'authorized seizure; loss and residual debt allocation', test: 'partial liquidation and close factor; maturity before forfeiture',
+      pre: ['position eligible for liquidation', 'close factor declared', 'maturity not yet reached'],
+      plaus: ['full seizure on first call', ['residual debt: absorbed into a balance', U], 'forfeiture before maturity'],
+      reqd: ['seizure bounded by the close factor', 'loss and residual debt allocated explicitly', 'no forfeiture before maturity'],
+      out: ['reject', 'rejects: forfeiture before maturity'],
+      enforced: 'liquidator authority is a distinct mandate from borrower authority; loss allocation is explicit', layer: 'authorization facet; K rule' },
+    DA08: { fam: ['F2'], action: 'flash borrow / repay atomically',
+      req: 'atomic multi-leg settlement with fee', test: 'every loan repaid within the same atomic transaction',
+      pre: ['flash borrow inside transaction T', 'fee declared'],
+      plaus: ['borrow settles in T', ['repayment: accepted in a later transaction', U]],
+      reqd: ['every loan repaid, with fee, inside T', 'otherwise T rejects as a whole'],
+      out: ['reject', 'rejects: loan not repaid within the atomic transaction'],
+      enforced: 'atomic multi-leg settlement; flash borrowing is a capability with legitimate uses, not a vulnerability', layer: 'transaction atomicity in Core' },
+    DA09: { fam: ['F2'], action: 'refinance / novate / capitalize',
+      req: 'workflow over old debt, new debt, collateral and signed liability authority', test: 'reject refinance without old-debt discharge; capitalization changes liability',
+      pre: ['old debt outstanding', 'new debt requested against the same collateral', 'liability authority signed'],
+      plaus: ['new debt issued', ['old debt: still outstanding, unlinked', U], ['capitalization: interest folded into a balance', U]],
+      reqd: ['refinance without old-debt discharge rejects', 'capitalization is recorded as a change of liability'],
+      out: ['reject', 'rejects: old debt not discharged'],
+      enforced: 'a workflow over identified obligations with signed liability authority', layer: 'obligation identity; authorization facet' },
+    DA10: { fam: ['F2'], action: 'issue / burn debt-backed stablecoin',
+      req: 'issuance authority plus debt and collateral', test: 'burn amount and released collateral obey the specified debt rule',
+      pre: ['stablecoin issued against debt and collateral', 'burn requested'],
+      plaus: ['collateral released by an ad hoc ratio', ['debt rule: not consulted', U]],
+      reqd: ['burn amount and released collateral obey the specified debt rule'],
+      out: ['preserve', 'preserved: debt rule'],
+      enforced: 'issuance authority plus debt and collateral as separate typed state', layer: 'Debt<T>; collateral facet' },
+    DA11: { fam: ['F3'], action: 'open / margin / fund / close derivative',
+      req: 'position notional, margin and funding obligations', test: 'funding signs; insolvency; precise settlement convention',
+      pre: ['open position with notional and margin', 'funding rate observed'],
+      plaus: [['funding direction: a sign in balance arithmetic', U], ['settlement convention: mark, index or last trade, unstated', U], 'insolvency recognized after the loss'],
+      reqd: ['funding is a signed obligation with typed direction', 'settlement convention and timestamp are precise', 'insolvency is a state'],
+      out: ['preserve', 'preserved: funding sign and settlement convention'],
+      enforced: 'typed observation with feed, unit, timestamp, sequence (DA20); time and duration distinct from amounts', layer: 'static semantics (types); observation facet' },
+    DA12: { fam: ['F3','P'], shared: true, action: 'write / exercise / expire contingent claim',
+      req: 'choice authority and exercise/payment dates', test: 'expiry does not erase an already exercised payment duty',
+      pre: ['claim exercised before expiry', 'payment duty created by the exercise', 'expiry reached'],
+      plaus: ['expiry sweep cancels the position', ['exercised payment duty: cancelled with it', U]],
+      reqd: ['the exercised payment duty survives expiry', 'erasing it would violate an ensures clause'],
+      out: ['preserve', 'preserved: the exercised payment duty'],
+      enforced: 'obligations survive independently of the position; a Debt-typed duty and an ensures clause', layer: 'Core obligations; correctness claims' },
+    DA13: { fam: ['P'], action: 'split / merge / resolve event claims',
+      req: 'outcome-indexed claims; resolution evidence', test: 'no duplicate winning claim; invalid resolution rejects',
+      pre: ['complete outcome set, fully collateralized', 'resolution evidence submitted'],
+      plaus: ['merge treated as a token operation', ['winning claim: duplicated', U], 'first resolution answer wins'],
+      reqd: ['split partitions, join cannot duplicate resource', 'resolution that fails provenance, freshness or domain rejects'],
+      out: ['reject', 'rejects: invalid resolution'],
+      enforced: 'conservation over split/merge (DA24); resolution is a typed observation with a named capability', layer: 'value conservation; observation facet' },
+    DA14: { fam: ['F4'], action: 'stake / account rewards / slash',
+      req: 'share-rate or rebase accounting; loss allocation', test: 'the same nominal token balance can have changing entitlement',
+      pre: ['nominal balance N of the staked token', 'rewards accounted; a slash applied'],
+      plaus: [['entitlement: read as N', U], ['loss: applied to whatever history is present', U]],
+      reqd: ['entitlement is share × rate, or a rebased quantity; N unchanged, entitlement changed', 'loss allocated against claims as a compliant successor of a compliant history'],
+      out: ['preserve', 'preserved: entitlement distinct from nominal balance'],
+      enforced: 'share-rate or rebase accounting; the four mandatory proof claims (HistoryCompliance)', layer: 'Core accounting; proof claims' },
+    DA15: { fam: ['F4'], action: 'request unstake / claim exit',
+      req: 'pending exit identity; custody; delayed completion', test: 'an exit request is not immediate token delivery',
+      pre: ['unstake requested'],
+      plaus: ['tokens delivered', ['pending state: not represented', U]],
+      reqd: ['a pending exit object with an identity', 'still slashable, no longer earning, not yet transferable', 'completion consumes it; partial completion cannot reset it'],
+      out: ['preserve', 'preserved: pending exit as an identified obligation'],
+      enforced: 'durable identified obligation; affine authority', layer: 'Core obligations; authorization facet' },
+    DA16: { fam: ['F5'], action: 'issue / redeem external claim',
+      req: 'attested claim; custody and legal assumptions', test: 'missing external settlement evidence cannot discharge the duty',
+      pre: ['token burned on-chain', 'external settlement evidence: none'],
+      plaus: ['duty discharged', ['"burned and the wire has not arrived": not represented', U]],
+      reqd: ['the duty stays a duty until evidence of performance exists', 'residual risk printed beside it: the source can still lie'],
+      out: ['reject', 'rejects: discharge without external settlement evidence'],
+      enforced: 'named capability and assurance boundary in the manifest; typed observation with provenance', layer: 'manifest; observation facet' },
+    DA17: { fam: ['F6'], action: 'deposit / mint / withdraw / redeem vault shares',
+      req: 'asset/share conversions with method-specific rounding', test: 'fees, rounding direction, initial donation and zero shares',
+      pre: ['four conversion methods', 'a fee', 'an initial donation; share supply 0'],
+      plaus: ['one rounding direction applied to all four methods', ['zero shares minted on the first deposit', U], ['remainder: whoever the division favours', U]],
+      reqd: ['each conversion declares its rounding direction and remainder disposition', 'zero shares and initial donation are named cases', 'fees stated'],
+      out: ['preserve', 'preserved: method-specific rounding, declared'],
+      enforced: 'policy block per conversion; conversion, preview, limit and execution semantics kept distinct', layer: 'policy block' },
+    DA18: { fam: ['F6'], action: 'request / fulfill / claim asynchronous redemption',
+      req: 'Pending → Claimable → Claimed; residual request amount', test: 'partial claim and changed exchange rate; double claim rejects',
+      pre: ['request R: Pending', 'partially fulfilled; exchange rate changed since the request', 'claim, then a second claim'],
+      plaus: ['first claim paid', ['residual request amount: not tracked', U], 'second claim paid again'],
+      reqd: ['Pending, Claimable and Claimed are distinct states', 'residual survives the partial claim', 'the second claim has nothing to consume'],
+      out: ['reject', 'rejects: double claim'],
+      enforced: 'request duties are persistent identified obligations', layer: 'Core obligations' },
+    DA19: { fam: ['F6'], action: 'allocate / harvest / reinvest / unwind / rebalance',
+      req: 'bounded workflow of trades, debt, shares and fees', test: 'losses and debt persist through unwind; liquidity shortage',
+      pre: ['strategy holding debt and an unrealized loss', 'unwind requested; liquidity insufficient'],
+      plaus: ['position reported closed', ['debt: gone with the position', U], ['liquidity shortage: silent', U]],
+      reqd: ['losses and debt persist through the unwind', 'liquidity shortage is a named state'],
+      out: ['preserve', 'preserved: losses and debt through unwind'],
+      enforced: 'a bounded workflow over identified debt, shares and fees; nested delegation is a named capability', layer: 'Core obligations; manifest capabilities' },
+    DA20: { fam: ['⊥'], action: 'observe price / time / external event',
+      req: 'typed observations with provenance, freshness and domain', test: 'stale or unauthorized evidence rejects',
+      pre: ['observation submitted: valid signature, stale timestamp or unauthorized source'],
+      plaus: ['accepted: the signature verifies', ['freshness, source, domain: not part of the value', U]],
+      reqd: ['observation carries source, feed, unit, timestamp, freshness, sequence, bounds, fallback', 'stale or unauthorized evidence rejects'],
+      out: ['reject', 'rejects: stale or unauthorized evidence'],
+      enforced: 'signed typed observation; a valid oracle signature does not establish economic truth', layer: 'observation declaration; static semantics' },
+    DA21: { fam: ['⊥'], action: 'authorize exact plan / refine outcome intent',
+      req: 'gross debit; net receipt; recipients; calls; new liabilities', test: 'refund cannot restore gross capacity; fees count against the net goal',
+      pre: ['gross authority G signed for an asset', 'transfer of X out; a refund of X returns; a fee F is paid'],
+      plaus: [['allowance after refund: back to G', U], ['fee: outside the goal', U]],
+      reqd: ['gross consumed by X and by F; the refund restores nothing', 'the net goal is compared after fees', 'every recipient, including the refund, on the permitted list'],
+      out: ['preserve', 'preserved: affine gross authority'],
+      enforced: 'authority is affine; gross, not net; asset identity is the full {domain, issuer, reference, kind} tuple', layer: 'IntentIR; IntentRefinement proof claim' },
+    DA22: { fam: ['⊥'], action: 'change parameters / pause / migrate',
+      req: 'bounded administrative action under fixed claim policy', test: 'cannot downgrade claims or reset work; affects existing positions',
+      pre: ['existing positions with accrued work', 'parameter change, pause or migration requested'],
+      plaus: ['parameters changed', ['existing claims: downgraded', U], ['accrued work: reset', U]],
+      reqd: ['administrative action bounded by a fixed claim policy', 'cannot downgrade claims or reset work', 'effect on existing positions is explicit'],
+      out: ['reject', 'rejects: downgrade of existing claims'],
+      enforced: 'governance is a financial action under a fixed claim policy', layer: 'authorization facet; proof claims' },
+    DA23: { fam: ['⊥'], action: 'send / receive / refund pending message',
+      req: 'bounded pending commitments and finality evidence', test: 'delayed or duplicate delivery; explicit refund duty',
+      pre: ['message sent; commitment pending', 'delivery delayed, then delivered twice'],
+      plaus: ['each delivery applied', ['refund path: none', U]],
+      reqd: ['pending commitment is bounded and identified', 'duplicate delivery rejects', 'an explicit refund duty exists'],
+      out: ['reject', 'rejects: duplicate delivery'],
+      enforced: 'bounded pending commitments with finality evidence; same machinery as exit requests and asynchronous redemptions', layer: 'Core obligations; settlement facet' },
+    DA24: { fam: ['⊥'], action: 'sequence / parallel / interleave / synchronize / message',
+      req: 'operator-specific authority, duties, conflicts and fan-in', test: 'split partitions work and claims; join cannot duplicate resource',
+      pre: ['cross-chain swap: an internal ledger batch, then a bridge withdrawal', 'internal batch succeeds', 'bridge withdrawal is rolled back'],
+      plaus: ['swap reported complete on batch success', ['bridge rollback: not representable', U], ['join of two partitions: resource duplicated', U]],
+      reqd: ['atomicity defined per layer and per route; batch atomicity is never lifted to bridge fulfillment', 'the trace is representable, and rejects', 'split partitions work and claims; join cannot duplicate resource'],
+      out: ['reject', 'rejects: bridge withdrawal rolled back after internal batch success'],
+      enforced: 'five operators, each with its own authority rules, duty propagation, conflict semantics and fan-in; attestations cannot discharge a proof obligation', layer: 'composition operators in Core; route custody manifest' }
+  };
+
+  const COMPOSITION = { eligible: 1830, clean: 1645, failed: 185,
+    within: { pairs: 143, failed: 3, rate: '2.10%' }, cross: { pairs: 1687, failed: 182, rate: '10.79%' }, ratio: '5.14×' };
+  const SWAP = { reserveA: 1000000n, reserveB: 2000000n, amountIn: 10000n, feeNum: 997n, feeDen: 1000n };
+  const LOAN = { principal: 100, interest: 10 };
+
+  // fixed counts, asserted
+  const allIds = new Set(TABS.flatMap(t => t.targets));
+  if (allIds.size !== 24 || Object.keys(CASES).length !== 24) throw new Error('action target count is not 24');
+  if (TABS.length !== 8) throw new Error('tab count is not 8');
+  if (CASES.DA24.action.split(' / ').length !== 5) throw new Error('operator count is not 5');
+  if (COMPOSITION.within.pairs + COMPOSITION.cross.pairs !== COMPOSITION.eligible) throw new Error('pair split does not sum');
+
+  // ---------- helpers ----------
+  const $ = (s, r) => (r || document).querySelector(s);
+  const el = (tag, attrs, ...kids) => {
+    const n = document.createElement(tag);
+    for (const k in attrs || {}) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'text') n.textContent = attrs[k];
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    }
+    for (const c of kids) if (c != null) n.append(c);
+    return n;
+  };
+  const fmt = v => { const s = (typeof v === 'bigint' ? v : BigInt(v)).toString(); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const state = { tab: 0, caseId: 'DA01', minOut: 19744, payment: 4, view: 'category', fieldDrawn: false };
+
+  // ---------- tab strip ----------
+  function renderTabs() {
+    const strip = $('#tabs'); strip.textContent = '';
+    TABS.forEach((t, i) => {
+      const own = t.id === 'P' ? '1 + 1' : String(t.targets.length);
+      const b = el('button', { class: 'tab', role: 'tab', id: 'tab-' + i, 'aria-selected': String(i === state.tab),
+        'aria-controls': 'index', tabindex: i === state.tab ? '0' : '-1', type: 'button',
+        onclick: () => selectTab(i), onkeydown: e => tabKeys(e, i) },
+        el('span', { class: 'id', text: t.id }), el('span', { text: t.short }),
+        el('span', { class: 'n', text: own + (t.targets.length === 1 && t.id !== 'P' ? ' action target' : ' action targets') }));
+      b.title = t.name;
+      strip.append(b);
+    });
+    $('#countline').textContent = allIds.size + ' action targets · DA12 shared by F3 and P';
+  }
+  function tabKeys(e, i) {
+    const n = TABS.length; let j = null;
+    if (e.key === 'ArrowRight') j = (i + 1) % n; else if (e.key === 'ArrowLeft') j = (i - 1 + n) % n;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = n - 1;
+    if (j === null) return; e.preventDefault(); selectTab(j); $('#tab-' + j).focus();
+  }
+  function selectTab(i) {
+    state.tab = i; state.caseId = TABS[i].targets[0];
+    renderTabs(); renderIndex(); renderFork(); renderCompo();
+    const t = $('#tab-' + i); if (t.scrollIntoView) t.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  // ---------- case index ----------
+  function renderIndex() {
+    const t = TABS[state.tab]; $('#tabintro').innerHTML = '';
+    $('#tabintro').append(el('strong', { text: t.id + ' ' + t.name + '. ' }), document.createTextNode(t.intro));
+    const idx = $('#index'); idx.textContent = '';
+    t.targets.forEach((id, k) => {
+      const c = CASES[id]; const on = id === state.caseId;
+      const b = el('button', { class: 'case', role: 'radio', 'aria-checked': String(on), tabindex: on ? '0' : '-1', type: 'button',
+        'aria-label': id + ', ' + c.action + ', ' + c.test + ', ' + (k + 1) + ' of ' + t.targets.length,
+        onclick: () => selectCase(id), onkeydown: e => caseKeys(e, k) },
+        el('span', { class: 'l1' }, el('span', { class: 'id', text: id }), el('span', { class: 'act', text: c.action }),
+          c.shared ? el('span', { class: 'badge', text: 'shared' }) : null),
+        el('span', { class: 'test', text: c.test }));
+      idx.append(b);
+    });
+  }
+  function caseKeys(e, k) {
+    const ids = TABS[state.tab].targets; const n = ids.length; let j = null;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') j = (k + 1) % n;
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') j = (k - 1 + n) % n;
+    else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = n - 1;
+    if (j === null) return; e.preventDefault(); selectCase(ids[j]); $('#index').children[j].focus();
+  }
+  function selectCase(id) { state.caseId = id; renderIndex(); renderFork(true); }
+
+  // ---------- fork ----------
+  function lines(arr, cls) {
+    const dl = el('dl', { class: 'lines' });
+    arr.forEach(item => {
+      const isU = Array.isArray(item);
+      const dd = el('dd', { text: isU ? item[0] : item });
+      if (isU) { dd.className = 'undef'; dd.title = 'A balance-based model has no field for this.'; }
+      dl.append(dd);
+    });
+    return dl;
+  }
+  function renderFork(animate) {
+    const id = state.caseId, c = CASES[id];
+    const f = $('#fork'); f.textContent = '';
+    const head = el('header', {},
+      el('div', { class: 'l1' }, el('span', { class: 'id', text: id }), el('h3', { id: 'fork-title', text: c.action }),
+        el('span', { class: 'fam', text: c.fam.join(' · ') + (c.shared ? ' · shared' : '') })),
+      el('dl', { class: 'meta' }, el('dt', { text: 'requirement' }), el('dd', { text: c.req }), el('dt', { text: 'test' }), el('dd', { class: 't', text: c.test })));
+    f.append(head);
+
+    let pre, plaus, reqd;
+    if (c.live === 'swap') ({ pre, plaus, reqd } = swapColumns());
+    else if (c.live === 'loan') ({ pre, plaus, reqd } = loanColumns());
+    else {
+      pre = lines(c.pre); plaus = lines(c.plaus); reqd = lines(c.reqd);
+      reqd.append(el('dd', { class: 'out ' + (c.out[0] === 'reject' ? 'rej' : 'pre'), text: c.out[1], 'aria-live': 'polite' }));
+      markDiff(plaus, reqd);
+    }
+    const cols = el('div', { class: 'cols' },
+      el('div', { class: 'col pre' }, el('h4', { text: 'Pre-state' }), pre),
+      el('div', { class: 'col plaus' + (animate && !reduced() ? ' enter' : '') }, el('h4', { text: 'Plausible implementation' }), plaus),
+      el('div', { class: 'col req' + (animate && !reduced() ? ' enter' : '') }, el('h4', { text: 'Required behaviour' }), reqd));
+    f.append(cols);
+    f.append(el('div', { class: 'enforced' }, el('span', { class: 'k', text: 'enforced by' }), el('span', { text: c.enforced }),
+      el('span', { class: 'layer', text: c.layer })));
+  }
+  // mark the first line index at which the two columns differ in count or kind: a hairline rule on both sides
+  function markDiff(plaus, reqd) {
+    const a = plaus.querySelectorAll('dd'), b = reqd.querySelectorAll('dd:not(.out)');
+    const i = Math.min(a.length, b.length) - 1; if (i < 0) return;
+    // the differing line is the first "undefined" line on the plausible side, else the last shared index
+    let k = Array.from(a).findIndex(d => d.classList.contains('undef')); if (k < 0) k = i;
+    a[k] && a[k].classList.add('diff'); b[Math.min(k, b.length - 1)] && b[Math.min(k, b.length - 1)].classList.add('diff');
+  }
+
+  // DA01: the real formula, exact integer arithmetic
+  function swapColumns() {
+    const s = SWAP;
+    const eff = s.amountIn * s.feeNum, num = eff * s.reserveB, den = s.reserveA * s.feeDen + eff;
+    const out = num / den, rem = num % den;
+    const minOut = BigInt(Math.max(0, Math.floor(Number(state.minOut) || 0)));
+    const minOk = minOut <= out, resOk = out < s.reserveB;
+
+    const pre = lines(['reserve_a ' + fmt(s.reserveA) + ' A', 'reserve_b ' + fmt(s.reserveB) + ' B', 'amount_in ' + fmt(s.amountIn) + ' A', 'fee ' + s.feeNum + '/' + s.feeDen]);
+    const row = el('div', { class: 'field-row' }, el('label', { for: 'minout', text: 'min_out' }),
+      el('input', { id: 'minout', type: 'number', inputmode: 'numeric', min: '0', step: '1', value: String(state.minOut),
+        oninput: e => { state.minOut = e.target.value; refreshLive(); } }), el('span', { class: 'mono', text: 'B' }));
+    pre.append(el('dd', {}, row));
+
+    const plaus = lines([
+      'output ' + fmt(out) + ' or ' + fmt(out + 1n) + ': rounding direction unstated',
+      [minOk ? 'min_out met' : 'min_out unmet: delivered adjusted to output', U],
+      ['reserve emptiness: unchecked', U]]);
+    const reqd = lines([
+      'effective_input = ' + fmt(s.amountIn) + ' × ' + s.feeNum + ' = ' + fmt(eff),
+      'output_calculated = floor(' + fmt(num) + ' / ' + fmt(den) + ') = ' + fmt(out),
+      'remainder ' + fmt(rem) + ' / ' + fmt(den) + ' discarded: unpaid output remains in reserve_b']);
+    reqd.append(el('dd', { class: minOk ? 'ok' : 'fail', text: 'guard arg.min_out <= output_calculated: ' + fmt(minOut) + ' <= ' + fmt(out) + ' ' + (minOk ? 'holds' : 'fails') }));
+    reqd.append(el('dd', { class: resOk ? 'ok' : 'fail', text: 'guard output_calculated < state.reserve_b: ' + fmt(out) + ' < ' + fmt(s.reserveB) + ' ' + (resOk ? 'holds' : 'fails') }));
+    const outcome = !minOk ? ['rej', 'rejects: "minimum output not met"'] : !resOk ? ['rej', 'rejects: "output would empty reserve"']
+      : ['pre', 'preserved: exactly ' + fmt(out) + ' B delivered'];
+    reqd.append(el('dd', { class: 'out ' + outcome[0], text: outcome[1], 'aria-live': 'polite' }));
+    plaus.querySelectorAll('dd')[1].classList.add('diff'); reqd.querySelectorAll('dd')[3].classList.add('diff');
+    return { pre, plaus, reqd };
+  }
+
+  // DA06: the real PartialPayment action
+  function loanColumns() {
+    const p = Math.floor(Number(state.payment) || 0);
+    const pos = p > 0, bounded = p <= LOAN.interest;
+    const pre = lines(['principal: Debt<USD> = debt(' + LOAN.principal + ', USD)', 'interest: Debt<USD> = debt(' + LOAN.interest + ', USD)']);
+    const row = el('div', { class: 'field-row' }, el('label', { for: 'payment', text: 'payment' }),
+      el('input', { id: 'payment', type: 'number', inputmode: 'numeric', min: '0', step: '1', value: String(state.payment),
+        oninput: e => { state.payment = e.target.value; refreshLive(); } }), el('span', { class: 'mono', text: 'USD' }));
+    pre.append(el('dd', {}, row));
+
+    const bal = LOAN.principal + LOAN.interest;
+    const plaus = lines(['balance ' + bal + ' − ' + p + ' = ' + (bal - p),
+      ['allocation between interest and principal: undefined', U],
+      bounded ? ['principal: a residue of subtraction order', U] : ['principal silently reduced by ' + (p - LOAN.interest), U]]);
+    const reqd = lines([]);
+    reqd.append(el('dd', { class: pos ? 'ok' : 'fail', text: 'requires payment > debt(0, USD): ' + p + ' > 0 ' + (pos ? 'holds' : 'fails') }));
+    reqd.append(el('dd', { class: bounded ? 'ok' : 'fail', text: 'requires payment <= pre.interest: ' + p + ' <= ' + LOAN.interest + ' ' + (bounded ? 'holds' : 'fails') }));
+    let outcome;
+    if (pos && bounded) {
+      reqd.append(el('dd', { class: 'diff', text: 'next.interest = ' + LOAN.interest + ' − ' + p + ' = ' + (LOAN.interest - p) }));
+      reqd.append(el('dd', { class: 'ok', text: 'ensures post.principal == pre.principal: ' + LOAN.principal + ' == ' + LOAN.principal + ' holds' }));
+      outcome = ['pre', 'preserved: principal ' + LOAN.principal + ', interest ' + (LOAN.interest - p)];
+    } else {
+      reqd.append(el('dd', { class: 'diff', text: 'no state transition; pre-state unchanged' }));
+      outcome = ['rej', 'rejects: "' + (!pos ? 'requires payment > debt(0, USD)' : 'requires payment <= pre.interest') + '"'];
+    }
+    reqd.append(el('dd', { class: 'out ' + outcome[0], text: outcome[1], 'aria-live': 'polite' }));
+    plaus.querySelectorAll('dd')[1].classList.add('diff');
+    return { pre, plaus, reqd };
+  }
+  // re-render the live case without stealing focus from the input
+  function refreshLive() {
+    const active = document.activeElement, id = active && active.id, pos = active && active.selectionStart;
+    renderFork(false);
+    if (id) { const n = document.getElementById(id); if (n) { n.focus(); } }
+  }
+
+  // ---------- composition field (only on the cross-cutting tab) ----------
+  function renderCompo() {
+    const box = $('#compo'); box.hidden = TABS[state.tab].id !== '⊥'; if (box.hidden) return;
+    box.textContent = '';
+    const C = COMPOSITION;
+    box.append(el('h3', { text: 'Composition across categories fails ' + C.ratio + ' as often.' }));
+    box.append(el('p', { class: 'lead', text: 'From the DeFiFormal audit, independently reproduced locally. Over ' + fmt(C.eligible) + ' eligible protocol pairs, ' + fmt(C.clean) + ' compose cleanly and ' + C.failed + ' fail. ' + C.cross.failed + ' of the ' + C.failed + ' failures are cross-category and ' + C.within.failed + ' are within-category.' }));
+    const seg = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Partition of the 1,830 pairs' });
+    [['category', 'by category'], ['result', 'by result']].forEach(([v, label]) => seg.append(el('button', { type: 'button', role: 'radio', 'aria-checked': String(state.view === v), text: label,
+      onclick: () => { state.view = v; renderCompo(); } })));
+    box.append(seg);
+    box.append(drawField());
+    const caps = el('div', { class: 'caps' });
+    if (state.view === 'category') {
+      caps.append(cap('Within category', C.within.pairs, C.within.failed, C.within.rate), cap('Across categories', C.cross.pairs, C.cross.failed, C.cross.rate));
+    } else {
+      caps.append(cap('Compose cleanly', C.clean, 0, null), cap('Fail', C.failed, C.failed, C.cross.failed + ' cross-category, ' + C.within.failed + ' within'));
+    }
+    box.append(caps);
+    box.append(el('div', { class: 'ratio' }, el('span', { class: 'num', text: C.ratio }), document.createTextNode(C.cross.rate + ' cross-category against ' + C.within.rate + ' within-category.')));
+    box.append(el('p', { class: 'derive mono', text: fmt(C.within.pairs) + ' within and ' + fmt(C.cross.pairs) + ' cross are implied by ' + C.within.failed + ' / ' + C.within.rate + ' and ' + C.cross.failed + ' / ' + C.cross.rate + '; they sum to ' + fmt(C.eligible) + '. Marks are placed by count, not by pair identity.' }));
+  }
+  function cap(h, pairs, failed, rate) {
+    const d = el('div', {}, el('div', { class: 'h', text: h }), el('div', { class: 'num', text: fmt(pairs) + ' pairs' }));
+    if (rate !== null) d.append(el('div', {}, el('span', { class: 'fail num', text: String(failed) }), document.createTextNode(' failed' + (typeof rate === 'string' && rate.endsWith('%') ? ', ' + rate : rate ? ': ' + rate : ''))));
+    return d;
+  }
+  function drawField() {
+    const C = COMPOSITION;
+    const blocks = state.view === 'category'
+      ? [{ n: C.within.pairs, f: C.within.failed, cols: 13, cls: 'f' }, { n: C.cross.pairs, f: C.cross.failed, cols: 59, cls: 'f' }]
+      : [{ n: C.clean, f: 0, cols: 59, cls: 'f' }, { n: C.failed, f: C.failed, cols: 13, cls: 'f', light: C.within.failed }];
+    const narrow = window.innerWidth < 480, u = 10, g = 3;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const label = fmt(C.eligible) + ' eligible pairs: ' + fmt(C.clean) + ' clean, ' + C.failed + ' failed; ' + C.within.failed + ' of ' + fmt(C.within.pairs) + ' within-category (' + C.within.rate + '), ' + C.cross.failed + ' of ' + fmt(C.cross.pairs) + ' cross-category (' + C.cross.rate + '), a ' + C.ratio + ' difference.';
+    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
+    if (state.fieldDrawn || reduced()) svg.classList.add('field-static');
+    let x0 = 0, y0 = 0, W = 0, H = 0, idx = 0;
+    blocks.forEach((b, bi) => {
+      const rows = Math.ceil(b.n / b.cols), step = b.f ? b.n / b.f : Infinity;
+      const fails = new Set(); for (let k = 0; k < b.f; k++) fails.add(Math.floor(k * step + step / 2));
+      let lightLeft = b.light || 0;
+      for (let i = 0; i < b.n; i++) {
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const cx = x0 + (i % b.cols) * u, cy = y0 + Math.floor(i / b.cols) * u;
+        r.setAttribute('x', cx); r.setAttribute('y', cy); r.setAttribute('width', u - g); r.setAttribute('height', u - g);
+        r.setAttribute('aria-hidden', 'true');
+        if (fails.has(i)) { r.setAttribute('class', 'mark f'); r.style.setProperty('--i', idx++); r.setAttribute('fill', lightLeft-- > 0 ? 'var(--mark-fail-2)' : 'var(--mark-fail)'); }
+        else { r.setAttribute('class', 'mark'); r.setAttribute('fill', 'var(--mark)'); }
+        svg.append(r);
+      }
+      const bw = b.cols * u, bh = rows * u;
+      if (narrow) { y0 += bh + 3 * u; W = Math.max(W, bw); H = y0 - 3 * u; }
+      else { x0 += bw + 3 * u; H = Math.max(H, bh); W = x0 - 3 * u; }
+    });
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    state.fieldDrawn = true;
+    return svg;
+  }
+
+  // ---------- theme ----------
+  const themeBtn = $('#theme');
+  function applyTheme(t) {
+    if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+    const dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    themeBtn.textContent = dark ? 'Light theme' : 'Dark theme'; themeBtn.setAttribute('aria-pressed', String(dark));
+  }
+  themeBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const dark = cur === 'dark' || (!cur && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const next = dark ? 'light' : 'dark';
+    try { localStorage.setItem('moriarty-theme', next); } catch (e) {}
+    applyTheme(next);
+  });
+  let saved = null; try { saved = localStorage.getItem('moriarty-theme'); } catch (e) {}
+  applyTheme(saved);
+
+  // deep link: #tests/DA21
+  const m = /#tests\/(DA\d\d)/.exec(location.hash);
+  if (m && CASES[m[1]]) { state.tab = TABS.findIndex(t => t.targets.includes(m[1])); state.caseId = m[1]; }
+
+  let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (!$('#compo').hidden) renderCompo(); }, 150); });
+
+  renderTabs(); renderIndex(); renderFork(false); renderCompo();
+})();
+</script>
+</body>
+</html>

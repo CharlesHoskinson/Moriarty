@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moriarty: the guarantee chain</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --bg-2: #eceef1;
+    --ink: #15181d;
+    --ink-2: #4b5160;
+    --ink-3: #7c8291;
+    --line: rgba(21, 24, 29, 0.12);
+    --line-2: rgba(21, 24, 29, 0.24);
+    --accent: #b84a1f;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(184, 74, 31, 0.10);
+    --link-bg: #ffffff;
+    --sans: system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --r: 6px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111317; --bg-2: #181b20; --ink: #e6e7ea; --ink-2: #aeb3bf; --ink-3: #7e8493;
+      --line: rgba(230, 231, 234, 0.12); --line-2: rgba(230, 231, 234, 0.26);
+      --accent: #e07a4a; --accent-ink: #111317; --accent-soft: rgba(224, 122, 74, 0.14);
+      --link-bg: #1b1e24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111317; --bg-2: #181b20; --ink: #e6e7ea; --ink-2: #aeb3bf; --ink-3: #7e8493;
+    --line: rgba(230, 231, 234, 0.12); --line-2: rgba(230, 231, 234, 0.26);
+    --accent: #e07a4a; --accent-ink: #111317; --accent-soft: rgba(224, 122, 74, 0.14);
+    --link-bg: #1b1e24; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.5;
+    font-feature-settings: "tnum" 1;
+  }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+  @media (min-width: 720px) { .wrap { padding-inline: 32px; } }
+
+  /* top bar */
+  .top { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+  .brand { font-weight: 600; letter-spacing: -0.01em; text-decoration: none; }
+  .brand span { color: var(--ink-3); font-weight: 400; }
+  .controls { display: flex; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--r); overflow: hidden; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .seg span { display: block; padding: 6px 12px; font-size: 14px; color: var(--ink-2); }
+  .seg input:checked + span { background: var(--ink); color: var(--bg); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ghost { background: transparent; border: 1px solid var(--line-2); border-radius: var(--r); padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  .ghost:hover { border-color: var(--ink); }
+  .ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* hero of the section */
+  .lead { padding-block: 56px 40px; }
+  @media (min-width: 720px) { .lead { padding-block: 88px 56px; } }
+  h1 { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.05; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 20px; max-width: 18ch; }
+  .lead p { max-width: 62ch; color: var(--ink-2); margin: 0; font-size: 17px; }
+  .lead p strong { color: var(--ink); font-weight: 600; }
+
+  /* chain + panel */
+  .stage { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: start; padding-bottom: 72px; }
+  @media (min-width: 760px) { .stage { grid-template-columns: minmax(280px, 340px) 1fr; gap: 56px; } }
+
+  .chain-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .chain-head h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.02em; color: var(--ink-3); margin: 0; }
+  .chain { list-style: none; margin: 0; padding: 0; position: relative; }
+  .chain li { position: relative; transition: transform 700ms var(--ease); }
+  .link {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: var(--link-bg); border: 1px solid var(--line-2); border-radius: var(--r);
+    padding: 12px 14px 12px 16px; min-height: 64px;
+    transition: border-color 200ms var(--ease), background 200ms var(--ease), border-radius 700ms var(--ease);
+  }
+  .link:hover { border-color: var(--ink); }
+  .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .link[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
+  .link .n { font-family: var(--mono); font-size: 12px; color: var(--ink-3); display: block; }
+  .link .t { display: block; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; margin-top: 2px; }
+  .gap { height: 44px; display: flex; align-items: center; gap: 8px; padding-left: 16px; transform-origin: top; transition: transform 700ms var(--ease), opacity 500ms var(--ease); }
+  .gap .stem { width: 1px; height: 100%; background: var(--line-2); }
+  .gap .lbl { font-family: var(--mono); font-size: 11.5px; color: var(--accent); letter-spacing: 0.01em; }
+  .gap .lbl::before { content: "\2193  "; }
+
+  .term { margin-top: 0; }
+  .term .link { border-style: dashed; background: transparent; }
+  .term .link .t { font-weight: 500; }
+
+  .chain.collapsed li { transform: translateY(calc(var(--i) * -44px)); }
+  .chain.collapsed .gap { transform: scaleY(0); opacity: 0; }
+  .chain.collapsed .link { border-radius: 0; }
+  .chain.collapsed li:first-child .link { border-radius: var(--r) var(--r) 0 0; }
+  .chain.collapsed li.last .link { border-radius: 0 0 var(--r) var(--r); }
+  .chain.collapsed .term { transform: translateY(calc(var(--i) * -44px + 18px)); }
+  .chain { transition: margin-bottom 700ms var(--ease); }
+  .chain.collapsed { margin-bottom: -230px; }
+  @media (max-width: 479px) { .brand span { display: none; } }
+
+  /* panel */
+  .panel { border-top: 1px solid var(--line-2); padding-top: 16px; min-height: 420px; }
+  .panel .k { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 0 0 8px; }
+  .panel h2 { font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 18px; font-weight: 600; }
+  .panel h3 { font-size: 13px; font-weight: 500; letter-spacing: 0.02em; color: var(--ink-3); margin: 22px 0 6px; }
+  .panel p { margin: 0 0 12px; max-width: 64ch; color: var(--ink-2); }
+  .panel p code { color: var(--ink); }
+  .open { border-left: 2px solid var(--accent); padding: 4px 0 4px 14px; margin-top: 8px; }
+  .open .to { font-family: var(--mono); font-size: 12.5px; color: var(--accent); display: block; margin-bottom: 4px; }
+  .open p { color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .chips li { border: 1px solid var(--line-2); border-radius: var(--r); padding: 4px 10px; font-size: 14px; }
+  .chips li.hist { border-color: var(--accent); background: var(--accent-soft); }
+  .chips li a { text-decoration: none; }
+  .chips li a:hover { text-decoration: underline; }
+  .residuals { margin: 0; padding: 0; list-style: none; }
+  .residuals li { padding: 8px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr; gap: 2px 16px; font-size: 14.5px; }
+  @media (min-width: 560px) { .residuals li { grid-template-columns: 200px 1fr; } }
+  .residuals .who { color: var(--ink-3); }
+  .residuals .what { color: var(--ink); }
+
+  /* below: claims, tables, audit */
+  section.block { padding-block: 48px; border-top: 1px solid var(--line-2); }
+  section.block h2 { font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 8px; font-weight: 600; max-width: 26ch; }
+  section.block > .wrap > p.sub { color: var(--ink-2); max-width: 64ch; margin: 0 0 28px; }
+
+  .claims { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 8px; }
+  @media (min-width: 720px) { .claims { grid-template-columns: repeat(4, 1fr); } }
+  .claim { border: 1px solid var(--line-2); border-radius: var(--r); padding: 16px; background: var(--link-bg); }
+  .claim .n { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .claim .name { font-family: var(--mono); font-size: 15px; font-weight: 600; margin: 4px 0 6px; display: block; }
+  .claim p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+  .claim.hist { border-color: var(--accent); }
+  .claim.hist .name { color: var(--accent); }
+  .note { margin-top: 18px; font-size: 15px; color: var(--ink); max-width: 64ch; border-left: 2px solid var(--accent); padding-left: 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  thead th { text-align: left; font-weight: 500; font-size: 12.5px; letter-spacing: 0.02em; color: var(--ink-3); padding: 0 12px 10px 0; border-bottom: 1px solid var(--line-2); }
+  tbody td { vertical-align: top; padding: 12px 12px 12px 0; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  tbody td:first-child { color: var(--ink); font-weight: 600; width: 22%; }
+  tbody td.res { color: var(--ink); }
+  th.res { color: var(--accent); }
+  td.res::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 1px; background: var(--accent); margin-right: 8px; vertical-align: 2px; }
+  tr.dim td { opacity: 0.38; }
+  tr.on td { opacity: 1; }
+  tr.on td:first-child { box-shadow: inset 3px 0 0 var(--accent); padding-left: 12px; }
+  tr:target td { background: var(--accent-soft); }
+  tbody td .src { font-family: var(--mono); font-size: 11px; color: var(--ink-3); display: block; margin-top: 4px; font-weight: 400; }
+  .tblnote { margin-top: 14px; font-size: 13.5px; color: var(--ink-3); max-width: 70ch; }
+
+  @media (max-width: 719px) {
+    table, thead, tbody, tr, td, th { display: block; }
+    thead { position: absolute; left: -9999px; }
+    tbody tr { border-top: 1px solid var(--line-2); padding: 14px 0; }
+    tbody td { border: 0; padding: 4px 0; width: auto !important; }
+    tbody td::before { content: attr(data-label); display: block; font-size: 12px; letter-spacing: 0.02em; color: var(--ink-3); font-weight: 500; }
+    td.res::before { content: attr(data-label); display: block; width: auto; height: auto; background: none; margin: 0; color: var(--accent); }
+    tr.on td:first-child { box-shadow: none; padding-left: 0; }
+    tbody td:first-child { padding-top: 0; }
+  }
+
+  .audit { display: grid; grid-template-columns: 1fr; gap: 0; counter-reset: a; margin: 0; padding: 0; list-style: none; }
+  @media (min-width: 720px) { .audit { grid-template-columns: repeat(2, 1fr); column-gap: 40px; } }
+  .audit li { counter-increment: a; border-top: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-columns: 34px 1fr; font-size: 15px; }
+  .audit li::before { content: counter(a); font-family: var(--mono); font-size: 12px; color: var(--ink-3); padding-top: 3px; }
+
+  footer { border-top: 1px solid var(--line-2); padding-block: 28px 40px; font-size: 13.5px; color: var(--ink-3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chain, .chain li, .gap, .link { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">Moriarty <span>/ the guarantees</span></a>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="Reading mode">
+        <label><input type="radio" name="mode" value="build" checked><span>Build</span></label>
+        <label><input type="radio" name="mode" value="verify"><span>Verify</span></label>
+      </div>
+      <button class="ghost" id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap lead">
+    <h1>Six obligations. Establishing one does not establish the next.</h1>
+    <p id="lede"></p>
+  </div>
+
+  <div class="wrap stage">
+    <div>
+      <div class="chain-head">
+        <h2 id="chain-label">The assurance chain</h2>
+        <button class="ghost" id="collapse" type="button" aria-pressed="false">Show it collapsed</button>
+      </div>
+      <ol class="chain" id="chain" aria-labelledby="chain-label"></ol>
+    </div>
+    <aside class="panel" id="panel" aria-labelledby="panel-title"></aside>
+    <div class="sr-only" aria-live="polite" id="live"></div>
+  </div>
+
+  <section class="block" id="claims">
+    <div class="wrap">
+      <h2>Four claims on every accepted transaction.</h2>
+      <p class="sub">Fixed names, fixed order, none optional.</p>
+      <div class="claims" id="claims-grid"></div>
+      <p class="note">The fourth is the one that distinguishes Moriarty from contract-level verification: a valid proof of a valid transition against an invalid history must not be accepted.</p>
+    </div>
+  </section>
+
+  <section class="block" id="properties">
+    <div class="wrap">
+      <h2>Twelve properties, each with the assumption that qualifies it.</h2>
+      <p class="sub" id="props-sub"></p>
+      <table>
+        <thead><tr><th>Property</th><th>Assumption that qualifies it</th><th>Moriarty obligation</th></tr></thead>
+        <tbody id="props-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="threats">
+    <div class="wrap">
+      <h2>Thirteen threat rows. The residual-risk column is the point.</h2>
+      <p class="sub">Each row names the required control and what remains after it. Select an obligation in the chain to see which rows sit at that boundary.</p>
+      <table>
+        <thead><tr><th>Threat</th><th>Required control</th><th class="res">Residual risk</th></tr></thead>
+        <tbody id="threats-body"></tbody>
+      </table>
+      <p class="tblnote" id="threats-note"></p>
+    </div>
+  </section>
+
+  <section class="block" id="audits">
+    <div class="wrap">
+      <h2>A single "Moriarty audit" is not an adequate claim.</h2>
+      <p class="sub">Audits split across seven distinct boundaries.</p>
+      <ol class="audit" id="audit-list"></ol>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">Every number on this page is real and traces to the content specification.</div></footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- data ---------------------------------------------------------------
+
+  const LAYERS = [
+    {
+      n: 1, name: 'Semantic validity',
+      build: 'The <code>.mori</code> source means what you think it means. <code>Debt&lt;USD&gt;</code> is a different type from <code>Amount&lt;USD&gt;</code>, a partial repayment preserves principal, a failed guard is a named rejection. This is where <code>ensures post.principal == pre.principal</code> is checked, against the typing judgments and the executable K semantics.',
+      verify: 'Typed elaboration and the executable operational semantics in K fix what the agreement means: state transitions, financial effects, obligations, rejection. The twelve properties are stated over these semantics, with the assumption that qualifies each one.',
+      open: 'That meaning has not yet been shown to survive into the generated Compact. Simulation and static analysis are distinct: a successful example does not turn the property list green.'
+    },
+    {
+      n: 2, name: 'Moriarty-to-Compact translation validity',
+      build: 'The Compact that gets deployed does what your source does. Compact and ZKIR erase some domain distinctions, so this is where token-indexed amounts and distinct time and duration types have to be shown to survive lowering, and where every generated <code>disclose()</code> is traced to an explicit source visibility transition.',
+      verify: 'Canonical Core lowers to readable generated Compact with a correspondence manifest. Validity is checked by an independent Core interpreter, translation validation and differential traces against a pinned toolchain. Compact&rsquo;s <code>disclose()</code> authorizes a flow past the compiler&rsquo;s privacy analysis; it does not make that flow semantically safe.',
+      open: 'Correct Compact says nothing about what <code>compactc</code> does with it. Compact-to-ZKIR compilation is a separate obligation, and it belongs to the supported compiler, not to Moriarty.'
+    },
+    {
+      n: 3, name: 'Compact-to-ZKIR compiler correctness',
+      build: 'Your Compact is compiled by Midnight&rsquo;s compiler, not by Moriarty. Moriarty keeps a reviewable Compact artifact and source maps so this step can be inspected, and pins the toolchain so it cannot drift underneath you.',
+      verify: '<code>compactc</code> lowers Compact to ZKIR 3, generated TypeScript and proving and verifier artifacts. ZKIR is a typed straight-line circuit IR with guarded impacts and no source-level financial concepts; it is ledger-coupled and evolving. Direct source-to-ZKIR generation is deliberately deferred so that the supported compiler, source maps, runtime bindings and ledger operations are reused rather than replaced.',
+      open: 'A correct circuit description is not a correct proof. Private witness callbacks are unverified TypeScript, so the generated circuit must constrain every witness result.'
+    },
+    {
+      n: 4, name: 'Circuit and proof correctness',
+      build: 'The proof is about one bounded transition, not a whole lifetime. Four claims travel with every accepted transaction. The fourth, HistoryCompliance, is what stops a step that looks locally fine from extending a history that is not.',
+      verify: 'The generated circuit constrains every witness result. Every accepted transaction carries ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance. A valid proof of a valid transition against an invalid history must not be accepted.',
+      open: 'A valid proof does not make a stale predecessor live, and it does not make the transaction feasible on the ledger. The transaction count bound is over abstract transactions, not ledger resource feasibility.'
+    },
+    {
+      n: 5, name: 'Midnight ledger feasibility',
+      build: 'The ledger has to accept it: the pinned versions of everything, within resource limits, against the live predecessor state. Timeouts are permissionless exported transitions guarded by ledger block-time predicates; they do not execute autonomously.',
+      verify: 'Sealed ledger fields bind Core hash, version, parties and capabilities, token policy, deadlines and resource limits. Mutable public state holds phase, sequence number, accounting and obligation commitments and bounded continuation roots. The certificate carries max transitions and per-entry-point resource estimates.',
+      open: 'Ledger acceptance says nothing about whether the transaction the wallet built is the one the user meant to sign.'
+    },
+    {
+      n: 6, name: 'Transaction construction and wallet correctness',
+      build: 'What you sign is a deterministic semantic signing summary, not a hex blob: asset domains, gross budgets, allowed recipients, net goals, fees, validity and nonces, assumptions and liabilities.',
+      verify: 'The client recomputes Core hash, entry point, public effects, destinations, fees, versions and artifact hashes before signing. Wallet rendering is derived from the canonical signed meaning. An envelope&rsquo;s key cannot appoint itself authoritative; verification uses the caller&rsquo;s independent trust record.',
+      open: 'This is the last layer the toolchain can answer for. What remains is the residual-risk column: a compromised wallet UI can still deceive the user, and wallet or key compromise remains.'
+    }
+  ];
+
+  const TERMINAL = {
+    n: 7, name: 'What no layer establishes',
+    text: 'After all six obligations, these are the risks that remain. They are stated next to the controls that leave them, because naming the assumption beside the claim is the project&rsquo;s actual differentiator.'
+  };
+
+  // Threat rows. `src: 'spec'` rows are reproduced in CONTENT-SPEC section 4.3;
+  // `src: 'wiki'` rows are taken from wiki/security.md, the file the spec cites
+  // for the full set of thirteen. `at` is an editorial cross-reference used only
+  // to highlight rows; it is not a claim made on the page.
+  const THREATS = [
+    { id: 'witness',    name: 'Malicious witness',       ctrl: 'circuit constrains commitments, signatures, units, ranges, freshness, authorization', res: 'compromised local secrets and selective withholding', at: [4], src: 'spec' },
+    { id: 'disclosure', name: 'Accidental disclosure',   ctrl: 'visibility types + Compact information-flow check; generated disclose() reviewed in manifest', res: 'traffic analysis; intentionally disclosed correlations', at: [1, 2], src: 'spec' },
+    { id: 'compiler',   name: 'Compiler mistranslation', ctrl: 'independent Core interpreter, translation validation, differential traces, pinned toolchain', res: 'compiler and validator bugs until proof coverage is complete', at: [2, 3], src: 'spec' },
+    { id: 'initial',    name: 'Invalid initial state',   ctrl: 'total well-formedness checker and constructor assertions; reject deployment manifest', res: 'backend mismatch could bypass incomplete checks', at: [1], src: 'wiki' },
+    { id: 'unit',       name: 'Token or unit confusion', ctrl: 'token-indexed amounts and distinct time/duration types before lowering', res: 'Compact/ZKIR erase some domain distinctions', at: [1, 2], src: 'spec' },
+    { id: 'replay',     name: 'Authorization replay',    ctrl: 'domain separation, sequence numbers, nonce/nullifier, deadline', res: 'wallet/key compromise', at: [4, 6], src: 'spec' },
+    { id: 'oracle',     name: 'Oracle manipulation',     ctrl: 'signed typed observation: source, feed, unit, timestamp, freshness, sequence, bounds, fallback', res: 'the source can still lie', at: [4, 7], src: 'spec' },
+    { id: 'contin',     name: 'Continuation loss',       ctrl: 'replicated content-addressed storage, preflight availability proof', res: 'integrity does not create availability', at: [5], src: 'spec' },
+    { id: 'subst',      name: 'Runtime substitution',    ctrl: 'client recomputes Core hash, entry point, public effects, destinations, fees, versions, artifact hashes before signing', res: 'a compromised wallet UI can still deceive the user', at: [6], src: 'spec' },
+    { id: 'skew',       name: 'Backend version skew',    ctrl: 'lock every version and artifact hash; conformance matrix; no implicit "latest"', res: 'emergency ledger upgrades can remove an execution path', at: [3, 5], src: 'wiki' },
+    { id: 'resource',   name: 'Resource exhaustion',     ctrl: 'predeployment limits on Core size, transition rows, proof memory/time, state cardinality, transaction size', res: 'estimates need safety margin and live-network validation', at: [5], src: 'wiki' },
+    { id: 'external',   name: 'External contract call',  ctrl: 'excluded from V0; later capability manifest, allowlist, effect summary', res: 'external behavior cannot inherit Moriarty guarantees', at: [7], src: 'spec' },
+    { id: 'govern',     name: 'Governance capture',      ctrl: 'multi-party ownership, public MIPs, reproducible releases, delayed activation, signed registries', res: 'social-layer collusion cannot be eliminated technically', at: [7], src: 'wiki' }
+  ];
+
+  const CLAIMS = [
+    { name: 'ContractInvariant', text: 'The agreement’s own rules hold.' },
+    { name: 'IntentRefinement', text: 'What executed refines what the principal authorized.' },
+    { name: 'TransitionValidity', text: 'This state transition is legal.' },
+    { name: 'HistoryCompliance', text: 'The predecessor history this extends is itself compliant.', hist: true }
+  ];
+
+  const PROPERTIES = [
+    ['Termination', 'V1 core only; no new recursive construct', 'Core step decreases a well-founded measure; surface loops elaborate to finite Core'],
+    ['Finite maximum lifetime', 'every wait has a finite absolute bound', 'reject unbounded subscriptions; certify the bound in the manifest'],
+    ['Conservation of value', 'valid positive state and successful transaction', 'prove abstract conservation, and separately prove correspondence to Midnight kernel effects'],
+    ['Positive accounts', 'valid initial state', 'make validity a constructor and transaction precondition'],
+    ['Closure / no residual internal value', 'a semantic execution path exists and can be submitted', 'separate semantic closure from proving, ledger, witness and participant liveness'],
+    ['Quiescence and idempotence', 'pinned V1 evaluator', 'preserve in Core; do not require one giant circuit to reduce a whole lifetime'],
+    ['Grouped/split input equivalence', 'only under stated valid transaction conditions', 'reprove around atomic action sets; atomicity intentionally changes some equivalences'],
+    ['Determinism', 'canonical interval and serialization agreement', 'total deterministic step relation and canonical input ordering'],
+    ['Transaction count bound', 'abstract transactions, not ledger resource feasibility', 'certificate carries max transitions and per-entry-point resource estimates'],
+    ['Authorization', 'does not validate arbitrary role-token policy', 'model credentials/capabilities and nullifier/replay rules explicitly'],
+    ['Continuation integrity', 'hash comparison does not imply availability', 'bind continuation roots in ZK; specify replicated availability separately'],
+    ['Cross-implementation correspondence', 'no single theorem covers Isabelle, Agda, Haskell, TypeScript, Plutus', 'normative Core plus conformance vectors, differential tests, translation validation']
+  ];
+
+  const AUDITS = [
+    'Normative Core and proofs',
+    'Parser, type checker and elaborator',
+    'Compact backend and translation validator',
+    'Generated circuits and artifact registry',
+    'Runtime and client verifier',
+    'SDK and UI',
+    'Optional oracle and composition protocols'
+  ];
+
+  const LEDE = {
+    build: 'A type error caught in source is not a proof. A proof is not a ledger acceptance. A ledger acceptance is not the transaction you signed. Each layer below is a separate obligation, and <strong>collapsing them into one word is the standard overclaim in this field.</strong>',
+    verify: 'The assurance vocabulary is permanently layered. Each arrow is a separate obligation with its own evidence, its own assumptions and its own residual risk; <strong>a proof at one arrow never silently discharges the next.</strong>'
+  };
+
+  const PROPS_SUB = {
+    build: 'Three columns that must never collapse into one. The middle column is what a marketing page leaves out.',
+    verify: 'Evidence reproduced from pinned Isabelle sources in the Marlowe lineage (<code>marlowe-lang/marlowe</code> <code>7b5b1e90c171eae2674a6fc08aa7d8caa92b16af</code>). Three columns: the property, the assumption under which the evidence holds, and what Moriarty must establish beyond it.'
+  };
+
+  // ---- state --------------------------------------------------------------
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let mode = 'build';
+  let selected = 1;
+  let collapsed = false;
+
+  try { const m = localStorage.getItem('moriarty.mode'); if (m === 'build' || m === 'verify') mode = m; } catch (e) {}
+  const h = /^#guarantees\/(\d)$/.exec(location.hash);
+  if (h) { const n = +h[1]; if (n >= 1 && n <= 7) selected = n; }
+
+  const $ = (s) => document.querySelector(s);
+  const el = (tag, attrs, html) => { const e = document.createElement(tag); if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; };
+
+  // ---- chain --------------------------------------------------------------
+
+  const chain = $('#chain');
+  function buildChain() {
+    chain.innerHTML = '';
+    LAYERS.forEach((L, i) => {
+      const li = el('li', { style: '--i:' + i });
+      if (i === LAYERS.length - 1) li.classList.add('last');
+      const b = el('button', { type: 'button', class: 'link', 'data-n': L.n, 'aria-pressed': 'false' },
+        '<span class="n">obligation ' + L.n + ' of 6</span><span class="t">' + L.name + '</span>');
+      li.appendChild(b);
+      if (i < LAYERS.length - 1) {
+        li.appendChild(el('div', { class: 'gap', 'aria-hidden': 'true' }, '<span class="stem"></span><span class="lbl">does not establish</span>'));
+      }
+      chain.appendChild(li);
+    });
+    const t = el('li', { class: 'term', style: '--i:' + (LAYERS.length - 1) });
+    t.appendChild(el('div', { class: 'gap', 'aria-hidden': 'true' }, '<span class="stem"></span><span class="lbl">leaves</span>'));
+    t.appendChild(el('button', { type: 'button', class: 'link', 'data-n': 7, 'aria-pressed': 'false' },
+      '<span class="n">residual</span><span class="t">' + TERMINAL.name + '</span>'));
+    chain.appendChild(t);
+  }
+
+  function select(n, announce) {
+    selected = n;
+    chain.querySelectorAll('.link').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.n === n)));
+    renderPanel();
+    highlightThreats();
+    if (history.replaceState) history.replaceState(null, '', '#guarantees/' + n);
+    if (announce) {
+      const name = n === 7 ? TERMINAL.name : LAYERS[n - 1].name;
+      $('#live').textContent = (n === 7 ? 'Residual risk' : 'Obligation ' + n + ' of 6') + ', ' + name + ', selected.';
+    }
+  }
+
+  chain.addEventListener('click', (e) => {
+    const b = e.target.closest('.link'); if (!b) return;
+    if (collapsed) setCollapsed(false);
+    select(+b.dataset.n, true);
+  });
+  chain.addEventListener('keydown', (e) => {
+    const b = e.target.closest('.link'); if (!b) return;
+    const links = Array.from(chain.querySelectorAll('.link'));
+    const i = links.indexOf(b); let j = null;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') j = Math.min(i + 1, links.length - 1);
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') j = Math.max(i - 1, 0);
+    if (e.key === 'Home') j = 0;
+    if (e.key === 'End') j = links.length - 1;
+    if (j === null) return;
+    e.preventDefault(); links[j].focus(); select(+links[j].dataset.n, true);
+  });
+
+  function setCollapsed(v) {
+    collapsed = v;
+    chain.classList.toggle('collapsed', v);
+    const btn = $('#collapse');
+    btn.setAttribute('aria-pressed', String(v));
+    btn.textContent = v ? 'Show the six obligations' : 'Show it collapsed';
+    renderPanel();
+    highlightThreats();
+    $('#live').textContent = v ? 'Chain collapsed into one bar.' : 'Chain expanded into six obligations.';
+  }
+  $('#collapse').addEventListener('click', () => setCollapsed(!collapsed));
+
+  // ---- panel --------------------------------------------------------------
+
+  const panel = $('#panel');
+  function renderPanel() {
+    if (collapsed) {
+      panel.innerHTML =
+        '<p class="k">as usually claimed</p>' +
+        '<h2 id="panel-title">One bar, six obligations, no gaps.</h2>' +
+        '<p>This is the shape the claim usually takes: a single word standing for six separate things, with nothing in it saying which of the six was established, under what assumption, or what remains.</p>' +
+        '<p>Nothing on this page is allowed to be drawn this way. Expand the chain to see the six obligations and the gaps between them.</p>';
+      return;
+    }
+    if (selected === 7) {
+      panel.innerHTML =
+        '<p class="k">after obligation 6</p>' +
+        '<h2 id="panel-title">' + TERMINAL.name + '</h2>' +
+        '<p>' + TERMINAL.text + '</p>' +
+        '<h3>The residual-risk column, in full</h3>' +
+        '<ul class="residuals">' + THREATS.map((t) => '<li><span class="who">' + t.name + '</span><span class="what">' + t.res + '</span></li>').join('') + '</ul>';
+      return;
+    }
+    const L = LAYERS[selected - 1];
+    const next = LAYERS[selected] ? LAYERS[selected].name : TERMINAL.name;
+    const rows = THREATS.filter((t) => t.at.indexOf(L.n) >= 0);
+    let html =
+      '<p class="k">obligation ' + L.n + ' of 6</p>' +
+      '<h2 id="panel-title">' + L.name + '</h2>' +
+      '<h3>' + (mode === 'build' ? 'What it settles' : 'What it establishes') + '</h3>' +
+      '<p>' + (mode === 'build' ? L.build : L.verify) + '</p>';
+    if (L.n === 4) {
+      html += '<h3>The four mandatory proof claims</h3><ul class="chips">' +
+        CLAIMS.map((c) => '<li' + (c.hist ? ' class="hist"' : '') + '><a href="#claims">' + c.name + '</a></li>').join('') + '</ul>';
+    }
+    html +=
+      '<h3>Leaves open</h3>' +
+      '<div class="open"><span class="to">does not establish ↓ ' + next + '</span><p>' + L.open + '</p></div>';
+    if (rows.length) {
+      html += '<h3>Threat rows at this boundary</h3><ul class="chips">' +
+        rows.map((t) => '<li><a href="#threat-' + t.id + '">' + t.name + '</a></li>').join('') + '</ul>';
+    }
+    panel.innerHTML = html;
+  }
+
+  // ---- claims, properties, threats, audits -------------------------------
+
+  $('#claims-grid').innerHTML = CLAIMS.map((c, i) =>
+    '<div class="claim' + (c.hist ? ' hist' : '') + '"><span class="n">' + (i + 1) + '</span><span class="name">' + c.name + '</span><p>' + c.text + '</p></div>').join('');
+
+  $('#props-body').innerHTML = PROPERTIES.map((p) =>
+    '<tr><td data-label="Property">' + p[0] + '</td><td data-label="Assumption that qualifies it">' + p[1] + '</td><td data-label="Moriarty obligation">' + p[2] + '</td></tr>').join('');
+
+  $('#threats-body').innerHTML = THREATS.map((t) =>
+    '<tr id="threat-' + t.id + '" data-at="' + t.at.join(' ') + '"><td data-label="Threat">' + t.name +
+    (t.src === 'wiki' ? '<span class="src">row from wiki/security.md</span>' : '') +
+    '</td><td data-label="Required control">' + t.ctrl + '</td><td class="res" data-label="Residual risk">' + t.res + '</td></tr>').join('');
+
+  $('#audit-list').innerHTML = AUDITS.map((a) => '<li>' + a + '</li>').join('');
+
+  function highlightThreats() {
+    const rows = document.querySelectorAll('#threats-body tr');
+    const note = $('#threats-note');
+    if (collapsed) {
+      rows.forEach((r) => { r.classList.remove('on', 'dim'); });
+      note.textContent = 'All thirteen rows shown. A collapsed chain cannot say which boundary any of them sits at.';
+      return;
+    }
+    let count = 0;
+    rows.forEach((r) => {
+      const on = r.dataset.at.split(' ').indexOf(String(selected)) >= 0;
+      r.classList.toggle('on', on); r.classList.toggle('dim', !on); if (on) count++;
+    });
+    const name = selected === 7 ? TERMINAL.name : LAYERS[selected - 1].name;
+    note.textContent = count + ' of 13 rows sit at "' + name + '". The other rows are dimmed, not hidden; the placement of a row against a boundary is editorial and every row is always shown.';
+  }
+
+  // ---- mode and theme -----------------------------------------------------
+
+  function applyMode() {
+    document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === mode; });
+    $('#lede').innerHTML = LEDE[mode];
+    $('#props-sub').innerHTML = PROPS_SUB[mode];
+    renderPanel();
+  }
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', () => {
+    mode = r.value; try { localStorage.setItem('moriarty.mode', mode); } catch (e) {} applyMode();
+  }));
+
+  $('#theme').addEventListener('click', () => {
+    const root = document.documentElement;
+    const dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  // ---- boot ---------------------------------------------------------------
+
+  buildChain();
+  applyMode();
+  select(selected, false);
+  highlightThreats();
+
+  // Entry motion: the chain first appears as one bar, then separates into six.
+  // This is the section's argument made visible. Under reduced motion the chain
+  // renders already separated.
+  // A reader arriving by deep link is not shown the entry motion.
+  if (!reduced && !h && 'IntersectionObserver' in window) {
+    chain.classList.add('collapsed');
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        setTimeout(() => { if (!collapsed) chain.classList.remove('collapsed'); }, 420);
+      }
+    }, { threshold: 0.3 });
+    io.observe(chain);
+  }
+})();
+</script>
+</body>
+</html>
