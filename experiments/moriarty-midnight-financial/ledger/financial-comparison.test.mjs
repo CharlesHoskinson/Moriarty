@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 const require=createRequire('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/package.json');
@@ -149,4 +150,18 @@ test('mint-to-self input counts once as contract funding and never as participan
  assert.equal(s.participantNetDeltas.trader.ASSET_A,'100000');
  await assert.rejects(run(fixture('swap'),(o,i)=>{if(i===1)o.receipt.transaction.actions[0].transcripts[0].effects.unshieldedInputs={};}),/unshieldedInputs/);
  await assert.rejects(run(fixture('swap'),(o,i,f)=>{if(i===1)o.receipt.contractBalances[f.colors[0]]='2000000';}),/CONTRACT_BALANCES/);
+});
+
+test('standalone runtime pin inspection rejects unchanged-version package or entry mutation without importing adapters',()=>{
+ assert.equal(typeof api.inspectFinancialRuntimePinsForSourceTest,'function');
+ assert.throws(()=>api.inspectFinancialRuntimePinsForSourceTest({readFile:readFileSync}),/SOURCE_TEST_ONLY/);
+ const result=api.inspectFinancialRuntimePinsForSourceTest({sourceTestOnly:true,readFile:readFileSync});
+ assert.deepEqual(result,{status:'SOURCE_TEST_ONLY',pinChecksPassed:true,runtimeImported:false,networkAcceptance:false,proofAcceptance:false});
+ for(const suffix of ['package.json','dist/index.js']){
+  const readFile=path=>{
+   const bytes=readFileSync(path);
+   return path.endsWith(suffix)?Buffer.concat([bytes,Buffer.from('\n ')]):bytes;
+  };
+  assert.throws(()=>api.inspectFinancialRuntimePinsForSourceTest({sourceTestOnly:true,readFile}),suffix==='package.json'?/COMPACT_RUNTIME_PACKAGE_PIN/:/COMPACT_RUNTIME_ENTRY_PIN/);
+ }
 });

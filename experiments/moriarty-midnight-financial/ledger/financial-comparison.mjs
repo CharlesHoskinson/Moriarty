@@ -1,10 +1,25 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 import {PINNED_NM} from './providers.mjs';
 
 const EXPECTATION_HASH='693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f';
+const RUNTIME_ROOT=PINNED_NM+'/@midnight-ntwrk/compact-runtime';
+const RUNTIME_PACKAGE_SHA256='ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c';
+const RUNTIME_ENTRY_SHA256='c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde';
+function checkRuntimePins(readFile){
+ const metadata=readFile(RUNTIME_ROOT+'/package.json');
+ check(createHash('sha256').update(metadata).digest('hex')===RUNTIME_PACKAGE_SHA256,'COMPACT_RUNTIME_PACKAGE_PIN');
+ check(JSON.parse(metadata).version==='0.16.0','COMPACT_RUNTIME_VERSION');
+ check(createHash('sha256').update(readFile(RUNTIME_ROOT+'/dist/index.js')).digest('hex')===RUNTIME_ENTRY_SHA256,'COMPACT_RUNTIME_ENTRY_PIN');
+}
+// Closed source-test inspection: shares the exact production byte predicates,
+// but cannot import a runtime or return an executable financial comparator.
+export function inspectFinancialRuntimePinsForSourceTest({sourceTestOnly,readFile}={}){
+ check(sourceTestOnly===true&&typeof readFile==='function','SOURCE_TEST_ONLY_REQUIRED');
+ checkRuntimePins(readFile);
+ return {status:'SOURCE_TEST_ONLY',pinChecksPassed:true,runtimeImported:false,networkAcceptance:false,proofAcceptance:false};
+}
 const MAX=(1n<<128n)-1n;
 const check=(condition,code)=>{if(!condition)throw Error(code);};
 const hex=(x,label)=>{check(typeof x==='string'&&/^[0-9a-f]{64}$/.test(x),'HEX_'+label);return x;};
@@ -50,10 +65,8 @@ export async function createFinancialComparator({kind,roles,networkTag,expectedP
  const raw=readFileSync(new URL('./financial-expectations.json',import.meta.url));
  check(createHash('sha256').update(raw).digest('hex')===EXPECTATION_HASH,'EXPECTATION_PIN');
  const expected=JSON.parse(raw).cases[kind];
- const require=createRequire(PINNED_NM+'/../package.json');
- const runtimePackage=JSON.parse(readFileSync(PINNED_NM+'/@midnight-ntwrk/compact-runtime/package.json','utf8'));
- check(runtimePackage.version==='0.16.0','COMPACT_RUNTIME_VERSION');
- const runtime=await import(pathToFileURL(require.resolve('@midnight-ntwrk/compact-runtime')).href);
+ checkRuntimePins(readFileSync);
+ const runtime=await import(pathToFileURL(RUNTIME_ROOT+'/dist/index.js').href);
  const bindings=publicBindings(kind,roles,networkTag,expected.bindingParameters.programDigest,runtime);
  roles=undefined; // The returned closure retains public commitments, not preimages.
  const roleNames=Object.keys(bindings.addresses),assets=expected.bindingParameters.assets;

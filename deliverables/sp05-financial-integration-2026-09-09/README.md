@@ -1,6 +1,6 @@
 # SP05 financial integration candidate
 
-Status: unaccepted source checkpoint. The original assembled candidate is locally committed as `cb21b30`; subsequent builder and launcher repairs are described below. No full financial Compact compile, Docker financial settlement or new Preview transaction has run.
+Status: genuine loan and swap compiler key builds completed under the reviewed resource limits; actual result review is pending. Current assembled source is [Candidate 04](candidate-04.json). Docker financial settlement, transaction proofs and new Preview transactions have not run.
 
 [Candidate 02](candidate-02.json) binds the earlier assembled package and 31 ledger source/test/fixture files. Builder repairs supersede its two builder-file hashes; the old manifest and reviews remain historical evidence. The [checkpoint](PROGRESS-02.md) explains the implementation, actual-runtime discoveries and limits. The package exposes real callable composition through `ledger/integrate-local.mjs`; it supplies deployment preparation, a proof-asset loader, durable providers, the observer, complete comparator and fixed local driver. It takes existing wallet handles and explicit deployment/resource inputs. It does not create a wallet or provide an admitted financial-network CLI.
 
@@ -10,9 +10,9 @@ Two concrete corrections are preserved. The [historical DUST fixture](../../expe
 
 ## Remaining acceptance work
 
-- Complete independent review of the assembled source, including actual SDK composition. Builder-only review does not approve the entire integration.
-- Complete Opus review of the assembled integration. Canonical `claude-opus-5` has now reviewed the builder and its repairs; those limited source approvals do not cover the complete integration. The original two timeouts and the launcher response that supplied no substantive review remain preserved.
-- Enforce and verify the proposed compiler memory, swap, output, deadline and cleanup limits, establish current admission, then generate and review genuine loan/swap proof assets.
+- Assemble the admitted local launch using the reviewed integration and existing wallet identity; fresh launch-source reviews remain required.
+- Source candidate04 has independent GPT-6 and canonical `claude-opus-5` approval. Preserve the original reviews and failures; source approval does not establish Docker or Preview results.
+- Finish independent review of the actual loan/swap key-build results retained in [full-build-01](full-build-01/).
 - Establish outer process containment for SDK operations that expose no cancellation. Current real driver cleanup remains explicitly incomplete.
 - Execute admitted Docker loan and swap transactions and failed-transaction financial rollback controls; retain actual bytes, fees, full state/effects and canonical finality.
 - Run the separately admitted Preview campaign and report every actual transaction ID. Mandatory PCD and later roadmap acceptance remain separate.
@@ -26,3 +26,20 @@ The changed builder rejects an attempt path equal to the output directory before
 All 24 builder tests and the full 150-test offline ledger suite passed after these changes. Independent GPT-6 and Opus source reviews bind build-source candidate `a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6` in [build-review-02](build-review-02/). These are source checks, with no compiler invocation.
 
 The fixed launcher enforces a per-case tmpfs generation quota and a separate logical retained-content ceiling. Its seven tests include actual ENOSPC, sparse/hardlink rejection and growth during copying. The original retention defects and rejection are preserved. Filesystem allocation rounding and metadata are outside the logical retention ceiling; this is not a sandbox for malicious writes to arbitrary host paths. Two harmless serial service probes recorded raw memory, swap, process and runtime settings. Actual compiler admission and terminal artifact review remain required.
+
+## Actual full key builds
+
+The [root admission](full-build-01/root-admission.json) bound the current 17 source files, seven installed toolchain files, both source/resource reviews and each exact request before dispatch. The [observed results](full-build-01/run-summary.json) record one loan attempt and one swap attempt, executed serially without retries. Earlier charges and stops remain unchanged.
+
+| Case | Observed wall time | Service memory peak | Retained build bytes | Hashed compiler artifacts |
+|---|---:|---:|---:|---:|
+| Loan | 16.796 s | 391.6 MiB (systemd display) | 16,056,263 | 16 |
+| Swap | 20.368 s | 546.3 MiB (systemd display) | 20,978,930 | 16 |
+
+Both services returned zero. Live readbacks confirmed 4 GiB memory, zero swap, 330-second service lifetime and whole-group termination settings. Both terminal groups were empty. Each build used the reviewed 1 GiB tmpfs allocation and logical retention limit. The 720-second aggregate limit was not approached. These successful runs do not test timeout exhaustion; the separate inert timeout probe retains that scope.
+
+The [actual loader check](full-build-01/actual-loader-check.json) inspected every declared artifact and loaded each generated contract through the production loader, then cleaned up. Compiler 0.31.1, Compact language 0.23.0 and runtime 0.16.0 were observed. Generated prover/verifier keys are not transaction proofs or settlement evidence. Original artifacts remain under `/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/`.
+
+Candidate 04 repairs native signature ordering, standalone runtime pins and cleanup after early driver failure. Fresh independent GPT-6 checks recorded 154 ledger tests, 52 baseline tests and three retained-generated-code checks; the original logs and exact source manifest are in [integration-review-04](integration-review-04/). Opus correction review approved the three source repairs; [root disposition](integration-review-04/root-review-disposition.json) verifies current bytes and explains historical count metadata. Current launcher review covers 13 tests; the earlier seven-test statement above is historical.
+
+Actual build-result review: [GPT-6 approved the compiler-key scope](full-build-01/gpt6-build-result-review.json). The [Opus attempt](full-build-01/opus-build-result.json) ended with API 429/session limit and no verdict. Its reported reset is 19:40 America/Denver. The attempt is retained and does not approve the result. Do not repeat either consumed compile to obtain a review; inspect the same retained bytes when review service is available.

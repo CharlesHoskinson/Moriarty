@@ -65,7 +65,7 @@ class LauncherTests(unittest.TestCase):
             path, _, parent, _ = self.fixture(Path(tmp))
             with self.assertRaises(ValueError): bounded.validate(str(path), bounded.digest(path), str(parent/'result.json'))
 
-    def test_real_namespace_rejects_sparse_and_hardlinks(self):
+    def test_real_namespace_rejects_oversized_sparse_and_hardlinks(self):
         for payload in [
             "with (p/'sparse').open('wb') as f: f.truncate(262144)",
             "(p/'linked').write_bytes(b'x'*16384); os.link(p/'linked',p/'link')",
@@ -80,6 +80,105 @@ class LauncherTests(unittest.TestCase):
                                      capture_output=True, text=True, timeout=10)
                 self.assertNotEqual(run.returncode, 0, 'oversized/hardlinked output was accepted')
                 self.assertEqual(list(parent.iterdir()), [], 'preflight must precede any host writes')
+
+    def test_real_namespace_accepts_small_sparse_within_logical_limit(self):
+        # Acceptance concerns logical bytes only, not host block allocation.
+        with tempfile.TemporaryDirectory(prefix='sp05-small-sparse-') as tmp:
+            root = Path(tmp); parent = root/'parent'; mirror = root/'mirror'
+            parent.mkdir(mode=0o700)
+            payload = "import pathlib,sys; p=pathlib.Path(sys.argv[1]); f=(p/'small').open('wb'); f.truncate(32); f.close()"
+            code = "import importlib.util,sys; from pathlib import Path; s=importlib.util.spec_from_file_location('b',sys.argv[1]); b=importlib.util.module_from_spec(s); s.loader.exec_module(b); sys.exit(b.quota_run(Path(sys.argv[2]),Path(sys.argv[3]),[sys.executable,'-c',sys.argv[4],sys.argv[2]],65536))"
+            run = subprocess.run(['unshare', '--user', '--map-root-user', '--mount', '--fork', sys.executable,
+                                  '-c', code, str(MODULE), str(parent), str(mirror), payload],
+                                 capture_output=True, text=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual((parent/'small').read_bytes(), bytes(32))
+            self.assertFalse(mirror.exists())
+
+    def test_mirror_appearing_after_overlay_prevents_child(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)/'parent'; parent.mkdir(); mirror = Path(tmp)/'mirror'
+            commands = []
+            def run(command, **kwargs):
+                commands.append(command)
+                if command[:3] == ['mount', '-t', 'tmpfs']: mirror.mkdir()
+                return subprocess.CompletedProcess(command, 0)
+            with patch.object(bounded.subprocess, 'run', run):
+                with self.assertRaisesRegex(ValueError, 'mirror appeared after mount'):
+                    bounded.quota_run(parent, mirror, ['inert'], 65536)
+            self.assertFalse(any(command[0] == 'unshare' for command in commands))
+            self.assertIn(['umount', str(parent)], commands)
+
+    def test_real_namespace_kills_detached_descendants_before_retention(self):
+        with tempfile.TemporaryDirectory(prefix='sp05-orphan-test-') as tmp:
+            root = Path(tmp); parent = root/'parent'; mirror = root/'mirror'
+            parent.mkdir(mode=0o700)
+            payload = """import os,pathlib,sys,time
+p=pathlib.Path(sys.argv[1]); ready=p.parent/'ready'; escaped=p.parent/'escaped'
+if os.fork()==0:
+ os.setsid()
+ if os.fork()!=0: os._exit(0)
+ ready.write_text('ready')
+ time.sleep(0.2)
+ escaped.write_text('surviving detached descendant')
+ os._exit(0)
+for _ in range(100):
+ if ready.exists(): break
+ time.sleep(0.001)
+assert ready.exists()
+(p/'retained').write_text('finished')
+os._exit(0)
+"""
+            code = "import importlib.util,sys; from pathlib import Path; s=importlib.util.spec_from_file_location('b',sys.argv[1]); b=importlib.util.module_from_spec(s); s.loader.exec_module(b); sys.exit(b.quota_run(Path(sys.argv[2]),Path(sys.argv[3]),[sys.executable,'-c',sys.argv[4],sys.argv[2]],65536))"
+            run = subprocess.run(['unshare', '--user', '--map-root-user', '--mount', '--fork', sys.executable,
+                                  '-c', code, str(MODULE), str(parent), str(mirror), payload],
+                                 capture_output=True, text=True, timeout=10)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            time.sleep(0.25)
+            self.assertTrue((root/'ready').exists())
+            self.assertFalse((root/'escaped').exists(), 'detached descendant survived before retention')
+            self.assertEqual((parent/'retained').read_text(), 'finished')
+
+    def test_mirror_inside_output_rejected_before_mount(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            with patch.object(bounded.subprocess, 'run') as run:
+                with self.assertRaises(ValueError): bounded.quota_run(parent, parent/'mirror', ['inert'], 65536)
+                run.assert_not_called()
+
+    def test_retention_and_both_unmount_failures_preserved(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)/'parent'; parent.mkdir()
+            mirror = Path(tmp)/'mirror'
+            original_stat = Path.stat
+            def mounted_stat(path, *args, **kwargs):
+                observed = original_stat(path, *args, **kwargs)
+                return original_stat(parent) if path == mirror else observed
+            def run(command, **kwargs):
+                if command[0] == 'umount':
+                    raise subprocess.CalledProcessError(9, command)
+                return subprocess.CompletedProcess(command, 0)
+            with patch.object(bounded.subprocess, 'run', run), patch.object(Path, 'stat', mounted_stat), patch.object(bounded, 'retain', side_effect=ValueError('primary-retention-failure')):
+                with self.assertRaises(ExceptionGroup) as caught:
+                    bounded.quota_run(parent, Path(tmp)/'mirror', ['inert'], 65536)
+            errors = caught.exception.exceptions
+            self.assertEqual(len(errors), 3)
+            self.assertIn('primary-retention-failure', str(errors[0]))
+            self.assertTrue(all(isinstance(error, subprocess.CalledProcessError) for error in errors[1:]))
+
+    def test_successful_mount_with_wrong_target_rejects_before_retention(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)/'parent'; parent.mkdir(); mirror = Path(tmp)/'mirror'
+            # A successful command status alone does not establish the bind target.
+            with patch.object(bounded.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)), patch.object(bounded, 'retain') as retain:
+                with self.assertRaisesRegex(ValueError, 'retention bind target mismatch'):
+                    bounded.quota_run(parent, mirror, ['inert'], 65536)
+                retain.assert_not_called()
+            self.assertFalse(mirror.exists())
 
     def test_growth_during_copy_cannot_exceed_shared_budget(self):
         from unittest.mock import patch
@@ -124,7 +223,7 @@ sys.exit(99)
             self.assertIn('ENOSPC', run.stdout)
             self.assertEqual((parent/'retained').read_bytes(), b'same-path')
             self.assertLessEqual(sum(p.stat().st_size for p in parent.iterdir()), 65536)
-            self.assertEqual(list(mirror.iterdir()), [])
+            self.assertFalse(mirror.exists())
 
 
 if __name__ == '__main__': unittest.main()

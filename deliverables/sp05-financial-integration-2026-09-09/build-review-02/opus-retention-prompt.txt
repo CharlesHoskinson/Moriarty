@@ -1,0 +1,113 @@
+You are a static code reviewer. Read the provided Python functions and return JSON with verdict APPROVED or CHANGES_REQUESTED, specific blockers and scope. No tools exist here: do not request tools. Keep final response under500words. Review only retain/quota_run; otherfunctions and globaladmission are OUT OF SCOPE. Sourcefile hash dad18f12cbfe47440bc228745265f96473d399b6d929f3dc2b54933fc59526cd. Imports os/stat/subprocess/pathlib; require raises ValueError. QUOTA=1073741824. parent existing owned empty0700 directory; mirror absent. Caller is inside private user/mount namespace and systemd cgroup4GiB/0swap330scontrol-group. Normal trusted compiler writes designated output tree; not an adversarial arbitraryhostwrite sandbox.
+Required: actualtmpfs allocation<=quota for generation; retainedLOGICALcontents<=quota including sparsefiles/hardlinks/growth; hostphysicalblockrounding/metadata notcapped;1GiBlogicalpercase2GiBtotal enforcedexternalserialtwocases. Hostmirror must not be mounted while compiler runs. Cleanup/retention failure must fail invocation, no successinference. On abrupt cgroupkill partialvolatilefiles maylost and externalresultincomplete. Testsactually passed64KiBENOSPCnormalfailurepartialretention, sparse/hardlinksreject, growthcopyreject. Does this code meet statedfunctions? Flag concrete failures withoutinventing hardphysicaldiskclaim.
+def retain(source, mirror, quota=QUOTA):
+    """Bound logical retained bytes independently of sparse tmpfs allocation.
+
+    Preflight the complete tree before creating output. Copy from no-follow,
+    identity-checked descriptors with one shared budget, including on growth.
+    """
+    flags = os.O_RDONLY | os.O_NOFOLLOW
+    total = 0
+    def inspect(directory):
+        nonlocal total
+        plan = []
+        for name in sorted(os.listdir(directory)):
+            info = os.stat(name, dir_fd=directory, follow_symlinks=False)
+            if stat.S_ISDIR(info.st_mode):
+                child = os.open(name, flags | os.O_DIRECTORY, dir_fd=directory)
+                try:
+                    require(identity(os.fstat(child)) == identity(info), 'directory changed')
+                    children = inspect(child)
+                finally:
+                    os.close(child)
+                plan.append((name, info, children))
+            else:
+                require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, 'nonregular/hardlinked asset rejected')
+                total += info.st_size
+                require(total <= quota, 'logical retention quota exceeded')
+                plan.append((name, info, None))
+        return plan
+    def identity(info):
+        return (info.st_dev, info.st_ino)
+    remaining = quota
+    def copy(directory, destination, plan):
+        nonlocal remaining
+        for name, before, children in plan:
+            fd = os.open(name, flags | (os.O_DIRECTORY if children is not None else 0), dir_fd=directory)
+            try:
+                current = os.fstat(fd)
+                require(identity(current) == identity(before), 'source identity changed')
+                target = destination / name
+                if children is not None:
+                    target.mkdir(mode=0o700)
+                    copy(fd, target, children)
+                else:
+                    require(stat.S_ISREG(current.st_mode) and current.st_nlink == 1 and current.st_size == before.st_size,
+                            'source size/type/link changed')
+                    file_remaining = before.st_size
+                    with target.open('xb') as dst:
+                        while True:
+                            chunk = os.read(fd, min(65536, remaining + 1, file_remaining + 1))
+                            if not chunk:
+                                break
+                            require(len(chunk) <= remaining and len(chunk) <= file_remaining, 'source grew beyond retention budget')
+                            dst.write(chunk)
+                            remaining -= len(chunk)
+                            file_remaining -= len(chunk)
+                        after = os.fstat(fd)
+                        require(file_remaining == 0 and after.st_size == before.st_size and after.st_nlink == 1,
+                                'source changed during retention')
+                        dst.flush()
+                        os.fsync(dst.fileno())
+            finally:
+                os.close(fd)
+        fd = os.open(destination, os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    root = os.open(source, flags | os.O_DIRECTORY)
+    try:
+        plan = inspect(root)
+        copy(root, mirror, plan)
+    finally:
+        os.close(root)
+
+
+def quota_run(parent, mirror, command, quota=QUOTA):
+    """Bound the designated output tree, not arbitrary malicious host writes.
+
+    The host output tree remains reachable only through a noninherited descriptor
+    until the child terminates; expose its retention mirror only afterwards.
+    """
+    def mount(*args):
+        subprocess.run(['mount', *args], check=True)
+    mount('--make-rprivate', '/')
+    require(not mirror.exists() and not mirror.is_symlink(), 'mirror must be absent during compiler execution')
+    host = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    os.set_inheritable(host, False)
+    mounted = mirrored = False
+    try:
+        mount('-t', 'tmpfs', '-o', f'size={quota},nosuid,nodev,mode=0700', 'sp05-build', str(parent))
+        mounted = True
+        try:
+            return subprocess.run(command, check=False, close_fds=True).returncode
+        finally:
+            mirror.mkdir(mode=0o700)
+            # mount must see this one descriptor, but the compiler never does.
+            subprocess.run(['mount', '--no-canonicalize', '--bind', f'/proc/self/fd/{host}', str(mirror)],
+                           check=True, pass_fds=(host,))
+            mirrored = True
+            retain(parent, mirror, quota)
+    finally:
+        try:
+            if mirrored:
+                subprocess.run(['umount', str(mirror)], check=True)
+        finally:
+            try:
+                if mounted:
+                    subprocess.run(['umount', str(parent)], check=True)
+            finally:
+                os.close(host)
+
+

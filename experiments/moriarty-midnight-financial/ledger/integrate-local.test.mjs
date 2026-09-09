@@ -56,6 +56,25 @@ test('provider construction failure preserves failure and cleans wallet/assets',
  try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
  assert.equal(error.message,'INERT_PROVIDER_FAILURE');assert(f.calls.includes('wallet-stop'));assert(f.calls.includes('asset-cleanup'));assert(!f.calls.includes('deploy'));
 });
+test('driver failure before its cleanup ownership guard falls back to wallet cleanup',async()=>{
+ const f=fixture(),create=f.adapters.createProviders;
+ f.adapters.createProviders=async o=>({...await create(o),cleanup:undefined});
+ let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
+ assert.equal(error.message,'OWNED_PROVIDER_CLEANUP_REQUIRED');
+ assert.equal(f.calls.filter(c=>c==='wallet-stop').length,1);
+ assert.equal(error.publicIntegrationResult.cleanup.walletStopped,true);
+ assert.equal(error.publicIntegrationResult.cleanup.containmentComplete,false);
+ assert(f.calls.includes('asset-cleanup'));assert(!f.calls.includes('deploy'));
+});
+test('driver throw without cleanup receipt falls back to owned providers exactly once',async()=>{
+ const f=fixture();f.adapters.driver=async()=>{throw Error('EARLY_DRIVER_FAILURE');};
+ let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
+ assert.equal(error.message,'EARLY_DRIVER_FAILURE');
+ assert.equal(f.calls.filter(c=>c==='provider-cleanup').length,1);
+ assert.equal(error.publicIntegrationResult.cleanup.walletStopped,true);
+ assert.equal(error.publicIntegrationResult.cleanup.containmentComplete,false);
+ assert(f.calls.includes('asset-cleanup'));assert(!f.calls.includes('deploy'));
+});
 test('onStage failed retention stops before another transaction',async()=>{
  const f=fixture();f.options.onStage=async()=>({status:'FAILED'});
  await assert.rejects(integrateLocalFinancialCase(f.options),/STAGE_RETENTION/);assert(!f.calls.includes('initialize'));

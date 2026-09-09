@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import time
+import traceback
 
 UNIT = 'moriarty-sp05-financial-build.service'
 QUOTA = 1073741824
@@ -171,40 +172,73 @@ def retain(source, mirror, quota=QUOTA):
 
 
 def quota_run(parent, mirror, command, quota=QUOTA):
-    """Bound the designated output tree, not arbitrary malicious host writes.
+    """Bound designated tmpfs allocation and retained LOGICAL bytes only.
 
-    The host output tree remains reachable only through a noninherited descriptor
-    until the child terminates; expose its retention mirror only afterwards.
+    Host block rounding/metadata are not capped. The compiler runs as PID 1 in
+    a nested PID/mount namespace: its exit kills namespace descendants before
+    unshare returns. Only then expose the host retention mirror. This is not
+    a sandbox against arbitrary malicious writes elsewhere on the host.
     """
+    parent = safe_path(str(parent))
+    mirror = safe_path(str(mirror), missing=True)
+    require(not mirror.resolve().is_relative_to(parent.resolve()), 'mirror must be outside output parent')
+    require(not mirror.exists(), 'mirror must be absent during compiler execution')
     def mount(*args):
         subprocess.run(['mount', *args], check=True)
     mount('--make-rprivate', '/')
-    require(not mirror.exists() and not mirror.is_symlink(), 'mirror must be absent during compiler execution')
     host = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     os.set_inheritable(host, False)
-    mounted = mirrored = False
+    mounted = mirrored = mirror_created = False
+    errors = []
+    code = None
+    child_command = ['unshare', '--pid', '--fork', '--kill-child=SIGKILL',
+                     '--mount', '--mount-proc', '--propagation=private', '--', *command]
     try:
         mount('-t', 'tmpfs', '-o', f'size={quota},nosuid,nodev,mode=0700', 'sp05-build', str(parent))
         mounted = True
-        try:
-            return subprocess.run(command, check=False, close_fds=True).returncode
-        finally:
-            mirror.mkdir(mode=0o700)
-            # mount must see this one descriptor, but the compiler never does.
-            subprocess.run(['mount', '--no-canonicalize', '--bind', f'/proc/self/fd/{host}', str(mirror)],
-                           check=True, pass_fds=(host,))
-            mirrored = True
-            retain(parent, mirror, quota)
+        require(not mirror.exists() and not mirror.is_symlink(), 'mirror appeared after mount')
+        # No descriptor for the original host tree is inherited by the child.
+        code = subprocess.run(child_command, check=False, close_fds=True).returncode
+        require(not mirror.exists() and not mirror.is_symlink(), 'mirror appeared during compiler execution')
+        mirror.mkdir(mode=0o700)
+        mirror_created = True
+        # --no-canonicalize preserves the open pre-overlay mount reference.
+        subprocess.run(['mount', '--no-canonicalize', '--bind', f'/proc/self/fd/{host}', str(mirror)],
+                       check=True, pass_fds=(host,))
+        mirrored = True
+        before, after = os.fstat(host), mirror.stat()
+        require((before.st_dev, before.st_ino) == (after.st_dev, after.st_ino), 'retention bind target mismatch')
+        retain(parent, mirror, quota)
+    except BaseException as error:
+        errors.append(error)
     finally:
-        try:
-            if mirrored:
-                subprocess.run(['umount', str(mirror)], check=True)
-        finally:
+        if mirrored:
             try:
-                if mounted:
-                    subprocess.run(['umount', str(parent)], check=True)
-            finally:
-                os.close(host)
+                subprocess.run(['umount', str(mirror)], check=True)
+                mirrored = False
+            except BaseException as error:
+                errors.append(error)
+        if mounted:
+            try:
+                subprocess.run(['umount', str(parent)], check=True)
+            except BaseException as error:
+                errors.append(error)
+        if mirror_created and not mirrored:
+            try:
+                mirror.rmdir()
+            except BaseException as error:
+                errors.append(error)
+        try:
+            os.close(host)
+        except BaseException as error:
+            errors.append(error)
+    if errors:
+        if code not in (None, 0):
+            errors.insert(0, subprocess.CalledProcessError(code, child_command))
+        if len(errors) == 1:
+            raise errors[0]
+        raise BaseExceptionGroup('SP05 build/retention/cleanup failures; cleanup not verified', errors)
+    return code
 
 
 def verify_cgroup():
@@ -230,11 +264,7 @@ def main():
     require(not mirror.exists(), 'mirror already exists')
     if args.inner:
         verify_cgroup()
-        try:
-            return quota_run(parent, mirror, [NODE, str(BUILDER), '--request', args.request])
-        finally:
-            if mirror.exists():
-                mirror.rmdir()
+        return quota_run(parent, mirror, [NODE, str(BUILDER), '--request', args.request])
     marker = safe_path(args.request + '.bounded-launch.json', missing=True)
     require(not marker.is_relative_to(parent), 'launch marker inside quota')
     exclusive(marker, {'schema': 'moriarty.sp05-build-launch/1', 'requestSha256': args.request_sha256,
@@ -263,5 +293,5 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except Exception as error:
-        print('SP05 bounded build failed: ' + str(error), file=sys.stderr)
+        traceback.print_exception(error)
         sys.exit(1)

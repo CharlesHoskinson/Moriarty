@@ -9,20 +9,22 @@ const ledger = await import(pathToFileURL(require.resolve('@midnight-ntwrk/ledge
 const module = await import('./receipt.mjs').catch(() => ({}));
 
 // These are native serialized test transactions, not valid network proofs or receipts.
-async function nativeFixture({signed=true,deploy=false}={}) {
+async function nativeFixture({signed=true,deploy=false,twoOwners=false,twoInputs=false,mutateSignatures=x=>x}={}) {
   const key = ledger.signingKeyFromBip340(Uint8Array.from({length:32}, (_, i) => i+1));
+  const secondKey = ledger.signingKeyFromBip340(Uint8Array.from({length:32}, (_, i) => i+2));
   const owner = ledger.signatureVerifyingKey(key);
+  const secondOwner=twoOwners?ledger.signatureVerifyingKey(secondKey):owner;
   const address = ledger.addressFromKey(owner);
   const input = {owner, type:'01'.repeat(32), value:100n, intentHash:'02'.repeat(32), outputNo:0};
   let intent = ledger.Intent.new(new Date('2030-01-01T00:00:00Z'));
   const deployment=deploy?new ledger.ContractDeploy(new ledger.ContractState()):undefined;
   if(deployment) intent=intent.addDeploy(deployment);
-  intent.guaranteedUnshieldedOffer = ledger.UnshieldedOffer.new([input], [{owner:address,type:input.type,value:70n}], []);
+  intent.guaranteedUnshieldedOffer = ledger.UnshieldedOffer.new(twoInputs?[input,{...input,owner:secondOwner,outputNo:1}]:[input], [{owner:address,type:input.type,value:70n}], []);
   let tx = ledger.Transaction.fromParts('undeployed',undefined,undefined,intent);
   tx = await tx.prove({check(){throw Error('ACTUAL_PROVER_FORBIDDEN');},prove(){throw Error('ACTUAL_PROVER_FORBIDDEN');}},ledger.CostModel.initialCostModel());
   const intents = tx.intents;
   for (const [segment, item] of signed?intents:[]) {
-    item.guaranteedUnshieldedOffer = item.guaranteedUnshieldedOffer.addSignatures([ledger.signData(key,item.signatureData(segment))]);
+    item.guaranteedUnshieldedOffer = item.guaranteedUnshieldedOffer.addSignatures(mutateSignatures(item.guaranteedUnshieldedOffer.inputs.map(input=>ledger.signData(input.owner===owner?key:secondKey,item.signatureData(segment)))));
     intents.set(segment,item);
   }
   tx.intents = intents;
@@ -126,4 +128,17 @@ test('historical DUST replay preserves unequal fee fields and exact indexed iden
   }
   data.identifiers=captured.identifiers;
   await assert.rejects(module.observeFinalizedStage({...args,expectedProtocolVersion:8}),/UNSUPPORTED_PROTOCOL/);
+});
+
+// Native .prove below invokes no prover body. These malformed signed bytes
+// demonstrate decoding behavior only, never valid proof or network evidence.
+test('native decoder verifies signatures by exact input index and count', async()=>{
+  const good=await nativeFixture({twoInputs:true,twoOwners:true});
+  assert.equal(module.decodeNativeFinancialTransaction(good.tx.serialize(),ledger).inputs.length,2);
+  const reordered=await nativeFixture({twoInputs:true,twoOwners:true,mutateSignatures:s=>s.toReversed()});
+  assert.throws(()=>module.decodeNativeFinancialTransaction(reordered.tx.serialize(),ledger),/SIGNATURE/);
+  const missing=await nativeFixture({twoInputs:true,mutateSignatures:s=>s.slice(0,1)});
+  assert.throws(()=>module.decodeNativeFinancialTransaction(missing.tx.serialize(),ledger),/SIGNATURE/);
+  const extra=await nativeFixture({mutateSignatures:s=>[...s,...s]});
+  assert.throws(()=>module.decodeNativeFinancialTransaction(extra.tx.serialize(),ledger),/SIGNATURE/);
 });

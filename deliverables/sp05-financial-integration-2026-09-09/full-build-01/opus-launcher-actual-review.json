@@ -1,0 +1,57 @@
+{
+  "schema": "moriarty.sp05-source-review/1",
+  "reviewer": "opus-medium-final-source",
+  "verdict": "APPROVED",
+  "scope": "SOURCE_BYTES_ONLY",
+  "sourceCandidateSha": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6",
+  "bindings": {
+    "ledger/run-build-bounded.py": "dc2f8e386222722fa86a2318fafc0b38add66a09ab55eecdaadfff2d2302fa8d",
+    "ledger/run-build-bounded.test.py": "8792690cc8870e9cdc416a3625de0355e5323da3220b1a1f9b6f8b1c0d5bf94d",
+    "build-review-04/execution-manifest.json": "17688ad330b33bb6f2a6ddee2a717949ebb5404607648e833ae59308b30ace35",
+    "build-review-04/probe-scope-disposition.json": "19604b919a94416c02c1daea51b4d12ba5366cd6dcff3a700745f77440956ca9",
+    "build-review-03/stop-timeout-zero-probe.json": "463728f9ee9931e37ad0d9349abbad4b2669e2e68a0ac12fedf2130501909363"
+  },
+  "hashesVerifiedBy": "root; reviewer read by path only, no digest computation available",
+  "priorFindings": {
+    "B1": "CLOSED. run-build-bounded.py:209-210 requires fstat(host) dev/ino == mirror.stat() dev/ino after the host bind, before retain(). Mount exit status alone no longer establishes the target. test:172-181 mocks all-success subprocess.run, asserts 'retention bind target mismatch', retain not called, mirror removed; red on prior 1257b2e4. Delta confined to those two lines.",
+    "B2": "CLOSED by probe-scope-disposition.json: old raw probe preserved unchanged, explicitly unit-properties-only, not launcher implementation; current bytes bound by execution-manifest.json and independent reviews.",
+    "C2": "ACCEPTED as previously agreed: 17 pins covering all 14 builder files + builder test + launcher + launcher test; root rechecks pins, inner builder SHA and both reviews before each launch."
+  },
+  "attemptOwnershipClarification": "ACCEPTED AS CORRECT. Launcher only asserts attemptFile absent (:91-92) and outside the volatile output parent (:93-95). Builder creates it exclusively before any version/compile call. Root supervises the allocation and must NOT precreate the file; precreating trips the builder's already-consumed refusal. Prior 'charge out of band' wording means supervision. No code change required.",
+  "remainingFindings": [
+    {
+      "id": "N1",
+      "severity": "nit",
+      "location": "run-build-bounded.py:251",
+      "issue": "verify_cgroup matches literal 'RuntimeMaxUSec=5min 30s'; a systemd format change turns a containment check into a hard abort. Fail-closed, and external preflight already confirms unit properties.",
+      "blocking": false
+    },
+    {
+      "id": "N2",
+      "severity": "nit",
+      "location": "run-build-bounded.test.py:156-166",
+      "issue": "Test-only fragility: patching Path.stat to alias mirror->parent also feeds the mirror.exists() guards at :199/:202 on interpreters where exists() routes through Path.stat, which would yield 'mirror appeared after mount' and 2 errors instead of the asserted 3. Reported green on the target interpreter; pin with an os.stat-level or exists-preserving patch so the aggregation assertion cannot drift. No launcher bytes affected.",
+      "blocking": false
+    }
+  ],
+  "preconditions": [
+    "External preflight re-verifies all 17 manifest pins, inner builder SHA and both review verdicts immediately before launch.",
+    "Root does not create resource.attemptFile; builder reserves it.",
+    "Terminal cgroup state and retained artifacts reviewed externally after the run; wrapper result is never acceptance (status REQUIRES_TERMINAL_AND_ARTIFACT_REVIEW, accepted:false).",
+    "Trusted pinned compiler writing only the designated output tree; not a sandbox against arbitrary host writes.",
+    "Full build still unperformed; approval covers source bytes only and grants no missing external preflight or terminal artifact review."
+  ],
+  "resourceVote": {
+    "decision": "APPROVE_UNCHANGED",
+    "cases": "2 serial (loan, swap), 1 attempt each",
+    "perCase": "1GiB tmpfs + 1GiB logical retained (2GiB total), 4GiB memory, 0 swap, 330s service",
+    "aggregate": "720s external root budget, 16MiB outside diagnostic headroom",
+    "notes": "Logical cap covers oversized sparse/hardlink/growth; host block rounding and metadata uncapped by design; nested PID1 kills descendants before the mirror is exposed; all errors retained. TimeoutStopSec=0 confirmed: SIGTERM ignored, SIGKILL at 1.008s, empty terminal ControlGroup = immediate kill, not infinity."
+  },
+  "outOfScope": [
+    "transaction proof",
+    "wallet",
+    "submission",
+    "terminal artifact review"
+  ]
+}

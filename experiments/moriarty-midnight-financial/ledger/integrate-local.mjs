@@ -165,7 +165,7 @@ export async function integrateLocalFinancialCase(options){
     driverResult={...driverResult,assetBindings};
   }catch(error){failure=error instanceof Error?error:Error('INTEGRATION_FAILED');}
   finally{
-    if(!driverStarted){
+    if(!driverStarted || !driverResult?.cleanup){
       if(providers){try{cleanup=await providers.cleanup();}catch{cleanup=await stopWallet(wallet);}}
       else cleanup=await stopWallet(wallet);
     }else cleanup=driverResult?.cleanup;

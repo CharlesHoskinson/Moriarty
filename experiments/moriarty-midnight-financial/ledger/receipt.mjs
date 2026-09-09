@@ -55,9 +55,10 @@ export function decodeNativeFinancialTransaction(raw, ledger) {
     const signatureData=intent.signatureData(segment);
     for (const [section,offer] of [['guaranteed',intent.guaranteedUnshieldedOffer],['fallible',intent.fallibleUnshieldedOffer]]) {
       if (!offer) continue;
-      for (const input of offer.inputs) {
+      requireThat(offer.signatures.length===offer.inputs.length,'INPUT_SIGNATURE_COUNT');
+      for (const [index,input] of offer.inputs.entries()) {
         const owner=hex(ledger.addressFromKey(input.owner),'INPUT_OWNER');
-        requireThat(offer.signatures.some(sig=>ledger.verifySignature(input.owner,signatureData,sig)),'MISSING_OR_INVALID_INPUT_SIGNATURE');
+        requireThat(ledger.verifySignature(input.owner,signatureData,offer.signatures[index])===true,'MISSING_OR_INVALID_INPUT_SIGNATURE');
         const type=hex(input.type,'INPUT_ASSET'), value=amount(input.value,'INPUT_VALUE');
         const origin=hex(input.intentHash,'INPUT_ORIGIN');
         requireThat(Number.isSafeInteger(input.outputNo) && input.outputNo>=0,'INVALID_OUTPUT_NUMBER');
