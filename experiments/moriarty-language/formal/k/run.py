@@ -17,12 +17,14 @@ DEFINITION=BUILD/'moriarty-kompiled'
 BINDING=BUILD/'binding.json'
 START=time.monotonic()
 DEADLINE=START+512
+SUITE='initial'
+SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json'}
 
 class RunnerError(RuntimeError):pass
 def fail(code):raise RunnerError(code)
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def write(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
-def sources():return {name:sha(HERE/name) for name in ['moriarty.k','codec.py','run.py','toolchain.lock.json','fixtures/cases.json']}
+def sources():return {name:sha(HERE/name) for name in ['moriarty.k','codec.py','run.py','toolchain.lock.json',SUITES[SUITE]]}
 def toolchain():
     lock=json.loads((HERE/'toolchain.lock.json').read_text())
     for name in ['kompile','krun']:
@@ -80,7 +82,7 @@ def evaluate(packet,label):
     return result
 
 def traces():
-    cases=json.loads((HERE/'fixtures/cases.json').read_text())
+    cases=json.loads((HERE/SUITES[SUITE]).read_text())
     if type(cases) is not list or not cases or len(cases)>16:fail('FIXTURE_COUNT')
     ids=[c['id'] for c in cases]
     if len(set(ids))!=len(ids):fail('FIXTURE_IDS')
@@ -94,7 +96,9 @@ def traces():
     return observations
 
 def main():
+    global SUITE
     parser=argparse.ArgumentParser()
+    parser.add_argument('--suite',choices=tuple(SUITES),default='initial')
     sub=parser.add_subparsers(dest='command',required=True)
     sub.add_parser('compile')
     sub.add_parser('prove')
@@ -102,6 +106,7 @@ def main():
     for name in ['traces','compile-and-traces']:
         sub.add_parser(name).add_argument('--all',action='store_true',required=True)
     args=parser.parse_args()
+    SUITE=args.suite
     if args.command=='prove':fail('PROOF_UNIMPLEMENTED')
     if args.command in ['compile','compile-and-traces']:compile_definition()
     if args.command in ['traces','compile-and-traces']:result=traces()

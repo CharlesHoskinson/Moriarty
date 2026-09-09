@@ -3,7 +3,7 @@ id: k-framework.best-practices
 type: reference
 title: K best practices for the ZKIR definition
 status: active
-updated_at: 2026-09-05T20:15:19Z
+updated_at: 2026-09-09T19:25:15Z
 sources:
   - SRC-0108
   - SRC-0039
@@ -24,6 +24,12 @@ tags:
 Recommendation (S2; not reproduced): make numeric bounds and rejected-state preservation explicit, distinguish financial transitions from helper functions, and compare complete final configurations with the local evaluator. The linked review names the official sources and scope limits. The ZKIR guidance below remains historical project context, not the specification of this repayment slice.
 
 Source clarification for CLM-0806: the current manual's warning concerns the general problem of proving reachability claims ending in `#Bottom`; it does not say that satisfiability of `#Bottom` itself is generally undecidable. Broader LLVM crash and automatic cross-backend soundness claims have not been reproduced by this intake. Original claim text remains below for provenance.
+
+### Additional repayment branches — 2026-09-09
+
+Experiment observation: [sixteen additional K cases](../../deliverables/repayment-k-branches-2026-09-09/README.md) match independent complete expectations and actual source preparation. Five successes cover recipient creation, row order, third-party payment and PrincipalFirst crossing; eleven rejections include duplicate-before-work and overflow-before-zero-repayment. K, codec and source financial behavior are unchanged. The [raw result record](../../deliverables/repayment-k-branches-2026-09-09/execution-result.json) retains all comparisons; subsequent review disposition belongs in that deliverable's acceptance record. Earlier sixteen-case evidence and both failures are preserved.
+
+Lesson from this scoped experiment: independently specify whole post-states and effects before running either implementation; keep array order, unrelated balances, payer/debtor identity and residual principal/accrual visible. Bind each selected suite's bytes to its build so old compiled evidence cannot silently cover new cases. Capture transient-service limits while it is active: the post-service query returned defaults after collection, whereas the retained active snapshot establishes the actual limits. The 43.508-second service run reported 705M peak memory and zero swap; finite agreement remains distinct from full semantics, codec verification, correspondence and Midnight settlement.
 
 ### Bounded result after the repairs — 2026-09-09
 

@@ -8,7 +8,7 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-07T18:01:49Z
+updated_at: 2026-09-09T19:25:15Z
 sources:
   - SRC-0108
   - SRC-0106
@@ -134,6 +134,10 @@ remain historical evidence. The current work is ACTUS/DeFi-led language design:
 - [Candidate A continuation evidence](research-journal.md) —
   admitted A4 source gate and failed-export preservation, successful A5 view
   typecheck, and saved follow-up drafts; exports and verification remain open.
+
+## Additional bounded repayment branches
+
+[New sixteen-case K/source comparison](../deliverables/repayment-k-branches-2026-09-09/README.md) · [[wiki/k-framework/k-best-practices|Receiver, identity, ordering and resource-observation lessons]]. Experiment evidence only; full successor semantics, correspondence and financial settlement remain open.
 
 ## Current bounded repayment K references
 

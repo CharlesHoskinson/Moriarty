@@ -8,7 +8,7 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-07T18:43:23Z
+updated_at: 2026-09-09T19:25:15Z
 sources:
   - SRC-0108
   - SRC-0106
@@ -22,6 +22,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-09] save | Independent repayment branch comparisons
+
+Saved [[wiki/k-framework/k-best-practices|sixteen additional complete K/source/independent comparisons]] and lessons on missing-recipient reconstruction, payer/debtor distinction, row order, competing failures and active-service resource capture. One compile and sixteen krun calls; historical charges remain. No new source ID, accepted theorem, full SP03 closure or Midnight transaction. [Execution and subsequent review records](../deliverables/repayment-k-branches-2026-09-09/README.md).
 
 ## [2026-09-09] save | Bounded K result after compatibility repairs
 
