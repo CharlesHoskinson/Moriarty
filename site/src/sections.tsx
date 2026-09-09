@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react';
+import { Opening } from './components/Opening';
+import { Categories } from './components/Categories';
 
 /**
- * The nine-section spine. Sections register here in reading order; the selected
- * storyboard decides what each one renders.
+ * The section spine, in reading order. A section registers here once its
+ * component exists; the page renders exactly what is registered.
  */
 export interface SectionEntry {
   id: string;
@@ -10,4 +12,7 @@ export interface SectionEntry {
   Component: ComponentType;
 }
 
-export const SECTIONS: readonly SectionEntry[] = [];
+export const SECTIONS: readonly SectionEntry[] = [
+  { id: 'opening', title: 'What Moriarty is', Component: Opening },
+  { id: 'categories', title: 'The category tabs', Component: Categories },
+];
