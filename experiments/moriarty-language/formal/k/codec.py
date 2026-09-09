@@ -64,8 +64,6 @@ def admit(text):
         else:error('MALFORMED_INPUT')
     if len(s['balances'])!=2 or len(s['allowances'])!=1 or len(s['obligations'])!=1 or s['usedTransferIds'] or s['usedAllocationIds']:error('UNSUPPORTED_PROJECTION')
     if [a['kind'] for a in p['actions']] not in [['Transfer'],['Transfer','Repay']]:error('UNSUPPORTED_PROJECTION')
-    o=s['obligations'][0]
-    if o['allocationRule']=='ProRata' or o['conversion']!={'mantissa':'1','scale':'0','rounding':'none'}:error('UNSUPPORTED_PROJECTION')
     return p
 
 def digest(p):return hashlib.sha256(json.dumps(p,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -76,7 +74,7 @@ def encode(p):
     bs=[term('balance',[b['party'],b['asset'],b['amount']],(2,)) for b in s['balances']]
     terms=bs+[
         term('allowance',[a[k] for k in ['party','asset','remaining','spent']],(2,3)),
-        term('obligation',[o[k] for k in ['id','debtor','creditor','denomination','settlementAsset','principal','accrued','outstanding','allocationRule','status']],(5,6,7)),
+        term('obligation',[o[k] for k in ['id','debtor','creditor','denomination','settlementAsset','principal','accrued','outstanding','allocationRule','status']],(5,6,7))[:-1]+', '+term('conversion',[o['conversion'][k] for k in ['mantissa','scale','rounding']],(0,1))+')',
         term('work',[w[k] for k in ['remaining','spent','closureReserve']],(0,1,2)),
         term('transfer',[t[k] for k in ['id','from','to','asset','amount']],(4,))]
     if len(p['actions'])==2:
@@ -85,7 +83,7 @@ def encode(p):
     terms.append(json.dumps(digest(p)))
     return ('transferPacket(' if len(p['actions'])==1 else 'packet(')+', '.join(terms)+')'
 
-REJECTIONS={-1:{'DUPLICATE','INVARIANT','INSUFFICIENT_WORK','OVERFLOW'},0:{'ZERO_AMOUNT','SELF_TRANSFER','MISSING_BALANCE','INSUFFICIENT_BALANCE','MISSING_ALLOWANCE','INSUFFICIENT_ALLOWANCE','OVERFLOW'},1:{'ZERO_AMOUNT','MISSING_OBLIGATION','NOT_OUTSTANDING','EXCEEDS_OUTSTANDING','TRANSFER_NOT_IN_STEP','TRANSFER_MISMATCH','INSUFFICIENT_UNALLOCATED'}}
+REJECTIONS={-1:{'DUPLICATE','INVARIANT','INSUFFICIENT_WORK','OVERFLOW'},0:{'ZERO_AMOUNT','SELF_TRANSFER','MISSING_BALANCE','INSUFFICIENT_BALANCE','MISSING_ALLOWANCE','INSUFFICIENT_ALLOWANCE','OVERFLOW'},1:{'ZERO_AMOUNT','MISSING_OBLIGATION','NOT_OUTSTANDING','EXCEEDS_OUTSTANDING','TRANSFER_NOT_IN_STEP','TRANSFER_MISMATCH','INSUFFICIENT_UNALLOCATED','OVERFLOW','INEXACT_CONVERSION','DUST','ALLOCATION_COMPONENT'}}
 def decode(text,p):
     try:
         if len(text)>1024*1024: error('K_OUTPUT')

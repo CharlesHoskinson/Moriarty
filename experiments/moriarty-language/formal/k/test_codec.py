@@ -31,7 +31,7 @@ class CodecTests(unittest.TestCase):
     @unittest.skipIf(codec is None, 'codec not yet implemented')
     def test_schema_and_projection_are_separate(self):
         p=json.loads((HERE/'fixtures/cases.json').read_text())[0]['input']
-        p['state']['obligations'][0]['conversion']['mantissa']='2'
+        p['actions']=p['actions']*2
         with self.assertRaisesRegex(codec.CodecError,'UNSUPPORTED_PROJECTION'):
             codec.admit(json.dumps(p))
         p['extra']=True

@@ -18,7 +18,9 @@ BINDING=BUILD/'binding.json'
 START=time.monotonic()
 DEADLINE=START+512
 SUITE='initial'
-SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json', 'transfer-only':'fixtures/transfer-only.json'}
+SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json', 'transfer-only':'fixtures/transfer-only.json', 'numeric':'fixtures/numeric.json'}
+
+SUITE_LIMITS={'initial':(16,512),'branches':(16,512),'transfer-only':(16,512),'numeric':(64,1512)}
 
 class RunnerError(RuntimeError):pass
 def fail(code):raise RunnerError(code)
@@ -71,7 +73,7 @@ def evaluate(packet,label):
     binding=json.loads(BINDING.read_text())
     if binding['sources']!=sources() or binding['artifacts']!=artifacts():fail('COMPILED_STALE')
     count=binding['krunInvocations']
-    if type(count) is not int or count<0 or count>=16:fail('KRUN_LIMIT')
+    if type(count) is not int or count<0 or count>=SUITE_LIMITS[SUITE][0]:fail('KRUN_LIMIT')
     # Count the actual attempt before subprocess dispatch; failures do not refund it.
     binding['krunInvocations']=count+1;write(BINDING,binding)
     name=f'trace-{count+1:02d}'
@@ -83,7 +85,7 @@ def evaluate(packet,label):
 
 def traces():
     cases=json.loads((HERE/SUITES[SUITE]).read_text())
-    if type(cases) is not list or not cases or len(cases)>16:fail('FIXTURE_COUNT')
+    if type(cases) is not list or not cases or len(cases)>SUITE_LIMITS[SUITE][0]:fail('FIXTURE_COUNT')
     ids=[c['id'] for c in cases]
     if len(set(ids))!=len(ids):fail('FIXTURE_IDS')
     observations=[]
@@ -96,7 +98,7 @@ def traces():
     return observations
 
 def main():
-    global SUITE
+    global SUITE, DEADLINE
     parser=argparse.ArgumentParser()
     parser.add_argument('--suite',choices=tuple(SUITES),default='initial')
     sub=parser.add_subparsers(dest='command',required=True)
@@ -107,6 +109,7 @@ def main():
         sub.add_parser(name).add_argument('--all',action='store_true',required=True)
     args=parser.parse_args()
     SUITE=args.suite
+    DEADLINE=START+SUITE_LIMITS[SUITE][1]
     if args.command=='prove':fail('PROOF_UNIMPLEMENTED')
     if args.command in ['compile','compile-and-traces']:compile_definition()
     if args.command in ['traces','compile-and-traces']:result=traces()

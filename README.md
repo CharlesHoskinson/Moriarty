@@ -183,94 +183,98 @@ Syntax acceptance does not imply execution. The [bounded funded source profile](
 
 ### Small-step semantics (implemented repayment subset)
 
-This presentation uses **Felleisen–Hieb reduction semantics**: a grammar of terms, evaluation contexts selecting the next redex, primitive contractions, and a context-closure rule. The reference is Felleisen and Hieb, [*The Revised Report on the Syntactic Theories of Sequential Control and State*](https://plv.mpi-sws.org/plerg/papers/felleisen-hieb-92-2up.pdf), §2, Definitions 2.1 and 2.3, and §3.1 for whole-program control reductions. Their metatheorems are not claims about Moriarty.
+This presentation uses **Felleisen–Hieb reduction semantics**: terms, evaluation contexts, primitive contractions, context closure and terminal answers. Felleisen and Hieb's [*Revised Report*](https://plv.mpi-sws.org/plerg/papers/felleisen-hieb-92-2up.pdf), §2 Definitions 2.1/2.3 and §3.1, supplies the presentation method; its metatheorems are not claims about Moriarty. The [downloaded open textbooks and Redex corpus](deliverables/reduction-semantics-textbooks-2026-09-09/CORPUS.md) and [source-linked practices](deliverables/reduction-semantics-textbooks-2026-09-09/BEST-PRACTICES.md) provide further references.
 
-Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer`, optionally followed by one `Repay`. This is a different profile from the successor EBNF above. The following reduction semantics presents that implemented control layer; full successor expression and statement semantics remain open.
+The [K definition](experiments/moriarty-language/formal/k/moriarty.k) implements the provisional **`moriarty-funded-repayment/0`** projection: one Transfer, optionally followed by one Repay; two initial balances, one allowance, one obligation and empty used-ID lists. It supports `AccrualFirst`, `PrincipalFirst` and `ProRata`, with explicit `none`, `floor` or `ceil` conversion rounding. The [numeric extension's evidence](deliverables/numeric-k-2026-09-09/README.md) records its execution and review status. Full successor expressions, arbitrary action sequences and correspondence proofs remain open.
 
-The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. K performs the financial checks and computes every changed financial amount.
+The codec admits closed records and canonical UInt128 fields. K checks positive conversion mantissa and scale at most 18 before reaching the stage that computes powers or division. Invalid financial values such as zero mantissa or a huge scale reach K and reject; malformed records and unsupported collection/action shapes stop at the codec. Raw K terms outside this admitted domain are not covered.
 
-**Terms and evaluation contexts.** `P` is an admitted packet, `H` its codec-supplied digest, `b` a Boolean, and `i` a diagnostic index. `s` and `r` are sender/receiver row indices; `-1` means absent. `ε` is an empty computation and `▷` is sequencing. `run_H` delimits one packet's reduction; final answers are `prepared` or `rejected`.
+**Terms and contexts.** `P` is a packet and `H` its codec-supplied digest. `s,r` are sender/receiver row indices (`−1` means absent). `x,q,u,c,v` are intermediate integers. `ε` is empty computation, `▷` sequencing, and `□` one context hole. This is explanatory notation, not raw K syntax.
 
 ```text
-Instruction  a ::= start(P) | inspect(P, s, r)
-                 | ensure(H, b, code, i) | finish(P, s, r)
-Computation  k ::= ε | a | k ▷ k
-Context      E ::= □ | E ▷ k
-Program      t ::= run_H(k) | prepared(H, F) | rejected(H, code, i)
+Instruction a ::= start(P) | inspect(P,s,r) | ensure(H,b,code,i)
+                | convert(P,s,r) | divide(P,s,r,x) | round(P,s,r,q,u)
+                | fund(P,s,r,c) | allocate(P,s,r,c) | split(P,s,r,c)
+                | finishT(P,s,r) | finishR(P,s,r,c,v)
+Computation k ::= ε | a | k ▷ k
+Context     E ::= □ | E ▷ k
+Program     t ::= run_H(k) | prepared(H,F) | rejected(H,code,i)
 ```
 
-`E[k]` plugs `k` into the single hole `□`. Sequences are identified up to associativity and the two unit equations `ε ▷ k = k = k ▷ ε`; equivalently, they are flat instruction lists. Contexts therefore select the first pending instruction and retain its suffix. There is no context form `k ▷ E`: execution cannot skip an unfinished instruction or reduce inside packet data. The initial term is `run_H(start(P))`; only terms reachable from an admitted initial term are in this claim domain. This notation is explanatory, not K input syntax.
+Sequences are identified up to associativity and the two unit equations `ε ▷ k = k = k ▷ ε`, so contexts select the first pending instruction and retain its suffix. There is no `k ▷ E` context that skips an unfinished instruction, and no context enters packet data or terminal answers. Only programs reachable from `run_H(start(P))` for admitted `P` are in the domain.
 
-**Primitive contractions.** Write `↝` for a local contraction. `sender(P)` and `receiver(P)` are the K index functions; `checks(P,s,r)` is the definition's exact list of 14 ordered `ensure` instructions for Transfer-only, or 21 for Transfer/Repay. The predicates and arithmetic helpers are treated as pure metafunctions here, abstracting their internal K equational reductions.
+**Pure helpers and guards.** Within a repayment rule, `n` is nominal payment, `m` conversion mantissa, `ℓ` scale, `ρ` rounding mode, `p,a` principal/accrued debt, `T` transferred cash and `λ` allocation rule, all read from `P`. Let `U = 2^128 − 1` and write `g(b,code)` for `ensure(H,b,code,1)`. `R(ρ,q,u)` returns `q`, except that ceil with nonzero remainder returns `q+1`. `DP(λ,n,p,a)` is:
 
 ```text
-start(P) ↝ inspect(P, sender(P), receiver(P))             (START)
-
-inspect(P, s, r)
-  ↝ checks(P, s, r) ▷ finish(P, s, r)                   (EXPAND)
-
-ensure(H, true, code, i) ↝ ε                           (CHECK)
+AccrualFirst:   n − min(n,a)
+PrincipalFirst: min(n,p)
+ProRata:       floor(n*p / (p+a))
 ```
 
-**Contextual reduction and terminal rules.** `→` is the one-step program relation, generated by the following rules. The first lifts a primitive contraction into its evaluation context. Failure is a whole-program control reduction: it discards `E` rather than plugging an error back into it. Finalization applies when `finish` is the only remaining instruction, as the expansion rule guarantees after every check passes.
+The ProRata helper is used only after a positive outstanding obligation and a fitting `n*p` product have passed their guards. Integer division therefore has a positive denominator. Helpers abstract internal K equational steps; they are not financial action-work charges.
+
+**Primitive contractions.** `checks(P,s,r)` contains 15 ordered guards for Transfer-only or 21 initial guards for repayment. `tail(P,s,r)` is `finishT` or `convert`, respectively. Both are exact instruction-list abbreviations, not new program constructors.
 
 ```text
-                    a ↝ k'
-  ---------------------------------------------       (CONTEXT)
+start(P) ↝ inspect(P,sender(P),receiver(P))                         (START)
+inspect(P,s,r) ↝ checks(P,s,r) ▷ tail(P,s,r)                       (EXPAND)
+ensure(H,true,code,i) ↝ ε                                        (CHECK)
+
+convert(P,s,r)
+  ↝ g(n*m ≤ U,OVERFLOW) ▷ divide(P,s,r,n*m)                       (CONVERT)
+divide(P,s,r,x)
+  ↝ round(P,s,r,x div 10^ℓ,x mod 10^ℓ)                           (DIVIDE)
+round(P,s,r,q,u)
+  ↝ g(ρ ≠ none or u = 0,INEXACT_CONVERSION)
+    ▷ fund(P,s,r,R(ρ,q,u))                                      (ROUND)
+fund(P,s,r,c)
+  ↝ g(c ≤ U,OVERFLOW) ▷ g(c > 0,DUST)
+    ▷ g(c ≤ T,INSUFFICIENT_UNALLOCATED) ▷ allocate(P,s,r,c)       (FUND)
+allocate(P,s,r,c)
+  ↝ g(λ ≠ ProRata or n*p ≤ U,OVERFLOW) ▷ split(P,s,r,c)          (ALLOCATE)
+split(P,s,r,c)
+  ↝ g(DP(λ,n,p,a) ≤ p and n−DP(λ,n,p,a) ≤ a,ALLOCATION_COMPONENT)
+    ▷ finishR(P,s,r,c,DP(λ,n,p,a))                               (SPLIT)
+```
+
+The stage boundaries matter: a huge scale cannot trigger exponentiation before its state guard, and a product that exceeds UInt128 cannot be divided first to obtain an apparently fitting answer. The definition uses K instructions, rather than eager numeric helpers over the whole future continuation, for these boundaries.
+
+**Contextual and terminal reductions.** `→` is generated by context closure and the following whole-program rules. ABORT discards the entire continuation, including finalization; rejected output has no tentative state or effects.
+
+```text
+                      a ↝ k'
+  ---------------------------------------------                 (CONTEXT)
   run_H(E[a]) → run_H(E[k'])
 
-  run_H(E[ensure(H, false, code, i)])
-    → rejected(H, code, i)                             (ABORT)
+  run_H(E[ensure(H,false,code,i)])
+    → rejected(H,code,i)                                        (ABORT)
 
-  run_H(finish(P, s, r))
-    → prepared(H, F(P, s, r))                          (PREPARE)
+  run_H(finishT(P,s,r)) → prepared(H,FT(P,s,r))                   (PREPARE-T)
+  run_H(finishR(P,s,r,c,v)) → prepared(H,FR(P,s,r,c,v))           (PREPARE-R)
 ```
 
-`F(P,s,r)` abbreviates the exact scalar result fields emitted by K, including the receiver index used by the codec. The presentation maps both K result constructors (`preparedTransfer` and `prepared`) to `prepared(H,F)`; `F` retains their distinct fields. `prepared` and `rejected` are terminal: no context reduces inside either answer. Write `→*` for zero or more program reductions. If a check fails, its suffix—including `finish`—is erased; no proposed financial state or effects are returned. The machine checks the whole packet before producing a result, rather than committing a transfer before checking repayment.
+`FT` and `FR` abbreviate the exact distinct scalar records returned by K's `preparedTransfer` and `prepared` constructors. Both include the input digest and receiver index. The codec reconstructs complete unchanged metadata and ordered effects. For Transfer-only, unchanged debt and allocation history are copied by the codec: they are not separately computed debt outputs or a proved K invariant. No context reduces inside `prepared` or `rejected`.
 
-**Trace and presentation bound.** A successful packet follows:
-
-```text
-run_H(start(P))
-  → run_H(inspect(P, s, r))
-  → run_H(checks(P, s, r) ▷ finish(P, s, r))
-  →* run_H(finish(P, s, r))
-  → prepared(H, F(P, s, r))
-```
-
-If the first false check is at position `j` (counting from one), the preceding `j − 1` CHECK steps erase only successful guards. ABORT then discards the remaining context, including `finish`, and returns that check's rejection. By inspection, assuming the pure metafunctions terminate on admitted inputs, this presentation takes **17 control steps** for successful Transfer-only (START, EXPAND, 14 guards, PREPARE), or **24** for successful Transfer/Repay (21 guards). Failure at guard `j` takes `j + 2` steps. These counts are neither K's internal rewrite counts nor charged financial action-work units.
-
-The [downloaded open textbook and Redex corpus](deliverables/reduction-semantics-textbooks-2026-09-09/CORPUS.md) and [source-linked practices](deliverables/reduction-semantics-textbooks-2026-09-09/BEST-PRACTICES.md) explain the distinctions used here: evaluation contexts versus unrestricted compatible closure, context-erasing failure, and terminal answers versus stuck terms. The trace is an explanation of this bounded control projection; no textbook theorem establishes Moriarty's source/K correspondence.
-
-Checks run in this order, stopping at the first failure. The [K rules](experiments/moriarty-language/formal/k/moriarty.k) give every predicate and diagnostic code.
+Checks run in this order; the [K rules](experiments/moriarty-language/formal/k/moriarty.k) specify every predicate.
 
 | Stage | Ordered checks | Error index |
 | --- | --- | --- |
-| State | Distinct balance keys; allowance sum; principal/accrual/outstanding and status; total work including reserve | `-1` (no action index) |
-| Work | Ordinary work covers the action count (one or two); spent work can increase by that count | `-1` |
-| Transfer | Positive amount; different parties; sender balance exists and is sufficient; matching allowance exists and is sufficient; spent allowance and receiver balance do not overflow | `0` |
-| Repay (when present) | Positive nominal amount; matching obligation; outstanding status; payment within debt; same-step transfer ID; matching payer, creditor and asset; sufficient unallocated transfer amount | `1` |
+| State | Distinct balance keys; allowance sum; positive conversion mantissa and scale ≤18; debt sum/status; total work including reserve | `−1` (decoded as null) |
+| Work | Ordinary remaining work covers one or two actions; spent work can increase by that count | `−1` |
+| Transfer | Positive amount; distinct parties; sender exists and covers cash; exact allowance exists and covers cash; allowance-spent and receiver additions fit | `0` |
+| Repay, when present | Positive nominal amount; matching obligation; outstanding status; nominal ≤ outstanding; prior transfer ID; matching payer/creditor/asset | `1` |
+| Conversion | Product fits; `none` has zero remainder; rounded amount fits and is positive; converted cash ≤ transferred cash | `1` |
+| Allocation | ProRata product fits; discharged principal/accrual fit their existing components | `1` |
 
-For Transfer-only, successful preparation moves cash and gross allowance, appends only the transfer ID, and charges **one action-work unit**. The complete obligation and allocation-ID list remain unchanged, even for a settled obligation or a recipient other than its creditor. There is no implicit debt discharge.
+A successful Transfer-only moves cash and gross allowance, appends only its Transfer ID, emits one Transfer and charges **one action-work unit**. It preserves the complete obligation, including a settled ProRata obligation, because no allocation occurs. A non-creditor recipient is legal for this operation.
 
-For successful Transfer/Repay preparation, let `T` be transferred cash, `N` nominal repayment, `p` principal, `a` accrued debt, and `o = p + a` outstanding. Identity conversion makes settlement equal `N`; the checks require `0 < N ≤ T` and `N ≤ o`. Only `N` discharges debt even when `T > N`. Allocation is:
+A successful repayment charges **two action-work units**, emits Transfer then Repayment, and appends both IDs. With computed settlement `c` and principal discharge `v`, the obligation becomes `p′=p−v`, `a′=a−(n−v)`, `o′=p+a−n`, Settled iff `o′=0`. Only nominal `n` discharges debt; cash `T` and settlement `c` have distinct roles. Closure reserve is unchanged.
 
-```text
-AccrualFirst:   dischargedPrincipal = N - min(N, a)
-PrincipalFirst: dischargedPrincipal = min(N, p)
-Both rules:    dischargedAccrued   = N - dischargedPrincipal
+For example, ProRata with principal 100, accrued 10 and nominal payment 7 gives `v=floor(700/110)=6`, leaving principal 94, accrued 9 and outstanding 103. At mantissa 3, scale 1 and floor rounding, settlement is `floor(21/10)=2`: transferring 2 can fund that nominal payment. `none` would reject the same fractional conversion; floor producing zero cash rejects DUST.
 
-p' = p - dischargedPrincipal
-a' = a - dischargedAccrued
-o' = o - N
-status' = Settled if o' = 0, otherwise Outstanding
-```
+**Presentation bound.** Assuming pure helper termination on the admitted domain, successful Transfer-only takes **18 control steps** (START, EXPAND, 15 guards, PREPARE-T). Successful repayment takes **37** (eight stage contractions, 28 guards, PREPARE-R). Rejection ends at its first false guard and discards the remaining stages. Unlike the earlier single-expansion presentation, the failure step count depends on which numeric stages were reached. These are control-presentation counts, not internal K rewrites, execution fees or a mechanized termination proof.
 
-K also subtracts `T` from the sender, adds `T` to the receiver (or creates its missing row), moves `T` from remaining to spent allowance, and moves **two action-work units** from remaining to spent work. The closure reserve stays unchanged. These two work units count the actions, not K rewrite steps. The codec reconstructs unchanged metadata, the ordered Transfer/Repayment effects and used-ID appends from the input and checked K output; that codec remains a trusted, unproved boundary.
-
-For the executed [`principal-partial` fixture](experiments/moriarty-language/formal/k/fixtures/cases.json), cash balances `(100, 0)` become `(70, 30)` after transferring and repaying `30`; principal/outstanding become `70`, the debt remains `Outstanding`, allowance becomes `(remaining: 70, spent: 30)`, and work becomes `(remaining: 98, spent: 2, reserve: 16)`. If a check fails instead, the result exposes a rejection code/index and no proposed state or effects.
-
-The [initial 16-case execution evidence](deliverables/bounded-k-2026-09-09/acceptance.json) and [16 additional branch cases](deliverables/repayment-k-branches-2026-09-09/README.md) check complete successful results and exact rejections against independent expectations and the source preparation path. The additional cases exercise recipient creation, row ordering, third-party repayment, PrincipalFirst crossing and further first-failure checks. These are finite comparisons, not a correspondence theorem. Full successor expression/statement semantics, broader financial actions, mechanized correspondence and mandatory proof-backed ledger settlement remain [SP03/SP09 work](openspec/sprints/README.md). `Prepared` means a local financial proposal; it does not mean authorized, proved or settled on Midnight.
+The [initial execution](deliverables/bounded-k-2026-09-09/README.md), [additional repayment branches](deliverables/repayment-k-branches-2026-09-09/README.md), and [Transfer-only extension](deliverables/transfer-only-k-2026-09-09/README.md) retain their original source-bound evidence and earlier control counts. The numeric suite combines all 42 prior distinct inputs with 22 new independent cases. Finite comparisons do not establish full source/Core/K correspondence, SP03 completion, mandatory PCD or finalized financial settlement. `Prepared` remains a local proposal, not authorization or Midnight acceptance.
 
 ## What a developer writes
 

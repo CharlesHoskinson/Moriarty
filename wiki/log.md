@@ -8,7 +8,7 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T19:43:06Z
+updated_at: 2026-09-09T20:18:05Z
 sources:
   - SRC-0108
   - SRC-0106
@@ -22,6 +22,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-09] save | Numeric K conversion and ProRata
+
+Saved [[wiki/k-framework/k-best-practices|numeric execution lessons]] on staged arithmetic, nominal/cash separation, settled ProRata state and preserved full-case regressions. [Evidence](../deliverables/numeric-k-2026-09-09/README.md) contains 22 new and 42 retained cases. Preserve original failed review payload and all prior resource charges; no source/claim promotion, proof, full sprint completion or Midnight transaction.
 
 ## [2026-09-09] save | Transfer-only K semantics
 

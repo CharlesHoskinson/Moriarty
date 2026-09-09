@@ -211,6 +211,15 @@ Emit:
 
 Every quantity is decimal text. Append the allocation id tombstone. No effect-dependent label determines financial success.
 
+### Settled ProRata state and allocation guards
+
+A valid settled obligation with zero principal, accrued and outstanding remains
+valid state under every allocation rule, including ProRata. A Transfer-only action
+preserves it. Repay rejects NOT_OUTSTANDING before allocation. The ProRata helper's
+zero-denominator INVARIANT guard belongs to allocation; it is not an additional
+state-admission rule. This clarifies the stable-error table against the existing
+parser and transition order; it does not change reference execution behavior.
+
 ### Success
 
 Return **only**:
@@ -241,7 +250,7 @@ Effects are one per action, in action order. Preserve untouched debt, balance, a
 | `INVALID_AMOUNT` | `null` | non-canonical decimal or out of UInt128 text range |
 | `CAPACITY` | `null` on admission; action index at apply | collection length > 128, or receiver/tombstone append exceeds 128 |
 | `DUPLICATE` | `null` on admission; action index at apply | duplicate pair, obligation id, used-id, transfer id, or allocation id |
-| `INVARIANT` | `null` on admission; action index at apply | mantissa 0, scale > 18, remaining+spent(+reserve) overflow, principal+accrued ≠ outstanding, status mismatch, or ProRata `P+A == 0` |
+| `INVARIANT` | `null` on admission; action index at apply | mantissa 0, scale > 18, remaining+spent(+reserve) overflow, principal+accrued ≠ outstanding, status mismatch, or a zero ProRata denominator at allocation (not an extra admission invariant) |
 | `INSUFFICIENT_WORK` | `null` | `work.remaining < actions.length` (closure reserve is not ordinary work) |
 | `OVERFLOW` | `null` if work spent overflows before actions; else action index | UInt128 overflow on work spent, credit, allowance spent, conversion product, ceil increment, or pro-rata `N*P` / `P+A` |
 | `ZERO_AMOUNT` | action index | Transfer or Repay amount is 0 |

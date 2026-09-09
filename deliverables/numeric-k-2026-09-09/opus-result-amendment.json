@@ -1,0 +1,40 @@
+{
+  "requested_model": "opus",
+  "effort": "medium",
+  "packet_sha256": "d58a85a52f771c0dee129fd2486c338325ea545c37a6b566c8077a9179fcecea",
+  "candidate_sha256": "38e6bf4661a31f0a502f4545d22f48f292ea8f80c83f1469464dca7e9baf5f8b",
+  "original_review_sha256": "c1e276b61f33240a1b4bb14a3893ea8386a875598b01e319f00738e6941d1521",
+  "extract_sha256": "25f55b09ced787143b0d99cced9b5c47d5d30df5596567c66fdca1aed6e39118",
+  "result": "## Amendment to Numeric K Result Audit (`sp03-numeric-01`)\n\nScope: the supplied audit text, the 64 extracted token vectors, and their listed `sha256`/timing values. No filesystem, no `krun`, no rehashing. This amendment corrects the audit; it does not re-open unreviewed material.\n\n### 1. Constructor tally \u2014 corrected, non-material\n\nCorrect counts are **22 `prepared` (arity 16) + 6 `preparedTransfer` (arity 9) + 36 `rejected` (arity 3) = 64**. The audit's \u00a71 opening line (\"28 prepared \u2026 4 preparedTransfer \u2026 32 rejected\") was wrong; its inline self-correction fixed only the Prepared split and left **\"all 32 rejected outputs\" in the Rejections bullet uncorrected \u2014 that reads 36**. The cohort tallies were already right and reconcile: new 22 = 13 Prepared-family + 9 rejected; retained 42 = 15 + 27; totals 28 Prepared-family / 36 rejected.\n\nThese are arity/label tallies only. They establish nothing about semantics \u2014 equal counts across cohorts are not evidence of equivalent behaviour, and I do not treat them as such.\n\n### 2. `statusOf` claim \u2014 over-scoped, now bounded\n\nThe audit asserted the status token is `\"Settled\"` exactly when the outstanding scalar is `0` \"in all 28 Prepared rows.\" **Only the 22 arity-16 Repay outputs carry a status token at all.** Restricted to those 22, the biconditional holds on the extracted vectors: `\"Settled\"` appears in traces 15, 22, 26, and exactly those three carry `(0,0,0)` in the principal/accrued/outstanding slots; every other Repay row has a non-zero outstanding and `\"Outstanding\"`.\n\nThe six arity-9 `preparedTransfer` vectors (20, 21, 55, 56, 57, 58) contain **no status token and no debt scalars**. Consequently the audit's \u00a72 claim that trace\u201121 \"preserves P0/A0/O0 `Settled` under Transfer-only\" is **not supported by the raw output**: the constructor has no such fields to observe. The correct statement is that the Transfer-only constructor omits debt entirely \u2014 debt is carried through unchanged \u2014 which is a property of the codec/kernel contract as attested, not something I read off the token vector. I withdraw the trace\u201121 wording and mark that property attested rather than verified.\n\n### 3. First-trace aggregate \u2014 corrected\n\n`firstTraceAggregateSeconds` is **18.000994734000415**, not 12.355; the audit apparently carried over the compile figure (12.329168\u2026). The corrected value is consistent with compile 12.329 plus a first `krun` \u2265 2.273. Monotonic increase to 328.6530731849998, agreement with the supervisor's 328.769 s, and headroom under the 1512 s `RuntimeMaxUSec` are all unaffected.\n\n### 4. Effect on the verdict\n\nAll three slips are errors in the audit's own prose and arithmetic-of-description, not defects in the recorded execution:\n\n- The digest bindings (64 distinct, each matching its case), rejection codes/indices, `receiver = -1` append triple (39, 42, 56 with appended amounts 17/17/19), zero-append closure on all `receiver \u2265 0` rows, and the staging discriminators (traces 09, 12, and the scale\u20111/scale\u20110 pair) are unchanged by these corrections.\n- The one substantive change is a **narrowing**: the Transfer-only debt-preservation claim moves from \"verified at token level\" to \"attested by contract,\" and the `statusOf` invariant is bounded to 22 rows. Neither was a load-bearing gate.\n\n**Verdict: PASS** for the same result candidate (`38e6bf46\u2026f5f8b`), scope = supplied text plus this correction. Section 6 of the original audit stands: no correspondence, semantic-freeze, proof, or ledger claim, and the source/CLI checker runs and 187-artifact hashes remain attested, not observed.",
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 15882,
+      "outputTokens": 15,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.015957,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3776,
+      "cacheReadInputTokens": 2365,
+      "cacheCreationInputTokens": 18429,
+      "webSearchRequests": 0,
+      "costUSD": 0.27988250000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2394,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false
+}

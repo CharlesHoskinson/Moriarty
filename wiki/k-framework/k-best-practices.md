@@ -3,7 +3,7 @@ id: k-framework.best-practices
 type: reference
 title: K best practices for the ZKIR definition
 status: active
-updated_at: 2026-09-09T19:43:06Z
+updated_at: 2026-09-09T20:18:05Z
 sources:
   - SRC-0108
   - SRC-0039
@@ -16,6 +16,18 @@ tags:
 ---
 
 # K Best Practices for the ZKIR Definition
+
+## Numeric conversion and ProRata observations — 2026-09-09
+
+Repository and experiment observations: [the numeric K extension](../../deliverables/numeric-k-2026-09-09/README.md) compares 22 new independent numeric cases and all 42 earlier distinct cases through source preparation, the actual simulation CLI and K. Consult the exact result audits and acceptance record for publication status. This is finite agreement in the fixed-state local projection, not a full semantic freeze or correspondence theorem.
+
+- Keep nominal debt, transferred cash and converted settlement distinct. Funding compares converted cash with the preceding transfer; allocation reduces nominal principal/accrual. A wrapper or rounding rule cannot erase a positive debt for zero settlement cash.
+- Introduce exponentiation and division only in K instruction stages reached after bounds checks. A canonical UInt128 scale can still be enormous; schema admission alone is not permission to compute its power. Reject an overflowing product before division even if the quotient would fit.
+- ProRata divides the checked nominal-times-principal product by positive total debt. A settled ProRata obligation is valid for Transfer-only; the repayment status guard prevents zero-total allocation. Defensive guards need explicit reachability notes rather than fabricated negative fixtures.
+- Preserve complete prior-case expectations when extending numeric behavior. New semantics do not inherit old runtime acceptance merely because identifiers and result shapes remain stable. The current control presentation has 18 successful Transfer-only steps and 37 repayment steps, distinct from one/two financial work units and internal K rewrites.
+- A provider exit code and YES labels do not constitute a substantive review. The first Opus payload is retained as unusable; only its corrected technical audit can vote. Keep this isolated review-transport correction separate from product changes and resource charges.
+
+These are local observations and engineering lessons. No source or accepted-claim ledger is promoted; no formal proof or Midnight financial settlement follows.
 
 ## Transfer-only distinction — 2026-09-09
 
