@@ -1,0 +1,999 @@
+                                                                                                       x := 3; y := x + 1 is equivalent to the program y := 4, yet the subexpression x := 3; y :=
+                                                                                                       x + 1 cannot be replaced by y := 4 because the context in which the former expression
+                                                                                                       occurs may contain further references to x and these references must be able to perceive the
+                           The Revised Report                                                          assignment to x . Still, the calculi satisfy relatively simple variants of the Church-Rosser and
+                                                                                                       Standardization properties. Most importantly, they satisfy most of Plotkin’s [18] criteria
+                                   on the                                                              for a correspondence between a programming language and a reduction-based calculus:
+             Syntactic Theories of Sequential Control and State                                         (1) the standard derivations of the calculi yield the same value for a program as the
+                                                                                                            operational semantics, and
+                                  Matthias Felleisen∗
+                                                                                                        (2) a subset of the calculi equations for ordinary expressions are operationally sound.
+        Department of Computer Science, Rice University, Houston, TX 77251-1892
+                                                                                                       The first property is important because a programmer can use the relatively simple reduc-
+                                     Robert Hieb†                                                      tion system to determine the value of an imperative higher-order program by rewriting the
+         Computer Science Department, Indiana University, Bloomington, IN 47405                        program until it becomes a value. The second property is a basis for program transfor-
+                                                                                                       mations and program correctness proofs. However, as the restriction in (2) indicates, the
+                                                                                                       calculi are complicated equational theories because some equivalences are not equations in
+                                               Abstract                                                the usual sense. This distinction is unnatural and leads to problems in reasoning about
+                                                                                                       equational properties of programs.
+          The syntactic theories of control and state are conservative extensions of the                   One way to simplify the equational theories for an imperative programming language is
+          λv -calculus for equational reasoning about imperative programming facilities in             to modify the programming language. For example, we recently showed that by adding a
+          higher-order languages. Unlike the simple λv -calculus, the extended theories are            control delimiter facility to the λ-calculus extended with control operators, we can simplify
+          mixtures of equivalence relations and compatible congruence relations on the                 the calculus and get a more elegant relationship between the language and its calculus [6].
+          term language, which significantly complicates the reasoning process. In this                But, although this proposal provides a good example of how calculus design can influence
+          paper we develop fully compatible equational theories of the same imperative                 and improve language design, it does not alleviate the need for better techniques for rea-
+          higher-order programming languages. The new theories subsume the original                    soning about existing languages. Languages such as Scheme, ML, and Common Lisp have
+          calculi of control and state and satisfy the usual Church-Rosser and Standard-               grown through practical experiences and support practical applications, and they need cal-
+          ization Theorems. With the new calculi, equational reasoning about imperative                culi that are tuned towards their specific needs.
+          programs becomes as simple as reasoning about functional programs.                               The solution to the problem is to relax Plotkin’s first correspondence criterion. More
+                                                                                                       precisely, we no longer require that the standard derivation of the programming language
+1        The syntactic theories of control and state                                                   calculi terminate in a value when the machine produces a value for a program. Instead, we
+                                                                                                       allow the standard derivation to produce some other kind of term that is recognizable as
+Most λ-calculus-based programming languages provide imperative programming facilities                  a final answer. For both kinds of imperative extensions, i.e., control operators and assign-
+such as assignment statements, exceptions, and continuations. Typical examples are ML [16],            ments, the result is a simple equational calculus for imperative, higher-order programming
+Scheme [19], and Common Lisp [20]. While these additions add expressive power and in-                  languages that can prove the same set of observational equivalences as the old calculus but
+crease the efficiency of programs, they also appear to invalidate the simple reduction rules           with an elegant axiomatic basis. Indeed, reasoning with the new calculi is as simple as
+and equational reasoning of the λ-calculus that make functional programming so appeal-                 reasoning with the traditional λ-calculus.
+ing. In two previous papers [8, 9], we have shown that there are conservative extensions of                In the next section, we briefly summarize Plotkin’s work on the λv -calculus since it
+Plotkin’s λv -calculus [18] for such programming languages, and that it is possible to reason          constitutes the basis of our research. Sections 3 and 4 present our new theories of control
+about programs in extended functional languages in an equational style.                                and state, respectively. These sections begin by briefly introducing our old calculi, which
+    The main difference between the simple lambda-calculi and its extended versions is                 provide machine-independent semantics for the languages and standards against which to
+a distinction between two classes of equations: equations for ordinary expressions and                 measure the new theories. Next, these sections introduce the new calculi and analyze the
+equations for whole programs. The reason for this distinction is the need to arrange the               relationships between the old and new calculi. The fifth section describes the merger of
+effects of assignments and jumps in the appropriate order. For example, a program like                 the two theories. Finally we discuss related work and some implications of our work for an
+    ∗
+                                                                                                       alternative denotational semantics for extended functional languages.
+        Supported in part by NSF grants CCR 88-07520 and 89-17022, and DARPA/NSF grant CCR 87-20277.
+    †
+        Supported in part by NSF grant CCR 88-03432.
+
+
+                                                   1                                                                                                  2
+2    The λ-value-calculus                                                                               interpreter. The original SECD-semantics and the λv -calculus precisely model the call-
+                                                                                                        by-value parameter-passing technique that is now predominant in the functional subsets
+The expression language Λ of the λ-calculus and the λv -calculus [2, 3, 18] is the union of a           of programming languages. Besides being easy to implement, call-by-value provides an
+set of values and expression juxtapositions:                                                            obvious order of evaluation, which facilitates the addition of imperative features. There
+                                                                                                        is, however, no theoretical reason for choosing one over the other, even in the presence of
+                                          e ::= v | (e e).                                              control operators and assignments.
+                                                                                                            The λv -calculus is an equational theory about Λ. More precisely, it is a set of equations
+The set of values is the collection of basic constants (b ∈ BConsts) and functional constants
+                                                                                                        that is based on a set of term relations on Λ. The two basic relations, notions of reduction,
+(f ∈ FConsts), variables (x ∈ Vars) and λ-abstractions:
+                                                                                                        are:
+                                      v ::= b | f | x | λx.e.                                                                                f a −→ δ(f, a)                                       (δ)
+
+Constants correspond to built-in algebraic language primitives like numbers and booleans                                                (λx.e)v −→ e[x ← v].                                    (βv )
+and (mathematical) functions on them; identifiers are placeholders for values; and λ-                   The equational theory λv is the smallest congruence relation generated from the above
+abstractions are call-by-value procedures. Expression juxtaposition denotes function ap-                relations. For the formal definition, we rely on the concept of a term context, which are
+plication.                                                                                              expressions with a hole ([ ]) at the place of a subexpression:
+    The only binding construct in the programming language is λ-abstraction. The set of
+closed expressions, Λ0 , is the set of all expressions with no free variables; Values 0 is the set of                                C ::= [ ] | (e C) | (C e) | (λx.C).
+closed values. We adopt Barendregt’s [2] conventions on bound variables and abstractions:
+                                                                                                        The expression C[e] stands for the result of putting the expression e into the hole of the
+    • Bound variables are always distinct from free variables in the various expressions of             context C , which may bind free variables in e.
+      mathematical definitions and claims.                                                                  Given the notions of reduction and the definition of contexts, the definition of λv is
+                                                                                                        straightforward.
+    • Abstractions that only differ by a renaming of bound variables are identified, e.g.,
+      λx.x ≡ λy.y.                                                                                      Definition 2.1. (λv ) The basic notion of reduction is
+The expression e[x ← e1 ] is the result of substituting the expression e1 for a free variable x                                                  v = δ ∪ βv .
+in the expression e.
+    An important parameter of the language definition is the set of constants and its inter-            The one-step v-reduction −→v is the compatible closure of v: e −→v e" if (p, q) ∈ v, e ≡
+pretation. Following Plotkin [18], we assume that the behavior of constants is specified by             C[p], and e" ≡ C[q] for some expressions p and q and context C. The v-reduction is de-
+a partial function from functional and basic constants to closed values:                                noted by −→
+                                                                                                                  −→v and is the reflexive, transitive closure of −→v ; =v is the smallest equivalence
+                                                                                                        relation generated by −→v . If e1 =v e2 , we write λv ( e1 = e2 .
+                               δ : FConsts × BConsts → Values 0 .
+                                                                                                            The λv -calculus has the same characteristic properties as Church’s original λ-calculus.
+    In the mid-60’s, Landin [11, 12] illustrated in a series of papers that Λ is an interesting         First, the defining notion of reduction, v, is Church-Rosser, i.e., the v-reduction satisfies
+and powerful programming language. Most importantly, he showed how a simple stack-                      the diamond property.
+based calculator for algebraic expressions could be extended to the abstract SECD-machine
+for evaluating complete Λ-programs. From a programmer’s perspective, the SECD-machine                   Theorem 2.2 (Plotkin) If e−→             −→v e2 , then there exists an expression e" such
+                                                                                                                                     −→v e1 and e−→
+                                                                                                        that e1 −→   "
+                                                                                                                −→v e and e2 −→   "
+                                                                                                                             −→v e .
+is an interpreter that implements a partial function from programs to answers, where the
+former are closed expressions and the latter are closed values:
+                                                                                                            Second, for every sequence of (single) reduction steps from one term to another, there
+                                    eval SECD : Λ0 → Values 0 .                                         is a canonical sequence of steps between the same terms that can be found algorithmically.
+                                                                                                        This idea is important for an analysis of the correspondence between a calculus and an
+    The use of Λ as a programming language with an operational semantics and as the                     abstract machine. While it is easy to see that e −→−→v v if eval SECD (e) = v, the inverse is
+term language for Church’s λ-calculus [3] raises the natural question of how the two con-               not correct. If e −→
+                                                                                                                          −→v v and v is a λ-abstraction, then there are possibly many different
+cepts correspond to each other. Plotkin [18] provided the answer by defining the λv -calcu-             values to which e reduces, yet eval SECD , the interpreter, can only yield one value for e.
+lus, which matches the evaluation function eval SCED , and by providing a modified SECD-                To determine this value via a sequence of reductions, we need canonical reductions and an
+machine, which implements the λ-calculus correctly in the above sense of a Landin-style                 algorithm to compute them.
+
+                                                 3                                                                                                    4
+    To describe the basis of the algorithm and to state the corresponding theorem, we                       In other words, the SECD-machine terminates and returns a value for a program if and
+need some definitions. An evaluation context is a special kind of context. The hole of an               only if the program standard reduces to the same value. It is therefore possible to define the
+evaluation context is in such a position that a δ- or βv -redex inserted in the hole is the             evaluation function via the standard reduction function, ignoring the details of the actual
+leftmost-outermost redex that is not inside of a λ-abstraction. We let E range over the set             machine:
+                                                                                                                                                    df
+of evaluation contexts and define it with the following grammar:                                                                         eval v (e) ≡ v iff e )−→∗v v.
+
+                                     E ::= [ ] | (v E) | (E e).                                             After determining that reductions in the calculus correspond to evaluations on a ma-
+                                                                                                        chine, the question remains what equations on the calculus mean for a programmer. To
+Given the definition of an evaluation context, we say that e standard reduces to e" if the              understand this relationship, we recall that a programmer can only observe the effects of
+reduction occurs in an evaluation context. In other words, a standard reduction function                entire programs via the evaluator. Thus, to compare expressions as black boxes, a pro-
+always picks the leftmost-outermost v-redex outside the scope of a λ-expression. It is                  grammer must rely on those equivalences that the evaluation function can validate for all
+undefined on values.                                                                                    programs in which the expression can occur. This argument naturally leads to the definition
+                                                                                                        of the operational equivalence relation.
+Definition 2.3. (Standard Reduction Function) The standard reduction function maps e
+to e" , e )−→v e" , if for some evaluation context E , e ≡ E[p], e" ≡ E[q] and (p, q) ∈ v. We use       Definition 2.7. (Operational Equivalence) Two terms, e and e" , are operationally equiv-
+ )−→∗v to denote the transitive closure of the standard reduction function.                             alent, e ≃v e" , if and only if they are indistinguishable in all program contexts C :
+
+                                                                                                                              eval v (C[e]) terminates iff eval v (C[e" ]) terminates
+   The concept of standard reduction sequences generalizes the idea of a standard reduction
+function such that standard reductions become applicableto arbitrary term positions. A                  and
+standard reduction sequence also permits incomplete reduction sequences that may choose                                               eval v (C[e]) = b iff eval (C[e" ]) = b
+not to reduce a leftmost-outermost redex for the rest of the sequence.
+                                                                                                        for some basic constant b.
+Definition 2.4. (Standard Reduction Sequences) The set of standard reduction sequences
+                                                                                                            Plotkin [18] showed that the λv -calculus is sound with respect to operational equivalence.
+is defined as follows:
+                                                                                                        Theorem 2.8 (Plotkin) If λv ( e = e" then e ≃v e" . The inverse direction does not hold.
+  1. Every constant and variable is a standard reduction sequence.
+                                                                                                           Theorems 2.5 and 2.8 are the basis of a formal correspondence relation between pro-
+  2. If e1 , . . . , en is a standard reduction sequence, then so is λx.e1 , . . . , λx.en .
+                                                                                                        gramming languages and calculi. They stipulate that
+  3. If p1 , . . . , pn and q1 , . . . , qm are standard reduction sequences, then so is                    1. a calculus can evaluate a program in the same way as an independently given opera-
+                                                                                                               tional semantics; and
+                                  p1 q 1 , p2 q 1 , . . . , pn q 1 , pn q 2 , . . . , pn q m .
+                                                                                                            2. the equations of a calculus imply the interchangeability of expressions in arbitrary
+  4. If e1 , . . . , en is a standard reduction sequence and e )−→v e1 , then e, e1 , . . . , en is a          contexts.
+     standard reduction sequence.
+                                                                                                        These two criteria are the basis for any further development of programming language
+   We can now formalize a Curry-Feys-style Standardization Theorem.                                     calculi.
+
+                        −→v e" if and only if there is a standard reduction sequence
+Theorem 2.5 (Plotkin) e −→                                                                              3     Theories of control
+e, . . . , e" .
+                                                                                                        The language Λc for programming with procedural and control abstractions is an extension
+   Together, the Church-Rosser and Standard Reduction Theorems show that there is a                     of Λ with a set of C-applications of the form (Ce):
+perfect correspondence between the SECD-evaluation function and the standard reduction
+function.                                                                                                                                     e ::= v | (ee) | (Ce).
+
+Theorem 2.6 (Plotkin) Let e, v be closed terms in Λ. Then, e )−→∗v v if and only if                     A C-application applies its subexpression to an abstraction of the current control context,
+eval SECD (e) = v.                                                                                      the continuation. The application takes place in the empty control context, the halt contin-
+                                                                                                        uation. A continuation has the same first-class status as a λ-abstraction; upon invocation,
+
+                                                          5                                                                                             6
+it discards the control context of the application and resumes the abstracted control context    wrap this expression in an A-application. To obtain the outer part of the continuation, we
+with its argument.                                                                               use another C-application:
+    This notion of control abstraction is derived from the treatment of continuations in
+the programming language Scheme [19]. However, although the continuation created by a                                        (C e)e" −→ C(λk.e (λx.A(k (xe" )))).
+C-application acts just like a continuation created by the Scheme continuation constructor
+                                                                                                 Similarly, when the control expression occurs as the argument part of an application, the
+call/cc, a C-application differs from a call/cc application in that the former aborts the
+                                                                                                 abstraction of the control context applies the known function to an unknown argument,
+current control context, whereas the latter leaves the current control context intact. This
+                                                                                                 passing the result to the continuation of the entire application:
+abortive affect allows us to define an abort abstraction as an abbreviation of a C-application
+whose subexpression is a procedure that ignores its argument:                                                                v(C e) −→ C(λk.e (λx.A(k (vx)))).
+                                  df
+                              A e ≡ C(λd.e) where d +∈ FV (e).                                   The assumption that the left part of the application is a value reflects the left-to-right
+                                                                                                 evaluation order of the underlying language.
+The effect of (A e) is an abort of the program evaluation. It discards the current control           To facilitate the formal definition and future reference to the above rules, we introduce
+context and returns the value of its subexpression as the final value of the program. This       the notion of a singular evaluation context:
+abbreviation is used to simplify the reduction rules for C-applications.
+    Other than the introduction of C-applications, the syntax of Λ is adopted mutatis mu-                                           E s ::= (v [ ]) | ([ ] e).
+tandis. The definition of the set of values retains its shape, even though subexpressions are
+in the extended language Λc :                                                                    Using singular evaluation contexts, one definition schema suffices for specifying both of the
+                                     v ::= b | f | x | λx.e.                                     above reduction relations for Λc :
+
+Similarly, the specification of the set of evaluation contexts stays the same:                                           E s [C e] −→ C(λk.e (λx.A(k E s [x]))).                         (Clift )
+
+                                  E ::= [ ] | (v E) | (E e),                                        The relation for lifting C-applications gives rise to an extended notion of reduction:
+
+but it now denotes the set of evaluation contexts whose subexpressions are in the extended                                          c = δ ∪ βv ∪ Clift .                                     (c)
+language Λc .
+    The following subsection briefly presents our original theory of control abstractions        This notion of reduction defines a full reduction relation and a congruence relation in the
+with an emphasis on the set of safe equations; for a more complete description, we refer         usual way. It is Church-Rosser and has Curry-Feys-style standard reduction sequences. The
+the reader to the earlier report [9]. The second subsection contains the development of          symbol )−→c denotes the standard reduction function for c. The respective theorems and
+a finite axiomatization of the theory of safe equations. The Plotkin-style correspondence        proofs are straightforward adaptations of the proofs of Plotkin’s corresponding theorems.
+theorem relies on a proof of equivalence between the two calculi and on the idea that the old    We use λv -C(c) ( e = e" if e =c e" .
+calculus is an acceptable specification of the semantics of Λc . The final subsection presents       For a complete simulation of an abstract machine for Λc , the reduction based on c
+two interesting extensions of the equational theory.                                             is insufficient because C-applications get stuck at the top of the program. We therefore
+                                                                                                 introduce a computation rule that maps a C-application at the top of the program into an
+                                                                                                 application of its subterm to the halt continuation (λx.Ax):
+3.1   A syntactic theory of control abstractions
+Originally we derived the syntactic theory of control from an abstract operational semantics                                         C e $ e(λx.Ax).                                       (CT )
+based on Landin’s SECD-machine [7]. Eliminating all non-program text components from
+                                                                                                     Together with the extended reduction −→
+                                                                                                                                          −→c , the computation rule forms a computation
+the machine shows that the concept of “current continuation” is equivalent to the notion of
+                                                                                                 relation
+evaluation context. The machine transition rules for abstracting a control state naturally
+                                                                                                                                    $c = −→
+                                                                                                                                          −→c ∪ CT .
+lead to two term relations that gradually lift a C-application to the top of an evaluation
+context while encoding the context as an abstraction.                                            The computation relation satisfies the diamond property, i.e., if e $c e1 and e $c e2 , then for
+    When the C-expression, Ce, occurs as the function part of an application, (Ce)e" , its       some e" , e1 $c e" and e2 $c e" . But, since CT only applies to entire programs, the computa-
+immediate continuation is the application of a yet-unknown function f to the expression e" .     tion relation cannot satisfy the full Church-Rosser property. Similarly, there are standard
+The rest of the continuation, k , is the continuation of the entire application. Composing       computation sequences, which are weak forms of standard reduction sequences. The com-
+                                                                                                                                                                                              !
+the two pieces, k(f e" ), yields the functional part of the continuation of Ce, which in turn    putation relation generates an equivalence relation on programs, which we refer to as =c .
+                                                                                                                                      !
+is the argument for e. Since this continuation must abort its context upon invocation, we        We also write λv -C! ( e = e" if e =c e" . Based on the diamond property of the computation
+
+                                              7                                                                                                 8
+relation and the Church-Rosser property of the reduction c, it is easy to show that the               the latter than the former because most interesting properties of programs are characterized
+theory λv -C! is a conservative extension of λv .                                                     by safe equations. Unfortunately, working with the theory of safe equations is not as easy
+    The standard computation function is a generalization of the notion of a standard re-             as working with the λ-calculus since it is not a simple axiomatic theory with a finite set of
+duction function and always performs the leftmost-outermost computation step. Like the                axioms or axiom schemas but a theory based on a filtered subset of another theory, λv -C! .
+standard reduction function, it is undefined on values.                                               We introduce a simple axiomatic characterization of safeness in the next subsection.
+
+Definition 3.1. (c-Standard Computation Function) The standard computation function                   3.2    An axiomatic basis for safe equations
+                                       !
+maps a program e to a program e" , e )−→c e" , if e standard reduces to e" or if e computes to
+       !                                                                                              The disturbing element in the calculus of control abstractions is the rule CT . The purpose
+e" : )−→c = )−→c ∪ CT .
+                                                                                                      of the rule is to replace a C-application (Ce) at the root of a program with an application of
+     The standard computation function faithfully simulates evaluation on a machine for Λc ,          e to the halt continuation. For an axiomatic characterization of safe equations, we must find
+i.e., we can use it to define a semantics instead of a machine with complex states:                   a way of replacing this special relation with simple notions of reduction that approximate
+                                                               ! ∗
+                                                                                                      its effect.1
+                                eval c (e) = v       if   e )−→c v.                                       A partial solution is to leave C-applications at the root of the program alone and to
+                                                                                                      continue with the evaluation of the subexpression. More precisely, when a C-application
+This, in turn, gives rise to an operational equivalence relation in the usual manner. A
+                                                                                                      reaches the root of the program after a number of Clift reductions, it has the shape (Cλk.e),
+Λc -expression e is operationally equivalent to e" , e ≃c e" , if and only if the two are indistin-
+                                                                                                      and an evaluation may continue with e. But this clearly leads to an accumulation of
+guishable in the sense of Definition 2.7 relative to all Λc -program contexts.
+                                                                                                      C-applications at the root of a program. By observing that the outermost C-application
+    From the design of the control calculus, it follows that congruences generated by c-
+                                                                                                      removes the current continuation and that therefore the next C-application’s continuation
+reduction are operationally sound, but, due to their context-sensitivity, equations based on
+                                                                                                      is the halt continuation, we are led to a rule that captures the idempotency of the abort
+the computation relation are not.
+                                                                                                      action of C-applications:
+Theorem 3.2 ([9]) Let e and e" be in ΛC .
+                                                                                                                                    C(λk.C e) −→ C(λk.e(λx.Ax)).                                        (Cidem )
+  (i) If λv -C(c) ( e = e" then e ≃c e" .
+                                                                                                      The only exception to this reasoning is the case where the program is already a C-application
+ (ii) λv -C! ( e = e" does not imply e ≃c e" .                                                        and the subexpression is not an abstraction. We therefore need a rule for transforming an
+                                                                                                      arbitrary subexpression of a C-application into a λ-abstraction. The task of this abstraction
+   Fortunately, it is possible to factor out a large subset of equations in λv -C! that are           is to receive a continuation and to apply the subexpression to it. A first attempt at the rule
+operationally sound: the safe equations.                                                              could be
+                                                           !                                                                                C e −→ C(λk.e k).
+Definition 3.3. (C-Safe Equations) An equation e =c e" is safe if and only if it holds in
+all evaluation contexts: λv -C! ( E[e] = E[e" ] for all E.                                            Unfortunately, this version is not strong enough. If, for example, e is a λ-abstraction that
+                                                                                                      eventually causes an application of k to some value, the reduction would be stuck and no
+    Operationally, the two terms of a safe equation have the same control effects. In order           further evaluation would be possible. The solution is to replace k by (λx.A(kx)) so that an
+to enrich the set of safe equations we also permit the use of safe equations in the safeness          application of the continuation can initiate a program abort. Putting things together, the
+proof of an equation. We use λv -C-safe to refer to the equational theory generated by safe           additional rule becomes
+equations. The safe theory is again a conservative extension of λv and, more importantly,
+reduces reasoning about operational equivalence from the set of all contexts to the set of                                            C e −→ C(λk.e (λx.A(k x))).                                        (Ctop )
+evaluation contexts.
+                                                                                                      Although a Cidem redex is also a Ctop redex, this ambiguity causes no problem: by imposing
+Theorem 3.4 ([9]) If λv -C-safe ( e = e" then e ≃c e" .                                               an appropriate condition on the standard reduction function (see below), it is still possible
+                                                                                                      to emulate a deterministic machine.
+    In summary, the calculus of control abstractions is like an ordinary λ-calculus with                  Together, the two new relations, Cidem and Ctop , can closely simulate the top-level rule
+Church-Rosser and Standardization Theorems. Moreover, it closely corresponds to the                   of λv -C! . Indeed, the entire system of c-reduction, Cidem , and Ctop suffices for simulating
+programming language definition for Λc . If we need to evaluate a program, the standard                  1
+                                                                                                           Tim Griffin independently and simultaneously discovered another solution while studying the connection
+computation will produce the correct value; for proving operationally sound equations, we             between a typed variant of the control calculus and classical logic [10]. He proposes to restrict the set of
+often must work in the theory of safe equations. In general, we will be more interested in            programs to expressions of the form C(λk.ke) and to use Cidem as a replacement for CT .
+
+
+                                                 9                                                                                                        10
+a complete evaluation. To begin, we introduce the notion of reduction                                can be transformed into the derivation
+                                                                                                                                  ! ∗
+                                   d = c ∪ Cidem ∪ Ctop .                                                                   e1 y )−→c e"y where e" ≡ e"y [y ← (λx.A† x)].
+
+As usual, we let −→d and −→−→d stand for the respective one-step reduction and its tran-             By Lemma 3.6, it follows that
+sitive closure. Furthermore, we write λv -C(d) ( e = e" if e =d e" . Next we characterize
+the relationship between standard computation and the new reduction system with three                                                           −→d C(λk.e"y ),
+                                                                                                                                     C(λk.e1 y) −→
+lemmas. Clearly, the new system subsumes the standard computations that are entirely
+based on c-reductions.                                                                               and, by replacing free y with (λx.A† (k x)),
+
+                   ! ∗
+Lemma 3.5 If e )−→c e" without use of CT then e −→
+                                                −→d e" .                                                             C(λk.e1 (λx.A† (k x))) −→
+                                                                                                                                            −→d C(λk.e"y [y ← (λx.A† (k x))]).
+
+                    ! ∗
+Proof. Suppose e )−→c e" without use of CT . Then e )−→∗c e" and therefore e −→
+                                                                             −→d e" . !              Again, a replacement of (kx) with x throughout e"y [y ← (λx.A† (k x))] yields e"y [y ←
+   Given the operational motivation behind the introduction of Cidem , it should also be             (λx.A† x)], which is e" .
+obvious that once a C-application is at the root of the program the evaluation proceeds as
+                                                                                                  2. Assume that the tagged continuation is applied to a value for a first, and last, time:
+before.
+                                                                                                                                     ! ∗                 !             ! ∗
+                   ! ∗                                                                                                 e1 (λx.A† x) )−→c E[(λx.A† x)v] )−→c E[A† v] )−→c e" .
+Lemma 3.6 If e )−→c e" then C(λk.e) −→
+                                    −→d C(λk.e" ).
+                                                                                                     By the same reasoning as in the first case, there must be an evaluation context Ey
+Proof. Since Cidem is essentially an instance of CT inside of the context C(λk.[ ]), every
+                                                                                                     and a value vy such that
+computation step in the old derivation is a reduction step inside of C(λk.[ ]) in the revised
+calculus. The rest follows by transitivity. !                                                                 C(λk.e1 (λx.A† (k x))) −→
+                                                                                                                                     −→d C(λk.Ey [yvy ][y ← (λx.A† (k x))])
+    Finally, if an evaluation in λv -C! uses a top-level step, there is no equivalent step in
+                                                                                                                                        −→d    C(λk.Ey [A† (kvy )][y ← (λx.A† (k x))]),
+the new reduction system. However, based on the above lemmas, we can show that the rest
+of the evaluation in λv -C! can be simulated, and that there is always a close relationship          where E ≡ Ey [y ← (λx.A† x)] and v ≡ vy [y ← (λx.A† x)]. Substituting vy for
+between the respective terms in the two sequences.                                                   (kvy ) and x for (kx) in the underlined term yields Ey [(A† vy )][y ← (λx.A† x)], which
+                   ! ∗                                                                               is the underlined term E[A† v] above. The corresponding terms in the two derivation
+Lemma 3.7 If e )−→c e" with at least one CT -step, then e −→−→d C(λk.e"k ), where e"k may be
+              "                                                                                      sequences still satisfy the desired invariant.
+converted to e by replacing all occurrences of (ku) with u for arbitrary values u.
+                                                                                                     The rest of the standard computation sequence in λv -C! can only eliminate some or
+                                             ! ∗
+Proof. By assumption, the derivation for e )−→c e" must contain a first step using CT :              all of the evaluation context E. These steps are easily mimicked in the new calculus
+                                                             ! ∗                                     without violating the desired relationship. !
+                             e )−→∗c Ce1 $ (e1 (λx.A† x)) )−→c e" .
+
+We tag this first, newly-created halt continuation with a dagger † so that we can track it
+through the rest of the computation and distinguish its occurrence in the final answer.                                       f a −→ δ(f, a)                                                   (δ)
+    By Lemma 3.5, the first part of the above derivation is easily simulated in the new                                  (λx.e)v −→ e[x ← v]                                                 (βv )
+system:                                                                                                                  E s [C e] −→ C(λk.e (λx.A(k E s [x])))                            (Clift )
+                             −→d Ce1 −→d C(λk.e1 (λx.A† (k x))).
+                           e −→
+                                                                                                                             C e −→ C(λk.e (λx.A(k x)))                                    (Ctop )
+Since replacing (kx) with x in the underlined term yields the underlined term in the previous                        C(λk.(C e)) −→ C(λk.e(λx.Ax))                                        (Cidem )
+derivation, the underlined terms satisfy the desired relationship.
+    To complete the proof, it suffices to show that the invariant is preserved by all steps
+following the first top-level step. For this, we consider two cases.                                                 Figure 1: The revised syntactic theory of control
+
+  1. Assume that the tagged continuation is not applied to a value during the rest of the
+     computation. It is easy to see that in λv -C! the second half of the derivation,              In summary, Lemmas 3.5 through 3.7 show that if a program has a value according to
+                                                                                                eval c , then the new calculus can reduce the program to a recognizably equivalent expression.
+                                                       ! ∗
+                                        e1 (λx.A† x) )−→c e" ,                                  The essential difference is that the reductions in λv -C(d) “remember” whether or not the
+
+                                              11                                                                                              12
+computation used any control operations. Thus, the answer in the new theory may be a               Lemma 3.10 λv -C-safe ( Cidem , Ctop .
+simple value, v , a C-application that abstracts over a value, C(λk.v), or a C-application that    Proof. The safeness of Cidem follows from a simple calculation. Let E be an arbitrary
+abstracts over the application of a continuation variable to a value, C(λk.k v). In the first      evaluation context. Then,
+case, v is the same answer the evaluation function eval c would produce; in the latter two
+cases, the body of the C-application may be converted to the expected answer by replacing                    λv -C! ( E[C(λk.Ce)] = (λk.Ce)K                 for some term K determined by E
+all occurrences of (kv) with v .                                                                                                        = Ce[k ← K]
+    More importantly, the proofs of the above lemmas also show that the new calculus                                                    = (e[k ← K])(λx.Ax)
+basically reduces programs to answers with standard reduction steps. More precisely, an
+                                                                                                                                        = (λk.e(λx.Ax))K
+evaluation with the new rules begins with standard reduction steps based on the relation c.
+If this yields a value, the evaluation is finished. If not, it reaches a C-application, in which                                        = E[C(λk.e(λx.Ax))].
+case it employs a single Ctop -step, followed by a number of standard reduction steps based        Verification of the safeness of Ctop is slightly more complicated:
+on c possibly intermingled with Cidem reductions on the complete program. If this yields a                         λv -C! ( E[Ce] = eK            for some term K determined by E
+C-application of the above form, the evaluation stops and produces an answer. We abstract
+                                                                                                                                      = e(λx.A(Kx))                                            (†)
+this process in an evaluation function.
+                                                                                                                                      = (λk.e(λx.A(kx)))K
+Definition 3.8. (d-Evaluation) Let C(λk.e) )−→idem C(λk.e" ) if (C(λk.e), C(λk.e" )) ∈ Cidem                                          = E[C(λk.e(λx.A(kx)))].
+or e )−→c e" . Let v and vy be values such that v ≡ vy [y ← (λx.Ax)].
+                                                                                                   Since the continuation K is an abstraction of the form λx.Ae, the step (†) is a consequence
+    A program e in Λc evaluates to the value v , eval d (e) ≡ v, if and only if
+                                                                                                   of the following safe equality:
+     • e )−→∗c v, or
+                                                                                                                        λv -C! ( (λx.A(Kx)) = (λx.A(Ae)) = (λx.Ae) = K.
+     • e )−→∗c Ce" −→d C(λk.e" (λx.A† (k x))) )−→∗idem C(λk.kvy [y ← (λx.A† (k x))]), or           The equation A(Ae) = Ae follows from the safeness of Cidem . !
+     • e )−→∗c Ce" −→d C(λk.e" (λx.A† (k x))) )−→∗idem C(λk.vy [y ← (λx.A† (k x))]).                  Every safe equation is also an equation in the new theory λv -C(d).
+                                                                                                   Lemma 3.11 If λv -C-safe ( e = e" , then λv -C(d) ( e = e" .
+Note: Once again we tag the first halt continuation in the above definition to distinguish
+its occurrences in the last term of the reduction.                                                 Proof. The proof requires several lemmas about the shape of proofs for safe equations.
+    Based on the above lemmas, it is easy to prove that the two evaluation functions, eval c       Since it only contributes insight into the old theory, the proof is explained in the appendix.
+and eval d , are equivalent.                                                                       !
+                                                                                                      The two preceding lemmas show that adding the two axioms Cidem and Ctop to the
+Theorem 3.9 For e ∈ Λc , eval c (e) ≡ eval d (e).                                                  theory λv -C(c) provides an axiomatic characterization of the theory of safe equations.
+Proof. By Lemmas 3.5 and 3.7, λv -C(d) can simulate standard computations. A simple                Theorem 3.12 (Safeness) λv -C(d) ( e1 = e2 iff λv -C-safe ( e1 = e2
+check of their proofs shows that the reduction steps in the new system indeed conform to           Proof. The theorem follows from Lemmas 3.10 and 3.11. !
+Definition 3.8. — For the other direction, assume that eval d (e) = v. Then, either e )−→∗c e" ,       An immediate consequence of this theorem is that all equations in the revised theory of
+in which case the conclusion is obviously true. Or,                                                control are operationally sound. In other words, two equal expressions are indistinguishable
+          e )−→∗c Ce" −→d C(λk.e" (λx.A† (k x))) )−→∗idem C(λk.kvy [y ← (λx.A† (k x))])            via eval d with respect to all ΛC -contexts (in the sense of Definition 2.7).
+                                                                                                   Corollary 3.13 If λv -C(d) ( e1 = e2 then e1 ≃c e2 .
+or
+                       "              "       †
+           e )−→∗c Ce −→d C(λk.e (λx.A (k x))) )−→∗idem C(λk.vy [y ← (λx.A (k x))]) †                 As to the classical properties of the new reduction d, we can show that it is Church-
+                                                                                                   Rosser, which provides an alternative proof of λv -C(d)’s soundness. The Church-Rosser
+for an appropriate vy . It is easy to see that in both cases,                                      property moreover shows that λv -C(d) (and, by the proceeding theorem, λv -C-safe) is a
+                                          !              ! ∗
+                           e )−→∗c Ce" )−→c e" (λx.A† x) )−→c vy [y ← (λx.A† x)].                  conservative extension of λv .
+
+            ! ∗                                                                                    Theorem 3.14 (Consistency) The notion of reduction d is Church-Rosser. If e −→
+                                                                                                                                                                               −→d e1
+Hence, e )−→c v and eval c (e) = v as desired. !                                                         −→d e2 , then there is e" such that e1 −→
+                                                                                                   and e −→                                     −→d e" and e2 −→
+                                                                                                                                                              −→d e" .
+    More importantly, we can show that the theory λv -C(d) can also prove all safe equations
+in the old theory of control. To establish the claim, we need a lemma for each direction.          Proof. 2 The proof requires some generalizations of standard techniques. First, we define
+                                                                                                     2
+The safeness of the new proof rules can be established by straightforward calculations.                  We gratefully acknowledge Erik Crank’s help with this proof.
+
+
+                                                    13                                                                                                  14
+an alternative set of reduction rules:                                                                                                    −→d e" if and only if there is a standard reduction
+                                                                                                         Theorem 3.16 (Standardization) e −→
+                                f a −→ δ(f, a)                                                    (δ)    sequence e, . . . , e" .
+                          (λx.e)v −→ e[x ← v]                                                   (βv )    Proof. The proof is an adaptation of Plotkin’s corresponding proof. !
+                                                                                                "
+                    E s [C(λm.e)] −→ C(λk.e[m ← (λx.A(k E s [x])))])                          (Clift )       Finally, we can show that the evaluation function is again determined by the transitive
+                                                                                               "         closure of the standard reduction relation based on d. Since the latter determines a relation
+               C(λk.(C(λm.e))) −→ C(λk.e[m ← (λx.Ax)])                                       (Cidem )
+                         C(λm.e) −→ C(λk.e[m ← (λx.A(kx))])                                     "
+                                                                                              (Ctop )    but not a function, the statement of the theorem takes on a slightly peculiar form.
+                               C e −→ C(λk.e (λx.A(k x)))                                     (Ctop )    Theorem 3.17 (Evaluation) eval d ⊆ {(e, v) | e )−→∗d v, or e )−→∗d C(λk.kv " ), or e )−→∗d
+We refer to the new set of reductions as d" . It is easy to show that d and d" are equivalent            C(λk.v " ), where v ≡ v " [y ← (λx.Ax)]}
+                           −→d ( d" and −→
+reduction relations, i.e., −→            −→d" ( d. Second, we show in several steps that
+the new system is Church-Rosser. The proof for                                                           Proof. The standard reduction relation obviously extends the relations )−→c and )−→idem
+                                                                                                         from Definition 3.8. !
+                                           c" = δ ∪ β ∪ Clift
+                                                         "
+                                                                                                            With this last theorem, we have explored all the conventional aspects of the connection
+                                                                                                         between programming languages and calculi.
+is a simple adaptation of the Church-Rosser proof for c [9]. It is also straightforward to
+              "
+prove that Cidem                "
+                  , Ctop and Ctop  each directly satisfy the diamond property, and that they
+                                                                                                         3.3   Extensions of the equational theory
+are therefore Church-Rosser. Next we combine the relations and use the Hindley-Rossen
+method [2:64–66] for proving the Church-Rosser property of the larger relations. This is                 It is not immediately obvious from the preceding discussion why the reduction Clift must
+straightforward for the union of c" and Cidem
+                                            "                  " , and of β ∪ C "
+                                                , of βv and Ctop           v    top and Ctop .           be restricted to capturing only singular evaluation contexts. Combined with Ctop , which
+The final step requires us to show that the reductions based on c" ∪ Cidem
+                                                                         "                 "
+                                                                             and Ctop ∪ Ctop             effectively captures empty evaluation contexts, the two relations serve to capture arbitrary
+commute. For this we use Barendregt’s commutation lemma [2:65] for the transitive closure                evaluation contexts. Consequently, the following generalization of Clift would seem to be a
+of relations and apply it to c" ∪ Cidem
+                                     "   and a parallel one-step reduction relation based on             natural unification of Clift and Ctop :
+Ctop ∪ Ctop . Based on this, it is easy to show that the reductions based on c" ∪ Cidem
+          "                                                                              "
+
+and βv ∪ Ctop ∪ Ctop commute. Hence, the union, which is the reduction based on d" is
+                     "                                                                                                           E[C e] −→ C(λk.e (λx.A (k E[x]))).                             (CE )
+Church-Rosser because both sub-relations are Church-Rosser. Since d and d" are equivalent
+as reductions, d is also Church-Rosser. !                                                                This rule captures an arbitrary evaluation context in a single step and applies the subterm
+    The new theory of control also has standard reduction sequences, albeit non-traditional              of the C-application to an appropriate continuation.
+ones. To allow both Ctop and other d-reductions in standard reduction sequences, we must                     The notion of reduction CE subsumes Clift and Ctop as sub-relations, but the inverse is
+extend the set of evaluation contexts to a set of d-evaluation contexts such that c standard             not true. Consider the term u(v (C e)). Two uses of Clift yield the term
+reduction steps can take place after a C-application reaches the top of the entire term. The
+                                                                                                                                   C(λk.e (λx.A ((λy.A (k (u y)))(v x)))),
+rest of the definition is conventional.
+
+Definition 3.15. (d-Standard Reduction Relation; d-Standard Reduction Sequences) Let                     but a single application of CE with E ≡ u (v [ ]) produces
+the set of d-evaluation contexts (E d ) be defined as follows:
+                                                                                                                                        C(λk.e (λx.A (k (u (v x))))).
+                                           d
+                                        E ::= E | C(λk.E).
+                                                                                                         Both terms are in normal form and it is thus impossible to prove their equivalence in either
+The standard reduction relation maps e to e" , e )−→d e" , if there is a d-standard evaluation           λv -C(d) or λv -C(d) modified with CE . In short, although CE adds equational power to
+context E d such that e ≡ E d [p], e" ≡ E d [q] for some (p, q) ∈ d.                                     the calculus, it destroys the Church-Rosser property.
+    By adding the following clause to the definition of standard reduction sequences of the                  A second extension of the theory λv -C(d) is based on the observation that the safe
+λv -calculus (Definition 2.4), we get the set of standard reduction sequences for λv -C(d):              theory cannot simulate the evaluation in a perfect manner. In λv -C(d), there are three
+                                                                                                         different types of answers. First, an evaluation may simply yield a value. Second, an
+   • If e1 , . . . , en is a standard reduction sequence, then so is C e1 , . . . , C en .
+                                                                                                         evaluation may abort some part of a computation and produce the answer (Cλk.v) (with v
+    Clearly, the standard reduction for d generalizes the standard reduction for v but is a              possibly containing k ), which basically is an exceptional answer. Finally, the answer may
+relation instead of a function. The reduction theory based on d satisfies the same standard-             have the shape (Cλk.kv). In this case, the program discovered the answer at some point
+ization theorem as conventional λ-calculi.                                                               in the evaluation and used a continuation to escape from the rest of the evaluation. If the
+
+
+                                                   15                                                                                                 16
+answer does not contain any references to the captured continuation, it is uninteresting            that corresponds to the argument value. The traditional solution is to maintain an addi-
+from an observational perspective that the program used a continuation for escaping from            tional function that maps a parameter name to a value: a store. In our earlier report [8],
+the evaluation process.                                                                             we demonstrated that the store and its management can be incorporated into the term
+   We could avoid the third kind of answer for an evaluation in λv -C(d) by introducing             structure of the program. The key is to keep track of the substituted values via a unique
+an additional reduction that eliminates C-applications when they have become superfluous:           label that is attached to the value before substitution. Based on this labeling scheme, an
+                                                                                                    assignment can be simulated by replacing all values that are tagged with the same label by
+                            C(λk.k e) −→ e if k +∈ FV (e)                               (Celim )    a different labeled value. The use of the value of an assignable variable requires stripping off
+                                                                                                    the label of the labeled value. The deallocation (or garbage collection) of unusable storage
+Unfortunately d ∪ Celim is not Church-Rosser. A counterexample is the Celim -redex itself,
+                                                                                                    happens automatically.
+which is also a Ctop -redex. Whereas a Celim -step yields e, a reduction with Ctop followed
+                                                                                                        A complicating fact for the definition of the extended term language is the potential for
+by a βv -step leads to Cλk.((λx.A (k x)) e). Since e does not necessarily have a value, we
+                                                                                                    circular (self-referential) values. For example, the expression (λx.(σx.x)(λy.x))0 evaluates
+cannot continue the reduction as necessary.
+                                                                                                    to a recursive function that returns itself upon application. To achieve canonicity in the
+   We leave unsolved the problem of finding an extended theory that includes CE or Celim
+                                                                                                    representation of such values, we add labeled bullets of the shape •x for all labels x . For
+and still satisfies the classical properties of reduction theories.
+                                                                                                    convenience, we add σ-capabilities with labeled bullets in the variable position (σ •x .e),
+                                                                                                    which represent the result of substituting labeled values for free variables.
+4     Theories of state                                                                                 Following these preliminary remarks, we define the extension of Λσ to ΛS with the
+                                                                                                    following abstract syntax:
+The extension of the λv -calculus to a theory of procedural abstraction and assignment
+requires two new syntactic constructs for the underlying term language. First, there is                                 e ::= v | (ee) | xσ | v x | •x
+a need for assignable variables—also called state variables—that denote different values at                             v ::= c | xλ | (λxλ .e) | (λxσ .e) | (σxσ .e) | (σ •x .e)
+different times. To distinguish the set of assignable variables from the set of binding variables
+of the simple λv -calculus, we rename the latter set Vars λ and refer to the former as Vars σ ,     The set of labels is the set of assignable variables (used without subscript). When the
+annotating elements according to their set-membership: xλ ∈ Vars λ and xσ ∈ Vars σ . Since          distinction between assignable and binding variables is irrelevant or deducible from context,
+assignable variables do not denote fixed values, we do not use them as values.                      we omit the subscripts λ and σ from variables. As indicated above, the substitution of free
+    Second, the extended language needs a construct for altering the value, or state, of            variables in terms is adapted mutatis mutandis with one exception: (σx.e)[x ← v l ] =
+an assignable variable. For this purpose we use the σ-capability, which is a new form               (σ •l .e[x ← v l ]).
+of value, (σxσ .e). A σ-capability is similar to a λ-abstraction, but instead of binding a              Since the labeling strategy is a textual representation of a store, we need to ensure that
+variable in some expression, it represents the right to assign the variable a new value. Upon       programs describe consistent stores. For example, every label should be attached to only
+invocation, it globally alters the value of its variable and then continues with the evaluation     one value and labeled bullets should be used only to indicate self-references; typical terms
+of its subexpression or body. We refer to the extended language as Λσ .                             that violate these conditions are (λx.1)y (λx.0)y and •l . To eliminate such terms without a
+    The notions of substitution, contexts and evaluation contexts are adapted appropriately.        corresponding store configuration, we impose three context-sensitive conditions on the term
+The latter definition has the same shape as in the λv - and the λv -C-calculus framework,           language and use the resulting language as the basis of the calculus:
+but denotes a subset of contexts over Λσ .
+    In the following subsection, we introduce the calculus of procedural abstraction and            (C1) an x -labeled bullet (•x ) can only occur as a sub-term of an x -labeled value or in the
+state [8]. Like the original calculus of control, the state calculus requires two kinds of term          variable-position of a σ-capability, and an x -labeled value must not contain x -labeled
+relations and, moreover, relies on further extensions of the language Λσ . We show in the                values, only x -labeled bullets;
+second subsection that both program-level term relations as well as additional language             (C2) the bound variable of a λ-abstraction must not occur as a sub-term in a labeled value;
+extensions are superfluous. In addition, our new theory of state is a proper extension of the
+existing one.                                                                                       (C3) the labeling of the two subexpressions in an application must be consistent: if v x is
+                                                                                                         a subterm of e and ux is a subterm of e" where (e e" ) is an application, then v and u
+4.1   A syntactic theory of state                                                                        must be identical after replacing labeled values in them by the labels.
+
+According to βv , the application of a procedural abstraction to an argument value is equiva-       Equipped with the notion of labeled terms, we introduce labeled-value substitution, e[•x ←
+lent to the evaluation of the procedure body with all occurrences of the procedure parameter        v x ], which replaces all x -labeled values in an expression e by v x such that the resulting
+replaced by the argument. Given this, it is reasonable to expect that a reduction relation for      expression respects the above conditions. This may involve replacing labeled subvalues by
+procedures with assignable parameters replaces the assignable parameter with something              labeled bullets in v.
+
+                                               17                                                                                                  18
+    Next, we can turn to the question of how to simulate the execution of a Λσ program               We define the calculus of state in the same way as the calculus of control. The basic
+through reductions of ΛS -terms. For an example, we consider the application of an abstrac-       notion of reduction is
+tion with an assignable parameter to a value. We would like to model this effect with a                                            s = v ∪ βE ∪ σE ∪ DE .
+substitution of the parameter by a labeled value. Since the label must be unique for every
+                                                                                                  When terms are equal according to s, e =s e" , we write λv -S(s) ( e = e" . As usual, −→s and
+reduction of such an application, it is impossible to perform several reductions in parallel
+                                                                                                  −→
+                                                                                                  −→s denote the one-step reduction and its transitive closure. The computation relation is
+in different parts of the term.
+                                                                                                  defined by:
+    The coordination of the effects of labeled-value substitutions becomes possible by en-
+                                                                                                                                $s = −→−→s ∪ βT ∪ σT ∪ DT .
+suring that only one such contraction is applicable. Since the only unique point in a term
+                                                                                                                !
+is the root, the calculus again coordinates imperative effects of transition steps by splitting   The relation =s is the smallest equivalence relation generated by the computation relation
+the set of term relations into a set of simple notions of reduction and computation rules.        $s . We denote equivalences in this theory by λv -S! ( e = e" .
+The reductions lift a redex to the top of the program where the computation rules perform              The syntactic theory of state satisfies the same variants of the classical properties as
+the appropriate action. There are three kinds of redexes that require unique actions:             the syntactic theory of control. Its sub-theory based on the relation s is Church-Rosser
+                                                                                                  and the computation relation satisfies the diamond property. There are standard reduction
+  1. the application of a procedural abstraction with an assignable variable to a value,          sequences for the reduction relation and standard computation sequences for the compu-
+     (λxσ .e)v;                                                                                                                                                                     !
+                                                                                                  tation relation. As above, we denote the standard reduction function with )−→s . Most
+  2. the application of a σ-capability to a value, (σ •x .e)v, which must proceed with the        importantly, a subset of the standard computation mapping defines an evaluation function.
+     evaluation of the body after replacing all occurrences of ux with v x in the entire
+                                                                                                  Definition 4.1. (s-Standard Computation Function) The standard computation function
+     program; and                                                                                                                        !
+                                                                                                  maps a program e to a program e" , e )−→s e" , if e standard reduces to e" or if e computes to
+                                                                                                         !
+  3. the use of a labeled value, v x , which produces the value v[•x ← v x ].                     e" : )−→s = )−→s ∪ βT ∪ σT ∪ DT .
+
+    According to the above reasoning, such redexes must be lifted to the top of the program           Now the evaluation function on Λσ (and ΛS ), eval s , can again be defined as the transitive
+just before they are evaluated. Consequently, the reductions must lift the redexes out of         closure of the standard computation relation:
+evaluation contexts, and, after applying the appropriate computation rule, the evaluation
+                                                                                                                                                             ! ∗
+must continue with the expression in the hole of the original evaluation context. Putting all                                      eval s (e) = v    if   e )−→s v.
+of this together, we introduce the following notions of reductions where the meta-variables X
+ranges over assignable variables, labeled values and labeled bullets (depending on context):      Mutatis mutandis, this definition induces an operational equivalence relation for Λσ (≃σ )
+                                                                                                  (along the lines of Definition 2.7). Most importantly, we can prove that equations between
+                             E[((λxσ .e)v)] −→ (λxσ .E[e])v                              (βE )    Λσ terms in the calculus are safe and imply operational equivalence.
+                             E[((σX.e)v)] −→ (σX.E[e])v                                  (σE )
+                                                                                                  Theorem 4.2 ([8]) Let e and e" be in Λσ . If λv -S! ( e = e" then e ≃σ e" .
+                                    E[X] −→ (λv.E[v])X                                  (DE )
+
+In accord with the variable assumptions in Section 2, we assume in these equations that              Unfortunately, the theory λv -S! is not compatible with respect to equations over Λσ
+variables are renamed as necessary to avoid conflicts.                                            terms. For example,
+    Once redexes reach the top of the program, the appropriate action must take place. For                                      λv -S! ( (λx.(σx.2)1)0 = 2,
+the simulation of these in a term rewriting system, we define the following computation           yet,
+rules:                                                                                                                          λv -S! +( λy.(λx.(σx.2)1)0 = λy.2.
+                                            y
+                      (λxσ .e)v $ e[xσ ← v ] where y +∈ FV (e, v)                        (βT )    In the second equation, the top-level steps that are crucial for evaluating assignments can
+                         x            x     x                                                     no longer be performed because the expressions are embedded inside of λ-abstractions. We
+                     (σ • .e)v $ e[• ← v ]                                               (σT )
+                         (uv x ) $ u(v[•x ← v x ])                                      (DT )     could solve this problem by introducing an extended theory of safe equations as in the old
+                                                                                                  theory of control, but fortunately, there is a better solution for this problem.
+
+Notice that (σx.e)v is a redex for the reduction relations but not for the computation
+relations: in Λσ assignments can only be made to bound variables (which are replaced by
+labeled variables in time).
+
+
+                                                19                                                                                                  20
+4.2    The revised syntactic theory of state                                                                     for some ρθ1 .e"1 , ρθ2 .e"2 ∈ Λσ . This holds, in particular, for the computation rules, which we
+                                                                                                                 would like to eliminate. Assuming that no labeled value gets lost during a transition, the
+The crucial insight that leads to an improved theory of state originates from a simple
+                                                                                                                 reformulation of the top-level relations yields the following set of term relations:
+observation about the context-sensitive restrictions of the language ΛS . The motivation
+for the restrictions is the existence of terms in the unconstrained language that do not                                                          ρθ.((λxσ .e)v) −→ ρθ ∪ {(x, v)}.e
+represent an intermediate consistent store in the evaluation of a Λσ -term. The context-                                                      ρθ ∪ {(x, v)}.(ux) −→ ρθ ∪ {(x, v)}.(uv)
+sensitive restrictions eliminate such terms.                                                                                             ρθ ∪ {(x, u)}.((σx.e)v) −→ ρθ ∪ {(x, v)}.e
+Lemma 4.3 For every term e ∈ ΛS there is a term e" ∈ Λσ such that e" $∗s e.
+                                                                                                                 The first rule says that a βT -transition creates a new entry in the ρ-application. The second
+Proof. By the context-sensitive restrictions on ΛS , for every term e ∈ ΛS with labels                           rule specifies that the use of an assignable variable corresponds to a lookup of the variable
+x1 , . . . , xn , there is a term e"" ∈ Λσ with free assignable variables x1 , . . . , xn and values             in the ρ-application-set. And finally, the assignment is a modification of one pair in the set.
+u1 , . . . , un in Λσ such that                                                                                      In short, the set of the (global) ρ-application acts like a store, and the translation of the
+                                                                                                                 computation rules have the appropriate effects on the finite store. More importantly, these
+               e ≡ e"" . . . [xi ← (λx.x)xi ] . . . [•xi ← (ui . . . [xi ← (λx.x)xi ] . . .)xi ] . . .           rules are completely independent of the context in which they occur. They do not rely on
+                                                                                                                 the uniqueness of new variables, have no effect on the context, and the lookup is relative to
+First, for every label xi in e, there is a unique value ui that corresponds to the collection of
+                                                                                                                 the closest (part of the) store in the term. Hence, there is no further need for coordinating
+xi -labeled values. By condition (C3), we can construct this value by replacing all labeled
+                                                                                                                 these rules, and we may as well take these relations as notions of reduction.
+values with their labels in an arbitrary x -labeled value (not a bullet!). This algorithm pro-
+                                                                                                                     Unfortunately, the above rules are not quite strong enough to replace the computation
+duces the values u1 through un . Second, we can also obtain e"" by replacing all occurrences
+                                                                                                                 rules in the preceding subsection. The assumption that a transition does not loose labeled
+of a labeled value with its label. By construction, the terms e"" , u1 , . . . , un satisfy the above
+                                                                                                                 values is too strong. If, for example, a bound assignable variable does not occur in the
+condition. We can now take
+                                                                                                                 procedure body, the corresponding instance of βT would translate as
+                     e" ≡ (λx1 . . . xn .(σx1 . . . xn .e"" )u1 . . . un )(λx.x) . . . (λx.x),                                                       ρθ.((λxσ .e)v) −→ ρθ.e,
+which proves the proposition. !                                                                                  or even
+    In order to simplify the presentation of terms like e" in the preceding lemma, we introduce                                                ρθ.((λxσ .e)v) −→ ρθ " .e,     θ" ⊂ θ
+a simplified version of Landin’s [11] letrec-abbreviation: the ρ-application.3 A ρ-application
+                                                                                                                 if v contains the last reference to some other assignable variables. In general, the right hand
+is a combination of a finite function from assignable variables to values, represented as a set
+                                                                                                                 side of the new reductions may contain variables in the store of the ρ-application that are
+θ = {(x1 , v1 ), . . . , (xn , vn )}, and an expression e; it expands according to the construction
+                                                                                                                 no longer relevant to the evaluation of the body. These variables and their associated values
+in the lemma:
+                                                                                                                 are garbage and can be discarded. Whereas garbage collection is automatic in λv -S! , we
+                                         df                                                                      need to introduce an explicit garbage collection rule for the new system:
+       ρ{(x1 , u1 ), . . . , (xn , un )}.e ≡ (λx1 . . . xn .(σx1 . . . xn .e)u1 . . . un )(λx.x) . . . (λx.x).
+                                                                                                                             ρθ0 ∪ θ1 .e −→ ρθ1 .e if θ0 += ∅ and Dom(θ0 ) ∩ FV (ρθ1 .e) = ∅.                (gc)
+The set notation is justified since all expansions corresponding to some linear arrangement
+of the set clearly reduce to the same term in λv -S! . When we write ρθ ∪ θ " .e, we assume                          We have summarized the revised theory of state in Figure 2. The rules in the figure
+that θ ∪ θ " is a finite function. Finally, we define ρ∅.e ≡ e. We use Dom(θ) to denote the                      slightly differ from the rules developed above. In order to reduce the number of reductions,
+set of defined variables, {x1 , . . . , xn }, in the function θ.                                                 we have merged the λE -, σE - and DE -rules with the replacements for the computation
+    It also follows from the above Lemma that every theorem e1 = e2 in λv -S! for e1 , e2 ∈ ΛS                   rules. This also requires a new term relation, ρ∪ , for merging two ρ-applications, which
+implies the existence of a theorem                                                                               would otherwise be the effect of the lifting rules. The basic reduction relation for the new
+                                                                                                                 calculus is
+                                                ρθ1 .e"1 = ρθ2 .e"2                                                                               t = v ∪ βσ ∪ D ∪ σ ∪ gc ∪ ρ∪ .
+   3
+     Recently, Abadi et al. [1] proposed and studied a variant of the λ-calculus that incorporates explicit      The new theory is referred to as λv -S(t). With Lemma 4.3 and the garbage collection rule,
+substitutions. Our ρ-applications correspond to their closures: in the notation of Abadi et al. ρθ.e would be
+                                                                                                                 we can show that the new set of rules is a complete replacement for the computation rules.
+the term e[θ] for a non-recursive θ. In other words, our ρ-applications generalize their notion of closure to
+the more common notion of Scheme- and ML-like closures whose lexical variables may be bound to recursive
+values.
+                                                                                                                 Lemma 4.4 Let e1 , e2 ∈ ΛS and let ρθ1 .e"1 , ρθ2 .e"2 ∈ Λσ be their counterparts according to
+                                                                                                                 Lemma 4.3. If λv -S! ( e1 $s e2 then λv -S(t), βE , DE , σE ( ρθ1 .e"1 −→
+                                                                                                                                                                                        −→ ρθ2 .e"2 .
+
+                                                         21                                                                                                     22
+                                                                                                           (i) If λv -S! ( e = e" then λv -S(t), βE , DE , σE ( e = e" .
+                             f a −→ δ(f, a)                                                      (δ)
+                      (λxλ .e)v −→ e[xλ ← v]                                                    (βv )     (ii) The converse does not hold.
+                      (λxσ .e)v −→ ρ{(xσ , v)}.e                                                (βσ )    Proof. (i) By the diamond property, λv -S! ( e = e" implies that there is a term e∗ such that
+            ρθ ∪ {(x, v)}.E[x] −→ ρθ ∪ {(x, v)}.E[v]                                            (D)      λv -S! ( e $∗s e∗ and λv -S! ( e" $∗s e∗ . It follows from Lemma 4.4 that λv -S(t), βE , σE , DE (
+     ρθ ∪ {(x, u)}.E[(σx.e)v] −→ ρθ ∪ {(x, v)}.E[e]                                              (σ)       −→ e∗ and λv -S(t), βE , σE , DE ( e" −→
+                                                                                                         e −→                                          −→ e∗ . Therefore, λv -S(t), βE , DE , σE ( e = e" .
+                                                                                                             (ii) Here is a simple proof in λv -S(t):
+                     ρθ0 ∪ θ1 .e −→ ρθ1 .e if θ0 += ∅ and Dom(θ0 ) ∩ FV (ρθ1 .e) = ∅            (gc)
+                    ρθ.E[ρθ " .e] −→ ρθ ∪ θ " .E[e] if θ " += ∅ and ρθ.E += [ ]                 (ρ∪ )             λv -S(t) ( λy.(λx.(σx.2)1)0 = λy.ρ{(x, 0)}.(σx.2)1 = λy.ρ{(x, 1)}.2 = λy.2
+
+                                                                                                         As explained at the end of the previous subsection, the resulting theorem is not provable
+                        Figure 2: The revised syntactic theory of state
+                                                                                                         in the old theory. !
+
+                                                                                                             A second important consequence of Lemma 4.4 is that the reduction theory based on t
+Proof. The proof relies on two facts about the construction in Lemma 4.3:                                alone can simulate the evaluation of Λσ -programs.
+   1. The algorithm for converting e to ρθ.e" does not alter the structure of the term e
+                                                                                                                                                                               −→t ρθ.v " where
+                                                                                                         Lemma 4.6 Let e ∈ Λσ . If eval s (e) = v for some value v ∈ ΛS then e −→
+      except for replacing labeled values by labels. In particular, values remain values and
+                                                                                                         ρθ.v " ∈ Λσ is the counterpart of v according to Lemma 4.3.
+      non-values remain non-values.
+                                                                                                                                                                       ! ∗
+   2. The labeled values in e that are moved into the store of the program ρθ.e" preserve                Proof. If eval s (e) = v for some value v ∈ ΛS , then e )−→s v. In such a series of standard
+      their structure in the same way.                                                                   computation steps, subsequences of standard reduction steps according to βE , σE , and
+                                                                                                         DE are always followed by standard computation steps according to βT , σT , and DT ,
+As a consequence, a redex in e1 not inside of a labeled value becomes a redex at the                     respectively; the latter always precedes a βv step, which puts the de-labeled value into the
+homologous position in e"1 . More specifically, s-redexes becomes s-redexes and βT -, σT -,              original evaluation context. In other words, βE , σE , and DE in standard computations
+and DT -redexes become instances of βσ -, σ-, and D-redexes, respectively. Similarly, s-                 only occur in clusters that, by Church-Rosser and diamond property, are equivalent to the
+redexes inside of labeled values in e1 become s-redexes inside of the values in the store of             following three cases:
+ρθ1 .e"1 that directly contain the redex (a labeled value directly contains a subexpression if
+there is not a labeled sub-value that contains the subexpression).                                          1. E[(λx.e)v] )−→s (λx.E[e])v $s E[e[x ← v l ]]
+    Given these preliminaries, it is easy to see that, given a reduction in λv -S! , a reduction            2. E[v l ] )−→s (λx.E[x])v l $s (λx.E[x])v[•l ← v l ] )−→s E[v[•l ← v l ]]
+in λv -S(t) of the corresponding redex in ρθ1 .e"1 leads to a term ρθ ∗ .e"2 . Clearly, neither s- nor
+t-redexes create new free variables but the substitution process associated with s-redexes                  3. E[(σx.e)v] )−→s (σx.E[e])v $s E[e][•l ← v l ]
+may eliminate some labels by vacuous substitutions. On the other hand, the corresponding
+t-redexes will eliminate the corresponding variables. Hence,                                             Translating these kinds of sequences into the new calculus according to Lemma 4.4, merges
+                                                                                                         them as βσ /ρ∪ , D, and σ steps:
+                                        ρθ ∗ .e"2 ≡ ρθ2 ∪ θ.e"2
+                                                                                                            1. ρθ.E[(λx.e)v] −→t ρθ.E[ρ{(x, v)}.e] −→t ρθ ∪ {(x, v)}.E[e]
+such that, by the construction of ρθ2 .e"2 ,
+                                                                                                            2. ρθ.E[l] −→t ρθ.E[θ(l)]
+                                    Dom(θ) ∩ FV (ρθ2 .e"2 ) = ∅.
+                                                                                                            3. ρθ ∪ {(x, u)}.E[(σx.e)v] −→t ρθ ∪ {(x, v)}.E[e]
+This permits an application of the garbage collection rule, gc, and we get                               In short, the translation incorporates preliminary lifting reductions into the simulated top-
+                               ρθ1 .e"1 −→ ρθ ∗ .e"2 −→ ρθ2 .e"2 .   !                                   level steps. But then the derivation in the extended theory no longer uses any lifting steps,
+                                                                                                                            −→ ρθ.v " . !
+                                                                                                         i.e., λv -S(t) ( e −→
+    The lemma implies that the new theory, extended with the lifting reductions, can prove
+all the equations on Λσ that the old theory can prove.                                                       Based on this lemma, we can now define an evaluation function using only t reductions.
+                                                                                                         The main idea behind the definition is that programs can maintain a textual representation
+Theorem 4.5 Let e, e" ∈ Λσ .                                                                             of the store in the form of a ρ-application at the root of the program.
+
+                                                  23                                                                                                      24
+Definition 4.7. (t-Evaluation) Let e )−→t1 e" if                                                                                       −→t e" if and only if there is a standard reduction
+                                                                                                      Theorem 4.11 (Standardization) e −→
+                                                                                                      sequence e, . . . , e" .
+  1. e ≡ ρθ.M , M )−→v M " , and e" ≡ ρθ.M " , or
+                                                                                                      Proof. The proof is an adaptation of Plotkin’s corresponding proof. !
+  2. (e, e" ) ∈ (σ ∪ D ∪ gc ∪ (ρ∪ ◦ βσ )), where (ρ∪ ◦ βσ ) is the composition of βσ and ρ∪ , i.e.,
+     a βσ -step followed by a ρ∪ -step.
+                                                                                                         Finally, we are ready to prove that the new theory is sound. We do this in two steps.
+   A program e in Λσ evaluates to the answer ρθ.v, eval t (e) ≡ ρθ.v, if e )−→∗t1 ρθ.v and
+there is no e" such that ρθ.v )−→t1 e" .                                                              Theorem 4.12 (Evaluation) Let e, ρθ.v be in Λσ .
+
+                                                                                                        (i) If eval t (e) = ρθ.v, then e )−→∗t ρθ.v.
+    The single-step evaluation relation ()−→t1 ) is a proper relation because of its non-              (ii) If e )−→∗t ρθ.v, then there exists ρθ " .v " such that eval t (e) = ρθ " .v " .
+deterministic use of garbage collection. On the other hand, by demanding complete garbage
+collection, eval t becomes a (partial) function on Λσ programs. Moreover, it is equivalent to         Proof. (i) The relation )−→t1 is clearly a subset of the standard reduction relation, in which
+the old evaluation function.                                                                          all non-v steps are restricted to the root of the program.
+                                                                           ! ∗
+                                                                                                           (ii) The relation )−→t generalizes )−→t1 such that all reductions can be performed inside
+Theorem 4.8 Let e, ρθ.v ∈ Λσ , v " ∈ ΛS , and assume that ρθ.v " )−→s v. Then, eval s (e) = v "       of a program as well as at its root. Moreover, it disconnects the relation ρ∪ ◦ βσ such that
+if and only if eval t (e) = ρθ.v.                                                                     ρ∪ - and βσ -reductions can be separated. However, it is also easy to see that a sequence
+                                                                                                      of )−→t steps can be rearranged so that all ρ-applications are merged with the top-level
+Proof. A simple check of Lemma 4.6 shows that the left to right direction is built into               ρ-applications as soon as they occur in an evaluation context. Clearly, such rearranged
+Definition 4.7, and that the arguments are invertible. !                                              sequences are still standard reduction sequences, and more importantly, they are also se-
+                                                                                                      quences of )−→t1 -steps. The difference between the two answers is that a standard reduction
+    Since, unlike in the case of control, the new theory extends the old theory, we cannot
+                                                                                                      sequence does not assume that all garbage is eliminated whereas the evaluation function
+prove the soundness of the new theory via the old one. Instead, we must assert some
+                                                                                                      insists on this. !
+classical properties first.
+                                                                                                           Now, recall that two Λσ expressions e and e" are operationally equivalent, e ≃σ e" , if
+    First, the theory is Church-Rosser.
+                                                                                                      and only if they are indistinguishable relative to all Λσ program contexts (in the sense of
+                                                                                                      Definition 2.7). The final theorem says that the new calculus is operationally sound in
+Theorem 4.9 (Consistency) The notion of reduction t is Church-Rosser. If e −→
+                                                                           −→t e1
+                                                                                                      the sense that two expressions are equivalent in the calculus only if they are operationally
+      −→t e2 , then there is e" such that e1 −→
+and e −→                                     −→t e" and e2 −→
+                                                           −→t e" .
+                                                                                                      equivalent.
+Proof. The classical methods for Church-Rosser proofs for untyped λ-calculi apply. !
+                                                                                                      Theorem 4.13 If λv -S(t) ( e = e" then e ≃σ e" .
+   Second, we can define a standard reduction relation and a set of standard reduction
+sequences for λv -S(t).
+                                                                                                      Proof. Since λv -S(t) is a conventional calculus, λv -S(t) ( e = e" implies λv -S(t) ( C[e] =
+                                                                                                      C[e" ] for all contexts C . Now assume that for some context C , eval t (C[e]) terminates. By
+Definition 4.10. (t-Standard Reduction Relation; Standard Reduction Sequences) The
+                                                                                                      the Standardization Theorem 4.11, C[e] )−→∗t ρθ.v and therefore λv -S(t) ( C[e" ] = C[e] = v.
+definition of )−→t is based on a set of t-standard evaluation contexts, E:
+                                                                                                      By the Consistency Theorem 4.9 and the Evaluation Theorem 4.12, C[e" ] )−→∗t1 ρθ " .v " and
+                                           E ::= E | ρθ.E.                                            therefore eval t (C[e" ]) is defined too. By symmetry, C[e] terminates if and only if C[e" ]
+                                                                                                      terminates.
+The standard reduction relation maps e to e" , e )−→t e" , if there is a t-standard evaluation            For the second condition, assume that eval t (C[e]) = c and eval t (C[e" ]) = d for constants
+context E such that e ≡ E[p], e" ≡ E[q] for some (p, q) ∈ t.                                          c and d. Then, by Lemma 4.6, λv -S(t) ( C[e] −→    −→ c and λv -S(t) ( C[e" ] −→  −→ d. Hence,
+    By adding the following clause to the definition of standard reduction sequences of the           c = C[e] = C[e ] = d. Again by the Consistency Theorem, c = d, which proves that e ≃σ e" .
+                                                                                                                       "
+
+λv -calculus (Definition 2.4), we get the set of standard reduction sequences for λv -S(t):           !
+                                                                                                          In summary, the new theory of state based on the reduction t is the essential calculus
+   • If e1 , . . . , en is a standard reduction sequence, then so is σx.e1 , . . . , σx.en .          of state. It can evaluate programs (4.8); it is consistent (4.9); it has standard reduction
+                                                                                                      sequences whose standard reduction relation is an evaluation mechanism (4.12); and it is
+                                                                                                      sound (4.13). Finally, it also extends the old theory (4.5).
+   Third, the new theory of state satisfies the usual standardization theorem.
+
+
+                                                  25                                                                                                       26
+Note: The nature of variables                                                                      Most importantly, the new notion of reduction is syntactically consistent.
+From Scheme’s [19, 21] practical point of view, the new theory only contains one disturbing        Theorem 5.1 The extended notion of reduction cs is Church-Rosser.
+element, namely, the partitioning of the variable set into binding and assignable variables.
+The reason for this separation is the desire to use variables as values as in λv . However, in a   Proof. All three parts of the relation satisfy the Church-Rosser property. The proof that
+language with assignments variables no longer stand for one value but for a series of values.      the union does is a straightforward generalization of the Hindley-Rossen method [2:ch3]. !
+Consequently, they should not be considered as values but as expressions that always have               As a consequence, the larger theory contains the theories λv -C(d) and λv -S(t) as
+a value. By excluding the set of variables from values, the distinction between the two            subsets. Evaluation can be defined for the larger theory. A program p evaluates to q in the
+variable sets becomes superfluous and the language becomes Scheme-like:                            new theory if and only if p evaluates to a value v in the old theory, where q is of the form
+                                     e ::= x | v | (e e)                                           v " or Cλk.vk" , vk" can be converted to v " by replacing all occurrences of (ku) with u as in
+                                                                                                   Lemma 3.7, and v " may be constructed from v using the algorithm of Lemma 4.3.
+                                     v ::= λx.e | σx.e.
+A revised calculus only requires a single axiom for parameter-passing, namely, βσ . The only
+loss of this modified theory is that it is no longer a conservative extension of the original      6    Towards a better understanding of imperative languages
+λv -calculus.
+                                                                                                   The most closely related research on reasoning with continuations and assignments is the
+     On the other hand, such a revised calculus easily accommodates another reduction that
+                                                                                                   work by Mason and Talcott. Over the past few years, they have developed equational
+simplifies work with the calculus. In the revised calculus a variable is said to be assignable
+                                                                                                   theories for a first-order version of Lisp with destructive cell operations [13], for a ΛC -
+if it occurs in the variable position of a σ-capability. When a variable in a ρ-set is no longer
+                                                                                                   like language on control [22, 23], and, most recently, for a higher-order imperative version
+assignable, the new calculus can replace the variable with its recursive value:
+                                                                                                   of Lisp without control abstractions [14]. For a fragment of first-order destructive Lisp
+     ρθ ∪ {(x, v)}.e −→ (ρθ.e)[x ← v[x ← Y(λx.v)]]                                        (ρY )    without arithmetic and recursion, they have also shown that it is possible to obtain a
+                                if x is not assignable in e, v , and θ                             complete theory [15].
+                                               df                                                      Mason and Talcott’s equational proof systems are essentially ad hoc approximations to
+                                and where Y ≡ (λf y.(λx.xx)(λx.f (λy.(xx)y))y).                    the operational equivalences of the respective languages. They find the axioms of these the-
+A restricted version of βv can be derived from ρY .                                                ories by extracting and generalizing frequently used laws from example correctness proofs
+                                                                                                   of programs. From a high-level perspective, the axioms are related to our notions of reduc-
+                                                                                                   tion, but the two frameworks strongly differ in the details. Mason and Talcott have not yet
+5    Unified theories of control and state
+                                                                                                   addressed the questions of how their theories relate to the underlying theory of procedural
+The original theories of control and state are completely orthogonal to each other [5]. The        abstraction and of how the various theories relate to each other.
+sum of the extended notions of reduction yields a theory for a language with facilities                An early effort in the direction of equational theories for proving the correctness of
+for both control and state manipulation; indeed, the shape of the reduction relations as           higher-order imperative programs is due to Demers and Donahue [4]. The focus of their
+pattern-matching rules stays the same. As a result, the larger theory contains the theories        research is Russell, an extension of the higher-order typed λ-calculus with cells and de-
+of procedural abstraction, control and state as sub-sets.                                          structive cell operations; their major result is a proof system for Russell with several dozen
+    In our new framework, a simple merger is insufficient, since a C-application may block         axioms, quite unlike our reductions or the Mason-Talcott axioms. Besides equational asser-
+variable references and assignments. Thus we must introduce an additional notion of re-            tions, the theory also has statements for expressing the purity and legality of expressions
+duction to move C-applications outside of ρ-applications:                                          as well as their imperative effect. There are no formal results on the equational theory nor
+                                                                                                   its relationship to the original λ-calculus.
+                                    ρθ.Ce −→ Cρθ.e                                        (ρC)         Neither Mason and Talcott’s research nor the work by Demers and Donahue provides an
+    Let ΛCσ stand for the merged language:                                                         analysis of the equational theories from the perspective of a reduction theory. Both theories
+                                                                                                   are clearly intended for practical use with a particular programming language and proof
+                               e ::= v | (e e) | (C e) | xσ                                        system.
+                               v ::= b | f | xλ | λx.e | σx.e                                          The principal motivation for our work is a better understanding of the essence of im-
+Furthermore, let d" and t" stand for the extension of the notions of reduction d and t to          perative extensions of higher-order programming languages based on the λ-calculus. Our
+ΛCσ . The new theory of control and state is based on the union of these reductions with           new theories rely on minimal sets of notions of reduction, which provide a simple opera-
+ρC:                                                                                                tional semantics for the respective languages. The λv -calculus is the core of all theories; the
+                                   cs = d" ∪ t" ∪ ρC.                                              various theories are conservative extensions of the respective subtheories. In this sense, our
+
+
+                                              27                                                                                                 28
+operational semantics is modular : the semantics of an extended language is an extension                       For the following lemmas, we use the terminology grabbing a continuation, by which
+of the semantics for the simpler language. The advantage of this approach is that results                  we mean a sequence of applications of Clift followed by a top-level transition CT , which
+on evaluation and proof systems automatically lift to richer languages; the disadvantage                   creates a new abstraction of the form (λx.Ax) and provides access to an abstraction of the
+is a certain weakness of the proof systems. We believe that recent work by Moggi [17] on                   evaluation context E. We represent such a continuation with (A +E). The following lemma
+the computational λ-calculus—motivated by similar concerns—and our own work are the                        provides the justification for this notation by connecting the invocation of the continuation
+correct starting point for developing modular proof systems for large, powerful languages.                 to the reduction of the encoded evaluation context. Again, we label instances of A in order
+    The development of a good proof system will require the development of an induction                    to keep track of continuations.
+principle and other mathematical tools in order to strengthen the power of the system. One                                                   ! ∗
+                                                                                                           Lemma A.2 ([9]) ((A + E)v) )−→c Au if and only if E[v] −→
+                                                                                                                                                                  −→c u.
+possible solution is to work with the underlying operational approximation relation and to
+axiomatize its use [14]. The more popular direction relies on the ideas of denotational se-                    Furthermore, the definition of a standard computation sequence implies that all top-
+mantics. Currently, however, denotational semantics provides different models for different                level transitions in a standard computation sequence are part of the series of standard
+languages, especially in the realm of the imperative, higher-order language family. It is con-             computation steps at the front-end of the sequence. In particular, if a sequence grabs and
+sequently difficult to relate results on a language to results on its extensions. Our approach             invokes a continuation, then there is a standard mapping between the two points.
+to operational semantics should lead to a collection of denotational models for imperative                                           ! ∗
+                                                                                                           Lemma A.3 If E[C e] )−→c e(A† + E) and e(A† + E), . . . , A† v is a standard computation
+higher-order languages in which a model for an extended language contains the model for                                                                ! ∗
+                                                                                                           sequence (for some value v ), then E[C e] )−→c A† v.
+the core language as a projection. Such a denotational theory would provide an improved
+understanding of control and state in programming languages and their relationship to other                Proof. Obvious: (A† v) can only get to the root of the program by computation rules. By
+language facilities.                                                                                       Definition A.1 such transitions can only take place within the series of standard computation
+                                                                                                           steps at the front-end of the term sequence. !
+Acknowledgement Both Udday Reddy and Carolyn Talcott independently suggested to                                The two preceding lemmas lead to the first crucial property of the standard computation
+look for simpler, congruent versions of our calculi. Tim Griffin read an early draft of this               sequences for safe equations. If both sequences grab a continuation, the continuation is
+paper and proposed clarifications of several opaque points in our discussions. Erik Crank                  invoked if and only if both sequences invoke it.
+came up with large number of counter-examples to the Church-Rosser property of various                                           !
+                                                                                                           Lemma A.4 Let Ce =c Ce" be a safe equation. Let E be an arbitrary evaluation context
+extensions of our control theory; he also pointed out a flaw in an early draft of the proof for            and let p be such that
+the Soundness Theorem of the new state theory. We also appreciate the referees’s efforts,                                            E[Ce] )−→∗c e(A† + E), . . . , p
+leading to the elimination of a number of mistakes and a greatly improved presentation of
+                                                                                                           and
+our results.
+                                                                                                                                             E[Ce" ] )−→∗c e" (A† + E), . . . , p
+                                                                                                                                          "
+                                                                                                           where e(A + E), . . . , p and e (A + E), . . . , p are standard computation sequences.
+A      Appendix: Proof of Lemma 3.11                                                                                                ! ∗                                      ! ∗
+                                                                                                              Then, e(A† + E) )−→c A† v if and only if e" (A† + E) )−→c A† u for some values v and u.
+Before we can sketch the proof of Lemma 3.11, we need to collect some facts about the                      Proof. By Lemma A.3, it suffices to look at the front-end of the standard computation
+                                                                                             !
+general shape of proofs of safe equations. We know from the definition of safeness that if e =c            sequence. Thus assume that e invokes the continuation but e" does not. Since the computa-
+ "                  !       "
+e is safe then E[e] =c E[e ] is a theorem for every evaluation contexts E. Consequently, by                tion sequences are in standard form, the decision to invoke or not to invoke the continuation
+the Church-Rosser and the Standardization Theorems, there must be standard computation                     does not depend on the evaluation context E . Hence, we may consider a less arbitrary con-
+sequences from E[e] and E[e" ] to some term p. The proof of Lemma 3.11 relies on the fact                  text, say, E ≡ (λx.c)[ ] for some constant c not in e or e" . By Lemma A.3, this implies
+that these two standard computation sequences have certain properties.                                     p ≡ c.
+                                                                                                               The second derivation sequence, on the other hand, may or may not discard the newly
+Definition A.1. (Standard Computation Sequences) Standard reduction sequences based                        created continuation. If it does not, p must still contain the corresponding new A-applica-
+on the relation c are defined just like standard reduction sequences for the relation d: see               tion. On the other hand, if e" throws away its continuation, p can no longer contain any part
+Definition 3.15. We extend standard reduction sequences for c to standard computation                      of the evaluation context, i.e., the unique constant c. In either case, the second derivation
+sequences for the theory λv -C! as follows:                                                                sequence places inconsistent requirements on the term p. This contradiction proves our
+    1. All standard reduction sequences are standard computation sequences.                                claim. !
+                                                                                                               A second property of standard computation sequences for safe equations is that if only
+             !
+    2. If e )−→c e1 and e1 , . . . , en is a standard computation sequence, then e, e1 , . . . , en is a   one of the derivation sequences grabs the evaluation context, then the common term is an
+       standard computation sequence.                                                                      A-application and the continuation is never invoked.
+
+                                                   29                                                                                                   30
+                      !
+Lemma A.5 Let Ce =c e" be a safe equation. Let E be an arbitrary evaluation context and                       By Lemmas 3.5 through 3.7, we know that the following holds in λv -C(d):
+let p be such that
+                            E[Ce] )−→∗c e(A† + E), . . . , p                                                                     E[e]    )−→∗d    C(λk.q(A† + k + E))
+                                                                                                                                         −→d C(λk.ku[y ← (A† + k + E)])
+                                                                                                                                         −→
+where e(A† + E), . . . , p is a standard computation sequence. Moreover, let
+
+                                           E[e" ] −→
+                                                  −→c p                                                       and
+
+and let E[e" ], . . . , p be the corresponding standard computation sequence.                                                   E[e" ]   )−→∗d    C(λk.q " (A† + k + E))
+   Then, p ≡ Aq for some q. Moreover, it is impossible that e(A† + E) invokes the                                                        −→d C(λk.ku" [y ← (A† + k + E)]).
+                                                                                                                                         −→
+continuation (A† + E), i.e., it is impossible that p ≡ A† q.
+                                                                                                              Since u and u" are values, the rest of the standard computation sequence must
+Proof. It is easy to see that the evaluation context in this continuation must not occur in                   be provable in λv -C(c):
+p because the second term, e" , cannot construct (A† + E) for arbitrary contexts E. Conse-
+quently, the first derivation must eliminate all pieces of E including the labeled continuation                               λv -C(c) ( u[y ← (A† + E)] = u" [y ← (A† + E)]
+(A† + E), and p cannot contain any pieces of the evaluation context. As a result, the sec-
+ond derivation sequence must abort the entire evaluation context E without performing a                       By this we directly have that
+top-level step. Consequently, the term p is of the shape Aq for some term q. By the above
+argument that p does not contain a tagged abort application, we also know that p +≡ A† q.                                 λv -C(d) ( u[y ← (A† + k + E)] = u" [y ← (A† + k + E)].
+!
+                                                                                                              But then we also get that
+   With Lemmas A.4 and A.5, we can now prove Lemma 3.11.
+                                                                                                                              λv -C(d) (         C(λk.ku[y ← (A† + k + E)]) =
+Lemma 3.11 If λv -C-safe ( e = e" , then λv -C(d) ( e = e" .
+                                                                                                                                                     C(λk.ku" [y ← (A† + k + E)])
+                                                                                         !
+Proof. The proof is an analysis of the derivations of the equations E[e] =c            As    E[e" ].
+discussed, there must be two standard computation sequences that start in the two distinct                    and hence λv -C(d) ( E[e] = E[e" ].
+terms and end in a common term:                                                                           (b) Neither sequence invokes the continuation. The analysis of case 2a applies again
+                                                          "                                                   with the exception that the intermediate terms
+                                 E[e], . . . , p and E[e ], . . . , p.
+
+There are three major cases:                                                                                                              C(λk.ku[y ← (A† + k + E)])
+
+  1. Neither standard computation sequence uses top-level rules. Then the standard com-                       and
+     putation sequences are such that                                                                                                    C(λk.ku" [y ← (A† + k + E)])
+
+                                        −→c p and E[e" ] −→
+                                   E[e] −→               −→c p.                                               look like
+                                                                                                                                          C(λk.u[y ← (A† + k + E)])
+     Since −→    −→d , these reductions also hold in d, and λv -C(d) ( E[e] = E[e" ].
+           −→c ⊂ −→
+                                                                                                              and
+  2. Both sequences grab the continuation. According to Lemma A.4, we must now dis-                                                       C(λk.u" [y ← (A† + k + E)]),
+     tinguish two subcases:
+                                                                                                              respectively.
+       (a) Both sequences invoke the continuation:
+                                                                                                       3. Finally, it may be the case that one sequence grabs the continuation and the other
+                                                          ! ∗
+                           E[e] )−→∗c q(A† + E) )−→c             E " [(A† + E)v]                          does not:
+                                                          ! ∗
+                                                        )−→c     A† u[y ← (A† + E)]                                           E[e] )−→∗c q(A† + E), . . . , p and E[e" ] −→
+                                                                                                                                                                         −→c p.
+
+           and                                                                                           It follows from Lemma A.5 that p has the shape Ar, that r does not contain the tagged
+                                                                                                         continuation, and that q does not invoke the continuation. Again by Lemmas 3.5
+                                                          ! ∗
+                          E[e" ] )−→∗c q " (A† + E) )−→c         E "" [(A† + E)v " ]                     through 3.7
+                                                          ! ∗
+                                                        )−→c     A† u" [y ← (A† + E)].                                                  −→d C(λk.q(A† + k + E))
+                                                                                                                                   E[e] −→
+
+                                                 31                                                                                                32
+     and, given that (A† + k + E) does not occur in p,                                      11. Landin, P.J. The next 700 programming languages. Commun. ACM 9(3), 1966,
+                                                                                                157–166.
+                        −→d C(λk.q(A† + k + E)) −→
+                   E[e] −→                      −→d C(λk.p), k +∈ FV (p).
+                                                                                            12. Landin, P.J. The mechanical evaluation of expressions. Comput. J. 6(4), 1964, 308–
+     Since we know from Lemma A.5 that p is of the shape Ar ≡ Cλd.r for some r with d           320.
+     not in r , we can derive the rest with a simple calculation:                           13. Mason, I.A. Equivalences of first-order Lisp programs. In Proc. Symposium on Logic
+                                                                                                in Computer Science, 1986, 105–117.
+                        λv -C(d) ( Cλk.p = Cλk.(Cλd.r)                                      14. Mason, I.A. and C. Talcott. Programming, transforming, and proving with func-
+                                           = Cλk.(λd.r)(λx.A(k x))                              tion abstractions and memories. In Proc. International Conference on Automata, Lan-
+                                           = Cλk.r                                              guages and Programming. Springer Lecture Notes in Computer Science, Berlin, 1989,
+                                           ≡ p.                                                 574-588.
+                                                                                            15. Mason, I.A. and C. Talcott. A sound and complete axiomatization of operational
+   These are all possible cases and now we know that λv -C(d) ( E[e] = E[e" ] for all E .       equivalence between programs with memory. In Proc. Symposium on Logic in Computer
+This holds in particular for E ≡ [ ] and therefore λv -C(d) ( e = e" . !                        Science, 1989, 284–293.
+                                                                                            16. Milner, R., M. Tofte, and R. Harper. The Definition of Standard ML. The MIT
+                                                                                                Press, Cambridge, Massachusetts and London, England, 1990.
+References
+                                                                                            17. Moggi, E. Computational lambda-calculus and monads. In Proc. Symposium on
+ 1. Abadi, M., L. Cardelli, P.-L. Curien, and J.-J. Lévy. Explicit substitution. In            Logic in Computer Science, 1989, 14–23.
+    Proc. 17th ACM Symposium on Principles of Programming Languages, 1990, 31–46.           18. Plotkin, G.D. Call-by-name, call-by-value, and the λ-calculus. Theor. Comput. Sci.
+ 2. Barendregt, H.P. The Lambda Calculus: Its Syntax and Semantics. Revised Edition.            1, 1975, 125–159.
+    Studies in Logic and the Foundations of Mathematics 103. North-Holland, Amsterdam,      19. Rees, J. and W. Clinger (Eds.). The revised3 report on the algorithmic language
+    1984.                                                                                       Scheme. SIGPLAN Notices 21(12), 1986, 37–79.
+ 3. Church, A. Introduction to Mathematical Logic. Princeton University Press, Prince-      20. Steele, G.L., Jr. Common Lisp—The Language. Digital Press, 1984.
+    ton, New Jersey, 1956.                                                                  21. Sussman, G.J. and G.L. Steele Jr. Scheme: An interpreter for extended lambda
+ 4. Demers, A. and J. Donahue. Making variables abstract: an equational theory for              calculus. Memo 349, MIT AI Lab, 1975.
+    Russell. In Proc. 10th ACM Symposium on Principles of Programming Languages,            22. Talcott, C. Rum: An intensional theory function and control abstractions. In Proc.
+    1983, 59–72.                                                                                1987 Workshop on Foundations of Logic and Functional Programming. Springer Lecture
+ 5. Felleisen, M. The Calculi of Lambda-v-CS-Conversion: A Syntactic Theory of Con-             Notes 306, 1988.
+    trol and State in Imperative Higher-Order Programming Languages. Ph.D. dissertation,    23. Talcott, C. The Essence of Rum—A Theory of the Intensional and Extensional
+    Indiana University, 1987.                                                                   Aspects of Lisp-type Computation. Ph.D. dissertation, Stanford University, 1985.
+ 6. Felleisen, M. The theory and practice of first-class prompts. In Proc. 15th ACM
+    Symposium on Principles of Programming Languages, 1988, 180–190.
+ 7. Felleisen, M. and D.P. Friedman. Control operators, the SECD-machine, and the
+    λ-calculus. In Formal Description of Programming Concepts III , edited by M. Wirsing.
+    Elsevier Science Publishers B.V. (North-Holland), Amsterdam, 1986, 193–217.
+ 8. Felleisen, M. and D.P. Friedman. A syntactic theory of sequential state. Theor.
+    Comput. Sci. 69(3), 1989, 243–287. Preliminary version in: Proc. 14th ACM Sympo-
+    sium on Principles of Programming Languages, 1987, 314-325.
+ 9. Felleisen, M., D.P. Friedman, E. Kohlbecker, and B. Duba. A syntactic
+    theory of sequential control. Theor. Comput. Sci. 52(3), 1987, 205–237. Preliminary
+    version in: Proc. Symposium on Logic in Computer Science, 1986, 131–141.
+10. Griffin, T. A formulae-as-types notion of control. In Proc. 17th ACM Symposium
+    on Principles of Programming Languages, 1990, 47–58.
+
+                                           33                                                                                         34
+

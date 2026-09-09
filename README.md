@@ -183,35 +183,64 @@ Syntax acceptance does not imply execution. The [bounded funded source profile](
 
 ### Small-step semantics (implemented repayment subset)
 
-A small-step semantics describes how one machine configuration advances to the next. Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer` followed by one `Repay`. This is a different profile from the successor EBNF above. It is not yet a small-step semantics for every successor source construct.
+This presentation uses **Felleisen–Hieb reduction semantics**: a grammar of terms, evaluation contexts selecting the next redex, primitive contractions, and a context-closure rule. The reference is Felleisen and Hieb, [*The Revised Report on the Syntactic Theories of Sequential Control and State*](https://plv.mpi-sws.org/plerg/papers/felleisen-hieb-92-2up.pdf), §2, Definitions 2.1 and 2.3, and §3.1 for whole-program control reductions. Their metatheorems are not claims about Moriarty.
 
-The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. Within that domain, K performs the financial checks and computes every changed financial amount.
+Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer` followed by one `Repay`. This is a different profile from the successor EBNF above. The following reduction semantics presents that implemented control layer; full successor expression and statement semantics remain open.
 
-Write `⟨k ; out⟩` for the current computation and output cells. `P` is the admitted packet, `H` its input digest, `s` and `r` the sender/receiver row indices, `κ` the remaining computation, and `ε` an empty computation. `r = -1` denotes an absent receiver row; an absent sender fails a later check. The following rules summarize the actual K control transitions; helper functions compute indices, predicates and arithmetic. `checks` abbreviates the 21 ordered `ensure` terms in the definition, and `F` abbreviates its exact prepared-result fields.
+The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. K performs the financial checks and computes every changed financial amount.
+
+**Terms and evaluation contexts.** `P` is an admitted packet, `H` its codec-supplied digest, `b` a Boolean, and `i` a diagnostic index. `s` and `r` are sender/receiver row indices; `-1` means absent. `ε` is an empty computation and `▷` is sequencing. `run_H` delimits one packet's reduction; final answers are `prepared` or `rejected`.
 
 ```text
-START
-  ⟨P ; pending⟩
-    → ⟨inspect(P, s, r) ; pending⟩
-
-EXPAND
-  ⟨inspect(P, s, r) ; pending⟩
-    → ⟨checks(P, s, r) ▷ finish(P, s, r) ; pending⟩
-
-CHECK-PASS
-  ⟨ensure(H, true, code, i) ▷ κ ; pending⟩
-    → ⟨κ ; pending⟩
-
-CHECK-FAIL
-  ⟨ensure(H, false, code, i) ▷ κ ; pending⟩
-    → ⟨ε ; rejected(H, code, i)⟩
-
-FINISH
-  ⟨finish(P, s, r) ; pending⟩
-    → ⟨ε ; prepared(H, F(P, s, r))⟩
+Instruction  a ::= start(P) | inspect(P, s, r)
+                 | ensure(H, b, code, i) | finish(P, s, r)
+Computation  k ::= ε | a | k ▷ k
+Context      E ::= □ | E ▷ k
+Program      t ::= run_H(k) | prepared(H, F) | rejected(H, code, i)
 ```
 
-`▷` means “then execute”; `→` is one displayed control transition. A false check discards the entire continuation, so `finish` is unreachable after any failure. Terminal results have no further control step. The machine checks the packet before producing a financial result; it does not commit a transfer and then attempt repayment.
+`E[k]` plugs `k` into the single hole `□`. Sequences are identified up to associativity and the two unit equations `ε ▷ k = k = k ▷ ε`; equivalently, they are flat instruction lists. Contexts therefore select the first pending instruction and retain its suffix. There is no context form `k ▷ E`: execution cannot skip an unfinished instruction or reduce inside packet data. The initial term is `run_H(start(P))`; only terms reachable from an admitted initial term are in this claim domain. This notation is explanatory, not K input syntax.
+
+**Primitive contractions.** Write `↝` for a local contraction. `sender(P)` and `receiver(P)` are the K index functions; `checks(P,s,r)` is the definition's exact list of 21 ordered `ensure` instructions. The predicates and arithmetic helpers are treated as pure metafunctions here, abstracting their internal K equational reductions.
+
+```text
+start(P) ↝ inspect(P, sender(P), receiver(P))             (START)
+
+inspect(P, s, r)
+  ↝ checks(P, s, r) ▷ finish(P, s, r)                   (EXPAND)
+
+ensure(H, true, code, i) ↝ ε                           (CHECK)
+```
+
+**Contextual reduction and terminal rules.** `→` is the one-step program relation, generated by the following rules. The first lifts a primitive contraction into its evaluation context. Failure is a whole-program control reduction: it discards `E` rather than plugging an error back into it. Finalization applies when `finish` is the only remaining instruction, as the expansion rule guarantees after every check passes.
+
+```text
+                    a ↝ k'
+  ---------------------------------------------       (CONTEXT)
+  run_H(E[a]) → run_H(E[k'])
+
+  run_H(E[ensure(H, false, code, i)])
+    → rejected(H, code, i)                             (ABORT)
+
+  run_H(finish(P, s, r))
+    → prepared(H, F(P, s, r))                          (PREPARE)
+```
+
+`F(P,s,r)` abbreviates the exact scalar result fields emitted by K, including the receiver index used by the codec. `prepared` and `rejected` are terminal: no context reduces inside either answer. Write `→*` for zero or more program reductions. If a check fails, its suffix—including `finish`—is erased; no proposed financial state or effects are returned. The machine checks the whole packet before producing a result, rather than committing a transfer before checking repayment.
+
+**Trace and presentation bound.** A successful packet follows:
+
+```text
+run_H(start(P))
+  → run_H(inspect(P, s, r))
+  → run_H(checks(P, s, r) ▷ finish(P, s, r))
+  →* run_H(finish(P, s, r))
+  → prepared(H, F(P, s, r))
+```
+
+If the first false check is at position `j` (counting from one), the preceding `j − 1` CHECK steps erase only successful guards. ABORT then discards the remaining context, including `finish`, and returns that check's rejection. By inspection, assuming the pure metafunctions terminate on admitted inputs, this presentation takes at most **24 control steps**: START, EXPAND, 21 guards and PREPARE. Failure at guard `j` takes `j + 2` steps. These counts are neither K's internal rewrite counts nor charged financial action-work units.
+
+The [downloaded open textbook and Redex corpus](deliverables/reduction-semantics-textbooks-2026-09-09/CORPUS.md) and [source-linked practices](deliverables/reduction-semantics-textbooks-2026-09-09/BEST-PRACTICES.md) explain the distinctions used here: evaluation contexts versus unrestricted compatible closure, context-erasing failure, and terminal answers versus stuck terms. The trace is an explanation of this bounded control projection; no textbook theorem establishes Moriarty's source/K correspondence.
 
 Checks run in this order, stopping at the first failure. The [K rules](experiments/moriarty-language/formal/k/moriarty.k) give every predicate and diagnostic code.
 
