@@ -1,0 +1,13 @@
+# Independent updated builder review
+
+**APPROVED for this fixed builder source scope.** No blocking builder defect was established. Candidate source commitment: `a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6`. Observed source manifest matched the frozen manifest. Builder file SHA-256: `ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb`. The companion JSON also binds the test file.
+
+All **24 offline tests passed** using `node --test experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs`. No compiler, wallet, proof or network operation was run. No current Opus review output was consulted.
+
+The four requested repairs are present: the attempt file cannot equal or descend from output; charged output-directory creation failures reach the diagnostic path; source commitments ignore JSON key insertion order while preserving the exact file order; and proof scope explicitly means compiler key artifacts with no generated transaction proof. Receipt persistence failure retains the original build failure through `AggregateError` and tries a failed diagnostic beside the durable attempt outside the output quota. Neither failed persistence nor synthetic adapters create a successful proven build claim.
+
+**Resource vote: APPROVED WITH CONDITIONS.** The proposed finite ceilings are reasonable for one attempt per case: serial loan/swap, distinct1GiB output/retention allowance each and2GiB total,4GiB memory with zero swap,300seconds compile plus30seconds cleanup per case,720seconds aggregate, and1MiB command output per command. This vote is conditional on closing the launcher disk defects, actual authenticated admission, root enforcement of serial/per-case/aggregate limits without charge resets, and observed terminal cgroup plus artifact checks. It is not permission to dispatch an unfixed launcher.
+
+The supplied harmless live-cgroup probe reports successful settings verification. It does not demonstrate exhaustion handling or subsequent compiler termination. Full compiler behavior, availability/integrity of genuine generated proving assets, and actual termination remain empirical gates. The guarded status operational-history stop is not cleared by this review. Review JSON hashes bind bytes; they do not authenticate reviewers or authority.
+
+The final resource interpretation is actual1GiB tmpfs generation per case and1GiB **logical retained contents** per case,2GiB logical total. Physical host allocation and metadata overhead are not bounded; the revised launcher review retains the tiny-sparse reproduction demonstrating this distinction. Updated proposal bytes must be rebound by admission.

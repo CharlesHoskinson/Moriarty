@@ -1,0 +1,419 @@
+You are an independent source/resource reviewer. Audit the supplied actual Moriarty full-build implementation and tests, with the exact source manifest and bounded resource proposal. Return one concise JSON object: sourceCandidateSha, verdict (APPROVED or REJECTED), findings, resourceVote, preExecutionConditions, scope. No tools; do not claim to run tests. Scope is the supplied builder and proposed resource allocation; unchanged custody generator/wrappers/kernels are previously accepted dependencies, whose current source bytes are bound by the manifest but NOT reproduced for fresh inspection in this review. They remain independently reviewed dependencies, not proof results. Check real compiler invocation/no skip-zk, no synthetic-to-real claims, source/artifact bindings, exclusive irreversible attempt charge, failures/timeout and closed build interfaces. The root knows memory/swap/output/wall/whole-tree containment require an outer launch; do not waive them. Hard 1GiB quota launcher is being implemented separately and must be reviewed and demonstrated before execution. This review may approve source CONDITIONALLY while listing unfulfilled execution conditions; no wallet/network/transaction/proof-server operation is requested or admitted. Preserve prior charges. Compiler output keys do NOT mean transaction proofs were generated. No speculative new generic framework. State any concrete source bugs with line/function. Limit output to about1500 words.
+
+source-manifest.json
+{
+  "schema": "moriarty.financial-build-sources/1",
+  "files": [
+    {
+      "path": "experiments/moriarty-language/compact/arithmetic.compact",
+      "sha256": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/bound-program.json",
+      "sha256": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/kernel.compact",
+      "sha256": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/loan/metadata.json",
+      "sha256": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/bound-program.json",
+      "sha256": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/kernel.compact",
+      "sha256": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/swap/metadata.json",
+      "sha256": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/examples/loan.mori",
+      "sha256": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/examples/swap.mori",
+      "sha256": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+      "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "sha256": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+      "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/swap.compact",
+      "sha256": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "sha256": "c053c5b219a9d0ede519153c036b10c8e3245b2ad5b1ea63b01a569b499a9d28"
+    }
+  ]
+}
+
+resource-proposal.json
+{
+  "schema": "moriarty.financial-build-resource-proposal/1",
+  "sourceCandidateSha": "e4d2c4d085d693e374fa717a837639ce4a1959bc482211992647d789c52db1dd",
+  "status": "proposed-not-admitted",
+  "cases": [
+    "loan",
+    "swap"
+  ],
+  "maxAttemptsPerCase": 1,
+  "maxCompileMsPerCase": 300000,
+  "maxTotalWallMs": 720000,
+  "memoryMaxBytes": 4294967296,
+  "memorySwapMaxBytes": 0,
+  "maxOutputBytesPerCase": 1073741824,
+  "parallelCompiles": 1,
+  "cleanupReserveMs": 30000,
+  "compilerInvocationsAlreadyMadeForThisProposal": 0,
+  "walletOperations": 0,
+  "transactionProofs": 0,
+  "submissions": 0,
+  "priorCharges": "Preserved unchanged; this proposal neither resets nor spends earlier allocations.",
+  "outerContainment": "Existing systemd user transient service with MemoryMax=4G MemorySwapMax=0 RuntimeMaxSec bound and KillMode=control-group; verify actual cgroup result before acceptance.",
+  "purpose": "Generate actual prover/verifier artifacts for existing fixed custody loan and swap, prerequisite to real Docker financial transactions. Does not admit financial network execution."
+}
+
+review-inputs.json
+{
+  "sourceCandidateSha": "e4d2c4d085d693e374fa717a837639ce4a1959bc482211992647d789c52db1dd",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "sha256": "c053c5b219a9d0ede519153c036b10c8e3245b2ad5b1ea63b01a569b499a9d28"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs",
+      "sha256": "42b113b3f2a45206cbf4b5e5c4e1e807db1803985c12787e9945f2644d0e17e7"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "sha256": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+      "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1"
+    }
+  ]
+}
+
+FILE experiments/moriarty-midnight-financial/ledger/build-proven.mjs
+#!/usr/bin/env node
+/** One admitted full Compact build. Import/manifest inspection is inert.
+ * Review digests establish byte/candidate bindings, not auditor independence or votes.
+ * commandAdapter is explicitly synthetic and can never produce a proven manifest.
+ */
+import {spawn} from 'node:child_process';
+import {readFileSync, lstatSync, readdirSync, mkdirSync, writeFileSync, openSync, closeSync, fsyncSync} from 'node:fs';
+import {dirname, join, resolve, relative, isAbsolute, sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {PIN_PATHS, generateWrappers, validatePinnedInputs, sha256, isDirectRun} from '../custody/generate.mjs';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const CUSTODY = 'experiments/moriarty-midnight-financial/custody';
+const BUILDER = 'experiments/moriarty-midnight-financial/ledger/build-proven.mjs';
+const REQUIRED_SOURCES = [...Object.values(PIN_PATHS), BUILDER, `${CUSTODY}/generate.mjs`, `${CUSTODY}/bindings.json`, `${CUSTODY}/loan.compact`, `${CUSTODY}/swap.compact`].sort();
+const CIRCUITS = {loan:['initialize','accrue','settle'],swap:['initialize','swap','close']};
+const VERSIONS = {compiler:'0.31.1',language:'0.23.0',runtime:'0.16.0',compactWrapper:'0.5.2'};
+const HEX = /^[a-f0-9]{64}$/;
+
+function requireThat(value, message) { if (!value) throw new Error(message); }
+function positive(value) { return Number.isSafeInteger(value) && value > 0; }
+function noSymlinks(path, {missingLeaf=false}={}) {
+  const absolute=resolve(path); let current=absolute;
+  while(true) {
+    const stat=lstatSync(current,{throwIfNoEntry:false});
+    if(stat) {
+      requireThat(!stat.isSymbolicLink(),`symlink forbidden: ${current}`);
+      if(current!==absolute) requireThat(stat.isDirectory(),`not a directory: ${current}`);
+    } else requireThat(missingLeaf && current===absolute,`missing parent: ${current}`);
+    const parent=dirname(current);if(parent===current)break;current=parent;
+  }
+  return absolute;
+}
+function checkedFile(path) {
+  noSymlinks(path);requireThat(lstatSync(path).isFile(),`not a regular file: ${path}`);
+  return readFileSync(path);
+}
+function durableExclusive(path, record) {
+  noSymlinks(path,{missingLeaf:true});
+  const fd=openSync(path,'wx',0o600);
+  try {writeFileSync(fd,JSON.stringify(record,null,2)+'\n');fsyncSync(fd);} finally {closeSync(fd);}
+  const dirFd=openSync(dirname(path),'r');try {fsyncSync(dirFd);}finally{closeSync(dirFd);}
+}
+function boundRecord(ref,label) {
+  requireThat(ref && isAbsolute(ref.path??'') && HEX.test(ref.sha256??''),`missing ${label} binding`);
+  const bytes=checkedFile(ref.path);requireThat(sha256(bytes)===ref.sha256,`${label} digest mismatch`);
+  return JSON.parse(bytes.toString('utf8'));
+}
+export function sourceManifestHash(manifest) {return sha256(JSON.stringify(manifest));}
+export function inspectBuildSources() {
+  return {schema:'moriarty.financial-build-sources/1',files:REQUIRED_SOURCES.map(path=>({path,sha256:sha256(checkedFile(join(ROOT,path)))}))};
+}
+function checkSources(manifest) {
+  requireThat(manifest?.schema==='moriarty.financial-build-sources/1' && Array.isArray(manifest.files),'source manifest required');
+  const observed=inspectBuildSources();
+  requireThat(manifest.files.length===observed.files.length,'missing or extra source pin');
+  for(let i=0;i<observed.files.length;i++) {
+    requireThat(manifest.files[i]?.path===observed.files[i].path && manifest.files[i]?.sha256===observed.files[i].sha256,`stale or missing source pin: ${observed.files[i].path}`);
+    requireThat(Object.keys(manifest.files[i]).sort().join(',')==='path,sha256','unknown source pin field');
+  }
+  requireThat(Object.keys(manifest).sort().join(',')==='files,schema','unknown source manifest field');
+}
+
+/** Runs one direct subprocess in its own process group; no shell, retry or install. */
+async function realCommand(argv,{cwd,timeoutMs}) {
+  return new Promise((resolveResult,reject)=>{
+    const child=spawn(argv[0],argv.slice(1),{cwd,detached:true,stdio:['ignore','pipe','pipe']});
+    let stdout='',stderr='',bytes=0,failure=null;
+    const stop=reason=>{failure??=reason;try{process.kill(-child.pid,'SIGKILL');}catch(error){if(error.code!=='ESRCH')failure+='; process-group kill failed';}};
+    const timer=setTimeout(()=>stop('command timeout'),timeoutMs);
+    const append=(which,data)=>{bytes+=data.length;if(bytes>1048576){stop('command output limit');return;}if(which==='stdout')stdout+=data;else stderr+=data;};
+    child.stdout.on('data',d=>append('stdout',d));child.stderr.on('data',d=>append('stderr',d));
+    child.once('error',error=>{clearTimeout(timer);reject(error);});
+    child.once('close',(status,signal)=>{clearTimeout(timer);resolveResult({status,signal,stdout,stderr,error:failure});});
+  });
+}
+function hashAssets(assetsPath,kind) {
+  const artifacts=[];
+  function visit(dir) {
+    noSymlinks(dir);requireThat(lstatSync(dir).isDirectory(),'asset directory required');
+    for(const name of readdirSync(dir).sort()) {
+      const path=join(dir,name);const stat=lstatSync(path);
+      requireThat(!stat.isSymbolicLink(),`asset symlink forbidden: ${path}`);
+      if(stat.isDirectory())visit(path);
+      else {
+        requireThat(stat.isFile() && stat.size>0,`empty or nonregular artifact: ${path}`);
+        artifacts.push({path:relative(assetsPath,path).split(sep).join('/'),sha256:sha256(checkedFile(path)),bytes:stat.size});
+      }
+    }
+  }
+  visit(assetsPath);
+  const required=['contract/index.js','compiler/contract-info.json',...CIRCUITS[kind].flatMap(name=>[`keys/${name}.prover`,`keys/${name}.verifier`,`zkir/${name}.zkir`,`zkir/${name}.bzkir`])];
+  for(const path of required)requireThat(artifacts.some(a=>a.path===path),`missing required artifact: ${path}`);
+  const metadata=JSON.parse(checkedFile(join(assetsPath,'compiler/contract-info.json')));
+  for(const [key,name] of [['compiler-version','compiler'],['language-version','language'],['runtime-version','runtime']])requireThat(metadata[key]===VERSIONS[name],`compiler metadata ${key} mismatch`);
+  requireThat(Array.isArray(metadata.circuits),'compiler metadata circuits missing');
+  const proven=metadata.circuits.filter(c=>c.proof===true && c.pure===false).map(c=>c.name).sort();
+  requireThat(JSON.stringify(proven)===JSON.stringify([...CIRCUITS[kind]].sort()),'compiler metadata proof circuits mismatch');
+  return artifacts;
+}
+
+export async function buildProven(options={}) {
+  const {case:kind,sourceManifest,admission,resourceCounters,commandAdapter}=options;
+  requireThat(Object.hasOwn(CIRCUITS,kind),'case must be loan or swap');
+  requireThat(options.outputDir && isAbsolute(options.outputDir),'absolute outputDir required');
+  const outputDir=resolve(options.outputDir);
+  requireThat(options.outputDir===outputDir,'outputDir must be normalized');
+  requireThat(!lstatSync(outputDir,{throwIfNoEntry:false}),'output already exists');
+  noSymlinks(outputDir,{missingLeaf:true});
+  checkSources(sourceManifest);
+  const candidateHash=sourceManifestHash(sourceManifest);
+  requireThat(admission?.allowFullBuild===true && typeof admission.id==='string' && admission.id.length>0,'full-build admission required');
+  requireThat(admission.candidateHash===candidateHash,'admission candidate mismatch');
+  requireThat(admission.case===kind && admission.outputDir===outputDir,'admission case/output mismatch');
+  requireThat(positive(admission.maxCompileMs) && positive(admission.deadlineMs) && admission.deadlineMs>Date.now(),'invalid timeout/deadline');
+  requireThat(admission.maxAttempts===1,'one compile attempt required');
+  const resource=boundRecord(admission.resourceRecord,'resource');
+  requireThat(resource.id===admission.resourceId && resource.sourceCandidateSha===candidateHash,'resource identity/candidate mismatch');
+  for(const key of ['case','outputDir','maxCompileMs','deadlineMs','maxAttempts'])requireThat(resource[key]===admission[key],`resource ${key} mismatch`);
+  requireThat(isAbsolute(resource.attemptFile??''),'absolute attemptFile required');
+  const attemptFile=noSymlinks(resource.attemptFile,{missingLeaf:true});
+  requireThat(attemptFile===resource.attemptFile && !attemptFile.startsWith(outputDir+sep),'attempt must persist outside output directory');
+  requireThat(!lstatSync(attemptFile,{throwIfNoEntry:false}),'resource attempt already exists');
+  requireThat(Array.isArray(admission.reviews) && admission.reviews.length>0,'review byte bindings required');
+  for(const ref of admission.reviews) {
+    const review=boundRecord(ref,'review');
+    requireThat(review.sourceCandidateSha===candidateHash && review.verdict==='APPROVED','review candidate/verdict mismatch');
+  }
+  requireThat(resourceCounters?.resourceId===resource.id && resourceCounters.maxAttempts===1 && resourceCounters.attempts===0,'resource counters exhausted or mismatched');
+  requireThat(commandAdapter===undefined || typeof commandAdapter==='function','invalid commandAdapter');
+  const bindings=JSON.parse(checkedFile(join(ROOT,CUSTODY,'bindings.json')));
+  for(const [key,name] of [['compilerVersion','compiler'],['languageVersion','language'],['compactRuntimeVersion','runtime'],['compactWrapperVersion','compactWrapper']])requireThat(bindings.toolchain[key]===VERSIONS[name],`toolchain ${key} mismatch`);
+  const runtime=JSON.parse(readFileSync(join(bindings.toolchain.runtimeNodeModules,'@midnight-ntwrk/compact-runtime/package.json'),'utf8'));
+  requireThat(runtime.version===VERSIONS.runtime,'runtime package version mismatch');
+  const pinned=validatePinnedInputs({worktree:ROOT,bindings,readFileSync});
+  const generated=generateWrappers({worktree:ROOT,bindings,readFileSync,pinned});
+  for(const name of ['loan','swap']) requireThat(checkedFile(join(ROOT,CUSTODY,name+'.compact')).equals(Buffer.from(generated[name+'Source'])),`stale wrapper ${name}`);
+
+  // Atomic reservation precedes any version/compile process and survives every outcome.
+  durableExclusive(attemptFile,{schema:'moriarty.financial-build-attempt/1',resourceId:resource.id,admissionId:admission.id,sourceCandidateSha:candidateHash,case:kind,outputDir,attempts:1,startedAt:new Date().toISOString(),synthetic:!!commandAdapter});
+  resourceCounters.attempts=1;
+  mkdirSync(outputDir,{mode:0o700});
+  const assetsPath=join(outputDir,kind),stage=join(outputDir,'stage');
+  const receipt={schema:'moriarty.financial-proven-assets/1',status:'started',case:kind,assetsPath,contractModulePath:join(assetsPath,'contract/index.js'),proven:false,inspectedProofAssets:false,proofsGenerated:false,synthetic:!!commandAdapter,sourceManifestHash:candidateHash,admissionId:admission.id,resourceId:resource.id,attemptFile,resourceRecord:admission.resourceRecord,reviews:admission.reviews,versions:{},commands:[],artifacts:[]};
+  const run=async argv=>{
+    const remaining=admission.deadlineMs-Date.now();requireThat(remaining>0,'build deadline exceeded');
+    const timeoutMs=Math.min(admission.maxCompileMs,remaining);
+    const result=await (commandAdapter??realCommand)(argv,{cwd:ROOT,timeoutMs});
+    const stdout=String(result.stdout??''),stderr=String(result.stderr??'');
+    receipt.commands.push({argv,timeoutMs,exit:result.status,signal:result.signal??null,error:result.error??null,stdoutSha256:sha256(stdout),stderrSha256:sha256(stderr),stdout,stderr});
+    requireThat(result.status===0 && !result.error,`command exit ${result.status}: ${result.error??stderr}`);
+    requireThat(Date.now()<=admission.deadlineMs,'build deadline exceeded');
+    return stdout.trim();
+  };
+  try {
+    const compact=bindings.toolchain.compact;
+    for(const [args,key,expected] of [[['--version'],'compactWrapper','compact '+VERSIONS.compactWrapper],[['compile','--version'],'compiler',VERSIONS.compiler],[['compile','--language-version'],'language',VERSIONS.language],[['compile','--runtime-version'],'runtime',VERSIONS.runtime]]) {
+      const actual=await run([compact,...args]);requireThat(actual===expected,`${key} version mismatch`);receipt.versions[key]=actual;
+    }
+    mkdirSync(stage);
+    writeFileSync(join(stage,'arithmetic.compact'),pinned.arithmetic.bytes,{flag:'wx'});
+    writeFileSync(join(stage,'kernel.compact'),pinned[kind+'Kernel'].bytes,{flag:'wx'});
+    writeFileSync(join(stage,kind+'.compact'),generated[kind+'Source'],{flag:'wx'});
+    await run([compact,'compile','--compact-path',stage,join(stage,kind+'.compact'),assetsPath]);
+    receipt.artifacts=hashAssets(assetsPath,kind);
+    checkSources(sourceManifest);
+    receipt.status=commandAdapter?'source-test-only':'built';
+    receipt.proven=!commandAdapter;receipt.inspectedProofAssets=!commandAdapter;
+  } catch(error) {
+    receipt.status='failed';receipt.error=error.message;throw error;
+  } finally {
+    receipt.finishedAt=new Date().toISOString();
+    durableExclusive(join(outputDir,'build-receipt.json'),receipt);
+  }
+  return receipt;
+}
+
+if(isDirectRun(import.meta.url)) {
+  const args=process.argv.slice(2);
+  requireThat(args.length===2 && args[0]==='--request','usage: build-proven.mjs --request REQUEST.json');
+  const options=JSON.parse(checkedFile(resolve(args[1])).toString('utf8'));
+  requireThat(!Object.hasOwn(options,'commandAdapter'),'CLI cannot inject an adapter');
+  const result=await buildProven(options);
+  process.stdout.write(JSON.stringify(result)+'\n');
+}
+
+FILE experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs
+import {test} from 'node:test';
+import {createHash} from 'node:crypto';
+import assert from 'node:assert/strict';
+import {mkdtemp, mkdir, writeFile, readFile, symlink, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {buildProven, inspectBuildSources, sourceManifestHash} from './build-proven.mjs';
+
+async function fixture(t, kind = 'loan') {
+  const dir = await mkdtemp(join(tmpdir(), 'moriarty-build-source-test-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const sourceManifest = inspectBuildSources();
+  const outputDir = join(dir, 'fresh');
+  const calls = [];
+  const options = {
+    case:kind, outputDir, sourceManifest,
+    admission:{id:'test-only-admission',resourceId:'test-only-resource',candidateHash:sourceManifestHash(sourceManifest),case:kind,outputDir,allowFullBuild:true,reviewed:true,maxCompileMs:1000,deadlineMs:Date.now()+30000,maxAttempts:1},
+    resourceCounters:{resourceId:'test-only-resource',attempts:0,maxAttempts:1},
+    commandAdapter: async (argv, context) => {
+      calls.push({argv,context});
+      const flags = argv.slice(1).join(' ');
+      const versions = {'--version':'compact 0.5.2','compile --version':'0.31.1','compile --language-version':'0.23.0','compile --runtime-version':'0.16.0'};
+      if (versions[flags]) return {status:0,stdout:versions[flags],stderr:''};
+      assert.equal(argv[1], 'compile');
+      assert.equal(argv.includes('--skip-zk'),false);
+      const assets = argv.at(-1);
+      const names = kind==='loan'?['initialize','accrue','settle']:['initialize','swap','close'];
+      for (const sub of ['contract','compiler','keys','zkir']) await mkdir(join(assets,sub),{recursive:true});
+      await writeFile(join(assets,'contract/index.js'),'// inert test artifact, not a real contract\n');
+      await writeFile(join(assets,'compiler/contract-info.json'),JSON.stringify({'compiler-version':'0.31.1','language-version':'0.23.0','runtime-version':'0.16.0',circuits:names.map(name=>({name,pure:false,proof:true}))}));
+      for(const name of names) for(const ext of ['prover','verifier','zkir','bzkir']) await writeFile(join(assets,['prover','verifier'].includes(ext)?'keys':'zkir',name+'.'+ext),'inert-'+name+'-'+ext);
+      return {status:0,stdout:'inert compilation only',stderr:''};
+    },
+  };
+  const hash=b=>createHash('sha256').update(b).digest('hex');
+  const record={id:options.admission.resourceId,sourceCandidateSha:options.admission.candidateHash,case:kind,outputDir,maxCompileMs:1000,deadlineMs:options.admission.deadlineMs,maxAttempts:1,attemptFile:join(dir,'resource-attempt.json')};
+  const rp=join(dir,'resource.json');const rb=JSON.stringify(record);await writeFile(rp,rb);
+  const reviewPath=join(dir,'review.json');const reviewBytes=JSON.stringify({sourceCandidateSha:options.admission.candidateHash,verdict:'APPROVED',scope:'inert source-test receipt only'});await writeFile(reviewPath,reviewBytes);
+  options.admission.resourceRecord={path:rp,sha256:hash(rb)};
+  options.admission.reviews=[{path:reviewPath,sha256:hash(reviewBytes)}];
+  return {dir, options, calls};
+}
+
+test('loan complete inert artifacts produce inspected hashes, never a proven build claim',async t=>{
+  const {options,calls}=await fixture(t);
+  const result=await buildProven(options);
+  assert.equal(result.status,'source-test-only'); assert.equal(result.proven,false);
+  assert.equal(result.inspectedProofAssets,false); assert.equal(result.proofsGenerated,false);
+  assert.equal(result.case,'loan'); assert.equal(options.resourceCounters.attempts,1);
+  assert.equal(calls.filter(x=>x.argv.includes('--compact-path')).length,1);
+  assert.equal(result.artifacts.length,14); assert(result.artifacts.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)));
+  assert.equal(result.contractModulePath,join(options.outputDir,'loan/contract/index.js'));
+  const receipt=JSON.parse(await readFile(join(options.outputDir,'build-receipt.json')));
+  assert.equal(receipt.sourceManifestHash,options.admission.candidateHash);
+  assert.equal(receipt.commands.length,5);
+});
+test('swap chooses exact exported circuits',async t=>{
+ const {options}=await fixture(t,'swap'); const r=await buildProven(options);
+ assert(r.artifacts.some(x=>x.path==='keys/close.verifier'));
+ assert(!r.artifacts.some(x=>x.path.includes('settle')));
+});
+for(const [label, mutate] of [
+ ['absent admission',o=>{delete o.admission;}],
+ ['wrong case',o=>{o.case='other';}],
+ ['wrong candidate',o=>{o.admission.candidateHash='0'.repeat(64);}],
+ ['wrong resource',o=>{o.resourceCounters.resourceId='other';}],
+ ['consumed allowance',o=>{o.resourceCounters.attempts=1;}],
+ ['nonfinite timeout',o=>{o.admission.maxCompileMs=Infinity;}],
+ ['expired deadline',o=>{o.admission.deadlineMs=1;}],
+ ['missing source pin',o=>{o.sourceManifest.files.pop();o.admission.candidateHash=sourceManifestHash(o.sourceManifest);}],
+ ['stale source pin',o=>{o.sourceManifest.files[0].sha256='0'.repeat(64);o.admission.candidateHash=sourceManifestHash(o.sourceManifest);}],
+ ['different output',o=>{o.admission.outputDir+='_other';}],
+]) test(label+' rejects before compiler and allocation',async t=>{
+ const {options,calls}=await fixture(t);mutate(options);await assert.rejects(buildProven(options));assert.equal(calls.length,0);
+});
+test('existing output is preserved and rejects',async t=>{
+ const {options,calls}=await fixture(t);await mkdir(options.outputDir);await writeFile(join(options.outputDir,'keep'),'keep');
+ await assert.rejects(buildProven(options),/exist/);assert.equal(calls.length,0);assert.equal(await readFile(join(options.outputDir,'keep'),'utf8'),'keep');
+});
+test('symlink ancestor rejects before compiler',async t=>{
+ const {options,dir,calls}=await fixture(t);await symlink(dir,join(dir,'link')); options.outputDir=join(dir,'link/fresh');options.admission.outputDir=options.outputDir;
+ await assert.rejects(buildProven(options),/symlink/);assert.equal(calls.length,0);
+});
+test('compiler failure preserves charged attempt, partial outputs and diagnostic receipt; no retry',async t=>{
+ const {options,calls}=await fixture(t); const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{if(a.includes('--compact-path')){calls.push({argv:a});await mkdir(a.at(-1));await writeFile(join(a.at(-1),'partial'),'partial');return {status:2,stdout:'',stderr:'inert failure'};}return adapter(a,c);};
+ await assert.rejects(buildProven(options),/exit/);assert.equal(options.resourceCounters.attempts,1);
+ assert.equal(await readFile(join(options.outputDir,'loan/partial'),'utf8'),'partial');
+ assert.equal(JSON.parse(await readFile(join(options.outputDir,'build-receipt.json'))).status,'failed');
+ assert.equal(calls.filter(x=>x.argv.includes('--compact-path')).length,1);
+});
+test('missing proving key rejects despite compiler success',async t=>{
+ const {options}=await fixture(t);const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path'))await rm(join(a.at(-1),'keys/settle.prover'));return r;};
+ await assert.rejects(buildProven(options),/missing.*settle.prover/);
+});
+test('wrong metadata version rejects despite compiler success',async t=>{
+ const {options}=await fixture(t);const adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path')){const p=join(a.at(-1),'compiler/contract-info.json');const d=JSON.parse(await readFile(p));d['runtime-version']='other';await writeFile(p,JSON.stringify(d));}return r;};
+ await assert.rejects(buildProven(options),/metadata/);
+});
+test('generated output symlink is rejected, never hashed through',async t=>{
+ const {options,dir}=await fixture(t);const adapter=options.commandAdapter;await writeFile(join(dir,'outside'),'outside');
+ options.commandAdapter=async(a,c)=>{const r=await adapter(a,c);if(a.includes('--compact-path'))await symlink(join(dir,'outside'),join(a.at(-1),'escape'));return r;};
+ await assert.rejects(buildProven(options),/symlink/);
+});
+
+test('consumed on-disk attempt refuses reset counters on later invocation',async t=>{
+ const {options,calls,dir}=await fixture(t);await buildProven(options);options.resourceCounters.attempts=0;
+ await rm(options.outputDir,{recursive:true});const before=calls.length;
+ await assert.rejects(buildProven(options),/attempt|exist/);assert.equal(calls.length,before);
+ assert.equal(JSON.parse(await readFile(join(dir,'resource-attempt.json'))).resourceId,'test-only-resource');
+});
+test('review digest and resource bytes must match immutable admission bindings',async t=>{
+ const {options,calls}=await fixture(t);await writeFile(options.admission.reviews[0].path,'{}');
+ await assert.rejects(buildProven(options),/review|digest/);assert.equal(calls.length,0);
+});

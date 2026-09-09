@@ -1,0 +1,83 @@
+{
+  "schema": "moriarty.independent-builder-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/sp05_integration_audit",
+  "independent": true,
+  "authorSelfReview": false,
+  "sourceCandidateSha": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6",
+  "verdict": "APPROVED",
+  "scope": "Updated build-proven source, its24offline tests and supplied resource proposal. Does not accept full-build output, launcher fixes, financial deployment or proofs. No current Opus output consulted.",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "sha256": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs",
+      "sha256": "6c733306b1e644d7fb1473c677aecd3101ce66dc79cb0bcb01408b7ca27c315a"
+    }
+  ],
+  "manifestVerified": true,
+  "blockingFindings": [],
+  "checkedRepairs": {
+    "F1": "Attempt==output and descendants reject before charging; output mkdir now inside try/finally after durable attempt, preserving external diagnosis on failure. Existing output is preserved.",
+    "F2": "sourceManifestHash serializes fixed schema/files and fixed path/sha256 keys. File order remains committed; checker enforces exact ordered sources and forbids unknown fields.",
+    "F3": "Receipt proofScope explicitly states compiler key artifacts only, no transaction proof generated. proofsGenerated false. Synthetic adapters retain source-test-only, proven false, inspectedProofAssets false.",
+    "F6": "Receipt persistence failure preserves original build error in AggregateError, writes failed diagnostic outside output under attemptFile.failure.json, and includes fallback failure when it also fails. Failed fallback never becomes successful output."
+  },
+  "checks": [
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs",
+      "exitCode": 0,
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "command": "Compare sourceManifestHash(frozen source-manifest.json) with sourceManifestHash(inspectBuildSources())",
+      "result": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6",
+      "matched": true
+    }
+  ],
+  "resourceVote": {
+    "verdict": "APPROVED_WITH_CONDITIONS",
+    "proposalSha256": "7c09801e6e3dc57a1d43361befce842ffdc98d436f43dca08fa26e2b0b729a90",
+    "scope": "One bounded attempt for each fixed loan and swap, serial only, distinct1GiB output/retention quota each and2GiB total,4GiB memory zero swap,300s compile plus30s cleanup per case,720s aggregate;1MiB combined stdout/stderr per command. Approval of these finite ceilings does not establish the enforcement mechanism or authenticated admission.",
+    "conditions": [
+      "Close launcher disk retention and exposed-mirror findings through independent fixed-source review.",
+      "External authority must authenticate actual reviewer identities/votes and bind source/resource/request bytes.",
+      "Root must enforce serial execution, distinct case directories, one persistent attempt each and720s aggregate deadline without resetting previous charges.",
+      "Observe terminal service/cgroup disposition and retained artifact integrity before accepting any compiler output."
+    ],
+    "approvedBoundsClarification": {
+      "maxTmpfsBytesPerCase": 1073741824,
+      "maxRetainedLogicalBytesPerCase": 1073741824,
+      "maxRetainedLogicalBytesTotal": 2147483648,
+      "hostAllocationOverheadBounded": false,
+      "cases": [
+        "loan",
+        "swap"
+      ],
+      "maxAttemptsPerCase": 1,
+      "parallelCompiles": 1,
+      "memoryMaxBytes": 4294967296,
+      "memorySwapMaxBytes": 0,
+      "maxCompileMsPerCase": 300000,
+      "cleanupReserveMsPerCase": 30000,
+      "maxTotalWallMs": 720000,
+      "maxCommandLogBytesPerCommand": 1048576
+    },
+    "clarification": "Root explicitly clarified actual tmpfs generation bytes and logical retained file contents; physical host allocation/metadata overhead is not bounded. Subsequent clarified proposal must be rebound by external admission."
+  },
+  "liveProbeDisposition": "Supplied live-cgroup-probe.json reports actual harmless success verifying4GiB memory,zero swap,330s/control-group settings. It proves settings at that invocation, not exhaustion handling or later full-build termination. Reviewer did not rerun it.",
+  "limits": [
+    "No compiler or transaction proofs executed; offline commandAdapter tests do not establish actual compiler artifact availability.",
+    "Resource review does not clear existing guarded CLI operational-history stop.",
+    "Runtime/log limits depend on realCommand plus reviewed outer confinement; source-only review does not independently enforce720s aggregate.",
+    "Builder accepts externally bound review JSON as byte records; actual authority and auditor independence remain external as documented."
+  ],
+  "fullBuilds": 0,
+  "networkOperations": 0,
+  "proofAcceptance": false,
+  "financialAcceptance": false,
+  "dispatchAuthorized": false
+}

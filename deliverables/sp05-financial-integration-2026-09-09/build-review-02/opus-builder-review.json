@@ -1,0 +1,154 @@
+{
+  "providerResultSha256": "4a5c95c4350f5ad593f91027d06838bbb02f7262195bb374920887e1910d428c",
+  "resolvedCanonicalModel": "claude-opus-5",
+  "review": {
+    "schema": "moriarty.financial-build-review/1",
+    "reviewer": "independent-claude-opus-medium",
+    "reviewDate": "2026-09-09",
+    "sourceCandidateSha": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6",
+    "shaVerification": "NOT_RECOMPUTED \u2014 no execution was performed. The candidate SHA is carried as a label only. I verified statically that sourceManifestHash() is a deterministic function of {schema, ordered [path,sha256] pairs} and that checkSources() forces that manifest to equal inspectBuildSources() exactly, so the hash is well-defined given the 14 pinned files; I did not compute its value or the 14 file digests.",
+    "verdict": "APPROVED",
+    "verdictScope": "Approval covers ONLY the two reviewed source bytes: build-proven.mjs (ede6a8e...) and build-proven.test.mjs (6c733306...). It is NOT admission, NOT build acceptance, NOT approval of the launcher, NOT approval of the 12 other manifest-pinned files (accepted previously by hash binding, not re-reviewed here), and NOT authorization of any compiler invocation, wallet operation, proof, or submission.",
+    "actualScope": {
+      "reviewed": [
+        "experiments/moriarty-midnight-financial/ledger/build-proven.mjs (full static read)",
+        "experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs (full static read)",
+        "source-manifest.json (structure and consistency with REQUIRED_SOURCES only)",
+        "resource-proposal.json (terms, internal consistency, and consistency with builder-enforced limits)",
+        "live-cgroup-probe.json (argv/exit/stdout as reported text)"
+      ],
+      "notReviewed": [
+        "The 12 non-builder pinned files (arithmetic.compact, generated wrappers/metadata/bound-programs, .mori specs, custody/*.compact, bindings.json, generate.mjs) \u2014 carried forward by hash binding only",
+        "run-build-bounded.py (the launcher, not supplied and NOT present in source-manifest.json)",
+        "The compact toolchain binary and @midnight-ntwrk/compact-runtime tree",
+        "Test execution \u2014 the '24 pass' claim is unverified by me; I only confirmed the assertions are consistent with the source"
+      ],
+      "executionPerformed": "none",
+      "compilerInvocations": 0,
+      "proofsOrSubmissions": 0
+    },
+    "priorFindings": [
+      {
+        "id": "F1",
+        "issue": "Aliased output/attempt paths could yield an unrecorded charge",
+        "status": "RESOLVED",
+        "evidence": "outputDir must be absolute and byte-equal to resolve(outputDir) ('outputDir must be normalized'); must not already exist; noSymlinks() walks every ancestor rejecting symlinks. attemptFile is independently resolved, required byte-equal to its resolved form, required !== outputDir and !startsWith(outputDir+sep), required non-existent, and created with openSync 'wx' + fsync of file and parent dir BEFORE the try block and before any process spawn. The durable attempt record is therefore the charge of record and precedes every side effect.",
+        "residual": "Aliasing via case-insensitive or hardlinked namespaces is not defeated; irrelevant on the ext4/tmpfs target but worth a one-line comment."
+      },
+      {
+        "id": "F2",
+        "issue": "Manifest hash sensitive to object insertion order",
+        "status": "RESOLVED",
+        "evidence": "sourceManifestHash() reconstructs {schema, files:[{path,sha256}]} in fixed field order, discarding caller key order; the ordered file array is retained in the commitment. checkSources() additionally rejects unknown top-level keys (must be exactly 'files,schema') and unknown per-entry keys (exactly 'path,sha256'), and enforces element-wise equality with observed digests, so no unhashed field can ride along. Test 'source commitment ignores object insertion order...' asserts both order-independence of keys and order-dependence of the file list."
+      },
+      {
+        "id": "F3",
+        "issue": "Ambiguous 'proven' field",
+        "status": "RESOLVED_ADEQUATELY",
+        "evidence": "receipt.proofScope is set unconditionally to 'compiler key artifacts only; no transaction proof was generated'; proofsGenerated is initialized false and never mutated anywhere in the module; inspectedProofAssets and proven are both strictly !commandAdapter; status is 'source-test-only' whenever an adapter is present. hashAssets() only ever inspects keys/*.prover, keys/*.verifier, zkir/*, contract/index.js and contract-info.json \u2014 no transaction-proof surface exists.",
+        "residual": "The field name 'proven' still reads as proof generation even though it now means 'compiler key artifacts inspected'. Non-blocking given proofScope, but renaming to keyArtifactsBuilt in a later revision would remove the last ambiguity."
+      },
+      {
+        "id": "F6",
+        "issue": "Receipt-write errors masking compile errors",
+        "status": "RESOLVED",
+        "evidence": "catch captures buildError, marks status 'failed', records error.message, rethrows; finally attempts the receipt write and, on failure, assembles failures=[buildError?, receiptError, fallbackError?] into an AggregateError whose message concatenates the original build error, 'receipt persistence failed: ...', and any outside-diagnostic failure, with cause=buildError??receiptError. I traced the slice arithmetic (slice(buildError?2:1)) and it selects exactly the fallback errors in both branches. The outside-quota diagnostic is written to attemptFile+'.failure.json', which lives outside outputDir by the F1 invariant, so a full output tmpfs cannot suppress diagnosis. Success path also downgrades status to 'failed' and throws if the receipt cannot be persisted \u2014 no silent success."
+      }
+    ],
+    "newFindings": [
+      {
+        "id": "N1",
+        "severity": "HIGH",
+        "class": "resource-precondition",
+        "title": "RuntimeMaxSec=330 in the probe is inconsistent with the declared 720s aggregate",
+        "detail": "live-cgroup-probe.json pins RuntimeMaxSec=330 (300s compile + 30s cleanup) on a single fixed unit name (moriarty-sp05-financial-build.service). The proposal declares maxTotalWallMs=720000 across two serial cases. If both cases run inside one such unit, the second case is SIGKILLed at 330s; if two units are used, the aggregate is 660s and the 720s figure is never actually enforced by anything. Nothing in the reviewed builder enforces an aggregate bound \u2014 admission.deadlineMs is per-invocation only.",
+        "required": "Declare explicitly which containment shape is used (one unit at RuntimeMaxSec=720, or one unit per case at 330 with an external 720s aggregate clock) and re-probe that shape."
+      },
+      {
+        "id": "N2",
+        "severity": "HIGH",
+        "class": "unpinned-dependency",
+        "title": "run-build-bounded.py is not in source-manifest.json",
+        "detail": "The probe loaded and executed verify_cgroup() from experiments/moriarty-midnight-financial/ledger/run-build-bounded.py, which is absent from the 14 pinned files. The launcher therefore sits outside the candidate commitment: its bytes can change without changing sourceCandidateSha, and the builder's own guarantees (single attempt, no retry, no install) say nothing about how the launcher invokes it. The user's own framing confirms the launcher is under separate review and not approved here.",
+        "required": "Pin run-build-bounded.py (and any sibling launcher modules) into source-manifest.json, which changes the candidate SHA, and land its terminal review before admission."
+      },
+      {
+        "id": "N3",
+        "severity": "MEDIUM",
+        "class": "evidence-strength",
+        "title": "Probe stdout echoes module constants, not read-back cgroup values",
+        "detail": "The printed memoryMaxBytes is m.MEMORY (a module constant) and memorySwapMaxBytes is the literal 0. The only genuine evidence that memory.max/memory.swap.max were actually read from /sys/fs/cgroup is that verify_cgroup() did not raise \u2014 and that function is unpinned/unreviewed (N2). The cgroup path string and the 'Memory peak: 9.2M (swap: 0B)' line are real but corroborative, not dispositive. Exit 0 in 79ms with compilerInvocations:0 is consistent with a harmless probe.",
+        "required": "Re-emit the probe printing the raw string contents of the unit's memory.max, memory.swap.max, and pids.max read at probe time."
+      },
+      {
+        "id": "N4",
+        "severity": "MEDIUM",
+        "class": "unenforced-in-reviewed-code",
+        "title": "No byte-quota enforcement exists in the reviewed builder",
+        "detail": "maxOutputBytesPerCase (1 GiB), maxRetainedOutputBytesTotal (2 GiB) and the per-case tmpfs separation are entirely delegated to the unapproved launcher. The builder measures artifact sizes (stat.size in hashAssets) but never sums or bounds them, and never bounds the intermediate 'stage' tree or partial compiler output. Under the clarified terms this is acceptable in principle \u2014 a tmpfs of fixed size is a sound enforcement point \u2014 but it is currently an unmet precondition, not a satisfied one.",
+        "required": "Approval of the launcher's tmpfs sizing/mount/teardown must precede admission."
+      },
+      {
+        "id": "N5",
+        "severity": "MEDIUM",
+        "class": "capacity",
+        "title": "Outside-quota diagnostic space is unbudgeted",
+        "detail": "The failure receipt embeds full stdout and stderr for every command, each capped at 1 MiB combined by realCommand, across up to 5 commands \u2014 so attemptFile.failure.json can approach ~5 MiB and is written OUTSIDE the per-case tmpfs by design. The proposal budgets nothing for this location. If the attempt directory's filesystem is full or read-only, the F6 fallback degrades to a fallbackError appended to the AggregateError message (still no silent success, but no persisted diagnosis).",
+        "required": "Budget and declare writable headroom (>=16 MiB suggested) on the attempt-file filesystem, distinct from the 2 GiB retained-artifact budget."
+      },
+      {
+        "id": "N6",
+        "severity": "LOW",
+        "class": "source",
+        "title": "Compiler binary path is spawned without path validation",
+        "detail": "bindings.toolchain.compact is passed straight to spawn(), and bindings.toolchain.runtimeNodeModules is read with a bare readFileSync that bypasses noSymlinks/checkedFile. Both values are committed only by the sha256 of bindings.json, which pins the strings, not the objects they name. Version-probe commands mitigate substitution of a differently-versioned toolchain but not of an equally-versioned tampered one. Consistent with the accepted trust model (the toolchain is not hashed at all), so non-blocking.",
+        "recommendation": "Apply noSymlinks() + regular-file lstat to bindings.toolchain.compact and route the runtime package.json read through checkedFile()."
+      },
+      {
+        "id": "N7",
+        "severity": "LOW",
+        "class": "source",
+        "title": "realCommand can hang if a grandchild escapes the process group",
+        "detail": "The promise settles only on 'close', which waits for stdio EOF. After the timeout fires, stop() SIGKILLs the process group; a setsid'd grandchild holding the pipes would keep 'close' pending with no internal backstop. The systemd RuntimeMaxSec + KillMode=control-group bound this externally, which is why it is LOW rather than MEDIUM \u2014 but that mitigation is exactly the containment questioned in N1.",
+        "recommendation": "Settle on 'exit' with a short stdio-drain grace, or add an unref'd hard timer."
+      },
+      {
+        "id": "N8",
+        "severity": "LOW",
+        "class": "test-coverage",
+        "title": "Two F1 branches are unexercised",
+        "detail": "The regression suite covers attemptFile === outputDir, but not attemptFile strictly inside outputDir (the startsWith(outputDir+sep) branch) and not the 'outputDir must be normalized' branch (e.g. a trailing slash or an embedded '..'). Both branches are statically correct as written; the gap is in evidence, not behavior.",
+        "recommendation": "Add two cases to the existing rejection loop."
+      },
+      {
+        "id": "N9",
+        "severity": "INFO",
+        "class": "source",
+        "title": "Non-blocking observations",
+        "detail": "(a) hashAssets rejects any zero-byte artifact; if the compiler legitimately emits an empty file the build fails conservatively \u2014 safe direction, but a surprise worth documenting. (b) outputDir/stage consumes per-case tmpfs quota and is never pruned before hashing. (c) admission.reviews requires only length>=1 with matching candidate and verdict APPROVED; there is no distinctness, reviewer-identity, or minimum-quorum check, so N identical review files would pass \u2014 independence is wholly delegated to the external authenticated admission authority, which the module header states. (d) resource-proposal.json carries both cleanupReserveMs and cleanupReserveMsPerCase with the same value 30000; harmless but ambiguous."
+      }
+    ],
+    "regressionAssessment": {
+      "claimed": "4 regressions reproduced pre-fix, 24 tests now pass",
+      "myStaticFinding": "The four new tests map coherently onto the fixes: insertion-order commitment (F2), attempt-path-equals-output (F1), post-charge output-creation failure with outside diagnostic (F1/F6), and receipt-write failure preserving the original compiler failure (F6). Each asserts on the specific mechanism rather than on an incidental message. F3 is covered only indirectly, by the proofScope regex in the first loan test.",
+      "unverified": "I did not run the suite; pass/fail counts are taken as the builder's claim, not as reviewed evidence."
+    },
+    "resourceVote": "APPROVE_WITH_CONDITIONS",
+    "resourceVoteScope": "A vote on the clarified terms only: 2 cases, 1 attempt each, serial (parallelCompiles=1), 300s compile + 30s cleanup per case, 720s aggregate, MemoryMax=4 GiB with MemorySwapMax=0, a separate 1 GiB tmpfs per case, <=2 GiB retained artifacts total, 1 MiB command-log cap, and 0 wallet operations / 0 transaction proofs / 0 submissions. These magnitudes are proportionate to producing loan and swap key artifacts once and are consistent with what the reviewed builder enforces where it enforces anything. This vote does not admit execution.",
+    "conditions": [
+      "C1 (blocks admission, from N1): reconcile RuntimeMaxSec with maxTotalWallMs \u2014 state whether containment is one unit at 720s or one 330s unit per case \u2014 and re-run the probe against the chosen shape.",
+      "C2 (blocks admission, from N2): add run-build-bounded.py and any sibling launcher modules to source-manifest.json, accept the resulting new candidate SHA, and obtain the launcher's own terminal review.",
+      "C3 (blocks admission, from N4): the launcher's per-case 1 GiB tmpfs creation, isolation between cases, 2 GiB total retention bound, and teardown must be reviewed and approved. Until then this precondition is UNMET and I do not approve it.",
+      "C4 (from N3): re-emit the cgroup probe printing raw memory.max / memory.swap.max / pids.max read from the unit at probe time, rather than echoing module constants.",
+      "C5 (from N5): declare and reserve writable headroom on the attempt-file filesystem, outside the tmpfs quota, sized for a ~5 MiB failure diagnostic.",
+      "C6 (procedural): external authenticated admission plus terminal review remain required; the builder must be invoked once per case with maxAttempts=1 and a fresh non-existent outputDir and attemptFile, and with no commandAdapter (the CLI already refuses one).",
+      "C7 (non-blocking, from N6/N7/N8): fold the path-validation, command-settle, and two test-branch fixes into the next revision; none of these need to precede this admission."
+    ],
+    "unmetPreconditions": [
+      "Launcher bounded-retention implementation is under separate review and explicitly not approved \u2014 C2, C3.",
+      "Containment wall-clock shape is internally inconsistent between probe and proposal \u2014 C1.",
+      "No build acceptance, transaction proof, wallet, network, or submission authorization is granted or implied by this review."
+    ],
+    "summary": "The four prior findings (F1, F2, F3, F6) are genuinely fixed in the reviewed bytes, and I verified each by tracing the code rather than relying on the fix narrative: the durable attempt reservation now provably precedes every side effect on non-aliasable paths, the source commitment is canonical in field order while remaining sensitive to file order, the proof scope is stated explicitly and proofsGenerated can never become true, and a receipt-write failure now surfaces the original build error alongside it with an outside-quota fallback. I approve those source bytes. Everything still blocking sits in the resource and launcher layer: the 330s-versus-720s containment inconsistency, the unpinned run-build-bounded.py that the probe actually executed, the probe's echoed-constant evidence, and the fact that every byte quota in the proposal is enforced only by code that is explicitly not approved here. The resource magnitudes themselves are sound; I vote for them subject to C1 through C6."
+  }
+}

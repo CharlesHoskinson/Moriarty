@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp, mkdir, writeFile, readFile, symlink, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {writeFileSync} from 'node:fs';
 import {buildProven, inspectBuildSources, sourceManifestHash} from './build-proven.mjs';
 
 async function fixture(t, kind = 'loan') {
@@ -46,6 +47,7 @@ test('loan complete inert artifacts produce inspected hashes, never a proven bui
   const result=await buildProven(options);
   assert.equal(result.status,'source-test-only'); assert.equal(result.proven,false);
   assert.equal(result.inspectedProofAssets,false); assert.equal(result.proofsGenerated,false);
+  assert.match(result.proofScope,/compiler key artifacts only; no transaction proof/);
   assert.equal(result.case,'loan'); assert.equal(options.resourceCounters.attempts,1);
   assert.equal(calls.filter(x=>x.argv.includes('--compact-path')).length,1);
   assert.equal(result.artifacts.length,14); assert(result.artifacts.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)));
@@ -114,4 +116,49 @@ test('consumed on-disk attempt refuses reset counters on later invocation',async
 test('review digest and resource bytes must match immutable admission bindings',async t=>{
  const {options,calls}=await fixture(t);await writeFile(options.admission.reviews[0].path,'{}');
  await assert.rejects(buildProven(options),/review|digest/);assert.equal(calls.length,0);
+});
+
+test('source commitment ignores object insertion order, retaining the exact ordered source list',()=>{
+ const manifest=inspectBuildSources();
+ const reordered={files:manifest.files.map(f=>({sha256:f.sha256,path:f.path})),schema:manifest.schema};
+ assert.equal(sourceManifestHash(reordered),sourceManifestHash(manifest));
+ assert.notEqual(sourceManifestHash({...manifest,files:[...manifest.files].reverse()}),sourceManifestHash(manifest));
+});
+test('attempt path equal to output rejects before consuming the allowance',async t=>{
+ const {options,calls}=await fixture(t);
+ const ref=options.admission.resourceRecord,record=JSON.parse(await readFile(ref.path));
+ record.attemptFile=options.outputDir;
+ const bytes=JSON.stringify(record);await writeFile(ref.path,bytes);
+ ref.sha256=createHash('sha256').update(bytes).digest('hex');
+ await assert.rejects(buildProven(options),/attempt must persist outside/);
+ assert.equal(options.resourceCounters.attempts,0);assert.equal(calls.length,0);
+ await assert.rejects(readFile(options.outputDir),{code:'ENOENT'});
+});
+test('post-charge output creation failure retains a diagnostic outside output',async t=>{
+ const {options,calls,dir}=await fixture(t);let attempts=0;
+ Object.defineProperty(options.resourceCounters,'attempts',{get:()=>attempts,set:value=>{
+   attempts=value;writeFileSync(options.outputDir,'raced output, preserve it');
+ }});
+ await assert.rejects(buildProven(options),error=>{
+   assert.match(error.message,/EEXIST/);assert.match(error.message,/receipt persistence failed/);return true;
+ });
+ assert.equal(attempts,1);assert.equal(calls.length,0);
+ const receipt=JSON.parse(await readFile(join(dir,'resource-attempt.json.failure.json')));
+ assert.equal(receipt.status,'failed');assert.match(receipt.error,/EEXIST/);
+ assert.match(receipt.receiptWriteError,/not a directory|ENOTDIR/);
+ assert.equal(await readFile(options.outputDir,'utf8'),'raced output, preserve it');
+});
+test('receipt write failure preserves the original compiler failure and outside diagnostic',async t=>{
+ const {options,dir}=await fixture(t),adapter=options.commandAdapter;
+ options.commandAdapter=async(a,c)=>{
+  if(!a.includes('--compact-path'))return adapter(a,c);
+  await mkdir(join(options.outputDir,'build-receipt.json'));
+  return {status:23,stderr:'original compiler failure'};
+ };
+ await assert.rejects(buildProven(options),error=>{
+  assert.match(error.message,/original compiler failure/);assert.match(error.message,/receipt persistence failed/);return true;
+ });
+ const receipt=JSON.parse(await readFile(join(dir,'resource-attempt.json.failure.json')));
+ assert.equal(receipt.status,'failed');assert.match(receipt.error,/original compiler failure/);
+ assert.match(receipt.receiptWriteError,/EEXIST/);
 });

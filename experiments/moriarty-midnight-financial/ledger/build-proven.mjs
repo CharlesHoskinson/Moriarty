@@ -46,7 +46,10 @@ function boundRecord(ref,label) {
   const bytes=checkedFile(ref.path);requireThat(sha256(bytes)===ref.sha256,`${label} digest mismatch`);
   return JSON.parse(bytes.toString('utf8'));
 }
-export function sourceManifestHash(manifest) {return sha256(JSON.stringify(manifest));}
+// Fixed field order; the ordered file list remains part of the commitment.
+export function sourceManifestHash(manifest) {
+  return sha256(JSON.stringify({schema:manifest.schema,files:manifest.files.map(({path,sha256})=>({path,sha256}))}));
+}
 export function inspectBuildSources() {
   return {schema:'moriarty.financial-build-sources/1',files:REQUIRED_SOURCES.map(path=>({path,sha256:sha256(checkedFile(join(ROOT,path)))}))};
 }
@@ -119,7 +122,7 @@ export async function buildProven(options={}) {
   for(const key of ['case','outputDir','maxCompileMs','deadlineMs','maxAttempts'])requireThat(resource[key]===admission[key],`resource ${key} mismatch`);
   requireThat(isAbsolute(resource.attemptFile??''),'absolute attemptFile required');
   const attemptFile=noSymlinks(resource.attemptFile,{missingLeaf:true});
-  requireThat(attemptFile===resource.attemptFile && !attemptFile.startsWith(outputDir+sep),'attempt must persist outside output directory');
+  requireThat(attemptFile===resource.attemptFile && attemptFile!==outputDir && !attemptFile.startsWith(outputDir+sep),'attempt must persist outside output directory');
   requireThat(!lstatSync(attemptFile,{throwIfNoEntry:false}),'resource attempt already exists');
   requireThat(Array.isArray(admission.reviews) && admission.reviews.length>0,'review byte bindings required');
   for(const ref of admission.reviews) {
@@ -138,10 +141,10 @@ export async function buildProven(options={}) {
 
   // Atomic reservation precedes any version/compile process and survives every outcome.
   durableExclusive(attemptFile,{schema:'moriarty.financial-build-attempt/1',resourceId:resource.id,admissionId:admission.id,sourceCandidateSha:candidateHash,case:kind,outputDir,attempts:1,startedAt:new Date().toISOString(),synthetic:!!commandAdapter});
-  resourceCounters.attempts=1;
-  mkdirSync(outputDir,{mode:0o700});
   const assetsPath=join(outputDir,kind),stage=join(outputDir,'stage');
   const receipt={schema:'moriarty.financial-proven-assets/1',status:'started',case:kind,assetsPath,contractModulePath:join(assetsPath,'contract/index.js'),proven:false,inspectedProofAssets:false,proofsGenerated:false,synthetic:!!commandAdapter,sourceManifestHash:candidateHash,admissionId:admission.id,resourceId:resource.id,attemptFile,resourceRecord:admission.resourceRecord,reviews:admission.reviews,versions:{},commands:[],artifacts:[]};
+  receipt.proofScope='compiler key artifacts only; no transaction proof was generated';
+  let buildError;
   const run=async argv=>{
     const remaining=admission.deadlineMs-Date.now();requireThat(remaining>0,'build deadline exceeded');
     const timeoutMs=Math.min(admission.maxCompileMs,remaining);
@@ -153,6 +156,8 @@ export async function buildProven(options={}) {
     return stdout.trim();
   };
   try {
+    resourceCounters.attempts=1;
+    mkdirSync(outputDir,{mode:0o700});
     const compact=bindings.toolchain.compact;
     for(const [args,key,expected] of [[['--version'],'compactWrapper','compact '+VERSIONS.compactWrapper],[['compile','--version'],'compiler',VERSIONS.compiler],[['compile','--language-version'],'language',VERSIONS.language],[['compile','--runtime-version'],'runtime',VERSIONS.runtime]]) {
       const actual=await run([compact,...args]);requireThat(actual===expected,`${key} version mismatch`);receipt.versions[key]=actual;
@@ -167,10 +172,20 @@ export async function buildProven(options={}) {
     receipt.status=commandAdapter?'source-test-only':'built';
     receipt.proven=!commandAdapter;receipt.inspectedProofAssets=!commandAdapter;
   } catch(error) {
-    receipt.status='failed';receipt.error=error.message;throw error;
+    buildError=error;receipt.status='failed';receipt.error=error.message;throw error;
   } finally {
     receipt.finishedAt=new Date().toISOString();
-    durableExclusive(join(outputDir,'build-receipt.json'),receipt);
+    try {
+      durableExclusive(join(outputDir,'build-receipt.json'),receipt);
+    } catch(receiptError) {
+      receipt.status='failed';receipt.receiptWriteError=receiptError.message;
+      // The attempt lives outside the output quota; preserve diagnosis there if
+      // output creation or a quota-full receipt write fails. Never accept fallback.
+      const failures=[...(buildError?[buildError]:[]),receiptError];
+      try {durableExclusive(attemptFile+'.failure.json',receipt);}
+      catch(fallbackError) {failures.push(fallbackError);}
+      throw new AggregateError(failures,[buildError?.message,'receipt persistence failed: '+receiptError.message,...failures.slice(buildError?2:1).map(e=>'outside diagnostic failed: '+e.message)].filter(Boolean).join('; '),{cause:buildError??receiptError});
+    }
   }
   return receipt;
 }
