@@ -8,8 +8,9 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T20:18:05Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
+  - SRC-0110
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -229,3 +230,7 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 ## Report 8: comparison and all named standards
 
 [Comparison](../deliverables/defi-report8-comparison-2026-09-09/README.md) · [40-standard relevance table](../deliverables/defi-report8-comparison-2026-09-09/RELEVANCE.md) · [linked interactive graph](../deliverables/defi-report8-comparison-2026-09-09/graph.html) · [remaining roadmap](../deliverables/defi-report8-comparison-2026-09-09/ROADMAP-REMAINING.md). SRC-0106/SRC-0107, CLM-0937–CLM-0939. Four exact paper captures reused and full80pages re-extracted;40officialstandardpages captured. Research only; no new accepted semantics or network evidence.
+
+## Security tokens and asset transformations — 2026-09-09
+
+[Report, interactive graph and design analysis](../deliverables/security-token-transformations-2026-09-09/README.md), SRC-0110, adds asset/claim/encumbrance distinctions and eight proposed transformation cases. CLM-0943–CLM-0945 are maintained in [[wiki/moriarty-architecture|architecture]] and [[wiki/security|security]]. Full report read; 100 graph nodes, 239 directed edges and seven communities. External citations remain unverified. Proposed SP01–SP12 refinements preserve current MC/RP acceptance gates.

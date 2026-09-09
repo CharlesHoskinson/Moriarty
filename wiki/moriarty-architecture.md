@@ -3,8 +3,9 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-07T18:43:23Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
+  - SRC-0110
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -37,7 +38,7 @@ sources:
   - SRC-0031
   - SRC-0033
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
@@ -180,3 +181,11 @@ The ISO catalogue metadata is retained in SRC-0098. The Marlowe paper is reused 
 **CLM-0930.** The [four-paper language analysis](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) recommends more precise claim/share, debt, clock, authority and composition semantics within the existing successor direction. Source support: SRC-0100 PDF pp. 10–19 §§3–4; SRC-0101 PDF pp. 3–8 §§III–V; SRC-0102 PDF pp. 3–6,12; SRC-0103 PDF pp. 4–11 §§3–6. Primary descriptive studies, version dates in the [source register](../deliverables/defi-taxonomy-papers-2026-09-08/sources.json); reviewed 2026-09-08; S2 inference, not implementation or proof; confidence medium. SP02 still owns complete lexical/EBNF/static rules; SP03 owns executable bounded Moriarty K semantics. Proposed TX02 makes a partial payment leave an observable obligation across source/Core/K/evaluator; later acceptance must bind complete effects and duties to Midnight. None of the four mandatory proof claims or existing coverage obligations is waived.
 
 The [collateral-vault supplement](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md), CLM-0933 in [[wiki/security|security boundaries]], adds proposed tests for donation, preview authorization, valuation purpose, asynchronous claims and nested exposure. These feed SP02/SP03/SP08–SP11 without creating an Ethereum backend or accepting new syntax. The combined research now specifies eighteen illustrative tests, all unexecuted; complete language/K and actual Midnight evidence remain separate deliverables.
+
+## Assets, claims and transformations — 2026-09-09
+
+**CLM-0943.** The supplied security-token report separates financial lifecycle and entitlement from identity, transfer control and chain enforcement. Its useful contribution to Moriarty is an explicit account of how wrapping, pledging, liquidation, recovery and redemption change claims and retain obligations. Source: SRC-0110, report lines 317–385 and 539–555; report date 2026-09-09; secondary descriptive synthesis; reviewed 2026-09-09; source argument, S2; not reproduced; confidence medium. Its external citations are opaque and were not independently verified.
+
+**CLM-0944.** Recommend bounded asset/claim/encumbrance records and operation-specific transformation rules, with reusable financial and policy profiles. Keep asset quantities distinct from share units, economic exposure, legal title and nominal debt. Normal and exceptional authority must be separate. This extends the existing token-indexed amount/residual-duty direction; it does not add one Core constructor per standard. Source: SRC-0110, lines 317–473; S2 design inference/recommendation, reviewed 2026-09-09; not implemented or reproduced; confidence medium. [Three approaches, proposed semantics and eight cases](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md).
+
+Place the specification in SP01, types/EBNF in SP02, and Felleisen–Hieb reductions/K in SP03. SP07 owns scheduled servicing; SP08 owns DeFi transformations and pending claims; SP06/SP09 bind history and ledger correspondence; SP10 handles private bounded composition; SP11 conformance and SP12 developer release complete the path. SP04 requalifies affected native components. SP05 supplies Docker then Midnight Preview evidence only after the profile is admitted. The [exact sprint crosswalk](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md) preserves MC/RP gates, existing fixture counts and the shared-file ownership order. These are proposed refinements, not roadmap acceptance or new grammar. See [[wiki/security#Security-token policy paths — 2026-09-09|policy-path risks]].

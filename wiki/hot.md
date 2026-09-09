@@ -9,6 +9,7 @@ tags:
   - moriarty
   - research
 sources:
+  - SRC-0110
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -20,7 +21,7 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-09T20:18:05Z
+updated_at: 2026-09-09T22:50:07Z
 ---
 
 # Current research context
@@ -46,3 +47,5 @@ Report8 intake: [comparison, full named-source graph and relevance](../deliverab
 The [bounded repayment K references](../docs/research/2026-09-09-bounded-k-references.md) distinguish explicit numeric bounds, guarded transitions, helper totality and concrete execution from proof acceptance. SRC-0108 is a dated official-doc recapture; current website prose is not local-toolchain equivalence evidence.
 
 [[wiki/k-framework/k-best-practices|Bounded K results and lessons]]: the [numeric extension](../deliverables/numeric-k-2026-09-09/README.md) checks rounding, overflow-before-division, dust and ProRata against 22 new and 42 retained cases. Consult its exact result reviews. Preserve earlier attempts and their scope; full RP01 contract/challenge-map admission, successor semantics, proofs and Preview financial acceptance remain open.
+
+[Security-token report and asset transformations](../deliverables/security-token-transformations-2026-09-09/README.md): SRC-0110 recommends explicit assets, claims, encumbrances and operation-specific authority. Define the model in SP01, types and reductions/K in SP02–03, servicing/DeFi behavior in SP07–08, and history/composition/conformance in SP06/SP09–12. Preserve the current admitted SP05 loan/swap work; test each later supported profile on Docker then Preview. The eight new cases are proposals; report citations and standards status remain unverified.

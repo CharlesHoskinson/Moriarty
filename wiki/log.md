@@ -8,8 +8,9 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T20:18:05Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
+  - SRC-0110
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -1038,3 +1039,7 @@ Ingested report8 as SRC-0106, captured all40named ERC/EIP pages as SRC-0107, and
 ## [2026-09-09] ingest | Bounded repayment K references
 
 SRC-0108 captures nine official K pages with Scrapling 0.4.15, robots policy, SHA-256 and selected-section review. [Reference review](../docs/research/2026-09-09-bounded-k-references.md) provides S2 implementation recommendations and records the narrow CLM-0806 wording limitation. Older immutable captures and claims are preserved. No K execution, proof, source/Core freeze or Preview acceptance was performed by this intake.
+
+## [2026-09-09] ingest | Security-token report and asset transformations
+
+Captured the supplied 97,006-byte report unchanged as SRC-0110; all 565 lines read. Capture `capture-security-token-report9-20260909`; ingest `ingest-security-token-report9-20260909`. [Dossier and graph](../deliverables/security-token-transformations-2026-09-09/README.md) contain 100 nodes, 239 directed edges, seven communities, three extracted hyperedges and eight unexecuted proposed cases. CLM-0943–CLM-0945 extend architecture/security synthesis with explicit claim continuity and policy-path completeness. SRC-0109 is reserved by the existing syntax research branch; its identity is not reused. External citation tokens and two missing catalogs remain unresolved. No network requests, language implementation, proofs or Midnight transactions were performed by this intake.

@@ -1,0 +1,22 @@
+# Security-token report and Moriarty asset transformations
+
+Read and ingested on 2026-09-09. Source **SRC-0110**, *Security Token Standards Across EVM and Non-EVM Ecosystems*, supplied as `deep-research-report (9).md`. This is a secondary research report with unknown author, not a verified academic publication.
+
+- [Required roadmap integration](../../openspec/ASSET-STUDY-INTEGRATION-2026-09-09.md) and [task crosswalk](../../openspec/sprints/asset-study.json): the subsequent user instruction makes eleven requirements and eight acceptance cases required work under SP01–SP12. Implementation remains open.
+- [Language-design analysis and SP01–SP12 crosswalk](DESIGN-IMPLICATIONS.md): recommended bounded asset/claim model, three design approaches, eight proposed test cases and implementation order.
+- [Interactive concept graph](graphify-out/graph.html): **100 nodes, 239 directed edges, seven communities**, plus three extracted hyperedges retained in the extraction JSON.
+- [Graph report](graphify-out/GRAPH_REPORT.md), [machine-readable graph](graphify-out/graph.json), [integrity check](graphify-out/health.json), and [full-read evidence](report-read-coverage.json).
+- [Readable report copy](sources/report.md) and [immutable raw capture](../../.raw/captured/4ad282c993aeeeca777e659d9ebbdd50a914f69cfd46f123845f162b2868fdab.md).
+- Canonical wiki synthesis: [architecture](../../wiki/moriarty-architecture.md#assets-claims-and-transformations--2026-09-09) and [security](../../wiki/security.md#security-token-policy-paths--2026-09-09).
+
+**Required agenda (following the integration instruction):** specify identity, claims and transformation invariants in SP01; express and execute them in SP02–03; implement servicing and DeFi profiles in SP07–08; bind history, policy and authority in SP06/SP09; test private composition in SP10 and full conformance in SP11. Use SP05 for iterative Docker then Midnight Preview evidence after each supported profile is admitted. SP12 owns clear examples, signing displays and release documentation.
+
+The report strengthens lifecycle, scoped authority, wrapper restrictions and policy-path completeness. It complements existing token-indexed amounts, nominal obligations and residual duties. It does not establish that an interface proves legal rights, that a framework is currently production-ready, or that any proposed Moriarty feature is implemented.
+
+The full 97,006-byte, 565-line report was read; 11,609 words detected. SHA-256: `4ad282c993aeeeca777e659d9ebbdd50a914f69cfd46f123845f162b2868fdab`. Original Windows file and immutable capture are byte-identical. Capture operation: `capture-security-token-report9-20260909`. Ingest operation: `ingest-security-token-report9-20260909` completed; [result and changed paths](ingest-result.json). A scoped [link repair](link-repair-result.json) replaced two section fragments with direct document links. The repository source inventory was appended under its recorded hash precondition after the canonical ingest.
+
+Graphify 0.9.53 built and exported the graph. The installed skill text is 0.9.48; the exporter reported this version difference, but graph construction and integrity checks passed. No infrastructure update was needed. Actual extraction token usage is unavailable; zero-valued schema placeholders are not measured usage. EXTRACTED means explicit in the report, not independently verified. No URLs were fetched; external citation tokens and two missing companion catalogs remain unresolved. No new network transaction occurred.
+
+Verification: final wiki lint reports zero findings across 37 pages and 375 links; graph integrity has no dangling, missing or collapsed edges. [Verification record](verification.json), [final lint](lint-final.json). Earlier link findings and their correction remain retained. These checks establish artifact/provenance integrity, not financial semantics or standards conformance.
+
+The required agenda passed [fresh GPT-6 review](agenda-review-gpt6/review-03.json) and [Grok correction review](agenda-review-grok-03/review.json) against [candidate03](agenda-verification-03.json). Grok was requested as `grok-4.6` at high effort and returned `grok-4.6-build`; its review is a static packet audit. [Structural checks](agenda-validation-03.json) pass. These reviews approve the agenda only; all AS/AT implementation and ledger acceptance remains open. Earlier findings and candidate versions are retained.
