@@ -46,12 +46,28 @@ The successor semantic freeze and full SP02/SP03 acceptance remain open. A K def
 
 ### Successor source grammar (EBNF)
 
-This is the complete current [canonical grammar](experiments/moriarty-language/spec/successor/grammar.ebnf), including its admission notes. It uses **Extended Backus–Naur Form (EBNF)**: `=` defines a production, `;` ends it, `,` concatenates, `|` selects an alternative, `[ ... ]` is optional, `{ ... }` repeats zero or more times, and `( ... )` groups. Quoted strings are literal terminals; `? ... ?` names a special sequence supplied by the lexical layer; `(* ... *)` encloses a grammar comment. Quoted braces, parentheses and semicolons are source tokens, not EBNF operators.
+This is the complete syntax grammar for **`moriarty-successor-syntax/0`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/grammar.ebnf). The parser is implemented. This provisional profile still omits constructs required by the full roadmap; its successor semantic contract remains unfrozen.
+
+The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.
+
+| Notation | Meaning |
+| --- | --- |
+| `=` and `;` | Define and end a production |
+| `,` | Concatenation: match items in order |
+| `\|` | Alternatives: match one choice |
+| `[ ... ]` | Optional: zero or one occurrence |
+| `{ ... }` | Repetition: zero or more occurrences |
+| `( ... )` | Group an EBNF expression |
+| `"..."` | Literal source text |
+| `? ... ?` | A token or EOF condition defined by the lexical specification |
+| `(* ... *)` | A comment in the grammar specification |
+
+Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use `//` or `/* ... */`.
 
 ```ebnf
 (*
   ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
-  Specified-only syntax profile. Not a semantic freeze.
+  Provisional syntax profile; parser implemented. Not a semantic freeze.
   Concatenation is comma. Alternation is vertical bar.
   Square brackets are optional. Braces are zero or more repetition.
   Quoted text is a terminal. A special sequence names a lexical token
@@ -59,30 +75,30 @@ This is the complete current [canonical grammar](experiments/moriarty-language/s
   or is such a lexical token.
 *)
 
-program = profile_decl, agreement_decl, ? end of file ? ;
+program = profileDecl, agreementDecl, ? end of file ? ;
 
-profile_decl = "profile", string_token, ";" ;
+profileDecl = "profile", stringToken, ";" ;
 
-agreement_decl = "agreement", identifier, "{", { declaration }, "}" ;
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
 
-declaration = unit_decl
-            | party_decl
-            | asset_decl
-            | const_decl
-            | state_decl
-            | action_decl ;
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | constDecl
+            | stateDecl
+            | actionDecl ;
 
-unit_decl = "unit", identifier, ";" ;
+unitDecl = "unit", identifier, ";" ;
 
-party_decl = "party", identifier, ";" ;
+partyDecl = "party", identifier, ";" ;
 
-asset_decl = "asset", identifier, ":", type, ";" ;
+assetDecl = "asset", identifier, ":", type, ";" ;
 
-const_decl = "const", identifier, ":", type, "=", expression, ";" ;
+constDecl = "const", identifier, ":", type, "=", expression, ";" ;
 
-state_decl = "state", identifier, ":", type, "=", expression, ";" ;
+stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
 
-action_decl = "action", identifier, "(", [ parameters ], ")",
+actionDecl = "action", identifier, "(", [ parameters ], ")",
               "{", { statement }, { postcondition }, "}" ;
 
 parameters = parameter, { ",", parameter } ;
@@ -97,17 +113,17 @@ binding = "let", identifier, "=", expression, ";" ;
 
 update = "next", ".", identifier, "=", expression, ";" ;
 
-emission = "emit", type, "{", [ effect_fields ], "}", ";" ;
+emission = "emit", type, "{", [ effectFields ], "}", ";" ;
 
-effect_fields = effect_field, { ",", effect_field } ;
+effectFields = effectField, { ",", effectField } ;
 
-effect_field = identifier, ":", expression ;
+effectField = identifier, ":", expression ;
 
 postcondition = "ensures", expression, ";" ;
 
-type = identifier, [ type_args ] ;
+type = identifier, [ typeArgs ] ;
 
-type_args = "<", type, { ",", type }, ">" ;
+typeArgs = "<", type, { ",", type }, ">" ;
 
 expression = disjunction ;
 
@@ -117,9 +133,9 @@ conjunction = negation, { "and", negation } ;
 
 negation = { "not" }, comparison ;
 
-comparison = sum, [ comparison_op, sum ] ;
+comparison = sum, [ comparisonOp, sum ] ;
 
-comparison_op = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
 
 sum = product, { ( "+" | "-" ), product } ;
 
@@ -127,8 +143,8 @@ product = postfix, { "*", postfix } ;
 
 postfix = primary, { ".", identifier } ;
 
-primary = integer_token
-        | string_token
+primary = integerToken
+        | stringToken
         | "true"
         | "false"
         | identifier, [ "(", [ arguments ], ")" ]
@@ -138,19 +154,19 @@ arguments = expression, { ",", expression } ;
 
 identifier = ? ASCII identifier token defined in lexical.md ? ;
 
-integer_token = ? canonical unsigned decimal token defined in lexical.md ? ;
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
 
-string_token = ? JSON string token defined in lexical.md ? ;
+stringToken = ? JSON string token defined in lexical.md ? ;
 
 (* Grammar interpretation and additional admission constraints:
-   1. The source contains exactly one profile_decl and one agreement_decl.
+   1. The source contains exactly one profileDecl and one agreementDecl.
    2. The profile string must be the characters moriarty-successor-syntax/0.
-   3. A comparison_op cannot follow a comparison unless the inner comparison
-      is a parenthesized primary. That is chained comparison.
-   4. type_args is nonempty. Foo<> is not a type.
+   3. Unparenthesized a < b < c is rejected. (a < b) < c and a < (b < c)
+      are syntactically admitted; their typing is a separate check.
+   4. typeArgs is nonempty. Foo<> is not a type.
    5. Parentheses do not create AST nodes. They only group.
-   6. not binds looser than comparison, so not a == b is not (a == b).
-   7. Binary operators associate to the left.
+   6. not binds looser than comparison: not a == b parses as not (a == b).
+   7. or, and, +, -, and * associate to the left.
    8. Call arguments, parameters, and effect fields have no trailing comma.
    9. function, import, loop, obligation, request, composition, observation,
       settlement, policy, status, reserve, and effect-schema forms are not
@@ -164,6 +180,66 @@ The [lexical specification](experiments/moriarty-language/spec/successor/lexical
 The fixed [syntax bounds](experiments/moriarty-language/spec/successor/syntax-profile.json) apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including `ensures`, and 64 entries per parameter, call-argument or effect-field list. These parser limits are separate from the atomic execution bounds and from financial runtime limits.
 
 Syntax acceptance does not imply execution. The [bounded funded source profile](experiments/moriarty-language/spec/successor/funded-source.md), `moriarty-funded-source/0`, uses this same source header through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit `Transfer` and `Repay` emissions, producing local `Prepared` candidates. It rejects state and const declarations, `requires`, `let`, `next`, `ensures`, projections and operators, although those forms appear in this grammar. Its numeric values are limited to UInt128. The [funded example](experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori) exercises that subset; the separate [syntax-only example](experiments/moriarty-language/spec/successor/examples/partial-payment.mori) does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.
+
+### Small-step semantics (implemented repayment subset)
+
+A small-step semantics describes how one machine configuration advances to the next. Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer` followed by one `Repay`. This is a different profile from the successor EBNF above. It is not yet a small-step semantics for every successor source construct.
+
+The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. Within that domain, K performs the financial checks and computes every changed financial amount.
+
+Write `⟨k ; out⟩` for the current computation and output cells. `P` is the admitted packet, `H` its input digest, `s` and `r` the sender/receiver row indices, `κ` the remaining computation, and `ε` an empty computation. `r = -1` denotes an absent receiver row; an absent sender fails a later check. The following rules summarize the actual K control transitions; helper functions compute indices, predicates and arithmetic. `checks` abbreviates the 21 ordered `ensure` terms in the definition, and `F` abbreviates its exact prepared-result fields.
+
+```text
+START
+  ⟨P ; pending⟩
+    → ⟨inspect(P, s, r) ; pending⟩
+
+EXPAND
+  ⟨inspect(P, s, r) ; pending⟩
+    → ⟨checks(P, s, r) ▷ finish(P, s, r) ; pending⟩
+
+CHECK-PASS
+  ⟨ensure(H, true, code, i) ▷ κ ; pending⟩
+    → ⟨κ ; pending⟩
+
+CHECK-FAIL
+  ⟨ensure(H, false, code, i) ▷ κ ; pending⟩
+    → ⟨ε ; rejected(H, code, i)⟩
+
+FINISH
+  ⟨finish(P, s, r) ; pending⟩
+    → ⟨ε ; prepared(H, F(P, s, r))⟩
+```
+
+`▷` means “then execute”; `→` is one displayed control transition. A false check discards the entire continuation, so `finish` is unreachable after any failure. Terminal results have no further control step. The machine checks the packet before producing a financial result; it does not commit a transfer and then attempt repayment.
+
+Checks run in this order, stopping at the first failure. The [K rules](experiments/moriarty-language/formal/k/moriarty.k) give every predicate and diagnostic code.
+
+| Stage | Ordered checks | Error index |
+| --- | --- | --- |
+| State | Distinct balance keys; allowance sum; principal/accrual/outstanding and status; total work including reserve | `-1` (no action index) |
+| Work | At least two ordinary work units remain; spent work can increase by two | `-1` |
+| Transfer | Positive amount; different parties; sender balance exists and is sufficient; matching allowance exists and is sufficient; spent allowance and receiver balance do not overflow | `0` |
+| Repay | Positive nominal amount; matching obligation; outstanding status; payment within debt; same-step transfer ID; matching payer, creditor and asset; sufficient unallocated transfer amount | `1` |
+
+On successful preparation, let `T` be transferred cash, `N` nominal repayment, `p` principal, `a` accrued debt, and `o = p + a` outstanding. Identity conversion makes settlement equal `N`; the checks require `0 < N ≤ T` and `N ≤ o`. Only `N` discharges debt even when `T > N`. Allocation is:
+
+```text
+AccrualFirst:   dischargedPrincipal = N - min(N, a)
+PrincipalFirst: dischargedPrincipal = min(N, p)
+Both rules:    dischargedAccrued   = N - dischargedPrincipal
+
+p' = p - dischargedPrincipal
+a' = a - dischargedAccrued
+o' = o - N
+status' = Settled if o' = 0, otherwise Outstanding
+```
+
+K also subtracts `T` from the sender, adds `T` to the receiver (or creates its missing row), moves `T` from remaining to spent allowance, and moves **two action-work units** from remaining to spent work. The closure reserve stays unchanged. These two work units count the actions, not K rewrite steps. The codec reconstructs unchanged metadata, the ordered Transfer/Repayment effects and used-ID appends from the input and checked K output; that codec remains a trusted, unproved boundary.
+
+For the executed [`principal-partial` fixture](experiments/moriarty-language/formal/k/fixtures/cases.json), cash balances `(100, 0)` become `(70, 30)` after transferring and repaying `30`; principal/outstanding become `70`, the debt remains `Outstanding`, allowance becomes `(remaining: 70, spent: 30)`, and work becomes `(remaining: 98, spent: 2, reserve: 16)`. If a check fails instead, the result exposes a rejection code/index and no proposed state or effects.
+
+The [16-case execution evidence](deliverables/bounded-k-2026-09-09/acceptance.json) checks complete successful results and exact rejections against independent expectations and the source preparation path. It is a finite comparison, not a correspondence theorem. Full successor expression/statement semantics, broader financial actions, mechanized correspondence and mandatory proof-backed ledger settlement remain [SP03/SP09 work](openspec/sprints/README.md). `Prepared` means a local financial proposal; it does not mean authorized, proved or settled on Midnight.
 
 ## What a developer writes
 

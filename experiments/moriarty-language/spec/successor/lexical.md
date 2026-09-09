@@ -24,7 +24,7 @@ A `/` that does not start `//` or `/*` is not a token. There is no division oper
 
 ## Identifiers and keywords
 
-An identifier is `[A-Za-z][A-Za-z0-9_]*` and is at most 64 ASCII characters. Identifiers are case-sensitive. A longest match that starts with a non-ASCII letter, digit, or connector fails with `NON_ASCII_IDENTIFIER`. Other non-ASCII bytes outside strings and comments fail with `UNEXPECTED_CHAR`.
+An identifier is `[A-Za-z][A-Za-z0-9_]*` and is at most 64 ASCII characters. Identifiers are case-sensitive. A non-ASCII letter, number, connector punctuation, nonspacing mark, or spacing combining mark (Unicode categories `L`, `N`, `Pc`, `Mn`, or `Mc`) at the start of a token or immediately after an ASCII identifier prefix fails with `NON_ASCII_IDENTIFIER`. For example, standalone U+0301 and `a` followed by U+0301 both fail with that code. Other non-ASCII code points outside strings and comments fail with `UNEXPECTED_CHAR`.
 
 A word that equals a keyword is a keyword token. Keywords cannot be identifiers.
 
@@ -70,6 +70,10 @@ There is no `>>` token. Nested generics `Map<Debt<USD>>` are two `>` tokens.
 `>=` is one token. A type that is immediately followed by `=` without whitespace therefore lexes as `>=`. The type parser splits a `>=` token into `>` and `=` when it is closing a type argument list, so `Debt<USD>= debt(1, USD)` is accepted. The split rewrites that token in place and does not emit a new lexer token. The extra `=` counts toward the 8192 token bound including the end-of-file token. The formatter always writes a space before `=`.
 
 `<` and `>` are type-argument delimiters only in type position. In expressions they are comparisons. This profile has no call-site type arguments, so `foo<bar>` in an expression is `foo < bar` plus a leftover `>`.
+
+## End of file
+
+The grammar's `? end of file ?` special sequence matches the lexer’s single EOF sentinel after all source characters, including trailing whitespace or a terminated comment, have been consumed. EOF has zero width: its start and end spans both equal the source UTF-8 byte length. It consumes no source character and cannot match before remaining non-ignored text. The sentinel counts as one token toward the token bound.
 
 ## Token bound
 

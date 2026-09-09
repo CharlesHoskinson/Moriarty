@@ -1,6 +1,6 @@
 (*
   ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
-  Specified-only syntax profile. Not a semantic freeze.
+  Provisional syntax profile; parser implemented. Not a semantic freeze.
   Concatenation is comma. Alternation is vertical bar.
   Square brackets are optional. Braces are zero or more repetition.
   Quoted text is a terminal. A special sequence names a lexical token
@@ -8,30 +8,30 @@
   or is such a lexical token.
 *)
 
-program = profile_decl, agreement_decl, ? end of file ? ;
+program = profileDecl, agreementDecl, ? end of file ? ;
 
-profile_decl = "profile", string_token, ";" ;
+profileDecl = "profile", stringToken, ";" ;
 
-agreement_decl = "agreement", identifier, "{", { declaration }, "}" ;
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
 
-declaration = unit_decl
-            | party_decl
-            | asset_decl
-            | const_decl
-            | state_decl
-            | action_decl ;
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | constDecl
+            | stateDecl
+            | actionDecl ;
 
-unit_decl = "unit", identifier, ";" ;
+unitDecl = "unit", identifier, ";" ;
 
-party_decl = "party", identifier, ";" ;
+partyDecl = "party", identifier, ";" ;
 
-asset_decl = "asset", identifier, ":", type, ";" ;
+assetDecl = "asset", identifier, ":", type, ";" ;
 
-const_decl = "const", identifier, ":", type, "=", expression, ";" ;
+constDecl = "const", identifier, ":", type, "=", expression, ";" ;
 
-state_decl = "state", identifier, ":", type, "=", expression, ";" ;
+stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
 
-action_decl = "action", identifier, "(", [ parameters ], ")",
+actionDecl = "action", identifier, "(", [ parameters ], ")",
               "{", { statement }, { postcondition }, "}" ;
 
 parameters = parameter, { ",", parameter } ;
@@ -46,17 +46,17 @@ binding = "let", identifier, "=", expression, ";" ;
 
 update = "next", ".", identifier, "=", expression, ";" ;
 
-emission = "emit", type, "{", [ effect_fields ], "}", ";" ;
+emission = "emit", type, "{", [ effectFields ], "}", ";" ;
 
-effect_fields = effect_field, { ",", effect_field } ;
+effectFields = effectField, { ",", effectField } ;
 
-effect_field = identifier, ":", expression ;
+effectField = identifier, ":", expression ;
 
 postcondition = "ensures", expression, ";" ;
 
-type = identifier, [ type_args ] ;
+type = identifier, [ typeArgs ] ;
 
-type_args = "<", type, { ",", type }, ">" ;
+typeArgs = "<", type, { ",", type }, ">" ;
 
 expression = disjunction ;
 
@@ -66,9 +66,9 @@ conjunction = negation, { "and", negation } ;
 
 negation = { "not" }, comparison ;
 
-comparison = sum, [ comparison_op, sum ] ;
+comparison = sum, [ comparisonOp, sum ] ;
 
-comparison_op = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
 
 sum = product, { ( "+" | "-" ), product } ;
 
@@ -76,8 +76,8 @@ product = postfix, { "*", postfix } ;
 
 postfix = primary, { ".", identifier } ;
 
-primary = integer_token
-        | string_token
+primary = integerToken
+        | stringToken
         | "true"
         | "false"
         | identifier, [ "(", [ arguments ], ")" ]
@@ -87,19 +87,19 @@ arguments = expression, { ",", expression } ;
 
 identifier = ? ASCII identifier token defined in lexical.md ? ;
 
-integer_token = ? canonical unsigned decimal token defined in lexical.md ? ;
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
 
-string_token = ? JSON string token defined in lexical.md ? ;
+stringToken = ? JSON string token defined in lexical.md ? ;
 
 (* Grammar interpretation and additional admission constraints:
-   1. The source contains exactly one profile_decl and one agreement_decl.
+   1. The source contains exactly one profileDecl and one agreementDecl.
    2. The profile string must be the characters moriarty-successor-syntax/0.
-   3. A comparison_op cannot follow a comparison unless the inner comparison
-      is a parenthesized primary. That is chained comparison.
-   4. type_args is nonempty. Foo<> is not a type.
+   3. Unparenthesized a < b < c is rejected. (a < b) < c and a < (b < c)
+      are syntactically admitted; their typing is a separate check.
+   4. typeArgs is nonempty. Foo<> is not a type.
    5. Parentheses do not create AST nodes. They only group.
-   6. not binds looser than comparison, so not a == b is not (a == b).
-   7. Binary operators associate to the left.
+   6. not binds looser than comparison: not a == b parses as not (a == b).
+   7. or, and, +, -, and * associate to the left.
    8. Call arguments, parameters, and effect fields have no trailing comma.
    9. function, import, loop, obligation, request, composition, observation,
       settlement, policy, status, reserve, and effect-schema forms are not
