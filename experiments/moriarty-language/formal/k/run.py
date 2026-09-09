@@ -18,7 +18,7 @@ BINDING=BUILD/'binding.json'
 START=time.monotonic()
 DEADLINE=START+512
 SUITE='initial'
-SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json'}
+SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json', 'transfer-only':'fixtures/transfer-only.json'}
 
 class RunnerError(RuntimeError):pass
 def fail(code):raise RunnerError(code)

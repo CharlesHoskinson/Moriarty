@@ -63,23 +63,27 @@ def admit(text):
             uint(a['nominalAmount'])
         else:error('MALFORMED_INPUT')
     if len(s['balances'])!=2 or len(s['allowances'])!=1 or len(s['obligations'])!=1 or s['usedTransferIds'] or s['usedAllocationIds']:error('UNSUPPORTED_PROJECTION')
-    if [a['kind'] for a in p['actions']]!=['Transfer','Repay']:error('UNSUPPORTED_PROJECTION')
+    if [a['kind'] for a in p['actions']] not in [['Transfer'],['Transfer','Repay']]:error('UNSUPPORTED_PROJECTION')
     o=s['obligations'][0]
     if o['allocationRule']=='ProRata' or o['conversion']!={'mantissa':'1','scale':'0','rounding':'none'}:error('UNSUPPORTED_PROJECTION')
     return p
 
 def digest(p):return hashlib.sha256(json.dumps(p,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def encode(p):
-    s=p['state'];o=s['obligations'][0];a=s['allowances'][0];w=s['work'];t,r=p['actions']
+    s=p['state'];o=s['obligations'][0];a=s['allowances'][0];w=s['work'];t=p['actions'][0]
     def term(name,values,numeric=()):
         return name+'('+', '.join(v if i in numeric else json.dumps(v) for i,v in enumerate(values))+')'
     bs=[term('balance',[b['party'],b['asset'],b['amount']],(2,)) for b in s['balances']]
-    return 'packet('+', '.join(bs+[
+    terms=bs+[
         term('allowance',[a[k] for k in ['party','asset','remaining','spent']],(2,3)),
         term('obligation',[o[k] for k in ['id','debtor','creditor','denomination','settlementAsset','principal','accrued','outstanding','allocationRule','status']],(5,6,7)),
         term('work',[w[k] for k in ['remaining','spent','closureReserve']],(0,1,2)),
-        term('transfer',[t[k] for k in ['id','from','to','asset','amount']],(4,)),
-        term('repay',[r[k] for k in ['allocationId','transferId','obligationId','payer','nominalAmount']],(4,)),json.dumps(digest(p))])+')'
+        term('transfer',[t[k] for k in ['id','from','to','asset','amount']],(4,))]
+    if len(p['actions'])==2:
+        r=p['actions'][1]
+        terms.append(term('repay',[r[k] for k in ['allocationId','transferId','obligationId','payer','nominalAmount']],(4,)))
+    terms.append(json.dumps(digest(p)))
+    return ('transferPacket(' if len(p['actions'])==1 else 'packet(')+', '.join(terms)+')'
 
 REJECTIONS={-1:{'DUPLICATE','INVARIANT','INSUFFICIENT_WORK','OVERFLOW'},0:{'ZERO_AMOUNT','SELF_TRANSFER','MISSING_BALANCE','INSUFFICIENT_BALANCE','MISSING_ALLOWANCE','INSUFFICIENT_ALLOWANCE','OVERFLOW'},1:{'ZERO_AMOUNT','MISSING_OBLIGATION','NOT_OUTSTANDING','EXCEEDS_OUTSTANDING','TRANSFER_NOT_IN_STEP','TRANSFER_MISMATCH','INSUFFICIENT_UNALLOCATED'}}
 def decode(text,p):
@@ -124,8 +128,27 @@ def decode(text,p):
         if not args or tok(args[0],'String')!=digest(p):error('K_OUTPUT_BINDING')
         if label=='rejected' and len(args)==3:
             code=tok(args[1],'String');idx=tok(args[2],'Int')
-            if idx not in ['-1','0','1'] or code not in REJECTIONS[int(idx)]:error('K_OUTPUT')
+            if idx not in ['-1','0','1'] or int(idx)>=len(p['actions']) or code not in REJECTIONS[int(idx)]:error('K_OUTPUT')
             return {'status':'Rejected','code':code,'actionIndex':None if idx=='-1' else int(idx)}
+        transfer_only=len(p['actions'])==1
+        if transfer_only:
+            if label!='preparedTransfer' or len(args)!=9:error('K_OUTPUT')
+            nums={}
+            for idx in range(1,8):
+                v=tok(args[idx],'Int');uint(v);nums[idx]=v
+            receiver=tok(args[8],'Int')
+            if receiver not in ['-1','0','1']:error('K_OUTPUT')
+            t=p['actions'][0]
+            expected_receiver=next((str(i) for i,b in enumerate(p['state']['balances']) if b['party']==t['to'] and b['asset']==t['asset']),'-1')
+            if receiver!=expected_receiver:error('K_OUTPUT_BINDING')
+            if receiver!='-1' and nums[3]!='0':error('K_OUTPUT')
+            post=copy.deepcopy(p['state'])
+            for idx in [0,1]:post['balances'][idx]['amount']=nums[idx+1]
+            if receiver=='-1':post['balances'].append({'party':t['to'],'asset':t['asset'],'amount':nums[3]})
+            post['allowances'][0].update(remaining=nums[4],spent=nums[5])
+            post['work'].update(remaining=nums[6],spent=nums[7])
+            post['usedTransferIds'].append(t['id'])
+            return {'status':'Prepared','schemaVersion':VERSION,'post':post,'effects':[copy.deepcopy(t)]}
         if label!='prepared' or len(args)!=16:error('K_OUTPUT')
         nums={}
         for idx in list(range(1,11))+[12,13,14]:

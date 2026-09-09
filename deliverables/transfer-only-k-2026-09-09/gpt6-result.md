@@ -1,0 +1,43 @@
+# Independent GPT-6 Astra result audit
+
+**PASS** for the exact result candidate `16caa94f155da263c41aa0f55c2dca956f871b833328e0d16c78d1bfdf6d681c`. No blocking finding. The accepted observation is ten new Transfer-only cases and six retained repayment regressions with complete finite K/source/CLI agreement. This is not full SP03 acceptance, general correspondence, a proof result or ledger acceptance.
+
+Reviewer: independent `gpt-6-astra`, 2026-09-09, continuing the independent preexecution reviewer context. Checkout: `/home/charl/Moriarty/.worktrees/sp03-transfer-only`. Startup status was refreshed; the old SP01 operational-history stop remains, and pending transactions are empty. I did not compile K, invoke krun, run a proof/native campaign, submit a transaction or modify any retained receipt. My only repository write is this audit.
+
+## Commitments and provenance
+
+Independently recomputed the result manifest digest and all **146 file hashes**: all match. Rechecked every original preexecution commitment, using `preexecution-README.txt` for the one subsequently updated deliverable README: all match. In particular the reviewed K, codec, runner, fixtures, source implementation and root README have unchanged bytes.
+
+The preexecution candidate remains `2b802c07feb801585cb2521f69ccecb7df8879d597fa856a63c5f6852e30b5a0`, and the resource proposal remains `176542f1ed5a429369dcf8eabf4768477589546e60dfc2e88bf822c3375634d5`. Root admission binds those commitments and the two agreeing independent preexecution reviews; I recomputed its review-file hashes. The Opus record identifies the resolved model as `claude-opus-5`, with medium effort. This audit does not substitute for its separate result review.
+
+Compared the retained `attempt-01` files byte-for-byte with the corresponding live `.build` files: all match. Independently hashed the complete live compiled tree: **177 artifacts**, with exact name/hash-map equality to `binding.json`; retained and live bindings are equal. The binding selects `fixtures/transfer-only.json`, preserves the reviewed source hashes, and records exactly 16 krun invocations. This local artifact verification goes beyond what a fresh clone containing only retained traces can reproduce.
+
+## Actual results
+
+I inspected raw KAST without importing the production codec in my independent comparison. All 16 records have the generated top/cell structure, an empty terminal K continuation, the correct result constructor/arity and the expected echoed input digest. For every success I compared every material scalar token directly to the independently specified post-state and effects: two existing balances, optional appended balance, gross allowance remaining/spent, ordinary work remaining/spent and receiver index; repayment results additionally match principal, accrued, outstanding, status, settlement and both discharge components. For every rejection I compared the raw code/index, including null encoded as -1, and the rejection-only constructor.
+
+The first Transfer-only result contains cash 64/31, unused append 0, allowance 48/24, work 0/7, and receiver index 1. The append case preserves Custodian 29 and appends Creditor 19. The swapped-row case gives Merchant 31 / Sponsor 64. These directly distinguish movement order, missing receiver handling and third-party/non-creditor legality. All four Transfer-only successes retain complete obligation fields, nominal denomination, conversion, allocation rule/status, closure reserve and allocation-ID history, while appending only the Transfer ID and emitting only Transfer. The settled obligation remains settled; no debt is discharged.
+
+The six new failures produce the specified insufficient-work, zero-amount, overflow, invariant, missing-allowance and insufficient-balance records with the specified precedence/index. The retained repayment observations preserve three complete successes and three atomic rejections, including late index-1 failure with no tentative output. Across the suite there are **7 Prepared and 9 Rejected** results, comprising **4/6 new** and **3/3 retained**.
+
+Every saved complete decoded result equals its independent fixture, source observation, CLI JSON result and aggregate observation. This compares the whole post-state and ordered effects, not only the returned numbers or a boolean summary. In addition to the independent raw-token comparison, I ran the retained offline K checker; it passed without invoking K.
+
+I independently reran the real `simulate-cli.ts simulate` command for all 16 retained source/invocation pairs using temporary files. Every complete output matched its independent fixture; Prepared exited 0, Rejected exited 1, and stderr was empty. Temporary files were removed and original CLI receipts were untouched. `check-cli-cases.mjs` uses the same production CLI, checks full JSON and exit status, and preserves generated observations. Because that script writes `cli-observations.json`, I reviewed it but did not execute it over the frozen receipt. `check-source-cases.mjs` remains the separately reviewed parser/elaborator/preparation comparison against fixed expectations.
+
+## Execution and resources
+
+The supervisor argv exactly equals the admitted proposal. The active snapshot records the named service and cgroup, **4 GiB MemoryMax**, **zero MemorySwapMax**, **512-second RuntimeMax**, control-group termination and **KillSignal 9**. The outer call also holds the nonblocking shared flock. The snapshot is active-limit evidence; the final unloaded/inactive snapshot is correctly described separately.
+
+The compile command succeeded without timeout in **6.759 seconds**, below 180 seconds. All 16 sequential krun command receipts succeeded without timeout, each below 20 seconds and each cumulative timestamp below 512 seconds. The service reports **45.714 seconds** and successful exit; the root supervisor reports **45.726 seconds**, return code 0. The retained systemd summary reports rounded peak memory **480.4M**, swap **0B**. This is consistent with the admitted limits; it is not a claim of a separately measured exact peak byte count.
+
+The exclusive compile-attempt record and 16-call binding are retained. There is no evidence of a retry, fallback or counter reset in this allocation. One compile and 16 krun calls add to preserved history of four/33, giving cumulative **five compile attempts and 49 krun invocations**. The six regressions add runtime coverage in this candidate but do not become six new independent financial cases.
+
+## Documentation and wiki
+
+The maintained root README/Felleisen–Hieb presentation remains the reviewed explanatory control abstraction: 14 guards and 17 successful control steps for Transfer-only, 21 guards and 24 for repayment; these are distinct from financial action work and internal K rewrites. It preserves context-erasing failure and does not import the reference's metatheorems as Moriarty results. The scoped README now records actual execution, exact retained evidence and the limits on fresh-clone artifact verification, while keeping independent result acceptance separate.
+
+Reviewed the four wiki page diffs and portable inspect/apply records. Their hashes match the current pages, and the changed paths agree: K best practices, index, log and hot context. They report local finite observations, debt preservation, one-action work, distinct output constructors and retained scope. They do not promote a source ledger, theorem or accepted financial claim. The bound strict lint receipt reports **zero issues over 37 pages and 359 links**; I inspected that receipt rather than rerunning the vault workflow.
+
+Remaining scope is explicit: arbitrary action sequences and collection sizes, nonempty histories, conversion rounding, ProRata, full Core semantics, general source/K/proof/ledger correspondence, public Pending/Complete behavior and full SP03 completion are open. The execution does not dispatch the blocked old SP01 action or waive its history stop. Publication may cite this finite result after the required separate result-review disposition; no broader acceptance follows from this PASS.
+
+Publication annotation: after both required independent result verdicts pass, this audit permits changing only the newly appended SP03.md Transfer-only execution/audit checkbox to checked, while full SP03.2/SP03.3 remain open. Preserve its original reviewed bytes as `reviewed-SP03.txt` and record the old/new hashes in `acceptance.json`. This truthful completion annotation does not alter the reviewed code/results or expand the scope of this PASS; no additional audit cycle is required for that stated metadata delta.

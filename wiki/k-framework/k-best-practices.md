@@ -3,7 +3,7 @@ id: k-framework.best-practices
 type: reference
 title: K best practices for the ZKIR definition
 status: active
-updated_at: 2026-09-09T19:25:15Z
+updated_at: 2026-09-09T19:43:06Z
 sources:
   - SRC-0108
   - SRC-0039
@@ -16,6 +16,17 @@ tags:
 ---
 
 # K Best Practices for the ZKIR Definition
+
+## Transfer-only distinction — 2026-09-09
+
+Repository and experiment observations: the [Transfer-only K increment](../../deliverables/transfer-only-k-2026-09-09/README.md) adds one-action cash movement under the existing bounded source contract. Ten independently specified new cases and six retained repayment regressions compare complete results through K, source preparation and the actual successor simulation CLI. Result review status belongs to the linked acceptance record; these observations do not establish full Core semantics or correspondence.
+
+- Cash movement is not debt discharge. Preserve the complete unrelated obligation and allocation-ID list; a settled obligation and a non-creditor recipient are legal for Transfer-only. Emit one Transfer and append only its ID.
+- Derive work cost from the admitted action list. Exactly one ordinary unit suffices; closure reserve does not substitute for it. The 14-guard control presentation takes 17 successful steps, distinct from one charged action and K's internal rewrite count.
+- Keep output constructors distinct. Bind a one-action input to its Transfer-only result and reject repayment diagnostics at index 1. Host reconstruction copies unchanged fields; K computes changed financial quantities.
+- Compare full state and effect records plus competing failures. Retain repayment regressions alongside new constructor cases. A finite match is evidence for the tested domain, not a general theorem or public settlement.
+
+No new source ID or accepted claim is created by this local experiment synthesis. Historical ZKIR guidance and earlier failed execution receipts below retain their original scope.
 
 ## Bounded Moriarty repayment reference — 2026-09-09
 

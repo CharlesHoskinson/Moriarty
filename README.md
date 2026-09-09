@@ -40,7 +40,7 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 
 The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Its grammar is reproduced below. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile.
 
-The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) now executes Transfer followed by Repay. All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
+The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) supports Transfer-only execution as well as Transfer followed by Repay. The Transfer-only extension is tracked in [its scoped evidence](deliverables/transfer-only-k-2026-09-09/README.md). All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
 
 The successor semantic freeze and full SP02/SP03 acceptance remain open. A K definition also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance. Archived ZKIR K work does not establish Moriarty semantics.
 
@@ -185,7 +185,7 @@ Syntax acceptance does not imply execution. The [bounded funded source profile](
 
 This presentation uses **Felleisen–Hieb reduction semantics**: a grammar of terms, evaluation contexts selecting the next redex, primitive contractions, and a context-closure rule. The reference is Felleisen and Hieb, [*The Revised Report on the Syntactic Theories of Sequential Control and State*](https://plv.mpi-sws.org/plerg/papers/felleisen-hieb-92-2up.pdf), §2, Definitions 2.1 and 2.3, and §3.1 for whole-program control reductions. Their metatheorems are not claims about Moriarty.
 
-Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer` followed by one `Repay`. This is a different profile from the successor EBNF above. The following reduction semantics presents that implemented control layer; full successor expression and statement semantics remain open.
+Moriarty's executable [K definition](experiments/moriarty-language/formal/k/moriarty.k) currently covers the lowered **`moriarty-funded-repayment/0`** projection: exactly one `Transfer`, optionally followed by one `Repay`. This is a different profile from the successor EBNF above. The following reduction semantics presents that implemented control layer; full successor expression and statement semantics remain open.
 
 The [input codec](experiments/moriarty-language/formal/k/README.md#codec-boundary) admits bounded UInt128 fields, two initial balance rows, one allowance, one obligation, empty used-ID lists, identity settlement conversion, and either `AccrualFirst` or `PrincipalFirst` allocation. Malformed or unsupported inputs stop before K. K performs the financial checks and computes every changed financial amount.
 
@@ -201,7 +201,7 @@ Program      t ::= run_H(k) | prepared(H, F) | rejected(H, code, i)
 
 `E[k]` plugs `k` into the single hole `□`. Sequences are identified up to associativity and the two unit equations `ε ▷ k = k = k ▷ ε`; equivalently, they are flat instruction lists. Contexts therefore select the first pending instruction and retain its suffix. There is no context form `k ▷ E`: execution cannot skip an unfinished instruction or reduce inside packet data. The initial term is `run_H(start(P))`; only terms reachable from an admitted initial term are in this claim domain. This notation is explanatory, not K input syntax.
 
-**Primitive contractions.** Write `↝` for a local contraction. `sender(P)` and `receiver(P)` are the K index functions; `checks(P,s,r)` is the definition's exact list of 21 ordered `ensure` instructions. The predicates and arithmetic helpers are treated as pure metafunctions here, abstracting their internal K equational reductions.
+**Primitive contractions.** Write `↝` for a local contraction. `sender(P)` and `receiver(P)` are the K index functions; `checks(P,s,r)` is the definition's exact list of 14 ordered `ensure` instructions for Transfer-only, or 21 for Transfer/Repay. The predicates and arithmetic helpers are treated as pure metafunctions here, abstracting their internal K equational reductions.
 
 ```text
 start(P) ↝ inspect(P, sender(P), receiver(P))             (START)
@@ -226,7 +226,7 @@ ensure(H, true, code, i) ↝ ε                           (CHECK)
     → prepared(H, F(P, s, r))                          (PREPARE)
 ```
 
-`F(P,s,r)` abbreviates the exact scalar result fields emitted by K, including the receiver index used by the codec. `prepared` and `rejected` are terminal: no context reduces inside either answer. Write `→*` for zero or more program reductions. If a check fails, its suffix—including `finish`—is erased; no proposed financial state or effects are returned. The machine checks the whole packet before producing a result, rather than committing a transfer before checking repayment.
+`F(P,s,r)` abbreviates the exact scalar result fields emitted by K, including the receiver index used by the codec. The presentation maps both K result constructors (`preparedTransfer` and `prepared`) to `prepared(H,F)`; `F` retains their distinct fields. `prepared` and `rejected` are terminal: no context reduces inside either answer. Write `→*` for zero or more program reductions. If a check fails, its suffix—including `finish`—is erased; no proposed financial state or effects are returned. The machine checks the whole packet before producing a result, rather than committing a transfer before checking repayment.
 
 **Trace and presentation bound.** A successful packet follows:
 
@@ -238,7 +238,7 @@ run_H(start(P))
   → prepared(H, F(P, s, r))
 ```
 
-If the first false check is at position `j` (counting from one), the preceding `j − 1` CHECK steps erase only successful guards. ABORT then discards the remaining context, including `finish`, and returns that check's rejection. By inspection, assuming the pure metafunctions terminate on admitted inputs, this presentation takes at most **24 control steps**: START, EXPAND, 21 guards and PREPARE. Failure at guard `j` takes `j + 2` steps. These counts are neither K's internal rewrite counts nor charged financial action-work units.
+If the first false check is at position `j` (counting from one), the preceding `j − 1` CHECK steps erase only successful guards. ABORT then discards the remaining context, including `finish`, and returns that check's rejection. By inspection, assuming the pure metafunctions terminate on admitted inputs, this presentation takes **17 control steps** for successful Transfer-only (START, EXPAND, 14 guards, PREPARE), or **24** for successful Transfer/Repay (21 guards). Failure at guard `j` takes `j + 2` steps. These counts are neither K's internal rewrite counts nor charged financial action-work units.
 
 The [downloaded open textbook and Redex corpus](deliverables/reduction-semantics-textbooks-2026-09-09/CORPUS.md) and [source-linked practices](deliverables/reduction-semantics-textbooks-2026-09-09/BEST-PRACTICES.md) explain the distinctions used here: evaluation contexts versus unrestricted compatible closure, context-erasing failure, and terminal answers versus stuck terms. The trace is an explanation of this bounded control projection; no textbook theorem establishes Moriarty's source/K correspondence.
 
@@ -247,11 +247,13 @@ Checks run in this order, stopping at the first failure. The [K rules](experimen
 | Stage | Ordered checks | Error index |
 | --- | --- | --- |
 | State | Distinct balance keys; allowance sum; principal/accrual/outstanding and status; total work including reserve | `-1` (no action index) |
-| Work | At least two ordinary work units remain; spent work can increase by two | `-1` |
+| Work | Ordinary work covers the action count (one or two); spent work can increase by that count | `-1` |
 | Transfer | Positive amount; different parties; sender balance exists and is sufficient; matching allowance exists and is sufficient; spent allowance and receiver balance do not overflow | `0` |
-| Repay | Positive nominal amount; matching obligation; outstanding status; payment within debt; same-step transfer ID; matching payer, creditor and asset; sufficient unallocated transfer amount | `1` |
+| Repay (when present) | Positive nominal amount; matching obligation; outstanding status; payment within debt; same-step transfer ID; matching payer, creditor and asset; sufficient unallocated transfer amount | `1` |
 
-On successful preparation, let `T` be transferred cash, `N` nominal repayment, `p` principal, `a` accrued debt, and `o = p + a` outstanding. Identity conversion makes settlement equal `N`; the checks require `0 < N ≤ T` and `N ≤ o`. Only `N` discharges debt even when `T > N`. Allocation is:
+For Transfer-only, successful preparation moves cash and gross allowance, appends only the transfer ID, and charges **one action-work unit**. The complete obligation and allocation-ID list remain unchanged, even for a settled obligation or a recipient other than its creditor. There is no implicit debt discharge.
+
+For successful Transfer/Repay preparation, let `T` be transferred cash, `N` nominal repayment, `p` principal, `a` accrued debt, and `o = p + a` outstanding. Identity conversion makes settlement equal `N`; the checks require `0 < N ≤ T` and `N ≤ o`. Only `N` discharges debt even when `T > N`. Allocation is:
 
 ```text
 AccrualFirst:   dischargedPrincipal = N - min(N, a)

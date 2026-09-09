@@ -1,4 +1,4 @@
-// Bounded two-action funded repayment projection. No source/Core/proof claim.
+// Bounded Transfer-only or two-action funded repayment projection. No source/Core/proof claim.
 module MORIARTY-SYNTAX
   imports INT-SYNTAX
   imports STRING-SYNTAX
@@ -9,6 +9,7 @@ module MORIARTY-SYNTAX
   syntax Transfer ::= transfer(String, String, String, String, Int) [symbol(transfer)]
   syntax Repay ::= repay(String, String, String, String, Int) [symbol(repay)]
   syntax Packet ::= packet(Balance, Balance, Allowance, Obligation, Work, Transfer, Repay, String) [symbol(packet)]
+                  | transferPacket(Balance, Balance, Allowance, Obligation, Work, Transfer, String) [symbol(transferPacket)]
 endmodule
 
 module MORIARTY
@@ -19,6 +20,7 @@ module MORIARTY
   syntax Result ::= "pending" [symbol(pending)]
                   | rejected(String, String, Int) [symbol(rejected)]
                   | prepared(String, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, String, Int, Int, Int, Int) [symbol(prepared)]
+                  | preparedTransfer(String, Int, Int, Int, Int, Int, Int, Int, Int) [symbol(preparedTransfer)]
   syntax KItem ::= inspect(Packet, Int, Int) | finish(Packet, Int, Int)
                  | ensure(String, Bool, String, Int)
   configuration <k> $PGM:Packet </k> <out> pending </out>
@@ -49,12 +51,32 @@ module MORIARTY
   rule statusOf(0) => "Settled"
   rule statusOf(O) => "Outstanding" requires O >Int 0
 
+  rule <k> transferPacket(B0, B1, A, O, W, transfer(TID, FROM, TO, TA, T), H)
+        => inspect(transferPacket(B0, B1, A, O, W, transfer(TID, FROM, TO, TA, T), H),
+                   indexOf(FROM, TA, B0, B1), indexOf(TO, TA, B0, B1)) </k>
   rule <k> packet(B0, B1, A, O, W, transfer(TID, FROM, TO, TA, T), R, H)
         => inspect(packet(B0, B1, A, O, W, transfer(TID, FROM, TO, TA, T), R, H),
                    indexOf(FROM, TA, B0, B1), indexOf(TO, TA, B0, B1)) </k>
   rule <k> ensure(_, true, _, _) => .K ... </k>
   rule <k> ensure(H, false, CODE, IDX) ~> _REST:K => .K </k>
        <out> pending => rejected(H, CODE, IDX) </out>
+
+  rule <k> inspect(transferPacket(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), H), SI, RI)
+        => ensure(H, (notBool (BP0 ==String BP1 andBool BA0 ==String BA1)), "DUPLICATE", -1)
+        ~> ensure(H, (AR +Int AS <=Int maxU()), "INVARIANT", -1)
+        ~> ensure(H, ((P +Int I <=Int maxU()) andBool (P +Int I ==Int O) andBool (((STATUS ==String "Outstanding") andBool (O >Int 0)) orBool ((STATUS ==String "Settled") andBool (O ==Int 0)))), "INVARIANT", -1)
+        ~> ensure(H, (WR +Int WS +Int RES <=Int maxU()), "INVARIANT", -1)
+        ~> ensure(H, (WR >=Int 1), "INSUFFICIENT_WORK", -1)
+        ~> ensure(H, (WS +Int 1 <=Int maxU()), "OVERFLOW", -1)
+        ~> ensure(H, (T >Int 0), "ZERO_AMOUNT", 0)
+        ~> ensure(H, (FROM =/=String TO), "SELF_TRANSFER", 0)
+        ~> ensure(H, (SI >=Int 0), "MISSING_BALANCE", 0)
+        ~> ensure(H, (at(SI, B0, B1) >=Int T), "INSUFFICIENT_BALANCE", 0)
+        ~> ensure(H, (AP ==String FROM andBool AA ==String TA), "MISSING_ALLOWANCE", 0)
+        ~> ensure(H, (AR >=Int T), "INSUFFICIENT_ALLOWANCE", 0)
+        ~> ensure(H, (AS +Int T <=Int maxU()), "OVERFLOW", 0)
+        ~> ensure(H, (at(RI, B0, B1) +Int T <=Int maxU()), "OVERFLOW", 0)
+        ~> finish(transferPacket(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), H), SI, RI) </k>
 
   rule <k> inspect(packet(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), repay(AID, RTID, ROID, PAYER, N), H), SI, RI)
         => ensure(H, (notBool (BP0 ==String BP1 andBool BA0 ==String BA1)), "DUPLICATE", -1)
@@ -79,6 +101,10 @@ module MORIARTY
         ~> ensure(H, (FROM ==String PAYER andBool TO ==String CREDITOR andBool TA ==String OA), "TRANSFER_MISMATCH", 1)
         ~> ensure(H, (N <=Int T), "INSUFFICIENT_UNALLOCATED", 1)
         ~> finish(packet(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), repay(AID, RTID, ROID, PAYER, N), H), SI, RI) </k>
+
+  rule <k> finish(transferPacket(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), H), SI, RI) => .K </k>
+       <out> pending => preparedTransfer(H, moved(0, SI, RI, B0, T), moved(1, SI, RI, B1, T), appended(RI, T),
+           AR -Int T, AS +Int T, WR -Int 1, WS +Int 1, RI) </out>
 
   rule <k> finish(packet(balance(BP0, BA0, B0), balance(BP1, BA1, B1), allowance(AP, AA, AR, AS), obligation(OID, DEBTOR, CREDITOR, DENOM, OA, P, I, O, RULE, STATUS), work(WR, WS, RES), transfer(TID, FROM, TO, TA, T), repay(AID, RTID, ROID, PAYER, N), H), SI, RI) => .K </k>
        <out> pending => prepared(H, moved(0, SI, RI, B0, T), moved(1, SI, RI, B1, T), appended(RI, T),

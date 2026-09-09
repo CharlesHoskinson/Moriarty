@@ -8,7 +8,7 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T19:25:15Z
+updated_at: 2026-09-09T19:43:06Z
 sources:
   - SRC-0108
   - SRC-0106
@@ -134,6 +134,10 @@ remain historical evidence. The current work is ACTUS/DeFi-led language design:
 - [Candidate A continuation evidence](research-journal.md) —
   admitted A4 source gate and failed-export preservation, successful A5 view
   typecheck, and saved follow-up drafts; exports and verification remain open.
+
+## Transfer-only cash movement
+
+[Transfer-only K evidence](../deliverables/transfer-only-k-2026-09-09/README.md) · [[wiki/k-framework/k-best-practices|Cash movement, debt preservation and one-action work lessons]]. Ten new cases plus six repayment regressions; consult result reviews. Full Core semantics and correspondence remain open.
 
 ## Additional bounded repayment branches
 

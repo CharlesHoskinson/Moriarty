@@ -1,0 +1,46 @@
+# RESULT AUDIT — Transfer-only K execution, `deliverables/transfer-only-k-2026-09-09`
+
+**Verdict: PASS.** No material blockers. Limits below are scope statements, not defects.
+
+Scope of this audit: supplied text only. File/hash cross-checks were done against the candidate manifest as supplied; no filesystem, no K execution, no new run.
+
+## Raw K output → decoded result
+
+All sixteen `trace-NN.stdout` terms were decoded by hand against `codec.decode` and `moriarty.k`.
+
+- **Digest binding.** Every output's `args[0]` equals the `inputDigest` recorded in `execution-result.json` for the same case (e.g. trace-01 `307819969c…`, trace-11 `56e485e7…`). `decode` raises `K_OUTPUT_BINDING` on mismatch, so outputs cannot be transplanted between cases. Sixteen distinct digests.
+- **Arity/shape.** Ten `preparedTransfer` (arity 9) / `prepared` (arity 16) / `rejected` (arity 3) terms are shape-correct: 7 changed ints + receiver index + digest; 13 changed ints + status + receiver index + digest; code + index only. Counts match the prompt and the local README.
+- **Arithmetic, spot-checked in full for all 16.** trace-01: 83−19=64, 12+19=31, 67−19=48, 5+19=24, work 1−1=0 / 6+1=7, receiver=1, appended=0. trace-02: receiver=−1, appended=19, Custodian row 29 untouched, work 7−1=6. trace-03: row-order swap honored — `moved(0,SI=1,RI=0,12,19)=31`, `moved(1,…)=64`, receiver=0. trace-11 (`AccrualFirst`, I=0): principal 30 discharged, 100→70. trace-12 (`PrincipalFirst`): min(7,100)=7, accrued 10 retained, outstanding 103. trace-14: 17 split 8 principal / 9 accrued, o′=42, receiver=−1 with appended 17. All agree with `fixtures/transfer-only.json` `expected` and with `source-observations.json` `result`.
+
+## Guard order and rejection atomicity
+
+- Guard counts confirmed by reading `moriarty.k`: **14** for `transferPacket`, **21** for `packet` (14 shared + 7 repay). Work thresholds `WR>=1` / `WR>=2` and `WS+1` / `WS+2` are the only differences in the shared block. Matches all scoped claims.
+- Precedence cases are genuine, not coincidental: trace-08 returns `INVARIANT`(−1) with `WR=0` present, because the obligation invariant precedes `INSUFFICIENT_WORK`; trace-16 returns `DUPLICATE`(−1) with `WR=0`; trace-07 reaches the **last** Transfer guard (receiver overflow) only because sender balance and allowance both suffice; trace-15 reaches `TRANSFER_MISMATCH` past `N≤O` and `RTID==TID`.
+- **Atomicity holds.** `ensure(H,false,…) ~> _REST:K => .K` erases the continuation including `finish`; every rejected output carries exactly `(digest, code, index)` with no state or effects. Independently, `decode`'s walker requires the `<k>` cell to be an empty `KSequence`, so a stuck or partially reduced configuration fails closed rather than decoding.
+- Cross-shape control is real: for a one-action packet, `int(idx)>=len(p['actions'])` rejects an index-1 rejection, and a `prepared`/`preparedTransfer` label mismatch errors.
+
+## Input-dependent behavior
+
+Outputs vary with inputs in ways a constant or host-computed result could not produce: receiver index takes all three values (−1/0/1), appended amount is nonzero only when receiver is −1 (and `decode` enforces `nums[3]=='0'` otherwise), the receiver index is re-derived from the input balance rows and compared (`K_OUTPUT_BINDING`), work deltas differ per case, and both allocation rules produce different splits on structurally similar inputs. This is adequate anti-hardcoding evidence for the tested domain.
+
+## Binding, counters, resources
+
+- `root-admission.json` binds `candidateSha256 2b802c07…` = `preexecutionCandidateSha256` = manifest `candidate.json`; `resourceSha256` and both review hashes match manifest entries.
+- Counters reconcile exactly: preflight 4 compiles / 33 krun → 5 / 49, matching `execution-result.json`, the README and SP03's prior 3/17 + 1/16.
+- `sourceBinding` (5 entries) matches `run.py sources()` and the manifest hashes, and includes `fixtures/transfer-only.json` while excluding `cases.json`; `check-k-results.py` asserts both.
+- Timing is internally consistent: 16 trace elapsed values + 6.759 s compile ≈ 45.41 s, final `aggregateSeconds` 45.666 < service 45.714 < supervisor 45.726, all far inside the 512 s deadline and per-command caps; `timedOut:false`, `returncode:0` throughout.
+- Containment: `flock --nonblock` single heavy tree; the **active** snapshot shows `MemoryMax=4G`, `MemorySwapMax=0`, `RuntimeMaxUSec=512s`, `KillSignal=9`, `KillMode=control-group`. The inactive snapshot's `MemoryPeak=[not set]` is correctly presented as a post-collection default, and 480.4 M / 0 B swap as *reported rounded* values. The active snapshot's `MemoryPeak=1712128` is an early sample, not a peak — the README does not misuse it.
+
+## Publication claims
+
+Claims in the deliverable README, `INDEPENDENT-CASES.md`, SP03.md and the wiki writes are supported and appropriately bounded: execution passed; 4/6 and 3/3 splits (7 Prepared, 9 Rejected) are correct; CLI exit codes 0/1 track Prepared/Rejected and the sampled CLI stdout matches the fixtures; the six regressions are stated as non-distinct coverage; `prove` still hard-fails `PROOF_UNIMPLEMENTED`; no stage promotion, proof, ledger acceptance or new TX is asserted; SP03.2 stays unchecked; the wiki lesson is marked provisional with no new source ID. The four wiki writes are replaces of existing pages, `wiki-lint` reports zero issues, and each post-write `sha256` matches the candidate manifest.
+
+## Limits (state these; do not remove them)
+
+1. **Codec reconstruction, not K evidence.** For Transfer-only, K never emits obligation or allocation-ID fields; `codec.decode` copies them from the input. "Debt and allocation history preserved" is therefore established *by construction on the K path*. It is real evidence about the **source** evaluator (which produces its own full record) and about K only insofar as K accepted a one-action packet at one work unit. Phrase the lesson as design intent plus source evidence, not as a K result.
+2. **Artifact re-verification.** `compiledArtifactsUnchanged: 177` is a run-time assertion inside `run.py`/root. `check-k-results.py --retained` skips the artifact comparison when `.build` is absent, so the retained packet alone cannot re-establish it. Also read "unchanged" as unchanged since *this* compile, not across earlier suites (which had 174 artifacts under a different definition).
+3. **Unreviewed bytes in my scope.** `language-tests.txt` (236 passes), `codec-green.txt` (12), `execution.stdout`, and the non-empty `compile.stderr` were supplied as hashes only. All `trace-*.stderr` and `compile.stdout` are the empty-file hash.
+4. **Provenance nit (non-blocking).** `root-admission.json` binds `opus-preexecution.json`; the README links `opus-preexecution.md`, whose bytes are not in the admission record. Both are in the manifest. Treat the `.json` as the bound vote.
+5. **Domain.** Finite agreement over 16 records inside the 2-balance / 1-allowance / 1-obligation, identity-conversion, empty-history projection. Not correspondence, not a semantic freeze, not ProRata/rounding/multi-action, not ledger settlement.
+
+**Result: PASS** — publication of the scoped evidence is supported with limits 1–5 stated verbatim in the deliverable.

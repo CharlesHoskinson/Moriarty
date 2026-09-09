@@ -13,8 +13,8 @@ theorem, ledger acceptance or SP03 completion. No proof was attempted.
 shapes and UInt128 decimal strings. Duplicate JSON keys reject. Unlike the retained
 kernel's compact-string entry point, the codec accepts whitespace and JSON escape
 variants; the compared domain is the parsed projection. It accepts exactly two input
-balance rows, one allowance, one obligation, empty used-ID lists, and exactly Transfer
-then Repay. Identity conversion is exactly mantissa 1, scale 0, rounding none;
+balance rows, one allowance, one obligation, empty used-ID lists, and exactly Transfer, optionally
+followed by Repay. Identity conversion is exactly mantissa 1, scale 0, rounding none;
 allocation is AccrualFirst or PrincipalFirst. Other shapes are `UNSUPPORTED_PROJECTION`;
 malformed fields are `MALFORMED_INPUT`. Neither is a K financial rejection.
 Direct raw K terms are outside this codec-admitted claim domain; the host supplies
@@ -39,8 +39,8 @@ Third-party repayment and receiver creation are now exercised in the separate
 
 Each stage checks one condition and stops at the first failure. Failure clears the
 continuation and exposes only code and index. State validation precedes work, then
-Transfer (index 0), then Repay (index 1). Null index is encoded as -1 internally.
-The only success rule emits every changed financial amount: existing and appended
+Transfer (index 0), then Repay (index 1) when present. Null index is encoded as -1 internally.
+The Transfer/Repay success rule emits every changed financial amount: existing and appended
 balances, allowance remaining/spent, work remaining/spent, principal/accrued/
 outstanding, status, settlement and both discharge components. K returns a receiver
 index to identify an appended row. Input SHA-256 is echoed in both output variants.
@@ -115,3 +115,23 @@ all general-domain metatheorems remain open. Each selected suite still has the
 same sixteen-call ceiling; new execution requires a separate bounded allocation.
 The default command selects the initial suite; choose the additional suite with
 `run.py --suite branches compile-and-traces --all` inside its admitted containment.
+
+## Transfer-only extension
+
+The separate `transferPacket` constructor uses the same ordered state and Transfer
+checks, with ordinary work cost one. Its `preparedTransfer` result returns seven
+changed amount/counter fields plus the receiver index and input digest. The codec
+copies the unchanged obligation and allocation-ID list; it appends only a transfer
+ID and emits only Transfer. K computes all changed financial amounts. Existing
+repayment rules retain their two-action cost and 21-guard sequence. Transfer-only
+has 14 guards. The decoder rejects cross-shape success constructors and an index-1
+rejection for a one-action packet.
+
+Use `run.py --suite transfer-only compile-and-traces --all` only under its separately
+reviewed allocation. [Scoped evidence](../../../../deliverables/transfer-only-k-2026-09-09/README.md)
+records execution status, ten independent new cases and six retained repayment
+regressions. Earlier execution receipts remain tied to their original definition.
+The projection still requires one identity-conversion obligation and the fixed
+state sizes even if no repayment uses it. Arbitrary action sequences, replay
+history, conversion rounding, ProRata and full Core execution remain unsupported.
+`pending` is an internal initial K output cell, not a public Pending financial result.

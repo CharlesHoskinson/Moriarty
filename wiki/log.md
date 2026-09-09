@@ -8,7 +8,7 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T19:25:15Z
+updated_at: 2026-09-09T19:43:06Z
 sources:
   - SRC-0108
   - SRC-0106
@@ -22,6 +22,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-09] save | Transfer-only K semantics
+
+Saved [[wiki/k-framework/k-best-practices|Transfer-only observations and lessons]] on debt preservation, action-derived work and distinct result constructors. [Complete local evidence](../deliverables/transfer-only-k-2026-09-09/README.md) compares ten new cases and six retained regressions through K, source and CLI. Preserve prior charges and scoped result reviews; no theorem, full sprint closure or Midnight transaction.
 
 ## [2026-09-09] save | Independent repayment branch comparisons
 

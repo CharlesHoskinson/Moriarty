@@ -20,7 +20,7 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-09T19:25:15Z
+updated_at: 2026-09-09T19:43:06Z
 ---
 
 # Current research context
@@ -45,4 +45,4 @@ Report8 intake: [comparison, full named-source graph and relevance](../deliverab
 
 The [bounded repayment K references](../docs/research/2026-09-09-bounded-k-references.md) distinguish explicit numeric bounds, guarded transitions, helper totality and concrete execution from proof acceptance. SRC-0108 is a dated official-doc recapture; current website prose is not local-toolchain equivalence evidence.
 
-[[wiki/k-framework/k-best-practices|Bounded K results and lessons]]: the original sixteen cases and sixteen additional repayment branches match complete source and independent results. Retain earlier failures and consult each result acceptance record. Finite agreement does not establish full semantics, correspondence or Preview financial acceptance.
+[[wiki/k-framework/k-best-practices|Bounded K results and lessons]]: Transfer-only now preserves complete debt while moving cash and charging one work unit; ten new cases and six retained regressions match K/source/CLI. See [its scoped evidence](../deliverables/transfer-only-k-2026-09-09/README.md). Earlier evidence: the original sixteen cases and sixteen additional repayment branches match complete source and independent results. Retain earlier failures and consult each result acceptance record. Finite agreement does not establish full semantics, correspondence or Preview financial acceptance.
