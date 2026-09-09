@@ -27,6 +27,14 @@ export function App() {
       </a>
       <header className="masthead">
         <span className="wordmark">Moriarty</span>
+        <span className="tagline">bounded financial contracts</span>
+        <nav className="jump" aria-label="Sections">
+          {SECTIONS.map((s) => (
+            <a key={s.id} href={`#${s.id}`}>
+              {s.title}
+            </a>
+          ))}
+        </nav>
         <ModeSwitch mode={mode} setMode={setMode} />
       </header>
       <main id="main">
