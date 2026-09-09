@@ -14,17 +14,20 @@ import { Roadmap } from './components/Roadmap';
  */
 export interface SectionEntry {
   id: string;
+  /** Full name, used for the landmark label. */
   title: string;
+  /** Short label for the jump strip, which has a masthead to fit inside. */
+  nav: string;
   Component: ComponentType;
 }
 
 export const SECTIONS: readonly SectionEntry[] = [
-  { id: 'opening', title: 'What Moriarty is', Component: Opening },
-  { id: 'categories', title: 'The category tabs', Component: Categories },
-  { id: 'composition', title: 'Composition', Component: Composition },
-  { id: 'formalization', title: 'The formalization model', Component: Formalization },
-  { id: 'guarantees', title: 'The guarantees', Component: Guarantees },
-  { id: 'language', title: 'The language', Component: Language },
-  { id: 'intents', title: 'Intents, settlement and safety', Component: Intents },
-  { id: 'roadmap', title: 'Delivery', Component: Roadmap },
+  { id: 'opening', title: 'What Moriarty is', nav: 'Overview', Component: Opening },
+  { id: 'categories', title: 'The category tabs', nav: 'Categories', Component: Categories },
+  { id: 'composition', title: 'Composition', nav: 'Composition', Component: Composition },
+  { id: 'formalization', title: 'The formalization model', nav: 'Semantics', Component: Formalization },
+  { id: 'guarantees', title: 'The guarantees', nav: 'Guarantees', Component: Guarantees },
+  { id: 'language', title: 'The language', nav: 'Language', Component: Language },
+  { id: 'intents', title: 'Intents, settlement and safety', nav: 'Intents', Component: Intents },
+  { id: 'roadmap', title: 'Delivery', nav: 'Delivery', Component: Roadmap },
 ];

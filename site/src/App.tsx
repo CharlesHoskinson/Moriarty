@@ -30,8 +30,8 @@ export function App() {
         <span className="tagline">bounded financial contracts</span>
         <nav className="jump" aria-label="Sections">
           {SECTIONS.map((s) => (
-            <a key={s.id} href={`#${s.id}`}>
-              {s.title}
+            <a key={s.id} href={`#${s.id}`} title={s.title}>
+              {s.nav}
             </a>
           ))}
         </nav>
