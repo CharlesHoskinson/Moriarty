@@ -165,6 +165,15 @@ with sync_playwright() as pw:
     h1s = page.eval_on_selector_all("h1", "e => e.length")
     check("exactly one h1", h1s == 1, f"{h1s}")
 
+    # --- the masthead stays put --------------------------------------------
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.evaluate("() => window.scrollTo(0, 4000)")
+    page.wait_for_timeout(200)
+    top = page.eval_on_selector(".masthead", "e => Math.round(e.getBoundingClientRect().top)")
+    check("masthead stays pinned while scrolling", top == 0, f"top {top}px at scrollY 4000")
+    page.evaluate("() => window.scrollTo(0, 0)")
+    page.wait_for_timeout(150)
+
     # --- masthead fits at every width --------------------------------------
     for w in (1440, 1280, 1180, 1024, 900, 768, 400):
         page.set_viewport_size({"width": w, "height": 900})
