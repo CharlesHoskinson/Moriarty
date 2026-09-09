@@ -1,6 +1,6 @@
 # SP10: Private handoff and bounded composition implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Allow independent participants to continue, split and join private financial histories without losing duties or authority limits.
 
@@ -30,7 +30,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP10.1: Realize every required operator
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP10.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging using the RP01 definitions. Check read/write compatibility and explicit ordering. Partition and conserve a global finite work measure.
 - [ ] Verify: A required unsupported operator leaves MC06 open. Shared-state conflicts cannot masquerade as disjoint branches; async Pending does not claim atomic completion.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
@@ -38,7 +38,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP10.2: Demonstrate independent private continuation
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP10.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Inventory proof, commitment openings, witness fragments, recipients and recovery responsibility. Run Alice and Bob under distinct OS users or isolated containers. Give Bob only the allowed handoff package and prove the successor.
 - [ ] Verify: Denied-read evidence establishes harness separation. Missing allowed witness causes an explicit unavailable outcome. Plain shared-process private directories are insufficient.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
@@ -46,7 +46,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP10.3: Prove split/join and exercise recovery
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP10.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP10.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Generate actual split, branch and join proofs with distinct predecessor identities and compatible policies. Test duplicate inputs, excessive fan-in, authority amplification, debt erasure, reset budgets, fill/cancel races and unavailable handoff recovery.
 - [ ] Verify: The same acceptance path enforces durable consumption and residual duties. Scoped privacy evidence states leakage and availability assumptions. Changed MC04/MC05 domains are requalified.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP10` in the owning package evidence.
@@ -64,6 +64,14 @@ python3 experiments/moriarty-composition/proof/run-reviewed.py --contract experi
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Prove private handoff and all five composition operators.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP10.1/.2: use separate participant environments with demonstrably denied access to predecessor secrets; create real split, independent branches and join proofs. State disclosure policy and retain the separate confidential-profile leakage theorem obligation.
+- [ ] SP10.3: preserve request entitlements through partial fulfillment and claim/cancel races; carry shared collateral, remaining debt, gross authority and global work across all five operators.
+- [ ] Exercise actual acceptance lineage conflicts and bounded recovery on Preview. Local atomicity, foreign settlement, payout and solver reimbursement are distinct; unavailable witnesses are not invalid proofs or successful settlement.
 
 ## Exit gate
 

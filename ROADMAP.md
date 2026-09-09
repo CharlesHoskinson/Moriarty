@@ -6,13 +6,36 @@ Compact, Midnight native proofs, private state and ledger acceptance constrain t
 
 This is the complete current roadmap. [OpenSpec](openspec/MORIARTY-COMPLETION-PROGRAM.md) contains detailed package contracts; the [machine register](openspec/moriarty-completion-program.json) records scoped status and dependencies. The [three-report reconciliation](openspec/REPORT-RECONCILIATION-2026-09-07.md) defines the early decisions and staged proof admission. Editing these plans neither completes a package nor arms an execution loop.
 
+## Refined delivery roadmap
+
+The [September 9 refinement](openspec/ROADMAP-REFINEMENT-2026-09-09.md) incorporates the PCD/intents reports, four-paper taxonomy, vault report, modern standards atlas and orchestration postmortems. It preserves all original OpenSpec requirements and gates. The [report crosswalk](openspec/sprints/report-lessons.json) assigns eighteen lesson groups, TX01–TX12, VX01–VX06, all 24 modern cases and three identified source gaps to existing tasks. Research classifications become explicit acceptance obligations, never proof or network evidence.
+
+| Sprint | Deliverable | Decisive completion evidence |
+| --- | --- | --- |
+| [SP01](openspec/sprints/sp01-financial-contract-and-execution-admission.md) | Freeze behavior and reuse accepted foundations | Complete behavior/source/authority crosswalk; current atomic evidence retained; bounded native go/no-go. |
+| [SP02](openspec/sprints/sp02-complete-mori-authoring-frontend.md) | Finish the language contract and authoring tools | Full lexical/EBNF/static specification plus working check/format and matched syntax study. |
+| [SP03](openspec/sprints/sp03-executable-bounded-semantics-in-k.md) | Make K execute the financial distinctions | Runnable K/evaluator agreement and discharged base-domain semantic/correspondence claims. |
+| [SP04](openspec/sprints/sp04-complete-native-verifier-component-feasibility.md) | Decide whether the full native verifier works | All native/outer verifier controls, including the real final accumulator decision. |
+| [SP05](openspec/sprints/sp05-financial-integration-on-preview.md) | Finalize actual financial loan and swap effects on Preview | Both loan and swap finalized on Preview with complete independently checked effects. |
+| [SP06](openspec/sprints/sp06-real-recursive-financial-history.md) | Produce and independently verify real recursive history | Real two-step recursive proof; retained bytes independently verified and mutations rejected. |
+| [SP07](openspec/sprints/sp07-actus-obligations-and-lifecycle-semantics.md) | Implement ACTUS without losing debt or fields | All 277 ACTUS fixtures/all fields, 18 executable types and 32 source-backed dispositions. |
+| [SP08](openspec/sprints/sp08-defi-actions-and-outcome-intents.md) | Implement behavior-driven DeFi and intent libraries | All 72 DeFi rows, DA24, intent/request lifecycles and report-derived modeled regressions. |
+| [SP09](openspec/sprints/sp09-mandatory-pcd-and-ledger-correspondence.md) | Require complete proof and authority at ledger acceptance | All four mandatory claims, proved correspondence and verification-enabled Preview acceptance. |
+| [SP10](openspec/sprints/sp10-private-handoff-and-bounded-composition.md) | Prove private handoff and all five composition operators | Isolated private handoff, real split/join and all five composition operators through acceptance. |
+| [SP11](openspec/sprints/sp11-full-financial-and-formal-conformance.md) | Qualify the complete financial and formal scope | Every required behavior qualified across semantics, proof, local and required Preview evidence. |
+| [SP12](openspec/sprints/sp12-developer-release-and-reproducible-evidence.md) | Release something developers can use and reproduce | Usable end-to-end flow, two clean builders, two non-toy pilots and every G01–G24 gate. |
+
+Start three eligible tracks: **SP01→SP02→SP03** for language, **SP01 F0→SP04→SP06** for native feasibility/proofs, and **accepted atomic + loan/swap subset→SP05** for financial Preview integration. SP09.1 atomic F3 joins SP05/SP06 early; the full successor joins after SP07/SP08. Then SP10→SP11→SP12. Use the exact stage prerequisites below, not whole-sprint barriers.
+
+The next successor demonstration is a `.mori` partial payment that preserves its residual obligation in Core, K and the evaluator. The next network demonstration is actual loan and swap settlement. The missing current accounting/operational history blocks its dependent campaign dispatch, not this planning work or unrelated eligible development. No new runner, loop, dashboard or approval bureaucracy is part of this refinement.
+
 ## Sprint delivery plan
 
 The [twelve OpenSpec sprints](openspec/sprints/README.md) schedule the complete roadmap: financial design and admission; source language; K semantics; native verifier feasibility; Preview financial integration; real recursion; ACTUS; DeFi and intents; mandatory PCD and ledger correspondence; private composition; full conformance; developer release. Language and native feasibility work can progress independently until their acceptance boundary. Each sprint has explicit deliverables, file ownership and rejection criteria. The [coverage crosswalk](openspec/sprints/coverage.json) retains every original requirement. These are delivery gates, not calendar or compute estimates.
 
 ## What exists
 
-The repository contains an experimental bounded agreement syntax, parser, type checker, canonical encoding, local evaluator and restricted Compact lowering. Loan and swap examples run locally. A separate browser mock explores proposed developer flows with simulated authority and certificates. The initial atomic profile has scoped prior reviews; its current implementation still needs an input-boundary correction and current result audits.
+The repository contains an experimental bounded agreement syntax, parser, type checker, canonical encoding, local evaluator and restricted Compact lowering. Loan and swap examples run locally. A separate browser mock explores proposed developer flows with simulated authority and certificates. The initial atomic profile has accepted input-boundary correction and candidate-bound reviews: atomic-prepare, atomic-accept and RP01-MC02 are complete in the [retained reconciliation](evidence/moriarty-completion-program-2026-09-07/report-reconciliation/atomic-reconciliation.json). Full successor language and MC01 acceptance remain open.
 
 [Retained Preview evidence](evidence/midnight-preview-2026-09-07/README.md) records a hello-world deployment and call finalized with exact state readback. That demonstrates basic network integration. Financial transfer comparison and mandatory Moriarty PCD acceptance remain unperformed. The original native recursion experiment exhausted rows at k17. Its fixed-instance replacement is source work that has not produced a recursive proof. The complete native-to-Preview verifier remains unresolved.
 
@@ -20,7 +43,7 @@ The research corpus, source snapshots, target inventories and scoped experimenta
 
 ## Design decisions before expanded execution
 
-These checks belong to the existing work packages. They can progress alongside the current MC01 correction and review.
+These checks belong to the existing work packages. They can progress from the accepted atomic subset while successor language work remains open.
 
 - [ ] **RP01: Financial and intent semantics.** Define bounded, independent traces for the eight intent examples, the three retained held-outs, all eight DeFi regression classes and five composition operators. Map source intent, concrete plan, effects, liabilities, assumptions and successor artifacts. Specify signed nominal-debt authority separately from token spending. Co-design canonical signing and display before freezing new authority fields. Every unsupported required behavior retains an owner and closure task.
 - [ ] **RP02: Complete native history route.** Specify what a private successor receives, which secrets remain private, how predecessor proofs compose, and how the final native accumulator decision reaches the actual Midnight verifier. Pin source and deployment versions separately. Resolve source interfaces and run independently admitted component probes before a new native campaign.
@@ -42,7 +65,7 @@ The [DeFi and language-design amendment](openspec/DEFI-LANGUAGE-DESIGN-2026-09-0
 
 `MC01-ATOMIC` is the existing atomic profile after its input correction, applicable checks and current candidate-bound implementation audits. Only this milestone gates the initial financial/native experiments. The remaining source/IR expansions form `MC01-EXTENSIONS`; full RP01 gates those successor profiles, not acceptance of the existing subset.
 
-- [ ] Finish the current input-boundary correction and obtain current implementation audits.
+Retained completed submilestone: the atomic input-boundary correction and its exact candidate audits. Requalify changed scope; do not repeat the historical repair.
 - [ ] Finalize versioned grammar, types, canonical representations, source diagnostics and evaluator behavior for each supported profile.
 - [ ] Define source intent, bounded authority, concrete plan and receipt as distinct objects. Introduce required outcome, liability, residual and temporal constructs through explicit profile extensions.
 - [ ] Enforce registered limits on source, values, intermediate arithmetic, collections, effects, obligations, nesting, predecessor fan-in, verification work and lifetime. Define units, rounding, overflow and rejection precisely.

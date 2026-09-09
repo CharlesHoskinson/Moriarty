@@ -1,6 +1,6 @@
 # SP12: Developer release and reproducible evidence implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Deliver a cold-start developer workflow whose advertised guarantees match the accepted implementation.
 
@@ -31,7 +31,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP12.1: Finish developer commands and API
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP12.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Expose authoring, formatting, checking, simulation, canonical authorization display/signing, proving, submission and finality inspection. Explain fees, debt, locks, recovery rights, trust assumptions and residual duties. Keep mocked data out of the accepted workflow.
 - [ ] Verify: A cold-start developer runs valid loan/swap, rejected intent, stale observation, unavailable witness, pending redemption, restart, conflict, activation-window, revoked-key/spec and consumption-preserving migration scenarios. Unknown signed semantics rejects.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
@@ -39,7 +39,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP12.2: Verify a fresh checkout
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP12.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Re-execute deterministic frontend, K, theorem and conformance checks with pinned dependencies. Verify SRS acquisition digests. Re-verify retained native proofs and canonical chain receipts separately from fresh transactions.
 - [ ] Verify: No hidden local file or private key is needed to verify public evidence. The guide distinguishes retained receipt verification from a newly funded public campaign.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
@@ -47,7 +47,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP12.3: Audit the final release claims
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP12.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Bind every MC package and all G01-G24 obligations to exact candidate/source/profile/deployment evidence. Run missing-audit, stale-hash, fake-proof and omitted-row controls. Obtain independent exact Fable 5.1 medium and fresh GPT-6 audits. Apply Humanizer to developer prose.
 - [ ] Verify: Close only accepted predicates. Unperformed pilots, licensing, baselines or broader assurances stay explicit release blockers; this sprint does not infer production readiness.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
@@ -55,7 +55,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP12.4: Publish the accepted result
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP12.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Update the roadmap, developer guide, canonical wiki navigation and completion dossier. Publish reviewed work under standing authority. Close the runtime goal only if its actual full objective is fulfilled.
 - [ ] Verify: No test count, planning review, merged branch or expended budget substitutes for product acceptance.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
@@ -72,6 +72,15 @@ openspec validate --all --strict
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Release something developers can use and reproduce.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP12.1: cold-start author→check→simulate→sign→prove→submit→inspect. Show quantities, valuation purpose, fees, debt, pending rights and trust assumptions when they affect a user decision; support stable typed failure, cancellation, partial-fill, crash and unavailable outcomes.
+- [ ] SP12.2: reproduce artifacts byte-for-byte on two independent clean builders (G12). Verify retained proof bytes and finalized receipts separately from new funded submissions; include exact SRS and dependency acquisition.
+- [ ] SP12.3: reconcile all G01–G24 individually. Require two non-toy pilots including full ACTUS against the audited Compact-library baseline, licenses/attribution, named trusted dependencies, separate confidential leakage evidence and no unresolved high/critical audit findings.
+- [ ] SP12.4: publish current reviewed evidence and exact limitations. G18 retains its historical text; failure stops the affected language release, and any scope reduction needs a new user decision. Planning or plugin installation never substitutes for these results.
 
 ## Exit gate
 

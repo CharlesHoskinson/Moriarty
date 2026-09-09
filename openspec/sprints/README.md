@@ -4,6 +4,10 @@ Status: S2, specified-only. These delivery plans implement the [user's sprint re
 
 Moriarty is a bounded financial language for Midnight. Completion means a developer can author an agreement, inspect its effects, sign an intent, prove compliant execution and settle it with mandatory proof verification. The program must cover the required ACTUS and DeFi behavior, including private continuation and composition.
 
+## Latest refinement
+
+Read the [report-informed refinement](../ROADMAP-REFINEMENT-2026-09-09.md) before selecting work. Its additive lesson/case and exact legacy-gate maps preserve existing identities. Completed atomic subgates remain accepted; unchecked sprint boxes describe the remaining full scope. Routine authorized local edits/checks reuse existing task contracts. Campaign admissions remain mandatory for resource-controlled proof, native and public-network execution; planning creates no new runtime grant.
+
 ## Delivery sequence
 
 Sprints are deliverable boundaries, not promised calendar durations. Capacity and proving cost are not established. Each sprint closes on evidence; an unfinished required task carries forward with the same identity. The resource envelope is allocated separately before execution.
@@ -50,7 +54,7 @@ This sequence checks the backend early while financial examples shape the langua
 
 ## Successor preparation admission
 
-The program register adds four specified-only stages with null campaign IDs. `successor-frontend` requires reviewed `rp01-full`; `successor-semantics` requires the frontend; `actus-semantics` and `defi-semantics` each require the base successor semantics. Their owners are the corresponding sprint packages. Each stage needs its own reviewed preparation allocation, existing commands, source/profile hashes and RP03 campaign record before local implementation or verification dispatch.
+The program register adds four specified-only stages with null campaign IDs. `successor-frontend` requires reviewed `rp01-full`; `successor-semantics` requires the frontend; `actus-semantics` and `defi-semantics` each require the base successor semantics. Their owners are the corresponding sprint packages. Accepted semantic prerequisites still govern profile promotion. Routine authorized local implementation and lightweight checks use the existing task contract and development plugin; they do not require a new campaign merely to edit files. Resource-controlled K/prover/native work needs the existing RP03 allocation, exact commands and candidate review before dispatch.
 
 These stages permit only their recorded source work, local checks and bounded K claims. They grant no financial native proving or public submission. Required native work still follows F0-F3 and its own campaign admission. Mandatory successor promotion additionally requires `successor-semantics`, `actus-semantics` and `defi-semantics`. This provides an acyclic implementation route while keeping later proof/ledger qualification separate. No original completed status, campaign ID or historical charge changes through the planning amendment.
 

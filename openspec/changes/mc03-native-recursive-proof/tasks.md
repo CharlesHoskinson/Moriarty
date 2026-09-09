@@ -81,3 +81,7 @@ Keep unrelated changes, old failed runs, and private wallet material intact.
 ## Sprint delivery schedule
 
 [SP01, SP04, SP06](../../sprints/README.md) supplies task sequencing and required executable packets. Original package acceptance and RP stage admission remain authoritative. Sprint plans do not mark these tasks complete.
+
+## Report-informed acceptance refinement
+
+The [September 9 refinement](../../ROADMAP-REFINEMENT-2026-09-09.md) applies through [SP01](../../sprints/sp01-financial-contract-and-execution-admission.md#report-informed-acceptance-refinement), [SP04](../../sprints/sp04-complete-native-verifier-component-feasibility.md#report-informed-acceptance-refinement), [SP06](../../sprints/sp06-real-recursive-financial-history.md#report-informed-acceptance-refinement). Retain every original numbered task and requirement; the [task crosswalk](../../sprints/package-task-map.json) names its closing sprint task. Research-derived changes require the scoped positive/negative evidence and requalification owned there. Planning status does not promote this package or replace its existing admission gates.

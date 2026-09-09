@@ -1,6 +1,6 @@
 # SP07: ACTUS obligations and lifecycle semantics implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Implement scheduled financial obligations, starting with the held-out capitalization and refinance cases.
 
@@ -31,7 +31,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP07.1: Resolve financial source discrepancies
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP07.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Pin normative sources and fixture revisions for DS-01 through DS-07. Freeze calendar, day-count, event order, rounding, currency and ANN initialization rules. Preserve all 32 taxonomy dispositions and 18 executable type scopes.
 - [ ] Verify: Every present result-field kind is compared without arbitrary tolerance. An unresolved required discrepancy blocks its family; no fixture is silently excluded.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
@@ -39,7 +39,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP07.2: Implement the held-outs first
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP07.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement NAM19 capitalization and accepted refinance in source, typed Core, evaluator and K. Keep nominal debt separate from immediate payoff and token settlement. Preserve old/new obligation identities and authorized liabilities.
 - [ ] Verify: Zero cash flow may still capitalize debt. Refinance must be accepted when authorized and rejected for debt erasure, duplicate novation or increased unsigned liability.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
@@ -47,7 +47,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP07.3: Complete scheduled contract families
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP07.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP07.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement all 277 pinned fixtures through shared language libraries and necessary versioned Core extensions. Partition batches by actual contract type and event behavior. Define bounded schedules, partial payment, maturity/default and obligation-preserving exhaustion.
 - [ ] Verify: Every required fixture has an independently checked complete semantic trace. K/evaluator/lowering changes reopen affected claims; proof and ledger qualification finish in SP11.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP07` in the owning package evidence.
@@ -72,6 +72,14 @@ python3 experiments/moriarty-language/formal/k/run.py traces --all
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Implement ACTUS without losing debt or fields.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP07.1: resolve DS-01–DS-07 with pinned normative sources, independent arithmetic and calendar/event-order policies. Preserve 32 dispositions, 18 executable types, 276 contract fixtures plus one analysis-date fixture.
+- [ ] SP07.2: implement NAM19 zero-payoff capitalization and authorized refinance first. Carry old/new debt identity, nominal liability, interest allocation and time separately from immediate token transfers.
+- [ ] SP07.3: all 277 filename-qualified fixtures compare every present ordered field through shared source/Core/K/evaluator/lowering. No fixture-specific bypass, silent tolerance, quarantine or expected-failure exclusion. TX02/TX03 supplement; they do not rewrite ACTUS semantics.
 
 ## Exit gate
 

@@ -77,7 +77,7 @@ for id in ['SP02', 'SP03', 'SP07', 'SP08']:
     require(sprints[id]['stages'], f'Missing successor implementation admission for {id}')
 
 actual = set()
-for spec in sorted((ROOT / 'openspec/changes').glob('mc*/specs/*/spec.md')):
+for spec in sorted((ROOT / 'openspec/changes').glob('*/specs/*/spec.md')):
     for line in spec.read_text().splitlines():
         if line.startswith('### Requirement: '):
             actual.add((str(spec.relative_to(ROOT)), line.removeprefix('### Requirement: ')))
@@ -90,7 +90,10 @@ for section in ['requirements', 'outcomes', 'targetFamilies']:
 for row in coverage['requirements']:
     require(row['primaryClosingSprint'] in row['sprints'], 'Missing primary closing sprint')
     require(set(row['contributingSprints']) == set(row['sprints']) - {row['primaryClosingSprint']}, 'Contributor crosswalk differs')
-    require(all(row['package'] in sprints[id]['owners'] for id in row['sprints']), 'Requirement ownership mismatch')
+    if row['package'] == 'SPRINT-PROGRAM':
+        require(row['spec'] == 'openspec/changes/bounded-language-completion-sprints/specs/moriarty-sprint-program/spec.md', 'Invalid sprint-program owner')
+    else:
+        require(all(row['package'] in sprints[id]['owners'] for id in row['sprints']), 'Requirement ownership mismatch')
 for p in program['packages']:
     require(p['sprints'] == [s['id'] for s in schedule['sprints'] if p['id'] in s['owners']], 'Program/sprint register mismatch')
 for path in coverage['sourceInventories']:
@@ -115,4 +118,74 @@ require(len(actus) == 32 and sum(int(row['fixture_count']) for row in actus) == 
 require(sum(int(row['fixture_count']) > 0 for row in actus) == 18, 'ACTUS executable type mismatch')
 with (ROOT / 'evidence/moriarty-design-sprint-2026-09-06/defi-72-requirements.csv').open() as handle:
     require(len(list(csv.DictReader(handle))) == 72, 'Original DeFi inventory mismatch')
-print(json.dumps({'status': 'pass', 'scope': 'planning structure only; no implementation or dispatch acceptance', 'sprints': len(sprints), 'requirements': len(actual), 'stages': len(stages)}, indent=2))
+# Retain source-qualified original task text and status, not just aggregate counts.
+task_paths = {}
+for sprint in sprints.values():
+    for task in re.findall(r'^## (SP[0-9]{2}\.[0-9]+):', (ROOT / sprint['path']).read_text(), re.MULTILINE):
+        task_paths[task] = sprint['path']
+original_tasks = {}
+for path in sorted((ROOT / 'openspec/changes').glob('mc*/tasks.md')):
+    package = path.parent.name[:4].upper()
+    for checked, task, text in re.findall(r'^- \[([ xX])\] ([A-Za-z0-9]+\.[0-9]+) (.+)$', path.read_text(), re.MULTILINE):
+        key = (package, task)
+        require(key not in original_tasks, f'Duplicate original task {key}')
+        original_tasks[key] = (str(path.relative_to(ROOT)), text, checked.lower() == 'x')
+task_map = json.loads((SPRINTS / 'package-task-map.json').read_text())
+mapped = {(r['package'], r['taskId']): r for r in task_map['rows']}
+require(len(mapped) == len(task_map['rows']), 'Duplicate original task mapping')
+require(set(mapped) == set(original_tasks), 'Original task crosswalk differs')
+require(task_map['count'] == len(mapped), 'Original task count differs')
+for key, row in mapped.items():
+    require((row['sourcePath'], row['originalText'], row['originalChecked']) == original_tasks[key], f'Original task text differs: {key}')
+    closing = row['primaryClosingTask']
+    require(closing in task_paths and set(row['contributingTasks']) <= set(task_paths), f'Unknown closing task: {key}')
+    require(row['package'] in sprints[closing.split('.')[0]]['owners'], f'Original task ownership differs: {key}')
+    require(row['closingTaskPath'] == task_paths[closing], f'Original task path differs: {key}')
+
+reports = json.loads((SPRINTS / 'report-lessons.json').read_text())
+for path, digest in reports['sourceDigests'].items():
+    require(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == digest, f'Stale report source: {path}')
+for section in ['lessons', 'modeledRegressions', 'comparativeCases', 'sourceGaps']:
+    rows = reports[section]
+    require(len({r['id'] for r in rows}) == len(rows), f'Duplicate report identity: {section}')
+    for row in rows:
+        require(row['tasks'] and set(row['tasks']) <= set(task_paths), f'Unknown report task owner: {row["id"]}')
+        require(row['status'] in {'specified-only', 'source-gap'}, f'Report claims unverified completion: {row["id"]}')
+        for path in row.get('sources', [row['source']] if 'source' in row else []):
+            require(path in reports['sourceDigests'], f'Unpinned report reference: {path}')
+        for field in (['positive', 'negative'] if section in {'lessons', 'modeledRegressions'} else ['acceptance']):
+            require(row.get(field, '').strip(), f'Missing report acceptance: {row["id"]}')
+require({r['id'] for r in reports['lessons']} == {f'LR{i:02}' for i in range(1, 19)}, 'Report lesson identities differ')
+for sprint in sprints.values():
+    wanted = {r['id'] for r in reports['lessons'] if any(t.startswith(sprint['id'] + '.') for t in r['tasks'])}
+    require(set(sprint['reportLessons']) == wanted, f'Sprint report coverage differs: {sprint["id"]}')
+expected_tests = {f'TX{i:02}' for i in range(1, 13)} | {f'VX{i:02}' for i in range(1, 7)}
+require({r['id'] for r in reports['modeledRegressions']} == expected_tests, 'Report regression identities differ')
+for row in reports['modeledRegressions']:
+    lines = [line for line in (ROOT / row['source']).read_text().splitlines() if re.match(r'\| ' + row['id'] + r'\b', line)]
+    require(len(lines) == 1, f'Missing report test source: {row["id"]}')
+    cells = [c.strip() for c in lines[0].strip('|').split('|')]
+    require([row['title'], row['positive'], row['negative']] == cells[:3], f'Report test expectation differs: {row["id"]}')
+atlas_path = 'deliverables/modern-defi-taxonomy-2026-09-08/cases.json'
+atlas_cases = {r['id']: r for r in json.loads((ROOT / atlas_path).read_text())['cases']}
+require({r['id'] for r in reports['comparativeCases']} == set(atlas_cases), 'Modern case identities differ')
+for row in reports['comparativeCases']:
+    source = atlas_cases[row['id']]
+    require(row['component'] == source['component'] and row['scope'] == source['version_chain_scope'], f'Modern case scope differs: {row["id"]}')
+    require(row['implementationClaim'] is False, 'Comparative case claims implementation')
+require({r['id'] for r in reports['sourceGaps']} == {'FIN-CAP.2', 'FIN-MGT.3', 'FIN-RSK.3'}, 'Uncovered taxonomy leaves differ')
+
+legacy = json.loads((SPRINTS / 'legacy-release-gates.json').read_text())
+for path, digest in legacy['sourceSha256'].items():
+    require(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == digest, f'Stale legacy source: {path}')
+legacy_record = json.loads((ROOT / 'evidence/execution/moriarty-v1.3-program.json').read_text())
+original_gates = {r['id']: r['predicate'] for r in legacy_record['release_gates']}
+gate_rows = {r['id']: r for r in legacy['gates']}
+require(len(gate_rows) == len(legacy['gates']) == 24 and set(gate_rows) == set(original_gates), 'Legacy gate identities differ')
+for id, row in gate_rows.items():
+    require(row['originalPredicate'] == original_gates[id], f'Legacy gate text differs: {id}')
+    xml = (ROOT / row['sourcePath']).read_text()
+    require(f'<gate id="{id}">{row["originalPredicate"]}</gate>' in xml, f'Legacy gate XML differs: {id}')
+    require(row['primaryClosingTask'] in task_paths and set(row['evidenceOwners']) <= set(task_paths), f'Legacy gate owner differs: {id}')
+
+print(json.dumps({'status': 'pass', 'scope': 'planning structure only; no implementation or dispatch acceptance', 'sprints': len(sprints), 'requirements': len(actual), 'stages': len(stages), 'originalTasks': len(mapped), 'sprintTasks': len(task_paths), 'reportLessons': len(reports['lessons']), 'modeledRegressions': len(expected_tests), 'comparativeCases': len(atlas_cases), 'legacyGates': len(gate_rows)}, indent=2))

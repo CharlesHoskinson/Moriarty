@@ -18,3 +18,7 @@ Status: S2, specified-only delivery program. These items track product work, not
 ## Verification
 
 Run `python3 openspec/sprints/verify.py` and `openspec validate --all --strict` for plan consistency. Implementation and campaign commands reside in the individual sprint contracts. All product tasks remain unchecked until their evidence gates pass.
+
+## Retained and supplemental obligations
+
+Every sprint also closes its assigned [report lessons and cases](../../sprints/report-lessons.json). The exact [original task crosswalk](../../sprints/package-task-map.json) and [legacy release gates](../../sprints/legacy-release-gates.json) prevent obligations disappearing during regrouping. Planning checks and model reviews are not product completion.

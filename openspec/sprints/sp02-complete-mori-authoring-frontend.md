@@ -1,6 +1,6 @@
 # SP02: Complete .mori authoring frontend implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Let a developer write, check and format the successor language with stable diagnostics.
 
@@ -35,7 +35,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP02.1: Finish the source specification
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP02.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP02.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Document BNF production rules, ISO/IEC 14977 EBNF and RFC 5234 ABNF in the specification introduction. Select EBNF for the source grammar. Specify identifiers, literals, Unicode/UTF-8 policy, whitespace, comments, escapes and byte limits separately using regular expressions or a small lexical grammar. Resolve // and nonnested block comments, Boolean precedence and source spans. Publish every production and reserved word. Compare the three matched syntax specimens in the research dossier on authoring and debugging tasks.
 - [ ] Verify: Every source construct has a defined production and lexical tokens. Check exact ISO/IEC 14977 notation, parser/grammar agreement and valid/invalid examples. No undefined production or ambiguous update interpretation remains. Record a formative developer evaluation; model opinions alone are not empirical usability evidence.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP02` in the owning package evidence.
@@ -43,7 +43,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP02.2: Implement versioned parsing and checking
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP02.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP02.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Keep existing frontend.ts signatures and registered atomic bytes stable. Add a successor API selected by explicit profile hash. Implement typed assets, nominal amounts, shares, rates, times, bounded collections and obligation/request identities from SP01. Reject source recursion, unbounded loops and unsupported operations.
 - [ ] Verify: Positive loan, swap, partial payment and request programs check. Mixed asset arithmetic, duplicate next writes, next reads, invalid post placement and excessive depth reject with stable spans.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP02` in the owning package evidence.
@@ -51,7 +51,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP02.3: Deliver formatter and checking CLI
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP02.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP02.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement check and format commands using the same frontend. Specify stdout JSON, stderr diagnostics and exit codes before implementation. Add explicit source locations and profile hashes. Specify the simulation input/output contract for SP03, without claiming an evaluator exists.
 - [ ] Verify: Formatting preserves parsed meaning and is idempotent. CLI/API results agree. Comments cannot alter signed Core meaning; unknown profiles reject. Simulation acceptance belongs to SP03.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP02` in the owning package evidence.
@@ -68,6 +68,14 @@ node experiments/moriarty-language/src/cli.ts check --profile experiments/moriar
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Finish the language contract and authoring tools.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP02.1: complete lexical rules, ISO/IEC 14977 EBNF, static judgments and canonical encoding. Deliver the full successor grammar, with every supported production covered; the experimental atomic grammar is not full language completion.
+- [ ] SP02.2: make assets, shares, nominal debt, requests, time and valuation purpose distinct. Reject implicit conversion into borrowing capacity, overflow and unbounded constructs. Preserve versioned atomic sequential semantics separately from successor pre/next semantics.
+- [ ] SP02.3: check and format real .mori sources with stable spans/errors and idempotent meaning-preserving formatting; include source-level positive and invalid financial examples. Complete the matched syntax study with actual participants, not model preference votes.
 
 ## Exit gate
 

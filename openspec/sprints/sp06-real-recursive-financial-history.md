@@ -1,6 +1,6 @@
 # SP06: Real recursive financial history implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Produce and independently verify a real two-step native financial proof.
 
@@ -29,7 +29,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP06.1: Review the replacement encoding
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP06.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP06.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Freeze the RP01-MC03 statement and changed hypothesis after k17 exhaustion. Bind program, profile, policy, predecessor, authority, observations, next state, effects and work. Confirm genuine recursive predecessor verification and constrained genesis.
 - [ ] Verify: The encoding/resource decision explains why this attempt differs. Source review and F1 evidence precede proving. A fresh folder does not reset charged time.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP06` in the owning package evidence.
@@ -37,7 +37,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP06.2: Produce and retain the native episode
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP06.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP06.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Run only the admitted two-step fixed financial episode. Retain the real proof, canonical statement, key/SRS digests and resource receipts. Stop on the first failed control or resource ceiling.
 - [ ] Verify: The successor checks the predecessor proof in the native relation. A host hash chain, MockProver run or nonrecursive table re-proof fails acceptance.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP06` in the owning package evidence.
@@ -45,7 +45,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP06.3: Verify in a fresh process
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP06.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP06.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Import only retained public bytes and explicitly inventoried required artifacts. Check complete native finalization. Mutate proof bytes, public state, context, key and accumulator independently.
 - [ ] Verify: Valid proof passes and every required invalid control rejects. This closes only the fixed episode; the general DSL relation remains assigned to SP09.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP06` in the owning package evidence.
@@ -62,6 +62,14 @@ python3 experiments/moriarty-native-ivc-r3/successor/run-reviewed.py --contract 
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Produce and independently verify real recursive history.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP06.1/.2: implement the corrected fixed two-step relation only after atomic acceptance, RP01-MC03, path freeze and all F1 controls. Bind arithmetic constants, genesis, predecessors, liabilities and work.
+- [ ] SP06.3: verify retained serialized native artifacts in a separate process; mutate proof bytes, state, context, keys and accumulators. Discharge the final decision, not a host verdict.
+- [ ] Keep the exact two-step scope visible. This milestone does not establish general source execution, private branching or actual ledger consumption.
 
 ## Exit gate
 

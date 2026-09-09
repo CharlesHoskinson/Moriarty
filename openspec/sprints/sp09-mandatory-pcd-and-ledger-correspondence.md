@@ -1,6 +1,6 @@
 # SP09: Mandatory PCD and ledger correspondence implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Accept financial transactions only when complete native proofs establish the language and signed authority predicates.
 
@@ -36,7 +36,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP09.1: Close atomic F3 before extending it
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP09.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Use the SP06 retained proof as the MC04 extension input. Complete MC04 P.1-P.7 for adapter-profile-01, including reviewed loan/swap native proofs, retained-byte verification and resource admission. Connect that qualified adapter relation through the complete SP04 verifier to SP05 financial settlement. Pin actual Preview deployment, backend, verifier and SRS identity. Complete MC04 3.1-3.2 atomic source/Core/target correspondence before F3 promotion. Own the atomic K definition and claim manifest here, including all executable verification dependencies. Bootstrap the pinned K runner/toolchain if SP03 has not created it; serialize shared writers and preserve atomic sequential semantics separately. Discharge the mechanized loan/swap correspondence with explicit assumptions. Verify full output projection and durable predecessor consumption before promoting atomic F3.
 - [ ] Verify: Actual Preview loan/swap acceptance uses the qualified adapter-profile-01 proofs with verification enabled. Tampered proof, output or predecessor rejects. A compiled wrapper without verified deployment alignment or discharged atomic correspondence cannot close F3. SP09.4 requalifies successor correspondence; it is not a prerequisite for authoring the atomic proof here.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
@@ -44,7 +44,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP09.2: Implement the general bounded relation
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP09.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Replace the fixed-instance limitation with the accepted versioned Core transition relation. Bind all state/effects/liabilities/observations/work fields. Define contract-property certificate judgments and admission into trusted deployment policy. Require all four named claims on every permitted path, including genesis and administration.
 - [ ] Verify: At least two non-hardcoded agreements and adversarial traces exercise the general relation. Genericity requires constructor coverage and correspondence, not merely those examples. Missing claims or unsupported property evidence fail closed.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
@@ -52,7 +52,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP09.3: Enforce authorization and policy lifecycle
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP09.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement authenticated observations, durable partial-fill budgets, signature domains, expiry/currentness, permitted calls/recipients and one-time predecessor consumption. Bound claim counts, dependencies, sidecars and verification work before expensive allocation. Enforce verifier/spec activation, revocation and consumption-preserving migration.
 - [ ] Verify: Proof-valid but intent-invalid execution rejects. Two individually valid conflicting spends cannot both finalize. Restart, cancellation, key revocation and migration cannot revive consumed authority or work.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
@@ -60,7 +60,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP09.4: Prove compiler and acceptance correspondence
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP09.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Define complete observational projection across source elaboration, K, evaluator, Compact lowering, native relation and ledger application. Prove supported domains with explicit environment and cryptographic assumptions. Run mutation tests for omitted outputs, duplicated debt, changed policy and field-order/canonical-decoding attacks.
 - [ ] Verify: Generated proof obligations are discharged for each advertised domain. Tests are separate supporting evidence. Unsupported projection or unresolved theorem blocks promotion.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
@@ -68,7 +68,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP09.5: Requalify native and Preview mandatory acceptance
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP09.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Freeze the mandatory-claims-01 campaign and reviewed resources after implementation. Produce real extended proofs and verify retained bytes independently. Run local and admitted Preview acceptance controls under the new lineage.
 - [ ] Verify: MC04/MC05 close only for the actual mandatory profile after current audits. The earlier atomic proof or uncertified I2 receipt does not inherit this scope.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
@@ -92,6 +92,15 @@ python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experim
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Require complete proof and authority at ledger acceptance.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP09.1: close atomic F3 after I2/F2/F1 and atomic correspondence, without waiting for full successor ACTUS/DeFi. Verify actual loan/swap proofs on Preview and durable unique predecessor consumption.
+- [ ] SP09.2/.3: mandatory successor acceptance binds ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance on every permitted route, including genesis/admin. Bind request/valuation observations, complete effects, adapter/deployment/policy revisions and durable authority.
+- [ ] SP09.3/.4: reject refund-reset budgets, hidden intermediate calls, donation-derived liability capacity, unbound upgrades, conflicting spends, replay after restart and migration that revives consumed authority. Prove nonvacuous correspondence for each advertised domain.
+- [ ] SP09.5: reprove the expanded relation and obtain actual verification-enabled Preview evidence under that lineage. Atomic or I2 receipts cannot inherit general mandatory scope.
 
 ## Exit gate
 

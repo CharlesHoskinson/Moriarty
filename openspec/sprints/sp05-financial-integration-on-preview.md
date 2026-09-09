@@ -1,6 +1,6 @@
 # SP05: Financial integration on Preview implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Settle bounded loan and swap operations and compare every finalized financial effect.
 
@@ -31,7 +31,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP05.1: Freeze independently derived fixtures
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP05.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP05.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Use accepted atomic source and RP01-MC02. Specify counterparties, custody, ledger token versus nominal denomination, before-state, gross debit, fee, change, net credit and every residual duty. Reserve cleanup and public attempts before submission.
 - [ ] Verify: Loan and swap expected records are derived independently of generated outputs. Wrong recipient, token, denomination, fee or debt identity causes comparison failure.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP05` in the owning package evidence.
@@ -39,7 +39,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP05.2: Implement and exercise Docker settlement
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP05.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP05.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Generate financial Compact entry points and a complete receipt decoder. Compare initial state and all finalized effects with local expectations. Test failed transactions leave no financial state mutation. Reuse network utilities without exposing wallet secrets.
 - [ ] Verify: Both local cases settle with real test-asset movement. A pure arithmetic kernel or a stored numeric answer cannot pass.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP05` in the owning package evidence.
@@ -47,7 +47,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP05.3: Run the separately admitted Preview campaign
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP05.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP05.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Use existing Preview identities. Submit at most two attempts per case within the live gross-spend and submission reservation. Retain transaction bytes, indexed SUCCESS, canonical finalized block and exact readback. Preserve unsuccessful attempts.
 - [ ] Verify: Actual loan and swap effects match the independent records. Keep this I2 financial.compact contract and its historical receipts uncertified. Later F3/mandatory acceptance qualifies the financial behavior through acceptance.compact with new evidence.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP05` in the owning package evidence.
@@ -65,6 +65,14 @@ npm --prefix experiments/moriarty-midnight-financial run preview -- --case swap 
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Finalize actual financial loan and swap effects on Preview.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP05.1/.2: reuse the reviewed fixed-case comparator and custody wrappers as scoped utilities. Finish the real production bindings for asset IDs, participant roles, UTXO/signed-offer ownership, gross debit, fees, change and canonical finality. Existing skip-zk wrappers are not actual custody evidence.
+- [ ] SP05.3: pass local Docker transaction checks, then finalize both loan and swap on Preview and compare every material effect with independent expectations. Wrong payer, wrong recipient and omitted-fee controls must exercise the callable production path.
+- [ ] Publish each actual transaction ID and observed status. I2 proves financial integration only; its receipt remains an uncertified probe until SP09 verifies the mandatory acceptance lineage.
 
 ## Exit gate
 

@@ -1,6 +1,6 @@
 # SP04: Complete native verifier component feasibility implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use superpowers:writing-plans to expand each task into a reviewed executable packet before behavioral edits. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for admitted tasks. Use the existing task contract for routine authorized edits and checks; expand only an unresolved interface or a resource-controlled campaign into an execution note. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Establish a complete native-to-ledger verifier route before expensive financial proving.
 
@@ -30,7 +30,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP04.1: Freeze component authorship after F0 go
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP04.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP04.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement the selected route only after F0a preparation admission. Freeze actual Rust module paths and command arguments in execution/SP04.md against pinned sources. Specify canonical export bytes and witness availability. Review implemented source and a conservative resource amendment before F1.
 - [ ] Verify: Missing complete verifier API, unbounded constraint estimate or unavailable current reviewer prevents F1. Merely choosing a source family does not prove Preview deployment compatibility.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP04` in the owning package evidence.
@@ -38,7 +38,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP04.2: Generate independent small fixtures
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP04.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP04.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Use the reconciliation recipes: native transcript reference, a separately admitted small non-loan Poseidon IVC derivative and verifier-test accumulator. Retain generation commands, valid witnesses, public artifact hashes and negative controls. Keep private witness bytes outside Git.
 - [ ] Verify: Fixture generation never depends on the MC03 financial proof. Fixture source, transcript, key and SRS identity are independently checked.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP04` in the owning package evidence.
@@ -46,7 +46,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 ## SP04.3: Run all three component predicates
 
-- [ ] Specify inputs, exact file ownership and independent expected results in `openspec/sprints/execution/SP04.md`.
+- [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP04.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] P1 compares full ported IVC transcript/preparation/carried accumulator in the selected outer stack. P2 checks canonical export/import roundtrip. P3 constrains the complete final accumulator/pairing decision with nontrivial valid and direct-assignment-invalid inputs.
 - [ ] Verify: P1 and P3 pass in the actual chosen outer circuit stack. Native reference tests alone do not pass them. All three are required before F2; a separately admitted P2 may proceed after F0/F0a when P1/P3 remain incomplete or failed. P2 has no exemption from F0/F0a admission.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP04` in the owning package evidence.
@@ -63,6 +63,14 @@ python3 experiments/moriarty-ledger-adapter/probes/run.py --contract experiments
 ```
 
 Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+
+## Report-informed acceptance refinement
+
+**Decide whether the full native verifier works.** The [refinement contract](../ROADMAP-REFINEMENT-2026-09-09.md) and [lesson/case crosswalk](report-lessons.json) add the following acceptance details to the existing task IDs. These remain specified-only.
+
+- [ ] SP04.1/.2: port canonical codecs, native export and outer verification from pinned sources; use independently generated non-loan fixtures so admission does not require the loan proof it is meant to permit.
+- [ ] SP04.3: all P1/P2/P3 controls remain mandatory in the selected stack, including carried accumulators and final pairing, nontrivial positive fixtures and direct-assignment negatives. Native reference success alone cannot close outer verification.
+- [ ] The first deliverable is a bounded, decisive complete-verifier result. Failed fit stops that route under existing limits; continue eligible language work without a new infrastructure campaign.
 
 ## Exit gate
 
