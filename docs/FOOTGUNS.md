@@ -85,6 +85,10 @@ These are behavioral controls. They do not automatically enforce themselves.
 At each trigger, the lead agent must apply the required action without requesting routine permission again.
 Keep required tests, independent audits, bounded resources, mandatory PCD and financial acceptance intact.
 
+## Current Grok timeout follow-up
+
+[The unresolved Grok timeout issue](GROK-TIMEOUTS.md) records three terminated review attempts and the required diagnosis. Do not launch another broad retry before establishing observable progress, cancellation and usable result delivery. Missing usage is unknown, never zero; merging pending work does not supply a review verdict.
+
 ## Development plugin integration
 
 Every agent must load `moriarty-dev:develop` through

@@ -6,6 +6,10 @@ Compact, Midnight native proofs, private state and ledger acceptance constrain t
 
 This is the complete current roadmap. [OpenSpec](openspec/MORIARTY-COMPLETION-PROGRAM.md) contains detailed package contracts; the [machine register](openspec/moriarty-completion-program.json) records scoped status and dependencies. The [three-report reconciliation](openspec/REPORT-RECONCILIATION-2026-09-07.md) defines the early decisions and staged proof admission. Editing these plans neither completes a package nor arms an execution loop.
 
+## Grok review reliability
+
+- [ ] [Diagnose and fix Grok review timeouts](docs/GROK-TIMEOUTS.md). Three SP05 attempts consumed about 18 minutes without a final verdict; token usage is unknown. Preserve missing-review gates and continue independent eligible product work.
+
 ## Refined delivery roadmap
 
 The [asset-study integration](openspec/ASSET-STUDY-INTEGRATION-2026-09-09.md) adds eleven required implementation obligations and eight acceptance cases across the existing sprints. The [task crosswalk](openspec/sprints/asset-study.json) covers asset/claim transformations, encumbrances, operation-specific policies, exceptional authority, servicing, identity/privacy and history. Supported profiles require Docker testing followed by separately admitted Midnight Preview evidence. These obligations are open; the research does not establish implemented language features.
