@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 227.308,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"sourceVerdict\": \"PASS_SCOPED\",\n  \"resourceVerdict\": \"APPROVE\",\n  \"candidateSha256\": \"99fb6c25bddf965ca027bf863e3d12cb6f0267c14c2b6f3b4fa8453e742b4525\",\n  \"proposalSha256\": \"6c9fb3df909cb0432e2463df6433e2d5678d8070da401b30287f0ec54b2295fe\",\n  \"commandsSha256\": \"895326b7fff31fff9a9766a3f7c9e31ef6c4452eb81a7a710ff060714313b9e9\",\n  \"runnerSha256\": \"8a6d3cc3b6643099ef11610f4f9f22fee0b5ad5865a406014e8080d741305960\",\n  \"findings\": [\n    {\n      \"severity\": \"confirmed\",\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/integrate-local.mjs\",\n      \"behavior\": \"Production swap sequencing is compareAndRetain(initialize) first; only after durable PASS and STAGE_RETENTION_REQUIRED does within('swap-wallet-sync') call wallet.waitForSyncedState and assertSwapInitializedWallet({receipt: observation.receipt, roles, assetBindings, synced}); the driver cannot reach call('swap') until that returns. Loan continuation/recovery branches never enter this gate.\"\n    },\n    {\n      \"severity\": \"confirmed\",\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs\",\n      \"behavior\": \"Native/wallet boundary is exact and fail-closed: native initialize mint is 0 inputs / 1 guaranteed output, owner hex roles.firstAddress, type ASSET_A, value string 100000, offerIndex 0; wallet coin owner must be Bech32m decoded by decodeLocalIndexedOwner to that hex, value bigint 100000n, same intentHash and outputNo, exactly one match, all three children connected and isStrictlyComplete(), pendingCoins and pendingDust empty. Raw hex wallet owner is SWAP_WALLET_OUTPUT/OWNER, not success. dispatchAuthorized remains false; provenance/finality/proofs are not claimed.\"\n    },\n    {\n      \"severity\": \"confirmed\",\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/run-local.mjs\",\n      \"behavior\": \"Fixed swap order remains initialize(provider secret) \u2192 swap(trader secret, 10000 deposit / 19700 min-out) \u2192 close(provider secret). SWAP_WALLET_FAILURE_CODES are in publicFailureCodes, so a gate throw during compare/initialize is a closed driver code (tested SWAP_WALLET_AVAILABLE) and stops before swap/close. Inner status remains FAIL/INCOMPLETE unless cleanup.containmentComplete is true; this source does not claim Preview/PCD.\"\n    },\n    {\n      \"severity\": \"confirmed\",\n      \"path\": \"deliverables/sp05-financial-integration-2026-09-09/local-swap-01/execute-once.py\",\n      \"behavior\": \"Admission setup: exclusive new base /home/charl/.local/state/moriarty/sp05-local-swap-20260910-01 and empty contract-state after public-only preflight; reuse original03 roles, recovered03 password, existing seed/snapshots; no credential generation; loan stores never opened; kind swap plan with submissions 4, dustFee 2000000000000000, gross ASSET_A 100000 / ASSET_B 0; deadlineMs min(now+1200000, shutdownWallMs); independent timer --on-active=1300s kills launcher cgroup then docker; retryAllowed false; setup+activation share arming+120s.\"\n    },\n    {\n      \"severity\": \"confirmed\",\n      \"path\": \"deliverables/sp05-financial-integration-2026-09-09/local-swap-01/resource-proposal-01.json\",\n      \"behavior\": \"Charges are additive, not reused: retained loan reservations 6 submissions / 1800000000000006 SPECK plus this cap 4 / 2000000000000000 SPECK, combined ceiling 10 / 3800000000000006 SPECK. One controller holds both capability secrets with distinct first/second payout addresses. New output directory only. Approval does not establish a live swap result.\"\n    }\n  ],\n  \"scope\": \"Public-source review of source-candidate-10 as supplied (live gate in swap-wallet.mjs, integrate-local.mjs verifyStage swap-initialize hook, run-local.mjs closed SWAP_WALLET codes, indexed-owner.mjs Bech32m codec, unchanged launch-local.mjs/receipt.mjs/loan continuation bytes) plus draft resource proposal/commands/runner for one fresh local trader/pool swap. Predecessor local-continuation-02 four-stage loan trace is treated as reviewed complete financial comparisons with inner INCOMPLETE and separate outer containment; those result reviews grant no swap execution authority. Older candidate hashes remain historical evidence of older bytes, not this successor live path. Reported 416/416 ledger-regression-14.tap is retained testimony only.\",\n  \"limitations\": [\n    \"No tool execution, no independent SHA-256 recomputation, no test rerun, no private file/store/seed/password/roles inspection, and no live RPC/indexer/proof-server query. Hashes above are the supplied identifiers, not freshly measured.\",\n    \"waitForSyncedState is deadline-raced by integrate-local within('swap-wallet-sync') and checkDeadline(); the SDK wait is not itself aborted. INTEGRATION_DEADLINE_* labels remain outside driver/integration allowlists and surface as UNCLASSIFIED_* at the public boundary, matching prior continuation-sync. Fail-closed: no swap, no retry.\",\n    \"The mint predicate is a post-comparison snapshot, not a lock through swap submit. Extra non-matching coins are allowed; color is contract-derived so a new deploy does not spend prior loan USD_TEST_ASSET.\",\n    \"One launcher possesses both role secrets. Distinct payout addresses do not demonstrate independently signed multiparty settlement, funded seller liquidity, Preview, general AMM, full SP05, or PCD.\",\n    \"Existing reviewed loan inner driver/integration remain INCOMPLETE with containmentComplete false; separately observed process containment does not rewrite that. This swap source uses the same inner cleanup contract.\",\n    \"Resource approval authorizes at most one separately admitted local attempt under the stated 1350s envelope, 4 submissions, 2000000000000000 SPECK, 100000 A / 0 B gross, exclusive new swap directory, reused identities, and independent 1300s shutdown. It does not admit dispatch by itself and cannot establish the live result.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 92179,
+      "output_tokens": 12319,
+      "cache_read_input_tokens": 2048,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 92179,
+        "outputTokens": 12319,
+        "cacheReadInputTokens": 2048,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.04408032
+      }
+    },
+    "total_cost_usd": 0.04408032,
+    "session_id": "01a08ace-a8e5-75a3-884a-f2373cbb4c1c"
+  }
+}

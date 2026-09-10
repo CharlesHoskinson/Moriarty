@@ -1,0 +1,11 @@
+# Fixed local swap wallet synchronization
+
+The production swap path must observe the exact initialize mint in the payer wallet before attempting the trade. The SDK balancing path reads its current wallet state; a finalized initialize receipt alone does not establish that the wallet has indexed its new input.
+
+After the actual initialize observation passes and its financial comparison is durably retained, integrate-local awaits wallet.waitForSyncedState under the existing absolute deadline. The pure assertSwapInitializedWallet predicate requires strict connected completion for all three wallet components, no pending coins or DUST, and exactly one available canonical local-owner coin matching the native mint origin, output index, asset, owner and 100000-unit value. Receipt provenance and canonical finality remain the existing observer's obligations. A missing or mismatched mint stops before swap; no retry or new timeout framework is introduced.
+
+The fixed fixture deposits 10000 A from a 100000 A gross input and receives 19743 B, with 90000 A change. Closing pays the distinct provider address the remaining pool balances. One launcher controls both role capabilities. This is a local trader/pool fixture, not independently signed multiparty settlement. Preview and PCD acceptance remain open.
+
+The closed failure codes pass through the existing driver and integration reports. Loan continuation behavior remains unchanged. Red tests reproduce absent production synchronization, an unavailable mint that previously allowed swap, and a synchronization operation that crosses the absolute deadline. The final complete ledger suite passes 416 tests with no skips; its retained TAP is ledger-regression-14.tap. Synthetic test receipts are not chain evidence. Earlier helper checks bind their then-current helper bytes; the candidate below binds the final source and full suite.
+
+Source candidate 10 carries current source bytes and historical evidence references. Earlier candidates remain immutable records of earlier source; their old live-path hashes are not asserted to describe this successor. Source/resource approval permits only a separately admitted single local attempt, and cannot establish its result.

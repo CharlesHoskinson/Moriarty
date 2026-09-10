@@ -24,7 +24,7 @@ function fixture() {
     createComparator:async()=>({verifyStage(stage,observation){calls.push('compare:'+stage);return {status:'PASS',stage,txId:observation.receipt.txId,publicState:{observed:true},networkAcceptance:false,proofAcceptance:false};},finish:()=>({status:'PASS',networkAcceptance:false,proofAcceptance:false})}),
     driver:runLocalFinancialCase,fetch:()=>{throw Error('network forbidden in source fixture');},
   };
-  options.adapters=adapters;return {options,adapters,calls,summaries,getLimits:()=>limits,sdk,driverSdk};
+  options.adapters=adapters;return {options,adapters,calls,summaries,getLimits:()=>limits,sdk};
 }
 test('full composition prepares address then binds colors once and records every stage before next call',async()=>{
   const f=fixture();let error;
@@ -94,42 +94,14 @@ test('local RPC aborts an unresponsive inert request by absolute deadline',async
  const rpc=createLocalRpc({node:'http://127.0.0.1:9944',deadlineMs:Date.now()+30,fetchImpl:async(_u,o)=>{signal=o.signal;return new Promise(()=>{});}});
  await assert.rejects(rpc('chain_getFinalizedHead',[]),/DEADLINE/);assert.equal(signal.aborted,true);
 });
-function swapFixture(){
- const f=fixture();f.options.kind='swap';f.options.limits.grossByLogicalAsset={ASSET_A:100000n,ASSET_B:0n};let derived=0;
- f.adapters.loadNativeRuntime=async()=>({ledger:{addressFromKey:()=>first},runtime:{rawTokenType:()=>derived++===0?color:'99'.repeat(32)}});
- f.adapters.initializeReservations=o=>{assert.deepEqual(o.limits.grossByAsset,{[color]:100000n,['99'.repeat(32)]:0n});f.calls.push('initialize-allocation');};
- const initId='00'+'ab'.repeat(32),origin='cd'.repeat(32),txHash='ef'.repeat(32),blockHash='77'.repeat(32);
- const call=f.driverSdk.submitCallTx;f.driverSdk.submitCallTx=async(p,o)=>{const result=await call(p,o);if(o.circuitId==='initialize')result.public.txId=initId;return result;};
- const observe=f.adapters.observe;f.adapters.observe=async o=>{const v=await observe(o);if(o.circuitId==='initialize')v.receipt={schema:'moriarty.finalized-financial-stage/1',circuitId:'initialize',acceptance:'uncertified-I2-observation',protocolVersion:1000000,contractAddress:address,blockHash,blockHeight:10,finalizedHead:'0x'+blockHash,finalizedHeight:10,txId:initId,transaction:{transactionHash:txHash,rawSha256:txHash,identifiers:[initId],proofVerified:false,ledgerAccepted:false,actions:[{kind:'call',entryPoint:'initialize',address,segment:1}],inputs:[],outputs:[{segment:1,section:'guaranteed',offerIndex:0,owner:first,type:color,value:'100000',intentHash:origin}]}};return v;};
- f.options.walletContext.wallet.waitForSyncedState=async()=>{
-  f.calls.push('swap-wallet-sync');
-  const {MidnightBech32m,UnshieldedAddress}=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js');
-  const progress=()=>({isConnected:true,isStrictlyComplete:()=>true});
-  return {shielded:{progress:progress()},unshielded:{progress:progress(),availableCoins:[{utxo:{owner:MidnightBech32m.encode('undeployed',new UnshieldedAddress(Buffer.from(first,'hex'))).toString(),type:color,value:100000n,intentHash:origin,outputNo:0},meta:{}}],pendingCoins:[]},dust:{progress:progress(),state:{pendingDust:[]}}};
- };
- return f;
-}
-test('swap waits for exact wallet mint after durable initialize comparison and before actual driver swap',async()=>{
- const f=swapFixture();let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
- assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
- assert.equal(f.calls.filter(c=>c==='swap-wallet-sync').length,1);
- assert(f.calls.indexOf('record:initialize')<f.calls.indexOf('swap-wallet-sync'));assert(f.calls.indexOf('swap-wallet-sync')<f.calls.indexOf('swap'));
- assert.deepEqual(error.publicIntegrationResult.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
-});
-test('missing initialized wallet mint stops actual driver before swap and close',async()=>{
- const f=swapFixture(),sync=f.options.walletContext.wallet.waitForSyncedState;
- f.options.walletContext.wallet.waitForSyncedState=async()=>{const s=await sync();s.unshielded.availableCoins=[];return s;};
- let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
- assert.equal(error.message,'SWAP_WALLET_AVAILABLE');assert(!f.calls.includes('swap'));assert(!f.calls.includes('close'));assert(f.calls.includes('provider-cleanup'));
- assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize']);
- assert.deepEqual(error.publicIntegrationResult.driver.failure,{phase:'compare',stage:'initialize',code:'SWAP_WALLET_AVAILABLE'});
- assert.equal(error.publicIntegrationResult.failureCode,'SWAP_WALLET_AVAILABLE');
-});
-test('wallet sync that crosses the admission deadline prevents swap',async()=>{
- const f=swapFixture(),sync=f.options.walletContext.wallet.waitForSyncedState;let expired=false;const now=Date.now;
- f.options.walletContext.wallet.waitForSyncedState=async()=>{const s=await sync();expired=true;return s;};
- Date.now=()=>expired?f.options.limits.deadlineMs+1:now();
- try{await assert.rejects(integrateLocalFinancialCase(f.options),/DEADLINE/);assert(!f.calls.includes('swap'));assert(f.calls.includes('provider-cleanup'));}finally{Date.now=now;}
+test('swap binds each logical ceiling once and records initialize/swap/close through the actual driver',async()=>{
+  const f=fixture();f.options.kind='swap';f.options.limits.grossByLogicalAsset={ASSET_A:20n,ASSET_B:30n};let derived=0;
+  f.adapters.loadNativeRuntime=async()=>({ledger:{addressFromKey:()=>first},runtime:{rawTokenType:()=> (++derived===1?color:'99'.repeat(32))}});
+  f.adapters.initializeReservations=o=>{assert.deepEqual(o.limits.grossByAsset,{[color]:20n,['99'.repeat(32)]:30n});f.calls.push('initialize-allocation');};
+  let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
+  assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(derived,2);
+  assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
+  assert.deepEqual(error.publicIntegrationResult.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
 });
 test('asset mutation after a recorded stage stops before the next SDK stage',async()=>{
   const f=fixture(),load=f.adapters.loadAssets;let changed=false;

@@ -1,0 +1,190 @@
+{
+  "schema": "moriarty.fixed-local-swap-resource/1",
+  "status": "draft-not-admitted",
+  "authority": "raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md",
+  "scope": "One fresh fixed local trader/pool swap: deploy, initialize, swap, close. One wallet pays and holds both role capability secrets; provider has distinct payout address. No independently signed multiparty exchange, counterparty funding, registration, retry, compiler, Preview or acceptance promotion.",
+  "sourceAssessment": "Source candidate10 frozen; independent GPT-6 Astra/Grok4.6 source/resource reviews and admission remain required.",
+  "attempts": 1,
+  "submissions": 4,
+  "grossByLogicalAsset": {
+    "ASSET_A": "100000",
+    "ASSET_B": "0"
+  },
+  "dustFeeSpeck": "2000000000000000",
+  "proofAccounting": {
+    "contractProveEntriesMax": 4,
+    "walletFinalizeProveEntriesMax": 4,
+    "httpAttemptsPerCallbackMax": 4,
+    "callbackMultiplicity": "not established; no absolute HTTP count claimed",
+    "resourceBound": "single proof server under CPU/memory limits and independent outer Docker shutdown deadline; all internal SDK retries consume the same time/resources"
+  },
+  "timeSeconds": {
+    "serviceReadinessMax": 120,
+    "walletOperationMax": 1200,
+    "cleanupReserved": 30,
+    "totalMax": 1350,
+    "independentShutdownStart": 1300
+  },
+  "nodeService": {
+    "unit": "moriarty-sp05-local-swap-01.service",
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "KillMode": "control-group",
+    "SendSIGKILL": true,
+    "RuntimeMaxSec": 1206,
+    "TimeoutStopSec": 5,
+    "FinalKillSignal": "SIGKILL",
+    "activationDeadlineSecondsAfterArming": 120,
+    "TimeoutStartSec": "Remaining arming+120s activation allowance measured immediately before systemd-run"
+  },
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-proof-server",
+      "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "roles": {
+    "firstAddress": "9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb",
+    "secondAddress": "c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e",
+    "expectedAddress": "mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9",
+    "lenderBasis": "Existing preprod public address re-encoded as local payout recipient only; no preprod request, secret read, signature or funding."
+  },
+  "privatePreparation": {
+    "base": "/home/charl/.local/state/moriarty/sp05-local-swap-20260910-01",
+    "exclusive": true,
+    "seedFile": "/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed",
+    "walletStateDirectory": "/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2",
+    "newMaterial": "Exclusive0700 new swap base and empty contract-state plus0600 plan. Reuse original03 roles and wallet-derived signing identity and existing recovered03 validated password; generate no credentials.",
+    "existingSnapshots": "Existing wallet snapshots restored by launcher; prior loan stores remain untouched.",
+    "fileMode": "0600",
+    "directoryMode": "0700",
+    "directoryDurability": "Fsync exclusive new base, contract-state and parents before launcher activation.",
+    "originalRolesFile": "/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03/roles.json",
+    "gate": "Public exact plan/build/runtime checks and retained genesis/committee readiness before creating new base or empty swap store. Launcher repeats plan/build/runtime validation before seed access. Actual fixed initialize comparison must durably pass before deadline-bound wallet sync and exact100000A minted-coin gate allow swap.",
+    "existingPasswordFile": "/home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03/password"
+  },
+  "network": {
+    "networkId": "undeployed",
+    "node": "http://127.0.0.1:19944",
+    "indexer": "http://127.0.0.1:18088/api/v4/graphql",
+    "indexerWS": "ws://127.0.0.1:18088/api/v4/graphql/ws",
+    "proofServer": "http://127.0.0.1:16300",
+    "networkTagRule": "Exact retained genesis e72f7a21a0397844563b4206f887b779ffa0d937c2d1b2339441faa1f08b9846 matches actualchain_getBlockHash([0])",
+    "protocolVersionRule": "Every actual stage indexer receipt must report1000000; native identity and canonical finality verified independently by observer."
+  },
+  "storage": {
+    "minimumFreeBytes": 4294967296,
+    "publicPayloadMaxBytesEach": 16777216,
+    "publicPayloadMaxCount": 4,
+    "aggregateHardQuota": false,
+    "sourceBound": "Four new public payloads up to64MiB plus bounded public stages/events/results and a new isolated swap LevelDB. No hard aggregate disk quota; existing cgroup/Docker/wall limits apply.",
+    "cleanup": "Retain all partial transaction records, reservations and private contract state; no evidence or wallet-state deletion."
+  },
+  "stopOn": [
+    "preexisting unit/timer/run/base",
+    "container identity/limits/state mismatch",
+    "missing source/build/resource reviews or admission",
+    "missing memory/disk headroom",
+    "wrong genesis/protocol or committee readiness deadline",
+    "private file, wallet or original signing identity mismatch",
+    "new swap store not empty",
+    "deadline/resource cap",
+    "first failed required financial comparison",
+    "unknown submission/finality; preserve reservation",
+    "strict wallet synchronization or initialized minted coin unavailable/pending/duplicate/mismatched",
+    "stale/future/regressing native DUST creation time",
+    "unexpected payer funding or gross allowance exceeded"
+  ],
+  "prerequisites": [
+    "Frozen exact source-candidate-10 commitments and actual separate GPT-6 Astra/Grok4.6 source approvals",
+    "Actual agreeing GPT-6 Astra/Grok4.6 resource votes on this proposal and commands; source/resource may be jointly reviewed, with both verdict scopes explicit",
+    "Retained unchanged actual compiler artifact approvals",
+    "Exact admission binding candidate, all source files, proposal/commands/runner and actual review responses",
+    "Record exact command arguments, plan hash and independent timer activation before wallet launch"
+  ],
+  "priorCharges": "Reviewed local loan history retains6reservedsubmissions and1800000000000006SPECK. This fresh swap adds at most4submissions and2000000000000000SPECK: combined ceiling10submissions and3800000000000006SPECK. Preserve all original execution/recovery/continuation service, compiler, proof, diagnostic and review charges separately; no refund or reuse.",
+  "acceptance": "Four actual matching canonical-finalized swap comparisons plus independently observed terminal containment would establish the fixed local trader/pool trace only. Setup mints test assets. One controller possesses both capabilities; no funded seller or independent counterparty signing is demonstrated. No Preview, full SP05, general AMM or PCD acceptance.",
+  "predecessor": "../local-continuation-02/attempt-result.json",
+  "outerShutdown": {
+    "unit": "moriarty-sp05-local-swap-stop-01",
+    "atSecondsAfterArming": 1300,
+    "launcherUnit": "moriarty-sp05-local-swap-01.service",
+    "launcherKillCommandMaxSeconds": 5,
+    "dockerStopCommandMaxSeconds": 20,
+    "dockerKillFallbackMaxSeconds": 5,
+    "handlesAbsentLauncher": true,
+    "startsForbiddenAfterShutdownBegins": true,
+    "latestCompletedCleanupSeconds": 1331,
+    "envelopeSeconds": 1350,
+    "scope": "This corrects the late-launch finding by terminating both launcher cgroup and external services. Readiness, private setup and launcher activation must finish by arming+120 seconds; no deferred activation."
+  },
+  "sourceCandidate": {
+    "path": "../swap-wallet-sync-01/source-candidate-10.json",
+    "sha256": "99fb6c25bddf965ca027bf863e3d12cb6f0267c14c2b6f3b4fa8453e742b4525"
+  },
+  "changedHypothesis": "Fresh swap uses existing approved compiled public build. Initialize mints1000000A/2000000B into contract and100000A to trader. After finalized durable initialize comparison, a deadline-bound wallet sync and exact minted available UTXO check prevents racing the subscription before swap. Swap consumes100000A gross, returns90000A change and receives19743B; close pays distinct provider1010000A/1980257B.",
+  "readiness": "Before wallet preparation and each SDK balance: <=60s and60read-only samples,1s spacing,5s per sample requests,all inside existing wallet/outer deadline. Tipage<=60s,no future,canonical node hash and +/-2height near finalized head; not finality acceptance. Actual native DUSTctime <=60s and no tip-time regression before signing; <=60s before submit. No wallet retries. Slow proof stops; no extra resource allowance.",
+  "committeeReadiness": {
+    "scope": "Read-only same-finalized-hash runtime/metadata, timestamp, committee epoch and all system/session event observations before wallet preparation",
+    "conditions": [
+      "Actual current committee epoch equals sidechain epoch stored at selected finalized block",
+      "Selected finalized block has no session rotation event",
+      "Selected block timestamp is recent and its calculated wall epoch from actual slot/epoch configuration does not exceed committee epoch",
+      "Indexer latest block hash/height equals selected finalized node block"
+    ],
+    "bound": "All catch-up polling, old receipt checks, private preparation and acknowledged launcher activation share existing120s setup deadline after timer arming; one-second read-only condition polling. No fixed sleep as evidence; no runtime/committee write. If no readiness by bound, abort before wallet."
+  },
+  "publicFailureEvidence": "Before any private creation, retain bounded public preflight error class/code/message from the public-only child; no stack/object, seed/roles/password/private-store access or raw private diagnostics. Timeout/invalid-output also retains a closed failure record. A failed gate consumes this attempt.",
+  "predecessorSha256": "822232e8147b0c26e5012eef7a55b1cd926091f400dc52c2c059929ee8a5143f",
+  "reviewedLoanResult": {
+    "path": "../local-continuation-02/attempt-result.json",
+    "sha256": "822232e8147b0c26e5012eef7a55b1cd926091f400dc52c2c059929ee8a5143f",
+    "reviews": [
+      {
+        "path": "../local-continuation-02/result-review-gpt6.json",
+        "sha256": "50c0cd58c3fdbece592ed49ccef4ffaf8229ea350ee834e22dbdbd0a31f271df",
+        "reviewer": "gpt-6-astra",
+        "verdict": "PASS_SCOPED"
+      },
+      {
+        "path": "../local-continuation-02/result-review-grok.json",
+        "sha256": "69c32fd1e78134e6112bff8944b5efbc2f981afde43b1ab7865b8de6d2f619e9",
+        "reviewer": "grok-4.6",
+        "verdict": "APPROVED_SCOPED"
+      }
+    ],
+    "terminalContainment": {
+      "path": "../local-continuation-02/terminal-containment.json",
+      "sha256": "c23c7077c7b146371760ecbf25d806f9b69aa5aab1d0a9397b249c2f3f4dbc54"
+    }
+  },
+  "build": {
+    "receiptPath": "/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json",
+    "receiptSha256": "3789da217a36cecd5f7603cbbaead32671418da36ecc5c2d20b1709b9577f362",
+    "sourceManifestHash": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6"
+  }
+}

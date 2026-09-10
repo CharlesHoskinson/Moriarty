@@ -1,7 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
 import {INITIALIZED_LOAN} from './continue-initialized-loan.mjs';
-import {SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
 
 const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
 const BASE=1n<<64n;
@@ -13,7 +12,6 @@ function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)t
 
 
 const publicFailureCodes=new Set(['NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
-for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
 /** Closed public diagnostic shared by the producer and durable launcher boundary. */
 export function validatePublicDriverFailure(failure){
   const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};

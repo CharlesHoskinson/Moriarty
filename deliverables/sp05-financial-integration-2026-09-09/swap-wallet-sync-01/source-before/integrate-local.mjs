@@ -17,11 +17,9 @@ import {EXISTING_LOAN,validateExistingLoanPlan,readExistingLoanInputs,verifyExis
 import {inspectFailedLoanStore,assertEmptyRecoveryStore,preserveInitializedLoanStore} from './recover-store.mjs';
 import {validateInitializedLoanPlan,readInitializedLoanInputs} from './continue-loan-plan.mjs';
 import {INITIALIZED_LOAN,verifyInitializedLoanPrivate,assertInitializedLoanMintedOutput} from './continue-initialized-loan.mjs';
-import {assertSwapInitializedWallet,SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
 
 const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
 const publicIntegrationFailureCodes=new Set([
- ...SWAP_WALLET_FAILURE_CODES,
  'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST','INTEGRATION_CONTINUATION_ADAPTERS_REQUIRE_SOURCE_TEST','CONTINUATION_PUBLIC_RESULT','CONTINUATION_STORE_PRESERVATION','CONTINUATION_PRIVATE_RESULT',
  'INITIALIZED_PRIVATE_PROVIDER','INITIALIZED_PRIVATE_READ','INITIALIZED_PRIVATE_STATE','INITIALIZED_PRIVATE_KEY','INITIALIZED_SIGNING_AUTHORITY','INITIALIZED_STATE_TYPE','INITIALIZED_STATE_MISMATCH','INITIALIZED_STATE_CANONICAL','INITIALIZED_WALLET_BINDING','INITIALIZED_WALLET_COINS','INITIALIZED_WALLET_AVAILABLE','INITIALIZED_WALLET_OUTPUT','INITIALIZED_WALLET_HISTORY',
  'RECOVERY_WALLET_BINDING','RECOVERY_WALLET_TIME_CAP','RECOVERY_WALLET_SYNC','RECOVERY_WALLET_PENDING','RECOVERY_WALLET_COIN','RECOVERY_WALLET_SPENT_INPUT','RECOVERY_WALLET_DUST_CODEC','RECOVERY_WALLET_SPENT_DUST','RECOVERY_WALLET_REGISTERED_DUST','RECOVERY_WALLET_DUST_CAP',
@@ -275,15 +273,7 @@ export async function integrateLocalFinancialCase(options){
         ...(recovery?{existingDeployment:{contractAddress,txId:EXISTING_LOAN.txId}}:{}),
         ...(continuation?{initializedLoan:{contractAddress,deployTxId:EXISTING_LOAN.txId,initializeTxId:INITIALIZED_LOAN.txId}}:{}),
         observe:({circuitId,txId,contractAddress:observedAddress})=>{assertFresh();requireThat(observedAddress===contractAddress,'PREPARED_OBSERVED_ADDRESS_MISMATCH');if(continuation&&['deploy','initialize'].includes(circuitId)){const observation=circuitId==='deploy'?checkedContinuation.deploymentObservation:checkedContinuation.initializeObservation;requireThat(observation.receipt.txId===txId,'CONTINUATION_HISTORY_ID');return observation;}return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress:observedAddress,decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
-        verifyStage:async(stage,observation)=>{
-          if(continuation&&historicalSummaries.has(stage)){requireThat(observation===(stage==='deploy'?checkedContinuation.deploymentObservation:checkedContinuation.initializeObservation),'CONTINUATION_HISTORY_OBSERVATION');return historicalSummaries.get(stage);}
-          const summary=await compareAndRetain(stage,observation);
-          if(kind==='swap'&&stage==='initialize'){
-            const synced=await within('swap-wallet-sync',()=>wallet.waitForSyncedState());
-            assertSwapInitializedWallet({receipt:observation.receipt,roles,assetBindings,synced});checkDeadline();
-          }
-          return summary;
-        }});
+        verifyStage:async(stage,observation)=>{if(continuation&&historicalSummaries.has(stage)){requireThat(observation===(stage==='deploy'?checkedContinuation.deploymentObservation:checkedContinuation.initializeObservation),'CONTINUATION_HISTORY_OBSERVATION');return historicalSummaries.get(stage);}return compareAndRetain(stage,observation);}});
     }catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
     finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}
     driverResult={...driverResult,assetBindings};
