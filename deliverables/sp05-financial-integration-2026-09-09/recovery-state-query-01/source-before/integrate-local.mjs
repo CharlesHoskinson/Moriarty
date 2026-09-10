@@ -99,10 +99,9 @@ export async function preflightLocalRecovery(plan){
     const rpc=createLocalRpc({node:plan.networkConfig.node,deadlineMs});
     requireThat(await rpc('chain_getBlockHash',[0])==='0x'+recovery.networkTag,'RECOVERY_PUBLIC_GENESIS');
     const {waitForLocalTip}=await import('./local-tip.mjs');
-    const readCurrentTip=()=>waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs,exactFinality:true});
-    const tip=await readCurrentTip();
+    const tip=await waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs,exactFinality:true});
     const provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
-    const result=await verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip,readCurrentTip});
+    const result=await verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip});
     loaded.assertFresh();validDeadline(deadlineMs);return result;
   }finally{if(loaded)await loaded.cleanup();}
 }

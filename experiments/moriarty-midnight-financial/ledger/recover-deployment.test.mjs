@@ -44,6 +44,7 @@ function publicFixture(){
  const provider={async watchForTxData(){return data;},async queryContractState(){return initial();},async queryUnshieldedBalances(){return [];}};
  const rpc=async(method)=>method==='chain_getHeader'?{number:'0x4f59'}:'0x'+h;
  const options={raw,ledger,provider,rpc,decodeState:()=>({syntheticStateOnly:true}),deadlineMs:Date.now()+20000,expectedProtocolVersion:1000000,tip:{status:'READY',hash:h,finalizedHash:'0x'+h,height:20313,finalizedHeight:20313,timestampMs:Date.now()}};
+ options.readCurrentTip=async()=>({...options.tip});
  return {options,data};
 }
 test('public recovery gate verifies native receipt, canonical finality and whole current state through read-only interfaces',async()=>{
@@ -126,26 +127,27 @@ function movingFinalityFixture({changedCurrent=false,movesDuringQuery=false,lag=
   throw Error('UNEXPECTED_READ_RPC');
  };
  f.options.provider.queryContractState=async(_address,query)=>{
-  const hash=query.blockHash.replace(/^0x/,'');stateHashes.push(hash);const s=initial();
-  if(changedCurrent&&hash===newHash)s.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);
+  const hash=query?.blockHash?.replace(/^0x/,'')??'latest';stateHashes.push(hash);const s=initial();
+  if(changedCurrent&&hash==='latest')s.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);
   return s;
  };
+ f.options.readCurrentTip=async()=>({status:'READY',hash:newHash,height:height+1,finalizedHash:'0x'+newHash,finalizedHeight:height+1,timestampMs:Date.now()});
  return {...f,newHash,oldHash,rpcCalls,stateHashes,headReads:()=>headReads};
 }
 test('recovery detects later finalized state transition after prefetched tip',async()=>{
  const f=movingFinalityFixture({changedCurrent:true});
  await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_STATE_MISMATCH/);
- assert.ok(f.stateHashes.includes(f.newHash),'must query newly finalized state rather than old tip');
+ assert.ok(f.stateHashes.includes('latest'),'must query latest state after exact indexed/finalized coverage');
 });
 test('later finalized head with unchanged constructor state passes after final head recheck',async()=>{
  const f=movingFinalityFixture(),result=await api.verifyExistingLoanPublic(f.options);
- assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.deepEqual(result.stateBlock,{hash:'0x'+f.newHash,height:api.EXISTING_LOAN.blockHeight+1});assert.ok(f.stateHashes.includes(f.newHash));assert.ok(f.headReads()>=3);assert.equal(f.rpcCalls.at(-1).method,'chain_getFinalizedHead');
+ assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.deepEqual(result.stateBlock,{hash:'0x'+f.newHash,height:api.EXISTING_LOAN.blockHeight+1});assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);assert.equal(f.rpcCalls.at(-1).method,'chain_getFinalizedHead');
 });
 test('recovery rejects finalized head movement across current state query',async()=>{
- const f=movingFinalityFixture({movesDuringQuery:true});await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEAD_MOVED/);assert.ok(f.stateHashes.includes(f.newHash));assert.ok(f.headReads()>=3);
+ const f=movingFinalityFixture({movesDuringQuery:true});await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEAD_MOVED/);assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);
 });
-test('canonical indexed tip lag of one finalized block is permitted',async()=>{
- const f=movingFinalityFixture({lag:1}),result=await api.verifyExistingLoanPublic(f.options);assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.ok(f.stateHashes.includes(f.newHash));
+test('earlier one-block indexed lag must catch up before latest-state observation',async()=>{
+ const f=movingFinalityFixture({lag:1}),result=await api.verifyExistingLoanPublic(f.options);assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.ok(f.stateHashes.includes('latest'));
 });
 test('indexed tip ahead of fresh finalized head is rejected',async()=>{
  const f=movingFinalityFixture();f.options.tip.height+=2;f.options.tip.hash='cd'.repeat(32);f.options.tip.finalizedHeight=f.options.tip.height;f.options.tip.finalizedHash='0x'+f.options.tip.hash;
@@ -153,4 +155,31 @@ test('indexed tip ahead of fresh finalized head is rejected',async()=>{
 });
 test('indexed tip outside two-block bound or not canonical is rejected',async()=>{
  for(const mutate of [f=>{f.options.tip.height-=3;},f=>{f.options.tip.hash='ef'.repeat(32);}]){const f=movingFinalityFixture();mutate(f);await assert.rejects(api.verifyExistingLoanPublic(f.options));}
+});
+
+// Indexer4.3.3's SQL block filter is equality: an empty later block has no
+// contractAction row, while offset:null returns the last recorded state.
+function exactBlockStateFixture() {
+ const f=publicFixture(),oldHash=api.EXISTING_LOAN.blockHash,newHash='ac'.repeat(32),height=api.EXISTING_LOAN.blockHeight+1;
+ const indexed={status:'READY',hash:newHash,height,finalizedHash:'0x'+newHash,finalizedHeight:height,timestampMs:Date.now()};
+ const stateReads=[],tipReads=[];
+ f.options.rpc=async(method,args)=>method==='chain_getFinalizedHead'?'0x'+newHash:method==='chain_getHeader'?{number:'0x'+height.toString(16)}:'0x'+(args[0]===height?newHash:oldHash);
+ f.options.readCurrentTip=async()=>{tipReads.push('read');return {...indexed};};
+ f.options.provider.queryContractState=async(_address,config)=>{stateReads.push(config?.blockHash??'latest');return config&&config.blockHash!==oldHash?null:initial();};
+ return {...f,indexed,stateReads,tipReads,newHash,height};
+}
+test('recovery reads latest state when the finalized head has no contract action',async()=>{
+ const f=exactBlockStateFixture();const result=await api.verifyExistingLoanPublic(f.options);
+ assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.deepEqual(result.stateBlock,{hash:'0x'+f.newHash,height:f.height});
+ assert.ok(f.stateReads.includes('latest'));assert.ok(!f.stateReads.includes(f.newHash));assert.equal(f.tipReads.length,2);
+});
+test('latest state is rejected when indexed coverage is behind current finality',async()=>{
+ const f=exactBlockStateFixture();f.options.provider.queryContractState=async()=>initial();
+ f.options.readCurrentTip=async()=>({...f.indexed,height:f.height-1,hash:api.EXISTING_LOAN.blockHash});
+ await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_INDEXER_FINALITY/);
+});
+test('latest state is rejected when indexer coverage changes during observation',async()=>{
+ const f=exactBlockStateFixture();f.options.provider.queryContractState=async()=>initial();let reads=0;
+ f.options.readCurrentTip=async()=>++reads===1?{...f.indexed}:{...f.indexed,hash:'ed'.repeat(32),finalizedHash:'0x'+'ed'.repeat(32),height:f.height+1,finalizedHeight:f.height+1};
+ await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEAD_MOVED/);
 });

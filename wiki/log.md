@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T06:23:18Z
+updated_at: 2026-09-10T07:43:11Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Reproduce exact-block state semantics
+
+Updated [[wiki/midnight-readiness-lessons|Midnight lessons]] with the actual contained public diagnostic, literal source SQL and unchanged actual-SDK RED/GREEN fixture. Latest-state repair retains full-state equality and indexed/finalized bracketing. All 291 ledger tests pass; independent source/resource review and actual recovery remain pending. Preserved the misdirected Grok call as an input-binding footgun; no new source/claim assessment or financial acceptance.
 
 ## [2026-09-10] save | Preserve deployed identity and test recovery storage
 

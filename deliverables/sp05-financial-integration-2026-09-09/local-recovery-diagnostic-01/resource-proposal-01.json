@@ -1,0 +1,66 @@
+{
+  "schema": "moriarty.local-read-only-recovery-diagnostic/1",
+  "status": "proposed-not-admitted",
+  "scope": "One classified actual preflight observation; source unchanged; no wallet/private data access, recovery writes, proof, submission, acceptance or automatic successor. Prior failed attempt and charges remain consumed.",
+  "attempts": 1,
+  "submissions": 0,
+  "dustFeeSpeck": "0",
+  "grossDebit": "0",
+  "sourceCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-candidate-03.json",
+    "sha256": "3523e1f64323b8092de571f7018dba1f8683ebe66f353d30e44b98931f00fc66"
+  },
+  "priorAttempt": "../local-recovery-01/setup-failure.json",
+  "servicesSeconds": 180,
+  "diagnosticSeconds": 90,
+  "cleanupSeconds": 31,
+  "totalSeconds": 211,
+  "diagnosticUnit": "moriarty-sp05-recovery-diagnostic-01.service",
+  "stopUnit": "moriarty-sp05-recovery-diagnostic-stop-01",
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "proofServer": {
+    "name": "moriarty-midnight-proof-server",
+    "mustRemainStopped": true,
+    "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531"
+  },
+  "nodeProcess": {
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "RuntimeMaxSec": 90,
+    "KillMode": "control-group",
+    "TimeoutStopSec": 1,
+    "FinalKillSignal": "SIGKILL"
+  },
+  "readiness": "Only existing waitForLocalTip read-only polling, within the shared90s deadline. Actual preflight invoked once; no retry of preflight. One optional bounded exact SDK GraphQL query after classified failure; no writes or pool requests.",
+  "storage": {
+    "minimumFreeBytes": 4294967296,
+    "minimumHostAvailableMemoryBytes": 17179869184,
+    "diagnosticOutputMaxBytes": 65536,
+    "graphqlResponseReadMaxBytes": 262144,
+    "graphqlErrorsMax": 8,
+    "graphqlMessageMaxChars": 2048
+  },
+  "admission": "Require two agreeing actual GPT-6 Astra/Grok4.6 resource votes and exact file admission plus retained source approvals. No admission or votes fabricated by this draft.",
+  "outerShutdown": "At arming+180s independent timer kills diagnostic cgroup under5s, Docker stop node+indexer under20s, ExecStopPost Docker kill same two under5s; timer accuracy<=1s. Only same two containers. Proof server remains stopped. Start diagnostic byarming+90s or abort; no late activation.",
+  "priorCharges": "All prior three reserved submissions and900000000000003SPECK remain, plus consumed local-recovery01 service/review attempt and every other historical charge; no refunds."
+}

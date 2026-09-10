@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 318.242,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "```json\n{\n  \"verdict\": \"CHANGES_REQUESTED\",\n  \"reviewer\": \"grok-4.6\",\n  \"voteKind\": \"independent-resource-vote\",\n  \"proposalSha256\": \"92613a095af12ce1e8eab140f9462a1a700ebcd9092ccefae519a17d270bdaa2\",\n  \"commandsSha256\": \"22829764733dc89fcf926d261c9bf51caf5bb101bf59286ae3ed1a985c2309d8\",\n  \"runnerSha256\": \"cf4c9ca6d376957a2c2364d1806bf6d05d0681ee62c1286e1df4ee64057294de\",\n  \"diagnosticSha256\": \"b181073bf6276cbff02b3847833d99573a17d3abc54f4d313462483ffb28eaa7\",\n  \"sourceCandidateSha256\": \"3523e1f64323b8092de571f7018dba1f8683ebe66f353d30e44b98931f00fc66\",\n  \"statusObserved\": \"proposed-not-admitted\",\n  \"acceptanceClaimed\": false,\n  \"findings\": [\n    \"execute-once.py starts the diagnostic with systemd-run Type=exec and no --no-block. Default wait is until the unit exits. The following ActiveState==active check, arming+90s subprocess timeout, and except-path cgroup/docker kill assume a non-blocking start. A blocking wait can expire inside the activation window, SIGKILL a still-running preflight, and again lose the public cause this diagnostic exists to keep.\",\n    \"diagnose-preflight.mjs calls validateLocalLaunchPlan(plan) from launch-local.mjs, which is not among the seven operational files and not in the supplied approved source texts. public-plan.json carries live seedFile, passwordFile, secretsFile, private-state, destination/inspection paths, and a proofServer URL. That call is an unreviewed private-I/O and proof-liveness risk. preflightLocalRecovery already validates the closed recovery plan without those reads; the extra launch validator is not required for a public preflight observation.\",\n    \"docker start of node+indexer uses run()'s default 10s timeout. A slow start consumes the single attempt and never invokes preflight. Start must be bounded by the remaining arming+90s activation deadline, not a separate 10s cap.\",\n    \"assert __debug__ does not refuse python -O: -O strips that assert and every admission/hash/pin/memory/unit check, while save(), timer arming, docker start, and systemd-run still run. Admission must be a live if/raise before any side effect.\",\n    \"Stop-unit TimeoutStartSec=25s equals the sequential 5s cgroup-kill + 20s docker-stop budget. Timer AccuracySec=1s can cut the oneshot before docker stop finishes; ExecStopPost docker kill remains the real backstop. Acceptable only if that kill path stays proof-server-free.\",\n    \"Classifier and result path are the right repair for recovery01: allowlisted localCode, UNCLASSIFIED_* without dropping cause, clipped ASCII publicMessage, exclusive 64KiB fsync, no SDK stdout. Optional TX_ID_QUERY does not persist raw/body/stack and runs only after IndexerQueryError or UNCLASSIFIED_MESSAGE. Failing an existing predicate is in-scope and is not acceptance.\",\n    \"Resource envelope otherwise matches the proposal: submissions 0, dustFeeSpeck 0, grossDebit 0; prior three reserved submissions and 900000000000003 SPECK remain; recovery01 stay consumed; proof server inspected-stopped and absent from every start/stop/kill; images/memory/swap/nanoCpus/restart=no pinned; node MemoryMax 4GiB, MemorySwapMax 0, CPUQuota 200%, RuntimeMaxSec 90, KillMode=control-group, SIGKILL; independent +180s timer with AccuracySec=1s; 16GiB MemAvailable and 4GiB disk gates; attempt consumed before arming; no launcher, wallet, proof, restore, or submit invocation in the diagnostic.\"\n  ],\n  \"conditions\": [\n    \"Add --no-block to the diagnostic systemd-run; keep the ActiveState/MainPID/ActiveEnterTimestamp confirmation; do not wait on preflight inside execute-once.py.\",\n    \"Delete validateLocalLaunchPlan from diagnose-preflight.mjs, or bind launch-local.mjs in admission with evidence it neither opens seed/password/roles/private-state paths nor contacts the proof server.\",\n    \"Bound docker start (and any other pre-activation run()) by remaining activationDeadline, not timeout=10.\",\n    \"Replace assert __debug__ and admission asserts with non-optional checks that still execute under python -O.\",\n    \"Keep proof server out of start/stop/kill; keep submissionsAllowed 0; do not refund or reopen recovery01; do not treat a classified FAILED preflight as admission or acceptance.\",\n    \"Re-issue this vote only against a revised runner/diagnostic digest. This ballot does not admit the present seven-file set.\"\n  ],\n  \"limitations\": [\n    \"Read-only review of supplied text. Hashes are the declared digests; they were not recomputed. No execution, import, node --check, docker, systemd, wallet, or chain access.\",\n    \"Source candidate 03 is used as already independently approved; this vote is not a new source approval and is not runtime admission.\",\n    \"Actual tip readiness, indexer schema, native/state predicates, 89s deadline exhaustion, and terminal containment after the outer timer are runtime unknowns. Missing diagnostic-result.json after SIGKILL remains possible even after the runner fix.\",\n    \"No host CPU admission; two 4-CPU containers plus 200% node quota can oversubscribe. Container writable-layer appends while node/indexer run are not recovery-store writes, but they are not a frozen filesystem either.\",\n    \"TX_ID_QUERY still requests raw into a 256KiB memory bound; non-retention in the result file is a write-policy, not a proof that process memory never held public transaction bytes.\",\n    \"Two agreeing actual gpt-6-astra and grok-4.6 resource votes plus execution-admission.json remain required. This object is one Grok4.6 ballot only and must not be copied as the second vote or as admission.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 40205,
+      "output_tokens": 16023,
+      "cache_read_input_tokens": 1664,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 40205,
+        "outputTokens": 16023,
+        "cacheReadInputTokens": 1664,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0301546
+      }
+    },
+    "total_cost_usd": 0.0301546,
+    "session_id": "01a08a29-8c48-7d50-b543-02597f4f8381"
+  }
+}

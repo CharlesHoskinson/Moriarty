@@ -1,0 +1,9 @@
+# Read-only recovery diagnostic result
+
+The actual diagnostic failed with `RECOVERY_STATE_TYPE` after 21.171 seconds in public preflight. It reported a ready canonical finalized/indexed tip at height 20323. No new transaction was submitted, no new DUST was reserved, no private recovery base was created, and the proof server was not started. This consumed read-only attempt grants no retry or financial acceptance.
+
+The stop service's main command completed successfully at **181.180998 seconds** after arming; the service reached its terminal state at **181.297397 seconds**. Its post-stop kill returned 1 because the containers had already stopped. The separate containment inspection occurred later, at **280.872 seconds**: node/indexer/proof containers were exited, launcher PID was zero, and its cgroup was empty. The later inspection must not be reported as an observation made at stop completion.
+
+The actual retained error is `RECOVERY_STATE_TYPE`; no raw per-query state response was captured. Subsequent source SQL and actual-SDK synthetic transport reproductions support the inferred mechanism: an exact-block contract-action query returns null at a later block with no action, despite the deployment's state remaining available through the latest-action query. That mechanism is reproduced separately; it is not a captured response from this actual diagnostic.
+
+Evidence: [attempt result](attempt-result.json), [diagnostic result](diagnostic-result.json), [stop timing](stop-timing-observation.json), [independent containment](terminal-containment.json), and [subsequent mechanism evidence](../recovery-state-query-01/findings.md). All previous service, review, submission and DUST charges remain retained. No private recovery, financial settlement, Preview, full SP05 or PCD acceptance is established.

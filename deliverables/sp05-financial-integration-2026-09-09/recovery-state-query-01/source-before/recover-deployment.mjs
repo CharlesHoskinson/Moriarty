@@ -76,16 +76,9 @@ export async function reconstructExistingLoan({compiledContract,zkConfigProvider
 }
 
 /** Public chain gate, before seed/private store access. Caller supplies only fixed read-only providers. */
-export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
+export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip}){
  const {observeFinalizedStage,beforeDeadline}=await import('./receipt.mjs');
  const binding=inspectExistingLoanBytes(raw,ledger);const wait=fn=>beforeDeadline(fn,deadlineMs);
- check(typeof readCurrentTip==='function','RECOVERY_INDEXER_READER');
- const indexedTip=async()=>{
-  const t=Object.freeze({...await wait(readCurrentTip)});
-  check(t.status==='READY'&&typeof t.hash==='string'&&/^[a-f0-9]{64}$/.test(t.hash)&&Number.isSafeInteger(t.height)&&t.height>=0&&t.finalizedHeight===t.height&&t.finalizedHash==='0x'+t.hash,'RECOVERY_INDEXER_FINALITY');
-  check(Number.isSafeInteger(t.timestampMs)&&t.timestampMs<=Date.now()&&Date.now()-t.timestampMs<=60000,'RECOVERY_INDEXER_TIME');
-  return t;
- };
  check(tip?.status==='READY'&&typeof tip.hash==='string'&&/^[a-f0-9]{64}$/.test(tip.hash)&&Number.isSafeInteger(tip.height)&&tip.height>=0&&Number.isSafeInteger(tip.finalizedHeight)&&Math.abs(tip.height-tip.finalizedHeight)<=2,'RECOVERY_TIP_FINALITY');
  check(Number.isSafeInteger(tip.timestampMs)&&tip.timestampMs<=Date.now()&&Date.now()-tip.timestampMs<=60000,'RECOVERY_TIP_TIME');
  const observation=await observeFinalizedStage({provider,rpc,ledger,txId:binding.txId,contractAddress:binding.contractAddress,circuitId:'deploy',decodeState,deadlineMs,expectedProtocolVersion});
@@ -93,25 +86,19 @@ export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeSt
  check(r.transaction.transactionHash===binding.transactionHash&&r.transaction.rawSha256===binding.transactionHash&&r.blockHash===EXISTING_LOAN.blockHash&&r.blockHeight===EXISTING_LOAN.blockHeight,'RECOVERY_DEPLOY_RECEIPT');
  // The historical watch can advance the chain. Select current finality only
  // after that watch, then reject any head movement during state observation.
- const indexed=await indexedTip();
  const head=await wait(()=>rpc('chain_getFinalizedHead',[]));
  check(typeof head==='string'&&/^0x[a-f0-9]{64}$/.test(head),'RECOVERY_CURRENT_HEAD');
  const header=await wait(()=>rpc('chain_getHeader',[head]));
  check(typeof header?.number==='string'&&/^0x[a-f0-9]+$/i.test(header.number),'RECOVERY_CURRENT_HEADER');
  const height=Number(BigInt(header.number));
  check(Number.isSafeInteger(height)&&height>=r.finalizedHeight&&height>=tip.height&&height-tip.height<=2,'RECOVERY_CURRENT_HEIGHT');
- check(indexed.hash===head.slice(2)&&indexed.height===height,'RECOVERY_INDEXER_FINALITY');
  check(await wait(()=>rpc('chain_getBlockHash',[tip.height]))==='0x'+tip.hash,'RECOVERY_TIP_CANONICAL');
- // A block filter selects an action IN that block, not state as of the block.
- // Read latest state only between two exact indexed/finalized tip observations.
- const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress))]);
+ const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:head.slice(2)}))]);
  assertExistingLoanState(historical,ledger);assertExistingLoanState(current,ledger);
- const after=await indexedTip();
- check(after.hash===indexed.hash&&after.height===indexed.height,'RECOVERY_CURRENT_HEAD_MOVED');
  check(await wait(()=>rpc('chain_getFinalizedHead',[]))===head,'RECOVERY_CURRENT_HEAD_MOVED');
  check(tip.height>=r.blockHeight&&Date.now()-tip.timestampMs<=60000,'RECOVERY_CURRENT_STATE_TIME');
  // Native bytes include balances; compare all state, not just the three local verifier keys.
- return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock:Object.freeze({hash:head,height}),status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/latest-state checks bracketed by matching indexed and finalized heads; no private recovery or financial acceptance'});
+ return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock:Object.freeze({hash:head,height}),status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/current finalized-state checks; head stable during observation, no private recovery or financial acceptance'});
 }
 
 const verifiedPrivateResults=new WeakSet(),consumedPrivateResults=new WeakSet();

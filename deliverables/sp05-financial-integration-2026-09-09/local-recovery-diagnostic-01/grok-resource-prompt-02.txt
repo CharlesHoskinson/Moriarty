@@ -1,0 +1,274 @@
+Correction-only independent Grok4.6 high resource vote for the read-only diagnostic you reviewed in this session. Preserve prior CHANGES_REQUESTED. Return <=1000 words JSON verdict APPROVE_BOUNDED_RUN or CHANGES_REQUESTED, proposalSha256, commandsSha256, runnerSha256, diagnosticSha256, findings, conditions, limitations. This is the diagnostic (180s services,0submissions), NOT old recovery01 (1350s/3calls). Current exact hashes:{"resource-proposal-01.json": "92613a095af12ce1e8eab140f9462a1a700ebcd9092ccefae519a17d270bdaa2", "commands-01.md": "def3336b5a39d50c78d85d1218b26d449daf067616bb3d058749fdff843acdc4", "execute-once.py": "ca55c57ade15b430d4825844fe0bae286540285fd8fa5145f9e2d60bd54c5d6b", "diagnose-preflight.mjs": "b181073bf6276cbff02b3847833d99573a17d3abc54f4d313462483ffb28eaa7", "public-plan.json": "b50b6fc67f42013a978c1478b0e3fee3bcb53ecfd64f8f3c611d2d786199ecb2", "sdk-query.json": "f5c1045fe9eb2bbea4fa6256c57ee058d0362d37d45e87e558665f31b35901d8", "local-error-codes.json": "85be83745fd0f83eb350b4812f441b2692392435d18a09ce5639508f0814fdf7"}
+
+FILE correction-dispositions-02.md SHA256 00d79cfd3edfbada6d064b0773383fcb0b6adf198f90bb13dd11fd92f51d6de0
+# Diagnostic review corrections
+
+The first correctly targeted Grok vote requested changes; it remains retained and does not admit the original candidate.
+
+1. **Python optimization — corrected.** The original `assert __debug__` vanished under `-O`, as did every subsequent assertion. A non-assert `if not __debug__: raise SystemExit(...)` now runs before admission reads or side effects. Exact AST-extracted checks show normal execution reaches an inert canary, while `-O` and `-OO` exit first. All later assertions are therefore mandatory for any admitted execution.
+2. **Docker startup allowance — corrected.** The single Docker start command now uses the remaining arming +90-second activation allowance. It cannot extend the independent stop window.
+3. **systemd wait — finding contradicted by actual behavior.** An independently bounded, harmless `Type=exec` sleep service returned from `systemd-run` in 0.0327 seconds while the two-second child was still active. It later exited and had PID zero. We keep synchronous start-job acknowledgment; `--wait` was never supplied. Adding `--no-block` would race the immediate active/PID check. No blockchain services were involved.
+4. **Launch validator — missing review context supplied.** `validateLocalLaunchPlan` only checks and clones its argument. It does not open private paths or contact a proof server. Its entire file is already in source-candidate03, and the operational entry rechecks every source digest. The full public-preflight fixture additionally recorded no access to its guarded private paths. The extra validator remains; its source is included with this correction.
+5. **Stop budget — unchanged and scoped.** The timer accuracy shifts dispatch by at most one second; the service has 25 seconds for the kill/stop commands and five seconds for stop-post cleanup. Docker kill remains the backstop, and the proof server is absent. Actual terminal containment still requires observation. No resource ceiling or financial authority changed.
+
+All prior attempts, dissent, misdirected-review usage and original metadata are preserved. No diagnostic services have been dispatched.
+
+
+FILE execute-once.py SHA256 ca55c57ade15b430d4825844fe0bae286540285fd8fa5145f9e2d60bd54c5d6b
+# Draft operational script: do not import or execute for syntax checks.
+import pathlib,json,hashlib,os,subprocess,time,shlex,shutil
+R=pathlib.Path('/home/charl/Moriarty/.worktrees/sp05-deadline-review');D=R/'deliverables/sp05-financial-integration-2026-09-09';O=D/'local-recovery-diagnostic-01'
+if not __debug__: raise SystemExit('PYTHON_OPTIMIZATION_FORBIDDEN')
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+A=json.loads((O/'execution-admission.json').read_text());assert A['status']=='ADMITTED'
+P=json.loads((O/'resource-proposal-01.json').read_text());assert sha(O/'resource-proposal-01.json')==A['proposalSha256']
+files={f['path']:f['sha256'] for f in A['files']};assert len(files)==len(A['files'])
+def bound(ref):
+ p=R/ref['path'];assert not pathlib.Path(ref['path']).is_absolute() and '..' not in pathlib.Path(ref['path']).parts
+ assert files.get(ref['path'])==ref['sha256'] and sha(p)==ref['sha256'];return p
+for f in A['files']:bound(f)
+for p in ['resource-proposal-01.json','commands-01.md','execute-once.py','diagnose-preflight.mjs','public-plan.json','sdk-query.json','local-error-codes.json']:assert str((O/p).relative_to(R)) in files
+candidate=bound(P['sourceCandidate']);assert A['sourceCandidate']==P['sourceCandidate']
+for p,digest in json.loads(candidate.read_text())['files'].items():assert sha(R/p)==digest
+for group,field,digest,verdicts in [('sourceReviews','candidateSha256',P['sourceCandidate']['sha256'],['PASS_SCOPED','APPROVED']),('resourceVotes','proposalSha256',A['proposalSha256'],['APPROVED','APPROVE','APPROVE_BOUNDED_RUN'])]:
+ refs=A[group];assert len(refs)==2 and {x['reviewer'] for x in refs}=={'gpt-6-astra','grok-4.6'}
+ for ref in refs:
+  receipt=json.loads(bound(ref).read_text());assert receipt['reviewer']==ref['reviewer'] and receipt['verdict'] in verdicts and receipt[field]==digest;bound(receipt['actualReview'])
+assert P['attempts']==1 and P['submissions']==0 and P['servicesSeconds']==180 and P['diagnosticSeconds']==90 and P['totalSeconds']==211
+unit=P['diagnosticUnit'];timer=P['stopUnit'];names=['moriarty-midnight-indexer','moriarty-midnight-node'];armed=False
+assert unit=='moriarty-sp05-recovery-diagnostic-01.service' and timer=='moriarty-sp05-recovery-diagnostic-stop-01'
+os.umask(0o077)
+def run(argv,timeout=10):return subprocess.run(argv,capture_output=True,text=True,timeout=timeout,check=True).stdout
+def save(name,value):
+ p=O/name;raw=(json.dumps(value,indent=2)+'\n').encode();assert len(raw)<=65536
+ fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+ try:
+  with os.fdopen(fd,'wb',closefd=False) as f:f.write(raw);f.flush();os.fsync(fd)
+ finally:os.close(fd)
+ fd=os.open(O,os.O_RDONLY|os.O_DIRECTORY)
+ try:os.fsync(fd)
+ finally:os.close(fd)
+for name in [unit,timer+'.timer',timer+'.service']:assert run(['systemctl','--user','show',name,'--property=LoadState','--value']).strip()=='not-found'
+assert not (O/'attempt.json').exists() and not (O/'diagnostic-result.json').exists()
+mem=dict(x.split(':',1) for x in pathlib.Path('/proc/meminfo').read_text().splitlines());assert int(mem['MemAvailable'].split()[0])*1024>=P['storage']['minimumHostAvailableMemoryBytes'];assert shutil.disk_usage(O).free>=P['storage']['minimumFreeBytes']
+containers=json.loads(run(['docker','inspect',*names,P['proofServer']['name']]))
+for c in containers:
+ assert c['State']['Status']=='exited'
+ if c['Name']=='/'+P['proofServer']['name']:assert c['Image']=='sha256:'+P['proofServer']['imageSha256'];continue
+ pin=next(x for x in P['containers'] if c['Name']=='/'+x['name']);h=c['HostConfig'];assert c['Image']=='sha256:'+pin['imageSha256'] and h['Memory']==pin['memory'] and h['MemorySwap']==pin['memorySwapTotal'] and h['NanoCpus']==pin['nanoCpus'] and h['RestartPolicy']['Name']=='no'
+timerArgv=['/usr/bin/systemd-run','--user','--unit='+timer,'--on-active=180s','--timer-property=AccuracySec=1s','--property=Type=oneshot','--property=TimeoutStartSec=25s','--property=TimeoutStopSec=5s','--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill '+' '.join(names),'/usr/bin/bash','-c','/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all '+unit+'; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 '+' '.join(names)]
+argv=['/usr/bin/systemd-run','--user','--unit='+unit.removesuffix('.service'),'--property=Type=exec','--property=MemoryMax=4294967296','--property=MemorySwapMax=0','--property=CPUQuota=200%','--property=RuntimeMaxSec=90','--property=TimeoutStopSec=1','--property=KillMode=control-group','--property=FinalKillSignal=SIGKILL','--property=SendSIGKILL=yes','--property=UMask=0077','--property=StandardOutput=null','--property=StandardError=null','--working-directory='+str(R),'/usr/local/bin/node',str(O/'diagnose-preflight.mjs')]
+save('attempt.json',{'status':'CONSUMED','admissionSha256':sha(O/'execution-admission.json'),'timerArgv':timerArgv,'diagnosticArgv':argv,'submissionsAllowed':0,'retryAllowed':False})
+try:
+ armed=True;run(timerArgv)
+ obj=shlex.split(run(['busctl','--user','call','org.freedesktop.systemd1','/org/freedesktop/systemd1','org.freedesktop.systemd1.Manager','GetUnit','s',timer+'.timer']))[1]
+ def prop(k):return int(shlex.split(run(['busctl','--user','get-property','org.freedesktop.systemd1',obj,'org.freedesktop.systemd1.Timer',k]))[1])
+ nextUS=prop('NextElapseUSecMonotonic');accuracy=prop('AccuracyUSec');assert 0<accuracy<=1000000
+ arm=nextUS/1e6-180;activationDeadline=arm+90
+ assert run(['systemctl','--user','is-active',timer+'.timer']).strip()=='active'
+ save('timer-armed.json',{'argv':timerArgv,'armingMonotonicSeconds':arm,'nextElapseMonotonicMicroseconds':nextUS,'accuracyMicroseconds':accuracy})
+ assert time.monotonic()<activationDeadline;run(['docker','start','moriarty-midnight-node','moriarty-midnight-indexer'],timeout=max(.001,activationDeadline-time.monotonic()))
+ assert time.monotonic()<activationDeadline;run(argv,timeout=activationDeadline-time.monotonic());assert time.monotonic()<activationDeadline
+ fields=dict(x.split('=',1) for x in run(['systemctl','--user','show',unit,'--property=ActiveState,SubState,MainPID,ActiveEnterTimestampMonotonic']).splitlines());assert fields['ActiveState']=='active' and int(fields['MainPID'])>0 and arm<=int(fields['ActiveEnterTimestampMonotonic'])/1e6<=activationDeadline
+ save('diagnostic-active.json',fields)
+ print('Read-only diagnostic active; inspect its bounded public result and independent terminal containment.')
+except BaseException as e:
+ if armed:
+  for cmd in [['/usr/bin/timeout','--signal=KILL','5s','systemctl','--user','kill','--signal=KILL','--kill-whom=all',unit],['/usr/bin/timeout','--signal=KILL','20s','docker','stop','-t','5',*names],['/usr/bin/timeout','--signal=KILL','5s','docker','kill',*names]]:
+   try:subprocess.run(cmd,capture_output=True,timeout=22)
+   except Exception:pass
+ save('setup-failure.json',{'status':'FAILED','errorClass':type(e).__name__,'retryAllowed':False,'timerArmed':armed});raise SystemExit('Diagnostic setup failed; verify terminal containment; no retry.')
+
+
+FILE commands-01.md SHA256 def3336b5a39d50c78d85d1218b26d449daf067616bb3d058749fdff843acdc4
+# Draft read-only recovery diagnostic
+
+No dispatch has occurred. This is one proposed diagnostic after the consumed recovery attempt failed without returning its public preflight result. Existing containment was checked by the parent agent. This draft neither restores that attempt nor authorizes another recovery.
+
+After exact admission and two agreeing actual resource votes, the entry command would be:
+
+```bash
+python3 deliverables/sp05-financial-integration-2026-09-09/local-recovery-diagnostic-01/execute-once.py
+```
+
+Run from `/home/charl/Moriarty/.worktrees/sp05-deadline-review`. Do not execute or import the script for review; parse its Python AST. The entry point uses an explicit non-assert guard to reject optimized Python before reading admission or performing any side effect. `node --check diagnose-preflight.mjs` checks syntax without running the diagnostic.
+
+1. Require a new `execution-admission.json` with `ADMITTED`, the proposal digest, the exact retained source candidate, and `files` binding all seven draft files, the source candidate, normalized source/resource reviews and their retained actual responses. The existing candidate must still match every current source file. Require two source reviews and two resource votes from actual `gpt-6-astra` and `grok-4.6` reviews. Each normalized receipt binds the reviewer, actual verdict, exact candidate/proposal digest and an admission-bound `actualReview` path/hash. No votes or admission are created by this draft.
+
+2. Check that diagnostic and stop units, attempt record and result do not exist. Require 16 GiB available host memory and 4 GiB free disk. Inspect all three original containers as stopped. Start only `moriarty-midnight-node` and `moriarty-midnight-indexer`, preserving their existing image hashes, writable layers, 5 GiB memory, 10 GiB total memory plus swap, four CPUs and restart `no`. The proof server must remain stopped and is absent from every start, stop and kill argument.
+
+3. Retain the one-use attempt and exact timer/diagnostic argv before service start. Independently arm `moriarty-sp05-recovery-diagnostic-stop-01` at +180 seconds. Its inspected predecessor pattern kills the diagnostic cgroup under five seconds, stops only node and indexer under twenty seconds, then attempts their Docker kill under five-second `ExecStopPost`. Timer accuracy is at most one second: planned service and cleanup envelope 211 seconds. Read the real timer expiry and accuracy over D-Bus before container start. No shutdown command depends on the diagnostic returning.
+
+4. Bound the Docker start command by the remaining activation deadline. Start the two containers once and activate `moriarty-sp05-recovery-diagnostic-01.service` by arming +90 seconds. Its Node process has 4 GiB memory, zero swap, 200% CPU, 90-second RuntimeMaxSec, control-group kill and SIGKILL. It also has an internal 89-second exit timer. Confirm activation before the deadline. Setup failure consumes the attempt and attempts the same bounded cleanup; no retry is authorized. Retain terminal containment independently after the outer stop runs; an active timer is not proof of completed cleanup.
+
+5. The diagnostic reads only its admission-bound public plan/query/error-code fixtures, existing public deployment evidence, unchanged public build artifacts and installed source. `public-plan.json` was extracted from only the prior runner's plan-expression AST with literal public inputs; the operational runner was never imported. Private paths are inert fields required by plan validation. No seed, roles, password, snapshots or private database is read or written. Its three-submission plan field is required by the existing recovery validator; this diagnostic authorizes zero submissions and invokes no launcher, integration driver, wallet, proof server or private restore API.
+
+6. Under one shared 89-second deadline, invoke the existing `waitForLocalTip` polling for startup readiness, then call the unchanged `preflightLocalRecovery` once. Its internal readiness uses the same deadline. No preflight retries or other service polling are added. Preserve a closed ready-tip projection and, on success, only the public transaction/address/submitted-ID and finalized-state block. On failure retain the exact allowlisted local predicate, error class and failure phase. Retain a bounded ASCII public error message for every caught error, including non-allowlisted native/asset/SDK errors. This dedicated entry point reads only public inputs; no private objects, error stacks or arbitrary properties are recorded. Classification supplements the message instead of discarding the cause. Example recognized predicates include `RECOVERY_CURRENT_STATE_BYTES`, `UNSUPPORTED_PROTOCOL`, `INVALID_PAID_FEES` and deadline errors.
+
+7. Only if the actual preflight yields an indexer error or an unclassified message, and time remains, issue one exact retained SDK `TX_ID_QUERY` to the same local indexer. This is a diagnostic read, not a retry of preflight. Read at most 256 KiB with at most five seconds and the shared deadline. Preserve HTTP status, response-prefix digest, byte count/truncation, transaction count and at most eight public GraphQL errors with at most 2048 characters each. No transaction raw payload, arbitrary response body, private value or SDK stack is retained. A precise local predicate needs no extra query.
+
+The diagnostic writes one exclusive, fsynced public result bounded to 64 KiB. Generic SDK stdout/stderr are discarded; classification is written by the diagnostic itself. If native execution or the process is killed before retention, the missing result stays missing and containment evidence must state that limit. The diagnostic does not claim that asynchronous SDK calls are intrinsically cancellable; process and container containment remain necessary.
+
+Resource delta: one additional two-container read-only service window of at most 180 seconds plus 31 seconds planned cleanup; one Node diagnostic of at most 90 seconds; zero proofs, submissions, DUST or gross debit. Original three reserved submissions and 900000000000003 SPECK remain charged, as do the failed recovery service/review attempt and every other historical charge. No wallet/private-store preparation, source change, refund, automatic recovery successor, financial settlement or acceptance follows from this diagnostic.
+
+Review prerequisites remain open: exact current source commitments, fresh actual resource votes and admission. Runtime uncertainty remains the actual preflight failure, possible deadline exhaustion, and actual terminal containment. None has been diagnosed by this source-only draft.
+
+
+FILE optimization-guard-red-green.json SHA256 6ec050a95547a044a90cd02f416a6a08383400aca1a9b2375c087a1646568b23
+{
+  "scope": "Only exact AST-extracted old/new guard with inert canary; operational script never executed/imported; no admission/service/private access",
+  "status": "PASS",
+  "observations": [
+    {
+      "source": "old",
+      "options": [],
+      "exitCode": 0,
+      "stdout": "SIDE_EFFECT_CANARY\n",
+      "stderr": ""
+    },
+    {
+      "source": "old",
+      "options": [
+        "-O"
+      ],
+      "exitCode": 0,
+      "stdout": "SIDE_EFFECT_CANARY\n",
+      "stderr": ""
+    },
+    {
+      "source": "old",
+      "options": [
+        "-OO"
+      ],
+      "exitCode": 0,
+      "stdout": "SIDE_EFFECT_CANARY\n",
+      "stderr": ""
+    },
+    {
+      "source": "corrected",
+      "options": [],
+      "exitCode": 0,
+      "stdout": "SIDE_EFFECT_CANARY\n",
+      "stderr": ""
+    },
+    {
+      "source": "corrected",
+      "options": [
+        "-O"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "PYTHON_OPTIMIZATION_FORBIDDEN\n"
+    },
+    {
+      "source": "corrected",
+      "options": [
+        "-OO"
+      ],
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "PYTHON_OPTIMIZATION_FORBIDDEN\n"
+    }
+  ]
+}
+
+
+FILE systemd-type-exec-observation.json SHA256 231457e89e832a9a7cb5578079997fdf11fae897af6f0abee383e6137102951b
+{
+  "scope": "Actual bounded harmless Type=exec sleep service; no blockchain containers/private files/wallet or submissions",
+  "observedAt": "2026-09-10T07:19:18.515064+00:00",
+  "command": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-systemd-type-exec-observation-20260910",
+    "--property=Type=exec",
+    "--property=RuntimeMaxSec=5",
+    "--property=MemoryMax=16777216",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=10%",
+    "--property=TimeoutStopSec=1",
+    "--property=KillMode=control-group",
+    "/usr/bin/sleep",
+    "2"
+  ],
+  "exitCode": 0,
+  "systemdRunElapsedSeconds": 0.03273263700248208,
+  "immediatelyAfterCommand": {
+    "ActiveState": "active",
+    "SubState": "running",
+    "Type": "exec",
+    "MainPID": "1220589"
+  },
+  "afterSleepCompletion": {
+    "ActiveState": "inactive",
+    "SubState": "dead",
+    "Type": "",
+    "MainPID": "0"
+  },
+  "conclusion": "Without --wait, Type=exec systemd-run returned while child service was still active; no --no-block change required."
+}
+
+
+FILE offline-preflight-findings.md SHA256 547bf9ca72277b59441b2f609d32320ecb1d30a7fd6b9666ec333edb2f83dc48
+# Offline public wrapper coverage
+
+Experiment observation: on repository HEAD `f55296c449f9fc271ad25097fd70435547941001`, the actual `validateLocalLaunchPlan` and `preflightLocalRecovery` entry points completed with `PUBLIC_STATE_VERIFIED` in 898.952485 ms. The subprocess exited 0 under `timeout --signal=TERM --kill-after=1s 10s`; stderr was empty, all 16 HTTP requests reached the ephemeral loopback fixture, and its server closed before exit.
+
+Inputs were the reviewed `public-plan.json` (SHA256 `b50b6fc67f42013a978c1478b0e3fee3bcb53ecfd64f8f3c611d2d786199ecb2`), actual pinned runtime/SDK, unchanged proven build receipt/assets, retained deployment bytes/result and the native deployment's initial state. Only the plan's network endpoints and fixture deadline were changed in memory. The test loaded the actual generated state decoder and exercised genesis, exact finalized-tip readiness, SDK observation, full native state equality and stable finalized-head checks.
+
+Filesystem traps on synchronous read/open/lstat/write/mkdir operations rejected accesses to all plan seed, wallet snapshot, roles, source private store, recovery store/inspection/password and output paths. The access log is empty. The test contains no wallet constructor or blockchain service command. Responses for chain tip/time, GraphQL metadata/fees and RPC finality were synthetic. This verifies wrapper compatibility for those fixture responses; it neither identifies the actual failed preflight cause nor establishes actual-chain acceptance.
+
+Files: `offline-preflight-fixture.mjs`, `offline-preflight-result.json`, `offline-preflight-stderr.log`. Prior published fixtures and the seven diagnostic files under review were not modified.
+
+
+APPROVED launch-local.mjs SHA256 db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c; complete validation function and its helpers below, before private APIs. Sourcecandidate03 includes this exact file; runner iterates every sourcecandidate files entry.
+/** Existing-wallet local entry point. Actual execution requires separate admission
+ * and outer process containment. Importing this module never reads private files,
+ * constructs a wallet, imports SDK code, or contacts a service.
+ */
+import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join,dirname,isAbsolute,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {inspectFinancialBuild} from './proven-assets.mjs';
+import {integrateLocalFinancialCase,preflightLocalRecovery} from './integrate-local.mjs';
+import {waitForLocalTip,guardLocalWallet} from './local-tip.mjs';
+import {validateExistingLoanPlan} from './recover-deployment.mjs';
+
+const check=(ok,code)=>{if(!ok)throw Error(code);};
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+const childKinds=['shielded','unshielded','dust'];
+const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+export function validateLocalLaunchPlan(p){
+ const recovery=Object.hasOwn(p??{},'existingDeployment');
+ exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory'+(recovery?',existingDeployment':''));
+ check(p.schema==='moriarty.local-financial-launch/1'&&['loan','swap'].includes(p.kind),'LAUNCH_SCHEMA');
+ exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hex(p.build.receiptSha256)&&hex(p.build.sourceManifestHash),'LAUNCH_BUILD_HASH');
+ exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');check(p.networkConfig.networkId==='undeployed','LAUNCH_NETWORK');
+ for(const key of ['node','indexer','indexerWS','proofServer']){const u=new URL(p.networkConfig[key]);check(u.protocol===(key==='indexerWS'?'ws:':'http:')&&['127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&!u.hash,'LAUNCH_LOOPBACK');}
+ exact(p.wallet,'seedFile,stateDirectory,expectedAddress');absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);check(typeof p.wallet.expectedAddress==='string'&&/^mn_addr_undeployed1[a-z0-9]+$/.test(p.wallet.expectedAddress),'LAUNCH_WALLET_ADDRESS');
+ exact(p.roles,'firstAddress,secondAddress,secretsFile');absolute(p.roles.secretsFile);check(hex(p.roles.firstAddress)&&hex(p.roles.secondAddress)&&p.roles.firstAddress!==p.roles.secondAddress,'LAUNCH_ROLES');
+ exact(p.privateState,'directory,passwordFile');absolute(p.privateState.directory);absolute(p.privateState.passwordFile);absolute(p.outputDirectory);
+ const paths=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory];check(new Set(paths).size===3&&paths.every((a,i)=>paths.every((b,j)=>i===j||!a.startsWith(b+'/'))),'LAUNCH_DISTINCT_DIRECTORIES');
+ check(hex(p.networkTag)&&Number.isSafeInteger(p.expectedProtocolVersion)&&p.expectedProtocolVersion>=0,'LAUNCH_BINDINGS');
+ exact(p.limits,'allocationId,deadlineMs,submissions,dustFee,grossByLogicalAsset');check(typeof p.limits.allocationId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.limits.allocationId),'LAUNCH_ALLOCATION');
+ check(Number.isSafeInteger(p.limits.deadlineMs)&&p.limits.deadlineMs>Date.now()&&p.limits.deadlineMs<=Date.now()+3600000&&p.limits.submissions===(recovery?3:4)&&decimal(p.limits.dustFee),'LAUNCH_LIMITS');
+ exact(p.limits.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(p.limits.grossByLogicalAsset).every(decimal),'LAUNCH_ASSET_LIMITS');
+ if(recovery){
+  validateExistingLoanPlan(p.existingDeployment,p);
+  check(p.wallet.seedFile==='/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed'&&p.wallet.stateDirectory==='/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2'&&p.wallet.expectedAddress==='mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9','LAUNCH_RECOVERY_ORIGINAL_WALLET');
+  check(p.roles.firstAddress==='9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb'&&p.roles.secondAddress==='c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e','LAUNCH_RECOVERY_ORIGINAL_ROLES');
+  const roots=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory,p.existingDeployment.inspectionDirectory];
+  check(roots.every((a,i)=>roots.every((b,j)=>i===j||(a!==b&&!a.startsWith(b+'/')))),'LAUNCH_RECOVERY_DIRECTORY_OVERLAP');
+  check(!p.privateState.passwordFile.startsWith(p.wallet.stateDirectory+'/'),'LAUNCH_RECOVERY_PRESERVE_WALLET');
+ }
+ return structuredClone(p);
+}
+function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
+export function readPrivateLaunchFile(p){

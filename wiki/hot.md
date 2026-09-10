@@ -22,20 +22,18 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-10T06:23:18Z
+updated_at: 2026-09-10T07:43:11Z
 ---
 
 # Current research context
 
 The [complete roadmap](../ROADMAP.md) and [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) control current work. MC01-MC08 acceptance remains open.
 
-Preview is the public integration target. Existing hello-world deployment and call receipts establish basic connectivity, not financial settlement or PCD. A reviewed native encoding/resource decision must precede a new proof run.
+Preview is the public target. Hello-world receipts establish connectivity only; financial settlement and PCD remain open.
 
 [[wiki/index|Research index]] · [[wiki/moriarty-architecture|Architecture]] · [[wiki/open-questions|Open questions]] · [[wiki/workflow|Workflow]]
 
 The current [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks, EBNF/static judgments and K. `.mori` is the source extension. Prioritize pinned action fixtures and a small K/evaluator comparison with a surviving obligation; no native proof loop is armed by this research.
-
-The [completion sprints](../openspec/sprints/README.md) remain subject to MC/RP acceptance, cumulative resource charges and proof gates.
 
 The [four complete DeFi papers](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) now have page-cited taxonomies and a graph. The [design comparison](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) proposes twelve tests for shares, debt, clocks, atomic repayment, liquidation, requests and authority. Keep orthogonal facets and explicit external assumptions. Use the partial-payment/residual-duty case in the next admitted language/K slice; source intake does not close SP01–SP12.
 
@@ -51,4 +49,4 @@ The [TypeScript-style language report and PL checklist](../deliverables/language
 
 [Security-token report and asset transformations](../deliverables/security-token-transformations-2026-09-09/README.md): SRC-0110 recommends explicit assets, claims, encumbrances and operation-specific authority. Define the model in SP01, types and reductions/K in SP02–03, servicing/DeFi behavior in SP07–08, and history/composition/conformance in SP06/SP09–12. Preserve the current admitted SP05 loan/swap work; test each later supported profile on Docker then Preview. The eight new cases are proposals; report citations and standards status remain unverified.
 
-[[wiki/midnight-readiness-lessons|Local readiness lessons]]: stale-DUST rejection was followed by an indexed deployment and local storage failure. Source recovery preserves its identity and serializes actual-provider readbacks; live recovery and Preview financial acceptance remain open.
+[[wiki/midnight-readiness-lessons|Local readiness lessons]]: a contained public recovery diagnostic exposed exact-block action lookup semantics. The unchanged actual-SDK fixture passes with latest-state lookup and matching indexed/finalized bracketing; full native-state equality remains required. All 291 ledger tests pass. Source/resource audits and actual recovery remain pending; no Preview financial acceptance.

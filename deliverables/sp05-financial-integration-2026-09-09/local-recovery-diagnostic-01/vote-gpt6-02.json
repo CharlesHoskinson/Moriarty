@@ -1,0 +1,126 @@
+{
+  "schema": "moriarty.bounded-diagnostic-source-resource-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/recovery_source_audit",
+    "host": "Codex",
+    "role": "Independent diagnostic source/resource reviewer; no implementation or dispatch"
+  },
+  "reviewedAt": "2026-09-10T07:22:19.605458+00:00",
+  "verdict": "APPROVE_BOUNDED_RUN",
+  "findings": [],
+  "proposalSha256": "92613a095af12ce1e8eab140f9462a1a700ebcd9092ccefae519a17d270bdaa2",
+  "commandsSha256": "def3336b5a39d50c78d85d1218b26d449daf067616bb3d058749fdff843acdc4",
+  "runnerSha256": "ca55c57ade15b430d4825844fe0bae286540285fd8fa5145f9e2d60bd54c5d6b",
+  "reviewedFileSha256": {
+    "resource-proposal-01.json": "92613a095af12ce1e8eab140f9462a1a700ebcd9092ccefae519a17d270bdaa2",
+    "commands-01.md": "def3336b5a39d50c78d85d1218b26d449daf067616bb3d058749fdff843acdc4",
+    "execute-once.py": "ca55c57ade15b430d4825844fe0bae286540285fd8fa5145f9e2d60bd54c5d6b",
+    "diagnose-preflight.mjs": "b181073bf6276cbff02b3847833d99573a17d3abc54f4d313462483ffb28eaa7",
+    "public-plan.json": "b50b6fc67f42013a978c1478b0e3fee3bcb53ecfd64f8f3c611d2d786199ecb2",
+    "sdk-query.json": "f5c1045fe9eb2bbea4fa6256c57ee058d0362d37d45e87e558665f31b35901d8",
+    "local-error-codes.json": "85be83745fd0f83eb350b4812f441b2692392435d18a09ce5639508f0814fdf7"
+  },
+  "sourceCandidateSha256": "3523e1f64323b8092de571f7018dba1f8683ebe66f353d30e44b98931f00fc66",
+  "scope": "Correction review and resource vote on exact updated seven-file read-only diagnostic. Only runner optimization guard, Docker-start timeout and accompanying command documentation changed; five other diagnostic files and approved recovery source remain byte-identical. No dispatch or runtime acceptance.",
+  "priorVote": {
+    "path": "vote-gpt6-01.json",
+    "sha256": "b832b93f8ba101ef87c782059730dedf93fa92cde3bb8e8b3e9bc09225199b6f",
+    "status": "PRESERVED_SUPERSEDED_FOR_CURRENT_RUNNER"
+  },
+  "grokFindingDispositions": [
+    {
+      "finding": "assert __debug__ disappears under optimized Python",
+      "status": "RESOLVED",
+      "file": "execute-once.py",
+      "line": 4,
+      "detail": "Explicit if not __debug__: raise SystemExit survives optimization and executes before admission reading or operational side effects. Normal-mode assertions remain mandatory because optimized interpreters exit before reaching them. Earlier vote01 did not identify this real guard defect; this correction supersedes that conclusion."
+    },
+    {
+      "finding": "Docker start default10s can prematurely consume diagnostic attempt",
+      "status": "RESOLVED",
+      "file": "execute-once.py",
+      "line": 53,
+      "detail": "Docker-start subprocess timeout now uses the remaining arming+90s activation deadline; post-start and post-activation monotonic guards remain. Independent180s shutdown and211s planned envelope remain unchanged."
+    },
+    {
+      "finding": "Type=exec systemd-run waits until service exit",
+      "status": "DISPOSITION_VERIFIED_NO_CHANGE_NEEDED",
+      "detail": "Installed systemd-run --help explicitly identifies --wait as waiting until the service stops again. Retained bounded actual Type=exec sleep2 observation records systemd-run returning in0.032732637 seconds while service is active, then later inactive. Runner has no --wait. --no-block would remove startup-job waiting and can race immediate ActiveState confirmation; it is not needed to avoid waiting for preflight completion."
+    },
+    {
+      "finding": "validateLocalLaunchPlan unreviewed private-I/O/proof risk",
+      "status": "DISPOSITION_VERIFIED_NO_CHANGE_NEEDED",
+      "detail": "launch-local.mjs is explicitly bound in approved source-candidate03 and is rehashed by the runner through the complete manifest. Its exported validator performs shape/path/identity checks only and returns a clone; it does not read secret files, construct wallets or contact proof services. Prior independent offline public-plan validation succeeded without private reads. The earlier Grok packet omitted relevant source text; supplying the existing approved validator is the appropriate evidence correction."
+    },
+    {
+      "finding": "stop-unit25s equals5s cgroup kill plus20s Docker stop",
+      "status": "ACCEPTED_WITH_EXISTING_BACKSTOP",
+      "detail": "Stop service can terminate a slow main command at its25s bound; retained ExecStopPost performs bounded Docker kill for exactly node/indexer. Timer accuracy shifts activation by<=1s; it does not independently shorten TimeoutStartSec. +180s plus25s+5s+1s fits211s. Proof server remains absent from all start/stop/kill lists, and actual containment must be observed."
+    },
+    {
+      "finding": "classification, zero-debit scope and resource controls otherwise match",
+      "status": "UNCHANGED_VERIFIED",
+      "detail": "Preserved final publicMessage classifier, allowlisted codes, one optional exactSDKquery, bounded public result, zero submissions/DUST/gross, source-only public invocation, one-use attempt and original charge retention. Five unchanged file hashes carry prior independent checks forward."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact-current-and-original-bytes",
+      "result": "PASS",
+      "detail": "All seven current hashes computed; original runner/document snapshots match vote01 hashes. Only the two declared files changed. Approved candidate03 hash and all28 current source hashes still match."
+    },
+    {
+      "name": "guard-red-green",
+      "result": "INDEPENDENTLY_REPRODUCED",
+      "detail": "Parsed exact old/new guard AST and executed only that node followed by inert print under normal,-O,-OO interpreters. Old guard reached canary in all modes; new guard reaches canary only in normal mode and exits1 with PYTHON_OPTIMIZATION_FORBIDDEN and no canary under both optimized modes. Operational runner was not imported or executed."
+    },
+    {
+      "name": "syntax-and-source-order",
+      "result": "PASS",
+      "detail": "Current runner parses successfully; inspected exact diff and verified explicit guard precedes admission access. Docker start timeout uses activationDeadline-time.monotonic and existing later checks prevent a late diagnostic activation."
+    },
+    {
+      "name": "systemd-evidence",
+      "result": "PASS_SCOPED",
+      "detail": "Inspected retained harmless actual observation and independently read installed systemd-run --help. No new service was started by this reviewer; the actual sleep observation remains retained evidence rather than a rerun."
+    },
+    {
+      "name": "unchanged-review-coverage",
+      "result": "PASS_SCOPED",
+      "detail": "Prior exact public-plan validation, pure error-classifier tests, bounded optionalquery, same-source public preflight/private-access exclusion and source/resource-admission/containment checks carry forward on unchanged files. No other runner control or resource allowance changed."
+    }
+  ],
+  "evidenceSha256": {
+    "optimization-guard-red-green.json": "6ec050a95547a044a90cd02f416a6a08383400aca1a9b2375c087a1646568b23",
+    "systemd-type-exec-observation.json": "231457e89e832a9a7cb5578079997fdf11fae897af6f0abee383e6137102951b",
+    "grok-resource-result-01.json": "ece05e9b26570f64a177562dcff88faa22526a9e5578397d2c0be23dc5434471",
+    "source-snapshots-01/execute-once.py": "cf4c9ca6d376957a2c2364d1806bf6d05d0681ee62c1286e1df4ee64057294de",
+    "source-snapshots-01/commands-01.md": "22829764733dc89fcf926d261c9bf51caf5bb101bf59286ae3ed1a985c2309d8"
+  },
+  "conditions": [
+    "Require agreeing completed Grok source/resource vote on these exact seven files, then a separately faithful exact admission with both actual vote references and retained current source approvals. This one vote is not a dispatch.",
+    "Execute these exact bytes once under non-optimized Python, preserving one-use attempt/result absence checks. No preflight retry, extra query, service extension, wallet/private operation, source edit, funding, registration, redeployment or automatic successor.",
+    "Before starting services, all exact admission/source/container/headroom checks must actually pass. Keep proof server stopped, preserve node/indexer writable layers and all original identity/store/snapshot/journal files.",
+    "Do not exceed 180s services,90s Node diagnostic,211s planned total including cleanup, existing per-container and Node memory/CPU caps,64KiB diagnostic output or one conditional query with256KiB read ceiling.",
+    "Observe terminal cgroup emptiness and both containers stopped independently after the timer or setup cleanup. Active timer, process exit, attempted Docker kill or missing output is not successful containment evidence.",
+    "Interpret bounded publicMessage, localCode, failurePhase and optional-query observations together. Truncated/missing messages, deadline or missing result remain explicit limits; do not infer an actual schema/state cause from the earlier synthetic fixture.",
+    "Any PUBLIC_STATE_VERIFIED result is only the scoped public observation supplied by the unchanged helper; it does not authorize private restore, loan calls, financial/Preview/full-SP05/PCD acceptance or reuse of the consumed recovery allocation.",
+    "Retain the failed recovery evidence and all historical charges. This diagnostic consumes one additional service/review attempt even if it fails before producing useful output.",
+    "A new completed Grok vote must bind the corrected runner/document hashes and all seven current files; original Grok CHANGES_REQUESTED and vote01 remain retained and are not counted as corrected-source approval."
+  ],
+  "limitations": [
+    "No diagnostic/operational process was dispatched, no real service was started or queried and no private files were accessed during this review. Only static inspection, syntax checks, pure classification tests and offline public-plan validation ran.",
+    "Actual preflight cause, live server behavior, current canonical state and terminal runtime containment remain unestablished.",
+    "Underlying SDK operations are not claimed intrinsically cancellable; process/cgroup/container containment is required.",
+    "Bounded error projection is not arbitrary error-object or raw-response retention. Missing/non-string/deep cause-only errors or a failed/oversized retention can still limit diagnosis; these outcomes must be reported honestly.",
+    "The output ceiling does not establish an aggregate hard disk quota for existing container writable layers; CPU/memory/time bounds and preflight free-disk check remain the resource controls.",
+    "Admission record construction must preserve actual reviewer identity and exact-file conditions; normalized records alone are not independent votes.",
+    "The real optimized-Python guard defect in the original runner is explicitly preserved; this vote is only for the corrected exact bytes.",
+    "No systemd/container/runtime operations were performed for this correction review. Installed CLI help and the retained parent observation support the Type=exec disposition."
+  ],
+  "networkAcceptance": false,
+  "financialAcceptance": false,
+  "proofAcceptance": false,
+  "operationalScriptExecuted": false
+}
