@@ -1,0 +1,2151 @@
+diff --git a/deliverables/sp02-expression-source-2026-09-10/IMPLEMENTATION-01.md b/deliverables/sp02-expression-source-2026-09-10/IMPLEMENTATION-01.md
+new file mode 100644
+index 0000000..8111360
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/IMPLEMENTATION-01.md
+@@ -0,0 +1,88 @@
++# Real expression source candidate
++
++Implementation candidate; independent GPT-6 Astra and Grok 4.6 implementation
++and result audits are pending. The author does not approve this result.
++
++A developer can write `moriarty-expression-source/1` in a `.mori` file, check it,
++inspect its checked Core and evaluate it against an immutable trusted schema and
++owned snapshots. Source-level tests reach all40 reviewed Core constructors,
++including arbitrary record-valued Emit operands, and check exact types, work,
++UTF-8 spans and rollback. The factory accepts source, never supplied Core or AST.
++
++The executable demo increments an ordinary counter from10 to12, retains the
++financial funds field at100, and returns a typed quote descriptor. It executes
++no financial operation, funded preparation, signature, proof or network command.
++
++## Entry points and changes
++
++- `src/successor/expression-source-v1.ts`: source-only trusted-schema factory;
++  elaborate/check/evaluate APIs; closed snapshots and ordered failure phases.
++- `expression-source-types.ts` and `expression-source-lower.ts`: exact source type
++  metadata, namespace checks and all40 lowering; no type-alias registry.
++- `frontend.ts`, `format.ts`, `expression-source-frontend.ts`: explicit /1 parser
++  and formatter, gated syntax, collection128 and parameter256 limits. The original
++  syntax/0 parser/formatter and funded/atomic APIs retain their behavior.
++- `expression-v1.ts`: additive static `check()` API. It does not validate supplied
++  snapshots, execute guards or publish state/descriptors; evaluate is unchanged.
++- `spec/successor/expression-source-grammar.ebnf` and `expression-source.md`:
++  complete grammar and developer contract; executable counter example/configs.
++
++## Verification observations
++
++All commands ran in the isolated expression-source worktree at the candidate
++source bytes, with no financial, proof, native or Preview campaign.
++
++| Command | Observed result | Retained output |
++| --- | --- | --- |
++| npm --prefix experiments/moriarty-language run build | exit0 | build-02.txt |
++| npm --prefix experiments/moriarty-language test | exit0;470 tests pass, zero failures/skips | package-tests-03.txt |
++| npm --prefix experiments/moriarty-language run expression-demo | exit0; source check and expected local result | demo-02.txt |
++| git diff --check | exit0 | diff-check-02.txt |
++
++The tests include full40 source constructor coverage, indexed financial literal
++values, record/enum/option/collection constructors, both access aliases, exact
++capacity equality, collection128/129 and parameter256/257, static errors in dead
++branches, immutable pre/post, source guard/ensure failures, financial-write
++rejection, descriptor129 rollback, final aggregate VALUE_BOUND rollback, Unicode
++spans/Core paths, work exhaustion and workInitial below conservative work B,
++hostile input ownership, formatter Core preservation and old-profile regression.
++
++The final regression also prevents mutation of exported lexical catalogs from
++changing later source admission. Twelve additional root-authored public API
++probes passed; root-probes-01 preserves its incorrect REQUIRE_FAILED expectation
++(the runtime correctly uses GUARD_FAILED), and corrected root-probes-02 passes.
++This was a probe expectation correction, not a product defect. Original scripts
++and JSON results were copied byte-for-byte from the root-provided files.
++
++The prior source/profile red runs and the first whole-package green run remain
++retained. They are historical observations of their exact earlier source state.
++
++## Design and D5 corrections
++
++Proposals01/02 and every original review remain unchanged. Both proposal02
++reviewers approved D1–D4. GPT-6 requested D5 C1/C2 corrections; Grok's approval
++never erased those findings. Proposal03 is the narrow correction supplied to the
++final exact implementation audits:
++
++1. /1 emission accepts a bare operation identifier. `emit O<UInt64> {};` rejects
++   at `<` with parser UNEXPECTED_TOKEN, not a later SOURCE_OPERATION.
++2. The snapshot envelope has an explicit2000000-byte pre-parse cap and each
++   Pre/Args/Obs retains its independent65536-byte cap.
++
++Actual source/parser and transport tests exercise both corrections. D5 remains
++pending acceptance by the final independent pair. No third broad design cycle
++or orchestration infrastructure was added.
++
++## Remaining obligations
++
++This component supports one action against trusted Σ. It rejects source const and
++state initialization; source-defined schemas, multi-action agreements, genesis,
++constant semantics and identity escaping retain SP02 ownership. Its explicit
++source name/depth/token domain is narrower than arbitrary serialized Core.
++All40 means constructor/operand/composition fidelity within that stated domain.
++
++Operation outputs remain descriptors. Financial-operation semantics, complete
++ACTUS/DeFi behavior, K/evaluator/compiler correspondence, signing, mandatory PCD,
++private handoff and Preview financial acceptance remain open across SP01–SP12.
++The later pure-financial8/UInt256 runtime is not silently selected by this source
++profile. This candidate neither completes SP02 nor closes a sprint.
+diff --git a/deliverables/sp02-expression-source-2026-09-10/PROPOSAL-03.md b/deliverables/sp02-expression-source-2026-09-10/PROPOSAL-03.md
+new file mode 100644
+index 0000000..49ca8cf
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/PROPOSAL-03.md
+@@ -0,0 +1,378 @@
++# Expression source extension proposal 03
++
++Status: frozen narrow D5 correction for the final independent implementation
++audits; D1–D4 choices have both proposal02 design approvals. D5 is not closed
++until both final audits approve these corrections and their implementation.
++Proposals01/02 and all original reviews remain unchanged. This revision resolves
++GPT-6-02 C1/C2 within the accepted grammar and existing two-million-byte transport
++ceiling. The retained consistency reproduction precedes these narrow corrections. Scope is local
++source → typed Core → expression evaluation, consuming the reviewed all40 /1
++runtime at base 36ca249. Full SP02, financial-operation transitions, K/proof
++correspondence and SP01–SP12 completion remain open.
++
++Repository observations: syntax/0 has nonnegative decimal, text and Boolean
++literals; identifier reads/calls; dot projection; +, -, *, six comparisons,
++not/and/or; all five action statements. It has no signed literals, numeric type
++arguments, record/enum/option/collection construction, index projection, or
++observation/schema/vault declarations. Its formatter covers that AST. The funded
++elaborator rejects operators, state/const, guards, locals, writes and ensures.
++The all40 runtime accepts canonical Core and trusted host-bound Σ, not source.
++
++Design basis: deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md and
++SYNTAX-COMPARISON.md select braced declarations, typed financial values, explicit
++pre/next/post, named rounding and infix arithmetic. Model comparisons are not
++an empirical developer study. This proposal extends that design instead of
++making raw Core constructor names or host type aliases the source language.
++
++## Decisions requiring two substantive independent agreeing votes
++
++D1. Add explicit profile `moriarty-expression-source/1` through a separate parser
++and evaluation entry point. syntax/0, atomic/1 and funded-source/0 APIs and accepted
++bytes retain their meaning. Reuse the bounded lexer/parser with profile-gated
++productions; old parser rejects the new header. No implicit profile upgrade.
++
++D2. Extend generic type arguments to include canonical signed decimal integers.
++Types spell their complete metadata, with no hidden per-program aliases:
++`UInt64`, `UInt128`, `SInt128`, `Bool`, `Text`, `Amount<A>`, `Shares<V,H>`,
++`Rate<2>`, `Price<A,B,2>`, `Quantity<Units<EUR,-1,USD,1>,2>`, `Record<R>`,
++`Enum<E>`, `Operation<O>`, `Option<T>`, `Collection<T,128>`.
++`Units` without arguments is the empty vector. Unit pairs must already be in
++strict identifier order, nonzero exponent -128..127; no source normalization
++silently repairs malformed metadata. Exact runtime type equality applies.
++Bare unsigned expressions mean UInt128; `u64(1)`, `u128(1)`, `i128(-5)` are typed
++literal forms. A negative decimal expression is a SInt128 literal, not a general
++negation operator. `-0` rejects. There is no unary plus, float or implicit cast.
++
++D3. Add generic intrinsic calls and typed record literals. Only the fixed generic
++names `some`, `none`, `collection`, `quantity`, `record` may consume `<` after
++an identifier, removing ambiguity with comparisons; these names are reserved
++as term binders. Record fields and collection elements retain source order.
++All literal metadata must be syntactic literals/identifiers, never evaluated
++expressions. Signed mantissas admit unsigned or negative decimal token forms.
++
++| Source | Exact Core lowering |
++| --- | --- |
++| 1; u64(1); u128(1) | LitUInt(128,1); LitUInt(64,1); LitUInt(128,1) |
++| -5; i128(5) | LitSInt(-5); LitSInt(5) |
++| true/false; "text" | LitBool; LitText |
++| amount(5,A) | LitAmount(asset=A,value=5) |
++| shares(5,V,H) | LitShares(vault=V,holder=H,value=5) |
++| rate(-5,2) | LitRate(scale=2,mantissa=-5) |
++| price(5,A,B,2) | LitPrice(base=A,quote=B,scale=2,mantissa=5) |
++| quantity<Units<USD,1>,2>(-5) | LitQuantity(units=[[USD,1]],scale=2,mantissa=-5) |
++| local; parameter; obs.name | ReadLocal; ReadArg; ReadObs |
++| pre.field; post.field | ReadPre(pre,field); ReadPre(post,field) |
++| value.field; value[index] | ProjectField; ProjectIndex |
++| access_field(value,"field"); access_index(value,index) | AccessField; AccessIndex |
++| record<R> { field: value, other: value } | ConstructRecord(R, lexical fields) |
++| E.Member, where E is a registered enum name | ConstructEnum(E,Member) |
++| some<T>(value); none<T>() | ConstructSome(T,value); ConstructNone(T) |
++| collection<T,N>(values...) | ConstructCollection(T,N,lexical values) |
++| +, -, *, floor_div(a,b), ceil_div(a,b) | Add, Sub, Mul, FloorDiv, CeilDiv |
++| ==, <, <=, >, >= | Eq, Lt, Lte, Gt, Gte |
++| != | Not(Eq(a,b)); both nodes use the comparison occurrence span |
++| not, and, or | Not, And, Or, exactly once per operator |
++| requires e; let x=e; next.f=e; ensures e | Require, Let, NextWrite, Ensure |
++| emit O value; | Emit(O,core(value)), without a reconstructed record |
++| emit O { f:e, ... }; | Emit(O,ConstructRecord(Σ.operations[O], lexical fields)) |
++
++Bare variable reads resolve only lexical locals or declared parameters. Schema
++fields and observations require explicit views. Enum type names cannot collide
++with term binders or pre/post/obs. Unknown calls reject; there are no callbacks,
++user functions, macros, recursion or source Core-deserialization escapes.
++Access aliases exist only to cover both separately retained reviewed Core names;
++they carry the same exact runtime work/error rules as projection syntax.
++
++D4. Host binding remains the immutable reviewed Σ registry and determines all
++financial write classes. A source action parameter list must exactly match Σ.args
++in names and exact types. Its /1 parameter limit is256 (the total schema
++declaration bound), while syntax/0 keeps64; source bytes/tokens and aggregate
++schema bounds still apply simultaneously. This initial API admits exactly one action per source,
++plus optional unit/party declarations (any subset, with no extras) validating membership in Σ and name-only
++`asset A: Asset;` declarations validating membership in Σ.assets. `Asset<Unit>`
++annotations reject SOURCE_DECLARATION_TYPE: the expression registry has no
++asset/denomination relation and must not silently discard a supplied annotation. It rejects
++const/state declarations: no initializer, genesis, constant caching or implicit
++state-reset semantics are introduced by an expression bridge. Pre-state and
++observations are supplied snapshots validated by the runtime. Every reviewed constructor has a direct source mapping within the explicitly
++restricted source domain below, while the complete agreement declaration
++language remains open and this limitation is reported explicitly. Exactly one
++action is a scoped API limitation, not the final language design; SP02 retains
++ownership of multiple actions, source-defined schemas, state/genesis and constant
++semantics. No registry name is evidence of source-defined financial authority. The one
++source action is selected intrinsically; evaluate accepts no action selector,
++and there is no SOURCE_UNKNOWN_ACTION claim against Σ (which has no action
++registry). Zero or multiple actions reject SOURCE_ACTION_COUNT.
++
++D5. Source mapping and Core static errors are checked before typed snapshot
++validation/reduction; structural envelope errors precede both. Parser errors keep
++existing lexical/syntax codes. Elaboration errors use SOURCE_* codes and UTF-8
++source spans (action count, unsupported declaration/call/type, intrinsic arity
++and literal metadata shape, reserved/duplicate names, parameter/schema mismatch).
++Runtime TYPE_*, INPUT_*, ARITH_*, INDEX_RANGE, GUARD_FAILED, ENSURES_FAILED,
++VALUE_BOUND, DESCRIPTOR_BOUND and WORK_EXHAUSTED pass through unchanged with source spans and original Core paths.
++No rejection includes staged state/descriptors. Enum resolution, builtin-name
++reservation and type metadata validation occur before dynamic work. The trusted
++schema cannot be supplied/reclassified by an evaluation request.
++
++## Grammar delta (ISO/IEC 14977 EBNF)
++
++The syntax/0 productions remain the baseline except these /1-only replacements.
++The finite lexical, source-byte, AST and depth bounds continue to apply. Only
++`collection<T,N>` has a /1 argument-list limit of128; every other call remains
++bounded by64. The record-field limit remains64. The /1 parameter limit is256, versus64 in syntax/0. Core's stricter limits also apply
++after elaboration. All40 means constructor and exact type fidelity within these
++simultaneous source bounds, not surjectivity onto every Core-only metadata tree:
++for example the source nesting bound64 cannot spell Core-only Option chains of
++several thousand wrappers.
++
++```ebnf
++emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
++type = identifier, [ "<", typeArgument, { ",", typeArgument }, ">" ] ;
++typeArgument = type | signedInteger ;
++signedInteger = [ "-" ], integerToken ;
++postfix = primary, { ".", identifier | "[", expression, "]" } ;
++ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record ? ;
++primary = integerToken | "-", integerToken | stringToken | "true" | "false"
++        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
++        | genericCall | recordLiteral | "(", expression, ")" ;
++genericCall = ("some" | "none" | "collection" | "quantity"),
++              "<", typeArgument, { ",", typeArgument }, ">",
++              "(", [ arguments ], ")" ;
++recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
++```
++
++The fixed generic names are excluded from the ordinary identifier-primary arm
++in /1. Metadata arity/type restrictions are static rules. No trailing commas.
++`a < b` remains comparison; `some<UInt64>(u64(1))` is unambiguous.
++
++## Exact source domain, roles and diagnostics
++
++All baseline value/type domains apply unchanged: UInt64/UInt128/SInt128 endpoints,
++Text1024 UTF-8 bytes, units at most8 and exponents -128..127 excluding0, scales
++0..18, Price distinct assets and UInt128 mantissa, capacities0..128 and exact
++capacity equality, acyclic finite schemas, and no Unit data values. No arithmetic
++overload, financial interpretation, alias rewriting or implicit coercion is added.
++
++The /1 lexical delta adds `[` and `]` punctuation only in the new parser. The old
++lexer continues rejecting them. Existing nested generic closers and splitting
++`>=` into `>` followed by `=` in a type context are preserved. Fixed generic names
++require their generic syntax; ordinary identifiers retain comparison parsing.
++
++| Intrinsic | Type arguments | Value-argument syntax / arity |
++| --- | --- | --- |
++| u64/u128/i128 | none | one signedInteger (negative unsigned values reach TYPE_LITERAL) |
++| amount | none | unsigned integer, bare asset identifier; exactly2 |
++| shares | none | unsigned integer, bare vault, bare holder; exactly3 |
++| rate | none | signed integer, unsigned scale; exactly2 |
++| price | none | unsigned mantissa, bare base, bare quote, unsigned scale; exactly4 |
++| quantity | Units vector, numeric scale | one signedInteger |
++| some | one exact finite type | one expression |
++| none | one exact finite type | zero expressions |
++| collection | one exact finite type, numeric capacity | 0..128 expressions |
++| record | one bare record identifier | 0..64 named expression fields |
++| floor_div/ceil_div | none | two expressions |
++| access_field | none | expression, string literal decoding to a field identifier |
++| access_index | none | two expressions; index type exactly UInt64 |
++
++Unsigned syntax restrictions reject SOURCE_LITERAL_SHAPE before Core typing.
++Admitted signed numeric syntax outside the chosen exact mathematical domain
++reaches the unchanged TYPE_LITERAL check. Nested type syntax is rejected wherever
++a bare nominal identifier is required. `record<Record<R>>` therefore rejects
++SOURCE_TYPE_SHAPE; the admitted record form is `record<R>`.
++
++Units is source-only metadata, never a value or general type. It is legal only
++as the first argument of Quantity or quantity. Bare `Units` means empty; otherwise
++its argument list has even length, alternating bare declared unit identifier and
++signed decimal exponent. Odd arity, integer-first forms, nested types for a unit
++symbol, and Units outside Quantity reject SOURCE_TYPE_SHAPE. Empty `Units<>`
++retains parser EMPTY_TYPE_ARGS. Well-shaped but unsorted/duplicate/zero/out-of-range
++vectors lower without normalization and reject TYPE_LITERAL when the Core type is
++resolved. For an action parameter, any such annotation cannot equal its valid
++trusted Σ.args entry and rejects SOURCE_PARAMETER_TYPE in correspondence checking.
++
++Parentheses do not introduce AST nodes: `(pre).field`, `(obs).name` and `(E).Member`
++have the same resolution as unparenthesized forms. Whitespace/comments between
++minus and decimal are allowed: `- 5` is the same signed literal as `-5`; formatting
++emits `-5`. Neither form creates general unary negation. `-0` rejects
++SOURCE_LITERAL_SHAPE, and numeric type metadata `-0` rejects SOURCE_TYPE_SHAPE.
++`u64(-1)` and `u128(-1)` reach TYPE_LITERAL with width unchanged; amount/shares/price
++negative quantum syntax rejects SOURCE_LITERAL_SHAPE. `i128(1+2)` and evaluated
++metadata names reject SOURCE_LITERAL_SHAPE. access_field requires a string literal
++decoding to the reviewed ASCII identifier language, otherwise SOURCE_LITERAL_SHAPE.
++
++AST additions are `Call.typeArguments` (present only on generic calls),
++`RecordExpression {recordType,fields,span}`, `Index {object,index,span}` and an
++optional `Emit.expression` alternative to braced fields. Signed decimal primaries
++retain IntegerLiteral with their exact signed value string; numeric type arguments
++retain Type nodes marked numeric, so no identifier value is mistaken for metadata.
++The formatter must preserve these distinctions and Core structure after spans are
++erased; it cannot turn `i128(5)` into bare UInt128 `5`. Old ASTs have none of these
++new optional properties. No old-profile accepted source acquires a new AST node.
++
++The source domain explicitly excludes trusted schemas containing identifiers
++that cannot be spelled by this frontend; it does not silently rename them.
++This is a source-domain restriction, not a new Core schema rule. Full eventual
++SP02 owns source identity escaping and richer declaration scope if required.
++
++| Name category | Reserved names / rule |
++| --- | --- |
++| Lexical keywords | profile agreement unit party asset const state action requires let next emit ensures true false not and or; never bare identifiers |
++| Fixed generic primaries | some none collection quantity record; never ordinary term or nominal identifiers in /1 |
++| All schema metadata identifiers | must be ASCII identifiers admitted by the lexer and not lexical keywords or fixed generic primaries; otherwise SOURCE_SCHEMA_NAME |
++| Enum names | additionally cannot be pre/post/obs or collide with args, fields, observations, record names, operations or roster identities; otherwise SOURCE_SCHEMA_NAME |
++| Type constructor names | UInt64 UInt128 SInt128 Bool Text Amount Shares Rate Price Quantity Units Record Enum Operation Option Collection Unit Asset; reserved as term binders, meaningful only in their specified type roles |
++| Parameter/local binders | cannot be any intrinsic or type constructor name, pre/post/obs/next, an enum name, any declared registry name, or a previous local; a parameter's own Σ.args entry is exempt from its own collision check |
++| Metadata field/member names | ordinary intrinsic names such as amount remain permitted; e.g. quote.amount, record<Quote>{amount:e} |
++| Optional source declarations/action name | names must be distinct from each other; action name must not be reserved; unit/party/asset may only reaffirm their matching roster entry |
++
++Cross-category registry names other than enum/term ambiguities remain separate
++namespaces: an asset and record can share a spellable name because the syntactic
++role determines which registry is selected. Bare reads select an argument when
++that name is a declared parameter, otherwise a lexical local (unknown names become
++TYPE_NAME). No implicit field/observation fallback occurs. `pre.f`, `post.f` and
++`obs.f` are recognized before ordinary record projection; enum-qualified members
++are recognized next; ordinary record projection is last. The source schema domain
++rejects ambiguous enum prefixes. Local/parameter collision checks preserve the
++runtime's TYPE_DUPLICATE_BINDER constraint and do not shadow declarations.
++
++`createExpressionSourceV1(schemaCanonicalJSON)` binds immutable trusted schema
++text once. Its APIs are `elaborate(source)`, `check(source)` and
++`evaluate(source,snapshotCanonicalJSON)`. The last JSON text is a closed object
++with exactly Pre, Args, Obs and workInitial. There is no caller Core/AST/schema
++argument, no source evaluator callback and no live-object input. Each operation
++parses fresh owned JSON trees from primitive strings. Returned Core/results are
++fresh data; neither caller mutation nor a previous returned value can change a
++later invocation. No mutable cache or alias registry is introduced.
++
++Failure phases, in this exact order:
++
++1. Validate primitive string transport types and finite byte envelopes. The
++   snapshot-envelope transport ceiling is exactly2,000,000 UTF-8 bytes, reusing
++   the existing wire ceiling; reject INPUT_BOUND before JSON parsing when it is
++   exceeded. Each independent Pre/Args/Obs canonical component still has its
++   own65,536-byte ceiling. A source string retains its independent65,536-byte
++   bound; schema text retains its independent65,536-byte bound. For
++   evaluate, admit canonical JSON snapshot-envelope structure and workInitial
++   decimal/range0..65536, including each snapshot's raw canonical byte ceiling.
++   These are structural checks, not typed snapshot validation. Check/elaborate
++   have no snapshot input and claim no snapshot admission.
++2. Lex/parse the complete source with its exact profile, source/list/token/depth
++   bounds and UTF-8 scalar rules; existing syntax codes retain their byte spans.
++3. Admit the immutable Σ structure and semantic domain using the reviewed schema
++   checker, then validate the explicit source schema/name domain. Check source
++   action count, optional declarations and parameter correspondence.
++4. Elaborate source nodes in lexical preorder, validating fixed intrinsic arities,
++   syntactic metadata roles and type annotation shapes. SOURCE_* failures precede
++   Core typing failures; there is no claim of a single lexical ordering across
++   these distinct phases. No Core reduction occurs in elaboration.
++5. Run the existing whole-Core structural/schema/static checker, including all
++   unexecuted operands and statements. Bindings and writes use its exact rules.
++6. For evaluate only, validate typed Pre, Args and Obs, in that order, using the
++   existing shape, typed bounds and mathematical domain phases.
++7. Reduce with the unchanged work meter. Check/elaborate never enter this phase.
++
++The SOURCE_* diagnostic catalog is closed for this version:
++
++| Code | Phase / condition / source span |
++| --- | --- |
++| SOURCE_ACTION_COUNT | 3; action count differs from1; agreement span |
++| SOURCE_DECLARATION | 3; const/state or other unsupported declaration; declaration span |
++| SOURCE_DECLARATION_TYPE | 3; asset type is not bare Asset; type span |
++| SOURCE_DECLARATION_NAME | 3; optional unit/party/asset absent from matching Σ roster; declaration span |
++| SOURCE_DUPLICATE_DECLARATION | 3; second source declaration with an existing source name; second declaration span |
++| SOURCE_SCHEMA_NAME | 3; trusted registry name violates the declared source domain/collision rule; synthetic[0,0), because Σ is not source |
++| SOURCE_RESERVED_NAME | 3 for action/parameter, 4 for local; reserved binder; binder's containing source node span |
++| SOURCE_PARAMETER_NAMES | 3; duplicate source parameter or parameter-name set differs from Σ.args; duplicate parameter span or action span |
++| SOURCE_PARAMETER_TYPE | 3; source parameter exact annotation differs from its trusted type; annotation span |
++| SOURCE_CALL | 4; unknown non-generic call; call span |
++| SOURCE_ARITY | 4; generic/intrinsic call value/type argument count mismatch; call span |
++| SOURCE_LITERAL_SHAPE | 4; metadata is not the required literal/identifier or negative-zero value; offending operand span |
++| SOURCE_TYPE_SHAPE | 3 for parameter types, 4 otherwise; unknown type form/arity, malformed Units pairing, non-bare nominal index or negative-zero metadata; offending type span |
++| SOURCE_OPERATION | 4; operation name absent from Σ; emission span |
++
++Operation type arguments are not syntax of /1 emission: `emit O<UInt64> {};`
++rejects at the `<` token with parser UNEXPECTED_TOKEN in phase2, even when O is
++registered. It does not reach SOURCE_OPERATION. Similarly, record<R,S> has
++no derivation under the singleton record-type grammar and rejects with parser
++UNEXPECTED_TOKEN, not SOURCE_ARITY. The Emit AST type in /1 contains
++only the bare operation identifier; old syntax/0 typed emissions remain unchanged.
++
++Unknown generic names are ordinary comparisons/calls under the explicit grammar,
++so invalid generic-looking source can fail existing parser syntax codes instead
++of SOURCE_CALL. Keyword binders fail parsing before reservation checks. `next.f`
++in an expression is a syntax error (next is a keyword), and remains forbidden;
++no ReadNext or valid next read is introduced. Malformed [] in /0 is the unchanged
++UNEXPECTED_CHAR. All non-SOURCE errors retain their phase/code from the parser or
++reviewed wire/schema/Core helpers. Schema defects have synthetic spans; source
++parameter annotation differences have the table's source span. No extra SOURCE_*
++code may be silently added without updating this versioned source contract.
++
++All failures before phase7 have workUsed0 and expose no post/descriptors. Syntax
++and SOURCE_* diagnostics have an empty Core nodePath because no checked Core
++occurrence has been admitted. Metadata role/type-shape errors use the offending
++argument/type annotation span; action/declaration errors use that source node.
++The entire emitted record sugar shares its emission span for both Emit and its
++inserted ConstructRecord; direct `emit O e` gives Emit the statement span and e
++its own span. Both inserted Not/Eq nodes for != use the comparison span. Other
++nodes retain their complete original expression/statement span. ConstructRecord
++duplicate-field and missing-field failures use the record constructor span as
++in the runtime; action-finalization aggregate failures use the action span.
++Runtime paths count lowered Core children, never metadata or source punctuation.
++No synthetic source offsets are fabricated. Source spans are [start,end) UTF-8
++bytes and remain bounded by the retained source bytes.
++
++Conservative work B is the count of constructor occurrences in the lowered Core
++tree: both Boolean branches, Not plus Eq for !=, and Emit plus ConstructRecord
++for record sugar. Action wrappers and type/identifier metadata are not nodes.
++The checker reports B and rejects any static ceiling violation using the existing
++Core AST limit4096 and registered expression work ceiling65536. Request workInitial
++may be less than B: unselected branches require no dynamic work, and selected
++exhaustion retains the runtime's exact location/charge. No request is required to
++fund dead branches, and no source optimization silently changes B or work.
++
++## Representative real source
++
++Trusted Σ declares ordinary `counter:UInt64`, financial `funds:Amount<Cash>`,
++observation `ready:Bool`, record `Quote={amount:Amount<Cash>,count:UInt64}`,
++enum `Mode={Open,Closed}`, operation `QuoteNotice=Quote`, unit USD, asset Cash.
++Its action arguments are `delta:UInt64`. No financial operation is executed.
++
++```text
++profile "moriarty-expression-source/1";
++agreement QuoteCounter {
++  action step(delta: UInt64) {
++    requires obs.ready and delta > u64(0);
++    let rounded = floor_div(i128(-5), i128(2));
++    let quote = record<Quote> { amount: amount(5, Cash), count: delta };
++    let choices = collection<UInt64,2>(u64(7), delta);
++    let optional = some<Amount<Cash>>(quote.amount);
++    let empty = none<Amount<Cash>>();
++    let mode = Mode.Open;
++    next.counter = pre.counter + choices[u64(1)];
++    emit QuoteNotice { amount: quote.amount, count: delta };
++    ensures post.counter == pre.counter + delta;
++  }
++}
++```
++
++Result label stays ExpressionPrepared, explicitly local ordinary state plus
++uninterpreted typed operation descriptors. No Transfer/Repay implementation is
++inferred; direct financial writes fail TYPE_FINANCIAL_WRITE. Existing funded
++preparation remains the separate, unchanged route.
++
++## Implementation and verification plan
++
++1. Add the profile-gated AST/parser/formatter extension; preserve all old tests
++and add old-profile rejection and generic/comparison ambiguity tests.
++2. Add source elaboration and trusted-schema factory; use runtime static checking
++without executing during checking, then evaluate only the checked source action.
++Keep full source spans and enforce simultaneous source/Core bounds.
++3. Test real .mori for all40 mappings, complete typed values, wrong types in dead
++Boolean branches, static-error-before-guard, immutable pre/post, duplicate writes,
++forbidden next reads, financial write rejection, descriptor/write rollback,
++Unicode spans, selected/unselected failures, work exhaustion, host-input ownership
++and formatter round trips. Hand-authored Core-only tests cannot establish this.
++4. Freeze exact candidate bytes, run TypeScript build and package tests, retain
++raw outputs and obtain separate fresh GPT-6 Astra and Grok 4.6 result audits.
++Author implementation is not its own approval. No network/proof campaign runs.
+diff --git a/deliverables/sp02-expression-source-2026-09-10/root-probes-01.json b/deliverables/sp02-expression-source-2026-09-10/root-probes-01.json
+new file mode 100644
+index 0000000..8013503
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/root-probes-01.json
+@@ -0,0 +1,55 @@
++{
++  "checks": [
++    {
++      "name": "-170141183460469231731687303715884105728",
++      "pass": true
++    },
++    {
++      "name": "i128(5) - (i128(3) - i128(2))",
++      "pass": true
++    },
++    {
++      "name": "floor_div(-7,i128(3))",
++      "pass": true
++    },
++    {
++      "name": "ceil_div(-7,i128(3))",
++      "pass": true
++    },
++    {
++      "name": "dimensionless quantity source",
++      "pass": true
++    },
++    {
++      "name": "short circuit actual3/conservative4",
++      "pass": true
++    },
++    {
++      "name": "not equal lowering cost5",
++      "pass": true
++    },
++    {
++      "name": "Unicode exact rejection source span",
++      "pass": false,
++      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'GUARD_FAILED'\n- 'REQUIRE_FAILED'\n"
++    },
++    {
++      "name": "typed emit rejects at parse stage",
++      "pass": true
++    },
++    {
++      "name": "outer snapshot byte limit rejects before bad source",
++      "pass": true
++    },
++    {
++      "name": "unreachable snapshot type error before execution",
++      "pass": true
++    },
++    {
++      "name": "returned Core mutation cannot affect later execution",
++      "pass": true
++    }
++  ],
++  "passed": 11,
++  "failed": 1
++}
+diff --git a/deliverables/sp02-expression-source-2026-09-10/root-probes-01.mjs b/deliverables/sp02-expression-source-2026-09-10/root-probes-01.mjs
+new file mode 100644
+index 0000000..fb36b09
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/root-probes-01.mjs
+@@ -0,0 +1,18 @@
++import assert from 'node:assert/strict';
++import { createExpressionSourceV1 } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-source-v1.ts';
++import { formatExpressionSource } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-source-frontend.ts';
++import { canonical } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-wire-v1.ts';
++const empty=()=>({units:[],assets:[],vaults:[],parties:[],recordTypes:{},enumTypes:{},fields:{},args:{},observations:{},operations:{}});
++const src=b=>'profile "moriarty-expression-source/1"; agreement Root { action step() { '+b+' } }';
++const snap=(Pre={},workInitial='1000')=>canonical({Pre,Args:{},Obs:{},workInitial});
++const checks=[];const check=(name,fn)=>{try{fn();checks.push({name,pass:true});}catch(e){checks.push({name,pass:false,error:e.message});}};
++for(const [expr,expected] of [['-170141183460469231731687303715884105728','-170141183460469231731687303715884105728'],['i128(5) - (i128(3) - i128(2))','4'],['floor_div(-7,i128(3))','-3'],['ceil_div(-7,i128(3))','-2']])check(expr,()=>{const api=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['SInt128'],writeClass:'ordinary'}}}));const s=src('next.out = '+expr+';');const a=api.evaluate(s,snap({out:'0'}));assert.equal(a.post?.out,expected);assert.deepEqual(api.evaluate(formatExpressionSource(s),snap({out:'0'})),a);});
++check('dimensionless quantity source',()=>{const a=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['Quantity',[],'2'],writeClass:'ordinary'}}}));assert.equal(a.evaluate(src('next.out=quantity<Units,2>(-7);'),snap({out:'0'})).post?.out,'-7');});
++check('short circuit actual3/conservative4',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires true or false;');assert.equal(a.elaborate(s).staticWorkBound,'4');assert.equal(a.evaluate(s,snap({},'3')).workRemaining,'0');assert.equal(a.evaluate(s,snap({},'2')).code,'WORK_EXHAUSTED');});
++check('not equal lowering cost5',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires 1 != 2;');assert.equal(a.elaborate(s).staticWorkBound,'5');assert.equal(a.evaluate(s,snap({},'5')).workRemaining,'0');});
++check('Unicode exact rejection source span',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('/*é😀*/ requires false;');const r=a.evaluate(s,snap());assert.equal(r.code,'REQUIRE_FAILED');assert.equal(r.span.start,String(Buffer.byteLength(s.slice(0,s.indexOf('requires')))));assert.equal(r.span.end,String(Buffer.byteLength(s.slice(0,s.indexOf('false;')+6))));assert.deepEqual(r.nodePath,['0']);assert.equal(r.workUsed,'2');});
++check('typed emit rejects at parse stage',()=>{const a=createExpressionSourceV1(canonical(empty()));const r=a.check(src('emit O<UInt64> {};'));assert.equal(r.workUsed,'0');assert.notEqual(r.code,'SOURCE_OPERATION');assert.equal(r.status,'Rejected');});
++check('outer snapshot byte limit rejects before bad source',()=>{const a=createExpressionSourceV1(canonical(empty()));const r=a.evaluate('bad', ' '.repeat(2000001));assert.equal(r.code,'INPUT_BOUND');});
++check('unreachable snapshot type error before execution',()=>{const a=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['UInt64'],writeClass:'ordinary'}}}));const r=a.evaluate(src('requires false;'),snap({out:'-1'}));assert.equal(r.code,'INPUT_VALUE');assert.equal(r.workUsed,'0');});
++check('returned Core mutation cannot affect later execution',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires true;');const r=a.elaborate(s);r.core.statements[0].operands.condition.operands.value=false;assert.equal(a.evaluate(s,snap()).status,'ExpressionPrepared');});
++console.log(JSON.stringify({checks,passed:checks.filter(x=>x.pass).length,failed:checks.filter(x=>!x.pass).length},null,2));if(checks.some(x=>!x.pass))process.exitCode=1;
+diff --git a/deliverables/sp02-expression-source-2026-09-10/root-probes-02.json b/deliverables/sp02-expression-source-2026-09-10/root-probes-02.json
+new file mode 100644
+index 0000000..574c730
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/root-probes-02.json
+@@ -0,0 +1,54 @@
++{
++  "checks": [
++    {
++      "name": "-170141183460469231731687303715884105728",
++      "pass": true
++    },
++    {
++      "name": "i128(5) - (i128(3) - i128(2))",
++      "pass": true
++    },
++    {
++      "name": "floor_div(-7,i128(3))",
++      "pass": true
++    },
++    {
++      "name": "ceil_div(-7,i128(3))",
++      "pass": true
++    },
++    {
++      "name": "dimensionless quantity source",
++      "pass": true
++    },
++    {
++      "name": "short circuit actual3/conservative4",
++      "pass": true
++    },
++    {
++      "name": "not equal lowering cost5",
++      "pass": true
++    },
++    {
++      "name": "Unicode exact rejection source span",
++      "pass": true
++    },
++    {
++      "name": "typed emit rejects at parse stage",
++      "pass": true
++    },
++    {
++      "name": "outer snapshot byte limit rejects before bad source",
++      "pass": true
++    },
++    {
++      "name": "unreachable snapshot type error before execution",
++      "pass": true
++    },
++    {
++      "name": "returned Core mutation cannot affect later execution",
++      "pass": true
++    }
++  ],
++  "passed": 12,
++  "failed": 0
++}
+diff --git a/deliverables/sp02-expression-source-2026-09-10/root-probes-02.mjs b/deliverables/sp02-expression-source-2026-09-10/root-probes-02.mjs
+new file mode 100644
+index 0000000..66cdf8c
+--- /dev/null
++++ b/deliverables/sp02-expression-source-2026-09-10/root-probes-02.mjs
+@@ -0,0 +1,18 @@
++import assert from 'node:assert/strict';
++import { createExpressionSourceV1 } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-source-v1.ts';
++import { formatExpressionSource } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-source-frontend.ts';
++import { canonical } from '/home/charl/Moriarty-expression-source/experiments/moriarty-language/src/successor/expression-wire-v1.ts';
++const empty=()=>({units:[],assets:[],vaults:[],parties:[],recordTypes:{},enumTypes:{},fields:{},args:{},observations:{},operations:{}});
++const src=b=>'profile "moriarty-expression-source/1"; agreement Root { action step() { '+b+' } }';
++const snap=(Pre={},workInitial='1000')=>canonical({Pre,Args:{},Obs:{},workInitial});
++const checks=[];const check=(name,fn)=>{try{fn();checks.push({name,pass:true});}catch(e){checks.push({name,pass:false,error:e.message});}};
++for(const [expr,expected] of [['-170141183460469231731687303715884105728','-170141183460469231731687303715884105728'],['i128(5) - (i128(3) - i128(2))','4'],['floor_div(-7,i128(3))','-3'],['ceil_div(-7,i128(3))','-2']])check(expr,()=>{const api=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['SInt128'],writeClass:'ordinary'}}}));const s=src('next.out = '+expr+';');const a=api.evaluate(s,snap({out:'0'}));assert.equal(a.post?.out,expected);assert.deepEqual(api.evaluate(formatExpressionSource(s),snap({out:'0'})),a);});
++check('dimensionless quantity source',()=>{const a=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['Quantity',[],'2'],writeClass:'ordinary'}}}));assert.equal(a.evaluate(src('next.out=quantity<Units,2>(-7);'),snap({out:'0'})).post?.out,'-7');});
++check('short circuit actual3/conservative4',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires true or false;');assert.equal(a.elaborate(s).staticWorkBound,'4');assert.equal(a.evaluate(s,snap({},'3')).workRemaining,'0');assert.equal(a.evaluate(s,snap({},'2')).code,'WORK_EXHAUSTED');});
++check('not equal lowering cost5',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires 1 != 2;');assert.equal(a.elaborate(s).staticWorkBound,'5');assert.equal(a.evaluate(s,snap({},'5')).workRemaining,'0');});
++check('Unicode exact rejection source span',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('/*é😀*/ requires false;');const r=a.evaluate(s,snap());assert.equal(r.code,'GUARD_FAILED');assert.equal(r.span.start,String(Buffer.byteLength(s.slice(0,s.indexOf('requires')))));assert.equal(r.span.end,String(Buffer.byteLength(s.slice(0,s.indexOf('false;')+6))));assert.deepEqual(r.nodePath,['0']);assert.equal(r.workUsed,'2');});
++check('typed emit rejects at parse stage',()=>{const a=createExpressionSourceV1(canonical(empty()));const r=a.check(src('emit O<UInt64> {};'));assert.equal(r.workUsed,'0');assert.notEqual(r.code,'SOURCE_OPERATION');assert.equal(r.status,'Rejected');});
++check('outer snapshot byte limit rejects before bad source',()=>{const a=createExpressionSourceV1(canonical(empty()));const r=a.evaluate('bad', ' '.repeat(2000001));assert.equal(r.code,'INPUT_BOUND');});
++check('unreachable snapshot type error before execution',()=>{const a=createExpressionSourceV1(canonical({...empty(),fields:{out:{type:['UInt64'],writeClass:'ordinary'}}}));const r=a.evaluate(src('requires false;'),snap({out:'-1'}));assert.equal(r.code,'INPUT_VALUE');assert.equal(r.workUsed,'0');});
++check('returned Core mutation cannot affect later execution',()=>{const a=createExpressionSourceV1(canonical(empty()));const s=src('requires true;');const r=a.elaborate(s);r.core.statements[0].operands.condition.operands.value=false;assert.equal(a.evaluate(s,snap()).status,'ExpressionPrepared');});
++console.log(JSON.stringify({checks,passed:checks.filter(x=>x.pass).length,failed:checks.filter(x=>!x.pass).length},null,2));if(checks.some(x=>!x.pass))process.exitCode=1;
+diff --git a/experiments/moriarty-language/examples/expression-source.mjs b/experiments/moriarty-language/examples/expression-source.mjs
+new file mode 100644
+index 0000000..b7eb0f0
+--- /dev/null
++++ b/experiments/moriarty-language/examples/expression-source.mjs
+@@ -0,0 +1,13 @@
++import { readFileSync } from 'node:fs';
++import assert from 'node:assert/strict';
++import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
++const read = name => readFileSync(new URL('../spec/successor/examples/' + name, import.meta.url), 'utf8');
++const language = createExpressionSourceV1(read('expression-counter.schema.json'));
++const source = read('expression-counter.mori');
++const checked = language.check(source);
++const result = language.evaluate(source, read('expression-counter.snapshots.json'));
++assert.equal(checked.judgmentResult, 'SourceChecked');
++assert.equal(result.status, 'ExpressionPrepared');
++assert.deepEqual(result.post, { counter: '12', funds: '100' });
++assert.deepEqual(result.descriptors, [{ operation: 'QuoteNotice', fields: { amount: '5', count: '2' } }]);
++console.log(JSON.stringify({ sourceCheck: checked, localExpressionResult: result }, null, 2));
+diff --git a/experiments/moriarty-language/package.json b/experiments/moriarty-language/package.json
+index 614af29..c310e88 100644
+--- a/experiments/moriarty-language/package.json
++++ b/experiments/moriarty-language/package.json
+@@ -7,6 +7,7 @@
+     "materialize": "node src/materialize.ts",
+     "typecheck": "tsc -p tsconfig.json",
+     "build": "tsc -p tsconfig.json",
+-    "demo": "node examples/simulate.mjs"
++    "demo": "node examples/simulate.mjs",
++    "expression-demo": "node examples/expression-source.mjs"
+   }
+ }
+diff --git a/experiments/moriarty-language/spec/successor/README.md b/experiments/moriarty-language/spec/successor/README.md
+index 1eba351..764d2e9 100644
+--- a/experiments/moriarty-language/spec/successor/README.md
++++ b/experiments/moriarty-language/spec/successor/README.md
+@@ -45,3 +45,14 @@ The grammar rejects these declarations. They still belong to later owners.
+ ## Missing RP01 freeze
+ 
+ RP01 remains unfrozen. This profile does not promote a successor semantic contract, broaden accepted atomic scope, or close SP02. Static judgments, Core elaboration, K, and financial coverage stay later work.
++
++## Expression source component
++
++The separate [expression-source/1 candidate](expression-source.md) now connects
++real `.mori` expressions to the reviewed40-constructor Core evaluator through a
++trusted-schema API. It adds explicit numeric type metadata, signed values,
++records/options/collections, index access and direct record-valued emissions.
++Its exact implementation audits are pending. The included demo checks and
++updates ordinary state while retaining financial state; emissions are typed
++descriptors with no financial execution. Original syntax-only and funded entry
++points keep their exact profiles. Full agreement declarations and SP02 remain open.
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-counter.mori b/experiments/moriarty-language/spec/successor/examples/expression-counter.mori
+new file mode 100644
+index 0000000..d7fc623
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-counter.mori
+@@ -0,0 +1,17 @@
++profile "moriarty-expression-source/1";
++
++agreement QuoteCounter {
++  asset Cash: Asset;
++  action step(delta: UInt64) {
++    requires obs.ready and delta > u64(0);
++    let rounded = floor_div(i128(-5), i128(2));
++    let quote = record<Quote> { amount: amount(5, Cash), count: delta };
++    let choices = collection<UInt64,2>(u64(7), delta);
++    let optional = some<Amount<Cash>>(quote.amount);
++    let empty = none<Amount<Cash>>();
++    let mode = Mode.Open;
++    next.counter = pre.counter + choices[u64(1)];
++    emit QuoteNotice quote;
++    ensures post.counter == pre.counter + delta;
++  }
++}
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-counter.schema.json b/experiments/moriarty-language/spec/successor/examples/expression-counter.schema.json
+new file mode 100644
+index 0000000..c18ae9b
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-counter.schema.json
+@@ -0,0 +1 @@
++{"args":{"delta":["UInt64"]},"assets":["Cash"],"enumTypes":{"Mode":["Closed","Open"]},"fields":{"counter":{"type":["UInt64"],"writeClass":"ordinary"},"funds":{"type":["Amount","Cash"],"writeClass":"financial"}},"observations":{"ready":["Bool"]},"operations":{"QuoteNotice":"Quote"},"parties":[],"recordTypes":{"Quote":{"amount":["Amount","Cash"],"count":["UInt64"]}},"units":[],"vaults":[]}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/examples/expression-counter.snapshots.json b/experiments/moriarty-language/spec/successor/examples/expression-counter.snapshots.json
+new file mode 100644
+index 0000000..5751f92
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/expression-counter.snapshots.json
+@@ -0,0 +1 @@
++{"Args":{"delta":"2"},"Obs":{"ready":true},"Pre":{"counter":"10","funds":"100"},"workInitial":"1000"}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf b/experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf
+new file mode 100644
+index 0000000..e6582fe
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf
+@@ -0,0 +1,110 @@
++(* ISO/IEC 14977 EBNF for moriarty-expression-source/1.
++   Source header must match exactly; syntax/0 remains separate.
++   Lexical rules are lexical.md plus profile-gated [ and ] punctuation.
++   Parentheses create no AST nodes; precedence and associativity match syntax/0.
++   Generic names are excluded from ordinaryPrimaryName.
++   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
++   declarations256, statements256, record fields64, ordinary call arguments64,
++   collection intrinsic arguments128, action parameters256.
++   Integer lexical tokens remain unsigned canonical decimals; - is separate.
++   The source contract supplies all type/domain/metadata and diagnostic rules.
++   Parsing const/state or multiple actions does not make them executable.
++*)
++
++program = profileDecl, agreementDecl, ? end of file ? ;
++
++profileDecl = "profile", stringToken, ";" ;
++
++agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
++
++declaration = unitDecl
++            | partyDecl
++            | assetDecl
++            | constDecl
++            | stateDecl
++            | actionDecl ;
++
++unitDecl = "unit", identifier, ";" ;
++
++partyDecl = "party", identifier, ";" ;
++
++assetDecl = "asset", identifier, ":", type, ";" ;
++
++constDecl = "const", identifier, ":", type, "=", expression, ";" ;
++
++stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
++
++actionDecl = "action", identifier, "(", [ parameters ], ")",
++              "{", { statement }, { postcondition }, "}" ;
++
++parameters = parameter, { ",", parameter } ;
++
++parameter = identifier, ":", type ;
++
++statement = requirement | binding | update | emission ;
++
++requirement = "requires", expression, ";" ;
++
++binding = "let", identifier, "=", expression, ";" ;
++
++update = "next", ".", identifier, "=", expression, ";" ;
++
++emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
++
++effectFields = effectField, { ",", effectField } ;
++
++effectField = identifier, ":", expression ;
++
++postcondition = "ensures", expression, ";" ;
++
++type = identifier, [ typeArgs ] ;
++
++typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
++
++typeArgument = type | signedInteger ;
++signedInteger = [ "-" ], integerToken ;
++
++expression = disjunction ;
++
++disjunction = conjunction, { "or", conjunction } ;
++
++conjunction = negation, { "and", negation } ;
++
++negation = { "not" }, comparison ;
++
++comparison = sum, [ comparisonOp, sum ] ;
++
++comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
++
++sum = product, { ( "+" | "-" ), product } ;
++
++product = postfix, { "*", postfix } ;
++
++postfix = primary, { ".", identifier | "[", expression, "]" } ;
++
++ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record ? ;
++
++primary = "-", integerToken
++        | integerToken
++        | stringToken
++        | "true"
++        | "false"
++        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
++        | genericCall
++        | recordLiteral
++        | "(", expression, ")" ;
++
++genericCall = ( "some" | "none" | "collection" | "quantity" ),
++              "<", typeArgument, { ",", typeArgument }, ">",
++              "(", [ arguments ], ")" ;
++
++recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
++
++arguments = expression, { ",", expression } ;
++
++identifier = ? ASCII identifier token defined in lexical.md ? ;
++
++integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
++
++stringToken = ? JSON string token defined in lexical.md ? ;
++
+diff --git a/experiments/moriarty-language/spec/successor/expression-source.md b/experiments/moriarty-language/spec/successor/expression-source.md
+new file mode 100644
+index 0000000..367265d
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/expression-source.md
+@@ -0,0 +1,59 @@
++# Expression source /1
++
++Implementation candidate; independent implementation/result audits are pending.
++The exact source contract is the preserved [proposal03](../../../../deliverables/sp02-expression-source-2026-09-10/PROPOSAL-03.md).
++Its D1–D4 choices have both independent design approvals; D5's narrow diagnostic
++corrections remain in the final audit scope. The complete [grammar](expression-source-grammar.ebnf)
++extends the separate syntax-only profile. No original profile is upgraded.
++
++Developers can write typed expressions in `.mori`, check them, inspect their Core
++and evaluate ordinary state updates against a trusted schema and snapshots.
++The source factory accepts source text, never caller-supplied Core or an AST.
++
++```javascript
++import { createExpressionSourceV1 } from '../../src/successor/expression-source-v1.ts';
++const language = createExpressionSourceV1(schemaCanonicalJSON);
++language.check(source);                        // static checks and conservative work
++language.elaborate(source);                    // checked Core, action and work bound
++language.evaluate(source, snapshotCanonicalJSON);
++```
++
++The schema and snapshot strings use the exact canonical representation in
++[representation.md](representation.md). Snapshot keys are exactly `Pre`, `Args`,
++`Obs`, `workInitial`. The trusted schema controls financial field classes and
++operation operand schemas; source cannot reclassify them. Each call owns fresh
++input/result trees. Schema and each snapshot have independent65536-byte limits;
++the snapshot transport has an outer2000000-byte ceiling before JSON parsing.
++
++`ExpressionPrepared` contains local ordinary post-state and typed operation
++descriptors. Emitting `Transfer` does not transfer tokens. Direct writes to
++financial fields reject. Any rejection publishes neither tentative state nor
++descriptors. Check/elaborate perform no reduction and make no snapshot, signing,
++proof, oracle, privacy or ledger claim.
++
++Run the retained real-source example from the repository root:
++
++```sh
++npm --prefix experiments/moriarty-language run expression-demo
++```
++
++The [example](examples/expression-counter.mori) increments an ordinary counter,
++retains the financial field, and returns a quote descriptor. The executable tests
++also exercise every one of the reviewed40 constructor names, exact indexed types,
++dead-branch static errors, literal/collection boundaries, direct emission work,
++UTF-8 spans, input ownership and rollback. See the candidate result under the
++[delivery record](../../../../deliverables/sp02-expression-source-2026-09-10/).
++
++This is an expression component of SP02. Exactly one source action is supported;
++const/state initialization and source-defined schemas remain unimplemented.
++Only optional unit/party roster confirmations and name-only `asset A: Asset;`
++confirmations are admitted. The trusted schema must meet the explicit source
++name-domain rules; identities are never silently renamed. Numeric type metadata
++is written directly in source; there is no host type-alias registry.
++
++Full agreement authoring, multiple actions, genesis/constants, source identity
++escaping, financial-operation semantics, K/evaluator correspondence, mandatory
++proofs, ACTUS/DeFi coverage and Preview acceptance retain their existing SP01–SP12
++owners and remain open. The separate funded and atomic APIs keep their meaning.
++The later financial8/UInt256 runtime is not selected by this40-constructor source
++profile and needs its own reviewed source extension.
+diff --git a/experiments/moriarty-language/src/successor/expression-source-frontend.ts b/experiments/moriarty-language/src/successor/expression-source-frontend.ts
+new file mode 100644
+index 0000000..5388d4a
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/expression-source-frontend.ts
+@@ -0,0 +1,4 @@
++/** The expression profile has explicit parse/format entry points. The original
++ * syntax-only and funded entry points never opt into these semantics. */
++export { EXPRESSION_SOURCE_PROFILE, parseSuccessorExpressionSource as parseExpressionSource } from './frontend.ts';
++export { formatSuccessorExpressionSource as formatExpressionSource } from './format.ts';
+diff --git a/experiments/moriarty-language/src/successor/expression-source-lower.ts b/experiments/moriarty-language/src/successor/expression-source-lower.ts
+new file mode 100644
+index 0000000..eeba1ef
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/expression-source-lower.ts
+@@ -0,0 +1,77 @@
++/** Source lowering shared by the versioned expression frontend.
++ * Financial state classification and operation schemas always come from trusted Σ.
++ */
++import type { Expression, Span, Statement, Ensures } from './frontend.ts';
++import type { ExpressionSpan } from './expression-wire-v1.ts';
++import { ExpressionFailure } from './expression-wire-v1.ts';
++import type { Schema } from './expression-types-v1.ts';
++
++export interface SourceCoreNode {
++  constructor: string;
++  operands: Record<string, any>;
++  span: ExpressionSpan;
++}
++export function sourceSpan(span: Span): ExpressionSpan {
++  return { kind: 'source', start: String(span.start), end: String(span.end) };
++}
++export function sourceFailure(code: string, span: Span): never {
++  throw new ExpressionFailure(code, sourceSpan(span));
++}
++export function sourceNode(constructor: string, operands: Record<string, any>, span: Span): SourceCoreNode {
++  return { constructor, operands, span: sourceSpan(span) };
++}
++
++const BINARY: Record<string, string> = {
++  '+': 'Add', '-': 'Sub', '*': 'Mul', 'and': 'And', 'or': 'Or',
++  '==': 'Eq', '<': 'Lt', '<=': 'Lte', '>': 'Gt', '>=': 'Gte',
++};
++/** Extend only the explicitly reviewed surface forms through the supplied callback. */
++export function createSourceLowering(schema: Schema, parameters: Set<string>,
++    extension: (expression: Expression, lower: (e: Expression) => SourceCoreNode) => SourceCoreNode | undefined) {
++  const locals = new Set<string>();
++  function lower(e: Expression): SourceCoreNode {
++    if (e.tag === 'BooleanLiteral') return sourceNode('LitBool', { value: e.value }, e.span);
++    if (e.tag === 'StringLiteral') return sourceNode('LitText', { value: e.decoded }, e.span);
++    if (e.tag === 'Identifier') {
++      if (locals.has(e.name)) return sourceNode('ReadLocal', { name: e.name }, e.span);
++      if (parameters.has(e.name)) return sourceNode('ReadArg', { name: e.name }, e.span);
++      return sourceNode('ReadLocal', { name: e.name }, e.span);
++    }
++    if (e.tag === 'Unary') return sourceNode('Not', { value: lower(e.operand) }, e.span);
++    if (e.tag === 'Binary' || e.tag === 'Comparison') {
++      const operands = { left: lower(e.left), right: lower(e.right) };
++      if (e.operator === '!=') return sourceNode('Not', { value: sourceNode('Eq', operands, e.span) }, e.span);
++      return sourceNode(BINARY[e.operator], operands, e.span);
++    }
++    if (e.tag === 'Projection') {
++      if (e.object.tag === 'Identifier' && ['pre', 'post', 'next'].includes(e.object.name))
++        return sourceNode('ReadPre', { view: e.object.name, field: e.field }, e.span);
++      const projected = extension(e, lower);
++      if (projected) return projected;
++      return sourceNode('ProjectField', { record: lower(e.object), field: e.field }, e.span);
++    }
++    if (e.tag === 'Call' && ['floor_div', 'ceil_div'].includes(e.name)) {
++      if (e.arguments.length !== 2) return sourceFailure('SOURCE_ARITY', e.span);
++      return sourceNode(e.name === 'floor_div' ? 'FloorDiv' : 'CeilDiv',
++        { left: lower(e.arguments[0]), right: lower(e.arguments[1]) }, e.span);
++    }
++    return extension(e, lower) ?? sourceFailure('SOURCE_CALL', e.span);
++  }
++  function statement(s: Statement | Ensures): SourceCoreNode {
++    if (s.tag === 'Requires' || s.tag === 'Ensures')
++      return sourceNode(s.tag === 'Requires' ? 'Require' : 'Ensure', { condition: lower(s.expression) }, s.span);
++    if (s.tag === 'Let') {
++      const node = sourceNode('Let', { name: s.name, value: lower(s.expression) }, s.span);
++      locals.add(s.name);
++      return node;
++    }
++    if (s.tag === 'Next') return sourceNode('NextWrite', { field: s.name, value: lower(s.expression) }, s.span);
++    if (s.type.arguments.length || !Object.hasOwn(schema.operations, s.type.name))
++      return sourceFailure('SOURCE_OPERATION', s.span);
++    if (s.expression) return sourceNode('Emit', { operation: s.type.name, fields: lower(s.expression) }, s.span);
++    return sourceNode('Emit', { operation: s.type.name,
++      fields: sourceNode('ConstructRecord', { recordType: schema.operations[s.type.name],
++        fields: s.fields.map(f => ({ name: f.name, value: lower(f.expression) })) }, s.span) }, s.span);
++  }
++  return { lower, statement };
++}
+diff --git a/experiments/moriarty-language/src/successor/expression-source-types.ts b/experiments/moriarty-language/src/successor/expression-source-types.ts
+new file mode 100644
+index 0000000..e49870b
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/expression-source-types.ts
+@@ -0,0 +1,132 @@
++/** Exact source spellings for the reviewed expression types and constructors. */
++import { GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
++import type { Expression, TypeNode, Span } from './frontend.ts';
++import type { Schema, ValueType } from './expression-types-v1.ts';
++import { ExpressionFailure } from './expression-wire-v1.ts';
++import { sourceFailure, sourceNode } from './expression-source-lower.ts';
++import type { SourceCoreNode } from './expression-source-lower.ts';
++
++const SCALARS = ['UInt64', 'UInt128', 'SInt128', 'Bool', 'Text', 'Unit'];
++const INTRINSICS = ['u64', 'u128', 'i128', 'amount', 'shares', 'rate', 'price',
++  'access_field', 'access_index', 'floor_div', 'ceil_div', ...GENERIC_PRIMARIES];
++const TERM_RESERVED = new Set([...SOURCE_KEYWORDS, ...INTRINSICS, ...SCALARS,
++  'pre', 'post', 'obs', 'Amount', 'Shares', 'Rate', 'Price', 'Quantity', 'Units',
++  'Record', 'Enum', 'Operation', 'Option', 'Collection', 'Asset']);
++export function reservedSourceTerm(name: string): boolean { return TERM_RESERVED.has(name); }
++const METADATA_RESERVED = new Set([...SOURCE_KEYWORDS, ...GENERIC_PRIMARIES]);
++export function asciiIdentifier(s: string): boolean {
++  return /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(s) && !/[\r\n\u2028\u2029]/.test(s);
++}
++export function validateSourceSchemaNames(s: Schema): void {
++  const names: string[] = [];
++  for (const key of ['units', 'assets', 'vaults', 'parties']) names.push(...s[key]);
++  for (const key of ['recordTypes', 'enumTypes', 'fields', 'args', 'observations', 'operations']) names.push(...Object.keys(s[key]));
++  for (const fields of Object.values(s.recordTypes)) names.push(...Object.keys(fields as object));
++  for (const members of Object.values(s.enumTypes)) names.push(...members as string[]);
++  if (names.some(n => !asciiIdentifier(n) || METADATA_RESERVED.has(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
++  const prefixes = new Set(['pre', 'post', 'obs']);
++  for (const key of ['units', 'assets', 'vaults', 'parties']) s[key].forEach((n: string) => prefixes.add(n));
++  for (const key of ['recordTypes', 'fields', 'args', 'observations', 'operations']) Object.keys(s[key]).forEach(n => prefixes.add(n));
++  if (Object.keys(s.enumTypes).some(n => prefixes.has(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
++}
++function arity(t: TypeNode, n: number): TypeNode[] {
++  if (t.arguments.length !== n) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.arguments;
++}
++function nominal(t: TypeNode): string {
++  if (t.numeric || t.arguments.length) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.name;
++}
++function numeric(t: TypeNode): string {
++  if (!t.numeric || t.arguments.length || t.name === '-0') sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.name;
++}
++function units(t: TypeNode): string[][] {
++  if (t.numeric || t.name !== 'Units' || t.arguments.length % 2) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  const pairs: string[][] = [];
++  for (let i = 0; i < t.arguments.length; i += 2) pairs.push([nominal(t.arguments[i]), numeric(t.arguments[i + 1])]);
++  return pairs;
++}
++export function sourceType(t: TypeNode): ValueType {
++  if (t.numeric) return sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  if (SCALARS.includes(t.name)) { arity(t, 0); return [t.name]; }
++  if (['Amount', 'Record', 'Enum', 'Operation'].includes(t.name)) return [t.name, nominal(arity(t, 1)[0])];
++  if (t.name === 'Shares') { const a = arity(t, 2); return ['Shares', nominal(a[0]), nominal(a[1])]; }
++  if (t.name === 'Rate') return ['Rate', numeric(arity(t, 1)[0])];
++  if (t.name === 'Price') { const a = arity(t, 3); return ['Price', nominal(a[0]), nominal(a[1]), numeric(a[2])]; }
++  if (t.name === 'Quantity') { const a = arity(t, 2); return ['Quantity', units(a[0]), numeric(a[1])]; }
++  if (t.name === 'Option') return ['Option', sourceType(arity(t, 1)[0])];
++  if (t.name === 'Collection') { const a = arity(t, 2); return ['Collection', sourceType(a[0]), numeric(a[1])]; }
++  return sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++}
++function integer(e: Expression, unsigned = false): string {
++  if (e.tag !== 'IntegerLiteral' || e.value === '-0' || (unsigned && e.value.startsWith('-')))
++    return sourceFailure('SOURCE_LITERAL_SHAPE', e.span);
++  return e.value;
++}
++function identity(e: Expression): string {
++  if (e.tag !== 'Identifier') return sourceFailure('SOURCE_LITERAL_SHAPE', e.span);
++  return e.name;
++}
++function count(actual: number, expected: number, span: Span): void {
++  if (actual !== expected) sourceFailure('SOURCE_ARITY', span);
++}
++export function sourceExtension(schema: Schema) {
++  return (e: Expression, lower: (e: Expression) => SourceCoreNode): SourceCoreNode | undefined => {
++    const n = (tag: string, operands: Record<string, any>) => sourceNode(tag, operands, e.span);
++    if (e.tag === 'IntegerLiteral') {
++      const value = integer(e);
++      return value.startsWith('-') ? n('LitSInt', { value }) : n('LitUInt', { width: '128', value });
++    }
++    if (e.tag === 'Index') return n('ProjectIndex', { collection: lower(e.object), index: lower(e.index) });
++    if (e.tag === 'RecordExpression') return n('ConstructRecord', { recordType: nominal(e.recordType),
++      fields: e.fields.map(f => ({ name: f.name, value: lower(f.expression) })) });
++    if (e.tag === 'Projection' && e.object.tag === 'Identifier') {
++      if (e.object.name === 'obs') return n('ReadObs', { name: e.field });
++      if (Object.hasOwn(schema.enumTypes, e.object.name)) return n('ConstructEnum', { enumType: e.object.name, member: e.field });
++    }
++    if (e.tag !== 'Call') return undefined;
++    const args = e.arguments, types = e.typeArguments ?? [];
++    if (['some', 'none', 'collection', 'quantity'].includes(e.name)) {
++      count(types.length, ['collection', 'quantity'].includes(e.name) ? 2 : 1, e.span);
++      if (e.name === 'collection') return n('ConstructCollection', { elementType: sourceType(types[0]), capacity: numeric(types[1]), items: args.map(lower) });
++      count(args.length, e.name === 'none' ? 0 : 1, e.span);
++      if (e.name === 'quantity') return n('LitQuantity', { units: units(types[0]), scale: numeric(types[1]), mantissa: integer(args[0]) });
++      return e.name === 'some' ? n('ConstructSome', { elementType: sourceType(types[0]), value: lower(args[0]) })
++        : n('ConstructNone', { elementType: sourceType(types[0]) });
++    }
++    count(types.length, 0, e.span);
++    if (['u64', 'u128', 'i128'].includes(e.name)) {
++      count(args.length, 1, e.span);
++      return e.name === 'i128' ? n('LitSInt', { value: integer(args[0]) })
++        : n('LitUInt', { width: e.name === 'u64' ? '64' : '128', value: integer(args[0]) });
++    }
++    if (e.name === 'amount') {
++      count(args.length, 2, e.span);
++      return n('LitAmount', { value: integer(args[0], true), asset: identity(args[1]) });
++    }
++    if (e.name === 'shares') {
++      count(args.length, 3, e.span);
++      return n('LitShares', { value: integer(args[0], true), vault: identity(args[1]), holder: identity(args[2]) });
++    }
++    if (e.name === 'rate') {
++      count(args.length, 2, e.span);
++      return n('LitRate', { mantissa: integer(args[0]), scale: integer(args[1], true) });
++    }
++    if (e.name === 'price') {
++      count(args.length, 4, e.span);
++      return n('LitPrice', { mantissa: integer(args[0], true), base: identity(args[1]), quote: identity(args[2]), scale: integer(args[3], true) });
++    }
++    if (e.name === 'access_index') {
++      count(args.length, 2, e.span);
++      return n('AccessIndex', { collection: lower(args[0]), index: lower(args[1]) });
++    }
++    if (e.name === 'access_field') {
++      count(args.length, 2, e.span);
++      const field = args[1];
++      if (field.tag !== 'StringLiteral' || !asciiIdentifier(field.decoded)) return sourceFailure('SOURCE_LITERAL_SHAPE', field.span);
++      return n('AccessField', { record: lower(args[0]), field: field.decoded });
++    }
++    return undefined;
++  };
++}
+diff --git a/experiments/moriarty-language/src/successor/expression-source-v1.ts b/experiments/moriarty-language/src/successor/expression-source-v1.ts
+new file mode 100644
+index 0000000..7cf3037
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/expression-source-v1.ts
+@@ -0,0 +1,154 @@
++/** Source-only entry to local /1 expression evaluation. No financial operation
++ * interpreter, authorization, funded preparation, signing or ledger path is called. */
++import { parseExpressionSource, EXPRESSION_SOURCE_PROFILE } from './expression-source-frontend.ts';
++import { SuccessorSyntaxError } from './frontend.ts';
++import type { ActionDecl, Program } from './frontend.ts';
++import { createExpressionContractV1, EXPRESSION_CONTRACT_V1 } from './expression-v1.ts';
++import type { ExpressionResult } from './expression-v1.ts';
++import { ExpressionFailure, SYNTHETIC_SPAN, bytes, canonical, closed, decimal, parseCanonical, scalarString } from './expression-wire-v1.ts';
++import { schemaShape, validateSchema, same } from './expression-types-v1.ts';
++import type { Schema } from './expression-types-v1.ts';
++import { createSourceLowering, sourceFailure, sourceSpan } from './expression-source-lower.ts';
++import type { SourceCoreNode } from './expression-source-lower.ts';
++import { sourceExtension, sourceType, reservedSourceTerm, validateSourceSchemaNames } from './expression-source-types.ts';
++
++export type SourceRejected = Extract<ExpressionResult, { status: 'Rejected' }>;
++export interface SourceElaborated {
++  judgmentResult: 'SourceElaborated';
++  sourceProfile: typeof EXPRESSION_SOURCE_PROFILE;
++  contract: typeof EXPRESSION_CONTRACT_V1;
++  agreement: string;
++  action: string;
++  staticWorkBound: string;
++  core: { statements: SourceCoreNode[]; span: ReturnType<typeof sourceSpan> };
++}
++export interface SourceChecked {
++  judgmentResult: 'SourceChecked';
++  sourceProfile: typeof EXPRESSION_SOURCE_PROFILE;
++  staticWorkBound: string;
++}
++const TRANSPORT_BYTES = 2_000_000;
++const COMPONENT_BYTES = 65536;
++function rejection(error: unknown, source: unknown): SourceRejected {
++  if (error instanceof ExpressionFailure) return { status: 'Rejected', code: error.code,
++    span: error.span, nodePath: error.path.map(String), workUsed: '0' };
++  if (error instanceof SuccessorSyntaxError) {
++    const validSource = typeof source === 'string' && source.length <= COMPONENT_BYTES
++      && scalarString(source) && bytes(source) <= COMPONENT_BYTES;
++    return { status: 'Rejected', code: error.code,
++      span: validSource ? { kind: 'source', start: String(error.start), end: String(error.end) } : SYNTHETIC_SPAN,
++      nodePath: [], workUsed: '0' };
++  }
++  throw error;
++}
++function sourceTransport(source: string): void {
++  if (typeof source !== 'string') throw new SuccessorSyntaxError('SOURCE_TYPE', 'source must be a string');
++  if (source.length > COMPONENT_BYTES || bytes(source) > COMPONENT_BYTES)
++    throw new SuccessorSyntaxError('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
++}
++function snapshots(text: string): Record<string, any> {
++  const r = parseCanonical(text, TRANSPORT_BYTES);
++  closed(r, ['Pre', 'Args', 'Obs', 'workInitial']);
++  decimal(r.workInitial);
++  if (r.workInitial.length > 6 || BigInt(r.workInitial) < 0n || BigInt(r.workInitial) > 65536n)
++    throw new ExpressionFailure('INPUT_BOUND');
++  for (const key of ['Pre', 'Args', 'Obs']) if (bytes(canonical(r[key])) > COMPONENT_BYTES)
++    throw new ExpressionFailure('INPUT_BOUND');
++  return r;
++}
++function sourceAction(program: Program, schema: Schema): ActionDecl {
++  const declarations = program.agreement.declarations;
++  const actions = declarations.filter((d): d is ActionDecl => d.tag === 'ActionDecl');
++  if (actions.length !== 1) sourceFailure('SOURCE_ACTION_COUNT', program.agreement.span);
++  const names = new Set<string>();
++  for (const d of declarations) {
++    if (names.has(d.name)) sourceFailure('SOURCE_DUPLICATE_DECLARATION', d.span);
++    names.add(d.name);
++    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl') sourceFailure('SOURCE_DECLARATION', d.span);
++    if (d.tag === 'ActionDecl') {
++      if (reservedSourceTerm(d.name)) sourceFailure('SOURCE_RESERVED_NAME', d.span);
++    } else {
++      if (d.tag === 'AssetDecl' && (d.type.numeric || d.type.name !== 'Asset' || d.type.arguments.length))
++        sourceFailure('SOURCE_DECLARATION_TYPE', d.type.span);
++      const roster = d.tag === 'UnitDecl' ? schema.units : d.tag === 'PartyDecl' ? schema.parties : schema.assets;
++      if (!roster.includes(d.name)) sourceFailure('SOURCE_DECLARATION_NAME', d.span);
++    }
++  }
++  const action = actions[0], parameters = new Set<string>();
++  const otherDeclarations = new Set<string>();
++  for (const key of ['units', 'assets', 'vaults', 'parties']) schema[key].forEach((n: string) => otherDeclarations.add(n));
++  for (const key of ['fields', 'observations', 'recordTypes', 'enumTypes', 'operations']) Object.keys(schema[key]).forEach(n => otherDeclarations.add(n));
++  for (const p of action.parameters) {
++    if (parameters.has(p.name)) sourceFailure('SOURCE_PARAMETER_NAMES', p.span);
++    parameters.add(p.name);
++    if (reservedSourceTerm(p.name) || otherDeclarations.has(p.name)) sourceFailure('SOURCE_RESERVED_NAME', p.span);
++  }
++  if (parameters.size !== Object.keys(schema.args).length || [...parameters].some(n => !Object.hasOwn(schema.args, n)))
++    sourceFailure('SOURCE_PARAMETER_NAMES', action.span);
++  for (const p of action.parameters) if (!same(sourceType(p.type), schema.args[p.name]))
++    sourceFailure('SOURCE_PARAMETER_TYPE', p.type.span);
++  return action;
++}
++function workBound(core: object): string {
++  let count = 0;
++  const pending: any[] = [core];
++  while (pending.length) {
++    const value = pending.pop();
++    if (value === null || typeof value !== 'object') continue;
++    if (Object.hasOwn(value, 'constructor') && typeof value.constructor === 'string') count++;
++    pending.push(...Object.values(value));
++  }
++  return String(count);
++}
++/** Trusted Σ is immutable text. Every request owns new trees, including checking
++ * and returned Core. The public evaluator never consumes caller-supplied Core. */
++export function createExpressionSourceV1(schemaCanonicalJSON: string) {
++  const schemaIsText = typeof schemaCanonicalJSON === 'string';
++  const trustedText = schemaIsText ? schemaCanonicalJSON : '';
++  function transport(source: string): void {
++    if (!schemaIsText) throw new ExpressionFailure('INPUT_SCHEMA');
++    if (trustedText.length > COMPONENT_BYTES || bytes(trustedText) > COMPONENT_BYTES) throw new ExpressionFailure('INPUT_BOUND');
++    sourceTransport(source);
++  }
++  function compile(source: string): SourceElaborated | SourceRejected {
++    const program = parseExpressionSource(source);
++    const schema: Schema = parseCanonical(trustedText, COMPONENT_BYTES);
++    schemaShape(schema); validateSchema(schema); validateSourceSchemaNames(schema);
++    const action = sourceAction(program, schema);
++    const lowering = createSourceLowering(schema, new Set(action.parameters.map(p => p.name)), sourceExtension(schema));
++    const statements = [...action.statements, ...action.postconditions].map(statement => {
++      if (statement.tag === 'Let' && reservedSourceTerm(statement.name)) sourceFailure('SOURCE_RESERVED_NAME', statement.span);
++      return lowering.statement(statement);
++    });
++    const core = { statements, span: sourceSpan(action.span) };
++    const checked = createExpressionContractV1(trustedText).check(canonical({ contract: EXPRESSION_CONTRACT_V1,
++      source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
++    if ('status' in checked) return checked;
++    return { judgmentResult: 'SourceElaborated', sourceProfile: EXPRESSION_SOURCE_PROFILE,
++      contract: EXPRESSION_CONTRACT_V1, agreement: program.agreement.name, action: action.name,
++      staticWorkBound: workBound(core), core };
++  }
++  return Object.freeze({
++    elaborate(source: string): SourceElaborated | SourceRejected {
++      try { transport(source); return compile(source); } catch (error) { return rejection(error, source); }
++    },
++    check(source: string): SourceChecked | SourceRejected {
++      try {
++        transport(source);
++        const compiled = compile(source);
++        if ('status' in compiled) return compiled;
++        return { judgmentResult: 'SourceChecked', sourceProfile: EXPRESSION_SOURCE_PROFILE, staticWorkBound: compiled.staticWorkBound };
++      } catch (error) { return rejection(error, source); }
++    },
++    evaluate(source: string, snapshotCanonicalJSON: string): ExpressionResult {
++      try {
++        transport(source);
++        const input = snapshots(snapshotCanonicalJSON);
++        const compiled = compile(source);
++        if ('status' in compiled) return compiled;
++        return createExpressionContractV1(trustedText).evaluate(canonical({ contract: EXPRESSION_CONTRACT_V1,
++          source, core: compiled.core, ...input }));
++      } catch (error) { return rejection(error, source); }
++    },
++  });
++}
+diff --git a/experiments/moriarty-language/src/successor/expression-v1.ts b/experiments/moriarty-language/src/successor/expression-v1.ts
+index 4a10626..08bdfae 100644
+--- a/experiments/moriarty-language/src/successor/expression-v1.ts
++++ b/experiments/moriarty-language/src/successor/expression-v1.ts
+@@ -13,6 +13,9 @@ export type ExpressionResult =
+   | { status: 'Rejected'; code: string; span: ExpressionSpan; nodePath: string[]; workUsed: string }
+   | { status: 'ExpressionPrepared'; post: Record<string, any>; descriptors: any[]; workRemaining: string }
+   | { judgmentResult: 'ExpressionValue'; type: ValueType; value: any; workRemaining: string };
++export type ExpressionCheckResult =
++  | Extract<ExpressionResult, { status: 'Rejected' }>
++  | { judgmentResult: 'ExpressionChecked' };
+ type Role = 'int' | 'id' | 'bool' | 'text' | 'type' | 'units' | 'view' | 'expr' | 'list' | 'fields';
+ const BINARY: [string, Role][] = [['left', 'expr'], ['right', 'expr']];
+ const OPERANDS: Record<string, [string, Role][]> = {
+@@ -258,7 +261,7 @@ class Machine {
+       valueBound(type, result, this.schema, 'VALUE_BOUND'); return result;
+     });
+   }
+-  run(request: string): ExpressionResult {
++  run(request: string, checkOnly = false): ExpressionResult | ExpressionCheckResult {
+     try {
+       // The largest legal separate components fit below this derived envelope
+       // limit even with JSON string escaping. Each semantic component still has
+@@ -289,6 +292,7 @@ class Machine {
+           this.infer(n, [i], n.constructor === 'Ensure', true);
+         }));
+       } else this.infer(r.core, [], false);
++      if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
+       const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
+       validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
+       this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
+@@ -308,16 +312,24 @@ class Machine {
+ 
+ /** The trusted host binds Σ once. Untrusted evaluate() requests cannot supply or
+  * reclassify it. This factory is not profile registration or financial authority. */
+-export function createExpressionContractV1(schemaCanonicalJSON: string): { evaluate(requestCanonicalJSON: string): ExpressionResult } {
++export function createExpressionContractV1(schemaCanonicalJSON: string): {
++  evaluate(requestCanonicalJSON: string): ExpressionResult;
++  check(requestCanonicalJSON: string): ExpressionCheckResult;
++} {
+   // Retain only the immutable text; every call gets a fresh owned schema tree.
+-  // Schema defects are returned through the same defined rejection boundary.
+-  return Object.freeze({ evaluate(requestCanonicalJSON: string): ExpressionResult {
++  // check() performs structure/schema/whole-action typing only: it cannot certify
++  // supplied snapshots, run guards, or publish a prepared state or descriptors.
++  function run(requestCanonicalJSON: string, checkOnly: boolean): ExpressionResult | ExpressionCheckResult {
+     let schema: Schema;
+     try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+     catch (error) {
+       if (!(error instanceof ExpressionFailure)) throw error;
+       return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+     }
+-    return new Machine(schema).run(requestCanonicalJSON);
+-  } });
++    return new Machine(schema).run(requestCanonicalJSON, checkOnly);
++  }
++  return Object.freeze({
++    evaluate: (request: string) => run(request, false) as ExpressionResult,
++    check: (request: string) => run(request, true) as ExpressionCheckResult,
++  });
+ }
+diff --git a/experiments/moriarty-language/src/successor/format.ts b/experiments/moriarty-language/src/successor/format.ts
+index d8c9425..ec2bbf7 100644
+--- a/experiments/moriarty-language/src/successor/format.ts
++++ b/experiments/moriarty-language/src/successor/format.ts
+@@ -1,5 +1,6 @@
+ import {
+   parseSuccessorSource,
++  parseSuccessorExpressionSource,
+   SuccessorSyntaxError,
+   SYNTAX_BOUNDS,
+   type Declaration,
+@@ -39,8 +40,10 @@ function exprPrec(expr: Expression): number {
+     case 'StringLiteral':
+     case 'BooleanLiteral':
+     case 'Call':
++    case 'RecordExpression':
+       return PREC_PRIMARY;
+     case 'Projection':
++    case 'Index':
+       return PREC_POSTFIX;
+     case 'Unary':
+       return PREC_NOT;
+@@ -87,8 +90,13 @@ function formatExpressionInner(expr: Expression): string {
+       return expr.value ? 'true' : 'false';
+     case 'Call': {
+       const args = expr.arguments.map((argument) => formatExpression(argument, PREC_NONE, 'none'));
+-      return `${expr.name}(${args.join(', ')})`;
++      const types = expr.typeArguments ? `<${expr.typeArguments.map(formatType).join(', ')}>` : '';
++      return `${expr.name}${types}(${args.join(', ')})`;
+     }
++    case 'RecordExpression':
++      return `record<${formatType(expr.recordType)}> { ${expr.fields.map(formatEffectField).join(', ')} }`;
++    case 'Index':
++      return `${formatExpression(expr.object, PREC_POSTFIX, 'operand')}[${formatExpression(expr.index, PREC_NONE, 'none')}]`;
+     case 'Projection':
+       return `${formatExpression(expr.object, PREC_POSTFIX, 'operand')}.${expr.field}`;
+     case 'Unary':
+@@ -130,6 +138,7 @@ function formatStatement(statement: Statement): string {
+       return `next.${statement.name} = ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
+     case 'Emit': {
+       const type = formatType(statement.type);
++      if (statement.expression) return `emit ${type} ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
+       if (statement.fields.length === 0) return `emit ${type} {};`;
+       return `emit ${type} { ${statement.fields.map(formatEffectField).join(', ')} };`;
+     }
+@@ -174,8 +183,7 @@ function formatProgram(program: Program): string {
+   return `profile ${program.profile.raw};\n\nagreement ${program.agreement.name} {\n${inner}}\n`;
+ }
+ 
+-export function formatSuccessorSource(source: string): string {
+-  const program = parseSuccessorSource(source);
++function formatParsedSource(program: Program): string {
+   const formatted = formatProgram(program);
+   if (utf8ByteLength(formatted) > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+     throw new SuccessorSyntaxError(
+@@ -186,4 +194,10 @@ export function formatSuccessorSource(source: string): string {
+     );
+   }
+   return formatted;
+-}
+\ No newline at end of file
++}
++export function formatSuccessorSource(source: string): string {
++  return formatParsedSource(parseSuccessorSource(source));
++}
++export function formatSuccessorExpressionSource(source: string): string {
++  return formatParsedSource(parseSuccessorExpressionSource(source));
++}
+diff --git a/experiments/moriarty-language/src/successor/frontend.ts b/experiments/moriarty-language/src/successor/frontend.ts
+index 863a847..ad38aeb 100644
+--- a/experiments/moriarty-language/src/successor/frontend.ts
++++ b/experiments/moriarty-language/src/successor/frontend.ts
+@@ -1,6 +1,7 @@
+-/** Bounded lexer/parser for moriarty-successor-syntax/0. */
++/** Bounded lexer/parser with explicit, separate syntax/0 and expression-source/1 entries. */
+ 
+ export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
++export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
+ 
+ export const SYNTAX_BOUNDS = Object.freeze({
+   sourceUtf8Bytes: 65536,
+@@ -58,6 +59,7 @@ export interface AgreementDecl {
+ 
+ export interface TypeNode {
+   tag: 'Type';
++  numeric?: true;
+   name: string;
+   arguments: TypeNode[];
+   span: Span;
+@@ -145,6 +147,7 @@ export interface Next {
+ 
+ export interface Emit {
+   tag: 'Emit';
++  expression?: Expression;
+   type: TypeNode;
+   fields: EffectField[];
+   span: Span;
+@@ -185,6 +188,7 @@ export interface BooleanLiteral {
+ 
+ export interface Call {
+   tag: 'Call';
++  typeArguments?: TypeNode[];
+   name: string;
+   arguments: Expression[];
+   span: Span;
+@@ -220,7 +224,21 @@ export interface Comparison {
+   span: Span;
+ }
+ 
++export interface RecordExpression {
++  tag: 'RecordExpression';
++  recordType: TypeNode;
++  fields: EffectField[];
++  span: Span;
++}
++export interface Index {
++  tag: 'Index';
++  object: Expression;
++  index: Expression;
++  span: Span;
++}
+ export type Expression =
++  | RecordExpression
++  | Index
+   | Identifier
+   | IntegerLiteral
+   | StringLiteral
+@@ -231,11 +249,13 @@ export type Expression =
+   | Binary
+   | Comparison;
+ 
+-const KEYWORDS = new Set([
++export const SOURCE_KEYWORDS = Object.freeze([
+   'profile', 'agreement', 'unit', 'party', 'asset', 'const', 'state', 'action',
+   'requires', 'let', 'next', 'emit', 'ensures',
+   'true', 'false', 'not', 'and', 'or',
+ ]);
++const KEYWORDS = new Set(SOURCE_KEYWORDS);
++export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'quantity', 'record']);
+ 
+ const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
+ const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
+@@ -329,8 +349,10 @@ class Lexer {
+   readonly n: number;
+   readonly tokens: Token[] = [];
+   readonly source: string;
++  readonly expressionProfile: boolean;
+ 
+-  constructor(source: string) {
++  constructor(source: string, expressionProfile = false) {
++    this.expressionProfile = expressionProfile;
+     this.source = source;
+     this.n = source.length;
+   }
+@@ -446,7 +468,7 @@ class Lexer {
+     }
+ 
+     const ch = src[this.i]!;
+-    if (ONE_CHAR.has(ch)) {
++    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']'))) {
+       this.bumpAscii();
+       this.emit(ch, startB, startI);
+       return;
+@@ -603,11 +625,15 @@ class Parser {
+   readonly depths = new WeakMap<object, number>();
+   extraTokenCount = 0;
+   readonly tokens: Token[];
++  readonly profile: string;
+ 
+-  constructor(tokens: Token[]) {
++  constructor(tokens: Token[], profile = SYNTAX_PROFILE) {
+     this.tokens = tokens;
++    this.profile = profile;
+   }
+ 
++  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE; }
++
+   parseProgram(): Program {
+     const profile = this.parseProfile();
+     const agreement = this.parseAgreement();
+@@ -696,8 +722,8 @@ class Parser {
+   private parseProfile(): ProfileDecl {
+     const kw = this.expect('profile');
+     const str = this.expect('string');
+-    if (str.decoded !== SYNTAX_PROFILE) {
+-      this.fail('PROFILE_MISMATCH', `profile must be ${SYNTAX_PROFILE}`, str.start, str.end);
++    if (str.decoded !== this.profile) {
++      this.fail('PROFILE_MISMATCH', `profile must be ${this.profile}`, str.start, str.end);
+     }
+     const semi = this.expect(';');
+     return this.counted({
+@@ -792,7 +818,7 @@ class Parser {
+     if (!this.at(')')) {
+       parameters.push(this.parseParameter());
+       while (this.at(',')) {
+-        if (parameters.length >= SYNTAX_BOUNDS.parameters) {
++        if (parameters.length >= (this.expressionProfile ? 256 : SYNTAX_BOUNDS.parameters)) {
+           this.fail('ARITY_BOUND', 'parameter bound exceeded');
+         }
+         this.advance();
+@@ -881,7 +907,16 @@ class Parser {
+     }
+     if (this.at('emit')) {
+       const kw = this.advance();
+-      const type = this.parseType();
++      let type: TypeNode;
++      if (this.expressionProfile) {
++        const name = this.expectIdent();
++        type = this.expr({ tag: 'Type' as const, name: name.text, arguments: [], span: { start: name.start, end: name.end } }, 1);
++        if (!this.at('{')) {
++          const expression = this.parseExpression();
++          const semi = this.expect(';');
++          return this.counted({ tag: 'Emit', type, fields: [], expression, span: { start: kw.start, end: semi.end } });
++        }
++      } else type = this.parseType();
+       this.expect('{');
+       const fields: EffectField[] = [];
+       if (!this.at('}')) {
+@@ -929,7 +964,15 @@ class Parser {
+     });
+   }
+ 
+-  private parseType(): TypeNode {
++  private parseType(allowNumeric = false): TypeNode {
++    if (allowNumeric && this.expressionProfile && (this.at('integer') || this.at('-'))) {
++      const start = this.peek().start;
++      const negative = this.at('-');
++      if (negative) this.advance();
++      const value = this.expect('integer');
++      return this.expr({ tag: 'Type' as const, numeric: true as const,
++        name: (negative ? '-' : '') + value.text, arguments: [], span: { start, end: value.end } }, 1);
++    }
+     const name = this.expectIdent();
+     let args: TypeNode[] = [];
+     let depth = 1;
+@@ -940,10 +983,10 @@ class Parser {
+       if (this.at('>') || this.at('>=')) {
+         this.fail('EMPTY_TYPE_ARGS', 'empty type argument list', this.peek().start, this.peek().start + 1);
+       }
+-      args.push(this.parseType());
++      args.push(this.parseType(true));
+       while (this.at(',')) {
+         this.advance();
+-        args.push(this.parseType());
++        args.push(this.parseType(true));
+       }
+       end = this.expectGt();
+       this.leaveNest();
+@@ -1054,23 +1097,31 @@ class Parser {
+ 
+   private parsePostfix(): Expression {
+     let expr = this.parsePrimary();
+-    while (this.at('.')) {
+-      this.advance();
+-      const field = this.expectIdent();
+-      expr = this.expr(
+-        {
+-          tag: 'Projection' as const,
+-          object: expr,
+-          field: field.text,
+-          span: { start: expr.span.start, end: field.end },
+-        },
+-        1 + this.depthOf(expr),
+-      );
++    while (this.at('.') || (this.expressionProfile && this.at('['))) {
++      if (this.at('.')) {
++        this.advance();
++        const field = this.expectIdent();
++        expr = this.expr({ tag: 'Projection' as const, object: expr, field: field.text,
++          span: { start: expr.span.start, end: field.end } }, 1 + this.depthOf(expr));
++      } else {
++        this.enterNest(this.advance());
++        const index = this.parseExpression();
++        const close = this.expect(']');
++        this.leaveNest();
++        expr = this.expr({ tag: 'Index' as const, object: expr, index,
++          span: { start: expr.span.start, end: close.end } }, 1 + Math.max(this.depthOf(expr), this.depthOf(index)));
++      }
+     }
+     return expr;
+   }
+ 
+   private parsePrimary(): Expression {
++    if (this.expressionProfile && this.at('-')) {
++      const sign = this.advance();
++      const value = this.expect('integer');
++      return this.expr({ tag: 'IntegerLiteral' as const, value: '-' + value.text,
++        span: { start: sign.start, end: value.end } }, 1);
++    }
+     if (this.at('integer')) {
+       const t = this.advance();
+       return this.expr(
+@@ -1103,6 +1154,34 @@ class Parser {
+     }
+     if (this.at('ident')) {
+       const name = this.advance();
++      let typeArguments: TypeNode[] | undefined;
++      if (this.expressionProfile && GENERIC_PRIMARIES.includes(name.text)) {
++        this.enterNest(this.peek());
++        this.expect('<');
++        typeArguments = [this.parseType(name.text !== 'record')];
++        while (this.at(',')) { this.advance(); typeArguments.push(this.parseType(true)); }
++        this.expectGt();
++        this.leaveNest();
++        if (name.text === 'record') {
++          if (typeArguments.length !== 1) this.fail('UNEXPECTED_TOKEN', 'record requires one type argument', name.start, this.peek().start);
++          this.enterNest(this.peek());
++          this.expect('{');
++          const fields: EffectField[] = [];
++          if (!this.at('}')) {
++            fields.push(this.parseEffectField());
++            while (this.at(',')) {
++              if (fields.length >= SYNTAX_BOUNDS.recordFields) this.fail('ARITY_BOUND', 'record field bound exceeded');
++              this.advance(); fields.push(this.parseEffectField());
++            }
++          }
++          const close = this.expect('}');
++          this.leaveNest();
++          const depth = 1 + Math.max(this.depthOf(typeArguments[0]), ...fields.map(f => this.depthOf(f.expression)));
++          return this.expr({ tag: 'RecordExpression' as const, recordType: typeArguments[0], fields,
++            span: { start: name.start, end: close.end } }, depth);
++        }
++        if (!this.at('(')) this.unexpected();
++      }
+       if (this.at('(')) {
+         this.enterNest(this.peek());
+         this.advance();
+@@ -1110,7 +1189,7 @@ class Parser {
+         if (!this.at(')')) {
+           args.push(this.parseExpression());
+           while (this.at(',')) {
+-            if (args.length >= SYNTAX_BOUNDS.callArguments) {
++            if (args.length >= (this.expressionProfile && name.text === 'collection' ? 128 : SYNTAX_BOUNDS.callArguments)) {
+               this.fail('ARITY_BOUND', 'call argument bound exceeded');
+             }
+             this.advance();
+@@ -1119,11 +1198,12 @@ class Parser {
+         }
+         const close = this.expect(')');
+         this.leaveNest();
+-        let depth = 1;
++        let depth = typeArguments ? 1 + Math.max(...typeArguments.map(t => this.depthOf(t))) : 1;
+         for (const a of args) depth = Math.max(depth, 1 + this.depthOf(a));
+         return this.expr(
+           {
+             tag: 'Call' as const,
++            ...(typeArguments ? { typeArguments } : {}),
+             name: name.text,
+             arguments: args,
+             span: { start: name.start, end: close.end },
+@@ -1161,11 +1241,20 @@ class Parser {
+   }
+ }
+ 
+-export function parseSuccessorSource(source: string): Program {
++function parseSourceProfile(source: string, profile: string): Program {
+   if (typeof source !== 'string') {
+     fail('SOURCE_TYPE', 'source must be a string', 0, 0);
+   }
+   validateSource(source);
+-  const tokens = new Lexer(source).tokenize();
+-  return new Parser(tokens).parseProgram();
++  const tokens = new Lexer(source, profile === EXPRESSION_SOURCE_PROFILE).tokenize();
++  return new Parser(tokens, profile).parseProgram();
++}
++
++/** Original syntax-only entry point retains its exact profile. */
++export function parseSuccessorSource(source: string): Program {
++  return parseSourceProfile(source, SYNTAX_PROFILE);
++}
++/** Distinct expression-source entry point; no implicit profile migration. */
++export function parseSuccessorExpressionSource(source: string): Program {
++  return parseSourceProfile(source, EXPRESSION_SOURCE_PROFILE);
+ }
+diff --git a/experiments/moriarty-language/tests/expression-source-profile.test.mjs b/experiments/moriarty-language/tests/expression-source-profile.test.mjs
+new file mode 100644
+index 0000000..692f3fd
+--- /dev/null
++++ b/experiments/moriarty-language/tests/expression-source-profile.test.mjs
+@@ -0,0 +1,40 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { parseExpressionSource, formatExpressionSource } from '../src/successor/expression-source-frontend.ts';
++import { parseSuccessorSource } from '../src/successor/frontend.ts';
++import { formatSuccessorSource } from '../src/successor/format.ts';
++const old = 'profile "moriarty-successor-syntax/0"; agreement Test { action step() { requires true; } }';
++const current = old.replace('moriarty-successor-syntax/0', 'moriarty-expression-source/1');
++test('profile separation requires exact source headers at both entry points', () => {
++  assert.equal(parseSuccessorSource(old).profile.value, 'moriarty-successor-syntax/0');
++  assert.equal(parseExpressionSource(current).profile.value, 'moriarty-expression-source/1');
++  assert.throws(() => parseSuccessorSource(current), e => e.code === 'PROFILE_MISMATCH');
++  assert.throws(() => parseExpressionSource(old), e => e.code === 'PROFILE_MISMATCH');
++});
++test('profile formatters retain their respective exact source headers', () => {
++  assert.equal(formatSuccessorSource(formatSuccessorSource(old)), formatSuccessorSource(old));
++  assert.equal(formatExpressionSource(formatExpressionSource(current)), formatExpressionSource(current));
++  assert.throws(() => formatSuccessorSource(current), e => e.code === 'PROFILE_MISMATCH');
++  assert.throws(() => formatExpressionSource(old), e => e.code === 'PROFILE_MISMATCH');
++});
++
++test('new grammar supports numeric metadata, signed values, generics and brackets only under /1', () => {
++  for (const body of ['let x = -1;', 'let x = none<Collection<UInt64,2>>();', 'let x = collection<UInt64,2>()[u64(0)];', 'emit Notice row;']) {
++    const next = `profile "moriarty-expression-source/1"; agreement Demo { action step() { ${body} } }`;
++    assert.doesNotThrow(() => parseExpressionSource(next));
++    assert.throws(() => parseSuccessorSource(next.replace('moriarty-expression-source/1','moriarty-successor-syntax/0')));
++  }
++});
++test('generic calls and comparisons remain distinct and typed emissions reject during parsing', () => {
++  assert.doesNotThrow(() => parseExpressionSource(current.replace('requires true;', 'requires a < b; let x = some<Option<UInt64>>(none<UInt64>());')));
++  for (const body of ['emit Notice<UInt64> {};', 'let x = record<1> {};', 'let x = record<Row,Other> {};'])
++    assert.throws(() => parseExpressionSource(current.replace('requires true;', body)), e => e.code === 'UNEXPECTED_TOKEN');
++  assert.throws(() => parseExpressionSource(current.replace('step()', 'step(x: 1)')), e => e.code === 'UNEXPECTED_TOKEN');
++});
++
++test('exported lexical catalogs cannot mutate subsequent profile admission', async () => {
++  const { GENERIC_PRIMARIES, SOURCE_KEYWORDS } = await import('../src/successor/frontend.ts');
++  assert.throws(() => GENERIC_PRIMARIES.pop(), TypeError);
++  assert.throws(() => SOURCE_KEYWORDS.push('hello'), TypeError);
++  assert.doesNotThrow(() => parseExpressionSource(current.replace('requires true;', 'let x = none<UInt64>();')));
++});
+diff --git a/experiments/moriarty-language/tests/expression-source-v1.test.mjs b/experiments/moriarty-language/tests/expression-source-v1.test.mjs
+new file mode 100644
+index 0000000..d2b39e9
+--- /dev/null
++++ b/experiments/moriarty-language/tests/expression-source-v1.test.mjs
+@@ -0,0 +1,280 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
++import { parseExpressionSource, formatExpressionSource } from '../src/successor/expression-source-frontend.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++
++const empty = () => ({ units: [], assets: [], vaults: [], parties: [], recordTypes: {}, enumTypes: {}, fields: {}, args: {}, observations: {}, operations: {} });
++const source = body => `profile "moriarty-expression-source/1"; agreement Demo { action step() { ${body} } }`;
++const invocation = (Pre = {}, Args = {}, Obs = {}, workInitial = '1000') => canonical({ Pre, Args, Obs, workInitial });
++function expression(expr, type, expected, patch = {}, pre = {}) {
++  const schema = { ...empty(), ...patch, fields: { out: { type, writeClass: 'ordinary' }, ...(patch.fields ?? {}) } };
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const input = source(`next.out = ${expr};`);
++  const result = runtime.evaluate(input, invocation({ out: expected, ...pre }));
++  assert.equal(result.status, 'ExpressionPrepared', JSON.stringify(result));
++  assert.deepEqual(result.post.out, expected);
++  return runtime.elaborate(input);
++}
++
++test('source scalar types, signed extremes and named rounding keep exact values', () => {
++  expression('u64(7)', ['UInt64'], '7');
++  expression('1 + 2 * 3', ['UInt128'], '7');
++  expression('i128(5) + -7', ['SInt128'], '-2');
++  expression('floor_div(-5, i128(2))', ['SInt128'], '-3');
++  expression('ceil_div(-5, i128(2))', ['SInt128'], '-2');
++  expression('"é😀"', ['Text'], 'é😀');
++  expression('not false and true or false', ['Bool'], true);
++});
++test('source financial literals retain every exact type index', () => {
++  const patch = { assets: ['A', 'B'], vaults: ['Vault'], parties: ['Holder'], units: ['USD'] };
++  expression('amount(5,A)', ['Amount', 'A'], '5', patch);
++  expression('shares(5,Vault,Holder)', ['Shares', 'Vault', 'Holder'], '5', patch);
++  expression('rate(-5,2)', ['Rate', '2'], '-5', patch);
++  expression('price(5,A,B,2)', ['Price', 'A', 'B', '2'], '5', patch);
++  expression('quantity<Units<USD,1>,2>(-5)', ['Quantity', [['USD', '1']], '2'], '-5', patch);
++});
++test('source record, enum, option, collection and both access aliases', () => {
++  const patch = { recordTypes: { Row: { n: ['UInt64'] } }, enumTypes: { Mode: ['Closed', 'Open'] } };
++  expression('record<Row> {n: u64(5)}', ['Record', 'Row'], { n: '5' }, patch);
++  expression('Mode.Open', ['Enum', 'Mode'], 'Open', patch);
++  expression('some<UInt64>(u64(5))', ['Option', ['UInt64']], ['5']);
++  expression('none<UInt64>()', ['Option', ['UInt64']], []);
++  expression('collection<UInt64,2>(u64(5))', ['Collection', ['UInt64'], '2'], ['5']);
++  expression('(record<Row> { n: u64(5) }).n', ['UInt64'], '5', patch);
++  expression('access_field(record<Row> {n: u64(5)}, "n")', ['UInt64'], '5', patch);
++  expression('collection<UInt64,2>(u64(5))[u64(0)]', ['UInt64'], '5');
++  expression('access_index(collection<UInt64,2>(u64(5)),u64(0))', ['UInt64'], '5');
++});
++test('source check rejects a dead branch wrong type before runtime guard', () => {
++  const runtime = createExpressionSourceV1(canonical(empty()));
++  const input = source('requires false; requires true or 1;');
++  const result = runtime.evaluate(input, invocation());
++  assert.equal(result.code, 'TYPE_MISMATCH');
++  assert.equal(result.workUsed, '0');
++  assert.equal(runtime.check(input).code, 'TYPE_MISMATCH');
++});
++test('source formatting preserves complete expression meaning and is idempotent', () => {
++  const input = source('let xs=collection<UInt64,2>(u64(5));requires xs[u64(0)]==u64(5);');
++  const formatted = formatExpressionSource(input);
++  assert.equal(formatExpressionSource(formatted), formatted);
++  const runtime = createExpressionSourceV1(canonical(empty()));
++  assert.deepEqual(runtime.evaluate(input, invocation()), runtime.evaluate(formatted, invocation()));
++  assert.equal(parseExpressionSource(formatted).profile.value, 'moriarty-expression-source/1');
++});
++
++test('one real source program reaches all forty reviewed constructors', () => {
++  const schema = { ...empty(), assets: ['A', 'B'], parties: ['Holder'], vaults: ['Vault'], units: ['USD'],
++    recordTypes: { Row: { n: ['UInt64'] } }, enumTypes: { Mode: ['Closed', 'Open'] },
++    args: { input: ['UInt64'], row: ['Record', 'Row'] }, observations: { ready: ['Bool'] },
++    fields: { counter: { type: ['UInt64'], writeClass: 'ordinary' } }, operations: { Notice: 'Row' } };
++  const input = `profile "moriarty-expression-source/1";
++  agreement AllExpressions {
++    action step(input: UInt64, row: Record<Row>) {
++      let number = u64(7);
++      let signed = i128(-5);
++      let truth = true;
++      let label = "hello";
++      let cash = amount(5,A);
++      let quantityValue = quantity<Units<USD,1>,2>(-5);
++      let sharesValue = shares(5,Vault,Holder);
++      let rateValue = rate(-5,2);
++      let priceValue = price(5,A,B,2);
++      let observed = obs.ready;
++      let before = pre.counter;
++      let recordValue = record<Row> { n: number };
++      let member = Mode.Open;
++      let present = some<UInt64>(number);
++      let absent = none<UInt64>();
++      let items = collection<UInt64,2>(number);
++      let projectedField = recordValue.n;
++      let accessedField = access_field(recordValue,"n");
++      let projectedIndex = items[u64(0)];
++      let accessedIndex = access_index(items,u64(0));
++      let sum = number + input;
++      let difference = number - input;
++      let product = number * input;
++      let floorValue = floor_div(signed,i128(2));
++      let ceilValue = ceil_div(signed,i128(2));
++      requires number == u64(7);
++      requires number < u64(8);
++      requires number <= u64(7);
++      requires number > u64(6);
++      requires number >= u64(7);
++      requires not false and observed or false;
++      requires floorValue == i128(-3) and ceilValue == i128(-2);
++      next.counter = before + input;
++      emit Notice row;
++      ensures post.counter == pre.counter + input;
++    }
++  }`;
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const elaboration = runtime.elaborate(input);
++  assert.equal(elaboration.judgmentResult, 'SourceElaborated', JSON.stringify(elaboration));
++  const seen = new Set();
++  const visit = value => {
++    if (!value || typeof value !== 'object') return;
++    if (Object.hasOwn(value, 'constructor')) seen.add(value.constructor);
++    Object.values(value).forEach(visit);
++  };
++  visit(elaboration.core);
++  assert.deepEqual([...seen].sort(), ['LitUInt','LitSInt','LitBool','LitText','LitAmount','LitQuantity','LitShares','LitRate','LitPrice',
++    'ReadLocal','ReadArg','ReadObs','ReadPre','ProjectField','AccessField','ProjectIndex','AccessIndex',
++    'ConstructRecord','ConstructEnum','ConstructSome','ConstructNone','ConstructCollection',
++    'Add','Sub','Mul','FloorDiv','CeilDiv','Eq','Lt','Lte','Gt','Gte','Not','And','Or','Require','Let','NextWrite','Ensure','Emit'].sort());
++  const result = runtime.evaluate(input, invocation({ counter: '10' }, { input: '2', row: { n: '42' } }, { ready: true }));
++  assert.deepEqual(result.post, { counter: '12' });
++  assert.deepEqual(result.descriptors, [{ operation: 'Notice', fields: { n: '42' } }]);
++});
++
++test('a direct source emission preserves its record operand and exact work', () => {
++  const schema = { ...empty(), recordTypes: { Row: { n: ['UInt64'] } }, args: { row: ['Record','Row'] }, operations: { Notice: 'Row' } };
++  const input = 'profile "moriarty-expression-source/1"; agreement Demo { action step(row: Record<Row>) { emit Notice row; } }';
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const result = runtime.evaluate(input, invocation({}, { row: { n: '5' } }, {}, '2'));
++  assert.equal(result.status, 'ExpressionPrepared');
++  assert.equal(result.workRemaining, '0');
++  assert.equal(runtime.elaborate(input).staticWorkBound, '2');
++});
++
++test('source boundaries admit128 collection items and65 parameters without widening old grammar', () => {
++  const items = Array.from({ length: 128 }, (_, i) => `u64(${i})`).join(',');
++  expression(`collection<UInt64,128>(${items})`, ['Collection',['UInt64'],'128'], Array.from({ length: 128 }, (_, i) => String(i)));
++  const args = Object.fromEntries(Array.from({ length: 65 }, (_, i) => ['arg'+i, ['UInt64']]));
++  const input = `profile "moriarty-expression-source/1"; agreement Demo { action step(${Object.keys(args).map(name => `${name}:UInt64`).join(',')}) { requires arg64 == u64(64); } }`;
++  const runtime = createExpressionSourceV1(canonical({ ...empty(), args }));
++  assert.equal(runtime.evaluate(input, invocation({}, Object.fromEntries(Object.keys(args).map((name, i) => [name, String(i)])))).status, 'ExpressionPrepared');
++});
++
++test('source metadata, equality and namespace boundaries reject deterministically', () => {
++  const runtime = createExpressionSourceV1(canonical({ ...empty(), assets: ['A','B'], units: ['EUR','USD'] }));
++  const failures = [
++    ['let x = -0;', 'SOURCE_LITERAL_SHAPE'],
++    ['let x = i128(1 + 2);', 'SOURCE_LITERAL_SHAPE'],
++    ['let x = u64(-1);', 'TYPE_LITERAL'],
++    ['let x = amount(-1,A);', 'SOURCE_LITERAL_SHAPE'],
++    ['let x = amount(1,A) + amount(1,B);', 'TYPE_MISMATCH'],
++    ['let x = u64(1) + 1;', 'TYPE_MISMATCH'],
++    ['let x = price(1,A,A,2);', 'TYPE_LITERAL'],
++    ['let x = rate(1,19);', 'TYPE_LITERAL'],
++    ['let x = quantity<Units<USD,1,EUR,-1>,2>(1);', 'TYPE_LITERAL'],
++    ['let x = quantity<Units<USD>,2>(1);', 'SOURCE_TYPE_SHAPE'],
++    ['let x = none<Units>();', 'SOURCE_TYPE_SHAPE'],
++    ['let x = none<Unit>();', 'TYPE_NAME'],
++    ['let x = collection<UInt64,0>(u64(1));', 'TYPE_COLLECTION_BOUND'],
++    ['let x = collection<UInt64,1>() == collection<UInt64,2>();', 'TYPE_MISMATCH'],
++    ['let x = access_field(1,"not an identifier");', 'SOURCE_LITERAL_SHAPE'],
++    ['let amount = 1;', 'SOURCE_RESERVED_NAME'],
++    ['let x = unknown_function(1);', 'SOURCE_CALL'],
++  ];
++  for (const [body, code] of failures) {
++    const result = runtime.evaluate(source(body), invocation());
++    assert.equal(result.code, code, body + ': ' + JSON.stringify(result));
++    assert.equal(result.workUsed, '0');
++    assert.equal(Object.hasOwn(result, 'post'), false);
++  }
++});
++
++test('source stage rollback includes descriptors and rejects direct financial writes', () => {
++  const schema = { ...empty(), recordTypes: { Row: { n: ['UInt64'] } }, operations: { Notice: 'Row' },
++    fields: { counter: { type: ['UInt64'], writeClass: 'ordinary' }, debt: { type: ['UInt64'], writeClass: 'financial' } } };
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const snapshots = invocation({ counter: '10', debt: '20' });
++  const input = source('next.counter = u64(11); emit Notice {n:u64(5)}; ensures false;');
++  const result = runtime.evaluate(input, snapshots);
++  assert.equal(result.code, 'ENSURES_FAILED');
++  assert.equal(Object.hasOwn(result, 'post'), false);
++  assert.equal(Object.hasOwn(result, 'descriptors'), false);
++  assert.equal(runtime.evaluate(source('next.debt = u64(0);'), snapshots).code, 'TYPE_FINANCIAL_WRITE');
++  const valid = runtime.evaluate(source('requires pre.counter == u64(10);'), snapshots);
++  valid.post.counter = '999';
++  assert.equal(runtime.evaluate(source('requires pre.counter == u64(10);'), snapshots).post.counter, '10');
++});
++
++test('source byte spans, lowered paths and short-circuit work survive formatting-independent text', () => {
++  const runtime = createExpressionSourceV1(canonical(empty()));
++  const skipped = source('requires true or floor_div(1,0) == 0;');
++  assert.equal(runtime.evaluate(skipped, invocation({}, {}, {}, '3')).status, 'ExpressionPrepared');
++  assert.ok(BigInt(runtime.elaborate(skipped).staticWorkBound) > 3n);
++  const input = source('let label = "é😀"; requires false or floor_div(1,0) == 0;');
++  const result = runtime.evaluate(input, invocation());
++  assert.equal(result.code, 'ARITH_DENOMINATOR');
++  assert.equal(Buffer.from(input).subarray(Number(result.span.start), Number(result.span.end)).toString(), 'floor_div(1,0)');
++  assert.deepEqual(result.nodePath, ['1','0','1','0']);
++  const exhausted = runtime.evaluate(source('requires true;'), invocation({}, {}, {}, '1'));
++  assert.equal(exhausted.code, 'WORK_EXHAUSTED');
++  assert.equal(exhausted.workUsed, '1');
++  assert.deepEqual(exhausted.nodePath, ['0','0']);
++});
++
++test('source API rejects hostile transport, schema overrides and unsupported declaration semantics', () => {
++  let touched = false;
++  const hostile = { get source() { touched = true; throw new Error('must not access'); } };
++  const runtime = createExpressionSourceV1(canonical(empty()));
++  assert.equal(runtime.evaluate(hostile, invocation()).status, 'Rejected');
++  assert.equal(touched, false);
++  assert.equal(runtime.evaluate(source(''), canonical({ Pre: {}, Args: {}, Obs: {}, workInitial: '10', schema: empty() })).code, 'INPUT_SCHEMA');
++  const program = 'profile "moriarty-expression-source/1"; agreement Demo { state x: UInt64 = u64(0); action step() {} }';
++  assert.equal(runtime.check(program).code, 'SOURCE_DECLARATION');
++  const multiple = 'profile "moriarty-expression-source/1"; agreement Demo { action first() {} action second() {} }';
++  assert.equal(runtime.check(multiple).code, 'SOURCE_ACTION_COUNT');
++  const keywordSchema = { ...empty(), fields: { state: { type: ['Bool'], writeClass: 'ordinary' } } };
++  assert.equal(createExpressionSourceV1(canonical(keywordSchema)).check(source('')).code, 'SOURCE_SCHEMA_NAME');
++});
++
++test('formatter retains lowered Core structure, types and evaluation order', () => {
++  const schema = { ...empty(), units: ['EUR','USD'], recordTypes: { Row: { text: ['Text'], n: ['UInt64'] } } };
++  const input = source('let q=quantity<Units<EUR,-1,USD,1>,2>(- 5);let r=record<Row>{text:"é",n:u64(1)};requires r.n != u64(2);');
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const strip = value => {
++    if (Array.isArray(value)) return value.map(strip);
++    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([k]) => k !== 'span').map(([k,v]) => [k,strip(v)]));
++    return value;
++  };
++  const formatted = formatExpressionSource(input);
++  assert.deepEqual(strip(runtime.elaborate(formatted).core), strip(runtime.elaborate(input).core));
++  assert.equal(formatExpressionSource(formatted), formatted);
++  assert.deepEqual(runtime.evaluate(formatted, invocation()), runtime.evaluate(input, invocation()));
++});
++
++test('D5 outer transport and component limits precede source parsing and typed admission', () => {
++  const runtime = createExpressionSourceV1(canonical(empty()));
++  assert.equal(runtime.evaluate('invalid source', ' '.repeat(2_000_001)).code, 'INPUT_BOUND');
++  // The outer transport is not mistakenly capped at one component's 65536 bytes.
++  const parts = canonical({ Pre: 'x'.repeat(30000), Args: 'x'.repeat(30000), Obs: 'x'.repeat(30000), workInitial: '1' });
++  assert.ok(Buffer.byteLength(parts) > 65536);
++  assert.equal(runtime.evaluate(source(''), parts).code, 'INPUT_SCHEMA');
++  assert.equal(runtime.evaluate('invalid source', canonical({ Pre: 'x'.repeat(65535), Args: {}, Obs: {}, workInitial: '1' })).code, 'INPUT_BOUND');
++  assert.equal(runtime.evaluate(source('requires false;'), invocation({}, {}, {}, '65537')).code, 'INPUT_BOUND');
++});
++
++test('source final aggregate bound rejects at the action after both ordinary writes', () => {
++  const type = ['Collection', ['Collection', ['Bool'], '128'], '128'];
++  const schema = { ...empty(), args: { payload: type }, fields: { a: { type, writeClass: 'ordinary' }, b: { type, writeClass: 'ordinary' } } };
++  const input = 'profile "moriarty-expression-source/1"; agreement Demo { action step(payload: Collection<Collection<Bool,128>,128>) { next.a = payload; next.b = payload; } }';
++  const runtime = createExpressionSourceV1(canonical(schema));
++  const result = runtime.evaluate(input, invocation({ a: [], b: [] }, { payload: Array.from({ length: 16 }, () => Array(128).fill(false)) }));
++  assert.equal(result.code, 'VALUE_BOUND');
++  assert.equal(result.workUsed, '4');
++  assert.deepEqual(result.nodePath, []);
++  assert.match(Buffer.from(input).subarray(Number(result.span.start), Number(result.span.end)).toString(), /^action step/);
++  assert.equal(Object.hasOwn(result, 'post'), false);
++});
++test('source descriptor128 limit rolls back the129th emission', () => {
++  const runtime = createExpressionSourceV1(canonical({ ...empty(), recordTypes: { Empty: {} }, operations: { Notice: 'Empty' } }));
++  const result = runtime.evaluate(source('emit Notice {};'.repeat(129)), invocation());
++  assert.equal(result.code, 'DESCRIPTOR_BOUND');
++  assert.deepEqual(result.nodePath, ['128']);
++  assert.equal(result.workUsed, '258');
++  assert.equal(Object.hasOwn(result, 'descriptors'), false);
++});
++test('new parameter256 and collection128 ceilings have explicit next-value rejection', () => {
++  const args = Object.fromEntries(Array.from({ length: 256 }, (_, i) => ['p'+i, ['Bool']]));
++  const declaration = count => `profile "moriarty-expression-source/1"; agreement Demo { action step(${Array.from({length:count},(_,i)=>`p${i}:Bool`).join(',')}) {} }`;
++  const runtime = createExpressionSourceV1(canonical({ ...empty(), args }));
++  assert.equal(runtime.check(declaration(256)).judgmentResult, 'SourceChecked');
++  assert.equal(runtime.check(declaration(257)).code, 'ARITY_BOUND');
++  const language = createExpressionSourceV1(canonical(empty()));
++  assert.equal(language.check(source(`let items = collection<Bool,128>(${Array(129).fill('true').join(',')});`)).code, 'ARITY_BOUND');
++  assert.equal(language.check(source('let items = collection<Bool,129>();')).code, 'TYPE_COLLECTION_BOUND');
++});
+diff --git a/experiments/moriarty-language/tests/successor-expression-source.test.mjs b/experiments/moriarty-language/tests/successor-expression-source.test.mjs
+new file mode 100644
+index 0000000..48f0207
+--- /dev/null
++++ b/experiments/moriarty-language/tests/successor-expression-source.test.mjs
+@@ -0,0 +1,69 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { parseSuccessorSource } from '../src/successor/frontend.ts';
++import { createSourceLowering, sourceNode } from '../src/successor/expression-source-lower.ts';
++import { createExpressionContractV1 } from '../src/successor/expression-v1.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++
++const schema = { units: [], assets: [], vaults: [], parties: [], recordTypes: {}, enumTypes: {},
++  fields: { flag: { type: ['Bool'], writeClass: 'ordinary' } }, args: { ready: ['Bool'] }, observations: {}, operations: {} };
++function run(body, ready = true) {
++  const source = `profile "moriarty-successor-syntax/0"; agreement Test { action step(ready: Bool) { ${body} } }`;
++  const parsed = parseSuccessorSource(source), action = parsed.agreement.declarations[0];
++  const lower = createSourceLowering(schema, new Set(['ready']), e => {
++    if (e.tag === 'IntegerLiteral') return sourceNode('LitUInt', { width: '128', value: e.value }, e.span);
++    return undefined;
++  });
++  const core = { statements: [...action.statements, ...action.postconditions].map(lower.statement), span: { kind: 'source', start: String(action.span.start), end: String(action.span.end) } };
++  const result = createExpressionContractV1(canonical(schema)).evaluate(canonical({ contract: 'moriarty-expression-contract/1', source, core,
++    Pre: { flag: false }, Args: { ready }, Obs: {}, workInitial: '100' }));
++  return { source, core, result };
++}
++
++test('real syntax/0 Boolean statements lower to Core and evaluate immutable pre/post', () => {
++  const { result } = run('let condition = ready and not pre.flag; requires condition; next.flag = condition; ensures post.flag and not pre.flag;');
++  assert.equal(result.status, 'ExpressionPrepared');
++  assert.deepEqual(result.post, { flag: true });
++});
++test('wrong type in an unselected source Boolean branch rejects statically', () => {
++  const { result } = run('requires false and 1;');
++  assert.equal(result.code, 'TYPE_MISMATCH');
++  assert.equal(result.workUsed, '0');
++});
++test('source dead branch skips dynamic division failure, selected branch retains source span', () => {
++  assert.equal(run('requires true or floor_div(1, 0) == 0;').result.status, 'ExpressionPrepared');
++  const { source, result } = run('requires false or floor_div(1, 0) == 0;');
++  assert.equal(result.code, 'ARITH_DENOMINATOR');
++  assert.equal(Buffer.from(source).subarray(Number(result.span.start), Number(result.span.end)).toString(), 'floor_div(1, 0)');
++});
++test('source ensure failure rolls back staged writes', () => {
++  const { result } = run('next.flag = true; ensures false;');
++  assert.equal(result.code, 'ENSURES_FAILED');
++  assert.equal(Object.hasOwn(result, 'post'), false);
++});
++
++test('runtime exposes static checking without requiring or executing snapshots', () => {
++  const { source, core } = run('requires ready; next.flag = true;');
++  const runtime = createExpressionContractV1(canonical(schema));
++  const result = runtime.check(canonical({ contract: 'moriarty-expression-contract/1', source, core,
++    Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
++  assert.deepEqual(result, { judgmentResult: 'ExpressionChecked' });
++});
++
++test('source later static mistakes precede failed guards and snapshots', () => {
++  for (const [body, code] of [
++    ['requires false; requires missing;', 'TYPE_NAME'],
++    ['requires false; next.flag = true; next.flag = false;', 'TYPE_DUPLICATE_WRITE'],
++    ['requires false; let ready = true;', 'TYPE_DUPLICATE_BINDER'],
++    ['requires false; requires post.flag;', 'TYPE_POST_SCOPE'],
++  ]) {
++    const { result } = run(body);
++    assert.equal(result.code, code);
++    assert.equal(result.workUsed, '0');
++  }
++});
++test('UTF-8 source span survives earlier multibyte text', () => {
++  const { source, result } = run('let label = "é😀"; requires floor_div(1, 0) == 0;');
++  assert.equal(result.code, 'ARITH_DENOMINATOR');
++  assert.equal(Buffer.from(source).subarray(Number(result.span.start), Number(result.span.end)).toString(), 'floor_div(1, 0)');
++});

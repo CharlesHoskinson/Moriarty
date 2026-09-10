@@ -1,0 +1,165 @@
+{
+  "proposalSha256": "4ad4e01d3f11e69f904a3d24047672144706884852491cc0c6bfdc95c16172a3",
+  "verdict": "REQUEST_CHANGES",
+  "decisions": {
+    "D1": {
+      "vote": "APPROVE_SCOPED",
+      "reasons": [
+        "A separate, explicit expression-source profile is an appropriate component toward the compact TypeScript-style DSL.",
+        "Preserving old entry points, accepted bytes and semantics prevents silent migration.",
+        "This approves profile separation only. Parser, formatter and runtime compatibility remain unverified."
+      ]
+    },
+    "D2": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": [
+        "Explicit widths, signed literals, nominal indices, scales, options and collection capacities fit the baseline exact-type model without a host type-alias registry.",
+        "Quantity<Units<USD,1,EUR,-1>,2> contradicts increasing ASCII identifier order and baseline unitDomain. Correct spelling is Quantity<Units<EUR,-1,USD,1>,2>.",
+        "This is a bounded specification/example defect, not a fundamental problem with dimensional types. It nevertheless prevents approval of these exact proposal bytes.",
+        "The normative source type contract should explicitly inherit all baseline domains, including eight-unit maximum, scale 0..18, distinct Price assets, UInt128 Price mantissas, collection capacity 0..128 and exclusion of Unit as a value type."
+      ]
+    },
+    "D3": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": [
+        "The fixed generic-name rule resolves ordinary generic/comparison ambiguity, and preserving lexical record and collection order is correct.",
+        "The mapping table reaches all 40 constructor names, but does not establish representability of their full admitted operand domains.",
+        "Inherited call arity 64 prevents collection constructors with 65..128 elements.",
+        "Core Emit accepts any expression of the required Record type. The proposed emission syntax always inserts ConstructRecord, so it cannot preserve arbitrary Emit operands, work or diagnostic paths.",
+        "Reserved-name and namespace rules are incomplete. Core permits identifiers that source keywords or fixed generic primaries make unreachable.",
+        "The grammar adds index brackets without an explicit lexical punctuation delta."
+      ]
+    },
+    "D4": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": [
+        "Trusted immutable Sigma, runtime-validated snapshots, rejection of direct financial writes and the ExpressionPrepared label are appropriate boundaries.",
+        "The one-action bridge is explicitly a component; retaining full eventual SP02, financial semantics, K, proof and Preview obligations is essential.",
+        "The assertion that every reviewed expression is expressible is too strong given collection limits, emission operands, reserved identifiers and the inherited 64-parameter limit.",
+        "Optional asset declarations have no defined consistency predicate: baseline Sigma stores asset names but no asset-to-unit mapping.",
+        "Unknown-action checking also needs an explicit source action-selection contract; baseline Sigma contains no action-name registry."
+      ]
+    },
+    "D5": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": [
+        "Whole-action checking, UTF-8 spans, original Core paths and rejection without tentative results are sound requirements.",
+        "The listed pass-through errors omit VALUE_BOUND and DESCRIPTOR_BOUND, both observable baseline failures.",
+        "Source error precedence relative to structural input admission and typed snapshot validation is insufficiently specified.",
+        "The proposal needs an explicit conservative work calculation over lowered Core, including inserted nodes and skipped Boolean branches.",
+        "Span ownership and diagnostic paths for inserted Emit/ConstructRecord nodes, metadata errors and action-finalization failures remain unspecified."
+      ]
+    }
+  },
+  "requiredCorrections": [
+    {
+      "id": "R1",
+      "decisions": ["D2"],
+      "severity": "medium",
+      "correction": "Replace the unsorted Quantity example with Quantity<Units<EUR,-1,USD,1>,2>. Retain rejection of unsorted, duplicate, zero-exponent and out-of-domain unit vectors; do not silently normalize source metadata. State that ordering is ASCII identifier order."
+    },
+    {
+      "id": "R2",
+      "decisions": ["D2", "D3", "D4"],
+      "severity": "high",
+      "correction": "Distinguish constructor-name coverage from full operand-domain and composition coverage. Give /1 collection construction an explicit 128-element bound while preserving old-profile limits. Resolve the 64-parameter versus Sigma.args capacity mismatch. Define the exact source-admissible schema/domain instead of claiming unrestricted Core representability."
+    },
+    {
+      "id": "R3",
+      "decisions": ["D3", "D4"],
+      "severity": "high",
+      "correction": "Provide source syntax that lowers Emit with an arbitrary Record-valued operand directly, while retaining the braced record sugar. For example, specify an expression-bearing emission form. Emit(O,ReadArg(r)) costs two entered nodes; reconstructing a one-field record as emit O { f:r.f } costs four and changes paths. Do not call that reconstruction exact correspondence."
+    },
+    {
+      "id": "R4",
+      "decisions": ["D3", "D4"],
+      "severity": "high",
+      "correction": "Publish a namespace and reserved-name matrix covering lexical keywords, pre/post/obs/next, all intrinsics, type constructors, enum names, metadata identifiers, parameters and locals. Specify collisions, shadowing and projection resolution. Address a valid Core enum named some, keyword-named fields such as state, and parameters named pre. Either provide explicit source spellings or declare and validate the restricted source domain; do not silently rename trusted identities."
+    },
+    {
+      "id": "R5",
+      "decisions": ["D2", "D3"],
+      "severity": "medium",
+      "correction": "Complete the /1 lexical and grammar delta: add bracket tokens with profile behavior, preserve nested-generic closing and >= splitting rules, and enumerate intrinsic metadata arities and roles. Clarify that record<R> takes a bare record identifier despite the broader EBNF type production. Specify rejection of nested types where bare asset, vault, holder or nominal identifiers are required."
+    },
+    {
+      "id": "R6",
+      "decisions": ["D4"],
+      "severity": "high",
+      "correction": "Define exact consistency checks for optional declarations. Baseline asset Cash: Asset<USD> carries a relation absent from Sigma.assets; either bind that relation through an explicit trusted contract or reject/defer the declaration form. Define action-name selection separately from Sigma.args. Preserve full declarations and financial bindings as eventual SP02 work, without introducing a hidden type-alias registry or public Core-input substitute."
+    },
+    {
+      "id": "R7",
+      "decisions": ["D4", "D5"],
+      "severity": "high",
+      "correction": "Specify ownership at the source API boundary: bind an immutable trusted schema, own snapshot data before checking/use, prevent caller mutation between checking and evaluation, and prevent returned values from altering later evaluations. Static checking must not execute the action. Retain immutable pre/args/observations, sequential immutable locals, post only in ensures, financial write rejection and complete rollback."
+    },
+    {
+      "id": "R8",
+      "decisions": ["D5"],
+      "severity": "high",
+      "correction": "Publish the complete failure-phase contract. Distinguish structural envelope admission, source elaboration, Core/schema checking, typed snapshot validation and reduction. Preserve VALUE_BOUND and DESCRIPTOR_BOUND as well as the listed errors. Specify deterministic precedence, workUsed=0 before reduction, and exact source spans/Core paths for inserted nodes, duplicate fields, metadata and final aggregate failures."
+    },
+    {
+      "id": "R9",
+      "decisions": ["D5"],
+      "severity": "high",
+      "correction": "Define conservative work B from the lowered Core occurrence tree, counting both Boolean branches, Not(Eq(...)) for !=, and every emitted record constructor. Distinguish the registered static ceiling from request workInitial; do not invent a requirement that every request fund all unselected branches. Preserve runtime exhaustion location and charge semantics."
+    }
+  ],
+  "actualChecks": {
+    "scope": "Repository observations and inert calculations; no implementation acceptance.",
+    "startup": {
+      "loaded": [
+        "AGENTS.md",
+        "plugins/moriarty-dev/skills/develop/SKILL.md"
+      ],
+      "stopRulesInspected": true,
+      "statusCommand": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "statusResult": "Failed with sqlite3.OperationalError: unable to open database file. No status obtained; no database repair or sandbox workaround attempted."
+    },
+    "identity": {
+      "proposalHashMatchedBeforeAndAfterReview": true,
+      "baseCommit": "36ca249601288decb7e923a5561c8fe4ad4d9090",
+      "baselineAccess": "git show 36ca249:<path>",
+      "mutableAuthorCodeReviewed": false
+    },
+    "requestedBaselineFilesInspected": [
+      "experiments/moriarty-language/spec/successor/grammar.ebnf",
+      "experiments/moriarty-language/spec/successor/lexical.md",
+      "experiments/moriarty-language/spec/successor/semantic-contract.md",
+      "experiments/moriarty-language/spec/successor/representation.md",
+      "experiments/moriarty-language/spec/successor/expression-signatures.json",
+      "experiments/moriarty-language/src/successor/frontend.ts",
+      "experiments/moriarty-language/src/successor/format.ts",
+      "experiments/moriarty-language/src/successor/expression-types-v1.ts",
+      "deliverables/defi-language-design-2026-09-07/SYNTAX-COMPARISON.md"
+    ],
+    "additionalCommittedSectionsInspected": [
+      "spec/successor/static-semantics.md: admission, literals, reads, construction and arithmetic",
+      "src/successor/expression-v1.ts: structural bounds, inference, admission and trusted-schema factory",
+      "src/successor/elaborate.ts: declarations, asset-unit binding and funded restrictions",
+      "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md: surface, work, staging and acceptance obligations"
+    ],
+    "constructorInventory": {
+      "signatureCount": 40,
+      "assessment": "All 40 names have proposed mappings; full admitted-domain representability is not established."
+    },
+    "inertCalculations": [
+      "A 65-element UInt64 collection witness uses 562 source bytes, 7734 canonical Core bytes and 67 constructor nodes; inherited call arity 64 is the limiting mismatch.",
+      "A 128-element witness uses 1003 source bytes, 14916 canonical Core bytes and 130 constructor nodes.",
+      "A 65-argument UInt64 schema occupies 1231 canonical bytes and 65 declarations, while the source parameter limit is 64.",
+      "ASCII sorting places EUR before USD."
+    ]
+  },
+  "limits": [
+    "Independent design votes only. No implementation approval, second-reviewer vote or consensus is asserted.",
+    "No delegation, repository edits, private-data access, financial/proof/service execution or network acquisition occurred.",
+    "No candidate parser, evaluator, formatter, build or test suite was executed. Inert witness calculations are not parser or runtime reproductions.",
+    "Required verification remains specified-only: real-source all40 cases; numeric extrema and overflow; scale/unit boundaries; collection lengths 0/64/65/128/129; exact capacity equality; nested options and records; namespace collisions; generic/comparison parsing; Unicode spans; error precedence; work; snapshot ownership; rollback; and old-profile compatibility.",
+    "Operation values can be read through typed inputs; this inventory has no general Operation-value constructor or option elimination. Source syntax does not add missing Core semantics.",
+    "Price remains unsigned and base-per-quote; indexing requires UInt64; implicit width, asset, scale or capacity conversions remain forbidden. Mixed Amount multiplication/division needed by the financial specimens remains open.",
+    "The compact braced source is directionally consistent with the requested DSL. The syntax comparison is specified-only, not an empirical usability result.",
+    "Full SP02 declarations, financial transitions, ACTUS/DeFi coverage, K correspondence, mandatory proofs and Preview financial acceptance remain open. A one-action ExpressionPrepared bridge satisfies none of those acceptance gates by itself."
+  ]
+}

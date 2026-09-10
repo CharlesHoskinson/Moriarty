@@ -1,0 +1,4050 @@
+Fresh independent language-design review. Review exact proposal SHA 4ad4e01d3f11e69f904a3d24047672144706884852491cc0c6bfdc95c16172a3, base committed source36ca249. Author's unrelated working edits are not review candidates. User requires compact TypeScript-style Moriarty DSL on Midnight, full eventual SP02 frontend. Give substantive independent votes D1-D5 (APPROVE_SCOPED or REQUEST_CHANGES) plus exact blocking corrections, coverage gaps and limits. A one-action expression bridge is only a component, not a replacement for full declarations, financial semantics, K, proof or Preview acceptance. No host type-alias registry/Core serialization substitute. Evaluate actual all40 expression representability, types/units/widths/signed/scale/collections/records/options, grammar disambiguation, namespaces/reservednames, source spans/diagnostics, conservative work, immutable Sigma/snapshots, old profile preservation. Root noticed Quantity<Units<USD,1,EUR,-1>,2> example conflicts with sorted IDs: assess severity and other defects independently. No implementation approval. Return JSON with proposalSha256, verdict, decisions keyed D1-D5 each vote/reasons, requiredCorrections, actualChecks, limits. Do not delegate, access private data, or execute financial/proof/service commands.
+You receive exact source bodies inline below; no tools available. Do not claim disk rehash or execution. Distinguish static review from tests.
+
+SOURCE PROPOSAL-01.md SHA256 4ad4e01d3f11e69f904a3d24047672144706884852491cc0c6bfdc95c16172a3
+# Expression source extension proposal 01
+
+Status: proposed decisions; no new surface choice is accepted yet. Scope is local
+source → typed Core → expression evaluation, consuming the reviewed all40 /1
+runtime at base 36ca249. Full SP02, financial-operation transitions, K/proof
+correspondence and SP01–SP12 completion remain open.
+
+Repository observations: syntax/0 has nonnegative decimal, text and Boolean
+literals; identifier reads/calls; dot projection; +, -, *, six comparisons,
+not/and/or; all five action statements. It has no signed literals, numeric type
+arguments, record/enum/option/collection construction, index projection, or
+observation/schema/vault declarations. Its formatter covers that AST. The funded
+elaborator rejects operators, state/const, guards, locals, writes and ensures.
+The all40 runtime accepts canonical Core and trusted host-bound Σ, not source.
+
+Design basis: deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md and
+SYNTAX-COMPARISON.md select braced declarations, typed financial values, explicit
+pre/next/post, named rounding and infix arithmetic. Model comparisons are not
+an empirical developer study. This proposal extends that design instead of
+making raw Core constructor names or host type aliases the source language.
+
+## Decisions requiring two substantive independent agreeing votes
+
+D1. Add explicit profile `moriarty-expression-source/1` through a separate parser
+and evaluation entry point. syntax/0, atomic/1 and funded-source/0 APIs and accepted
+bytes retain their meaning. Reuse the bounded lexer/parser with profile-gated
+productions; old parser rejects the new header. No implicit profile upgrade.
+
+D2. Extend generic type arguments to include canonical signed decimal integers.
+Types spell their complete metadata, with no hidden per-program aliases:
+`UInt64`, `UInt128`, `SInt128`, `Bool`, `Text`, `Amount<A>`, `Shares<V,H>`,
+`Rate<2>`, `Price<A,B,2>`, `Quantity<Units<USD,1,EUR,-1>,2>`, `Record<R>`,
+`Enum<E>`, `Operation<O>`, `Option<T>`, `Collection<T,128>`.
+`Units` without arguments is the empty vector. Unit pairs must already be in
+strict identifier order, nonzero exponent -128..127; no source normalization
+silently repairs malformed metadata. Exact runtime type equality applies.
+Bare unsigned expressions mean UInt128; `u64(1)`, `u128(1)`, `i128(-5)` are typed
+literal forms. A negative decimal expression is a SInt128 literal, not a general
+negation operator. `-0` rejects. There is no unary plus, float or implicit cast.
+
+D3. Add generic intrinsic calls and typed record literals. Only the fixed generic
+names `some`, `none`, `collection`, `quantity`, `record` may consume `<` after
+an identifier, removing ambiguity with comparisons; these names are reserved
+as term binders. Record fields and collection elements retain source order.
+All literal metadata must be syntactic literals/identifiers, never evaluated
+expressions. Signed mantissas admit unsigned or negative decimal token forms.
+
+| Source | Exact Core lowering |
+| --- | --- |
+| 1; u64(1); u128(1) | LitUInt(128,1); LitUInt(64,1); LitUInt(128,1) |
+| -5; i128(5) | LitSInt(-5); LitSInt(5) |
+| true/false; "text" | LitBool; LitText |
+| amount(5,A) | LitAmount(asset=A,value=5) |
+| shares(5,V,H) | LitShares(vault=V,holder=H,value=5) |
+| rate(-5,2) | LitRate(scale=2,mantissa=-5) |
+| price(5,A,B,2) | LitPrice(base=A,quote=B,scale=2,mantissa=5) |
+| quantity<Units<USD,1>,2>(-5) | LitQuantity(units=[[USD,1]],scale=2,mantissa=-5) |
+| local; parameter; obs.name | ReadLocal; ReadArg; ReadObs |
+| pre.field; post.field | ReadPre(pre,field); ReadPre(post,field) |
+| value.field; value[index] | ProjectField; ProjectIndex |
+| access_field(value,"field"); access_index(value,index) | AccessField; AccessIndex |
+| record<R> { field: value, other: value } | ConstructRecord(R, lexical fields) |
+| E.Member, where E is a registered enum name | ConstructEnum(E,Member) |
+| some<T>(value); none<T>() | ConstructSome(T,value); ConstructNone(T) |
+| collection<T,N>(values...) | ConstructCollection(T,N,lexical values) |
+| +, -, *, floor_div(a,b), ceil_div(a,b) | Add, Sub, Mul, FloorDiv, CeilDiv |
+| ==, <, <=, >, >= | Eq, Lt, Lte, Gt, Gte |
+| != | Not(Eq(a,b)); both nodes use the comparison occurrence span |
+| not, and, or | Not, And, Or, exactly once per operator |
+| requires e; let x=e; next.f=e; ensures e | Require, Let, NextWrite, Ensure |
+| emit O { f:e, ... }; | Emit(O,ConstructRecord(Σ.operations[O], lexical fields)) |
+
+Bare variable reads resolve only lexical locals or declared parameters. Schema
+fields and observations require explicit views. Enum type names cannot collide
+with term binders or pre/post/obs. Unknown calls reject; there are no callbacks,
+user functions, macros, recursion or source Core-deserialization escapes.
+Access aliases exist only to cover both separately retained reviewed Core names;
+they carry the same exact runtime work/error rules as projection syntax.
+
+D4. Host binding remains the immutable reviewed Σ registry and determines all
+financial write classes. A source action parameter list must exactly match Σ.args
+in names and exact types. This initial API admits exactly one action per source,
+plus optional unit/party/asset declarations consistent with Σ. It rejects
+const/state declarations: no initializer, genesis, constant caching or implicit
+state-reset semantics are introduced by an expression bridge. Pre-state and
+observations are supplied snapshots validated by the runtime. Therefore every
+reviewed expression is expressible, while the complete agreement declaration
+language remains open and this limitation is reported explicitly.
+
+D5. All static errors are checked before snapshots/reduction. Parser errors keep
+existing lexical/syntax codes. Elaboration errors use SOURCE_* codes and UTF-8
+source spans (unknown action, unsupported declaration/call/type, intrinsic arity
+and literal metadata shape, reserved/duplicate names, parameter/schema mismatch).
+Runtime TYPE_*, INPUT_*, ARITH_*, INDEX_RANGE, GUARD_FAILED, ENSURES_FAILED and
+WORK_EXHAUSTED pass through unchanged with source spans and original Core paths.
+No rejection includes staged state/descriptors. Enum resolution, builtin-name
+reservation and type metadata validation occur before dynamic work. The trusted
+schema cannot be supplied/reclassified by an evaluation request.
+
+## Grammar delta (ISO/IEC 14977 EBNF)
+
+The syntax/0 productions remain the baseline except these /1-only replacements.
+The finite lexical, source-byte, AST, list and depth bounds continue to apply;
+Core's stricter limits also apply after elaboration.
+
+```ebnf
+type = identifier, [ "<", typeArgument, { ",", typeArgument }, ">" ] ;
+typeArgument = type | signedInteger ;
+signedInteger = [ "-" ], integerToken ;
+postfix = primary, { ".", identifier | "[", expression, "]" } ;
+primary = integerToken | "-", integerToken | stringToken | "true" | "false"
+        | identifier, [ "(", [ arguments ], ")" ]
+        | genericCall | recordLiteral | "(", expression, ")" ;
+genericCall = ("some" | "none" | "collection" | "quantity"),
+              "<", typeArgument, { ",", typeArgument }, ">",
+              "(", [ arguments ], ")" ;
+recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
+```
+
+The fixed generic names are excluded from the ordinary identifier-primary arm
+in /1. Metadata arity/type restrictions are static rules. No trailing commas.
+`a < b` remains comparison; `some<UInt64>(u64(1))` is unambiguous.
+
+## Representative real source
+
+Trusted Σ declares ordinary `counter:UInt64`, financial `funds:Amount<Cash>`,
+observation `ready:Bool`, record `Quote={amount:Amount<Cash>,count:UInt64}`,
+enum `Mode={Open,Closed}`, operation `QuoteNotice=Quote`, unit USD, asset Cash.
+Its action arguments are `delta:UInt64`. No financial operation is executed.
+
+```text
+profile "moriarty-expression-source/1";
+agreement QuoteCounter {
+  action step(delta: UInt64) {
+    requires obs.ready and delta > u64(0);
+    let rounded = floor_div(i128(-5), i128(2));
+    let quote = record<Quote> { amount: amount(5, Cash), count: delta };
+    let choices = collection<UInt64,2>(u64(7), delta);
+    let optional = some<Amount<Cash>>(quote.amount);
+    let empty = none<Amount<Cash>>();
+    let mode = Mode.Open;
+    next.counter = pre.counter + choices[u64(1)];
+    emit QuoteNotice { amount: quote.amount, count: delta };
+    ensures post.counter == pre.counter + delta;
+  }
+}
+```
+
+Result label stays ExpressionPrepared, explicitly local ordinary state plus
+uninterpreted typed operation descriptors. No Transfer/Repay implementation is
+inferred; direct financial writes fail TYPE_FINANCIAL_WRITE. Existing funded
+preparation remains the separate, unchanged route.
+
+## Implementation and verification plan
+
+1. Add the profile-gated AST/parser/formatter extension; preserve all old tests
+and add old-profile rejection and generic/comparison ambiguity tests.
+2. Add source elaboration and trusted-schema factory; use runtime static checking
+without executing during checking, then evaluate only the checked source action.
+Keep full source spans and enforce simultaneous source/Core bounds.
+3. Test real .mori for all40 mappings, complete typed values, wrong types in dead
+Boolean branches, static-error-before-guard, immutable pre/post, duplicate writes,
+forbidden next reads, financial write rejection, descriptor/write rollback,
+Unicode spans, selected/unselected failures, work exhaustion, host-input ownership
+and formatter round trips. Hand-authored Core-only tests cannot establish this.
+4. Freeze exact candidate bytes, run TypeScript build and package tests, retain
+raw outputs and obtain separate fresh GPT-6 Astra and Grok 4.6 result audits.
+Author implementation is not its own approval. No network/proof campaign runs.
+
+
+SOURCE experiments/moriarty-language/spec/successor/grammar.ebnf SHA256 a3376201d04dc2dd55049798a33af5be3d82701e0079adf8a18d4f6735dff345
+(*
+  ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
+  Provisional syntax profile; parser implemented. Not a semantic freeze.
+  Concatenation is comma. Alternation is vertical bar.
+  Square brackets are optional. Braces are zero or more repetition.
+  Quoted text is a terminal. A special sequence names a lexical token
+  defined in lexical.md. Every nonterminal used below is defined here
+  or is such a lexical token.
+*)
+
+program = profileDecl, agreementDecl, ? end of file ? ;
+
+profileDecl = "profile", stringToken, ";" ;
+
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | constDecl
+            | stateDecl
+            | actionDecl ;
+
+unitDecl = "unit", identifier, ";" ;
+
+partyDecl = "party", identifier, ";" ;
+
+assetDecl = "asset", identifier, ":", type, ";" ;
+
+constDecl = "const", identifier, ":", type, "=", expression, ";" ;
+
+stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
+
+actionDecl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", type, "{", [ effectFields ], "}", ";" ;
+
+effectFields = effectField, { ",", effectField } ;
+
+effectField = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ typeArgs ] ;
+
+typeArgs = "<", type, { ",", type }, ">" ;
+
+expression = disjunction ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparisonOp, sum ] ;
+
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier } ;
+
+primary = integerToken
+        | stringToken
+        | "true"
+        | "false"
+        | identifier, [ "(", [ arguments ], ")" ]
+        | "(", expression, ")" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+stringToken = ? JSON string token defined in lexical.md ? ;
+
+(* Grammar interpretation and additional admission constraints:
+   1. The source contains exactly one profileDecl and one agreementDecl.
+   2. The profile string must be the characters moriarty-successor-syntax/0.
+   3. Unparenthesized a < b < c is rejected. (a < b) < c and a < (b < c)
+      are syntactically admitted; their typing is a separate check.
+   4. typeArgs is nonempty. Foo<> is not a type.
+   5. Parentheses do not create AST nodes. They only group.
+   6. not binds looser than comparison: not a == b parses as not (a == b).
+   7. or, and, +, -, and * associate to the left.
+   8. Call arguments, parameters, and effect fields have no trailing comma.
+   9. function, import, loop, obligation, request, composition, observation,
+      settlement, policy, status, reserve, and effect-schema forms are not
+      productions of this profile.
+  10. Bounds in syntax-profile.json are simultaneous and not part of EBNF.
+*)
+
+
+SOURCE experiments/moriarty-language/spec/successor/lexical.md SHA256 88fa3353d1b1a889f1d06f8b35868ae187800719c67ab8345ebb09515e8de639
+# Lexical rules for `moriarty-successor-syntax/0`
+
+These rules are the lexical layer for [grammar.ebnf](grammar.ebnf). They are not a second grammar dialect. Regular expressions below are JavaScript Unicode regular expressions and apply only to this note. The ISO EBNF file refers to the tokens named here through special sequences.
+
+## Encoding and spans
+
+Input is a sequence of Unicode scalar values encoded as UTF-8. Lone UTF-16 surrogates in a JavaScript string, malformed UTF-8 in CLI file bytes, and escaped lone surrogates in string literals all fail. The CLI decoder uses a fatal UTF-8 decode. It does not replace invalid bytes.
+
+Source locations are 0-based UTF-8 byte offsets on the half-open interval `[start, end)`. Comments and whitespace occupy bytes and count toward the 65536-byte source bound. They are not tokens and they are not AST nodes.
+
+The parser does not normalize Unicode, strip a BOM, or rewrite the caller string.
+
+## Whitespace
+
+ASCII space, tab, CR, and LF may separate tokens. No other code point is whitespace.
+
+## Comments
+
+Line comments start with `//` and run through the last character before a U+000A line feed, or through end of file if no line feed remains. A line comment at end of file is terminated.
+
+Block comments start with `/*` and end at the first `*/`. They do not nest. `/* /* */` ends at the first closer. An unclosed `/*` fails with `UNTERMINATED_COMMENT`.
+
+A `/` that does not start `//` or `/*` is not a token. There is no division operator.
+
+## Identifiers and keywords
+
+An identifier is `[A-Za-z][A-Za-z0-9_]*` and is at most 64 ASCII characters. Identifiers are case-sensitive. A non-ASCII letter, number, connector punctuation, nonspacing mark, or spacing combining mark (Unicode categories `L`, `N`, `Pc`, `Mn`, or `Mc`) at the start of a token or immediately after an ASCII identifier prefix fails with `NON_ASCII_IDENTIFIER`. For example, standalone U+0301 and `a` followed by U+0301 both fail with that code. Other non-ASCII code points outside strings and comments fail with `UNEXPECTED_CHAR`.
+
+A word that equals a keyword is a keyword token. Keywords cannot be identifiers.
+
+Keywords:
+
+```
+profile agreement unit party asset const state action
+requires let next emit ensures
+true false not and or
+```
+
+`pre` and `post` are identifiers. `next` is a keyword and begins a state update. `floor_div` and `ceil_div` are identifiers and parse as calls when followed by an argument list.
+
+## Integer tokens
+
+An integer token is `0` or `[1-9][0-9]*`. The lexer consumes `[0-9]+` and then checks that form. Leading zeros, signs, decimal points, exponent suffixes, and digit separators fail. The token is kept as decimal text. It is not converted to a IEEE number. More than 78 digits fails with `INTEGER_BOUND`.
+
+## String tokens
+
+A string token is a JSON string in RFC 8259 form, including the surrounding quotes. Allowed escapes are `\"`, `\\`, `\/`, `\b`, `\f`, `\n`, `\r`, `\t`, and `\uXXXX` with four hexadecimal digits. Unescaped U+0000 through U+001F, unknown escapes, and an unclosed quote fail.
+
+After decoding, the value must be Unicode scalar values. A decoded lone surrogate, including one produced by `\uD800` without a trailing low surrogate, fails with `INVALID_SURROGATE`. A valid surrogate pair in escapes is one supplementary scalar. The decoded UTF-8 length must be at most 1024 bytes.
+
+The formatter emits the original string token text, so `\u0041` and `A` remain distinct literals.
+
+Unicode scalar values may appear in string and comment contents. Their byte spans follow UTF-8.
+
+## Punctuation and token priority
+
+The lexer uses longest match in this order:
+
+1. Whitespace (discarded)
+2. Line comment or block comment (discarded)
+3. Two-character operators `==`, `!=`, `<=`, `>=`
+4. One-character punctuation `{ } ( ) < > , : ; . = + - *`
+5. String
+6. Integer
+7. Keyword or identifier
+8. Failure
+
+There is no `>>` token. Nested generics `Map<Debt<USD>>` are two `>` tokens.
+
+`>=` is one token. A type that is immediately followed by `=` without whitespace therefore lexes as `>=`. The type parser splits a `>=` token into `>` and `=` when it is closing a type argument list, so `Debt<USD>= debt(1, USD)` is accepted. The split rewrites that token in place and does not emit a new lexer token. The extra `=` counts toward the 8192 token bound including the end-of-file token. The formatter always writes a space before `=`.
+
+`<` and `>` are type-argument delimiters only in type position. In expressions they are comparisons. This profile has no call-site type arguments, so `foo<bar>` in an expression is `foo < bar` plus a leftover `>`.
+
+## End of file
+
+The grammar's `? end of file ?` special sequence matches the lexer’s single EOF sentinel after all source characters, including trailing whitespace or a terminated comment, have been consumed. EOF has zero width: its start and end spans both equal the source UTF-8 byte length. It consumes no source character and cannot match before remaining non-ignored text. The sentinel counts as one token toward the token bound.
+
+## Token bound
+
+Whitespace and comments are not counted. The token bound is 8192 including the end-of-file token. The lexer reserves one slot for end of file, so 8191 non-EOF tokens plus EOF are accepted and a 8192nd non-EOF token is rejected. The type parser may rewrite a `>=` token in place into `>` and `=` when it closes a type argument list. That rewrite does not emit a lexer token. The extra `=` counts toward the 8192 bound including the end-of-file token. If the bound would be exceeded, the parser fails with `TOKEN_BOUND`.
+
+
+SOURCE experiments/moriarty-language/spec/successor/semantic-contract.md SHA256 4327399a3016c9e358db045c15f9c0d7be9df3addf9aebb83c65bf2e852f979a
+# Proposed successor expression contract
+
+Status: **PROPOSAL — SP01.3 expression layer only.** Contract identifier
+`moriarty-expression-contract/1`; this is not a registered execution profile.
+It does not replace `moriarty-funded-source/0`, the syntax profile, or archived
+candidate04. No full RP01, SP02, SP03, theorem, signature or Midnight acceptance
+follows from this document. The Boolean design change has two scoped independent
+votes; these exact revised source bytes still require fresh GPT-6/Grok result
+reviews. The 38 proposed financial operations are not defined here.
+
+This document and [static-semantics.md](static-semantics.md) give the meaning of
+all 40 expression constructors declared in candidate04 B.1. The complete index
+is [expression-signatures.json](expression-signatures.json). The exact mathematical
+JSON embedding and every byte/node aggregate are defined by
+[representation.md](representation.md); no implementation may choose another
+layout for these semantic bounds. Structural validation
+of that index is distinct from the [specified derivation cases](expression-cases.json).
+The documents, not the structural validator, define the proposed semantics.
+
+## Authority and decisions
+
+Inherited requirements: immutable pre-state; sequential immutable locals;
+one tentative write per field; no `next` reads; post-state available only in the
+final `ensures` suffix; first lexical failed clause; financial rollback; finite
+work; distinct nominal debt and tokens; no host flag establishes acceptance.
+Sources: [LANGUAGE-DESIGN](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:46),
+[SP01.3](../../../../openspec/sprints/sp01-financial-contract-and-execution-admission.md:49),
+[SP03](../../../../openspec/sprints/sp03-executable-bounded-semantics-in-k.md:39).
+
+The following are **new proposed choices**, not inherited approvals:
+
+| ID | Choice and reason |
+| --- | --- |
+| EX-D1 | Left-to-right short-circuit `And`/`Or`, matching the source design. Both operands are statically checked and all supplied snapshots admitted before reduction; only the selected right operand is evaluated. This deliberately replaces the strict EX-D1 of contract/0 under a distinct contract/1 identifier. |
+| EX-D2 | Checked same-type scalar arithmetic, indexed amount/share addition and subtraction, explicit quantity scale/unit arithmetic. No implicit asset, scale, width or debt conversion. This makes overflow and rounding visible. |
+| EX-D3 | `ReadPre` has a closed view operand `pre|post`; `post` is legal only in Ensure's condition. No new 41st constructor and no `ReadNext` are introduced. Read-view is part of Core encoding, never inferred from a name. |
+| EX-D4 | Every entered node costs one ordinary work unit. Finite helper operations do not each count as nodes. Recovery work is unchanged here. Failed preparation reports consumed local work, but publishes no candidate financial state/effects. This is a proposed local cost semantics, not native proof cost or authority consumption. |
+| EX-D5 | AccessField/AccessIndex are exact aliases of ProjectField/ProjectIndex, including errors and work. Core preserves their names; an optimizer may not delete their node charge without a separate correspondence argument. |
+| EX-D6 | Emit appends a typed operation descriptor only. Effects and financial state changes require the separately defined financial-operation transition. There is no default Transfer, repayment or other execution guessed from the descriptor. |
+| EX-D7 | Finite parameters below are proposal limits, independent of existing parser/funded bounds. UTF-8 spans are half-open byte offsets. Whole-action static rejection precedes any execution. |
+| EX-D8 | Unit is statement-result-only; schema fields are classified ordinary/financial. Raw NextWrite cannot bypass financial transitions. These are proposed type/registry mechanisms enforcing the inherited no-debt-erasure requirement. |
+
+The source proposal selects short-circuit `and`/`or`
+([line71](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:71)).
+This revision gives Core And/Or that same choice. The [reviewed decision](../../../../deliverables/sp01-surface-core-contract-2026-09-10/scoped-design-approval-01.json)
+approves the design, not these exact implementation bytes or full source/Core
+correspondence. Contract/0, its strict rejection cases and original approvals
+remain retrievable through the [preservation map](../../../../deliverables/sp01-surface-core-contract-2026-09-10/preservation-map-02.json).
+A compiler, signature or proof bound to the strict lineage cannot silently opt
+into /1. Source hashes and eventual semantic profile hashes remain distinct.
+
+The AMM fragment still needs mixed Amount products/division absent from this
+proposed overload table; those requirements remain open, not removed by
+TYPE_MISMATCH here.
+
+Unresolved privacy, observation authentication, operation effects and signing
+policy are explicit external obligations. Mathematical values below do not
+establish permission to disclose a value, condition, error or state. A future
+public execution profile must bind its confidentiality and observation policy;
+this proposal cannot accept a private workflow by omitting that policy.
+
+## V — finite domains and values
+
+A candidate binds a finite schema environment Σ and input snapshot before
+checking the action. No host callback, arbitrary JSON, mutable object reference,
+user function, recursion or implicit cast is a Core value.
+
+Proposed simultaneous limits: 65,536 source UTF-8 bytes; 4,096 AST nodes;
+64 nesting depth; 256 declarations and 256 statements; 64 fields per record;
+128 members per collection/enum; 1,024 UTF-8 bytes per Text; identifiers match
+`[A-Za-z][A-Za-z0-9_]{0,63}`; at most 65,536 canonical UTF-8 bytes and 4,096
+nodes in each complete input value or assembled candidate state; at most 128
+operation descriptors, each within the same value limits; work 0..65,536.
+A value node is one scalar or compound value constructor; names, type metadata
+and tags are not additional value nodes. A compound contributes one plus its
+child value nodes, counting repeated occurrences separately. AST nodes count
+entered constructor occurrences, not metadata or list containers.
+
+All aggregate collections, including Σ, arguments, observations and pre-state,
+are checked against those byte/node/depth bounds as complete records, not only
+against per-field bounds. Σ type definitions form an acyclic graph. Cardinalities
+must fit simultaneously: products of individual maxima do not grant larger
+aggregate limits. Inputs failing a bound never enter evaluation.
+
+These maxima are proposed contract parameters motivated by the retained bounded
+proposal and parser. They have no native fit, runtime performance or usability
+claim. Changing a maximum changes this contract's eventual profile digest.
+
+Values have exact types, recursively:
+
+- `UInt64`: 0..2^64−1; `UInt128`: 0..2^128−1;
+  `SInt128`: −2^127..2^127−1; `Bool`. `Unit` is a statement-result marker only,
+  not a storable, argument, observation, field or collection/option element type.
+- `Text`: a well-formed Unicode scalar sequence whose UTF-8 is at most 1,024
+  bytes. No normalization; comparison is exact decoded scalar equality.
+- `Amount<A>`: UInt128 quanta indexed by a declared asset identifier A.
+- `Shares<V,H>`: UInt128 share quanta indexed by a declared vault V and holder H.
+- `Rate<S>`: signed SInt128 mantissa with type-level scale S, 0..18; value m/10^S.
+- `Price<A,B,S>`: UInt128 mantissa, declared distinct base A and quote B,
+  scale S, direction fixed as base-per-quote; value m/10^S A per B.
+  In particular Price<AssetB,AssetA,4>(19743) is 1.9743 AssetB per AssetA,
+  matching the retained swap convention; parameter order is not interchangeable.
+- `Quantity<U,S>`: SInt128 mantissa with scale S and a canonical unit vector U over the separate declared Σ.units roster.
+  U contains at most eight distinct identifier/exponent pairs in increasing ASCII
+  identifier order. Exponents are nonzero integers −128..127. An empty vector
+  is dimensionless. Values denote m/10^S times the product of symbol powers.
+- `Record<R>`: every field of the declared record R exactly once, with its
+  declared type. Field names are sorted by ASCII identifier for value encoding;
+  source constructor operands retain lexical order for evaluation.
+- `Enum<E>`: one member of declared enum E. Payload enums are not implicit;
+  use a record plus an option when required.
+- `Option<T>`: `None<T>` or `Some<T>(v:T)`.
+- `Collection<T,N>`: ordered values all of T, length 0..N, 0≤N≤128. Capacity is
+  in the type; equal lengths do not make different capacities/types equal.
+- `Operation<O>`: descriptor `{operation:O, fields:Record<R_O>}` for a declared
+  operation O with exact operand schema R_O. It contains no executable callback.
+  This descriptor is formed by Emit; it is not a ledger effect.
+
+Record schemas may encode financial identities and debt records, but these
+expressions confer no authority to create/change a financial resource. Persistent
+field registry entries include `writeClass=ordinary|financial`; only ordinary
+fields may be targeted by NextWrite. Financial fields are read-only at this
+layer. A profile must define the complete financial operation relation and
+reconcile its footprint with staged ordinary writes before financial execution.
+This prevents a raw next-write from erasing debt or bypassing cash effects.
+
+Core metadata comprises identifiers, integers, type references, record field
+names, enum members and read views. It is bounded, not executable. Numeric
+metadata and values use canonical decimal strings: unsigned `0|[1-9][0-9]*`;
+signed adds `-[1-9][0-9]*`. No `+`, leading zeros or `-0`. Booleans use JSON
+booleans. Each Core node is a closed tagged record with its named operands and
+span, no extra keys. No duplicate JSON keys. Canonical serialization uses sorted
+object keys, ordered arrays, UTF-8 with no BOM, no insignificant whitespace and
+no Unicode normalization; escaping is JSON minimal (quote/backslash/control
+characters escaped, other scalar characters emitted). Quote/backslash use their
+short JSON escapes; backspace, form-feed, newline, carriage-return and tab use
+\b, \f, \n, \r and \t respectively; other U+0000..U+001F use lowercase
+\u00xx. This fixes the escaping choice. Any future wire codec
+must implement and test this; the structural checker is not that codec.
+
+## E — evaluation contexts and frames
+
+The configuration is `⟨control, pre, writes, locals, args, obs, descriptors,
+workInitial, workRemaining, result⟩`. Pre/args/obs/Σ are immutable finite snapshots.
+Writes and locals begin empty; descriptors begin empty. Existing duties,
+authority and recovery reserve are part of the supplied state, not fresh budget.
+Snapshots are assumed supplied consistently; this layer does not authenticate them.
+
+Distinguish an unentered constructor occurrence from a returned value. Literal
+syntax is a constructor occurrence; a returned Boolean value is not a fresh
+LitBool node. Every occurrence retains its original nodePath and span. Write
+`K°` for a constructor already entered; the circle is administrative machine
+notation, not a new Core constructor, value, encoding tag or work unit.
+
+The evaluation contexts are:
+
+```text
+C ::= []
+    | K°(v1,…,v(i−1),C,e(i+1),…,en)    K is not And or Or
+    | And°(C,e2)
+    | Or°(C,e2)
+```
+
+The generic K alternative ranges over its signature's **evaluatedOperands** in
+listed order, expanded in lexical list order. Metadata is not evaluated. For
+Let/NextWrite only the value is evaluated; Require/Ensure only the condition.
+Records/lists retain lexical operand order, never canonical field order.
+For And/Or, `evaluatedOperands=[left]` and `conditionalEvaluatedOperands` names
+the right operand with its selection predicate. Both still occur in the syntax
+and static traversal. Child indices count original expression operands, so
+left is p+[0] and right is p+[1] even when the right is skipped. There is no
+generic And°(v,C) or Or°(v,C) alternative.
+
+Small steps are deterministic proposals:
+
+1. On attempting to enter an occurrence with work=0, reject `WORK_EXHAUSTED` at
+   that occurrence without consuming work or entering children. Otherwise
+   decrement work once and mark it entered. Resuming a context never recharges it.
+2. Enter children through the contexts above. The first rejection discards the
+   entire continuation, tentative writes, locals and descriptors.
+3. For K other than And/Or, apply its rule after all evaluated children return
+   values. Primitive failure uses K's original span/path. For the entered Boolean
+   nodes use the four administrative contractions below after the left returns.
+4. A statement's success advances to the next lexical statement. Ensure clauses
+   are a suffix and see `post=pre overridden by writes`; that view does not commit.
+5. After all statements/ensures pass, check aggregate candidate encoding bounds
+   and return `ExpressionPrepared(post,descriptors,workRemaining)`.
+
+The Boolean contractions are:
+
+```text
+And°(false,e2) -> false
+And°(true, e2) -> e2
+Or°(true, e2)  -> true
+Or°(false,e2)  -> e2
+```
+
+Each contraction costs zero work. A skipped case returns the already obtained
+left value and creates no chargeable literal. A selected case resumes the
+original right occurrence at p+[1], with that child's original span, even though
+the And/Or control node is removed. An enclosing context retains its own original
+provenance for a later parent failure. Selecting a child does not copy it, rebase
+it to p, or cause a second And/Or entry. If the remaining work is zero, a skipped
+case can finish; a selected unentered child rejects WORK_EXHAUSTED at p+[1].
+Left-child failures retain p+[0] plus their nested path; the right is not entered.
+
+Let C(e) be actual ordinary work on a successful pure expression, and let B(e)
+count one for every constructor occurrence in the whole syntax, including
+unselected branches:
+
+```text
+C(And(e1,e2)) = 1 + C(e1) + (C(e2) if e1 returns true  else 0)
+C(Or(e1,e2))  = 1 + C(e1) + (C(e2) if e1 returns false else 0)
+B(K(e1,…,en)) = 1 + sum_i B(ei)
+B(And(e1,e2)) = B(Or(e1,e2)) = 1 + B(e1) + B(e2)
+```
+
+Read/literal nodes have B=1; metadata and array/field wrappers add no work.
+For a failed evaluation, count only its entered-node prefix, not a missing entry
+or an unselected suffix. B is finite under the simultaneous source/Core bounds
+and conservatively bounds this local reduction work; it does not estimate
+validation overhead, lifecycle work or native proof cost. Admission and complete
+action typing are unchanged, and no skip can waive an aggregate limit or a
+registered conservative static-bound ceiling. No registered profile is changed
+here.
+
+The Boolean-only source/Core mapping is `a and b` to `And(core(a),core(b))` and
+`a or b` to `Or(core(a),core(b))`, once per source operator. The existing source
+left associativity gives `a and b and c` the shape `And(And(a,b),c)`. Original
+source spans must be retained. No If expansion, thunk, host callback or duplicate
+evaluation is introduced. This equation specifies the Boolean mapping; a full
+elaborator, parser-to-Core trace and correspondence proof remain unimplemented.
+
+Result is **ExpressionPrepared**, never accepted `Prepared`, `Complete` or
+`Pending`. It is not financially executable without the operation-layer rule.
+For a descriptor-free ordinary action it specifies a tentative state only.
+An external financial rule must consume descriptors, account for its own work,
+produce complete ordered effects, preserve duties and resolve postcondition
+visibility before the combined language can execute. This missing composition
+is not silently given an evaluation order here.
+
+Rejection is `Rejected(code, span, nodePath, workUsed)` with no post-state or
+financial effects; workUsed is local attempted reduction cost, not a committed
+ledger/authority charge. Input admission/static rejection has workUsed=0.
+Runtime workUsed=workInitial−workRemaining includes the entered failing node
+unless failure is inability to enter it. No failed preparation increases a
+stored work budget or permits an on-chain retry. Continuing, charging a failure
+or using recovery work belongs to the future lifecycle/acceptance relation.
+
+Span `[start,end)` is UTF-8 byte offsets, 0≤start≤end≤sourceBytes. Elaboration must
+retain real node spans; synthetic Core has explicit synthetic spans and cannot
+claim a source diagnostic. For a rejection, use the first offending node's span only when it is a valid P
+for the supplied source: closed shape, canonical integer offsets, ordered and
+in range, or synthetic with both offsets zero. If that span is absent, malformed
+or out of range, return `{kind:synthetic,start:0,end:0}` (with decimal-string
+offsets in the presentation tree). Keep the original offending nodePath and
+workUsed; do not clamp the malformed range, mutate the input, or erase its path.
+In particular INPUT_SPAN cannot copy an invalid input P into Rejected.span.
+Synthetic spans must be explicitly
+marked and exactly `[0,0)`; they cannot fabricate source offsets. `nodePath` is an ordered child-index
+path from the action root; statement index is its first element. For an isolated
+expression derivation, its root path is empty and children begin at index zero. For post-final
+aggregate failure use the action's span/path. No wrapping private data in errors.
+
+## R — primitive reduction rules
+
+The exact rules and all overloads appear in the companion static contract.
+Common rules apply to all 40 nodes: admission and typing first; entering/child
+ordering above; no mutation by pure expressions; no implicit helper effects;
+checked finite result before returning. Integer checks compare mathematical
+integers to the declared bounds and never wrap. A multiplication checks its
+product before any subsequent division, even when the final quotient would fit.
+Literal/metadata validity is checked statically; runtime snapshot equality and
+value domain checks occur during whole-input admission, not arbitrary late reads.
+
+Post-state fields not written retain their exact pre-state values, including
+financial records and identities. No integer debt subtraction is a transfer.
+Only the operation-layer contract can authorize discharge/write-off/migration;
+RequestFulfill/Claim, MessageRefund, RewardAccrue/Claim and EventClaimSettle
+remain underdetermined in candidate04. This file invents no payout or funding rule.
+
+## Open interfaces and theorem scope
+
+The archived signing proposal's 38 financial rows, genesis funding, full
+contextual negative histories, cancellation backing and display identity fixes
+remain open. This 40-constructor document does not reconcile the full RP01
+challenge map or vote on an accepted base-Core membership list.
+
+A later combined contract must resolve financial-operation execution versus
+ordinary staged writes and postconditions, authenticated/labelled observations,
+privacy and disclosure, canonical codec implementation, lifecycle/authority work
+and acceptance statuses. Until then, a full successor runtime must reject an
+attempt to execute these missing interfaces; descriptor preparation alone cannot
+be exposed as a completed financial action.
+
+The six SP03.3 obligations remain determinism, progress-or-defined-rejection,
+type preservation, finite termination, residual-duty conservation and
+elaboration/evaluator correspondence **for the frozen base domain**. This source
+contract and its derivations are not mechanized proofs. No K proof or frontend
+correspondence is performed here. The existing Transfer/Repay evaluator, numeric
+K evidence and compiled Midnight loan/swap evidence retain their original scope.
+
+
+SOURCE experiments/moriarty-language/spec/successor/representation.md SHA256 dd09b7f7021d0357a06da95d5fd08545aae2e124c7d89655e5c1424d38ab9ed2
+# Proposed normative representation and size
+
+Proposed correction for EX-G6-F1. This specifies a mathematical embedding and size
+function, not an implemented encoder, decoder or accepted execution profile.
+It supplements V/S0 of the expression contract and must be reviewed with them.
+No financial-operation semantics or signing hash domain is added.
+
+## Canonical JSON spelling
+
+Let J(x) be the UTF-8 byte string for the **exact JSON tree** below: object keys
+sorted in Unicode scalar order (all protocol/field keys here are ASCII), arrays
+in listed order, no whitespace/BOM, no normalization. Quote/backslash and
+backspace/form-feed/newline/carriage-return/tab use their short JSON escapes;
+remaining U+0000..U+001F use lowercase `\u00xx`; other scalar values are emitted
+as UTF-8. JSON numbers, null, unpaired surrogates and duplicate object keys do
+not occur in these trees. Every integer, including metadata, spans and capacities,
+is a canonical decimal string. JSON booleans remain booleans. This determines
+spelling; the tables below determine the tree.
+
+`bytes(x)=length(J(x))` counts every key, quote, escape, delimiter and array/object
+wrapper. No pretty-printed, tagged, implementation-specific or host-memory size
+can substitute for this function. Receiving a different layout rejects
+INPUT_SCHEMA before evaluating a term; it cannot become an alternative size
+interpretation. A noncanonical spelling rejects INPUT_SCHEMA before evaluation
+when a wire input is supplied. Schematic mathematical derivations must state the
+same tree even though no transport decoder is implemented in this task.
+
+## Types: t(T)
+
+Types always use the following JSON arrays. Type references are not inlined
+through named record/enum definitions. The finite acyclic schema resolves them.
+The right side below is a JSON tree: metavariables stand for their specified
+JSON subtrees or strings, not text interpolation.
+
+| Type | t(T) |
+| --- | --- |
+| UInt64, UInt128, SInt128, Bool, Text | `["UInt64"]`, `["UInt128"]`, `["SInt128"]`, `["Bool"]`, `["Text"]` respectively |
+| Amount<A> | `["Amount", A]` |
+| Shares<V,H> | `["Shares", V, H]` |
+| Rate<S> | `["Rate", decimal(S)]` |
+| Price<A,B,S> | `["Price", A, B, decimal(S)]` |
+| Quantity<U,S> | `["Quantity", [[symbol,decimal(exponent)],...], decimal(S)]` with U in canonical symbol order |
+| Record<R>, Enum<E> | `["Record",R]`, `["Enum",E]` |
+| Option<T> | `["Option",t(T)]` |
+| Collection<T,N> | `["Collection",t(T),decimal(N)]` |
+| Operation<O> | `["Operation",O]` |
+
+Unit has no value embedding: it is a statement-result marker, never a valid
+input/schema member. The Core annotation token `["Unit"]` is nevertheless
+structurally recognized so ConstructNone(Unit) reaches static value-type
+resolution and rejects TYPE_NAME. W(Unit,a) is undefined for every a and must
+never be measured or admitted. A nominal reference `["Record","AbsentType"]`
+is likewise a well-shaped annotation that rejects TYPE_NAME if undeclared. No implicit width/asset/scale/vault conversion is encoded.
+Unknown type-annotation tags and wrong array arity reject INPUT_SCHEMA.
+Well-shaped but undeclared identifiers reject TYPE_NAME at static resolution.
+A resolved t(T) used by W is defined only after those checks.
+
+## Values: v(T,a)
+
+A type T and its schema are always known before interpreting v. Type metadata
+is deliberately stored in t and Σ rather than repeated on every scalar value.
+
+| Value type | v(T,a) |
+| --- | --- |
+| UInt64, UInt128, SInt128 | canonical decimal string for a |
+| Bool, Text | JSON boolean or exact decoded JSON string |
+| Amount, Shares, Rate, Price, Quantity | canonical decimal string for quanta/mantissa; indices and scale remain in t(T) |
+| Record<R> | JSON object `{field:v(R[field],a[field]),...}` with exactly R's fields |
+| Enum<E> | member identifier string |
+| Option<T> None | `[]` |
+| Option<T> Some(a) | `[v(T,a)]` |
+| Collection<T,N> | `[v(T,a0),...,v(T,ak)]`, length at most N; an empty collection is `[]` |
+| Operation<O> | `{"operation":O,"fields":v(Record<R_O>,a.fields)}` |
+
+Option and collection empty arrays are unambiguous because T is known; a decoder
+cannot infer T from an untyped value. The exact type-indexed standalone value
+encoding is `W(T,a)={"type":t(T),"value":v(T,a)}`. The complete value byte bound
+is **bytes(W)**, including the type wrapper. Mathematical value nodes remain
+one scalar/compound constructor plus child nodes. W and t metadata do not add
+value nodes. Record fields and collection/Some elements are child occurrences;
+None, enum members and numeric/indexed scalar values each have one value node.
+An Operation value has one node plus the value nodes of its fields record.
+Value depth is one for a scalar/empty constructor and one plus maximum child
+depth for a nonempty constructor. Snapshot and descriptor-sequence roots add
+one depth level. The bound is64 for each individually checked value/aggregate;
+type metadata and W do not add mathematical value depth.
+Repeated occurrences count separately, even if the host shares a reference.
+
+Every individual input field value and constructed value must fit 65,536 bytes
+as W and 4,096 value nodes. Literal values use the same rule; simpler literal
+limits remain in force. Aggregate snapshot/state bounds below are additional,
+not a replacement for the individual value bound.
+
+## Σ and aggregate snapshot trees
+
+Σ is exactly the following object. Each map is a JSON object keyed by the
+relevant declared identifier. Each shown key is required, including empty maps.
+Roster arrays are sorted unique identifiers. Enum member arrays are sorted
+unique identifiers. Declaration/field order for schema validation is increasing
+identifier order. Source expression/statement evaluation order is unchanged.
+
+```text
+{
+  "units": [unitSymbol,...],
+  "assets": [asset,...],
+  "vaults": [vault,...],
+  "parties": [party,...],
+  "recordTypes": {R: {field:t(T),...},...},
+  "enumTypes": {E:[member,...],...},
+  "fields": {field:{"type":t(T),"writeClass":"ordinary"|"financial"},...},
+  "args": {name:t(T),...},
+  "observations": {name:t(T),...},
+  "operations": {O:R_O,...}
+}
+```
+
+Every Quantity unit symbol must occur in Σ.units, including the symbols in
+literal units and derived unit vectors. Unit atoms are not free text or implicit
+asset names: the future source elaborator must bind source `unit` declarations
+to this exact roster. An undeclared unit rejects TYPE_NAME during type/literal
+checking. Symbols eliminated by normalization still must be declared in the
+operand types; cancellation cannot hide an undeclared unit.
+
+For schema acyclicity, recursively traverse every Option/Collection type to its
+element and every record field to its type. Treat each named record R and
+operation O as a dependency node: Record<R> references R; Operation<O> references
+O; O has an edge to its operand record R_O. Record fields recursively contribute
+all such edges even through Option or Collection. Reject any directed cycle
+before value admission with TYPE_SCHEMA_CYCLE, including R→Option<Operation<O>>→O→R. Enum and indexed
+scalar types are leaves; field/argument/observation types are roots. Finite
+capacities or a None value do not permit recursive schemas.
+
+This is a meta-notation for a closed object, not a JSON document with `...` or
+union bars. R_O is a declared record type identifier; no host callback/function,
+financial effect equation or signature is encoded there. Profiles still owe
+those independent financial semantics. Σ cannot be extended by a caller merely
+to classify a debt field ordinary; the complete reviewed profile must own it.
+
+`Args`, `Obs` and `Pre` are each exactly `{name:v(T_name,value),...}`, using
+Σ.args, Σ.observations and Σ.fields respectively. All declared fields occur
+exactly once. `Post` has the identical field/type layout to Pre, with staged
+ordinary values substituted and all other values unchanged. Neither snapshot
+repeats Σ or wraps field values in W. Each snapshot has its own 65,536-byte and
+4,096-value-node bound: one outer record node plus the field value nodes.
+The input schema, Args, Obs and Pre are checked separately; there is no unstated
+single 65,536-byte bound on their concatenation. Σ has its own 65,536-byte bound.
+
+Schema-size nodes are exactly JSON-tree nodes (one for each object, array and
+scalar occurrence; object keys do not add nodes). Σ must have at most 4,096 such
+nodes and maximum JSON-tree depth64 (root depth1). Schema metadata limits remain
+in force. These schema-size nodes are not expression work or financial values.
+
+`Descriptors` is one array of v(Operation<O>,descriptor) trees in emitted order;
+its size includes its outer brackets/commas, operation names and field wrappers.
+It has at most128 entries, at most65,536 bytes and at most4,096 value nodes,
+counting one outer sequence node plus each Operation value's nodes. Empty is
+`[]`, two bytes and one sequence node. Each descriptor must also fit W's
+individual bound. Exceeding an append's individual or aggregate size rejects
+DESCRIPTOR_BOUND; other constructed values use VALUE_BOUND. No financial effect
+list is substituted for this array.
+
+An ExpressionPrepared presentation tree is exactly
+`{"status":"ExpressionPrepared","post":Post,"descriptors":Descriptors,"workRemaining":decimal(workRemaining)}`.
+A Rejected presentation tree is exactly
+`{"status":"Rejected","code":code,"span":P,"nodePath":[decimal(index),...],"workUsed":decimal(workUsed)}`.
+These result wrappers do not impose a new aggregate65,536-byte gate: the bound
+is on Post/Descriptors individually, as stated above. Their presentation byte
+size is nevertheless exactly bytes(tree), and their finite size follows from
+the component limits. nodePath length is at most65 (statement plus constructor
+depth), and indexes are bounded by the corresponding operand/list cardinality.
+No caller can use a smaller presentation to waive the component bounds.
+
+Locals and tentative writes are internal finite maps, not separately admitted
+wire snapshots. Each stored value satisfies its individual bound, and there
+are at most256 binders/writes by the statement bound. This gives a finite
+product bound on these intermediate maps, not an additional 65,536-byte rejection
+at each Let/NextWrite. Post assembly and Descriptors have the aggregate limits
+above. Host memory usage and native proof cost are not established by these
+logical bounds.
+
+## Core and span trees
+
+Core metadata operands are encoded by role:
+
+- Identifier, enum member, view and field operands: the exact strings.
+- Width/capacity/scale/integer literal operands: canonical signed decimal
+  strings at structural admission. The constructor's static rule then enforces
+  its width, sign and range; e.g. LitAmount(A,-1) is well-shaped but TYPE_LITERAL.
+  A JSON number or noncanonical string such as "+1" is INPUT_SCHEMA instead.
+- Boolean/Text literal operands: the JSON boolean/string itself.
+- Type operands: the structurally recognized type-annotation arrays above,
+  then resolve to t(T) during checking; recordType/enumType operands use the
+  named identifier. No arbitrary free type-name string stands for a type array.
+- Quantity units metadata: U as the type table's ordered array of pairs.
+- Evaluated expression operand: recursively N(child).
+- Expression list: array of N(children) in lexical order.
+- Named expression list: array `[{"name":field,"value":N(child)},...]` in
+  lexical order, never sorted as a substitute for evaluation order.
+
+A node N is exactly `{"constructor":name,"operands":{operandName:encodedOperand,...},"span":P}`,
+with operand names exactly as expression-signatures.json. No inferred tag,
+unknown operand, extra type annotation or missing span is allowed. Shared AST
+objects are encoded as repeated occurrences, not pointer IDs.
+
+P is exactly `{"kind":"source"|"synthetic","start":decimal(start),"end":decimal(end)}`.
+Source is a separate supplied well-formed UTF-8 byte string of at most65,536
+bytes. A source span requires that artifact and is within its actual byte
+length, as specified by E; a caller-supplied length without the source cannot
+establish a source span. Range validation alone is not source/Core correspondence.
+A synthetic span is **always start=end=0** and establishes no source location.
+Reject a synthetic span claiming a nonzero source offset with INPUT_SPAN.
+Span integers use signed canonical strings structurally; negative/out-of-order
+values reject INPUT_SPAN, not a late expression error. A pure fragment
+judgment can use synthetic spans; only a future source elaborator can produce
+source span evidence. Spans and constructor/operand keys are included in
+canonical Core byte size but are not extra AST/work nodes.
+
+An action A is exactly `{"statements":[N(statement),...],"span":P}`. The final
+Ensure suffix is part of this same lexical array. A's canonical bytes must fit
+65,536; its AST occurrence count must fit4,096; constructor nesting depth64;
+statement count256. Action/root/span wrappers add bytes, but not work nodes.
+The source's own 65,536-byte bound is separate. Size failure of a supplied Core
+node/action is INPUT_BOUND at admission, workUsed0. Literal values and metadata
+still require their finite-type checks. This does not install a trusted Core
+input API in the existing funded-source runtime.
+
+Admitted schema/input bounds are tested before reduction. For pure construction
+or candidate finalization, compute this exact mathematical embedding and size;
+if it exceeds its bound, reject VALUE_BOUND at the constructor/action span with
+no published post-state. Emit append size failure instead uses DESCRIPTOR_BOUND.
+No implementation may return UNKNOWN, omit metadata, substitute a tagged layout
+or defer the size check until after publication. An unknown wire type tag rejects INPUT_SCHEMA; a well-shaped reference with
+missing schema definition rejects TYPE_NAME during schema/static checking.
+Neither can reach value sizing. The old proposal's wire is not implicitly inherited.
+
+
+## Structural versus static failure ordering
+
+Schema/metadata validation first checks JSON tree shape, permitted tags/keys,
+scalar kinds, canonical integer spelling, raw aggregate bytes, schema/Core
+structural nodes and spans. Type-dependent W sizes and value node/depth counts
+are computed only after type resolution.
+It does not check a constructor literal's numeric domain, Text1024-byte bound,
+unit-vector ordering/uniqueness, declaration membership, or an expression's
+operand/result type until static checking. Thus a LitUInt with canonical2^64
+passes shape and fails TYPE_LITERAL; LitText1025 ASCII characters can pass the
+whole-action65,536-byte bound and then fail TYPE_LITERAL. A unit-vector pair
+array of valid identifiers/integer strings is structurally valid; duplicated
+unit symbols on LitQuantity fail TYPE_LITERAL, undeclared symbols TYPE_NAME.
+Values in supplied snapshots are different: after resolving their declared
+types, wrong representation shapes reject INPUT_SCHEMA, individual W or typed
+node/depth bounds reject INPUT_BOUND, and mathematical domain violations reject
+INPUT_VALUE, in that order in S0's snapshot stage. Raw snapshot byte bounds were
+already checked structurally. All of this occurs before reduction.
+
+A named expression list is an array, so duplicate field *names* are structurally
+representable and reach ConstructRecord's static TYPE_DUPLICATE_FIELD rule.
+Duplicate keys in any JSON object still reject INPUT_SCHEMA. ReadPre's view
+is a string at shape validation: pre/post/next are recognized source/Core view
+spellings; next fails TYPE_NEXT_READ statically, post outside Ensure fails
+TYPE_POST_SCOPE. Other view strings reject INPUT_SCHEMA. Unknown operation or
+local/argument/observation/field names that are valid identifier strings reach
+TYPE_NAME, rather than being disguised as malformed wire trees.
+
+These rules resolve the phase for the existing specified cases. Cases are
+mathematical terms, not serialized input captures: their assumed well-formed
+metadata must be embedded exactly as above to reproduce the named predicate.
+A contradictory earlier admission defect would invalidate that case isolation.
+
+
+SOURCE experiments/moriarty-language/spec/successor/expression-signatures.json SHA256 8c1d64e85729d958e6dbc9c675c531a899a77b1173006d15c1b3ae98a84a609b
+{
+  "schemaVersion": "moriarty-expression-contract/1",
+  "status": "proposed-not-registered",
+  "ownerTask": "SP01.3",
+  "fullRp01Complete": false,
+  "runtimeImplemented": false,
+  "proofsEstablished": false,
+  "types": {
+    "UInt64": "integer 0..2^64-1",
+    "UInt128": "integer 0..2^128-1",
+    "SInt128": "integer -2^127..2^127-1",
+    "Bool": "true or false",
+    "Text": "bounded Unicode scalar text",
+    "Unit": "statement-only unit",
+    "T": "a finite declared value type, resolved by each rule",
+    "UIntW": "UInt64 when width=64, UInt128 when width=128",
+    "AmountA": "Amount indexed by declared asset A",
+    "SharesVH": "Shares indexed by vault V and holder H",
+    "RateS": "Rate indexed by scale S",
+    "PriceABS": "Price indexed by base A, quote B and scale S; A/B are parameters, not token names. Example Price<AssetB,AssetA,4> means AssetB per AssetA.",
+    "QuantityUS": "Quantity indexed by units U and scale S",
+    "RecordR": "closed named record schema R",
+    "EnumE": "declared payload-free enum E",
+    "OptionT": "None or Some of explicit T",
+    "CollectionTN": "ordered homogeneous values of T with capacity N",
+    "FieldType": "declared selected field type",
+    "ElementType": "selected collection element type",
+    "ArithmeticResult": "unique result of ARITH overload table",
+    "BoolComparable": "identically typed CMP equality values",
+    "Ordered": "identically typed CMP ordered values",
+    "Metadata": "bounded non-evaluated metadata of the named operand, validated by its rule",
+    "Expression": "pure expression operand, type constrained by rule",
+    "ExpressionList": "bounded lexical list of pure expression operands",
+    "NamedExpressionList": "bounded lexical list of uniquely named pure expressions"
+  },
+  "rules": [
+    "S0",
+    "V",
+    "E",
+    "L-U",
+    "L-I",
+    "L-B",
+    "L-T",
+    "L-A",
+    "L-Q",
+    "L-S",
+    "L-R",
+    "L-P",
+    "READ",
+    "ACCESS",
+    "BUILD",
+    "ARITH",
+    "CMP",
+    "STMT"
+  ],
+  "sources": {
+    "DESIGN-LAYERS": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 9,
+      "requirement": "separate lexical, grammar, typing, Core and correctness layers"
+    },
+    "DESIGN-STAGING": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 46,
+      "requirement": "immutable pre, tentative single writes, post suffix, lexical rejection"
+    },
+    "DESIGN-NUMERIC": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 86,
+      "requirement": "asset-indexed arithmetic and checked ranges"
+    },
+    "DESIGN-EFFECTS": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 15,
+      "requirement": "explicit typed emit, no implicit transfer"
+    },
+    "SP01-CONTRACT": {
+      "path": "openspec/sprints/sp01-financial-contract-and-execution-admission.md",
+      "line": 49,
+      "requirement": "define successor type/effect, rounding and staging contract"
+    },
+    "C04-F1": {
+      "path": "evidence/moriarty-completion-program-2026-09-07/SP01/independent-review-round-08/successor/gpt6-semantic-partial-review.md",
+      "line": 9,
+      "requirement": "complete every declared expression constructor; preserve financial open equations"
+    },
+    "DESIGN-BOOLEAN": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 71,
+      "requirement": "left-to-right short-circuit and/or with conservative whole-syntax static bounds"
+    }
+  },
+  "constructors": [
+    {
+      "constructor": "LitUInt",
+      "operands": [
+        {
+          "name": "width",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "UIntW",
+      "rule": "L-U",
+      "evaluatedOperands": [],
+      "typing": "width in {64,128}; canonical unsigned value fits selected width",
+      "reduction": "return exact integer",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitUInt-positive",
+        "LitUInt-reject"
+      ]
+    },
+    {
+      "constructor": "LitSInt",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "SInt128",
+      "rule": "L-I",
+      "evaluatedOperands": [],
+      "typing": "canonical signed integer fits SInt128",
+      "reduction": "return exact integer",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitSInt-positive",
+        "LitSInt-reject"
+      ]
+    },
+    {
+      "constructor": "LitBool",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "Bool",
+      "rule": "L-B",
+      "evaluatedOperands": [],
+      "typing": "after Boolean scalar-kind admission, value is literal true or false",
+      "reduction": "return exact Boolean",
+      "rejections": [
+        "INPUT_SCHEMA"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitBool-positive",
+        "LitBool-reject"
+      ]
+    },
+    {
+      "constructor": "LitText",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "Text",
+      "rule": "L-T",
+      "evaluatedOperands": [],
+      "typing": "well-formed Unicode scalar text within 1024 UTF-8 bytes",
+      "reduction": "return exact decoded text, without normalization",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitText-positive",
+        "LitText-reject"
+      ]
+    },
+    {
+      "constructor": "LitAmount",
+      "operands": [
+        {
+          "name": "asset",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "AmountA",
+      "rule": "L-A",
+      "evaluatedOperands": [],
+      "typing": "asset declared; UInt128 canonical value",
+      "reduction": "return Amount<asset>(value)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitAmount-positive",
+        "LitAmount-reject"
+      ]
+    },
+    {
+      "constructor": "LitQuantity",
+      "operands": [
+        {
+          "name": "units",
+          "type": "Metadata"
+        },
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "QuantityUS",
+      "rule": "L-Q",
+      "evaluatedOperands": [],
+      "typing": "unit symbols declared in separate \u03a3.units roster; canonical bounded unit vector; scale 0..18; SInt128 mantissa",
+      "reduction": "return Quantity<units,scale>(mantissa)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitQuantity-positive",
+        "LitQuantity-reject"
+      ]
+    },
+    {
+      "constructor": "LitShares",
+      "operands": [
+        {
+          "name": "vault",
+          "type": "Metadata"
+        },
+        {
+          "name": "holder",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "SharesVH",
+      "rule": "L-S",
+      "evaluatedOperands": [],
+      "typing": "vault and holder declared; UInt128 value",
+      "reduction": "return Shares<vault,holder>(value)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitShares-positive",
+        "LitShares-reject"
+      ]
+    },
+    {
+      "constructor": "LitRate",
+      "operands": [
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "RateS",
+      "rule": "L-R",
+      "evaluatedOperands": [],
+      "typing": "scale 0..18; SInt128 mantissa",
+      "reduction": "return Rate<scale>(mantissa)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitRate-positive",
+        "LitRate-reject"
+      ]
+    },
+    {
+      "constructor": "LitPrice",
+      "operands": [
+        {
+          "name": "base",
+          "type": "Metadata"
+        },
+        {
+          "name": "quote",
+          "type": "Metadata"
+        },
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "PriceABS",
+      "rule": "L-P",
+      "evaluatedOperands": [],
+      "typing": "distinct declared base/quote assets; scale 0..18; UInt128 mantissa",
+      "reduction": "return Price<base,quote,scale>(mantissa), base per quote",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitPrice-positive",
+        "LitPrice-reject"
+      ]
+    },
+    {
+      "constructor": "ReadLocal",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in earlier locals; exact declared type",
+      "reduction": "return immutable earlier locals snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadLocal-positive",
+        "ReadLocal-reject"
+      ]
+    },
+    {
+      "constructor": "ReadArg",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in arguments; exact declared type",
+      "reduction": "return immutable arguments snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadArg-positive",
+        "ReadArg-reject"
+      ]
+    },
+    {
+      "constructor": "ReadObs",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in observations; exact declared type",
+      "reduction": "return immutable observations snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadObs-positive",
+        "ReadObs-reject"
+      ]
+    },
+    {
+      "constructor": "ReadPre",
+      "operands": [
+        {
+          "name": "view",
+          "type": "Metadata"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "field declared; view pre always or post only inside Ensure; never next",
+      "reduction": "return pre[field] or assembled post[field]",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_POST_SCOPE",
+        "TYPE_NEXT_READ"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadPre-positive",
+        "ReadPre-reject"
+      ]
+    },
+    {
+      "constructor": "ProjectField",
+      "operands": [
+        {
+          "name": "record",
+          "type": "Expression"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "record"
+      ],
+      "typing": "record:Record<R>; metadata field belongs to R",
+      "reduction": "return exact record field",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ProjectField-positive",
+        "ProjectField-reject"
+      ]
+    },
+    {
+      "constructor": "AccessField",
+      "operands": [
+        {
+          "name": "record",
+          "type": "Expression"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "record"
+      ],
+      "typing": "record:Record<R>; metadata field belongs to R",
+      "reduction": "return exact record field",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "AccessField-positive",
+        "AccessField-reject"
+      ]
+    },
+    {
+      "constructor": "ProjectIndex",
+      "operands": [
+        {
+          "name": "collection",
+          "type": "Expression"
+        },
+        {
+          "name": "index",
+          "type": "Expression"
+        }
+      ],
+      "result": "ElementType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "collection",
+        "index"
+      ],
+      "typing": "collection:Collection<T,N>; index:UInt64",
+      "reduction": "require index<actual length then return item",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "INDEX_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ProjectIndex-positive",
+        "ProjectIndex-reject"
+      ]
+    },
+    {
+      "constructor": "AccessIndex",
+      "operands": [
+        {
+          "name": "collection",
+          "type": "Expression"
+        },
+        {
+          "name": "index",
+          "type": "Expression"
+        }
+      ],
+      "result": "ElementType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "collection",
+        "index"
+      ],
+      "typing": "collection:Collection<T,N>; index:UInt64",
+      "reduction": "require index<actual length then return item",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "INDEX_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "AccessIndex-positive",
+        "AccessIndex-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructRecord",
+      "operands": [
+        {
+          "name": "recordType",
+          "type": "Metadata"
+        },
+        {
+          "name": "fields",
+          "type": "NamedExpressionList"
+        }
+      ],
+      "result": "RecordR",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "fields"
+      ],
+      "typing": "resolve R; scan lexical field names for duplicates before coverage check; fields cover R exactly once; child types equal declared field types",
+      "reduction": "evaluate lexical fields; build value sorted by field names; check aggregate bounds",
+      "rejections": [
+        "TYPE_DUPLICATE_FIELD",
+        "TYPE_RECORD_FIELDS",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructRecord-positive",
+        "ConstructRecord-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructEnum",
+      "operands": [
+        {
+          "name": "enumType",
+          "type": "Metadata"
+        },
+        {
+          "name": "member",
+          "type": "Metadata"
+        }
+      ],
+      "result": "EnumE",
+      "rule": "BUILD",
+      "evaluatedOperands": [],
+      "typing": "member belongs to finite declared enum E",
+      "reduction": "return Enum<E>(member)",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_ENUM_MEMBER"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructEnum-positive",
+        "ConstructEnum-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructSome",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "OptionT",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "elementType=T declared finite; value:T",
+      "reduction": "return Some<T>(value); check aggregate bounds",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructSome-positive",
+        "ConstructSome-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructNone",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        }
+      ],
+      "result": "OptionT",
+      "rule": "BUILD",
+      "evaluatedOperands": [],
+      "typing": "elementType=T declared finite",
+      "reduction": "return None<T>",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructNone-positive",
+        "ConstructNone-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructCollection",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        },
+        {
+          "name": "capacity",
+          "type": "Metadata"
+        },
+        {
+          "name": "items",
+          "type": "ExpressionList"
+        }
+      ],
+      "result": "CollectionTN",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "items"
+      ],
+      "typing": "T declared finite; 0<=capacity<=128; count<=capacity; each item:T",
+      "reduction": "return ordered Collection<T,N>; check aggregate bounds",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_COLLECTION_BOUND",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructCollection-positive",
+        "ConstructCollection-reject"
+      ]
+    },
+    {
+      "constructor": "Add",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type, Amount<A>, Shares<V,H>, Rate<S> or Quantity<U,S>",
+      "reduction": "checked integer sum in underlying type",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Add-positive",
+        "Add-reject"
+      ]
+    },
+    {
+      "constructor": "Sub",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type, Amount<A>, Shares<V,H>, Rate<S> or Quantity<U,S>",
+      "reduction": "checked integer difference in underlying type",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Sub-positive",
+        "Sub-reject"
+      ]
+    },
+    {
+      "constructor": "Mul",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or two Quantity types deriving units sum and scales sum",
+      "reduction": "checked integer product in underlying type before any parent operation",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Mul-positive",
+        "Mul-reject"
+      ]
+    },
+    {
+      "constructor": "FloorDiv",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or Quantity deriving units difference and scales difference",
+      "reduction": "denominator>0 first; Euclidean quotient q for n=q*d+r,0<=r<d; range check q",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE",
+        "ARITH_DENOMINATOR"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "FloorDiv-positive",
+        "FloorDiv-reject"
+      ]
+    },
+    {
+      "constructor": "CeilDiv",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or Quantity deriving units difference and scales difference",
+      "reduction": "denominator>0 first; Euclidean q,r; q+(r!=0); range check",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE",
+        "ARITH_DENOMINATOR"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "CeilDiv-positive",
+        "CeilDiv-reject"
+      ]
+    },
+    {
+      "constructor": "Eq",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical finite types, structural equality",
+      "reduction": "structural exact typed equality",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Eq-positive",
+        "Eq-reject"
+      ]
+    },
+    {
+      "constructor": "Lt",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left<right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Lt-positive",
+        "Lt-reject"
+      ]
+    },
+    {
+      "constructor": "Lte",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left<=right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Lte-positive",
+        "Lte-reject"
+      ]
+    },
+    {
+      "constructor": "Gt",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left>right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Gt-positive",
+        "Gt-reject"
+      ]
+    },
+    {
+      "constructor": "Gte",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left>=right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Gte-positive",
+        "Gte-reject"
+      ]
+    },
+    {
+      "constructor": "Not",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "value:Bool",
+      "reduction": "return logical negation",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Not-positive",
+        "Not-reject"
+      ]
+    },
+    {
+      "constructor": "And",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left"
+      ],
+      "typing": "both operands Bool; recursively check left then right before reduction, including skipped branches",
+      "reduction": "return the left Bool value when left=false; otherwise evaluate and return the original right Bool occurrence; zero-cost contraction, no fresh literal or repeated node charge",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT",
+        "DESIGN-BOOLEAN"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "And-short-circuit-positive-v1",
+        "And-reject"
+      ],
+      "conditionalEvaluatedOperands": [
+        {
+          "name": "right",
+          "when": "left=true"
+        }
+      ],
+      "staticOperands": [
+        "left",
+        "right"
+      ],
+      "evaluationOrder": "left-then-selected-right"
+    },
+    {
+      "constructor": "Or",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left"
+      ],
+      "typing": "both operands Bool; recursively check left then right before reduction, including skipped branches",
+      "reduction": "return the left Bool value when left=true; otherwise evaluate and return the original right Bool occurrence; zero-cost contraction, no fresh literal or repeated node charge",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT",
+        "DESIGN-BOOLEAN"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Or-short-circuit-positive-v1",
+        "Or-reject"
+      ],
+      "conditionalEvaluatedOperands": [
+        {
+          "name": "right",
+          "when": "left=false"
+        }
+      ],
+      "staticOperands": [
+        "left",
+        "right"
+      ],
+      "evaluationOrder": "left-then-selected-right"
+    },
+    {
+      "constructor": "Require",
+      "operands": [
+        {
+          "name": "condition",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "condition"
+      ],
+      "typing": "condition:Bool; ordinary statement before Ensure suffix; post reads forbidden in its condition",
+      "reduction": "false rejects GUARD_FAILED; true returns Unit",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_STATEMENT_PLACEMENT",
+        "GUARD_FAILED"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Require-positive",
+        "Require-reject"
+      ]
+    },
+    {
+      "constructor": "Ensure",
+      "operands": [
+        {
+          "name": "condition",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "condition"
+      ],
+      "typing": "condition:Bool; statement only in final Ensure suffix; post reads allowed in its condition",
+      "reduction": "false rejects ENSURES_FAILED; true returns Unit",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_STATEMENT_PLACEMENT",
+        "ENSURES_FAILED"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Ensure-positive",
+        "Ensure-reject"
+      ]
+    },
+    {
+      "constructor": "Let",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "fresh non-shadowing binder; infer value type under old local context",
+      "reduction": "bind immutable local after value evaluation",
+      "rejections": [
+        "TYPE_DUPLICATE_BINDER",
+        "TYPE_NAME"
+      ],
+      "frame": "extend locals exactly once",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Let-positive",
+        "Let-reject"
+      ]
+    },
+    {
+      "constructor": "NextWrite",
+      "operands": [
+        {
+          "name": "field",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "declared ordinary field; unique write; value exact field type",
+      "reduction": "stage tentative write using immutable pre and prior locals",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_FINANCIAL_WRITE",
+        "TYPE_DUPLICATE_WRITE",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "stage one ordinary field; no financial mutation",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "NextWrite-positive",
+        "NextWrite-reject"
+      ]
+    },
+    {
+      "constructor": "Emit",
+      "operands": [
+        {
+          "name": "operation",
+          "type": "Metadata"
+        },
+        {
+          "name": "fields",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "fields"
+      ],
+      "typing": "operation declared with operand Record<R>; fields exactly Record<R>",
+      "reduction": "append Operation<O> descriptor; require descriptor aggregate bounds; no financial execution",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "DESCRIPTOR_BOUND"
+      ],
+      "frame": "append ordered operation descriptor only",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-EFFECTS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Emit-positive",
+        "Emit-reject"
+      ]
+    }
+  ],
+  "commonRules": [
+    "S0",
+    "V",
+    "E"
+  ],
+  "commonRuntimeRejections": [
+    "WORK_EXHAUSTED"
+  ],
+  "commonAdmissionRejections": [
+    "INPUT_SCHEMA",
+    "INPUT_BOUND",
+    "INPUT_SPAN",
+    "INPUT_VALUE",
+    "TYPE_CONSTRUCTOR"
+  ],
+  "scope": "Complete proposed expression inventory only; not full 38-operation financial semantics, signing, privacy or profile freeze. Static checker does not execute these reductions.",
+  "representation": "representation.md: normative type/value/schema/Core/span trees and exact byte/node measures; no production codec implemented",
+  "evaluationMetadata": {
+    "evaluatedOperands": "unconditionally evaluated expression operands in runtime order; static checking still visits every expression operand",
+    "conditionalEvaluatedOperands": "And/Or only: remaining original expression operands, evaluated once only when their when predicate holds; left/right nodePath indices remain 0/1",
+    "contexts": "semantic-contract.md:E excludes And/Or from the generic strict frame alternative",
+    "staticOperands": "For And/Or, both left and right are statically checked before reduction, including skipped branches."
+  }
+}
+
+
+SOURCE experiments/moriarty-language/src/successor/frontend.ts SHA256 910f0012e57b82b677744c60a4f5bd1f30c4e9c63dc7234a634214bb334e99de
+/** Bounded lexer/parser for moriarty-successor-syntax/0. */
+
+export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
+
+export const SYNTAX_BOUNDS = Object.freeze({
+  sourceUtf8Bytes: 65536,
+  identifierAsciiCharacters: 64,
+  decodedStringUtf8Bytes: 1024,
+  integerTokenDigits: 78,
+  tokenCount: 8192,
+  astNodes: 8192,
+  nestingDepth: 64,
+  totalDeclarations: 256,
+  statementsPerAction: 256,
+  callArguments: 64,
+  parameters: 64,
+  recordFields: 64,
+});
+
+export class SuccessorSyntaxError extends Error {
+  readonly code: string;
+  readonly start: number;
+  readonly end: number;
+  constructor(code: string, message: string, start: number = 0, end: number = start) {
+    super(message);
+    this.name = 'SuccessorSyntaxError';
+    this.code = code;
+    this.start = start;
+    this.end = end;
+  }
+}
+
+export interface Span {
+  start: number;
+  end: number;
+}
+
+export interface Program {
+  tag: 'Program';
+  profile: ProfileDecl;
+  agreement: AgreementDecl;
+  span: Span;
+}
+
+export interface ProfileDecl {
+  tag: 'ProfileDecl';
+  value: string;
+  raw: string;
+  span: Span;
+}
+
+export interface AgreementDecl {
+  tag: 'AgreementDecl';
+  name: string;
+  declarations: Declaration[];
+  span: Span;
+}
+
+export interface TypeNode {
+  tag: 'Type';
+  name: string;
+  arguments: TypeNode[];
+  span: Span;
+}
+
+export interface Parameter {
+  tag: 'Parameter';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface EffectField {
+  tag: 'EffectField';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface UnitDecl {
+  tag: 'UnitDecl';
+  name: string;
+  span: Span;
+}
+
+export interface PartyDecl {
+  tag: 'PartyDecl';
+  name: string;
+  span: Span;
+}
+
+export interface AssetDecl {
+  tag: 'AssetDecl';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface ConstDecl {
+  tag: 'ConstDecl';
+  name: string;
+  type: TypeNode;
+  value: Expression;
+  span: Span;
+}
+
+export interface StateDecl {
+  tag: 'StateDecl';
+  name: string;
+  type: TypeNode;
+  value: Expression;
+  span: Span;
+}
+
+export interface ActionDecl {
+  tag: 'ActionDecl';
+  name: string;
+  parameters: Parameter[];
+  statements: Statement[];
+  postconditions: Ensures[];
+  span: Span;
+}
+
+export type Declaration = UnitDecl | PartyDecl | AssetDecl | ConstDecl | StateDecl | ActionDecl;
+
+export interface Requires {
+  tag: 'Requires';
+  expression: Expression;
+  span: Span;
+}
+
+export interface Let {
+  tag: 'Let';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface Next {
+  tag: 'Next';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface Emit {
+  tag: 'Emit';
+  type: TypeNode;
+  fields: EffectField[];
+  span: Span;
+}
+
+export type Statement = Requires | Let | Next | Emit;
+
+export interface Ensures {
+  tag: 'Ensures';
+  expression: Expression;
+  span: Span;
+}
+
+export interface Identifier {
+  tag: 'Identifier';
+  name: string;
+  span: Span;
+}
+
+export interface IntegerLiteral {
+  tag: 'IntegerLiteral';
+  value: string;
+  span: Span;
+}
+
+export interface StringLiteral {
+  tag: 'StringLiteral';
+  raw: string;
+  decoded: string;
+  span: Span;
+}
+
+export interface BooleanLiteral {
+  tag: 'BooleanLiteral';
+  value: boolean;
+  span: Span;
+}
+
+export interface Call {
+  tag: 'Call';
+  name: string;
+  arguments: Expression[];
+  span: Span;
+}
+
+export interface Projection {
+  tag: 'Projection';
+  object: Expression;
+  field: string;
+  span: Span;
+}
+
+export interface Unary {
+  tag: 'Unary';
+  operator: 'not';
+  operand: Expression;
+  span: Span;
+}
+
+export interface Binary {
+  tag: 'Binary';
+  operator: '*' | '+' | '-' | 'and' | 'or';
+  left: Expression;
+  right: Expression;
+  span: Span;
+}
+
+export interface Comparison {
+  tag: 'Comparison';
+  operator: '==' | '!=' | '<' | '<=' | '>' | '>=';
+  left: Expression;
+  right: Expression;
+  span: Span;
+}
+
+export type Expression =
+  | Identifier
+  | IntegerLiteral
+  | StringLiteral
+  | BooleanLiteral
+  | Call
+  | Projection
+  | Unary
+  | Binary
+  | Comparison;
+
+const KEYWORDS = new Set([
+  'profile', 'agreement', 'unit', 'party', 'asset', 'const', 'state', 'action',
+  'requires', 'let', 'next', 'emit', 'ensures',
+  'true', 'false', 'not', 'and', 'or',
+]);
+
+const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
+const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
+const ONE_CHAR = new Set(['{', '}', '(', ')', '<', '>', ',', ':', ';', '.', '=', '+', '-', '*']);
+const IDENT_LIKE = /[\p{L}\p{N}\p{Pc}\p{Mn}\p{Mc}]/u;
+
+interface Token {
+  kind: string;
+  start: number;
+  end: number;
+  text: string;
+  raw?: string;
+  decoded?: string;
+}
+
+function fail(code: string, message: string, start = 0, end = start): never {
+  throw new SuccessorSyntaxError(code, message, start, end);
+}
+
+function isAsciiLetter(c: number): boolean {
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+}
+
+function isAsciiIdentCont(c: number): boolean {
+  return isAsciiLetter(c) || (c >= 48 && c <= 57) || c === 95;
+}
+
+function isDigit(c: number): boolean {
+  return c >= 48 && c <= 57;
+}
+
+function utf8SizeCu(c: number): number {
+  return c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+}
+
+function utf8SizeCp(cp: number): number {
+  if (cp < 0x80) return 1;
+  if (cp < 0x800) return 2;
+  if (cp < 0x10000) return 3;
+  return 4;
+}
+
+function hexDigit(c: number): number {
+  if (c >= 48 && c <= 57) return c - 48;
+  if (c >= 65 && c <= 70) return c - 55;
+  if (c >= 97 && c <= 102) return c - 87;
+  return -1;
+}
+
+function codePointAt(source: string, i: number): number {
+  const c = source.charCodeAt(i);
+  if (c >= 0xd800 && c <= 0xdbff) {
+    return 0x10000 + ((c - 0xd800) << 10) + (source.charCodeAt(i + 1) - 0xdc00);
+  }
+  return c;
+}
+
+function isNonAsciiIdentLike(cp: number): boolean {
+  return cp >= 128 && IDENT_LIKE.test(String.fromCodePoint(cp));
+}
+
+function validateSource(source: string): void {
+  const n = source.length;
+  if (n > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+    fail('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
+  }
+  let bytes = 0;
+  for (let i = 0; i < n; i++) {
+    const c = source.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = i + 1 < n ? source.charCodeAt(i + 1) : 0;
+      if (d < 0xdc00 || d > 0xdfff) {
+        fail('INVALID_UTF8', 'lone UTF-16 surrogate', bytes, bytes);
+      }
+      bytes += 4;
+      i++;
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      fail('INVALID_UTF8', 'lone UTF-16 surrogate', bytes, bytes);
+    } else {
+      bytes += utf8SizeCu(c);
+    }
+    if (bytes > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+      fail('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
+    }
+  }
+}
+
+class Lexer {
+  i = 0;
+  b = 0;
+  readonly n: number;
+  readonly tokens: Token[] = [];
+  readonly source: string;
+
+  constructor(source: string) {
+    this.source = source;
+    this.n = source.length;
+  }
+
+  tokenize(): Token[] {
+    while (true) {
+      this.skipIgnored();
+      if (this.i >= this.n) break;
+      this.scanToken();
+    }
+    this.tokens.push({ kind: 'eof', start: this.b, end: this.b, text: '' });
+    return this.tokens;
+  }
+
+  private bumpAscii(): void {
+    this.i++;
+    this.b++;
+  }
+
+  private bumpCp(): void {
+    const c = this.source.charCodeAt(this.i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      this.i += 2;
+      this.b += 4;
+    } else {
+      this.i += 1;
+      this.b += utf8SizeCu(c);
+    }
+  }
+
+  private emit(kind: string, startB: number, startI: number, extra?: { raw?: string; decoded?: string }): void {
+    const tok: Token = {
+      kind,
+      start: startB,
+      end: this.b,
+      text: this.source.slice(startI, this.i),
+      ...extra,
+    };
+    if (this.tokens.length >= SYNTAX_BOUNDS.tokenCount - 1) {
+      fail('TOKEN_BOUND', 'token bound exceeded', tok.start, tok.end);
+    }
+    this.tokens.push(tok);
+  }
+
+  private skipIgnored(): void {
+    const src = this.source;
+    while (this.i < this.n) {
+      const c = src.charCodeAt(this.i);
+      if (c === 32 || c === 9 || c === 13 || c === 10) {
+        this.bumpAscii();
+        continue;
+      }
+      if (c === 47 && this.i + 1 < this.n) {
+        const d = src.charCodeAt(this.i + 1);
+        if (d === 47) {
+          this.bumpAscii();
+          this.bumpAscii();
+          while (this.i < this.n && src.charCodeAt(this.i) !== 10) this.bumpCp();
+          continue;
+        }
+        if (d === 42) {
+          const startB = this.b;
+          this.bumpAscii();
+          this.bumpAscii();
+          let closed = false;
+          while (this.i < this.n) {
+            if (src.charCodeAt(this.i) === 42 && this.i + 1 < this.n && src.charCodeAt(this.i + 1) === 47) {
+              this.bumpAscii();
+              this.bumpAscii();
+              closed = true;
+              break;
+            }
+            this.bumpCp();
+          }
+          if (!closed) fail('UNTERMINATED_COMMENT', 'unterminated block comment', startB, this.b);
+          continue;
+        }
+      }
+      break;
+    }
+  }
+
+  private scanToken(): void {
+    const src = this.source;
+    const c = src.charCodeAt(this.i);
+    const startB = this.b;
+    const startI = this.i;
+    const c2 = this.i + 1 < this.n ? src.charCodeAt(this.i + 1) : -1;
+
+    if (c === 61 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('==', startB, startI);
+      return;
+    }
+    if (c === 33 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('!=', startB, startI);
+      return;
+    }
+    if (c === 60 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('<=', startB, startI);
+      return;
+    }
+    if (c === 62 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('>=', startB, startI);
+      return;
+    }
+
+    const ch = src[this.i]!;
+    if (ONE_CHAR.has(ch)) {
+      this.bumpAscii();
+      this.emit(ch, startB, startI);
+      return;
+    }
+
+    if (c === 34) {
+      this.scanString(startB, startI);
+      return;
+    }
+
+    if (isDigit(c)) {
+      while (this.i < this.n && isDigit(src.charCodeAt(this.i))) this.bumpAscii();
+      const digits = src.slice(startI, this.i);
+      if (digits.length > 1 && digits[0] === '0') {
+        fail('INTEGER_TOKEN', 'invalid integer token', startB, this.b);
+      }
+      if (digits.length > SYNTAX_BOUNDS.integerTokenDigits) {
+        fail('INTEGER_BOUND', 'integer digit bound exceeded', startB, this.b);
+      }
+      this.emit('integer', startB, startI);
+      return;
+    }
+
+    if (isAsciiLetter(c)) {
+      this.bumpAscii();
+      while (this.i < this.n && isAsciiIdentCont(src.charCodeAt(this.i))) this.bumpAscii();
+      if (this.i < this.n && isNonAsciiIdentLike(codePointAt(src, this.i))) {
+        fail('NON_ASCII_IDENTIFIER', 'non-ASCII identifier', this.b, this.b);
+      }
+      const name = src.slice(startI, this.i);
+      if (name.length > SYNTAX_BOUNDS.identifierAsciiCharacters) {
+        fail('IDENTIFIER_BOUND', 'identifier length bound exceeded', startB, this.b);
+      }
+      this.emit(KEYWORDS.has(name) ? name : 'ident', startB, startI);
+      return;
+    }
+
+    if (c > 127 && isNonAsciiIdentLike(codePointAt(src, this.i))) {
+      fail('NON_ASCII_IDENTIFIER', 'non-ASCII identifier', startB, startB);
+    }
+    fail('UNEXPECTED_CHAR', 'unexpected character', startB, startB);
+  }
+
+  private scanString(startB: number, startI: number): void {
+    const src = this.source;
+    this.bumpAscii();
+    let decoded = '';
+    let decodedBytes = 0;
+
+    const appendCp = (cp: number): void => {
+      decoded += String.fromCodePoint(cp);
+      decodedBytes += utf8SizeCp(cp);
+      if (decodedBytes > SYNTAX_BOUNDS.decodedStringUtf8Bytes) {
+        fail('STRING_BOUND', 'decoded string UTF-8 bound exceeded', startB, this.b);
+      }
+    };
+
+    while (this.i < this.n) {
+      const c = src.charCodeAt(this.i);
+      if (c === 34) {
+        this.bumpAscii();
+        const raw = src.slice(startI, this.i);
+        this.emit('string', startB, startI, { raw, decoded });
+        return;
+      }
+      if (c <= 0x1f) {
+        fail('INVALID_STRING', 'unescaped control in string', this.b, this.b);
+      }
+      if (c === 92) {
+        this.bumpAscii();
+        if (this.i >= this.n) fail('UNTERMINATED_STRING', 'unterminated string', startB, this.b);
+        const e = src.charCodeAt(this.i);
+        if (e === 34) {
+          appendCp(34);
+          this.bumpAscii();
+        } else if (e === 92) {
+          appendCp(92);
+          this.bumpAscii();
+        } else if (e === 47) {
+          appendCp(47);
+          this.bumpAscii();
+        } else if (e === 98) {
+          appendCp(8);
+          this.bumpAscii();
+        } else if (e === 102) {
+          appendCp(12);
+          this.bumpAscii();
+        } else if (e === 110) {
+          appendCp(10);
+          this.bumpAscii();
+        } else if (e === 114) {
+          appendCp(13);
+          this.bumpAscii();
+        } else if (e === 116) {
+          appendCp(9);
+          this.bumpAscii();
+        } else if (e === 117) {
+          this.bumpAscii();
+          const hex = this.readHex4(startB);
+          if (hex >= 0xd800 && hex <= 0xdbff) {
+            if (
+              this.i + 1 < this.n &&
+              src.charCodeAt(this.i) === 92 &&
+              src.charCodeAt(this.i + 1) === 117
+            ) {
+              this.bumpAscii();
+              this.bumpAscii();
+              const low = this.readHex4(startB);
+              if (low < 0xdc00 || low > 0xdfff) {
+                fail('INVALID_SURROGATE', 'invalid surrogate pair', startB, this.b);
+              }
+              appendCp(0x10000 + ((hex - 0xd800) << 10) + (low - 0xdc00));
+            } else {
+              fail('INVALID_SURROGATE', 'lone surrogate escape', startB, this.b);
+            }
+          } else if (hex >= 0xdc00 && hex <= 0xdfff) {
+            fail('INVALID_SURROGATE', 'lone surrogate escape', startB, this.b);
+          } else {
+            appendCp(hex);
+          }
+        } else {
+          fail('INVALID_STRING', 'unknown string escape', this.b, this.b);
+        }
+        continue;
+      }
+      if (c >= 0xd800 && c <= 0xdbff) {
+        appendCp(codePointAt(src, this.i));
+        this.bumpCp();
+      } else {
+        appendCp(c);
+        this.bumpCp();
+      }
+    }
+    fail('UNTERMINATED_STRING', 'unterminated string', startB, this.b);
+  }
+
+  private readHex4(stringStart: number): number {
+    let hex = 0;
+    for (let k = 0; k < 4; k++) {
+      if (this.i >= this.n) fail('UNTERMINATED_STRING', 'unterminated string', stringStart, this.b);
+      const h = hexDigit(this.source.charCodeAt(this.i));
+      if (h < 0) fail('INVALID_STRING', 'invalid unicode escape', this.b, this.b);
+      hex = (hex << 4) | h;
+      this.bumpAscii();
+    }
+    return hex;
+  }
+}
+
+class Parser {
+  pos = 0;
+  nodeCount = 0;
+  synDepth = 0;
+  readonly depths = new WeakMap<object, number>();
+  extraTokenCount = 0;
+  readonly tokens: Token[];
+
+  constructor(tokens: Token[]) {
+    this.tokens = tokens;
+  }
+
+  parseProgram(): Program {
+    const profile = this.parseProfile();
+    const agreement = this.parseAgreement();
+    if (!this.at('eof')) {
+      const t = this.peek();
+      this.fail('TRAILING_INPUT', 'trailing input after program', t.start, t.end);
+    }
+    return this.counted({
+      tag: 'Program',
+      profile,
+      agreement,
+      span: { start: profile.span.start, end: agreement.span.end },
+    });
+  }
+
+  private peek(): Token {
+    return this.tokens[this.pos]!;
+  }
+
+  private at(kind: string): boolean {
+    return this.peek().kind === kind;
+  }
+
+  private advance(): Token {
+    const t = this.peek();
+    if (t.kind !== 'eof') this.pos++;
+    return t;
+  }
+
+  private fail(code: string, message: string, start = this.peek().start, end = this.peek().end): never {
+    fail(code, message, start, end);
+  }
+
+  private unexpected(tok = this.peek()): never {
+    this.fail(
+      'UNEXPECTED_TOKEN',
+      tok.kind === 'eof' ? 'unexpected end of input' : `unexpected token ${tok.kind}`,
+      tok.start,
+      tok.end,
+    );
+  }
+
+  private expect(kind: string): Token {
+    if (this.at(kind)) return this.advance();
+    this.unexpected();
+  }
+
+  private expectIdent(): Token {
+    if (this.at('ident')) return this.advance();
+    this.unexpected();
+  }
+
+  private counted<T extends { span: Span }>(node: T): T {
+    this.nodeCount++;
+    if (this.nodeCount > SYNTAX_BOUNDS.astNodes) {
+      this.fail('AST_NODE_BOUND', 'AST node bound exceeded', node.span.start, node.span.end);
+    }
+    return node;
+  }
+
+  private expr<T extends object>(node: T, depth: number): T {
+    if (depth > SYNTAX_BOUNDS.nestingDepth) {
+      const span = (node as { span: Span }).span;
+      this.fail('NESTING_BOUND', 'nesting depth bound exceeded', span.start, span.end);
+    }
+    this.counted(node as { span: Span });
+    this.depths.set(node, depth);
+    return node;
+  }
+
+  private depthOf(node: object): number {
+    return this.depths.get(node) ?? 1;
+  }
+
+  private enterNest(at: Token): void {
+    if (this.synDepth >= SYNTAX_BOUNDS.nestingDepth) {
+      this.fail('NESTING_BOUND', 'nesting depth bound exceeded', at.start, at.end);
+    }
+    this.synDepth++;
+  }
+
+  private leaveNest(): void {
+    this.synDepth--;
+  }
+
+  private parseProfile(): ProfileDecl {
+    const kw = this.expect('profile');
+    const str = this.expect('string');
+    if (str.decoded !== SYNTAX_PROFILE) {
+      this.fail('PROFILE_MISMATCH', `profile must be ${SYNTAX_PROFILE}`, str.start, str.end);
+    }
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'ProfileDecl',
+      value: str.decoded!,
+      raw: str.raw!,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAgreement(): AgreementDecl {
+    const kw = this.expect('agreement');
+    const name = this.expectIdent();
+    this.expect('{');
+    const declarations: Declaration[] = [];
+    while (!this.at('}') && !this.at('eof')) {
+      if (declarations.length >= SYNTAX_BOUNDS.totalDeclarations) {
+        this.fail('DECLARATION_BOUND', 'declaration bound exceeded');
+      }
+      declarations.push(this.parseDeclaration());
+    }
+    const close = this.expect('}');
+    return this.counted({
+      tag: 'AgreementDecl',
+      name: name.text,
+      declarations,
+      span: { start: kw.start, end: close.end },
+    });
+  }
+
+  private parseDeclaration(): Declaration {
+    if (this.at('unit')) return this.parseNamedSimple('UnitDecl');
+    if (this.at('party')) return this.parseNamedSimple('PartyDecl');
+    if (this.at('asset')) return this.parseAsset();
+    if (this.at('const')) return this.parseConstOrState('ConstDecl');
+    if (this.at('state')) return this.parseConstOrState('StateDecl');
+    if (this.at('action')) return this.parseAction();
+    const t = this.peek();
+    if (t.kind === 'ident' || KEYWORDS.has(t.kind)) {
+      this.fail('UNKNOWN_DECLARATION', `unknown declaration ${t.text || t.kind}`, t.start, t.end);
+    }
+    this.unexpected();
+  }
+
+  private parseNamedSimple(tag: 'UnitDecl' | 'PartyDecl'): UnitDecl | PartyDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    const semi = this.expect(';');
+    return this.counted({
+      tag,
+      name: name.text,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAsset(): AssetDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'AssetDecl',
+      name: name.text,
+      type,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseConstOrState(tag: 'ConstDecl' | 'StateDecl'): ConstDecl | StateDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    this.expect('=');
+    const value = this.parseExpression();
+    const semi = this.expect(';');
+    return this.counted({
+      tag,
+      name: name.text,
+      type,
+      value,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAction(): ActionDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect('(');
+    const parameters: Parameter[] = [];
+    if (!this.at(')')) {
+      parameters.push(this.parseParameter());
+      while (this.at(',')) {
+        if (parameters.length >= SYNTAX_BOUNDS.parameters) {
+          this.fail('ARITY_BOUND', 'parameter bound exceeded');
+        }
+        this.advance();
+        parameters.push(this.parseParameter());
+      }
+    }
+    this.expect(')');
+    this.expect('{');
+    const statements: Statement[] = [];
+    const postconditions: Ensures[] = [];
+    let seenEnsures = false;
+    while (!this.at('}') && !this.at('eof')) {
+      if (statements.length + postconditions.length >= SYNTAX_BOUNDS.statementsPerAction) {
+        this.fail('STATEMENT_BOUND', 'statement bound exceeded');
+      }
+      if (this.at('ensures')) {
+        seenEnsures = true;
+        postconditions.push(this.parseEnsures());
+        continue;
+      }
+      if (seenEnsures) {
+        this.fail('STATEMENT_AFTER_ENSURES', 'statement after ensures');
+      }
+      statements.push(this.parseStatement());
+    }
+    const close = this.expect('}');
+    return this.counted({
+      tag: 'ActionDecl',
+      name: name.text,
+      parameters,
+      statements,
+      postconditions,
+      span: { start: kw.start, end: close.end },
+    });
+  }
+
+  private parseParameter(): Parameter {
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    return this.counted({
+      tag: 'Parameter',
+      name: name.text,
+      type,
+      span: { start: name.start, end: type.span.end },
+    });
+  }
+
+  private parseStatement(): Statement {
+    if (this.at('requires')) {
+      const kw = this.advance();
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Requires',
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('let')) {
+      const kw = this.advance();
+      const name = this.expectIdent();
+      this.expect('=');
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Let',
+        name: name.text,
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('next')) {
+      const kw = this.advance();
+      this.expect('.');
+      const name = this.expectIdent();
+      this.expect('=');
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Next',
+        name: name.text,
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('emit')) {
+      const kw = this.advance();
+      const type = this.parseType();
+      this.expect('{');
+      const fields: EffectField[] = [];
+      if (!this.at('}')) {
+        fields.push(this.parseEffectField());
+        while (this.at(',')) {
+          if (fields.length >= SYNTAX_BOUNDS.recordFields) {
+            this.fail('ARITY_BOUND', 'record field bound exceeded');
+          }
+          this.advance();
+          fields.push(this.parseEffectField());
+        }
+      }
+      this.expect('}');
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Emit',
+        type,
+        fields,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    this.unexpected();
+  }
+
+  private parseEffectField(): EffectField {
+    const name = this.expectIdent();
+    this.expect(':');
+    const expression = this.parseExpression();
+    return this.counted({
+      tag: 'EffectField',
+      name: name.text,
+      expression,
+      span: { start: name.start, end: expression.span.end },
+    });
+  }
+
+  private parseEnsures(): Ensures {
+    const kw = this.advance();
+    const expression = this.parseExpression();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'Ensures',
+      expression,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseType(): TypeNode {
+    const name = this.expectIdent();
+    let args: TypeNode[] = [];
+    let depth = 1;
+    let end = name.end;
+    if (this.at('<')) {
+      this.enterNest(this.peek());
+      this.advance();
+      if (this.at('>') || this.at('>=')) {
+        this.fail('EMPTY_TYPE_ARGS', 'empty type argument list', this.peek().start, this.peek().start + 1);
+      }
+      args.push(this.parseType());
+      while (this.at(',')) {
+        this.advance();
+        args.push(this.parseType());
+      }
+      end = this.expectGt();
+      this.leaveNest();
+      let maxD = 0;
+      for (const a of args) maxD = Math.max(maxD, this.depthOf(a));
+      depth = 1 + maxD;
+    }
+    return this.expr(
+      {
+        tag: 'Type' as const,
+        name: name.text,
+        arguments: args,
+        span: { start: name.start, end },
+      },
+      depth,
+    );
+  }
+
+  private expectGt(): number {
+    const t = this.peek();
+    if (t.kind === '>') {
+      this.advance();
+      return t.end;
+    }
+    if (t.kind === '>=') {
+      if (this.tokens.length + this.extraTokenCount + 1 > 8192) {
+        this.fail('TOKEN_BOUND', 'token bound exceeded', t.start, t.end);
+      }
+      this.extraTokenCount++;
+      const gtEnd = t.start + 1;
+      this.tokens[this.pos] = { kind: '=', start: gtEnd, end: t.end, text: '=' };
+      return gtEnd;
+    }
+    this.unexpected();
+  }
+
+  private parseExpression(): Expression {
+    return this.parseDisjunction();
+  }
+
+  private parseDisjunction(): Expression {
+    return this.parseLeftBin(() => this.parseConjunction(), ['or']);
+  }
+
+  private parseConjunction(): Expression {
+    return this.parseLeftBin(() => this.parseNegation(), ['and']);
+  }
+
+  private parseLeftBin(next: () => Expression, kinds: string[]): Expression {
+    let left = next();
+    while (kinds.includes(this.peek().kind)) {
+      const op = this.advance();
+      const right = next();
+      left = this.makeBinary(op, left, right);
+    }
+    return left;
+  }
+
+  private parseNegation(): Expression {
+    const nots: Token[] = [];
+    while (this.at('not')) nots.push(this.advance());
+    let expr = this.parseComparison();
+    for (let i = nots.length - 1; i >= 0; i--) {
+      const tok = nots[i]!;
+      expr = this.expr(
+        {
+          tag: 'Unary' as const,
+          operator: 'not' as const,
+          operand: expr,
+          span: { start: tok.start, end: expr.span.end },
+        },
+        1 + this.depthOf(expr),
+      );
+    }
+    return expr;
+  }
+
+  private parseComparison(): Expression {
+    const left = this.parseSum();
+    const kind = this.peek().kind;
+    if (!CMP_OPS.has(kind)) return left;
+    const op = this.advance();
+    const right = this.parseSum();
+    const node = this.expr(
+      {
+        tag: 'Comparison' as const,
+        operator: op.kind as Comparison['operator'],
+        left,
+        right,
+        span: { start: left.span.start, end: right.span.end },
+      },
+      1 + Math.max(this.depthOf(left), this.depthOf(right)),
+    );
+    if (CMP_OPS.has(this.peek().kind)) {
+      const extra = this.peek();
+      this.fail('CHAINED_COMPARISON', 'chained comparison', extra.start, extra.end);
+    }
+    return node;
+  }
+
+  private parseSum(): Expression {
+    return this.parseLeftBin(() => this.parseProduct(), ['+', '-']);
+  }
+
+  private parseProduct(): Expression {
+    return this.parseLeftBin(() => this.parsePostfix(), ['*']);
+  }
+
+  private parsePostfix(): Expression {
+    let expr = this.parsePrimary();
+    while (this.at('.')) {
+      this.advance();
+      const field = this.expectIdent();
+      expr = this.expr(
+        {
+          tag: 'Projection' as const,
+          object: expr,
+          field: field.text,
+          span: { start: expr.span.start, end: field.end },
+        },
+        1 + this.depthOf(expr),
+      );
+    }
+    return expr;
+  }
+
+  private parsePrimary(): Expression {
+    if (this.at('integer')) {
+      const t = this.advance();
+      return this.expr(
+        { tag: 'IntegerLiteral' as const, value: t.text, span: { start: t.start, end: t.end } },
+        1,
+      );
+    }
+    if (this.at('string')) {
+      const t = this.advance();
+      return this.expr(
+        {
+          tag: 'StringLiteral' as const,
+          raw: t.raw!,
+          decoded: t.decoded!,
+          span: { start: t.start, end: t.end },
+        },
+        1,
+      );
+    }
+    if (this.at('true') || this.at('false')) {
+      const t = this.advance();
+      return this.expr(
+        {
+          tag: 'BooleanLiteral' as const,
+          value: t.kind === 'true',
+          span: { start: t.start, end: t.end },
+        },
+        1,
+      );
+    }
+    if (this.at('ident')) {
+      const name = this.advance();
+      if (this.at('(')) {
+        this.enterNest(this.peek());
+        this.advance();
+        const args: Expression[] = [];
+        if (!this.at(')')) {
+          args.push(this.parseExpression());
+          while (this.at(',')) {
+            if (args.length >= SYNTAX_BOUNDS.callArguments) {
+              this.fail('ARITY_BOUND', 'call argument bound exceeded');
+            }
+            this.advance();
+            args.push(this.parseExpression());
+          }
+        }
+        const close = this.expect(')');
+        this.leaveNest();
+        let depth = 1;
+        for (const a of args) depth = Math.max(depth, 1 + this.depthOf(a));
+        return this.expr(
+          {
+            tag: 'Call' as const,
+            name: name.text,
+            arguments: args,
+            span: { start: name.start, end: close.end },
+          },
+          depth,
+        );
+      }
+      return this.expr(
+        { tag: 'Identifier' as const, name: name.text, span: { start: name.start, end: name.end } },
+        1,
+      );
+    }
+    if (this.at('(')) {
+      this.enterNest(this.peek());
+      this.advance();
+      const expr = this.parseExpression();
+      this.expect(')');
+      this.leaveNest();
+      return expr;
+    }
+    this.unexpected();
+  }
+
+  private makeBinary(op: Token, left: Expression, right: Expression): Binary {
+    return this.expr(
+      {
+        tag: 'Binary' as const,
+        operator: op.kind as Binary['operator'],
+        left,
+        right,
+        span: { start: left.span.start, end: right.span.end },
+      },
+      1 + Math.max(this.depthOf(left), this.depthOf(right)),
+    );
+  }
+}
+
+export function parseSuccessorSource(source: string): Program {
+  if (typeof source !== 'string') {
+    fail('SOURCE_TYPE', 'source must be a string', 0, 0);
+  }
+  validateSource(source);
+  const tokens = new Lexer(source).tokenize();
+  return new Parser(tokens).parseProgram();
+}
+
+
+SOURCE experiments/moriarty-language/src/successor/format.ts SHA256 bc1f7ac114b0c870ccd8569827bd1416a564c9edc9885cb1748220bb4d1968ef
+import {
+  parseSuccessorSource,
+  SuccessorSyntaxError,
+  SYNTAX_BOUNDS,
+  type Declaration,
+  type EffectField,
+  type Ensures,
+  type Expression,
+  type Parameter,
+  type Program,
+  type Statement,
+  type TypeNode,
+} from './frontend.ts';
+
+const PREC_NONE = 0;
+const PREC_OR = 1;
+const PREC_AND = 2;
+const PREC_NOT = 3;
+const PREC_CMP = 4;
+const PREC_SUM = 5;
+const PREC_MUL = 6;
+const PREC_POSTFIX = 7;
+const PREC_PRIMARY = 8;
+
+type Side = 'left' | 'right' | 'operand' | 'none';
+
+function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+function indent(level: number): string {
+  return '  '.repeat(level);
+}
+
+function exprPrec(expr: Expression): number {
+  switch (expr.tag) {
+    case 'Identifier':
+    case 'IntegerLiteral':
+    case 'StringLiteral':
+    case 'BooleanLiteral':
+    case 'Call':
+      return PREC_PRIMARY;
+    case 'Projection':
+      return PREC_POSTFIX;
+    case 'Unary':
+      return PREC_NOT;
+    case 'Comparison':
+      return PREC_CMP;
+    case 'Binary':
+      switch (expr.operator) {
+        case 'or':
+          return PREC_OR;
+        case 'and':
+          return PREC_AND;
+        case '+':
+        case '-':
+          return PREC_SUM;
+        case '*':
+          return PREC_MUL;
+      }
+  }
+}
+
+function needsParens(expr: Expression, parentPrec: number, side: Side): boolean {
+  const prec = exprPrec(expr);
+  if (prec < parentPrec) return true;
+  if (prec > parentPrec) return false;
+  if (expr.tag === 'Comparison') return true;
+  if (expr.tag === 'Binary') return side === 'right';
+  return false;
+}
+
+function formatExpression(expr: Expression, parentPrec: number, side: Side): string {
+  const inner = formatExpressionInner(expr);
+  return needsParens(expr, parentPrec, side) ? `(${inner})` : inner;
+}
+
+function formatExpressionInner(expr: Expression): string {
+  switch (expr.tag) {
+    case 'Identifier':
+      return expr.name;
+    case 'IntegerLiteral':
+      return expr.value;
+    case 'StringLiteral':
+      return expr.raw;
+    case 'BooleanLiteral':
+      return expr.value ? 'true' : 'false';
+    case 'Call': {
+      const args = expr.arguments.map((argument) => formatExpression(argument, PREC_NONE, 'none'));
+      return `${expr.name}(${args.join(', ')})`;
+    }
+    case 'Projection':
+      return `${formatExpression(expr.object, PREC_POSTFIX, 'operand')}.${expr.field}`;
+    case 'Unary':
+      return `not ${formatExpression(expr.operand, PREC_NOT, 'operand')}`;
+    case 'Binary': {
+      const prec = exprPrec(expr);
+      const left = formatExpression(expr.left, prec, 'left');
+      const right = formatExpression(expr.right, prec, 'right');
+      return `${left} ${expr.operator} ${right}`;
+    }
+    case 'Comparison': {
+      const left = formatExpression(expr.left, PREC_CMP, 'left');
+      const right = formatExpression(expr.right, PREC_CMP, 'right');
+      return `${left} ${expr.operator} ${right}`;
+    }
+  }
+}
+
+function formatType(type: TypeNode): string {
+  if (type.arguments.length === 0) return type.name;
+  return `${type.name}<${type.arguments.map(formatType).join(', ')}>`;
+}
+
+function formatParameter(parameter: Parameter): string {
+  return `${parameter.name}: ${formatType(parameter.type)}`;
+}
+
+function formatEffectField(field: EffectField): string {
+  return `${field.name}: ${formatExpression(field.expression, PREC_NONE, 'none')}`;
+}
+
+function formatStatement(statement: Statement): string {
+  switch (statement.tag) {
+    case 'Requires':
+      return `requires ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
+    case 'Let':
+      return `let ${statement.name} = ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
+    case 'Next':
+      return `next.${statement.name} = ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
+    case 'Emit': {
+      const type = formatType(statement.type);
+      if (statement.fields.length === 0) return `emit ${type} {};`;
+      return `emit ${type} { ${statement.fields.map(formatEffectField).join(', ')} };`;
+    }
+  }
+}
+
+function formatEnsures(ensures: Ensures): string {
+  return `ensures ${formatExpression(ensures.expression, PREC_NONE, 'none')};`;
+}
+
+function formatDeclaration(declaration: Declaration, level: number): string {
+  const pad = indent(level);
+  switch (declaration.tag) {
+    case 'UnitDecl':
+      return `${pad}unit ${declaration.name};`;
+    case 'PartyDecl':
+      return `${pad}party ${declaration.name};`;
+    case 'AssetDecl':
+      return `${pad}asset ${declaration.name}: ${formatType(declaration.type)};`;
+    case 'ConstDecl':
+      return `${pad}const ${declaration.name}: ${formatType(declaration.type)} = ${formatExpression(declaration.value, PREC_NONE, 'none')};`;
+    case 'StateDecl':
+      return `${pad}state ${declaration.name}: ${formatType(declaration.type)} = ${formatExpression(declaration.value, PREC_NONE, 'none')};`;
+    case 'ActionDecl': {
+      const params = declaration.parameters.map(formatParameter).join(', ');
+      const lines: string[] = [];
+      for (const statement of declaration.statements) {
+        lines.push(`${indent(level + 1)}${formatStatement(statement)}`);
+      }
+      for (const ensures of declaration.postconditions) {
+        lines.push(`${indent(level + 1)}${formatEnsures(ensures)}`);
+      }
+      const body = lines.length === 0 ? '' : `${lines.join('\n')}\n`;
+      return `${pad}action ${declaration.name}(${params}) {\n${body}${pad}}`;
+    }
+  }
+}
+
+function formatProgram(program: Program): string {
+  const decls = program.agreement.declarations.map((declaration) => formatDeclaration(declaration, 1));
+  const inner = decls.length === 0 ? '' : `${decls.join('\n')}\n`;
+  return `profile ${program.profile.raw};\n\nagreement ${program.agreement.name} {\n${inner}}\n`;
+}
+
+export function formatSuccessorSource(source: string): string {
+  const program = parseSuccessorSource(source);
+  const formatted = formatProgram(program);
+  if (utf8ByteLength(formatted) > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+    throw new SuccessorSyntaxError(
+      'FORMAT_BOUND',
+      `formatted source exceeds ${SYNTAX_BOUNDS.sourceUtf8Bytes} UTF-8 bytes`,
+      0,
+      0,
+    );
+  }
+  return formatted;
+}
+
+SOURCE experiments/moriarty-language/src/successor/expression-types-v1.ts SHA256 232abd4c6c7fac27d6bfc82d55380aec61ddd2b0b96cc9c080332c4c46b3b6d5
+import { array, bytes, canonical, closed, decimal, fail, identifier, object, treeSize } from './expression-wire-v1.ts';
+
+/** Type annotations and values retain the exact representation.md JSON trees. */
+export type ValueType = any[];
+export type Schema = Record<string, any>;
+export const SCHEMA_KEYS = ['units', 'assets', 'vaults', 'parties', 'recordTypes', 'enumTypes', 'fields', 'args', 'observations', 'operations'];
+const SCALARS = ['UInt64', 'UInt128', 'SInt128', 'Bool', 'Text', 'Unit'];
+export const NUMERIC = ['UInt64', 'UInt128', 'SInt128', 'Amount', 'Shares', 'Rate', 'Price', 'Quantity'];
+export function same(a: ValueType, b: ValueType): boolean { return canonical(a) === canonical(b); }
+export function unitShape(v: any): void {
+  array(v);
+  for (const item of v) { array(item); if (item.length !== 2) fail('INPUT_SCHEMA'); identifier(item[0]); decimal(item[1]); }
+}
+export function typeShape(t: any): asserts t is ValueType {
+  const capacities: any[] = [];
+  // Option/Collection metadata forms a unary chain, independent of value depth.
+  while (true) {
+    array(t); if (typeof t[0] !== 'string') fail('INPUT_SCHEMA');
+    if (t[0] === 'Option') {
+      if (t.length !== 2) fail('INPUT_SCHEMA'); t = t[1];
+    } else if (t[0] === 'Collection') {
+      if (t.length !== 3) fail('INPUT_SCHEMA'); capacities.push(t[2]); t = t[1];
+    } else break;
+  }
+  const tag = t[0];
+  if (SCALARS.includes(tag)) { if (t.length !== 1) fail('INPUT_SCHEMA'); }
+  else if (['Amount', 'Record', 'Enum', 'Operation'].includes(tag)) {
+    if (t.length !== 2) fail('INPUT_SCHEMA'); identifier(t[1]);
+  } else if (tag === 'Shares') {
+    if (t.length !== 3) fail('INPUT_SCHEMA'); identifier(t[1]); identifier(t[2]);
+  } else if (tag === 'Rate') {
+    if (t.length !== 2) fail('INPUT_SCHEMA'); decimal(t[1]);
+  } else if (tag === 'Price') {
+    if (t.length !== 4) fail('INPUT_SCHEMA'); identifier(t[1]); identifier(t[2]); decimal(t[3]);
+  } else if (tag === 'Quantity') {
+    if (t.length !== 3) fail('INPUT_SCHEMA'); unitShape(t[1]); decimal(t[2]);
+  } else fail('INPUT_SCHEMA');
+  for (let i = capacities.length - 1; i >= 0; i--) decimal(capacities[i]);
+}
+function mapShape(v: any): void { object(v); for (const k of Object.keys(v)) identifier(k); }
+export function schemaShape(s: any): asserts s is Schema {
+  closed(s, SCHEMA_KEYS);
+  if (bytes(canonical(s)) > 65536) fail('INPUT_BOUND');
+  const size = treeSize(s); if (size.nodes > 4096 || size.depth > 64) fail('INPUT_BOUND');
+  for (const key of ['units', 'assets', 'vaults', 'parties']) { array(s[key]); s[key].forEach(identifier); }
+  for (const key of ['recordTypes', 'enumTypes', 'fields', 'args', 'observations', 'operations']) mapShape(s[key]);
+  for (const r of Object.values(s.recordTypes)) {
+    mapShape(r); if (Object.keys(r as object).length > 64) fail('INPUT_BOUND'); Object.values(r as object).forEach(typeShape);
+  }
+  for (const e of Object.values(s.enumTypes)) { array(e); if (e.length > 128) fail('INPUT_BOUND'); e.forEach(identifier); }
+  for (const f of Object.values(s.fields)) {
+    closed(f, ['type', 'writeClass']); const field = f as any; typeShape(field.type);
+    if (!['ordinary', 'financial'].includes(field.writeClass)) fail('INPUT_SCHEMA');
+  }
+  Object.values(s.args).forEach(typeShape); Object.values(s.observations).forEach(typeShape);
+  Object.values(s.operations).forEach(identifier);
+}
+function declared(map: any, name: string): void { if (!Object.hasOwn(map, name)) fail('TYPE_NAME'); }
+export function unitDomain(units: any[], s: Schema, code: string): void {
+  if (units.length > 8) fail(code);
+  let previous = '';
+  for (const [name, power] of units) {
+    const p = BigInt(power);
+    if (name <= previous || p === 0n || p < -128n || p > 127n) fail(code);
+    if (!s.units.includes(name)) fail('TYPE_NAME');
+    previous = name;
+  }
+}
+export function resolve(t: ValueType, s: Schema, domainCode = 'TYPE_LITERAL'): void {
+  const capacities: string[] = [];
+  while (t[0] === 'Option' || t[0] === 'Collection') {
+    if (t[0] === 'Collection') capacities.push(t[2]);
+    t = t[1];
+  }
+  const tag = t[0];
+  if (tag === 'Unit') fail('TYPE_NAME');
+  if (['UInt64', 'UInt128', 'SInt128', 'Bool', 'Text'].includes(tag)) { /* resolved scalar */ }
+  else if (tag === 'Amount') { if (!s.assets.includes(t[1])) fail('TYPE_NAME'); }
+  else if (tag === 'Shares') { if (!s.vaults.includes(t[1]) || !s.parties.includes(t[2])) fail('TYPE_NAME'); }
+  else if (tag === 'Rate' || tag === 'Quantity' || tag === 'Price') {
+    if (tag === 'Quantity') unitDomain(t[1], s, domainCode);
+    if (tag === 'Price') {
+      if (!s.assets.includes(t[1]) || !s.assets.includes(t[2])) fail('TYPE_NAME');
+      if (t[1] === t[2]) fail(domainCode);
+    }
+    const scale = BigInt(t[tag === 'Rate' ? 1 : tag === 'Quantity' ? 2 : 3]);
+    if (scale < 0n || scale > 18n) fail(domainCode);
+  } else if (tag === 'Record') declared(s.recordTypes, t[1]);
+  else if (tag === 'Enum') declared(s.enumTypes, t[1]);
+  else if (tag === 'Operation') declared(s.operations, t[1]);
+  else fail('TYPE_NAME');
+  // Match recursive postorder: resolve the inner type before outer capacities.
+  for (let i = capacities.length - 1; i >= 0; i--) {
+    const capacity = BigInt(capacities[i]);
+    if (capacity < 0n || capacity > 128n) fail('TYPE_COLLECTION_BOUND');
+  }
+}
+export function validateSchema(s: Schema): void {
+  let declarations = 0;
+  for (const key of SCHEMA_KEYS) declarations += Array.isArray(s[key]) ? s[key].length : Object.keys(s[key]).length;
+  if (declarations > 256) fail('INPUT_BOUND');
+  function sortedUnique(items: string[]): void {
+    if (items.some((x, i) => i > 0 && x <= items[i - 1])) fail('INPUT_SCHEMA');
+  }
+  for (const key of ['units', 'assets', 'vaults', 'parties']) sortedUnique(s[key]);
+  for (const e of Object.values(s.enumTypes)) sortedUnique(e as string[]);
+  // Walk declarations in identifier order, including all nested type references.
+  const definitions: [string, ValueType][] = [];
+  for (const [name, fields] of Object.entries(s.recordTypes))
+    for (const [field, t] of Object.entries(fields as object)) definitions.push([name + '.' + field, t]);
+  for (const [name, record] of Object.entries(s.operations)) definitions.push([name, ['Record', record]]);
+  for (const key of ['args', 'observations'])
+    for (const [name, t] of Object.entries(s[key])) definitions.push([name, t as ValueType]);
+  for (const [name, f] of Object.entries(s.fields)) definitions.push([name, (f as any).type]);
+  for (const [, t] of definitions.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)) resolve(t, s);
+  const visiting = new Set<string>(), done = new Set<string>();
+  function walkType(t: ValueType): void {
+    while (t[0] === 'Option' || t[0] === 'Collection') t = t[1];
+    if (t[0] === 'Record') walk('R:' + t[1]);
+    else if (t[0] === 'Operation') walk('O:' + t[1]);
+  }
+  function walk(name: string): void {
+    if (visiting.has(name)) fail('TYPE_SCHEMA_CYCLE');
+    if (done.has(name)) return;
+    visiting.add(name);
+    const key = name.slice(2);
+    if (name.startsWith('R:')) for (const field of Object.keys(s.recordTypes[key]).sort()) walkType(s.recordTypes[key][field]);
+    else walk('R:' + s.operations[key]);
+    visiting.delete(name); done.add(name);
+  }
+  for (const name of [...Object.keys(s.recordTypes).map(x => 'R:' + x), ...Object.keys(s.operations).map(x => 'O:' + x)].sort()) walk(name);
+}
+export function numericFits(t: ValueType, value: string): boolean {
+  const n = BigInt(value), tag = t[0];
+  if (['SInt128', 'Quantity', 'Rate'].includes(tag)) return n >= -(1n << 127n) && n < (1n << 127n);
+  return n >= 0n && n < (1n << (tag === 'UInt64' ? 64n : 128n));
+}
+export function valueChildren(t: ValueType, value: any, s: Schema): [ValueType, any][] {
+  if (t[0] === 'Record') return Object.keys(s.recordTypes[t[1]]).sort().map(k => [s.recordTypes[t[1]][k], value[k]]);
+  if (t[0] === 'Option' || t[0] === 'Collection') return value.map((v: any) => [t[1], v]);
+  if (t[0] === 'Operation') return [[['Record', s.operations[t[1]]], value.fields]];
+  return [];
+}
+export function valueShape(t: ValueType, value: any, s: Schema): void {
+  const tag = t[0];
+  if (NUMERIC.includes(tag)) decimal(value);
+  else if (tag === 'Bool') { if (typeof value !== 'boolean') fail('INPUT_SCHEMA'); }
+  else if (tag === 'Text' || tag === 'Enum') { if (typeof value !== 'string') fail('INPUT_SCHEMA'); }
+  else if (tag === 'Record') closed(value, Object.keys(s.recordTypes[t[1]]));
+  else if (tag === 'Option') { array(value); if (value.length > 1) fail('INPUT_SCHEMA'); }
+  else if (tag === 'Collection') { array(value); if (BigInt(value.length) > BigInt(t[2])) fail('INPUT_SCHEMA'); }
+  else if (tag === 'Operation') {
+    closed(value, ['operation', 'fields']); if (value.operation !== t[1]) fail('INPUT_SCHEMA');
+  } else fail('INPUT_SCHEMA');
+  for (const [childType, child] of valueChildren(t, value, s)) valueShape(childType, child, s);
+}
+export function valueDomain(t: ValueType, value: any, s: Schema, code: string): void {
+  if (NUMERIC.includes(t[0]) && !numericFits(t, value)) fail(code);
+  if (t[0] === 'Text' && bytes(value) > 1024) fail(code);
+  if (t[0] === 'Enum' && !s.enumTypes[t[1]].includes(value)) fail(code);
+  for (const [ct, child] of valueChildren(t, value, s)) valueDomain(ct, child, s, code);
+}
+export function valueSize(t: ValueType, value: any, s: Schema): { nodes: number; depth: number } {
+  let nodes = 1, depth = 1;
+  for (const [ct, child] of valueChildren(t, value, s)) {
+    const n = valueSize(ct, child, s); nodes += n.nodes; depth = Math.max(depth, n.depth + 1);
+  }
+  return { nodes, depth };
+}
+export function valueBound(t: ValueType, value: any, s: Schema, code: string): void {
+  const size = valueSize(t, value, s);
+  if (size.nodes > 4096 || size.depth > 64 || bytes(canonical({ type: t, value })) > 65536) fail(code);
+}
+export function aggregateBound(types: Record<string, ValueType>, values: Record<string, any>, s: Schema, code: string): void {
+  let nodes = 1, depth = 1;
+  for (const key of Object.keys(types).sort()) {
+    valueBound(types[key], values[key], s, code);
+    const n = valueSize(types[key], values[key], s); nodes += n.nodes; depth = Math.max(depth, n.depth + 1);
+  }
+  if (nodes > 4096 || depth > 64 || bytes(canonical(values)) > 65536) fail(code);
+}
+export function validateSnapshot(types: Record<string, ValueType>, values: any, s: Schema): void {
+  closed(values, Object.keys(types));
+  for (const key of Object.keys(types).sort()) valueShape(types[key], values[key], s);
+  aggregateBound(types, values, s, 'INPUT_BOUND');
+  for (const key of Object.keys(types).sort()) valueDomain(types[key], values[key], s, 'INPUT_VALUE');
+}
+
+
+SOURCE deliverables/defi-language-design-2026-09-07/SYNTAX-COMPARISON.md SHA256 49e305e43fc39c839f8c84cba5183feb5152fd71f0c16a0c2ad2f7bc00401635
+# Matched surface specimens
+
+Specified-only reading-study fragments. All three forms below compute the same swap output, in the same arithmetic order, from the same immutable pre-state. They omit the same outer declarations, authorization and effects. They are not additional accepted Moriarty frontends.
+
+## Financial blocks
+
+```text
+let adjusted = amount_in * fee_numerator;
+let numerator = adjusted * pre.reserve_b;
+let denominator = pre.reserve_a * fee_denominator + adjusted;
+let output = floor_div(numerator, denominator);
+requires output >= min_out;
+```
+
+## S-expressions
+
+```text
+(let adjusted (* amount_in fee_numerator))
+(let numerator (* adjusted pre.reserve_b))
+(let denominator (+ (* pre.reserve_a fee_denominator) adjusted))
+(let output (floor_div numerator denominator))
+(requires (>= output min_out))
+```
+
+## Layout-based declarations
+
+```text
+let adjusted = amount_in * fee_numerator
+let numerator = adjusted * pre.reserve_b
+let denominator = pre.reserve_a * fee_denominator + adjusted
+let output = floor_div numerator denominator
+requires output >= min_out
+```
+
+For a second task, use the same three forms to calculate `n = notional * rate_numerator * day_numerator`, `d = rate_denominator * day_denominator` and `interest = floor_div(n, d)`. Multiplication associates left in every specimen. Calculating interest creates neither a token payment nor a discharged debt.
+
+Pilot the tasks with six participants, then use a 24-person formative comparison with equal representation from application developers, financial-domain specialists and contract reviewers. Record actual background rather than infer expertise from job titles. Counterbalance syntax and task variants with a Latin-square assignment; provide identical explanations and diagnostic support.
+
+Measure correct identification and repair of financially consequential errors first. Include wrong recipients/assets, fee treatment, deadline boundaries, Boolean grouping and a state-read-after-write trap. Measure time and preference separately. Include held-out and unaided-reading tasks. Report participant/task-aware uncertainty and all failures; this sample is formative, not a production-safety or universal-usability claim. Reconsider the block recommendation if an alternative reduces consequential misunderstandings without impairing authoring and diagnosis.
