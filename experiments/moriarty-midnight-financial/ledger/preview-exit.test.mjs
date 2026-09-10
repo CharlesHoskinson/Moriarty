@@ -68,11 +68,12 @@ import {previewFinancialExitCode} from './preview-bootstrap.mjs';
 const originals={providers:await import('./providers.mjs'),assets:await import('./proven-assets.mjs'),prepare:await import('./prepare-deployment.mjs'),receipt:await import('./receipt.mjs')};
 // Test-runner module interception only: no production adapters or source status
 // are passed to the real integration entry. SDK/transport operations are inert.
-async function completedFixture(t,{pending=0,stopFailure=false,observationMutation,retentionFailure=false}={}){
+async function completedFixture(t,{pending=0,stopFailure=false,observationMutation,retentionFailure=false,dustFeeCap,containmentComplete=false}={}){
  const f=fixture({observationMutation}),deps=f.options.adapters,directory=mkdtempSync(join(tmpdir(),'moriarty-preview-exit-'));
  t.after(()=>rmSync(directory,{recursive:true,force:true}));
+ if(dustFeeCap!==undefined)f.options.limits.dustFee=dustFeeCap;
  const create=deps.createProviders;
- deps.createProviders=async o=>{const p=await create(o);return {...p,cleanup:async()=>{await p.cleanup();if(stopFailure)throw Error('CONTROLLED_WALLET_STOP_FAILED');return {walletStopped:true,pendingOperations:pending,containmentComplete:false};}};};
+ deps.createProviders=async o=>{const p=await create(o);return {...p,cleanup:async()=>{await p.cleanup();if(stopFailure)throw Error('CONTROLLED_WALLET_STOP_FAILED');return {walletStopped:true,pendingOperations:pending,containmentComplete};}};};
  t.mock.module(new URL('./providers.mjs',import.meta.url).href,{namedExports:{...originals.providers,loadFinancialSdk:deps.loadProviderSdk,initializeFinancialReservations:deps.initializeReservations,createFinancialProviders:deps.createProviders}});
  t.mock.module(new URL('./proven-assets.mjs',import.meta.url).href,{namedExports:{...originals.assets,loadProvenFinancialContract:deps.loadAssets}});
  t.mock.module(new URL('./prepare-deployment.mjs',import.meta.url).href,{namedExports:{...originals.prepare,loadFinancialContractsSdk:deps.loadContractsSdk,prepareFinancialDeployment:deps.prepareDeployment}});
@@ -84,7 +85,7 @@ async function completedFixture(t,{pending=0,stopFailure=false,observationMutati
  let result,error;try{result=await entry.integratePreviewFinancialCase(f.options);}catch(e){error=e;result=e.publicIntegrationResult;}
  return {...f,result,error,directory};
 }
-test('controlled production driver/integration/writer reaches CLI zero with external containment still false',async t=>{
+test('controlled production driver/integration/writer reaches CLI zero selector with external containment still false',async t=>{
  const f=await completedFixture(t);assert.equal(f.error,undefined);assert.equal(f.result.status,'FINANCIAL_COMPLETE');assert.equal(f.result.driver.status,'FINANCIAL_COMPLETE');
  retainPreviewIntegrationResult(f.directory,f.result);const stored=JSON.parse(readFileSync(join(f.directory,'integration-result.json')));
  assert.equal(previewFinancialExitCode(stored,f.options.limits.deadlineMs),0);assert.equal(stored.cleanup.containmentComplete,false);assert.equal(stored.driver.cleanup.containmentComplete,false);
@@ -96,8 +97,27 @@ for(const control of [{pending:1},{stopFailure:true},{retentionFailure:true},{ob
 });
 test('completed result validator rejects stale status, missing stages/IDs, unknown work and false containment claims',async t=>{
  const f=await completedFixture(t);assert.equal(f.error,undefined);
- for(const mutate of [r=>r.status='FAILED',r=>r.status='INCOMPLETE',r=>r.sourceTestOnly=true,r=>r.setupPendingOperations=1,r=>r.driver.stages.pop(),r=>r.financialComparison.stages.pop(),r=>r.driver.transactionIds[0]='bad',r=>r.cleanup.containmentComplete=true,r=>r.driver.status='INCOMPLETE',r=>r.driver.operationalState={unavailable:true},r=>r.driver.failure={phase:'observe',stage:'settle',code:'UNCLASSIFIED_DRIVER_FAILURE'}]){
+ for(const mutate of [r=>r.status='FAILED',r=>r.status='INCOMPLETE',r=>r.sourceTestOnly=true,r=>r.setupPendingOperations=1,r=>r.driver.stages.pop(),r=>delete r.driver.stages[0].finalizedHeight,r=>r.financialComparison.stages.pop(),r=>r.driver.transactionIds[0]='bad',r=>r.cleanup.containmentComplete=true,r=>r.driver.status='INCOMPLETE',r=>r.driver.operationalState={unavailable:true},r=>r.driver.failure={phase:'observe',stage:'settle',code:'UNCLASSIFIED_DRIVER_FAILURE'}]){
   const r=structuredClone(f.result);mutate(r);assert.throws(()=>previewFinancialExitCode(r,f.options.limits.deadlineMs));
  }
  assert.throws(()=>previewFinancialExitCode(f.result,Date.now()),/DEADLINE/);
+});
+
+test('admitted cumulative excess fee prevents financial completion and CLI zero',async t=>{
+ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
+ const f=await completedFixture(t,{dustFeeCap:total-1n});assert.equal(f.error.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(f.result.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');assert.throws(()=>previewFinancialExitCode(f.result,f.options.limits.deadlineMs));
+});
+test('successful contained result retains PASS; source-only results never become command success',async t=>{
+ const f=await completedFixture(t,{containmentComplete:true});assert.equal(f.result.status,'PASS');assert.equal(previewFinancialExitCode(f.result,f.options.limits.deadlineMs),0);
+ const r=structuredClone(f.result);r.status='SOURCE_TEST_ONLY';r.sourceTestOnly=true;assert.throws(()=>previewFinancialExitCode(r,f.options.limits.deadlineMs));
+});
+test('failed durable result retention prevents the CLI exit selector from running',async t=>{
+ const f=await completedFixture(t);writeFileSync(join(f.directory,'integration-result.json'),'original');let selected=false;
+ assert.throws(()=>{retainPreviewIntegrationResult(f.directory,f.result);selected=true;previewFinancialExitCode(f.result,f.options.limits.deadlineMs);});assert.equal(selected,false);assert.equal(readFileSync(join(f.directory,'integration-result.json'),'utf8'),'original');
+});
+import fs from 'node:fs';import {syncBuiltinESMExports} from 'node:module';
+test('final durable result directory fsync crossing the absolute deadline cannot yield CLI zero',async t=>{
+ const f=await completedFixture(t);let clock=Date.now();f.options.limits.deadlineMs=clock+1000;const fsync=fs.fsyncSync;
+ t.mock.method(Date,'now',()=>clock);t.mock.method(fs,'fsyncSync',fd=>{const r=fsync(fd);if(fs.fstatSync(fd).isDirectory())clock=f.options.limits.deadlineMs+1;return r;});syncBuiltinESMExports();t.after(()=>{t.mock.restoreAll();syncBuiltinESMExports();});
+ retainPreviewIntegrationResult(f.directory,f.result);assert.throws(()=>previewFinancialExitCode(f.result,f.options.limits.deadlineMs),{message:'PREVIEW_LAUNCH_DEADLINE'});assert.ok(readFileSync(join(f.directory,'integration-result.json')).length>0);
 });

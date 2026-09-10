@@ -1,0 +1,76 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "identityBasis": "Fresh independent GPT-6 Astra agent requested by parent; no separate provider response metadata is exposed in this agent context",
+    "role": "independent source auditor",
+    "authoredCandidate": false
+  },
+  "timestampUtc": "2026-09-10T18:25:38.140835+00:00",
+  "candidate": "source-candidate-01.json",
+  "candidateSha256": "7893d0483da00d039fac41bbaacc7025e7c167e68076c235f1cdf45a7f53b648",
+  "baseCommit": "b35445d75b07467aaf654fa9a664809f8db40923",
+  "verdict": "APPROVE_SCOPED_SOURCE_ONLY",
+  "blockingFindings": [],
+  "scope": "SP05 Preview financial command completion correction, its producer-to-CLI path, and failure controls. No actual Preview invocation or acceptance approval.",
+  "pinVerification": {
+    "before": {
+      "checked": 65,
+      "mismatches": []
+    },
+    "after": {
+      "checked": 65,
+      "mismatches": []
+    },
+    "gitDiffAgainstBaseMatchesFrozenSourcePatch": true
+  },
+  "observations": [
+    "run-local.mjs creates FINANCIAL_COMPLETE only for Preview after all four stage observations and financial verification return, absent an operation failure, with successful wallet stop and zero provider pending operations. Any existing failure remains FAILED. The undeployed branch retains the original contained/PASS versus INCOMPLETE behavior and Preview still forbids recovery options.",
+    "integrate-preview.mjs uses its fixed real dependencies unless explicitly sourceTestOnly. Its observer checks the prepared contract identity and Preview network, its comparator verifies each stage before durable stage retention, and comparator.finish must pass. Setup pending operations, deadline expiry and asset-loader cleanup failure still reject. Source adapters continue to yield SOURCE_TEST_ONLY.",
+    "providers.mjs cleanup stops new work, awaits wallet.stop, returns tracked pending operations, and explicitly reports containmentComplete false. The change removes the unconditional external-containment success barrier without changing that evidence.",
+    "preview-launch.mjs completion validation checks ordered four-stage receipt/summary correspondence, finality presence, transaction identifier membership, driver/result/cleanup consistency, four reserved submissions and available operational state. Financial completion requires containmentComplete false; PASS requires true. Failed, unknown, source-only, malformed and failure-bearing command results are rejected. Receipt authentication remains in the native observer and financial comparator; this consumer validator is not an independent cryptographic verifier.",
+    "preview-bootstrap.mjs retains its real three-child durable persistence implementation and now requires its own successful persistence-and-stop closure before validating and retaining a completion result. Persistence rejection, wallet-stop rejection and missed stop cannot reach success. The output writer uses exclusive creation plus file and directory fsync. The bootstrap checks the absolute deadline after retention; the CLI selector checks it before and after validation and maps valid financial completion to zero.",
+    "Historical Preview loan FAILED/INCOMPLETE records and original source/failing logs remain pinned and unchanged. No arbitrary historical status migration exists. All network, financial and proof acceptance flags remain false."
+  ],
+  "checks": [
+    {
+      "command": "npm --prefix experiments/moriarty-midnight-financial run test:preview",
+      "nodeVersion": "v24.18.1",
+      "pass": 89,
+      "fail": 0,
+      "skipped": 0,
+      "log": "review-gpt6-preview-01.tap",
+      "sha256": "e8f5371d3f6ffc89b9b44a93c9a3020ddf28a0bcc5428b42fbcfdf853e6db5ba"
+    },
+    {
+      "command": "node --experimental-test-module-mocks --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/run-local.test.mjs experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs",
+      "nodeVersion": "v24.18.1",
+      "pass": 150,
+      "fail": 0,
+      "skipped": 0,
+      "log": "review-gpt6-local-01.tap",
+      "sha256": "6562adf9d2119dcdf28e275e87aa551415bd9f62877eebf0d7149605b590ef52"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "limitations": [
+    "Controlled module-interception tests execute the real driver, integration, native receipt observer, comparator, durable writer and CLI exit selector with inert SDK/transport dependencies. They do not observe a real CLI subprocess exit or any new Preview run.",
+    "Bootstrap persistence controls use synthetic wallet snapshots and mocked integration. The connected retained-native-bytes positive case is loan-shaped; swap coverage is provided by existing separate Preview composition controls and inspection of shared completion logic.",
+    "No real wallet/private state, secret, service, compiler, prover, transaction or operational dispatch was accessed. Native decoding of already retained public transaction bytes occurred in source tests.",
+    "External containment remains unproven. A separately admitted actual Midnight Preview invocation with independently audited financial evidence and observed exit zero is still required by SP05/MC02. This source approval does not waive that gate or establish sprint completion.",
+    "CLI stdout write completion and actual subprocess termination were inspected in source, not experimentally established by this audit; the durable integration result is not a substitute for a raw exit-code capture.",
+    "The guarded status reported unresolved operational history. This audit performed read-only diagnosis and source tests only; it does not authorize dependent dispatch."
+  ],
+  "acceptance": {
+    "sourceCorrectionApproved": true,
+    "actualPreviewExitZeroEstablished": false,
+    "networkAcceptance": false,
+    "financialAcceptance": false,
+    "proofAcceptance": false,
+    "containmentAcceptance": false,
+    "sp05Complete": false
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "schema": "moriarty.sp05-exit-status-gap/1",
+  "status": "READ_ONLY_ANALYSIS_OPEN_PRODUCT_GAP",
+  "observedAt": "2026-09-10T18:08:13.106244+00:00",
+  "checkout": "/home/charl/Moriarty/.worktrees/sp05-preview-owner",
+  "finding": "The explicit exit-zero contract remains unsatisfied for full SP05/MC02 by the actual Preview launchers. No inspected owning source supersedes it. Scoped financial effect acceptance and separate observed containment do not rewrite actual exit1. This is an additional product result/CLI gap beyond the fee-comparator gap in the earlier analysis.",
+  "normativeAnchors": [
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/openspec/sprints/sp05-financial-integration-on-preview.md",
+      "lines": "30,58,63-67",
+      "sha256": "fd7b0cdbbfe608239c2a91c28a1c4f7d9d15d3bcc9a120eeb52098ab5c1dda2f"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/openspec/changes/mc02-preview-financial-operation/tasks.md",
+      "lines": "45-56",
+      "sha256": "628c9be36bf57dc6822e7a61d0699b72a739a0ff567a10a82bb5cec381502358"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/openspec/changes/mc02-preview-financial-operation/specs/mc02-preview-financial-operation/spec.md",
+      "lines": "36-52",
+      "sha256": "33502e6ac8777a7e133253e6189ca7e0cc3b6e43f18c67048812581565a80b91"
+    }
+  ],
+  "interfaceVersusBehavior": {
+    "exactFlags": "SP05:30 delegates exact code signatures to reviewed execution packets;:58 calls the shown other commands proposed interfaces. The admitted --run --plan <path> --sha256 <digest> therefore supplies the exact safe implementation interface. --case/--max-attempts examples are stale proposed syntax, not evidence that the live CLI supports them.",
+    "exitStatus": "SP05:67 separately requires exit0 for valid supported inputs and required controls passing; MC02 tasks:48 independently says each command requires exit0. Neither the signature delegation nor I2 uncertified scope waives this behavior.",
+    "scopeApprovals": "The loan source/resource reviews explicitly accept a bounded financial slice with separate outer-containment observation and retain incomplete flags. They do not declare full sprint closure or supersede its valid-command exit predicate.",
+    "neededDocumentation": "Once corrected and reviewed, align the advertised command with the actual closed plan interface and explain precisely what exit0 certifies. Do not rewrite the spec to bless arbitrary nonzero successful commands."
+  },
+  "currentProductionCause": [
+    {
+      "step": 1,
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/providers.mjs",
+        "lines": "414-425",
+        "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74"
+      },
+      "observation": "Production cleanup stops wallet and counts pending operations, but returns containmentComplete:false because the pinned indexer exposes no disposal API. This is deliberately conservative; the process cannot attest its own future external cgroup/container termination."
+    },
+    {
+      "step": 2,
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+        "lines": "149-167",
+        "sha256": "f95d46b44c79729d1fdc8b515d6799e02791763a5399639479c6f667310ee624"
+      },
+      "observation": "contained requires walletStopped AND pendingOperations===0 AND containmentComplete. Without that last bit, even an otherwise successful four-stage run emits INCOMPLETE and throws DRIVER_CLEANUP_INCOMPLETE."
+    },
+    {
+      "step": 3,
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+        "lines": "123-137",
+        "sha256": "f1da859d655e175799b876f87a3231c788d5db88b0f81f141efc574429dc2eab"
+      },
+      "observation": "Driver throw is retained as failure; comparator.finish may nevertheless be PASS over all four stages. Integration emits FAILED. Its alternative success path additionally demands containmentComplete===true."
+    },
+    {
+      "step": 4,
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs",
+        "lines": "95-105",
+        "sha256": "c0dda2046ef37516dc7320b1bab27912c2d85d3861bb05900a2b00f8bd9a5942"
+      },
+      "observation": "Bootstrap durably retains publicIntegrationResult, rethrows a closed launch failure, and the actual CLI catch sets exitCode1. Its success branch maps statusPASS to exit0; with current production cleanup that branch is unavailable for the observed complete financial case."
+    }
+  ],
+  "actualEvidence": [
+    {
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md",
+        "lines": "35-40",
+        "sha256": "c728b77b801877f379452c2cb1f0892f5429ca6558372ac15cd6df7104bf9281"
+      },
+      "observed": "All four financial comparisons PASS; raw FAILED/INCOMPLETE, actual launcher exit1, separate actual cgroup/container containment. Published scope is financial effects, not a successful CLI result."
+    },
+    {
+      "source": {
+        "path": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/attempt-result-01.json",
+        "lines": "observed.innerStatus/driverStatus/financialComparison",
+        "sha256": "4fa2d682894fd3d5dab7b27bb344f7c5504336031d3325b9a5a3059968b4685a"
+      },
+      "observed": "Four financial stages PASS and raw FAILED/INCOMPLETE again; independent actual result audits were pending in the previous gap task. No new audit verdict inferred here."
+    }
+  ],
+  "smallestRecommendedCorrection": {
+    "scope": "Narrow production result and CLI boundary repair in a successor source candidate, keeping independent outer containment and acceptance review mandatory. No runner, daemon or orchestration redesign.",
+    "principle": "Separate financial execution completion, in-process cleanup/persistence outcome, and external containment. A CLI exit0 can report the declared financial command completed without claiming the external timer/cgroup/container checks have happened. Whole-run/sprint acceptance remains pending those actual checks and audits.",
+    "preferredImplementationShape": [
+      "Produce an explicit typed financial-execution completion outcome only from the real driver/comparator after all required stages and durable public retention pass, with no execution/observation/comparison error. It must be distinguishable from a generic INCOMPLETE object.",
+      "Preview integration requires complete independently checked stage order, fee/gross allowance binding, valid deadline after cleanup, zero pending operations, successful wallet snapshot persistence and wallet stop. Only the exact known lack of external-containment attestation may remain pending.",
+      "Return/store that explicit scoped completion outcome while retaining containmentComplete:false or a separate external-containment pending field. Keep networkAcceptance, financialAcceptance and proofAcceptance false until independent acceptance. Choose and review a schema evolution that keeps existing closed writer checks consistent.",
+      "Map only this validated financial-completion outcome to CLI exit0 with a concise machine-readable statement that external containment remains unobserved. Actual failures, unknown finality, malformed data, missing stages, retention/persistence failure, pending work and crossed deadlines remain nonzero.",
+      "Retain the independent existing timer, cgroup kill and actual containment checks. An exit0 must not cancel the timer or close the resource/sprint gate. Keep local/recovery APIs unchanged unless an explicit reviewed shared-result change is necessary."
+    ],
+    "prohibitedShortcuts": [
+      "Setting containmentComplete=true from walletStopped or an empty pending list",
+      "Treating every FAILED/INCOMPLETE record with financialComparisonPASS as success",
+      "Matching only UNCLASSIFIED_INTEGRATION_FAILURE or a stage count and suppressing any other failure",
+      "Exiting0 for unknown submission/finality, late cleanup, failed persistence or public-output write failure",
+      "Writing new success fields into historical actual results or claiming a new CLI exit from those old records",
+      "Building an outside result-polling runner merely to disguise the command failure"
+    ],
+    "tests": [
+      "Connected real driver\u2192integration\u2192durable writer\u2192CLI control: four valid stages with known external containment unobservable, successful in-process cleanup/persistence and no pending operations yields financial-completion outcome/exit0 while containment remains false and acceptance flags stay false.",
+      "A late deadline after cleanup/final durable write rejects and exits nonzero.",
+      "Missing stage, wrong recipient, over-cap cumulative fee, malformed native ID or failed stage/result retention each exits nonzero even if earlier stage comparisons passed.",
+      "Persistence failure or pending/unknown work cannot be classified as external-containment-only pending.",
+      "Source adapters/synthetic fixtures remain explicitly SOURCE_TEST_ONLY and cannot become actual Preview financial evidence.",
+      "Old generic FAILED/INCOMPLETE objects do not gain success through a broad shape/status fallback. Existing actual-producer writer and private snapshot durability controls remain passing."
+    ],
+    "executionEvidenceBoundary": "This read-only task authorizes no new transaction. Connected source tests can prove the corrected CLI mapping without wallet/network operations. They cannot establish that a new actual public invocation exited0; if full acceptance requires that runtime observation, retain it in a separately admitted subsequent execution. Do not relabel consumed historical runs or automatically replay them."
+  },
+  "impactOnEarlierGapAnalysis": {
+    "priorReport": "/tmp/moriarty-sp05-after-preview-positive-gaps.json",
+    "correction": "The earlier nine-row report omitted the explicit command/exit contract. Its positive financial findings and fee-cap gap remain valid, but comparator repair alone is insufficient to state full SP05 complete.",
+    "otherGatesUnchanged": [
+      "Pending exact swap result audits",
+      "Local negative and production payer/recipient/omitted-fee scope remains as previously assessed; no blanket new Preview negatives",
+      "Future asset-profile Docker/Preview checkpoints",
+      "SP06 recursive history, SP09 mandatory acceptance, SP11 coverage and SP12 release"
+    ]
+  },
+  "checksPerformed": {
+    "sourceReads": true,
+    "sourceEdits": false,
+    "testsExecuted": false,
+    "networkOrServices": false,
+    "privateReads": false,
+    "gateEdits": false,
+    "newRunner": false
+  }
+}

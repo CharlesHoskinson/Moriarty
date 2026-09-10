@@ -1,0 +1,356 @@
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
+index 45233a1..211bc77 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
+@@ -126,13 +126,13 @@ export async function integratePreviewFinancialCase(options){
+     if(kind==='swap'&&stage==='initialize'){const synced=await within('swap-sync',()=>wallet.waitForSyncedState());assertSwapInitializedWallet({receipt:observation.receipt,roles,assetBindings,synced,network:'preview'});validDeadline(limits.deadlineMs);}return summary;}
+   });}catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
+   finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}
+-  requireThat(driverResult?.status==='PASS'&&financialComparison?.status==='PASS'&&pending.size===0,'PREVIEW_INTEGRATION_INCOMPLETE');
++  requireThat(['PASS','FINANCIAL_COMPLETE'].includes(driverResult?.status)&&financialComparison?.status==='PASS'&&pending.size===0,'PREVIEW_INTEGRATION_INCOMPLETE');
+  }catch(error){failure=error instanceof Error?error:Error('PREVIEW_INTEGRATION_FAILURE');}
+  finally{
+   if(!driverStarted||!driverResult?.cleanup){if(providers){try{cleanup=await providers.cleanup();}catch{cleanup=await stopWallet(wallet);}}else cleanup=await stopWallet(wallet);}else cleanup=driverResult.cleanup;
+   if(loaded){try{await loaded.cleanup();}catch{failure??=Error('ASSET_LOADER_CLEANUP_FAILED');}}
+  }
+- if(!failure){try{validDeadline(limits.deadlineMs);requireThat(pending.size===0&&cleanup?.walletStopped===true&&cleanup.pendingOperations===0&&cleanup.containmentComplete===true,'PREVIEW_INTEGRATION_INCOMPLETE');}catch(error){failure=error;}}
+- const result={schema:'moriarty.preview-financial-integration/1',status:failure?'FAILED':sourceTestOnly?'SOURCE_TEST_ONLY':'PASS',kind:options?.kind,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),scope:'Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance'};
++ if(!failure){try{validDeadline(limits.deadlineMs);requireThat(pending.size===0&&cleanup?.walletStopped===true&&cleanup.pendingOperations===0,'PREVIEW_INTEGRATION_INCOMPLETE');}catch(error){failure=error;}}
++ const result={schema:'moriarty.preview-financial-integration/1',status:failure?'FAILED':sourceTestOnly?'SOURCE_TEST_ONLY':cleanup.containmentComplete?'PASS':'FINANCIAL_COMPLETE',kind:options?.kind,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),scope:'Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance'};
+  if(failure){failure.publicIntegrationResult=result;throw failure;}return result;
+ }
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs b/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs
+index 55e12e5..b3e4727 100644
+--- a/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs
+@@ -5,7 +5,7 @@ import {readFileSync,mkdirSync,lstatSync,renameSync,unlinkSync,existsSync,openSy
+ import {join,dirname,resolve} from 'node:path';
+ import {pathToFileURL} from 'node:url';
+ import {createHash} from 'node:crypto';
+-import {validatePreviewLaunchPlan,retainPreviewIntegrationResult,retainPreviewStage,publicPreviewLaunchEvent} from './preview-launch.mjs';
++import {validatePreviewLaunchPlan,retainPreviewIntegrationResult,retainPreviewStage,publicPreviewLaunchEvent,validatePreviewFinancialCompletion} from './preview-launch.mjs';
+ import {readPrivateLaunchFile,readLocalStoragePassword,decodeSavedWalletEnvelope,inspectLocalLaunchRuntime,retainPublicSubmissions} from './launch-local.mjs';
+ import {inspectFinancialBuild} from './proven-assets.mjs';
+ import {createPreviewRpc} from './financial-rpc.mjs';
+@@ -89,18 +89,20 @@ export async function launchPreviewFinancialCase(plan){
+   for(const kind of childKinds)check(synced[kind]?.progress?.isConnected===true&&synced[kind].progress.isStrictlyComplete()===true,'PREVIEW_SYNC_INCOMPLETE');
+   check(Array.isArray(synced.unshielded.pendingCoins)&&synced.unshielded.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PREVIEW_PENDING_WALLET');
+   const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
+-  let stopping;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));}finally{await target.stop();}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
++  let stopping,persisted=false,walletStopped=false;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));persisted=true;}finally{await target.stop();walletStopped=true;}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
+   const retainedWallet=retainPublicSubmissions({wallet:persistentWallet,ledger,directory:submissionDirectory});
+   const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicPreviewLaunchEvent(e)),onStage:s=>retainPreviewStage(p.outputDirectory,s)};
+   phase='integration';ownershipTransferred=true;let result;
+   try{result=await integratePreviewFinancialCase(options);}catch(error){if(error.publicIntegrationResult!==undefined)retainPreviewIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('PREVIEW_FINANCIAL_RUN_INCOMPLETE');}
++  check(persisted&&walletStopped,'PREVIEW_COMPLETION_PERSISTENCE');validatePreviewFinancialCompletion(result);
+   retainPreviewIntegrationResult(p.outputDirectory,result);deadlineCheck(deadline);return result;
+  }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('PREVIEW_FINANCIAL_LAUNCH_FAILED');}
+  finally{seed?.fill(0);if(!ownershipTransferred){let timer;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Independent outer containment remains required. */}finally{clearTimeout(timer);}}}
+ }
++export function previewFinancialExitCode(result,deadlineMs){deadlineCheck(deadlineMs);validatePreviewFinancialCompletion(result);deadlineCheck(deadlineMs);return 0;}
+ if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+  let timer;
+- try{const args=process.argv.slice(2);check(args.length===5&&args[0]==='--run'&&args[1]==='--plan'&&args[3]==='--sha256'&&hex(args[4]),'PREVIEW_LAUNCH_USAGE');const raw=readPrivateLaunchFile(args[2]);check(hash(raw)===args[4],'PREVIEW_PLAN_HASH');const p=validatePreviewLaunchPlan(JSON.parse(raw));timer=setTimeout(()=>process.exit(124),Math.max(1,p.limits.deadlineMs-Date.now()+6000));const r=await launchPreviewFinancialCase(p);process.stdout.write(JSON.stringify({status:r.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=r.status==='PASS'?0:2;}
++ try{const args=process.argv.slice(2);check(args.length===5&&args[0]==='--run'&&args[1]==='--plan'&&args[3]==='--sha256'&&hex(args[4]),'PREVIEW_LAUNCH_USAGE');const raw=readPrivateLaunchFile(args[2]);check(hash(raw)===args[4],'PREVIEW_PLAN_HASH');const p=validatePreviewLaunchPlan(JSON.parse(raw));timer=setTimeout(()=>process.exit(124),Math.max(1,p.limits.deadlineMs-Date.now()+6000));const r=await launchPreviewFinancialCase(p);process.stdout.write(JSON.stringify({status:r.status,containmentComplete:r.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=previewFinancialExitCode(r,p.limits.deadlineMs);}
+  catch{process.stderr.write('Preview financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+  finally{clearTimeout(timer);}process.exit(process.exitCode??0);
+ }
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs b/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs
+index 61021b4..3d1ce53 100644
+--- a/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs
+@@ -9,14 +9,14 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFile
+ import {PINNED_NM} from './providers.mjs';
+ const originalHelpers=await import('./launch-local.mjs');
+ const pins=JSON.parse(readFileSync(new URL('./launch-runtime-pins.json',import.meta.url)));
+-async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false}={}){
++async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false,skipStop=false,stopFailure=false,persistenceFailure=false}={}){
+  const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-bootstrap-')),events=[];t.after(()=>rmSync(dir,{recursive:true,force:true}));mkdirSync(join(dir,'wallet'),{mode:0o700});
+  const p={schema:'moriarty.preview-financial-launch/1',kind:'loan',build:{receiptPath:'/public-fixture',receiptSha256:'ab'.repeat(32),sourceManifestHash:'cd'.repeat(32)},networkConfig:{networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},wallet:{stateDirectory:join(dir,'wallet'),seedFile:join(dir,'seed'),expectedAddress:'CONTROLLED_PREVIEW_ADDRESS'},roles:{secretsFile:join(dir,'roles'),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)},privateState:{directory:join(dir,'contract'),passwordFile:join(dir,'password')},networkTag:'03'.repeat(32),expectedProtocolVersion:1000000,limits:{allocationId:'fixture',submissions:4,deadlineMs:Date.now()+10000,dustFee:'1000',grossByLogicalAsset:{USD_TEST_ASSET:'20000000000'}},outputDirectory:join(dir,'run')};
+  if(reuse)mkdirSync(p.outputDirectory,{mode:0o700});
+  const childDir=join(p.wallet.stateDirectory,'.midnight-wallet-state/preview');mkdirSync(childDir,{recursive:true,mode:0o700});for(const kind of ['shielded','unshielded','dust'])writeFileSync(join(childDir,kind+'.json'),JSON.stringify({version:1,state:'persisted-'+kind}),{mode:0o600});
+  // Dependency modules are mocked only by the Node source-test runner. Production
+  // launch accepts no adapter objects and uses the fixed real imports.
+- t.mock.module(new URL('./preview-launch.mjs',import.meta.url).href,{namedExports:{validatePreviewLaunchPlan:x=>structuredClone(x),retainPreviewIntegrationResult:(_d,r)=>{events.push('result:'+r.status);},retainPreviewStage:(_d,s)=>({status:'RECORDED',stage:s.stage,txId:s.txId}),publicPreviewLaunchEvent:e=>e}});
++ t.mock.module(new URL('./preview-launch.mjs',import.meta.url).href,{namedExports:{validatePreviewLaunchPlan:x=>structuredClone(x),validatePreviewFinancialCompletion:x=>x,retainPreviewIntegrationResult:(_d,r)=>{events.push('result:'+r.status);},retainPreviewStage:(_d,s)=>({status:'RECORDED',stage:s.stage,txId:s.txId}),publicPreviewLaunchEvent:e=>e}});
+  t.mock.module(new URL('./proven-assets.mjs',import.meta.url).href,{namedExports:{inspectFinancialBuild:async()=>{events.push('build');}}});
+  t.mock.module(new URL('./financial-rpc.mjs',import.meta.url).href,{namedExports:{createPreviewRpc:()=>async(m,params)=>{assert.equal(m,'chain_getBlockHash');assert.deepEqual(params,[0]);events.push('genesis');return '0x'+(genesisWrong?'ff'.repeat(32):p.networkTag);}}});
+  t.mock.module(new URL('./launch-local.mjs',import.meta.url).href,{namedExports:{...originalHelpers,inspectLocalLaunchRuntime:async()=>{events.push('pins');},readLocalStoragePassword:async()=>{events.push('private-password');return 'CONTROLLED_PASSWORD';},readPrivateLaunchFile:file=>{
+@@ -29,13 +29,13 @@ async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesis
+  }}});
+  let stopped=0;
+  const progress={isConnected:true,isStrictlyComplete:()=>true};
+- const wallet={unshielded:{state:{}},stop:async()=>{stopped++;events.push('stop');},start:async()=>events.push('start'),waitForSyncedState:async()=>({isSynced:true,shielded:{progress},unshielded:{progress,pendingCoins:[]},dust:{progress,availableCoins:[{}],state:{pendingDust:[]}}}),submitTransaction:async()=>{throw Error('NO_SUBMIT');}};
+- for(const kind of ['shielded','unshielded','dust'])wallet[kind]={...wallet[kind],serializeState:async()=> 'updated-'+kind};
++ const wallet={unshielded:{state:{}},stop:async()=>{stopped++;events.push('stop');if(stopFailure)throw Error('CONTROLLED_STOP_FAILURE');},start:async()=>events.push('start'),waitForSyncedState:async()=>({isSynced:true,shielded:{progress},unshielded:{progress,pendingCoins:[]},dust:{progress,availableCoins:[{}],state:{pendingDust:[]}}}),submitTransaction:async()=>{throw Error('NO_SUBMIT');}};
++ for(const kind of ['shielded','unshielded','dust'])wallet[kind]={...wallet[kind],serializeState:async()=>{if(persistenceFailure)throw Error('CONTROLLED_PERSIST_FAILURE');return 'updated-'+kind;}};
+  const sdk={Roles:{Zswap:'z',NightExternal:'n',Dust:'d'},HDWallet:{fromSeed:()=>({type:'seedOk',hdWallet:{selectAccount:()=>({selectRoles:()=>({deriveKeysAt:()=>({type:'keysDerived',keys:{z:new Uint8Array(32),n:new Uint8Array(32),d:new Uint8Array(32)}})})}),clear(){events.push('hd-clear');}}})},createKeystore:(_k,n)=>{assert.equal(n,'preview');return {getBech32Address:()=>({asString:()=>p.wallet.expectedAddress,toString:()=>p.wallet.expectedAddress}),getAddress:()=>p.roles.firstAddress,getSecretKey:()=>new Uint8Array(32),getPublicKey:()=> 'public-key'};},NoOpTransactionHistoryStorage:class{},WalletFacade:{init:async o=>{events.push('facade-init');assert.equal(o.configuration.networkId,'preview');for(const name of ['shielded','unshielded','dust'])await o[name]({});return wallet;}}};
+  for(const [key,kind] of [['ShieldedWallet','shielded'],['UnshieldedWallet','unshielded'],['DustWallet','dust']])sdk[key]=()=>({restore:async state=>{events.push('restore:'+kind);assert.equal(state,'persisted-'+kind);return {stop:async()=>{stopped++;}};}});
+  const modules={'@midnight-ntwrk/wallet-sdk':sdk,'@midnight-ntwrk/midnight-js-protocol':{ZswapSecretKeys:{fromSeed:()=>({})},DustSecretKey:{fromSeed:()=>({})},signingKeyFromBip340:()=> 'controlled-key',signatureVerifyingKey:()=> 'public-key'},'@midnight-ntwrk/midnight-js-network-id':{setNetworkId:n=>{assert.equal(n,'preview');events.push('network');}},rxjs:{firstValueFrom:async()=>({state:{networkId:wrongRestore?'undeployed':'preview',publicKey:{publicKey:'public-key',addressHex:p.roles.firstAddress,address:p.wallet.expectedAddress}}})},ws:{WebSocket:class{}}};
+  for(const [name,exports] of Object.entries(modules))t.mock.module(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href,{namedExports:exports});
+- t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
++ t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');if(!skipStop)await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
+  const subject=await import('./preview-bootstrap.mjs?fixture='+Math.random());return {p,events,subject,stops:()=>stopped};
+ }
+ test('existing Preview children restore before guarded integration and durable result',async t=>{
+@@ -101,3 +101,7 @@ test('final persistence fsync crossing deadline rejects without undoing a cohere
+  assert.equal(removed,true);assert.equal(existsSync(join(parent,'.moriarty-persistence-pending.json')),false);
+  for(const kind of ['shielded','unshielded','dust']){assert.equal(JSON.parse(readFileSync(join(parent,kind+'.json'))).state,'updated-'+kind);assert.deepEqual(readFileSync(join(parent,'.moriarty-backup-fixture-fsync',kind+'.json')),original[kind]);}
+ });
++
++for(const control of [{skipStop:true},{stopFailure:true},{persistenceFailure:true}])test('bootstrap refuses success without its own completed persistence and wallet stop',async t=>{
++ const f=await fixture(t,control);await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.some(x=>x.startsWith('result:')));
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-exit.test.mjs b/experiments/moriarty-midnight-financial/ledger/preview-exit.test.mjs
+new file mode 100644
+index 0000000..0609db7
+--- /dev/null
++++ b/experiments/moriarty-midnight-financial/ledger/preview-exit.test.mjs
+@@ -0,0 +1,123 @@
++/** Composed SOURCE-ONLY regressions. Transport/SDK submission and reservation
++ * counters are controlled fixtures, never live calls or real allocations.
++ * Native transaction bytes and financial public states come from retained loan
++ * evidence. Role capability commitments alone are replaced with commitments to
++ * synthetic test secrets; no original private roles or state are accessed.
++ * ContractState containers have controlled empty balances; decoded financial
++ * fields are reconstructed from retained summaries, not decoded from those containers.
++ */
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {readFileSync,mkdtempSync,rmSync,writeFileSync,openSync,fsyncSync,closeSync} from 'node:fs';
++import {tmpdir} from 'node:os';
++import {join} from 'node:path';
++import {pathToFileURL} from 'node:url';
++import {PINNED_NM} from './providers.mjs';
++
++import {runPreviewFinancialCase} from './run-local.mjs';
++import {observeFinalizedStage} from './receipt.mjs';
++import {createFinancialComparator} from './financial-comparison.mjs';
++
++const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
++const stateRuntime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
++const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
++const {MidnightBech32m,UnshieldedAddress}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-address-format/dist/index.js')).href);
++const D=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
++const read=path=>readFileSync(new URL(path,D));
++const retained=JSON.parse(read('preview-loan-01/actual-run/integration-result.json'));
++const stages=['deploy','initialize','accrue','settle'];
++const summaries=Object.fromEntries(stages.map(s=>[s,JSON.parse(read(`preview-loan-01/actual-run/stage-${s}.json`))]));
++const receiptByStage=Object.fromEntries(retained.driver.stages.map(r=>[r.circuitId,r]));
++const raws=Object.fromEntries(stages.map(s=>[s,read('preview-loan-01/actual-run/public-transactions/'+receiptByStage[s].transaction.transactionHash+'.bin')]));
++const bytes=s=>Uint8Array.from(Buffer.from(s,'hex'));
++const address=receiptByStage.deploy.contractAddress,first=summaries.deploy.publicState.borrowerAddress.bytes,second=summaries.deploy.publicState.lenderAddress.bytes,networkTag=summaries.deploy.publicState.networkTag;
++const color=summaries.initialize.publicState.usdColor;
++const publicKey=[...ledger.Transaction.deserialize('signature','proof','binding',raws.settle).intents.values()].flatMap(i=>[i.guaranteedUnshieldedOffer,i.fallibleUnshieldedOffer]).filter(Boolean).flatMap(o=>o.inputs)[0].owner;
++const roles={firstAddress:first,secondAddress:second,firstSecret:new Uint8Array(32).fill(17),secondSecret:new Uint8Array(32).fill(18)};
++function decodedState(stage){
++ const p=summaries[stage].publicState;
++ const scalars=x=>typeof x==='string'?BigInt(x):Object.fromEntries(Object.entries(x).map(([k,v])=>[k,scalars(v)]));
++ const s={...p,programDigest:bytes(p.programDigest),networkTag:bytes(p.networkTag),initialized:p.initialized,remaining:BigInt(p.remaining),revision:BigInt(p.revision),kernelState:scalars(p.kernelState),usdDomain:bytes(p.usdDomain),usdColor:bytes(p.usdColor),lastAccrue:scalars(p.lastAccrue),lastSettle:scalars(p.lastSettle)};
++ for(const [role,secret] of [['borrower',roles.firstSecret],['lender',roles.secondSecret]]){s[role+'Address']={bytes:bytes(p[role+'Address'].bytes)};s[role+'Capability']=runtime.persistentHash(new runtime.CompactTypeVector(4,new runtime.CompactTypeBytes(32)),[Uint8Array.from(Buffer.from(`moriarty:sp05:loan:${role}`.padEnd(32,'\0'))),bytes(networkTag),bytes(p.programDigest),secret]);}
++ return s;
++}
++function fixture({wireMutation,observationMutation,bindingMutation}={}){
++ const calls=[],compared=[],watched=[];let stopped=false,closed=false;const priorCount=0,priorDust=0n;let charges=priorDust,gross=0n;
++ const network={networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
++ const binding={network,payerAddress:first,sdkNetworkId:'preview'};
++ const submit=stage=>{calls.push(stage);charges+=BigInt(receiptByStage[stage].transaction.dustFee);gross+=BigInt(receiptByStage[stage].transaction.grossByAsset[color]??0);return receiptByStage[stage].txId;};
++ const sdkCalls={deployContract:async()=>({deployTxData:{public:{contractAddress:address,txId:submit('deploy')}}}),submitCallTx:async(_p,o)=>({public:{txId:submit(o.circuitId)}})};
++ const options={kind:'loan',sourceTestOnly:true,walletContext:{wallet:{async stop(){closed=true;}},unshieldedKeystore:{getPublicKey:()=>publicKey,getBech32Address:()=>MidnightBech32m.encode('preview',new UnshieldedAddress(Buffer.from(first,'hex')))},shieldedSecretKeys:{coinPublicKey:'synthetic-coin',encryptionPublicKey:'synthetic-encryption'}},networkConfig:network,roles,networkTag,deploymentSigningKey:'synthetic-signing-key-not-used',build:{receiptPath:'/synthetic/public-build.json',receiptSha256:'11'.repeat(32),sourceManifestHash:'22'.repeat(32)},privateStateConfig:{},limits:{allocationId:'composed-negative-only',reservationStatePath:'/synthetic/no-file-created',deadlineMs:Date.now()+10000,submissions:4,dustFee:2000000000000000n,grossByLogicalAsset:{USD_TEST_ASSET:20000000000n}},expectedProtocolVersion:1000000,onEvent:()=>{},now:()=>1700000000n,onStage:async s=>{compared.push(s.stage);if(bindingMutation)bindingMutation(s.stage,binding);return {status:'RECORDED',stage:s.stage,txId:s.txId};}};
++ options.adapters={loadPublicIdentity:()=>({address:MidnightBech32m.encode('preview',new UnshieldedAddress(Buffer.from(first,'hex'))).toString()}),loadAssets:async()=>({compiledContract:{sourceOnly:true},decodeState:decodedState,zkConfigPath:'/synthetic/no-proving-assets',assertFresh(){},cleanup(){}}),loadContractsSdk:async()=>sdkCalls,loadProviderSdk:async()=>({getNetworkId:()=> 'preview',NodeZkConfigProvider:class{}}),loadNativeRuntime:async()=>({ledger,runtime}),prepareDeployment:async()=>({public:{contractAddress:address},driverSdk:sdkCalls}),initializeReservations:()=>{},createProviders:async()=>({publicDataProvider:{},execute:async(_label,fn)=>fn(),stop(){stopped=true;},getExecutionBinding:()=>binding,getState:()=>({reservedSubmissions:priorCount+calls.length,reservedDustFee:charges,reservedGrossByAsset:gross?{[color]:gross}:{},identifiers:calls.flatMap(s=>receiptByStage[s].transaction.identifiers)}),cleanup:async()=>{closed=true;return {walletStopped:true,pendingOperations:0,containmentComplete:true};}}),createComparator:createFinancialComparator,driver:runPreviewFinancialCase,fetch:async(_url,o)=>{const r=JSON.parse(o.body);assert.equal(r.method,'chain_getBlockHash');assert.deepEqual(r.params,[0]);return Response.json({jsonrpc:'2.0',id:r.id,result:'0x'+networkTag});},observe:async o=>{
++  const stage=o.circuitId,r=receiptByStage[stage];
++  const row=x=>({owner:MidnightBech32m.encode('preview',new UnshieldedAddress(Buffer.from(x.owner,'hex'))).toString(),tokenType:x.type,value:BigInt(x.value),intentHash:x.intentHash});
++  const data={tx:ledger.Transaction.deserialize('signature','proof','binding',raws[stage]),txId:r.txId,txHash:r.transaction.transactionHash,identifiers:r.transaction.identifiers,status:'SucceedEntirely',protocolVersion:r.protocolVersion,blockHash:r.blockHash,blockHeight:r.blockHeight,fees:{paidFees:r.fees.indexerReported.paid,estimatedFees:r.fees.indexerReported.estimated},unshielded:{created:r.transaction.outputs.map(row),spent:r.transaction.inputs.map(row)}};
++  if(wireMutation)wireMutation(stage,data);
++  const provider={watchForTxData:async id=>{watched.push(stage);assert.equal(id,r.txId);return data;},queryContractState:async()=>new stateRuntime.ContractState(),queryUnshieldedBalances:async()=>Object.entries(r.contractBalances).map(([tokenType,value])=>({tokenType,balance:BigInt(value)}))};
++  const rpc=async(method,args)=>method==='chain_getHeader'?{number:'0x'+r.blockHeight.toString(16)}:method==='chain_getBlockHash'?'0x'+r.blockHash:'0x'+r.blockHash;
++  const observed=await observeFinalizedStage({...o,provider,rpc,decodeState:()=>o.decodeState(stage)});if(observationMutation)observationMutation(stage,observed);return observed;
++ }};
++ return {options,calls,compared,watched,state:()=>({stopped,closed,charges,gross,priorCount,priorDust})};
++}
++
++// Fixture above is retained verbatim from the frozen Preview composition test;
++// this consumer test connects its actual producer outputs to durable writers.
++
++import {retainPreviewStage,retainPreviewIntegrationResult,validatePreviewFinancialCompletion} from './preview-launch.mjs';
++import {previewFinancialExitCode} from './preview-bootstrap.mjs';
++const originals={providers:await import('./providers.mjs'),assets:await import('./proven-assets.mjs'),prepare:await import('./prepare-deployment.mjs'),receipt:await import('./receipt.mjs')};
++// Test-runner module interception only: no production adapters or source status
++// are passed to the real integration entry. SDK/transport operations are inert.
++async function completedFixture(t,{pending=0,stopFailure=false,observationMutation,retentionFailure=false,dustFeeCap,containmentComplete=false}={}){
++ const f=fixture({observationMutation}),deps=f.options.adapters,directory=mkdtempSync(join(tmpdir(),'moriarty-preview-exit-'));
++ t.after(()=>rmSync(directory,{recursive:true,force:true}));
++ if(dustFeeCap!==undefined)f.options.limits.dustFee=dustFeeCap;
++ const create=deps.createProviders;
++ deps.createProviders=async o=>{const p=await create(o);return {...p,cleanup:async()=>{await p.cleanup();if(stopFailure)throw Error('CONTROLLED_WALLET_STOP_FAILED');return {walletStopped:true,pendingOperations:pending,containmentComplete};}};};
++ t.mock.module(new URL('./providers.mjs',import.meta.url).href,{namedExports:{...originals.providers,loadFinancialSdk:deps.loadProviderSdk,initializeFinancialReservations:deps.initializeReservations,createFinancialProviders:deps.createProviders}});
++ t.mock.module(new URL('./proven-assets.mjs',import.meta.url).href,{namedExports:{...originals.assets,loadProvenFinancialContract:deps.loadAssets}});
++ t.mock.module(new URL('./prepare-deployment.mjs',import.meta.url).href,{namedExports:{...originals.prepare,loadFinancialContractsSdk:deps.loadContractsSdk,prepareFinancialDeployment:deps.prepareDeployment}});
++ t.mock.module(new URL('./receipt.mjs',import.meta.url).href,{namedExports:{...originals.receipt,observeFinalizedStage:deps.observe}});
++ t.mock.method(globalThis,'fetch',deps.fetch);
++ delete f.options.adapters;delete f.options.sourceTestOnly;
++ f.options.onStage=s=>{if(retentionFailure)throw Error('CONTROLLED_RETENTION_FAILURE');return retainPreviewStage(directory,s);};
++ const entry=await import('./integrate-preview.mjs?exit-test='+Math.random());
++ let result,error;try{result=await entry.integratePreviewFinancialCase(f.options);}catch(e){error=e;result=e.publicIntegrationResult;}
++ return {...f,result,error,directory};
++}
++test('controlled production driver/integration/writer reaches CLI zero selector with external containment still false',async t=>{
++ const f=await completedFixture(t);assert.equal(f.error,undefined);assert.equal(f.result.status,'FINANCIAL_COMPLETE');assert.equal(f.result.driver.status,'FINANCIAL_COMPLETE');
++ retainPreviewIntegrationResult(f.directory,f.result);const stored=JSON.parse(readFileSync(join(f.directory,'integration-result.json')));
++ assert.equal(previewFinancialExitCode(stored,f.options.limits.deadlineMs),0);assert.equal(stored.cleanup.containmentComplete,false);assert.equal(stored.driver.cleanup.containmentComplete,false);
++ for(const k of ['networkAcceptance','proofAcceptance','financialAcceptance'])assert.equal(stored[k],false);
++ assert.equal(stored.sourceTestOnly,false);assert.deepEqual(f.calls,stages);assert.equal(stored.comparisons.length,4);
++});
++for(const control of [{pending:1},{stopFailure:true},{retentionFailure:true},{observationMutation:(s,o)=>{if(s==='initialize')o.receipt.transaction.outputs[0].owner=second;}}])test('failed/pending production path never receives CLI zero',async t=>{
++ const f=await completedFixture(t,control);assert.ok(f.error);assert.throws(()=>previewFinancialExitCode(f.result,f.options.limits.deadlineMs));assert.notEqual(f.result.status,'FINANCIAL_COMPLETE');
++});
++test('completed result validator rejects stale status, missing stages/IDs, unknown work and false containment claims',async t=>{
++ const f=await completedFixture(t);assert.equal(f.error,undefined);
++ for(const mutate of [r=>r.status='FAILED',r=>r.status='INCOMPLETE',r=>r.sourceTestOnly=true,r=>r.setupPendingOperations=1,r=>r.driver.stages.pop(),r=>delete r.driver.stages[0].finalizedHeight,r=>r.financialComparison.stages.pop(),r=>r.driver.transactionIds[0]='bad',r=>r.cleanup.containmentComplete=true,r=>r.driver.status='INCOMPLETE',r=>r.driver.operationalState={unavailable:true},r=>r.driver.failure={phase:'observe',stage:'settle',code:'UNCLASSIFIED_DRIVER_FAILURE'}]){
++  const r=structuredClone(f.result);mutate(r);assert.throws(()=>previewFinancialExitCode(r,f.options.limits.deadlineMs));
++ }
++ assert.throws(()=>previewFinancialExitCode(f.result,Date.now()),/DEADLINE/);
++});
++
++test('admitted cumulative excess fee prevents financial completion and CLI zero',async t=>{
++ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
++ const f=await completedFixture(t,{dustFeeCap:total-1n});assert.equal(f.error.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(f.result.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');assert.throws(()=>previewFinancialExitCode(f.result,f.options.limits.deadlineMs));
++});
++test('successful contained result retains PASS; source-only results never become command success',async t=>{
++ const f=await completedFixture(t,{containmentComplete:true});assert.equal(f.result.status,'PASS');assert.equal(previewFinancialExitCode(f.result,f.options.limits.deadlineMs),0);
++ const r=structuredClone(f.result);r.status='SOURCE_TEST_ONLY';r.sourceTestOnly=true;assert.throws(()=>previewFinancialExitCode(r,f.options.limits.deadlineMs));
++});
++test('failed durable result retention prevents the CLI exit selector from running',async t=>{
++ const f=await completedFixture(t);writeFileSync(join(f.directory,'integration-result.json'),'original');let selected=false;
++ assert.throws(()=>{retainPreviewIntegrationResult(f.directory,f.result);selected=true;previewFinancialExitCode(f.result,f.options.limits.deadlineMs);});assert.equal(selected,false);assert.equal(readFileSync(join(f.directory,'integration-result.json'),'utf8'),'original');
++});
++import fs from 'node:fs';import {syncBuiltinESMExports} from 'node:module';
++test('final durable result directory fsync crossing the absolute deadline cannot yield CLI zero',async t=>{
++ const f=await completedFixture(t);let clock=Date.now();f.options.limits.deadlineMs=clock+1000;const fsync=fs.fsyncSync;
++ t.mock.method(Date,'now',()=>clock);t.mock.method(fs,'fsyncSync',fd=>{const r=fsync(fd);if(fs.fstatSync(fd).isDirectory())clock=f.options.limits.deadlineMs+1;return r;});syncBuiltinESMExports();t.after(()=>{t.mock.restoreAll();syncBuiltinESMExports();});
++ retainPreviewIntegrationResult(f.directory,f.result);assert.throws(()=>previewFinancialExitCode(f.result,f.options.limits.deadlineMs),{message:'PREVIEW_LAUNCH_DEADLINE'});assert.ok(readFileSync(join(f.directory,'integration-result.json')).length>0);
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs b/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
+index 195753c..092f2d5 100644
+--- a/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
+@@ -94,7 +94,7 @@ test('Preview composition uses real exclusive reservations and guarded provider
+   f.options.adapters.loadProviderSdk=async()=>({...await prior(),levelPrivateStateProvider:()=>({}),indexerPublicDataProvider:()=>({}),httpClientProofProvider:()=>({})});
+   f.options.adapters.initializeReservations=initializeFinancialReservations;
+   f.options.adapters.createProviders=createFinancialProviders;
+-  await assert.rejects(run(f),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicIntegrationResult.driver.operationalState.reservedSubmissions,0);assert.equal(e.publicIntegrationResult.financialComparison.status,'PASS');assert.equal(e.publicIntegrationResult.cleanup.containmentComplete,false);return true;});
++  const r=await run(f);assert.equal(r.status,'SOURCE_TEST_ONLY');assert.equal(r.driver.status,'FINANCIAL_COMPLETE');assert.equal(r.driver.operationalState.reservedSubmissions,0);assert.equal(r.financialComparison.status,'PASS');assert.equal(r.cleanup.containmentComplete,false);
+   assert.ok(readFileSync(f.options.limits.reservationStatePath).length>0);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ });
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-launch.mjs b/experiments/moriarty-midnight-financial/ledger/preview-launch.mjs
+index 2bffacc..f4e14dc 100644
+--- a/experiments/moriarty-midnight-financial/ledger/preview-launch.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/preview-launch.mjs
+@@ -3,6 +3,7 @@
+  */
+ import {readFileSync,lstatSync,openSync,writeFileSync,closeSync,fsyncSync,constants} from 'node:fs';
+ import {createHash} from 'node:crypto';
++import {isDeepStrictEqual} from 'node:util';
+ import {dirname,join,isAbsolute,resolve} from 'node:path';
+ import {decodePreviewIndexedOwner} from './indexed-owner.mjs';
+ import {validatePublicDriverFailure} from './run-local.mjs';
+@@ -31,7 +32,7 @@ export function validatePreviewLaunchPlan(p){
+ }
+ const KEYS=new Set('ASSET_A ASSET_B USD_TEST_ASSET acceptance actions address after amount asset assetADomain assetBDomain assetBindings blockHash blockHeight borrower borrowerAddress borrowerCapability build bytes circuitId claimedUnshieldedSpends cleanup colorA colorB comparisons containmentComplete contractAddress contractBalances driver dustFee effect0 effect1 effect2 effects encoding entryPoint estimated expectationsSha256 f0 f1 f2 f3 f4 f5 f6 f7 f8 failure failureCode fees finalizedHead finalizedHeight financialAcceptance financialComparison grossByAsset identifiers indexerFees indexerIdentifiers indexerReported initialized inputs intentHash kernelState kind lastAccrue lastClose lastSettle lastSwap ledgerAccepted lender lenderAddress lenderCapability nativeDebit nativeDebitRelationship nativeEffects nativeFee networkAcceptance networkTag offerIndex operationalState outputNo outputs owner paid participantNetDeltas pendingOperations phase programDigest proofAcceptance proofVerified protocolVersion provider providerAddress providerCapability publicState rawSha256 receiptSha256 recipient recipientKind remaining reservedDustFee reservedGrossByAsset reservedSubmissions revision schema scope section segment setupPendingOperations sourceManifestHash sourceTestOnly sourceUnitLabel stage stages status trader traderAddress traderCapability transaction transactionHash transactionIds transcripts txId type unit unshieldedInputs unshieldedMints unshieldedOutputs usdColor usdDomain v0 v1 v2 v3 v4 v5 value walletStopped unavailable code'.split(' '));
+ const SCOPES=new Set(['All four stages match independent fixed loan/swap expectations; external observer, indexer and RPC trust remain; no PCD or proof acceptance','Exact fixed financial trace comparison over supplied finalized observations; no proof or network acceptance','Fixed I2 composition; source adapters and incomplete containment never establish financial network acceptance','Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance','Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance']);
+-const VALUES=new Set('DUST SPECK unresolved uncertified-I2-observation loan swap deploy initialize accrue settle close call user contract guaranteed fallible PASS FAILED INCOMPLETE SOURCE_TEST_ONLY preflight allocate driver load-assets prepare-deployment providers public-identity observe compare'.split(' '));
++const VALUES=new Set('DUST SPECK unresolved uncertified-I2-observation loan swap deploy initialize accrue settle close call user contract guaranteed fallible PASS FINANCIAL_COMPLETE FAILED INCOMPLETE SOURCE_TEST_ONLY preflight allocate driver load-assets prepare-deployment providers public-identity observe compare'.split(' '));
+ const HASH_FIELDS=new Set('rawSha256 transactionHash contractAddress address bytes owner intentHash programDigest networkTag usdColor usdDomain colorA colorB assetADomain assetBDomain borrowerCapability lenderCapability traderCapability providerCapability receiptSha256 sourceManifestHash expectationsSha256 type'.split(' '));
+ const ID_FIELDS=new Set(['txId','transactionIds','identifiers','indexerIdentifiers']);
+ const PREVIEW_FAILURES=new Set(['PREVIEW_NETWORK_CONFIG','PREVIEW_PUBLIC_IDENTITY_PIN','PREVIEW_WALLET_IDENTITY','PREVIEW_GENESIS_MISMATCH','PREVIEW_RECOVERY_FORBIDDEN','PREVIEW_INTEGRATION_INCOMPLETE','PREVIEW_INTEGRATION_FAILURE','INTEGRATION_DEADLINE']);
+@@ -60,15 +61,42 @@ function publicClone(value){let count=0;const seen=new Set();function clone(v,ke
+ function cleanup(c){exact(c,'walletStopped,pendingOperations,containmentComplete');check(typeof c.walletStopped==='boolean'&&typeof c.containmentComplete==='boolean'&&(c.pendingOperations===null||Number.isSafeInteger(c.pendingOperations)&&c.pendingOperations>=0),'PREVIEW_PUBLIC_CLEANUP');}
+ function safeDirectory(directory){absolute(directory);for(let p=directory;;p=dirname(p)){const s=lstatSync(p);check(!s.isSymbolicLink(),'PREVIEW_PUBLIC_SYMLINK');if(p===directory)check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'PREVIEW_PUBLIC_DIRECTORY');if(dirname(p)===p)break;}}
+ function durable(directory,name,value){safeDirectory(directory);const raw=Buffer.from(JSON.stringify(value)+'\n');check(raw.length<=8*1024*1024,'PREVIEW_PUBLIC_SIZE');const fd=openSync(join(directory,name),constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,raw);fsyncSync(fd);}finally{closeSync(fd);}const d=openSync(directory,constants.O_RDONLY|constants.O_DIRECTORY);try{fsyncSync(d);}finally{closeSync(d);}}
+-export function retainPreviewIntegrationResult(directory,result){
++function checkedIntegrationResult(result){
+  const keys=fields(result);exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope'+(keys.includes('failureCode')?',failureCode':''));
+- check(result.schema==='moriarty.preview-financial-integration/1'&&['PASS','FAILED','SOURCE_TEST_ONLY'].includes(result.status)&&['loan','swap'].includes(result.kind)&&typeof result.sourceTestOnly==='boolean'&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'PREVIEW_PUBLIC_RESULT');check(result.status!=='PASS'||result.sourceTestOnly===false,'PREVIEW_PUBLIC_SOURCE_ONLY');check(result.status!=='SOURCE_TEST_ONLY'||result.sourceTestOnly===true,'PREVIEW_PUBLIC_SOURCE_ONLY');
++ check(result.schema==='moriarty.preview-financial-integration/1'&&['PASS','FINANCIAL_COMPLETE','FAILED','SOURCE_TEST_ONLY'].includes(result.status)&&['loan','swap'].includes(result.kind)&&typeof result.sourceTestOnly==='boolean'&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'PREVIEW_PUBLIC_RESULT');check(!['PASS','FINANCIAL_COMPLETE'].includes(result.status)||result.sourceTestOnly===false,'PREVIEW_PUBLIC_SOURCE_ONLY');check(result.status!=='SOURCE_TEST_ONLY'||result.sourceTestOnly===true,'PREVIEW_PUBLIC_SOURCE_ONLY');
+  if(keys.includes('failureCode')){check(result.status==='FAILED','PREVIEW_PUBLIC_FAILURE');failureCode(result.failureCode);}cleanup(result.cleanup);
+  if(result.build!==undefined){exact(result.build,'receiptSha256,sourceManifestHash');check(hash(result.build.receiptSha256)&&hash(result.build.sourceManifestHash),'PREVIEW_BUILD_HASH');}
+- if(result.driver!==undefined){const d=result.driver,dk=fields(d);exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(dk.includes('assetBindings')?',assetBindings':'')+(dk.includes('failure')?',failure':''));check(d.schema==='moriarty.preview-financial-run/1'&&d.kind===result.kind&&['PASS','FAILED','INCOMPLETE'].includes(d.status),'PREVIEW_PUBLIC_DRIVER');cleanup(d.cleanup);if(dk.includes('failure'))validatePublicDriverFailure(d.failure);}
++ if(result.driver!==undefined){const d=result.driver,dk=fields(d);exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(dk.includes('assetBindings')?',assetBindings':'')+(dk.includes('failure')?',failure':''));check(d.schema==='moriarty.preview-financial-run/1'&&d.kind===result.kind&&['PASS','FINANCIAL_COMPLETE','FAILED','INCOMPLETE'].includes(d.status),'PREVIEW_PUBLIC_DRIVER');cleanup(d.cleanup);if(dk.includes('failure'))validatePublicDriverFailure(d.failure);}
+  if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
+- const out=publicClone(result);durable(directory,'integration-result.json',out);return {status:'RECORDED'};
++ const out=publicClone(result);if(out.status==='FINANCIAL_COMPLETE')completed(out);return out;
+ }
++
++// Validate a completed command result, never upgrade historical FAILED/INCOMPLETE
++// records. Receipt authentication and financial comparison remain producer duties.
++function completed(r){
++ check(['PASS','FINANCIAL_COMPLETE'].includes(r.status)&&r.sourceTestOnly===false&&!Object.hasOwn(r,'failureCode')&&r.phase==='driver'&&r.setupPendingOperations===0,'PREVIEW_COMPLETION_REQUIRED');
++ check(r.cleanup.containmentComplete===(r.status==='PASS'),'PREVIEW_COMPLETION_CONTAINMENT');
++ const d=r.driver,f=r.financialComparison,order=r.kind==='loan'?['deploy','initialize','accrue','settle']:['deploy','initialize','swap','close'];
++ check(d&&f&&d.status===r.status&&!Object.hasOwn(d,'failure')&&f.status==='PASS'&&f.kind===r.kind&&f.contractAddress===d.contractAddress,'PREVIEW_COMPLETION_REQUIRED');
++ for(const c of [r.cleanup,d.cleanup])check(c.walletStopped===true&&c.pendingOperations===0,'PREVIEW_COMPLETION_REQUIRED');
++ check(isDeepStrictEqual(r.cleanup,d.cleanup)&&Array.isArray(d.stages)&&d.stages.length===4&&Array.isArray(r.comparisons)&&r.comparisons.length===4&&isDeepStrictEqual(f.stages,r.comparisons),'PREVIEW_COMPLETION_REQUIRED');
++ const ids=new Set();
++ for(const [i,stage] of order.entries()){
++  const receipt=d.stages[i],comparison=r.comparisons[i];
++  exact(receipt,'schema,txId,contractAddress,circuitId,transaction,blockHash,blockHeight,finalizedHead,finalizedHeight,protocolVersion,indexerIdentifiers,fees,contractBalances,acceptance');
++  exact(receipt.transaction,'schema,rawSha256,transactionHash,identifiers,inputs,outputs,actions,grossByAsset,dustFee,proofVerified,ledgerAccepted');
++  check(receipt.schema==='moriarty.finalized-financial-stage/1'&&receipt.acceptance==='uncertified-I2-observation'&&Number.isSafeInteger(receipt.blockHeight)&&Number.isSafeInteger(receipt.finalizedHeight)&&receipt.finalizedHeight>=receipt.blockHeight&&/^0x[0-9a-f]{64}$/.test(receipt.finalizedHead)&&Number.isSafeInteger(receipt.protocolVersion)&&receipt.transaction.schema==='moriarty.native-financial-transaction/1','PREVIEW_COMPLETION_REQUIRED');
++  check(receipt.circuitId===stage&&receipt.contractAddress===d.contractAddress&&comparison.status==='PASS'&&comparison.kind===r.kind&&comparison.stage===stage&&comparison.txId===receipt.txId&&comparison.contractAddress===d.contractAddress&&comparison.blockHash===receipt.blockHash&&comparison.blockHeight===receipt.blockHeight,'PREVIEW_COMPLETION_REQUIRED');
++  check(receipt.transaction?.identifiers?.includes(receipt.txId)&&receipt.transaction.proofVerified===false&&receipt.transaction.ledgerAccepted===false,'PREVIEW_COMPLETION_REQUIRED');
++  for(const id of receipt.transaction.identifiers){check(!ids.has(id),'PREVIEW_COMPLETION_REQUIRED');ids.add(id);}
++ }
++ check(Array.isArray(d.transactionIds)&&d.transactionIds.length===ids.size&&new Set(d.transactionIds).size===ids.size&&d.transactionIds.every(id=>ids.has(id)),'PREVIEW_COMPLETION_REQUIRED');
++ check(d.operationalState?.reservedSubmissions===4&&decimal(d.operationalState.reservedDustFee)&&d.operationalState.unavailable===undefined,'PREVIEW_COMPLETION_REQUIRED');
++ return r;
++}
++export function validatePreviewFinancialCompletion(result){return completed(checkedIntegrationResult(result));}
++export function retainPreviewIntegrationResult(directory,result){const out=checkedIntegrationResult(result);durable(directory,'integration-result.json',out);return {status:'RECORDED'};}
++
+ export function retainPreviewStage(directory,summary){fields(summary);check(summary.status==='PASS'&&['loan','swap'].includes(summary.kind)&&['deploy','initialize',...(summary.kind==='loan'?['accrue','settle']:['swap','close'])].includes(summary.stage)&&identifier(summary.txId)&&summary.networkAcceptance===false&&summary.proofAcceptance===false,'PREVIEW_PUBLIC_STAGE');const out=publicClone(summary);durable(directory,'stage-'+summary.stage+'.json',out);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}
+ export function publicPreviewLaunchEvent(event){
+  const keys=fields(event);check(['submitted','stopped'].includes(event.kind)&&Array.isArray(event.identifiers)&&event.identifiers.length<=128,'PREVIEW_PUBLIC_EVENT');
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-local.mjs b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+index 10858bb..1c959c3 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+@@ -161,8 +161,10 @@ async function runFinancialCase({kind,network,providers,compiledContract,roles,n
+     operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
+   } catch {operationalState={unavailable:true};}
+   const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
+-  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+-  if(failure||!contained) {
++  // Preview command completion does not attest to external process containment.
++  const previewComplete=target==='preview'&&stages.length===4&&cleanup.walletStopped&&cleanup.pendingOperations===0;
++  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':previewComplete?'FINANCIAL_COMPLETE':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
++  if(failure||(!contained&&!previewComplete)) {
+     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
+     error.publicResult=publicResult;throw error;
+   }
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs b/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs
+index ada04de..9996584 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs
+@@ -53,3 +53,8 @@ test('Preview incomplete cleanup cannot produce PASS',async()=>{
+  assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();f.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
+  await assert.rejects(driver.runPreviewFinancialCase(f.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);return true;});
+ });
++
++test('Preview financial completion separates stopped wallet from unobserved external containment',async()=>{
++ const f=fixture('loan');f.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:0,containmentComplete:false});
++ const r=await driver.runPreviewFinancialCase(f.options);assert.equal(r.status,'FINANCIAL_COMPLETE');assert.deepEqual(r.cleanup,{walletStopped:true,pendingOperations:0,containmentComplete:false});
++});
+diff --git a/experiments/moriarty-midnight-financial/package.json b/experiments/moriarty-midnight-financial/package.json
+index e639414..c8bbdfd 100644
+--- a/experiments/moriarty-midnight-financial/package.json
++++ b/experiments/moriarty-midnight-financial/package.json
+@@ -11,7 +11,7 @@
+     "test:compiled-rejection": "node --experimental-test-module-mocks --test --test-reporter=tap ledger/compiled-rejection.test.mjs",
+     "test:finalized-state": "node --test --test-reporter=tap ledger/finalized-financial-state.test.mjs ledger/finalized-state-rpc.test.mjs",
+     "preview": "node ledger/preview-bootstrap.mjs",
+-    "test:preview": "node --experimental-test-module-mocks --test --test-reporter=tap ledger/indexed-owner.test.mjs ledger/preview-rpc.test.mjs ledger/run-preview.test.mjs ledger/preview-integration.test.mjs ledger/preview-launch.test.mjs ledger/preview-launch-integration.test.mjs ledger/preview-bootstrap.test.mjs ledger/preview-swap-composition.test.mjs"
++    "test:preview": "node --experimental-test-module-mocks --test --test-reporter=tap ledger/indexed-owner.test.mjs ledger/preview-rpc.test.mjs ledger/run-preview.test.mjs ledger/preview-integration.test.mjs ledger/preview-launch.test.mjs ledger/preview-launch-integration.test.mjs ledger/preview-bootstrap.test.mjs ledger/preview-swap-composition.test.mjs ledger/preview-exit.test.mjs"
+   },
+   "engines": {
+     "node": ">=24.18.1"

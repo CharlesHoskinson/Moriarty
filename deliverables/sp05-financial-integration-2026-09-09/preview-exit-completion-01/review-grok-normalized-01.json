@@ -1,0 +1,102 @@
+{
+  "schema": "moriarty.preview-command-completion-source-audit/1",
+  "verdict": "PASS_SCOPED",
+  "candidateSha256": "7893d0483da00d039fac41bbaacc7025e7c167e68076c235f1cdf45a7f53b648",
+  "model": {
+    "identity": "Grok 4.6",
+    "vendor": "xAI",
+    "role": "independent-high-source-audit"
+  },
+  "scopeAccepted": "Preview financial command completion is separated from pending external containment. This candidate is CLI/source-selector control only. It does not admit a new actual Preview command, network transaction, or financial acceptance.",
+  "substantiveFindings": [
+    {
+      "id": "driver-status-split",
+      "severity": "info",
+      "finding": "The Preview driver now returns FINANCIAL_COMPLETE when four stages are recorded, in-process wallet stop succeeded, and pendingOperations===0, even if containmentComplete is false. Local/undeployed behavior is unchanged: uncontained local cleanup remains INCOMPLETE and still throws DRIVER_CLEANUP_INCOMPLETE. Generic incomplete cleanup (pending work, failed/missing stop, fewer than four stages) is not reclassified."
+    },
+    {
+      "id": "integration-does-not-require-external-containment",
+      "severity": "info",
+      "finding": "integratePreviewFinancialCase accepts driver PASS or FINANCIAL_COMPLETE, still demands comparator.finish() PASS, zero integration pending ops, walletStopped, and pendingOperations===0. It no longer requires containmentComplete. Result status is FAILED, SOURCE_TEST_ONLY, PASS (only if containmentComplete), or FINANCIAL_COMPLETE. Acceptance flags remain hard-false."
+    },
+    {
+      "id": "writer-cli-zero-predicate",
+      "severity": "info",
+      "finding": "validatePreviewFinancialCompletion/completed() is the success selector. It admits only PASS or FINANCIAL_COMPLETE, refuses SOURCE_TEST_ONLY, FAILED, INCOMPLETE, failure records, pending setup, unknown operational work, missing/unordered receipts, missing finality fields, identifier-set mismatch, proofVerified/ledgerAccepted true, reservedSubmissions!==4, and false containment claims. FINANCIAL_COMPLETE requires containmentComplete===false; PASS requires true. CLI previewFinancialExitCode returns 0 only after that validator and the original absolute deadline."
+    },
+    {
+      "id": "bootstrap-persistence-gate",
+      "severity": "info",
+      "finding": "Production launch sets persisted/walletStopped only inside the existing persist-then-stop proxy. Failed, skipped, or throwing persistence/stop cannot pass PREVIEW_COMPLETION_PERSISTENCE, and those paths do not retain a success result. The three-child persist implementation, pending marker, and private backup rules are untouched."
+    },
+    {
+      "id": "no-generic-upgrade",
+      "severity": "info",
+      "finding": "Writer retain of FAILED/INCOMPLETE/SOURCE_TEST_ONLY does not call completed() and cannot become PASS/FINANCIAL_COMPLETE. Fee-cap, wrong-recipient, retention, persistence, stop, pending, malformed, and post-retain deadline failures stay nonzero. The merged cumulative native-fee guard remains on the producer comparator and is still fail-closed in the composed path."
+    },
+    {
+      "id": "tests-are-selector-not-live-exit",
+      "severity": "info",
+      "finding": "preview-exit.test.mjs composes real driver, native observer, comparator, durable writer, and previewFinancialExitCode over intercepted modules and retained public Preview loan bytes. It does not spawn the CLI process, open the network, or create a new Preview command exit. SP05 exit 0 for an actual admitted Preview invocation remains an unsatisfied external obligation."
+    }
+  ],
+  "trace": {
+    "driver": "experiments/moriarty-midnight-financial/ledger/run-local.mjs:runPreviewFinancialCase",
+    "integration": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs:integratePreviewFinancialCase",
+    "writer": "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs:checkedIntegrationResult/completed/retainPreviewIntegrationResult",
+    "bootstrap": "experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs:launchPreviewFinancialCase persist+stop flags then validatePreviewFinancialCompletion then retain then deadline",
+    "cli": "preview-bootstrap.mjs process entry writes {status,containmentComplete,...flags false} then process.exitCode=previewFinancialExitCode(result,deadline)"
+  },
+  "zeroRequires": [
+    "four ordered compared and retained stages",
+    "matching receipt/comparison identifiers and full retained native identifier membership",
+    "successful in-process wallet stop and zero pending operations",
+    "bootstrap persistence-and-stop closure (process path, not the exported selector alone)",
+    "no failure/source-only/unknown-work record",
+    "absolute deadline still open after durable retain and again in the CLI selector",
+    "all acceptance flags false",
+    "containmentComplete true only for PASS; FINANCIAL_COMPLETE keeps it false"
+  ],
+  "acceptanceFlags": {
+    "networkAcceptance": false,
+    "proofAcceptance": false,
+    "financialAcceptance": false,
+    "proofVerified": false,
+    "ledgerAccepted": false,
+    "upgradedFromFailedOrIncomplete": false
+  },
+  "evidence": {
+    "changedFilesMatchScope": true,
+    "originalRawFailedIncompleteNotInDiff": true,
+    "loanSwapApprovedFinancialResultsUntouched": true,
+    "reportedPreviewTests": {
+      "command": "npm --prefix experiments/moriarty-midnight-financial run test:preview",
+      "pass": 89,
+      "fail": 0
+    },
+    "reportedLocalControls": {
+      "pass": 150,
+      "fail": 0
+    },
+    "reportedConnected03": {
+      "pass": 29,
+      "fail": 0
+    },
+    "independentReexecution": false,
+    "independentHashRecompute": false
+  },
+  "limitations": [
+    "This audit is source-only as instructed: no workspace operations, no hash recomputation, no TAP re-run, no live CLI spawn.",
+    "exported previewFinancialExitCode does not itself prove wallet persistence; persistence is enforced only on the launchPreviewFinancialCase process path before the selector runs.",
+    "retainPreviewIntegrationResult runs completed() for FINANCIAL_COMPLETE but not for PASS. Production providers still return containmentComplete=false, so the live success status is FINANCIAL_COMPLETE; bootstrap also validates before retain.",
+    "CLI stdout is written before the final deadline/selector. A later selector/deadline failure can leave FINANCIAL_COMPLETE on stdout with nonzero exit; the durable record is not treated as exit 0.",
+    "Composed CLI-selector coverage is loan-only. Swap order is encoded in completed() but not exercised by preview-exit.test.mjs.",
+    "Bootstrap unit tests mock validatePreviewFinancialCompletion as identity; the real validator is exercised in preview-exit.test.mjs.",
+    "Deliverable red-run-preview.test.mjs is reported with the same digest as the current green run-preview.test.mjs. The historical red.tap is a separate artifact; this audit did not re-execute original source against that TAP.",
+    "No new actual Preview command, network transaction, prover, compiler, wallet private data, or financial allocation is admitted by this verdict. SP05 exit 0 is not waived."
+  ],
+  "residualRisksNotBlockingInScope": [
+    "A caller invoking previewFinancialExitCode on a hand-built complete record can obtain 0 without the bootstrap persist proxy. That is outside the production CLI entry.",
+    "Observer/comparator trust remains producer-side. The writer checks structure, flags, identifier membership, and reservation count; it does not re-authenticate public RPC or replay proofs."
+  ]
+}

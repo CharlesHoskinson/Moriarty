@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFile
 import {PINNED_NM} from './providers.mjs';
 const originalHelpers=await import('./launch-local.mjs');
 const pins=JSON.parse(readFileSync(new URL('./launch-runtime-pins.json',import.meta.url)));
-async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false}={}){
+async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false,skipStop=false,stopFailure=false,persistenceFailure=false}={}){
  const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-bootstrap-')),events=[];t.after(()=>rmSync(dir,{recursive:true,force:true}));mkdirSync(join(dir,'wallet'),{mode:0o700});
  const p={schema:'moriarty.preview-financial-launch/1',kind:'loan',build:{receiptPath:'/public-fixture',receiptSha256:'ab'.repeat(32),sourceManifestHash:'cd'.repeat(32)},networkConfig:{networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},wallet:{stateDirectory:join(dir,'wallet'),seedFile:join(dir,'seed'),expectedAddress:'CONTROLLED_PREVIEW_ADDRESS'},roles:{secretsFile:join(dir,'roles'),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)},privateState:{directory:join(dir,'contract'),passwordFile:join(dir,'password')},networkTag:'03'.repeat(32),expectedProtocolVersion:1000000,limits:{allocationId:'fixture',submissions:4,deadlineMs:Date.now()+10000,dustFee:'1000',grossByLogicalAsset:{USD_TEST_ASSET:'20000000000'}},outputDirectory:join(dir,'run')};
  if(reuse)mkdirSync(p.outputDirectory,{mode:0o700});
@@ -29,13 +29,13 @@ async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesis
  }}});
  let stopped=0;
  const progress={isConnected:true,isStrictlyComplete:()=>true};
- const wallet={unshielded:{state:{}},stop:async()=>{stopped++;events.push('stop');},start:async()=>events.push('start'),waitForSyncedState:async()=>({isSynced:true,shielded:{progress},unshielded:{progress,pendingCoins:[]},dust:{progress,availableCoins:[{}],state:{pendingDust:[]}}}),submitTransaction:async()=>{throw Error('NO_SUBMIT');}};
- for(const kind of ['shielded','unshielded','dust'])wallet[kind]={...wallet[kind],serializeState:async()=> 'updated-'+kind};
+ const wallet={unshielded:{state:{}},stop:async()=>{stopped++;events.push('stop');if(stopFailure)throw Error('CONTROLLED_STOP_FAILURE');},start:async()=>events.push('start'),waitForSyncedState:async()=>({isSynced:true,shielded:{progress},unshielded:{progress,pendingCoins:[]},dust:{progress,availableCoins:[{}],state:{pendingDust:[]}}}),submitTransaction:async()=>{throw Error('NO_SUBMIT');}};
+ for(const kind of ['shielded','unshielded','dust'])wallet[kind]={...wallet[kind],serializeState:async()=>{if(persistenceFailure)throw Error('CONTROLLED_PERSIST_FAILURE');return 'updated-'+kind;}};
  const sdk={Roles:{Zswap:'z',NightExternal:'n',Dust:'d'},HDWallet:{fromSeed:()=>({type:'seedOk',hdWallet:{selectAccount:()=>({selectRoles:()=>({deriveKeysAt:()=>({type:'keysDerived',keys:{z:new Uint8Array(32),n:new Uint8Array(32),d:new Uint8Array(32)}})})}),clear(){events.push('hd-clear');}}})},createKeystore:(_k,n)=>{assert.equal(n,'preview');return {getBech32Address:()=>({asString:()=>p.wallet.expectedAddress,toString:()=>p.wallet.expectedAddress}),getAddress:()=>p.roles.firstAddress,getSecretKey:()=>new Uint8Array(32),getPublicKey:()=> 'public-key'};},NoOpTransactionHistoryStorage:class{},WalletFacade:{init:async o=>{events.push('facade-init');assert.equal(o.configuration.networkId,'preview');for(const name of ['shielded','unshielded','dust'])await o[name]({});return wallet;}}};
  for(const [key,kind] of [['ShieldedWallet','shielded'],['UnshieldedWallet','unshielded'],['DustWallet','dust']])sdk[key]=()=>({restore:async state=>{events.push('restore:'+kind);assert.equal(state,'persisted-'+kind);return {stop:async()=>{stopped++;}};}});
  const modules={'@midnight-ntwrk/wallet-sdk':sdk,'@midnight-ntwrk/midnight-js-protocol':{ZswapSecretKeys:{fromSeed:()=>({})},DustSecretKey:{fromSeed:()=>({})},signingKeyFromBip340:()=> 'controlled-key',signatureVerifyingKey:()=> 'public-key'},'@midnight-ntwrk/midnight-js-network-id':{setNetworkId:n=>{assert.equal(n,'preview');events.push('network');}},rxjs:{firstValueFrom:async()=>({state:{networkId:wrongRestore?'undeployed':'preview',publicKey:{publicKey:'public-key',addressHex:p.roles.firstAddress,address:p.wallet.expectedAddress}}})},ws:{WebSocket:class{}}};
  for(const [name,exports] of Object.entries(modules))t.mock.module(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href,{namedExports:exports});
- t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
+ t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');if(!skipStop)await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
  const subject=await import('./preview-bootstrap.mjs?fixture='+Math.random());return {p,events,subject,stops:()=>stopped};
 }
 test('existing Preview children restore before guarded integration and durable result',async t=>{
@@ -100,4 +100,8 @@ test('final persistence fsync crossing deadline rejects without undoing a cohere
  await assert.rejects(api.persistPreviewWalletState({wallet,stateDirectory:dir,allocationId:'fixture-fsync',original,deadlineMs:deadline}),{message:'PREVIEW_LAUNCH_DEADLINE'});
  assert.equal(removed,true);assert.equal(existsSync(join(parent,'.moriarty-persistence-pending.json')),false);
  for(const kind of ['shielded','unshielded','dust']){assert.equal(JSON.parse(readFileSync(join(parent,kind+'.json'))).state,'updated-'+kind);assert.deepEqual(readFileSync(join(parent,'.moriarty-backup-fixture-fsync',kind+'.json')),original[kind]);}
+});
+
+for(const control of [{skipStop:true},{stopFailure:true},{persistenceFailure:true}])test('bootstrap refuses success without its own completed persistence and wallet stop',async t=>{
+ const f=await fixture(t,control);await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.some(x=>x.startsWith('result:')));
 });
