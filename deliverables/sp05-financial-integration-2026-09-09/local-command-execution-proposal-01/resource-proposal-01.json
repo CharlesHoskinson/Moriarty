@@ -1,0 +1,177 @@
+{
+  "schema": "moriarty.local-command-execution-proposal/1",
+  "status": "PROPOSED_ONLY_NOT_ADMITTED",
+  "sourceCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-completion-01/source-candidate-02.json",
+    "sha256": "c58b6fbf83bdb95b2ee2d6620fd4c7528e28c9f5ab13cf341d067d2b44a71743"
+  },
+  "sourceReviews": "Both corrected-source approvals required; no assumption about pending Grok43 outcome.",
+  "resourceReviews": "Fresh exact executor/proposal GPT6 and Grok approvals required before dispatch.",
+  "target": "LOCAL_ONLY_UNDEPLOYED",
+  "cases": [
+    {
+      "kind": "loan",
+      "operations": [
+        "deploy",
+        "initialize",
+        "accrue",
+        "settle"
+      ],
+      "attempts": 1,
+      "submissionMax": 4,
+      "dustFeeSpeck": "2000000000000000",
+      "grossByLogicalAsset": {
+        "USD_TEST_ASSET": "20000000000"
+      },
+      "publicPlan": {
+        "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan-public-plan-draft.json",
+        "sha256": "2cfa4a44b9debd5e88ef920dd90feefe306c5dab8d032cbfa10e5652bc6e20f5"
+      },
+      "base": "/home/charl/.local/state/moriarty/sp05-local-loan-completion-20260910-01",
+      "launcherUnit": "moriarty-sp05-local-loan-completion-01.service",
+      "stopUnit": "moriarty-sp05-local-loan-completion-stop-01"
+    },
+    {
+      "kind": "swap",
+      "operations": [
+        "deploy",
+        "initialize",
+        "swap",
+        "close"
+      ],
+      "attempts": 1,
+      "submissionMax": 4,
+      "dustFeeSpeck": "2000000000000000",
+      "grossByLogicalAsset": {
+        "ASSET_A": "100000",
+        "ASSET_B": "0"
+      },
+      "publicPlan": {
+        "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/swap-public-plan-draft.json",
+        "sha256": "16d6d5985b474a0df2c2643c3ada6eec3bdfb1f3428e06cb0aa15ae12cd93175"
+      },
+      "base": "/home/charl/.local/state/moriarty/sp05-local-swap-completion-20260910-01",
+      "launcherUnit": "moriarty-sp05-local-swap-completion-01.service",
+      "stopUnit": "moriarty-sp05-local-swap-completion-stop-01"
+    }
+  ],
+  "caseScheduling": "Sequential; fully contain first before any second. Each receives its own exclusive consumed attempt, allocation, plan/output/store and original forced timer. Stop on any unknown/failure; no automatic second-case start or retry.",
+  "caseCaps": {
+    "newLocalAttemptsMax": 2,
+    "newLocalAttemptsPerCase": 1,
+    "newLocalSubmissionsMax": 8,
+    "publicPreviewLoanAttemptsConsumed": 2,
+    "publicPreviewSwapAttemptsConsumed": 2,
+    "publicAttemptsPerCaseCap": 2,
+    "authority": "This proposal does not alter any public attempt cap or authorize third Preview execution. Prior local attempts remain charged; these are successors, not first-ever local cases."
+  },
+  "timeSecondsPerCase": {
+    "setupAndActivationMax": 120,
+    "walletOperationMax": 1200,
+    "runtimeMax": 1206,
+    "independentStopAfterArming": 1300,
+    "cleanupMax": 31,
+    "containmentLatestAfterArming": 1331,
+    "envelopeMax": 1350,
+    "operationDeadlineRule": "min(materialized wall time+1200000ms, conservative independent shutdown wall projection-5000ms), same original local finite pattern; manager runtime<=1206s never resets outer timer"
+  },
+  "totalSequentialEnvelopeMaxSeconds": 2700,
+  "launcher": {
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "Type": "exec",
+    "RemainAfterExit": true,
+    "TimeoutStartSec": "floor(remaining120s activation window)-1; require>=1 before dispatch; exact argv fsynced",
+    "TimeoutStopSec": 5,
+    "KillMode": "control-group",
+    "restart": "no"
+  },
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-proof-server",
+      "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "readiness": "Reuse bounded existing committee/readiness probe and exact genesis gate before private preparation. Native startup/query failures stop the consumed service attempt; no reset/catchup/retry extension inferred.",
+  "memoryAvailableMinimumBytes": 21474836480,
+  "freeDiskMinimumBytes": 4294967296,
+  "identity": {
+    "seedFile": "/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed",
+    "walletStateDirectory": "/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2",
+    "originalRolesFile": "/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03/roles.json",
+    "existingPasswordFile": "/home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03/password"
+  },
+  "privatePreparation": "Fresh exclusive0700 per-case base and empty contract-state,0600 plan, original03 roles and recovered03 password. No new wallet, secret, signer or password; no chmod. Snapshot/stores/writable layers stay preserved. Plan deadline0 is deliberately invalid until exact admitted timer projection is materialized.",
+  "walletPrerequisites": "Existing owner-only three undeployed snapshots must parse and restore through existing launcher; original address/key identity and current synchronized DUST/coin availability must be observed at actual startup, never inferred from old amounts. Existing swap minted-output gate must succeed after initialize. No snapshot reset and no old allowance reuse.",
+  "persistenceBoundary": "Existing local launcher restores original child snapshots and stops wallet but does not persist post-run snapshots. Prior local admission explicitly preserved original snapshot bytes. Command/financial evidence can be proposed under that same scope; coherent post-run local persistence/restart assurance is NOT implemented or claimed. If acceptance requires it, a separate narrow source repair is a prerequisite; do not substitute Preview persistence or invent a local callable persistence API.",
+  "terminalCapture": "Record nonzero loaded startup InvocationID; at main completion retain loaded active/exited Typeexec RemainAfterExityes MainPID0 Resultsuccess ExecMainCode1/Status0 and same InvocationID before explicit launcher stop. Capture closed stdout with containmentCompletefalse independently. Explicit stop triggers ExecStopPost; retain its actual exit then physical startupcgroupabsence and all3containers exited before timer cancellation. Never infer code0 from unloaded defaults.",
+  "financialAcceptance": "Actual canonical-finalized full native receipts/state/effects, exact owners/change/gross assets/residual obligations, fee comparison and durable native IDs/results, zero pending and wallet stop plus raw mainexit0 and independent containment; both actual-result reviews. No fullSP05/PCD from command alone.",
+  "priorCharges": {
+    "priorLocalReservations": 11,
+    "priorLocalReservedSpeck": "3300000000000011",
+    "priorCombinedReservations": 27,
+    "priorCombinedReservedSpeck": "8100000000000027",
+    "priorCombinedAdmittedCeilingsSpeck": "12000000000000010",
+    "additionalReservationsMax": 8,
+    "additionalDustCapSpeck": "4000000000000000",
+    "combinedReservationCeiling": 35,
+    "combinedReservedPlusNewCapsSpeck": "12100000000000027",
+    "combinedAdmittedCeilingsPlusNewCapsSpeck": "16000000000000010",
+    "scope": "Not predicted paid fees. Both new allocations remain separately capped; no historical surplus subsidy. All older failed/service/proof/compiler/reviewer charges, including unquantified totals, remain consumed."
+  },
+  "operationalGap": "No new execute-once runner is implemented/admitted in this proposal. Existing local-swap01/local-stale01 executor requires a finite fresh-case adaptation, currentsource closure/admission pins and the reviewed RemainAfterExit/InvocationID capture lifecycle before any invocation. No callable local snapshot persistence interface exists.",
+  "provenance": [
+    {
+      "path": "openspec/changes/mc02-preview-financial-operation/tasks.md",
+      "sha256": "628c9be36bf57dc6822e7a61d0699b72a739a0ff567a10a82bb5cec381502358"
+    },
+    {
+      "path": "openspec/sprints/sp05-financial-integration-on-preview.md",
+      "sha256": "fd7b0cdbbfe608239c2a91c28a1c4f7d9d15d3bcc9a120eeb52098ab5c1dda2f"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/resource-proposal-02.json",
+      "sha256": "ee0915b4c44e6fd45a753776e42c6356e65ab0ff34db410a07b3f216db50b292"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/resource-proposal-01.json",
+      "sha256": "6c9fb3df909cb0432e2463df6433e2d5678d8070da401b30287f0ec54b2295fe"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-stale-loan-01/resource-proposal-01.json",
+      "sha256": "9979de6b7299e6bceb7d39af8590b7ca7935226d54cf45d7bb1d4ec999e77f15"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/attempt-result-01.json",
+      "sha256": "4ec1ad11614795bd26da341e2118ae61153dab3804be665cc2107ab7c0394ad1"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-status-retention-01/source-candidate-02.json",
+      "sha256": "3a2e057ae293e1d37c6d59ecaf40f43828881fe92445574ff38a52e87c42724b"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+--- original-executor-01/execute-once.py
++++ execute-once.py
+@@ -13,7 +13,7 @@
+  for q in [p,*p.parents]:assert not q.is_symlink()
+  assert p.is_file() and files.get(ref['path'])==ref['sha256'] and sha(p)==ref['sha256'];return p
+ for f in A['files']:bound(f)
+-P=json.loads(bound({'path':str((PACKET/'resource-proposal-02.json').relative_to(R)),'sha256':A['proposalSha256']}).read_text())
++P=json.loads(bound({'path':str((PACKET/'resource-proposal-03.json').relative_to(R)),'sha256':A['proposalSha256']}).read_text())
+ C=next(c for c in P['cases'] if c['kind']==kind)
+ assert A['case']==kind and A['allocationId']=='sp05-local-'+kind+'-completion-20260910-01'
+ for path,digest in P['packetFiles'].items():bound({'path':path,'sha256':digest})
+@@ -95,7 +95,7 @@
+  pin=next(p for p in P['containers'] if '/'+p['name']==c['Name']);h=c['HostConfig'];assert c['State']['Status']=='exited' and c['Image']=='sha256:'+pin['imageSha256'];assert h['Memory']==pin['memory'] and h['MemorySwap']==pin['memorySwapTotal'] and h['NanoCpus']==pin['nanoCpus'] and h['RestartPolicy']['Name']=='no'
+ timerArgv=['/usr/bin/systemd-run','--user','--unit='+timer,'--on-active=1300s','--timer-property=AccuracySec=1s','--property=Type=oneshot','--property=TimeoutStartSec=25s','--property=TimeoutStopSec=5s','--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill '+' '.join(names),'/usr/bin/bash','-c','/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all '+unit+' '+diagnostic+'; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 '+' '.join(names)]
+ O.mkdir(mode=0o700);syncdir(PACKET)
+-save(O/'attempt.json',{'schema':'moriarty.local-command-attempt/1','status':'CONSUMED','allocationId':A['allocationId'],'admissionSha256':shaadmission,'timerArgv':timerArgv,'retryAllowed':False,'priorCharges':P['priorCharges'],'otherCaseAttemptSha256':sha(PACKET/other/'attempt.json') if (PACKET/other/'attempt.json').is_file() else None})
++save(O/'attempt.json',{'schema':'moriarty.local-command-attempt/1','status':'CONSUMED','allocationId':A['allocationId'],'admissionSha256':sha(admission),'timerArgv':timerArgv,'retryAllowed':False,'priorCharges':P['priorCharges'],'otherCaseAttemptSha256':sha(PACKET/other/'attempt.json') if (PACKET/other/'attempt.json').is_file() else None})
+ try:
+  timerLaunchAttempted=True;run(timerArgv)
+  obj=shlex.split(run(['busctl','--user','call','org.freedesktop.systemd1','/org/freedesktop/systemd1','org.freedesktop.systemd1.Manager','GetUnit','s',timer+'.timer']))[1]
