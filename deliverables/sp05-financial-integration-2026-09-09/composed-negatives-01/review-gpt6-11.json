@@ -1,0 +1,97 @@
+{
+  "schema": "moriarty.independent-source-test-review/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/recovery_source_audit",
+    "interface": "Codex independent source-only reviewer",
+    "testAuthor": false
+  },
+  "reviewedAt": "2026-09-10T10:22:53.647681+00:00",
+  "candidateSha256": "4e70c4bc6c6837910a6d9be8032b03e7621dde6c33abe7d1e13eb4884b5bd8cd",
+  "verdict": "PASS_SCOPED",
+  "sourceVerdict": "PASS_SCOPED",
+  "resourceVerdict": "NOT_REVIEWED",
+  "resultVerdict": "NOT_REVIEWED",
+  "findings": [],
+  "fileCount": 20,
+  "allCandidateHashesMatch": true,
+  "productionChangesFromPriorReviewedCommit": [],
+  "priorReviewedCommit": "c4ea40e989cbf01f9f194cd4b0ff83d8ea01b40d",
+  "scope": "New composed source-only regression tests, with controlled transport/submission/reservation adapters and explicitly rewritten synthetic role commitments. No production behavior or live rejection/acceptance/resource claim.",
+  "checks": [
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:14",
+      "result": "Uses actual integrateLocalFinancialCase, runLocalFinancialCase, observeFinalizedStage, installed native codec and createFinancialComparator. Adapters explicitly replace asset loading/preparation, SDK submissions, provider state/counters, transport and state decode; fetch is forbidden. All production modules bound in candidate are unchanged from exact priorReviewedCommit."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:34",
+      "result": "Native transactions and financial public state values come from retained loan evidence. Public capability commitments alone are recomputed with two clearly synthetic32-byte secrets to make real comparator binding check possible without reading actual role secrets. The resulting state fixture is source evidence, not a newly decoded live state or original authenticated capability proof."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:43",
+      "result": "Submission callbacks merely record stage names and additive synthetic counters; no actual SDK submission or durable reservation provider runs. Controlled observer transport deserializes retained actual native bytes, reconstructs correct Bech32m indexed owners and feeds real observer/finality predicates with inert RPC. This composes actual validations without claiming actual external transport/finality."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:73",
+      "result": "Control reaches all four stages through real integration/driver/observer/comparator with financial comparator PASS but outer result SOURCE_TEST_ONLY and financialAcceptance false. Negative cases fail at expected call/observe/compare boundary for wrong payer binding, wrong indexed recipient, missing wire fees, missing observed receipt fees, understated native debit and unauthorized payer in post-observer native projection."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:84",
+      "result": "Each negative asserts exact error predicate, allowed submitted/compared prefix, retained IDs, diagnostic phase, additive simulated submission/DUST/gross charges, stopped/cleanup flags and source-only failure result. The final payer mutation occurs after real native signature decoding, so it tests comparator rejection of a corrupted supplied observation; it does not claim a forged signed native transaction was rejected on-chain."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs:59",
+      "result": "Actual production retainPublicIntegrationResult is called and must reject sourceTestOnly evidence. Separate scratch stage/result writes are explicitly source-test-only and confined to an exclusive temporary directory; cleanup removes it in finally. No production output file or actual allocation is written."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs:107",
+      "result": "Verified production retention requires sourceTestOnly===false and accepted raw runtime statuses, so the test does not weaken or bypass the existing evidence gate. Scratch storage is separately implemented, not misrepresented as production admission."
+    },
+    {
+      "location": "deliverables/sp05-financial-integration-2026-09-09/composed-negatives-01/SCOPE.md",
+      "result": "Accurately names all seven tests, actual composed validation layers, controlled counters/transport, rewritten capability commitments and source-only retention. Explicitly excludes live Docker rejection/nonmutation, Preview settlement, production changes and resource dispatch."
+    }
+  ],
+  "independentVerification": {
+    "command": "node --test experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs",
+    "exitCode": 0,
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "skipped": 0,
+    "durationMs": 348.133825,
+    "transcriptPath": "/tmp/moriarty-gpt6-source11-focused.tap",
+    "transcriptSha256": "51bd73798eb2642f0c7a73eaba33697094878f2ca0e8b7ec7d5317c6032453d6",
+    "scope": "Offline public artifacts/installed SDK and synthetic temporary files only; no private/service/wallet/network/operational access."
+  },
+  "limitations": [
+    "Counters, SDK submissions, provider execute/stop/cleanup and RPC are controlled fixtures. They establish source stop behavior, not real reservation crash consistency, actual wallet cleanup or live ledger nonmutation.",
+    "Post-observer mutations deliberately alter a trusted-interface projection; they do not demonstrate native proof/signature forgery or malformed transaction rejection by the actual network.",
+    "Synthetic capability commitments mean comparator success is scoped to the constructed state fixture. No actual private secret or authenticated private store was accessed.",
+    "Source-only scratch files are not production-retained acceptance evidence; production retention rejects them. These tests neither approve nor interfere with the separately admitted live swap run."
+  ],
+  "reviewedFileHashes": {
+    "deliverables/sp05-financial-integration-2026-09-09/composed-negatives-01/SCOPE.md": "4b85ccbef57b0bc82cf6edb7b052af46ca9609af605ca0c780a48af7bba8ee68",
+    "deliverables/sp05-financial-integration-2026-09-09/composed-negatives-01/tests.tap": "ee03fbeae72452f80304f7139756d420445eb2b99aedc23c8b47aa02ab535a20",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/integration-result.json": "5a237ead68191acd494d2b93d6d5ed0b2e6a54c67ab44f2f9f59e2c83bb3ad80",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/public-transactions/473b363b745c4be4864e93a04d475a6f343ff7e56a8f179d86060716ba9a5480.bin": "473b363b745c4be4864e93a04d475a6f343ff7e56a8f179d86060716ba9a5480",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/public-transactions/c201557431820f032743b0fc99c815b59131fa8bde6e298c466009189bce396e.bin": "c201557431820f032743b0fc99c815b59131fa8bde6e298c466009189bce396e",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/stage-accrue.json": "a208a4face56c59cde5ad486a972cfd206d86da6d7955349abcf3b07e11f25d8",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/stage-deploy.json": "ea81d794b3992991ca9fff424b85dde21a1cbd08357c054d8b56279cfb5a2fea",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/stage-initialize.json": "21eb8bebb5d3fe97a243037ccf9c82a36c77a1258cff66da9c32b9085f94e3bd",
+    "deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/stage-settle.json": "d70deb9c992c9f643e14da96d00efa2635e95f6b5e99cef9cb2ee19691cce895",
+    "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/run-public/public-transactions/0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c.bin": "0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/run-public/public-transactions/1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6.bin": "1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+    "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "3a61f8abe0fb1192099d5d0a09d6b7107acacf439c82205f9038c34d8107d08b",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "f089bccccbea0fdd56ec35b74c9e3864ad093a797c0030cdd387d6f4db343de2",
+    "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs": "80d9f3e125a5381580a96e6c343c0a9ae89b5570a926574ed6347bce01345cab",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "ace66630e1a903e085fee9b00de02fc5c75187539a8449b9039240a87a573e5e",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "c4b33be2e23da1d8f068eb4c19529147d7fd7a32c44e9109f2cb9de71ca4829e",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "e44e7f92845abe458277d4309c7ffa703ee8e7d0de98689660d916022c2dd7df",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs": "59b7bd87cf6ee21203f7e42b02717de3f572042dd55b22f00a438d07eaa5d999",
+    "deliverables/sp05-financial-integration-2026-09-09/composed-negatives-01/source-candidate-11.json": "4e70c4bc6c6837910a6d9be8032b03e7621dde6c33abe7d1e13eb4884b5bd8cd"
+  }
+}
