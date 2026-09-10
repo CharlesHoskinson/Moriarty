@@ -1,0 +1,1476 @@
+{
+  "schemaVersion": "moriarty-expression-contract/0",
+  "status": "proposed-not-registered",
+  "ownerTask": "SP01.3",
+  "fullRp01Complete": false,
+  "runtimeImplemented": false,
+  "proofsEstablished": false,
+  "types": {
+    "UInt64": "integer 0..2^64-1",
+    "UInt128": "integer 0..2^128-1",
+    "SInt128": "integer -2^127..2^127-1",
+    "Bool": "true or false",
+    "Text": "bounded Unicode scalar text",
+    "Unit": "statement-only unit",
+    "T": "a finite declared value type, resolved by each rule",
+    "UIntW": "UInt64 when width=64, UInt128 when width=128",
+    "AmountA": "Amount indexed by declared asset A",
+    "SharesVH": "Shares indexed by vault V and holder H",
+    "RateS": "Rate indexed by scale S",
+    "PriceABS": "Price indexed by base A, quote B and scale S",
+    "QuantityUS": "Quantity indexed by units U and scale S",
+    "RecordR": "closed named record schema R",
+    "EnumE": "declared payload-free enum E",
+    "OptionT": "None or Some of explicit T",
+    "CollectionTN": "ordered homogeneous values of T with capacity N",
+    "FieldType": "declared selected field type",
+    "ElementType": "selected collection element type",
+    "ArithmeticResult": "unique result of ARITH overload table",
+    "BoolComparable": "identically typed CMP equality values",
+    "Ordered": "identically typed CMP ordered values",
+    "Metadata": "bounded non-evaluated metadata of the named operand, validated by its rule",
+    "Expression": "pure expression operand, type constrained by rule",
+    "ExpressionList": "bounded lexical list of pure expression operands",
+    "NamedExpressionList": "bounded lexical list of uniquely named pure expressions"
+  },
+  "rules": [
+    "S0",
+    "V",
+    "E",
+    "L-U",
+    "L-I",
+    "L-B",
+    "L-T",
+    "L-A",
+    "L-Q",
+    "L-S",
+    "L-R",
+    "L-P",
+    "READ",
+    "ACCESS",
+    "BUILD",
+    "ARITH",
+    "CMP",
+    "STMT"
+  ],
+  "sources": {
+    "DESIGN-LAYERS": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 9,
+      "requirement": "separate lexical, grammar, typing, Core and correctness layers"
+    },
+    "DESIGN-STAGING": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 46,
+      "requirement": "immutable pre, tentative single writes, post suffix, lexical rejection"
+    },
+    "DESIGN-NUMERIC": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 86,
+      "requirement": "asset-indexed arithmetic and checked ranges"
+    },
+    "DESIGN-EFFECTS": {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "line": 15,
+      "requirement": "explicit typed emit, no implicit transfer"
+    },
+    "SP01-CONTRACT": {
+      "path": "openspec/sprints/sp01-financial-contract-and-execution-admission.md",
+      "line": 49,
+      "requirement": "define successor type/effect, rounding and staging contract"
+    },
+    "C04-F1": {
+      "path": "evidence/moriarty-completion-program-2026-09-07/SP01/independent-review-round-08/successor/gpt6-semantic-partial-review.md",
+      "line": 9,
+      "requirement": "complete every declared expression constructor; preserve financial open equations"
+    }
+  },
+  "constructors": [
+    {
+      "constructor": "LitUInt",
+      "operands": [
+        {
+          "name": "width",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "UIntW",
+      "rule": "L-U",
+      "evaluatedOperands": [],
+      "typing": "width in {64,128}; canonical unsigned value fits selected width",
+      "reduction": "return exact integer",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitUInt-positive",
+        "LitUInt-reject"
+      ]
+    },
+    {
+      "constructor": "LitSInt",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "SInt128",
+      "rule": "L-I",
+      "evaluatedOperands": [],
+      "typing": "canonical signed integer fits SInt128",
+      "reduction": "return exact integer",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitSInt-positive",
+        "LitSInt-reject"
+      ]
+    },
+    {
+      "constructor": "LitBool",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "Bool",
+      "rule": "L-B",
+      "evaluatedOperands": [],
+      "typing": "value is literal true or false",
+      "reduction": "return exact Boolean",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitBool-positive",
+        "LitBool-reject"
+      ]
+    },
+    {
+      "constructor": "LitText",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "Text",
+      "rule": "L-T",
+      "evaluatedOperands": [],
+      "typing": "well-formed Unicode scalar text within 1024 UTF-8 bytes",
+      "reduction": "return exact decoded text, without normalization",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitText-positive",
+        "LitText-reject"
+      ]
+    },
+    {
+      "constructor": "LitAmount",
+      "operands": [
+        {
+          "name": "asset",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "AmountA",
+      "rule": "L-A",
+      "evaluatedOperands": [],
+      "typing": "asset declared; UInt128 canonical value",
+      "reduction": "return Amount<asset>(value)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitAmount-positive",
+        "LitAmount-reject"
+      ]
+    },
+    {
+      "constructor": "LitQuantity",
+      "operands": [
+        {
+          "name": "units",
+          "type": "Metadata"
+        },
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "QuantityUS",
+      "rule": "L-Q",
+      "evaluatedOperands": [],
+      "typing": "canonical bounded unit vector; scale 0..18; SInt128 mantissa",
+      "reduction": "return Quantity<units,scale>(mantissa)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitQuantity-positive",
+        "LitQuantity-reject"
+      ]
+    },
+    {
+      "constructor": "LitShares",
+      "operands": [
+        {
+          "name": "vault",
+          "type": "Metadata"
+        },
+        {
+          "name": "holder",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Metadata"
+        }
+      ],
+      "result": "SharesVH",
+      "rule": "L-S",
+      "evaluatedOperands": [],
+      "typing": "vault and holder declared; UInt128 value",
+      "reduction": "return Shares<vault,holder>(value)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitShares-positive",
+        "LitShares-reject"
+      ]
+    },
+    {
+      "constructor": "LitRate",
+      "operands": [
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "RateS",
+      "rule": "L-R",
+      "evaluatedOperands": [],
+      "typing": "scale 0..18; SInt128 mantissa",
+      "reduction": "return Rate<scale>(mantissa)",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitRate-positive",
+        "LitRate-reject"
+      ]
+    },
+    {
+      "constructor": "LitPrice",
+      "operands": [
+        {
+          "name": "base",
+          "type": "Metadata"
+        },
+        {
+          "name": "quote",
+          "type": "Metadata"
+        },
+        {
+          "name": "scale",
+          "type": "Metadata"
+        },
+        {
+          "name": "mantissa",
+          "type": "Metadata"
+        }
+      ],
+      "result": "PriceABS",
+      "rule": "L-P",
+      "evaluatedOperands": [],
+      "typing": "distinct declared base/quote assets; scale 0..18; UInt128 mantissa",
+      "reduction": "return Price<base,quote,scale>(mantissa), base per quote",
+      "rejections": [
+        "TYPE_LITERAL",
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "LitPrice-positive",
+        "LitPrice-reject"
+      ]
+    },
+    {
+      "constructor": "ReadLocal",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in earlier locals; exact declared type",
+      "reduction": "return immutable earlier locals snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadLocal-positive",
+        "ReadLocal-reject"
+      ]
+    },
+    {
+      "constructor": "ReadArg",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in arguments; exact declared type",
+      "reduction": "return immutable arguments snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadArg-positive",
+        "ReadArg-reject"
+      ]
+    },
+    {
+      "constructor": "ReadObs",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        }
+      ],
+      "result": "T",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "name declared in observations; exact declared type",
+      "reduction": "return immutable observations snapshot value",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadObs-positive",
+        "ReadObs-reject"
+      ]
+    },
+    {
+      "constructor": "ReadPre",
+      "operands": [
+        {
+          "name": "view",
+          "type": "Metadata"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "READ",
+      "evaluatedOperands": [],
+      "typing": "field declared; view pre always or post only inside Ensure; never next",
+      "reduction": "return pre[field] or assembled post[field]",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_POST_SCOPE",
+        "TYPE_NEXT_READ"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ReadPre-positive",
+        "ReadPre-reject"
+      ]
+    },
+    {
+      "constructor": "ProjectField",
+      "operands": [
+        {
+          "name": "record",
+          "type": "Expression"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "record"
+      ],
+      "typing": "record:Record<R>; metadata field belongs to R",
+      "reduction": "return exact record field",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ProjectField-positive",
+        "ProjectField-reject"
+      ]
+    },
+    {
+      "constructor": "AccessField",
+      "operands": [
+        {
+          "name": "record",
+          "type": "Expression"
+        },
+        {
+          "name": "field",
+          "type": "Metadata"
+        }
+      ],
+      "result": "FieldType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "record"
+      ],
+      "typing": "record:Record<R>; metadata field belongs to R",
+      "reduction": "return exact record field",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "AccessField-positive",
+        "AccessField-reject"
+      ]
+    },
+    {
+      "constructor": "ProjectIndex",
+      "operands": [
+        {
+          "name": "collection",
+          "type": "Expression"
+        },
+        {
+          "name": "index",
+          "type": "Expression"
+        }
+      ],
+      "result": "ElementType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "collection",
+        "index"
+      ],
+      "typing": "collection:Collection<T,N>; index:UInt64",
+      "reduction": "require index<actual length then return item",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "INDEX_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ProjectIndex-positive",
+        "ProjectIndex-reject"
+      ]
+    },
+    {
+      "constructor": "AccessIndex",
+      "operands": [
+        {
+          "name": "collection",
+          "type": "Expression"
+        },
+        {
+          "name": "index",
+          "type": "Expression"
+        }
+      ],
+      "result": "ElementType",
+      "rule": "ACCESS",
+      "evaluatedOperands": [
+        "collection",
+        "index"
+      ],
+      "typing": "collection:Collection<T,N>; index:UInt64",
+      "reduction": "require index<actual length then return item",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "INDEX_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "AccessIndex-positive",
+        "AccessIndex-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructRecord",
+      "operands": [
+        {
+          "name": "recordType",
+          "type": "Metadata"
+        },
+        {
+          "name": "fields",
+          "type": "NamedExpressionList"
+        }
+      ],
+      "result": "RecordR",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "fields"
+      ],
+      "typing": "fields cover R exactly once; each expression has exact declared field type",
+      "reduction": "evaluate lexical fields; build value sorted by field names; check aggregate bounds",
+      "rejections": [
+        "TYPE_DUPLICATE_FIELD",
+        "TYPE_RECORD_FIELDS",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructRecord-positive",
+        "ConstructRecord-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructEnum",
+      "operands": [
+        {
+          "name": "enumType",
+          "type": "Metadata"
+        },
+        {
+          "name": "member",
+          "type": "Metadata"
+        }
+      ],
+      "result": "EnumE",
+      "rule": "BUILD",
+      "evaluatedOperands": [],
+      "typing": "member belongs to finite declared enum E",
+      "reduction": "return Enum<E>(member)",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_ENUM_MEMBER"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructEnum-positive",
+        "ConstructEnum-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructSome",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "OptionT",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "elementType=T declared finite; value:T",
+      "reduction": "return Some<T>(value); check aggregate bounds",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructSome-positive",
+        "ConstructSome-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructNone",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        }
+      ],
+      "result": "OptionT",
+      "rule": "BUILD",
+      "evaluatedOperands": [],
+      "typing": "elementType=T declared finite",
+      "reduction": "return None<T>",
+      "rejections": [
+        "TYPE_NAME"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructNone-positive",
+        "ConstructNone-reject"
+      ]
+    },
+    {
+      "constructor": "ConstructCollection",
+      "operands": [
+        {
+          "name": "elementType",
+          "type": "Metadata"
+        },
+        {
+          "name": "capacity",
+          "type": "Metadata"
+        },
+        {
+          "name": "items",
+          "type": "ExpressionList"
+        }
+      ],
+      "result": "CollectionTN",
+      "rule": "BUILD",
+      "evaluatedOperands": [
+        "items"
+      ],
+      "typing": "T declared finite; 0<=capacity<=128; count<=capacity; each item:T",
+      "reduction": "return ordered Collection<T,N>; check aggregate bounds",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_COLLECTION_BOUND",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "ConstructCollection-positive",
+        "ConstructCollection-reject"
+      ]
+    },
+    {
+      "constructor": "Add",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type, Amount<A>, Shares<V,H>, Rate<S> or Quantity<U,S>",
+      "reduction": "checked integer sum in underlying type",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Add-positive",
+        "Add-reject"
+      ]
+    },
+    {
+      "constructor": "Sub",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type, Amount<A>, Shares<V,H>, Rate<S> or Quantity<U,S>",
+      "reduction": "checked integer difference in underlying type",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Sub-positive",
+        "Sub-reject"
+      ]
+    },
+    {
+      "constructor": "Mul",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or two Quantity types deriving units sum and scales sum",
+      "reduction": "checked integer product in underlying type before any parent operation",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Mul-positive",
+        "Mul-reject"
+      ]
+    },
+    {
+      "constructor": "FloorDiv",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or Quantity deriving units difference and scales difference",
+      "reduction": "denominator>0 first; Euclidean quotient q for n=q*d+r,0<=r<d; range check q",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE",
+        "ARITH_DENOMINATOR"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "FloorDiv-positive",
+        "FloorDiv-reject"
+      ]
+    },
+    {
+      "constructor": "CeilDiv",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "ArithmeticResult",
+      "rule": "ARITH",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical integer type; or Quantity deriving units difference and scales difference",
+      "reduction": "denominator>0 first; Euclidean q,r; q+(r!=0); range check",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_QUANTITY_DOMAIN",
+        "ARITH_RANGE",
+        "ARITH_DENOMINATOR"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-NUMERIC",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "CeilDiv-positive",
+        "CeilDiv-reject"
+      ]
+    },
+    {
+      "constructor": "Eq",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical finite types, structural equality",
+      "reduction": "structural exact typed equality",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Eq-positive",
+        "Eq-reject"
+      ]
+    },
+    {
+      "constructor": "Lt",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left<right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Lt-positive",
+        "Lt-reject"
+      ]
+    },
+    {
+      "constructor": "Lte",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left<=right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Lte-positive",
+        "Lte-reject"
+      ]
+    },
+    {
+      "constructor": "Gt",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left>right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Gt-positive",
+        "Gt-reject"
+      ]
+    },
+    {
+      "constructor": "Gte",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "identical ordered integer/indexed numeric types; compare mantissas",
+      "reduction": "left>=right",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Gte-positive",
+        "Gte-reject"
+      ]
+    },
+    {
+      "constructor": "Not",
+      "operands": [
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "value:Bool",
+      "reduction": "return logical negation",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Not-positive",
+        "Not-reject"
+      ]
+    },
+    {
+      "constructor": "And",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "both operands Bool; strict left-to-right",
+      "reduction": "return conjunction",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "And-positive",
+        "And-reject"
+      ]
+    },
+    {
+      "constructor": "Or",
+      "operands": [
+        {
+          "name": "left",
+          "type": "Expression"
+        },
+        {
+          "name": "right",
+          "type": "Expression"
+        }
+      ],
+      "result": "Bool",
+      "rule": "CMP",
+      "evaluatedOperands": [
+        "left",
+        "right"
+      ],
+      "typing": "both operands Bool; strict left-to-right",
+      "reduction": "return disjunction",
+      "rejections": [
+        "TYPE_MISMATCH"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-LAYERS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Or-positive",
+        "Or-reject"
+      ]
+    },
+    {
+      "constructor": "Require",
+      "operands": [
+        {
+          "name": "condition",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "condition"
+      ],
+      "typing": "condition:Bool; Ensure only in final suffix; post reads only in its condition",
+      "reduction": "false rejects GUARD_FAILED; true returns Unit",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_STATEMENT_PLACEMENT",
+        "GUARD_FAILED"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Require-positive",
+        "Require-reject"
+      ]
+    },
+    {
+      "constructor": "Ensure",
+      "operands": [
+        {
+          "name": "condition",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "condition"
+      ],
+      "typing": "condition:Bool; Ensure only in final suffix; post reads only in its condition",
+      "reduction": "false rejects ENSURES_FAILED; true returns Unit",
+      "rejections": [
+        "TYPE_MISMATCH",
+        "TYPE_STATEMENT_PLACEMENT",
+        "ENSURES_FAILED"
+      ],
+      "frame": "unchanged",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Ensure-positive",
+        "Ensure-reject"
+      ]
+    },
+    {
+      "constructor": "Let",
+      "operands": [
+        {
+          "name": "name",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "fresh non-shadowing binder; infer value type under old local context",
+      "reduction": "bind immutable local after value evaluation",
+      "rejections": [
+        "TYPE_DUPLICATE_BINDER",
+        "TYPE_NAME"
+      ],
+      "frame": "extend locals exactly once",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Let-positive",
+        "Let-reject"
+      ]
+    },
+    {
+      "constructor": "NextWrite",
+      "operands": [
+        {
+          "name": "field",
+          "type": "Metadata"
+        },
+        {
+          "name": "value",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "value"
+      ],
+      "typing": "declared ordinary field; unique write; value exact field type",
+      "reduction": "stage tentative write using immutable pre and prior locals",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_FINANCIAL_WRITE",
+        "TYPE_DUPLICATE_WRITE",
+        "TYPE_MISMATCH"
+      ],
+      "frame": "stage one ordinary field; no financial mutation",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-STAGING",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "NextWrite-positive",
+        "NextWrite-reject"
+      ]
+    },
+    {
+      "constructor": "Emit",
+      "operands": [
+        {
+          "name": "operation",
+          "type": "Metadata"
+        },
+        {
+          "name": "fields",
+          "type": "Expression"
+        }
+      ],
+      "result": "Unit",
+      "rule": "STMT",
+      "evaluatedOperands": [
+        "fields"
+      ],
+      "typing": "operation declared with operand Record<R>; fields exactly Record<R>",
+      "reduction": "append Operation<O> descriptor; require descriptor aggregate bounds; no financial execution",
+      "rejections": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "DESCRIPTOR_BOUND"
+      ],
+      "frame": "append ordered operation descriptor only",
+      "entryWork": 1,
+      "sources": [
+        "DESIGN-EFFECTS",
+        "SP01-CONTRACT"
+      ],
+      "decisionStatus": "proposed",
+      "caseIds": [
+        "Emit-positive",
+        "Emit-reject"
+      ]
+    }
+  ],
+  "commonRules": [
+    "S0",
+    "V",
+    "E"
+  ],
+  "commonRuntimeRejections": [
+    "WORK_EXHAUSTED"
+  ],
+  "commonAdmissionRejections": [
+    "INPUT_SCHEMA",
+    "INPUT_BOUND",
+    "INPUT_SPAN",
+    "INPUT_VALUE",
+    "TYPE_CONSTRUCTOR"
+  ],
+  "scope": "Complete proposed expression inventory only; not full 38-operation financial semantics, signing, privacy or profile freeze. Static checker does not execute these reductions."
+}

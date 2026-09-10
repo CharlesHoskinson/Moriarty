@@ -1,0 +1,1818 @@
+{
+  "schemaVersion": "moriarty-expression-cases/0",
+  "status": "author-derived-specified-only",
+  "caseScope": "Mathematical Core judgments, not serialized evaluator-result captures. Terms assume structurally valid annotations embedded by representation.md. Unspecified spans are synthetic[0,0). Expected scalar/Unit values describe fragment judgments; derivationAccounting is not a field of a success result. Only a combined action has ExpressionPrepared post/descriptors/workRemaining. No parser, codec, runtime, K, proof, privacy or authority acceptance is claimed.",
+  "cases": [
+    {
+      "id": "LitUInt-positive",
+      "constructor": "LitUInt",
+      "kind": "positive",
+      "term": "LitUInt(64,7)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt64(7)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "7 is in [0,2^64-1]; one entered literal.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitUInt-reject",
+      "constructor": "LitUInt",
+      "kind": "rejection",
+      "term": "LitUInt(64,18446744073709551616)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "2^64 exceeds the UInt64 maximum before evaluation.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitSInt-positive",
+      "constructor": "LitSInt",
+      "kind": "positive",
+      "term": "LitSInt(-5)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "SInt128(-5)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "-5 is inside signed128 range.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitSInt-reject",
+      "constructor": "LitSInt",
+      "kind": "rejection",
+      "term": "LitSInt(170141183460469231731687303715884105728)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "2^127 is above the signed maximum.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitBool-positive",
+      "constructor": "LitBool",
+      "kind": "positive",
+      "term": "LitBool(true)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(true)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "True is a Boolean value.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitBool-reject",
+      "constructor": "LitBool",
+      "kind": "rejection",
+      "term": "LitBool(1)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "admission",
+        "code": "INPUT_SCHEMA",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Literal Boolean operand must be a JSON Boolean. Integer1 has the wrong scalar kind (and JSON numbers are disallowed), so structural admission rejects INPUT_SCHEMA before typing; there is no truthiness conversion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitText-positive",
+      "constructor": "LitText",
+      "kind": "positive",
+      "term": "LitText(\"\u00e9\")",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Text(\"\u00e9\")",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "One scalar U+00E9 encodes as two UTF-8 bytes, within1024; normalization is absent.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitText-reject",
+      "constructor": "LitText",
+      "kind": "rejection",
+      "term": "LitText(text of1025 ASCII x characters)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "1025 UTF-8 bytes exceeds literal Text bound.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitAmount-positive",
+      "constructor": "LitAmount",
+      "kind": "positive",
+      "term": "LitAmount(A,30)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Amount<A>(30)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "A is declared and30fits UInt128; indexed quantity remains A.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitAmount-reject",
+      "constructor": "LitAmount",
+      "kind": "rejection",
+      "term": "LitAmount(A,-1)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Negative quanta cannot inhabit Amount<A>.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitQuantity-positive",
+      "constructor": "LitQuantity",
+      "kind": "positive",
+      "term": "LitQuantity([(USD,1)],2,-123)",
+      "context": "\u03a3.units contains USD,m,s as a separate roster; other type/snapshot metadata is valid. Repeated USD in the negative literal remains well-shaped metadata but not a canonical unit vector.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Quantity<USD,2>(-123)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Canonical one-symbol unit vector, scale2, signed mantissa -123 represents -1.23USD.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitQuantity-reject",
+      "constructor": "LitQuantity",
+      "kind": "rejection",
+      "term": "LitQuantity([(USD,1),(USD,1)],2,-123)",
+      "context": "\u03a3.units contains USD,m,s as a separate roster; other type/snapshot metadata is valid. Repeated USD in the negative literal remains well-shaped metadata but not a canonical unit vector.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Repeated unit symbol is not a canonical literal vector.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitShares-positive",
+      "constructor": "LitShares",
+      "kind": "positive",
+      "term": "LitShares(V,H,4)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Shares<V,H>(4)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Both identities declared; four share quanta fit UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitShares-reject",
+      "constructor": "LitShares",
+      "kind": "rejection",
+      "term": "LitShares(V,H,-1)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Shares are unsigned, so -1 fails static literal admission.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitRate-positive",
+      "constructor": "LitRate",
+      "kind": "positive",
+      "term": "LitRate(2,-5)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Rate<2>(-5)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Signed rate is -5/100=-0.05.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitRate-reject",
+      "constructor": "LitRate",
+      "kind": "rejection",
+      "term": "LitRate(19,5)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Scale19 exceeds18.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "LitPrice-positive",
+      "constructor": "LitPrice",
+      "kind": "positive",
+      "term": "LitPrice(B,A,4,19743)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Price<B,A,4>(19743)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "BaseB per quoteA;19743/10000=1.9743 B per A.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "LitPrice-reject",
+      "constructor": "LitPrice",
+      "kind": "rejection",
+      "term": "LitPrice(A,A,4,19743)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_LITERAL",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Base and quote must be distinct declared assets.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ReadLocal-positive",
+      "constructor": "ReadLocal",
+      "kind": "positive",
+      "term": "ReadLocal(y)",
+      "context": "L={y:UInt128(11)}; z not declared; other snapshots empty.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(11)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Earlier immutable y=11 is returned unchanged.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ReadLocal-reject",
+      "constructor": "ReadLocal",
+      "kind": "rejection",
+      "term": "ReadLocal(z)",
+      "context": "L={y:UInt128(11)}; z not declared; other snapshots empty.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "z absent from local namespace.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ReadPre-positive",
+      "constructor": "ReadPre",
+      "kind": "positive",
+      "term": "ReadPre(post,x)",
+      "context": "F.x ordinary UInt128;pre.x10;writes.x11;expression is inside Ensure condition.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(11)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Inside Ensure, post overrides pre.x10 with staged x11.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ReadPre-reject",
+      "constructor": "ReadPre",
+      "kind": "rejection",
+      "term": "ReadPre(next,x)",
+      "context": "F.x ordinary UInt128;pre.x10;writes.x11;expression is inside Ensure condition.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NEXT_READ",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "next view is forbidden before reduction.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ReadArg-positive",
+      "constructor": "ReadArg",
+      "kind": "positive",
+      "term": "ReadArg(q)",
+      "context": "A={q:UInt128(7)},z absent.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(7)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Typed argument q=7 read from immutable argument snapshot.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ReadArg-reject",
+      "constructor": "ReadArg",
+      "kind": "rejection",
+      "term": "ReadArg(z)",
+      "context": "A={q:UInt128(7)},z absent.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "No fallback to another namespace when z absent.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ReadObs-positive",
+      "constructor": "ReadObs",
+      "kind": "positive",
+      "term": "ReadObs(now)",
+      "context": "O={now:UInt64(100)},other absent; snapshot consistency assumed only.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt64(100)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Returns supplied100 without oracle effect or truth claim.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ReadObs-reject",
+      "constructor": "ReadObs",
+      "kind": "rejection",
+      "term": "ReadObs(other)",
+      "context": "O={now:UInt64(100)},other absent; snapshot consistency assumed only.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Undeclared observation name rejects.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ProjectField-positive",
+      "constructor": "ProjectField",
+      "kind": "positive",
+      "term": "ProjectField(ReadArg(r),x)",
+      "context": "R={x:UInt128};args.r:Record<R>={x:9}.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(9)",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "Enter accessor1 plus ReadArg1; field x contains9.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "ProjectField-reject",
+      "constructor": "ProjectField",
+      "kind": "rejection",
+      "term": "ProjectField(ReadArg(r),y)",
+      "context": "R={x:UInt128};args.r:Record<R>={x:9}.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "RecordR has no field y.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "AccessField-positive",
+      "constructor": "AccessField",
+      "kind": "positive",
+      "term": "AccessField(ReadArg(r),x)",
+      "context": "R={x:UInt128};args.r:Record<R>={x:9}.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(9)",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "Enter accessor1 plus ReadArg1; field x contains9.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "AccessField-reject",
+      "constructor": "AccessField",
+      "kind": "rejection",
+      "term": "AccessField(ReadArg(r),y)",
+      "context": "R={x:UInt128};args.r:Record<R>={x:9}.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "RecordR has no field y.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ProjectIndex-positive",
+      "constructor": "ProjectIndex",
+      "kind": "positive",
+      "term": "ProjectIndex(ReadArg(xs),LitUInt(64,1))",
+      "context": "args.xs:Collection<UInt128,3>=[4,9].",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(9)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Accessor+argument+index cost3; second item at index1 is9.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "ProjectIndex-reject",
+      "constructor": "ProjectIndex",
+      "kind": "rejection",
+      "term": "ProjectIndex(ReadArg(xs),LitUInt(64,2))",
+      "context": "args.xs:Collection<UInt128,3>=[4,9].",
+      "expected": {
+        "phase": "evaluation",
+        "code": "INDEX_RANGE",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Index2 is not less than actual length2. Capacity3 permits a potential third element but does not create it.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "AccessIndex-positive",
+      "constructor": "AccessIndex",
+      "kind": "positive",
+      "term": "AccessIndex(ReadArg(xs),LitUInt(64,1))",
+      "context": "args.xs:Collection<UInt128,3>=[4,9].",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt128(9)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Accessor+argument+index cost3; second item at index1 is9.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "AccessIndex-reject",
+      "constructor": "AccessIndex",
+      "kind": "rejection",
+      "term": "AccessIndex(ReadArg(xs),LitUInt(64,2))",
+      "context": "args.xs:Collection<UInt128,3>=[4,9].",
+      "expected": {
+        "phase": "evaluation",
+        "code": "INDEX_RANGE",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Index2 is not less than actual length2. Capacity3 permits a potential third element but does not create it.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ConstructRecord-positive",
+      "constructor": "ConstructRecord",
+      "kind": "positive",
+      "term": "ConstructRecord(R,[(y,LitBool(true)),(x,LitUInt(128,9))])",
+      "context": "R={x:UInt128,y:Bool}; bounded schema.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Record<R>{x:9,y:true}",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Evaluate y before x; constructor+2literals cost3; value keys sorted x,y.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "ConstructRecord-reject",
+      "constructor": "ConstructRecord",
+      "kind": "rejection",
+      "term": "ConstructRecord(R,[(x,LitUInt(128,9)),(x,LitUInt(128,9))])",
+      "context": "R={x:UInt128,y:Bool}; bounded schema.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_DUPLICATE_FIELD",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Duplicate x detected before children; y also missing but duplicate is first.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ConstructEnum-positive",
+      "constructor": "ConstructEnum",
+      "kind": "positive",
+      "term": "ConstructEnum(E,Open)",
+      "context": "Enum E has Open,Closed members.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Enum<E>(Open)",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Open belongs to E; one leaf node.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ConstructEnum-reject",
+      "constructor": "ConstructEnum",
+      "kind": "rejection",
+      "term": "ConstructEnum(E,Other)",
+      "context": "Enum E has Open,Closed members.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_ENUM_MEMBER",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Other is not in declared enum.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ConstructSome-positive",
+      "constructor": "ConstructSome",
+      "kind": "positive",
+      "term": "ConstructSome(UInt128,LitUInt(128,4))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Some<UInt128>(4)",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "Explicit T equals child type; constructor and child cost2.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "ConstructSome-reject",
+      "constructor": "ConstructSome",
+      "kind": "rejection",
+      "term": "ConstructSome(UInt128,LitBool(true))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Bool does not equal UInt128.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ConstructNone-positive",
+      "constructor": "ConstructNone",
+      "kind": "positive",
+      "term": "ConstructNone(UInt128)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "None<UInt128>",
+        "financialEffects": [],
+        "workRemaining": "99"
+      },
+      "derivation": "Finite declared UInt128 supplies otherwise unavailable element type.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "1"
+      }
+    },
+    {
+      "id": "ConstructNone-reject",
+      "constructor": "ConstructNone",
+      "kind": "rejection",
+      "term": "ConstructNone(Record<AbsentType>)",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "The annotation[\"Record\",\"AbsentType\"] has valid wire shape, but that nominal record has no definition in \u03a3.recordTypes; static TYPE_NAME is the first defect.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "ConstructCollection-positive",
+      "constructor": "ConstructCollection",
+      "kind": "positive",
+      "term": "ConstructCollection(UInt128,2,[LitUInt(128,4),LitUInt(128,9)])",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Collection<UInt128,2>[4,9]",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Length2<=capacity2; exact element types; constructor+2literals cost3.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "ConstructCollection-reject",
+      "constructor": "ConstructCollection",
+      "kind": "rejection",
+      "term": "ConstructCollection(UInt128,1,[LitUInt(128,4),LitUInt(128,9)])",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_COLLECTION_BOUND",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Length2 exceeds capacity1 before child evaluation.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Add-positive",
+      "constructor": "Add",
+      "kind": "positive",
+      "term": "Add(LitAmount(A,10),LitAmount(A,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Amount<A>(13)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "10+3=13 same asset, UInt128 fit.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Add-reject",
+      "constructor": "Add",
+      "kind": "rejection",
+      "term": "Add(LitAmount(A,10),LitAmount(B,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "A and B are different type indices; no unit-only coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Sub-positive",
+      "constructor": "Sub",
+      "kind": "positive",
+      "term": "Sub(LitSInt(2),LitSInt(5))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "SInt128(-3)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2-5=-3 fits signed128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Sub-reject",
+      "constructor": "Sub",
+      "kind": "rejection",
+      "term": "Sub(LitUInt(128,0),LitUInt(128,1))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "ARITH_RANGE",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "0-1=-1 does not fit UInt128.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Mul-positive",
+      "constructor": "Mul",
+      "kind": "positive",
+      "term": "Mul(LitUInt(64,7),LitUInt(64,6))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "UInt64(42)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "7*6=42 fitsUInt64.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Mul-reject",
+      "constructor": "Mul",
+      "kind": "rejection",
+      "term": "Mul(LitUInt(64,18446744073709551615),LitUInt(64,2))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "ARITH_RANGE",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "(2^64-1)*2=36893488147419103230 exceedsUInt64, checked before any parent division.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "FloorDiv-positive",
+      "constructor": "FloorDiv",
+      "kind": "positive",
+      "term": "FloorDiv(LitSInt(-5),LitSInt(2))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "SInt128(-3)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "-5=(-3)*2+1 with0<=1<2; floor=-3.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "FloorDiv-reject",
+      "constructor": "FloorDiv",
+      "kind": "rejection",
+      "term": "FloorDiv(LitSInt(-5),LitSInt(0))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "ARITH_DENOMINATOR",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Zero denominator rejected before quotient.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "CeilDiv-positive",
+      "constructor": "CeilDiv",
+      "kind": "positive",
+      "term": "CeilDiv(LitSInt(-5),LitSInt(2))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "SInt128(-2)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Euclidean q=-3,r1; nonzero remainder givesq+1=-2.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "CeilDiv-reject",
+      "constructor": "CeilDiv",
+      "kind": "rejection",
+      "term": "CeilDiv(LitSInt(-5),LitSInt(-2))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "ARITH_DENOMINATOR",
+        "workUsed": 3,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Negative denominator rejected before quotient.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Eq-positive",
+      "constructor": "Eq",
+      "kind": "positive",
+      "term": "Eq(LitUInt(128,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(false)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2==3 is False; both operands exactly UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Eq-reject",
+      "constructor": "Eq",
+      "kind": "rejection",
+      "term": "Eq(LitUInt(64,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "UInt64 andUInt128 differ, no implicit width coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Lt-positive",
+      "constructor": "Lt",
+      "kind": "positive",
+      "term": "Lt(LitUInt(128,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(true)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2<3 is True; both operands exactly UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Lt-reject",
+      "constructor": "Lt",
+      "kind": "rejection",
+      "term": "Lt(LitUInt(64,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "UInt64 andUInt128 differ, no implicit width coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Lte-positive",
+      "constructor": "Lte",
+      "kind": "positive",
+      "term": "Lte(LitUInt(128,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(true)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2<=3 is True; both operands exactly UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Lte-reject",
+      "constructor": "Lte",
+      "kind": "rejection",
+      "term": "Lte(LitUInt(64,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "UInt64 andUInt128 differ, no implicit width coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Gt-positive",
+      "constructor": "Gt",
+      "kind": "positive",
+      "term": "Gt(LitUInt(128,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(false)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2>3 is False; both operands exactly UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Gt-reject",
+      "constructor": "Gt",
+      "kind": "rejection",
+      "term": "Gt(LitUInt(64,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "UInt64 andUInt128 differ, no implicit width coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Gte-positive",
+      "constructor": "Gte",
+      "kind": "positive",
+      "term": "Gte(LitUInt(128,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(false)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "2>=3 is False; both operands exactly UInt128.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Gte-reject",
+      "constructor": "Gte",
+      "kind": "rejection",
+      "term": "Gte(LitUInt(64,2),LitUInt(128,3))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "UInt64 andUInt128 differ, no implicit width coercion.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Not-positive",
+      "constructor": "Not",
+      "kind": "positive",
+      "term": "Not(LitBool(false))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(true)",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "Not false is true; node+literal cost2.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "Not-reject",
+      "constructor": "Not",
+      "kind": "rejection",
+      "term": "Not(LitUInt(128,0))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Integerzero is not Booleanfalse.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "And-positive",
+      "constructor": "And",
+      "kind": "positive",
+      "term": "And(LitBool(false),LitBool(true))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(false)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Both children evaluated; false andtrue=false.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "And-reject",
+      "constructor": "And",
+      "kind": "rejection",
+      "term": "And(LitBool(false),LitUInt(128,0))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Right child must beBool even whenleft isfalse.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Or-positive",
+      "constructor": "Or",
+      "kind": "positive",
+      "term": "Or(LitBool(true),LitBool(false))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Bool(true)",
+        "financialEffects": [],
+        "workRemaining": "97"
+      },
+      "derivation": "Both children evaluated; true orfalse=true.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "Or-reject",
+      "constructor": "Or",
+      "kind": "rejection",
+      "term": "Or(LitBool(true),LitUInt(128,0))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Right child must beBool even whenleft istrue.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Require-positive",
+      "constructor": "Require",
+      "kind": "positive",
+      "term": "Require(LitBool(true))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Unit; frames unchanged",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "True guard returnsUnit after2entries.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "Require-reject",
+      "constructor": "Require",
+      "kind": "rejection",
+      "term": "Require(LitBool(false))",
+      "context": "\u03a3 contains declared assets A/B, vault V, holder H; input snapshots satisfy their schemas.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "GUARD_FAILED",
+        "workUsed": 2,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "False condition after2entries erases candidate frames.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Let-positive",
+      "constructor": "Let",
+      "kind": "positive",
+      "term": "Let(y,Add(ReadPre(pre,x),LitUInt(128,1)))",
+      "context": "Positive:pre.x10 ordinary UInt128,yfresh. Negative:argument y:UInt128 already declared.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Unit;locals.y=UInt128(11)",
+        "financialEffects": [],
+        "workRemaining": "96"
+      },
+      "derivation": "Let1+Add1+read1+literal1=4;10+1=11;bind onlyaftervalue.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "4"
+      }
+    },
+    {
+      "id": "Let-reject",
+      "constructor": "Let",
+      "kind": "rejection",
+      "term": "Let(y,LitUInt(128,3))",
+      "context": "Positive:pre.x10 ordinary UInt128,yfresh. Negative:argument y:UInt128 already declared.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_DUPLICATE_BINDER",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "y alreadydeclared asargument; no shadowing.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "NextWrite-positive",
+      "constructor": "NextWrite",
+      "kind": "positive",
+      "term": "NextWrite(x,ReadLocal(y))",
+      "context": "F.x ordinaryUInt128;pre.x10;L.yUInt12811;no previouswrite.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Unit;writes.x=UInt128(11)",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "NextWrite1+ReadLocal1; write stages11,pre.x stays10.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "NextWrite-reject",
+      "constructor": "NextWrite",
+      "kind": "rejection",
+      "term": "NextWrite(x,LitBool(true))",
+      "context": "F.x ordinaryUInt128;pre.x10;L.yUInt12811;no previouswrite.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "x requiresUInt128, notBool.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Ensure-positive",
+      "constructor": "Ensure",
+      "kind": "positive",
+      "term": "Ensure(Eq(ReadPre(post,x),LitUInt(128,11)))",
+      "context": "F.x ordinaryUInt128;pre.x10;stagedwrites.x11;Ensure is finalsuffix. Work count covers this node alone, excluding earlier staging.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Unit;frames unchanged",
+        "financialEffects": [],
+        "workRemaining": "96"
+      },
+      "derivation": "Ensure1+Eq1+postread1+literal1=4;post.x11 equals11.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "4"
+      }
+    },
+    {
+      "id": "Ensure-reject",
+      "constructor": "Ensure",
+      "kind": "rejection",
+      "term": "Ensure(Eq(ReadPre(post,x),LitUInt(128,12)))",
+      "context": "F.x ordinaryUInt128;pre.x10;stagedwrites.x11;Ensure is finalsuffix. Work count covers this node alone, excluding earlier staging.",
+      "expected": {
+        "phase": "evaluation",
+        "code": "ENSURES_FAILED",
+        "workUsed": 4,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "11 differsfrom12; no candidate published.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    },
+    {
+      "id": "Emit-positive",
+      "constructor": "Emit",
+      "kind": "positive",
+      "term": "Emit(O,ReadArg(fields))",
+      "context": "O requiresR={amount:UInt128};args.fields:Record<R>={amount:3};emptydescriptors. O is an uninterpreted metadata fixture, not an admittedfinancial primitive.",
+      "expected": {
+        "phase": "evaluation",
+        "value": "Unit;descriptors=[Operation<O>{amount:3}]",
+        "financialEffects": [],
+        "workRemaining": "98"
+      },
+      "derivation": "Emit1+argument1; exactR appendedasdescriptor. No financialeffectoroperation execution.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "2"
+      }
+    },
+    {
+      "id": "Emit-reject",
+      "constructor": "Emit",
+      "kind": "rejection",
+      "term": "Emit(Unknown,ReadArg(fields))",
+      "context": "O requiresR={amount:UInt128};args.fields:Record<R>={amount:3};emptydescriptors. O is an uninterpreted metadata fixture, not an admittedfinancial primitive.",
+      "expected": {
+        "phase": "static",
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "span": [
+          0,
+          0
+        ]
+      },
+      "derivation": "Unknown operation has no admitted operandschema.",
+      "status": "author-derived-specified-only",
+      "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
+    }
+  ],
+  "combinedCases": [
+    {
+      "id": "staged-x10-to11",
+      "term": "Let(y,Add(ReadPre(pre,x),LitUInt(128,1))); NextWrite(x,ReadLocal(y)); Ensure(Eq(ReadPre(post,x),LitUInt(128,11)))",
+      "expected": {
+        "status": "ExpressionPrepared",
+        "post": {
+          "x": "11"
+        },
+        "descriptors": [],
+        "workRemaining": "90"
+      },
+      "derivation": "Let4+NextWrite2+Ensure4=10; pre.x10 readbeforewrite;post.x11;Eq11,11 true.",
+      "status": "author-derived-specified-only",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "10"
+      },
+      "context": "Minimal fixture pre={x:\"10\"}, \u03a3.fields.x ordinary UInt128. The ordinary-state frame equation extends this derivation to any additional admitted unwritten fields; no financial operation is executed."
+    },
+    {
+      "id": "staged-ensures12",
+      "term": "same staged-x10-to11 with final literal12",
+      "expected": {
+        "code": "ENSURES_FAILED",
+        "workUsed": 10,
+        "candidatePublished": false
+      },
+      "derivation": "All10nodes entered; staged11 !=12. Pre unchanged; no poststate/descriptors published.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "duplicate-write",
+      "term": "NextWrite(x,LitUInt(128,11));NextWrite(x,LitUInt(128,12))",
+      "expected": {
+        "code": "TYPE_DUPLICATE_WRITE",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Static fieldwrite set already contains x atsecondstatement; bothstatements checked beforeanyreduction.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "next-read",
+      "term": "NextWrite(x,ReadPre(next,x))",
+      "expected": {
+        "code": "TYPE_NEXT_READ",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "No next readview belongs to readable snapshots.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "post-outside-ensure",
+      "term": "Let(y,ReadPre(post,x))",
+      "expected": {
+        "code": "TYPE_POST_SCOPE",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Let phase is ordinary, not Ensurecondition.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "two-runtime-failures",
+      "term": "Add(FloorDiv(LitUInt(128,1),LitUInt(128,0)),Sub(LitUInt(128,0),LitUInt(128,1)))",
+      "expected": {
+        "code": "ARITH_DENOMINATOR",
+        "workUsed": 4,
+        "candidatePublished": false,
+        "nodePath": [
+          0
+        ]
+      },
+      "derivation": "Addentry1,FloorDiventry1,its2literals; zero denominator fails before right Sub isentered.",
+      "status": "author-derived-specified-only",
+      "context": "Pure expression fragment, whose root path is empty; no statement index prefix."
+    },
+    {
+      "id": "strict-and-failure",
+      "term": "And(LitBool(false),Eq(FloorDiv(LitUInt(128,1),LitUInt(128,0)),LitUInt(128,0)))",
+      "expected": {
+        "code": "ARITH_DENOMINATOR",
+        "workUsed": 6,
+        "candidatePublished": false,
+        "nodePath": [
+          1,
+          0
+        ]
+      },
+      "derivation": "And1,false1,Eq1,FloorDiv1,1literal1,0literal1=6; false doesnot shortcircuit; Eqrightnotentered.",
+      "status": "author-derived-specified-only",
+      "context": "Pure expression fragment, whose root path is empty; no statement index prefix."
+    },
+    {
+      "id": "static-before-guard",
+      "term": "Require(LitBool(false));NextWrite(x,LitBool(true))",
+      "expected": {
+        "code": "TYPE_MISMATCH",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "x isUInt128; wholeactionstaticchecking fails laterwrite before anyruntimefalseguard.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "work-exhaustion",
+      "term": "Add(LitUInt(128,2),LitUInt(128,3)) withworkInitial2",
+      "expected": {
+        "code": "WORK_EXHAUSTED",
+        "workUsed": 2,
+        "candidatePublished": false
+      },
+      "derivation": "EnterAdd costs1,left literal costs1; right cannot enter atzero; remaining0.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "quantity-mul",
+      "term": "Mul(LitQuantity([(m,1)],1,15),LitQuantity([(s,-1)],1,20))",
+      "expected": {
+        "value": "Quantity<[(m,1),(s,-1)],2>(300)",
+        "workRemaining": "97"
+      },
+      "derivation": "1.5m *2.0/s =3.00m/s;15*20=300;scales1+1=2;sortedunitscombined.",
+      "status": "author-derived-specified-only",
+      "context": "\u03a3.units contains m and s; canonical type annotations are structurally valid. Type/index arithmetic occurs during static checking.",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "quantity-div",
+      "term": "FloorDiv(LitQuantity([(m,1)],2,123),LitQuantity([(s,1)],1,20))",
+      "expected": {
+        "value": "Quantity<[(m,1),(s,-1)],1>(6)",
+        "workRemaining": "97"
+      },
+      "derivation": "123=6*20+3;scale2-1=1; quotient0.6m/s roundsdownfrom0.615m/s.",
+      "status": "author-derived-specified-only",
+      "context": "\u03a3.units contains m and s; canonical type annotations are structurally valid. Type/index arithmetic occurs during static checking.",
+      "derivationAccounting": {
+        "workInitial": "100",
+        "derivedWorkUsed": "3"
+      }
+    },
+    {
+      "id": "quantity-negative-scale",
+      "term": "FloorDiv(LitQuantity([(m,1)],0,3),LitQuantity([(s,1)],1,20))",
+      "expected": {
+        "code": "TYPE_QUANTITY_DOMAIN",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Derivedscale0-1=-1 is outside0..18; no implicitrescaling.",
+      "status": "author-derived-specified-only",
+      "context": "\u03a3.units contains m and s; canonical type annotations are structurally valid. Type/index arithmetic occurs during static checking."
+    },
+    {
+      "id": "financial-write",
+      "term": "NextWrite(debt,ReadArg(zeroDebt))",
+      "expected": {
+        "code": "TYPE_FINANCIAL_WRITE",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Debtfield registrywriteClassfinancial preventsrawstateassignment evenwithsameRecordtype; no repayment implied.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "finite-record-bound",
+      "term": "ConstructRecord(R,[(a,ReadArg(r)),(b,ReadArg(r))])",
+      "context": "T=Collection<Collection<UInt64,16>,128>; r contains128 rows of16 UInt64 zero values. R has a:T,b:T. Input r occurs once in the argument snapshot. No other values contribute appreciably to byte/node bounds.",
+      "expected": {
+        "code": "VALUE_BOUND",
+        "workUsed": 3,
+        "candidatePublished": false
+      },
+      "derivation": "Each inner row has17 value nodes; r has1+128*17=2177. Argument record has2178, within4096. New R has1+2*2177=4355, over4096. Constructor and two ReadArg nodes cost3. Repeated value occurrences count separately. Under representation.md the input argument tree is8455bytes and individual W(r)8518bytes. The duplicated Record W is16941bytes (post payload16909bytes), so4355nodes is the first constructed value bound exceeded; no byte-bound defect masks it.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "unit-not-a-value",
+      "term": "ConstructNone(Unit)",
+      "expected": {
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "[\"Unit\"] is a recognized annotation token but not a finite value type. Shape admission succeeds; ConstructNone cannot resolve Unit as element type and rejects TYPE_NAME before evaluation.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "max-u64-matrix-encoding",
+      "term": "Args={r:128 rows of16 UInt64 maxima}; T=Collection<Collection<UInt64,16>,128>",
+      "expected": {
+        "argsBytes": 47367,
+        "individualValueBytes": 47430,
+        "aggregateValueNodes": 2178,
+        "admission": "fits these input bounds; other schema/action prerequisites assumed valid"
+      },
+      "derivation": "Each UInt64 maximum is a20-digit string, with quotes and commas counted in schema-directed arrays. Exact args JSON is47367bytes; W adds type metadata and totals47430. No tagged scalar layout is admitted.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "byte-boundary-65536",
+      "term": "Args.a has32 Text values of1024 ASCII x characters; Args.b has31 such Text values plus819 ASCII x characters; both Collection<Text,128>",
+      "expected": {
+        "argsBytes": 65536,
+        "aggregateValueNodes": 67,
+        "admission": "fits these input bounds; no expression work yet"
+      },
+      "derivation": "Two array fields,64 strings; each Text within1024. Individual W(a)=32912 and W(b)=32707bytes, bothfit. The exact outer object is65536bytes and therefore not over the inclusive limit.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "byte-boundary-65537",
+      "term": "Same65536-byte case with final Text length820",
+      "expected": {
+        "code": "INPUT_BOUND",
+        "workUsed": 0,
+        "candidatePublished": false,
+        "argsBytes": 65537
+      },
+      "derivation": "One extra ASCII byte changes no type or node count. Every individual value still fits; the complete Args record exceeds65536 at admission.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "undeclared-unit",
+      "term": "LitQuantity([(Ghost,1)],0,1)",
+      "expected": {
+        "code": "TYPE_NAME",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Ghost is an identifier and the pair array has valid structure, but Ghost is absent from \u03a3.units. No normalization or free-symbol assumption bypasses lookup.",
+      "status": "author-derived-specified-only"
+    },
+    {
+      "id": "recursive-operation-schema",
+      "term": "Record R has field child:Option<Operation<O>>; operation O has operand Record<R>",
+      "expected": {
+        "code": "TYPE_SCHEMA_CYCLE",
+        "workUsed": 0,
+        "candidatePublished": false
+      },
+      "derivation": "Schema dependency graph has R\u2192O\u2192R through the Option element. Even a None runtime value cannot make the cyclic type definition admissible.",
+      "status": "author-derived-specified-only"
+    }
+  ]
+}
