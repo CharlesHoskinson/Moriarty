@@ -1,0 +1,42 @@
+{
+  "schema": "moriarty.preview-loan-attempt/1",
+  "status": "CONSUMED",
+  "allocationId": "sp05-preview-loan-exit-20260910-01",
+  "admissionSha256": "1b11a507f86e82c49fb51b0a7cf0f1a5450da14e714c013e0acd9d1fb5577fc7",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-preview-loan-exit-stop-01",
+    "--on-active=2500s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-preview-loan-exit-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server"
+  ],
+  "retryAllowed": false,
+  "priorCharges": {
+    "priorLocalReservedSubmissions": 11,
+    "priorLocalReservedDustSpeck": "3300000000000011",
+    "priorLocalAdmittedDustCeilingSpeck": "4000000000000010",
+    "priorPreviewLoanReservedSubmissions": 4,
+    "priorPreviewLoanReservedDustSpeck": "1200000000000004",
+    "priorPreviewLoanAdmittedDustCeilingSpeck": "2000000000000000",
+    "priorPreviewSwapReservedSubmissions": 4,
+    "priorPreviewSwapReservedDustSpeck": "1200000000000004",
+    "priorPreviewSwapAdmittedDustCeilingSpeck": "2000000000000000",
+    "priorCombinedReservedSubmissions": 19,
+    "priorCombinedReservedDustSpeck": "5700000000000019",
+    "priorCombinedAdmittedDustCeilingSpeck": "8000000000000010",
+    "thisAttemptAdditionalSubmissionsMax": 4,
+    "thisAttemptAdditionalDustCapSpeck": "2000000000000000",
+    "combinedReservedSubmissionCeiling": 23,
+    "combinedReservedPlusThisCapSpeck": "7700000000000019",
+    "combinedAdmittedCeilingPlusThisCapSpeck": "10000000000000010",
+    "reservedDustIsPaidFee": false,
+    "preservation": "All older local/Preview hello-world, compiler/build/proof, preflight/amendment/probe/runtime/reviewer charges and admitted caps remain consumed, including older unquantified totals. No global total, refund, reset, state rollback, repeat permission correction or retry is inferred."
+  }
+}

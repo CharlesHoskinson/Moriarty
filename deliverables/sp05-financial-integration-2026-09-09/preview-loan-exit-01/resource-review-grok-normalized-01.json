@@ -1,0 +1,194 @@
+{
+  "schema": "moriarty.preview-loan-exit-resource-review/1",
+  "reviewer": "grok-4.6",
+  "actualModelIdentity": "Grok 4.6 released by xAI",
+  "reviewKind": "HIGH_BOUNDED_RESOURCE_AND_EXECUTOR",
+  "toolsOperations": "none",
+  "evidenceBasis": "Remote-provided proposal text, packet files, executor, static-check script, source-review wrappers, and listed runtime modules only. Host-current pin check including all 39 runtimeClosure entries is taken as the operator attestation in the review request. This review did not recompute SHA-256, import execute-once.py, read private inputs, start services, or touch the network.",
+  "proposalSha256": "a88497860b4356c7ef08a752d7792612f95a90516601e957e8325ade7ba00632",
+  "sourceCandidateSha256": "7893d0483da00d039fac41bbaacc7025e7c167e68076c235f1cdf45a7f53b648",
+  "sourceStatusHonored": "BOTH_SOURCE_REVIEWS_PASS_SCOPED_NOT_OPERATIONAL_ADMISSION",
+  "packetStatusObserved": "PROPOSED_NOT_ADMITTED",
+  "verdict": "APPROVE_BOUNDED_RUN",
+  "verdictScope": "Exact one-attempt Preview loan activation described by this proposal and executor only. Not SP05, PCD, MC05, MC06, conformance, release, network, proof, or financial acceptance. Not admission by itself. Not a prediction that CLI exit 0 will occur.",
+  "authorizedAttempt": {
+    "kind": "loan",
+    "stages": [
+      "deploy",
+      "initialize",
+      "accrue",
+      "settle"
+    ],
+    "attempts": 1,
+    "submissionsMax": 4,
+    "dustFeeSpeck": "2000000000000000",
+    "grossUsdTestAsset": "20000000000",
+    "allocationId": "sp05-preview-loan-exit-20260910-01",
+    "envelopeSeconds": 2550,
+    "identities": "original Preview seed/address/cache and existing roles/password; no new keys",
+    "store": "new exclusive base, contract-state, run, reservation allocation, and allocation-scoped wallet backup/pending marker",
+    "build": "existing full loan build receipt 51ee2d4d60216464a9ace67966ba0ab253699844187aeb5652b46dc6e9ca5bf7",
+    "prover": "existing moriarty-midnight-proof-server image sha256:801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531 only"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "INFO",
+      "title": "Source approval is not operational admission",
+      "detail": "GPT-6-astra and grok-4.6 source wrappers bind candidate 7893d0483da00d039fac41bbaacc7025e7c167e68076c235f1cdf45a7f53b648 with PASS_SCOPED / APPROVE_SCOPED_SOURCE_ONLY. Those reviews remain source-only. This resource vote does not convert them into dispatch, transaction, or acceptance authority."
+    },
+    {
+      "id": "F2",
+      "severity": "INFO",
+      "title": "Executor is a named adaptation of the original loan activator, not the loan-01 file",
+      "detail": "execute-once.py c8040549e015f0402a72b1b37f2ec3772bf79eaeec4b69a4f07b4af9fd7c16fb uses exclusive unit/timer/allocation names, asserts current prior-charge totals, and rebinds every admission/source/packet/runtimeClosure digest before arming. Public provenance still retains original loan-01 execute-once.py e15bd843a4410a01f793ad9d10c1d663a4020f4fc1621a080ac3dd4a4a14a8d0 as predecessor evidence only."
+    },
+    {
+      "id": "F3",
+      "severity": "PASS",
+      "title": "Collision and one-shot consumption paths fail closed",
+      "detail": "Dispatch requires unit/timer LoadState=not-found, absent base, absent attempt.json, absent allocation-scoped backup and pending marker, exclusive O_CREAT|O_EXCL|O_NOFOLLOW 0600 logs, exclusive reservation allocation, and exclusive JSON saves. attempt.json is written CONSUMED with retryAllowed false before timer start. Occupied logs, locks, units, or paths stop the attempt. No chmod, fallback creation, or replay path exists in the executor."
+    },
+    {
+      "id": "F4",
+      "severity": "PASS",
+      "title": "Deadline and timer arithmetic match the 2550s envelope",
+      "detail": "Independent timer is --on-active=2500s with AccuracySec=1s. setupDeadline=arm+120, operationDeadline=arm+2490, CLI hard-exit timer is deadlineMs+6000, RuntimeMaxSec=floor(remaining operation)+6 with ceiling 2496. 2490+6<2500 and 2500+31<=2550. Deadline projection samples monotonic first and subtracts sampling delay plus 1ms so wall projection cannot lengthen. activate() fsyncs argv with TimeoutStartSec then refuses launch if the reserve was consumed. Static extraction covers timely, late-valid, record-overrun, too-late, and manager-overrun."
+    },
+    {
+      "id": "F5",
+      "severity": "PASS",
+      "title": "Executor never cancels the stop timer and does not start node/indexer",
+      "detail": "timerArgv targets only the loan-exit unit and moriarty-midnight-proof-server. Source contains no systemctl stop of the timer. Failure handling may SIGKILL the unit and docker stop/kill the proof server, then leaves containment verification to the operator. Local node and indexer must inspect as exited and are not in start or timer kill lists."
+    },
+    {
+      "id": "F6",
+      "severity": "PASS",
+      "title": "Corrected CLI selector is honest about command-complete versus outer containment",
+      "detail": "preview-bootstrap.mjs writes one JSON object with status from the integration result, containmentComplete from cleanup, and the three acceptance flags forced false, then returns 0 only after validatePreviewFinancialCompletion. Provider cleanup permanently reports containmentComplete false, so a successful Preview run is FINANCIAL_COMPLETE rather than PASS. That is a command-result selector, not proof that the actual Preview process will reach it. Outer cgroup absence, proof-server exit, and node/indexer still stopped remain independent and must be observed before any timer cancellation."
+    },
+    {
+      "id": "F7",
+      "severity": "LIMITATION",
+      "title": "Proof-request count is not a hard cap",
+      "detail": "providers.mjs constructs sdk.httpClientProofProvider with no callback counter. hardProofCallbackCountEnforced is false. The enforced financial gates are reservedSubmissions<4, cumulative DUST<=2e15 SPECK, and gross native USD_TEST_ASSET<=20e9 before reservation. SDK internal retries and extra proof HTTP calls, if any, consume the same wall, CPU, memory, DUST, and submission ceilings. They do not create a new allowance."
+    },
+    {
+      "id": "F8",
+      "severity": "LIMITATION",
+      "title": "Private SDK logs have no numeric byte quota",
+      "detail": "hardLogFileByteLimit is null and LimitFSIZE is deliberately omitted because it would also cap wallet snapshots, native payloads, and LevelDB files. Production is bounded by process lifetime, MemoryMax=4GiB, CPUQuota=200%, and a 4GiB free-disk precheck that is headroom rather than a quota. Disk exhaustion or process kill stops the attempt; logs are retained and must not be published. This is accepted only because it is disclosed and fail-closed."
+    },
+    {
+      "id": "F9",
+      "severity": "PASS",
+      "title": "Budget arithmetic is internally consistent and additive",
+      "detail": "19+4=23 submissions. 5700000000000019+2000000000000000=7700000000000019 reserved-plus-this-cap SPECK. 8000000000000010+2000000000000000=10000000000000010 admitted-ceiling-plus-this-cap SPECK. reservedDustIsPaidFee is false. Prior local 11, Preview loan 4, Preview swap 4, and all older unquantified charges remain consumed. This allocation does not refund, reset, or reuse those reservations."
+    },
+    {
+      "id": "F10",
+      "severity": "CONDITION",
+      "title": "Wallet reuse is original-identity reuse, not allocation reuse",
+      "detail": "Seed, expected address mn_addr_preview18adpl4a5kmjm5ffq7wy6wtq5sjy5pl67g4js8ldpvzdqrnpdgthqvlhhye, runtime directory, roles.json, and password are the original identities. Child snapshots may already reflect the completed original loan and swap. Persistence uses a new exclusive backup named for this allocation and a fail-closed pending marker. Spendable registered DUST, completed sync, zero pending coins, and unchanged original bytes at persist time remain dispatch-time gates, not facts established by this proposal."
+    },
+    {
+      "id": "F11",
+      "severity": "CONDITION",
+      "title": "execute-once.py only arms and starts; it does not harvest the financial result",
+      "detail": "After launcher ActiveState=active it records launcher-active.json and exits. systemd-run is used without --wait, so the client waits for Type=exec startup only. Actual CLI exit, closed stdout, four native receipts, fee comparison, persistence, and containment evidence are later operator observations required by COMMANDS-DRAFT.md. Command completion cannot cancel containment."
+    },
+    {
+      "id": "F12",
+      "severity": "INFO",
+      "title": "Packet hash cross-binds are consistent in the provided text",
+      "detail": "Listed packetFiles, FILE headers, runtimeClosure, publicPlanDraft, static-checks-02 sourceSha256, and source-review wrappers agree on the same digests for the files supplied in this review. financial-expectations.json is pinned by EXPECTATION_HASH inside financial-comparison.mjs rather than as a 39th-plus runtimeClosure path; launch-runtime-pins.json is bound through the source candidate and the bootstrap manifest pin 4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195. Admission must still include every file the executor will bound."
+    }
+  ],
+  "enforcedConditions": [
+    "Both resource votes must bind this exact proposalSha256 and the same source candidate; exclusive execution-admission.json must retain both reviewers' normalized decisions and actual raw-review hashes before any import or start of execute-once.py.",
+    "Admission files must include every source file, packet file, resource-proposal-draft.json under this proposal digest, referenced raw source reviews, both existing full-build reviews, and the 39 runtimeClosure paths. Missing or mismatched digest is a stop.",
+    "One consumed attempt only. No retries, no second systemd-run, no replay of old transactions or contracts, no new keys or capabilities, no chmod, no permission amendment, no fallback creation, no state rollback, no automatic recovery, no global fee reset, and no private SDK log publication.",
+    "deadlineMs remains 0 until the independently armed timer epoch is observed; only then may the executor materialize a conservative operation deadline. Draft plan with deadlineMs=0 must not be launched.",
+    "Original identities only: seedFile, stateDirectory, expectedAddress, rolesFile, passwordFile as pinned. Pending marker or this-allocation backup already present is a stop. Preserve all older backups and prior public evidence.",
+    "Start only the existing proof-server container with the pinned image, 5368709120 memory, 10737418240 MemorySwap, 4000000000 nanoCpus, restart=no, 127.0.0.1:16300. Node and indexer must remain stopped. Listener readiness is not proof correctness.",
+    "Hard financial caps for this allocation: 4 submissions, 2000000000000000 SPECK DUST, 20000000000 gross USD_TEST_ASSET. First cap, unknown finality, failed full comparison, or deadline miss stops the attempt and retains charges.",
+    "Required positive evidence after the unit is terminal, all independently retained: four canonical-finalized native Preview loan receipts and complete comparisons; systemd ExecMainCode=1 and ExecMainStatus=0 for actual exit 0; exactly one closed stdout JSON object with status FINANCIAL_COMPLETE and containmentComplete, networkAcceptance, proofAcceptance, financialAcceptance all false; native DUST total within 2e15 SPECK; gross USD_TEST_ASSET<=20e9; coherent exclusive persistence with pending marker cleared; durable public bytes and all partials on failure.",
+    "Required containment before any timer cancellation: terminal launcher status, actual launcher cgroup absence, proof-server exited, node/indexer still exited. CLI 0 does not substitute. Ambiguity classifies UNKNOWN; retain all charges; no replay.",
+    "Separate GPT-6 and Grok actual-result reviews are required after evidence capture. This resource vote does not pre-accept those results.",
+    "Prior combined reservations 19 and 5700000000000019 SPECK, admitted ceilings 8000000000000010 SPECK, and older unquantified charges remain. This attempt adds at most 4 submissions and a 2e15 SPECK cap. Do not treat reserved dust as paid fees.",
+    "Python assertions must remain enabled. execute-once.py must not be imported by checks. Dispatch is the listed python3 execute-once.py one-shot only."
+  ],
+  "limits": {
+    "attempts": 1,
+    "submissions": 4,
+    "dustFeeSpeck": "2000000000000000",
+    "grossByLogicalAsset": {
+      "USD_TEST_ASSET": "20000000000"
+    },
+    "timeSeconds": {
+      "activationAndSetupMax": 120,
+      "operationDeadlineAfterArming": 2490,
+      "operationRemainingAtLatestActivation": 2370,
+      "bootstrapHardExitAfterOperationDeadline": 6,
+      "independentShutdownAfterArming": 2500,
+      "cleanupMax": 31,
+      "latestPlannedContainmentAfterArming": 2531,
+      "envelopeMax": 2550
+    },
+    "launcher": {
+      "unit": "moriarty-sp05-preview-loan-exit-01.service",
+      "stopUnit": "moriarty-sp05-preview-loan-exit-stop-01",
+      "MemoryMax": 4294967296,
+      "MemorySwapMax": 0,
+      "CPUQuota": "200%",
+      "RuntimeMaxSecCeiling": 2496,
+      "TimeoutStopSec": 1,
+      "KillMode": "control-group",
+      "FinalKillSignal": "SIGKILL",
+      "UMask": "0077"
+    },
+    "storage": {
+      "minimumFreeBytes": 4294967296,
+      "minimumHostAvailableMemoryBytes": 9663676416,
+      "publicPayloadBytesEachMax": 16777216,
+      "publicPayloadCountMax": 4,
+      "publicJsonBytesEachMax": 8388608,
+      "privateSnapshotNextBytesEachMax": 33554432,
+      "hardLogFileByteLimit": null,
+      "hardProofCallbackCountEnforced": false
+    },
+    "priorChargesRemain": {
+      "priorCombinedReservedSubmissions": 19,
+      "priorCombinedReservedDustSpeck": "5700000000000019",
+      "priorCombinedAdmittedDustCeilingSpeck": "8000000000000010",
+      "combinedReservedSubmissionCeilingIfThisRuns": 23,
+      "combinedReservedPlusThisCapSpeck": "7700000000000019",
+      "combinedAdmittedCeilingPlusThisCapSpeck": "10000000000000010"
+    }
+  },
+  "notAcceptedFromThisProposal": [
+    "SP05 completion",
+    "mandatory PCD",
+    "MC05/MC06",
+    "conformance or release",
+    "networkAcceptance",
+    "proofAcceptance",
+    "financialAcceptance",
+    "outer containmentComplete",
+    "relabeling of original loan or swap CLI exit 1",
+    "reuse of a consumed allocation",
+    "any claim that source-tested CLI selection has already occurred on the actual Preview process"
+  ],
+  "stopOn": [
+    "missing or mismatched source or resource votes",
+    "occupied unit, timer, output, store, allocation, or backup",
+    "changed original identity or pending persistence marker",
+    "container image, limits, port, or state mismatch",
+    "insufficient memory or storage",
+    "genesis, protocol, owner, or build mismatch",
+    "missing or invalid private inputs, failed restore/sync, nonspendable DUST, or pending wallet state",
+    "first failure, cap, or deadline exceeded",
+    "unknown submission or finality, or failed full financial comparison",
+    "incomplete independently observed containment"
+  ]
+}
