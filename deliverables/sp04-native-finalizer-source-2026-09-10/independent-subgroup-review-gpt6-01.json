@@ -1,0 +1,119 @@
+{
+  "schema": "moriarty.independent-subgroup-source-review/1",
+  "createdAtUtc": "2026-09-10T19:34:16.265454+00:00",
+  "reviewer": {
+    "agent": "/root/subgroup_relation_audit",
+    "model": "GPT-6 Astra",
+    "role": "fresh independent source and mathematical reviewer",
+    "candidateAuthor": false,
+    "identityEvidence": "Host-assigned reviewer context; no external provider invocation"
+  },
+  "candidate": {
+    "directory": "deliverables/sp04-native-finalizer-source-2026-09-10/subgroup-bound-source-01",
+    "manifestSha256": "c2b7ec3ed98381f35658852352ad179ecf2a9a71823e99dfb548c38186de6adc",
+    "allManifestFileBindingsVerified": true,
+    "allImmutablePriorBindingsVerified": true,
+    "bytesPreserved": true
+  },
+  "verdict": "PASS_SCOPED_UNIMPLEMENTED_RELATION_AND_CONDITIONAL_COST_ANALYSIS",
+  "acceptedDesign": false,
+  "f0Go": false,
+  "admission": false,
+  "completeVerifierRowBound": null,
+  "blockingFindingsWithinStaticDraftScope": [],
+  "findings": [
+    {
+      "id": "ALG-01",
+      "classification": "independent algebraic inference",
+      "result": "PASS",
+      "claim": "For valid points over characteristic other than 2 or 3, the selected relation is the complete affine group law.",
+      "reason": "Unequal x selects secant. Equal x forces equal or opposite y by the two curve equations. Equal nonzero y selects tangent. Opposite y and y=0 doubling select canonical identity. The final Q.b and P.b selections give both identity laws, including O+O. The finite branch uses a=0 and is specialized to y^2=x^3+4."
+    },
+    {
+      "id": "ALG-02",
+      "classification": "independent algebraic inference",
+      "result": "PASS",
+      "claim": "Safe denominator and inverse constraints resist branch and witness substitution under the stated primitive premises.",
+      "reason": "If active and ex=0, dx is nonzero. If active and ex=1, vy=0 forces 2*P.y nonzero. Otherwise safeD is the fixed one. Thus safeD*w=1 uniquely fixes w in Fp, including inactive branches where w must equal one. Arbitrary zero or wrong inverse witnesses fail this equation. No unused zero division occurs, even when an identity input causes an otherwise artificial finite calculation."
+    },
+    {
+      "id": "ALG-03",
+      "classification": "source observation and independent algebraic inference",
+      "result": "PASS_CONDITIONAL",
+      "claim": "Boolean and exact-zero bindings are sufficient; host branch evaluation alone is not the evidence.",
+      "reason": "Native fixed equality enforces (x-c)*aux=1-res and (x-c)*res=0, forcing res to the exact equality bit even against arbitrary aux. Initial b uses b^2-b=0. NOT, AND, OR and bit selection preserve Boolean values and bind their outputs. Foreign zero normalizes before comparing all seven limbs. With shifted representation 1+sum(2^(56*i)*limb_i) and a 45-bit top limb, the represented integer lies in [1,2^381], strictly below 2p; its only zero residue is p. Thus its zero representation is unique. These premises rule out fake ex/ey/vy and fake active bits."
+    },
+    {
+      "id": "ALG-04",
+      "classification": "independent algebraic inference",
+      "result": "PASS",
+      "claim": "Canonical identity and on-curve invariants propagate without assigning unchecked intermediate points.",
+      "reason": "Input Boolean b with b=>x=y=0 and not b=>curve equation establishes the invariant. For b=0, (0,0) fails the curve equation. Every finite active formula is the group sum, inactive finite cases select zero coordinates and identity, and identity-input overrides return a valid input. Hence every iteration is valid and the final identity bit is meaningful. Extra output on-curve tests are mathematically redundant for this static relation."
+    },
+    {
+      "id": "ALG-05",
+      "classification": "independent algebraic inference and reproduced public Python",
+      "result": "PASS",
+      "claim": "The literal r schedule computes integer [r]P without a prime-order input premise.",
+      "reason": "The prefix invariant A=[processed binary prefix]P proves the schedule by induction. Initial leading one sets A=P; each subsequent bit doubles then optionally adds P. There are 254 doubles and 133 adds. The fixed schedule must retain the unreduced integer, not an Fq conversion or witness-selected bits. Order-2 points double to identity; order-3 (0,2) doubles to (0,-2), then sums to identity. The actual r is odd and r mod 3=1, so those nonidentity torsion cases do not pass membership. Identity passes. Identification with the intended G1 subgroup remains conditional on the stated BLS curve order and prime scalar parameters; this audit does not supply a new primality or curve-order proof."
+    },
+    {
+      "id": "COST-01",
+      "classification": "source observation and independent count",
+      "result": "PASS_CONDITIONAL",
+      "claim": "951 per complete-add relation and 368188 per membership check are consistent conditional region-height sums.",
+      "reason": "Five Fp products, nine normalized linear operations, three exact-zero checks, nine Fp selections, one inverse assignment, one fixed equality, three bit NOTs, one AND, one OR and two bit selections give 225+504+120+63+14+14+11=951. Zero costs 7*4+6*2=40. Input work is 93+42=135, constants 14, final assertion at most 2: 135+14+387*951+2=368188. Counts conservatively include uncached fixed requests and copy-only regions. The inherited 93-row on-curve calculation and arithmetic bounds reproduce through pinned count-tail.py/count-gadget-cost.py."
+    },
+    {
+      "id": "COST-02",
+      "classification": "scope limitation",
+      "result": "OPEN_OUTSIDE_DRAFT",
+      "claim": "The row subtotal requires seven 56-bit limbs with constrained narrower top limb, normalized operands, five native arithmetic columns, fourteen foreign columns, four parallel eight-bit lookup columns, and the pinned gadget bounds.",
+      "reason": "Normalization after each add/subtract is essential. Source normalize is crate-visible and is not automatically an externally callable API; a later implementation must realize this explicit schedule and preserve limb metadata and copy constraints. No synthesis, executable constraint checker or global layout validation was performed."
+    },
+    {
+      "id": "TEST-01",
+      "classification": "experiment observation and coverage limitation",
+      "result": "PASS_PUBLIC_MODEL_ONLY",
+      "claim": "Pinned check-relation.py exits zero for 3267 pairs on eight toy fields and all three reported actual-field checks.",
+      "reason": "The checker chooses honest inverse witnesses and computes zero and selection branches in Python. It does not enumerate malicious inverse/zero/bit assignments or test a synthesized circuit. Rejection of those witnesses in this review is an algebraic argument about the specified equations and inspected primitive source, not a claimed adversarial constraint execution."
+    }
+  ],
+  "reproductions": [
+    {
+      "command": "python3 deliverables/sp04-native-finalizer-source-2026-09-10/subgroup-bound-source-01/check-relation.py",
+      "exitCode": 0,
+      "toyFields": 8,
+      "exhaustivePairs": 3267,
+      "actualFieldChecks": [
+        "identity accepted",
+        "nonidentity cofactor-projected public point accepted",
+        "order3 point rejected"
+      ]
+    },
+    {
+      "command": "python3 deliverables/sp04-native-finalizer-source-2026-09-10/tail-cost-analysis-01/count-tail.py",
+      "exitCode": 0,
+      "includesPinnedRunpy": "schedule-supplement-01/count-gadget-cost.py",
+      "onCurveInputRows": 93
+    }
+  ],
+  "remainingAcceptanceBlockers": [
+    "No authored or synthesized circuit implementing this relation.",
+    "External point byte canonicality and equality to assigned coordinates remain unfrozen.",
+    "Exact variable-point origins, transcript and carried-accumulator/MSM bindings, and the number of required membership checks remain open.",
+    "Exact SRS and fixed-point validity, whole-verifier relation, table loading, domain/permutation/blinding/floor-planner overhead and native acceptance correspondence remain unestablished.",
+    "Required separate Grok review is outside this reviewer receipt; this vote alone grants no implementation or resource admission."
+  ],
+  "operations": {
+    "nativeExecutions": 0,
+    "circuitAuthorship": 0,
+    "compiles": 0,
+    "proofs": 0,
+    "network": 0,
+    "privateReads": 0,
+    "serviceOperations": 0
+  },
+  "hardGate": "Midnight hard gate preserved absolutely. No full-verifier bound, F0 go, native dispatch, backend, k, SRS, proof, or resource permission follows.",
+  "evidenceDiscipline": "Earlier audits were used only as historical bindings. Candidate self-checks were reproduced and separately assessed, not treated as independent acceptance."
+}
