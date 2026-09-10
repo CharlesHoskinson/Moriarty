@@ -1,0 +1,75 @@
+{
+  "schema": "moriarty.local-launch-cgroup-smoke/1",
+  "observedAt": "2026-09-10T03:40:39.867739+00:00",
+  "status": "PASS",
+  "unit": "moriarty-sp05-cgroup-smoke-1789011639580479239.service",
+  "observedParentAndChild": [
+    "817998",
+    "818000"
+  ],
+  "remainingPids": [],
+  "commands": [
+    {
+      "argv": [
+        "systemd-run",
+        "--user",
+        "--unit=moriarty-sp05-cgroup-smoke-1789011639580479239.service",
+        "--property=MemoryMax=67108864",
+        "--property=MemorySwapMax=0",
+        "--property=CPUQuota=5%",
+        "--property=RuntimeMaxSec=20",
+        "--property=TimeoutStopSec=1",
+        "--property=KillMode=control-group",
+        "/usr/bin/bash",
+        "-c",
+        "/usr/bin/sleep 20 & wait"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "Running as unit: moriarty-sp05-cgroup-smoke-1789011639580479239.service; invocation ID: 132ff660670b4a13b0828e44a656c508"
+    },
+    {
+      "argv": [
+        "systemctl",
+        "--user",
+        "show",
+        "moriarty-sp05-cgroup-smoke-1789011639580479239.service",
+        "--property=ControlGroup,MainPID,MemoryMax,MemorySwapMax,CPUQuotaPerSecUSec,RuntimeMaxUSec,TimeoutStopUSec,KillMode"
+      ],
+      "exitCode": 0,
+      "stdout": "TimeoutStopUSec=1s\nRuntimeMaxUSec=20s\nMainPID=817998\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-cgroup-smoke-1789011639580479239.service\nCPUQuotaPerSecUSec=50ms\nMemoryMax=67108864\nMemorySwapMax=0\nKillMode=control-group",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "kill",
+        "--signal=KILL",
+        "--kill-whom=all",
+        "moriarty-sp05-cgroup-smoke-1789011639580479239.service"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-sp05-cgroup-smoke-1789011639580479239.service"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "scope": "Real user-systemd parent/child cgroup kill only; 64MiB/no-swap/5% CPU/20s runtime. No Docker, wallet, proof or network operation; not complete timer/envelope validation or execution admission."
+}

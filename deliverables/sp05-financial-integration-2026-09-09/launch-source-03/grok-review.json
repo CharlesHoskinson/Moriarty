@@ -1,0 +1,50 @@
+{
+  "schema": "moriarty.launcher-fifo-grok-review/1",
+  "verdict": "APPROVED",
+  "candidateSha256": "6df045d64215ea16255fd9dc75270872e1c50769c3a90e9e6b43a58a3259d530",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "22057f50c1b120740b011c903803d08bb022a5dbff97a03ec9fdc9becfc3a3df"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "sha256": "e4f4b8c5e63730dfeb3dc6f40c21466d18f2ae88e8963dd1a377106c92c375b5"
+    }
+  ],
+  "reviewer": {
+    "requestedModel": "grok-4.6",
+    "effort": "high",
+    "metadataModel": "grok-4.6",
+    "usageModels": [
+      "grok-4.6-build"
+    ],
+    "independentProvider": true
+  },
+  "providerVerdict": {
+    "verdict": "APPROVED",
+    "blockers": [],
+    "findings": [
+      "Adding O_NONBLOCK to the existing O_RDONLY|O_NOFOLLOW open is the correct Linux fix: a no-writer FIFO blocked in openSync before fstat could reject a non-regular file, and before any CLI timer existed.",
+      "Regular-file success path is unchanged: O_NONBLOCK is ignored for local regular files; isFile, mode 077, uid, and size checks remain on the opened fd; readFileSync still runs only after that conjunction.",
+      "FIFO with or without a writer still fails LAUNCH_PRIVATE_FILE (S_IFIFO is not a regular file; st_size is 0). The no-writer hang was the only production gap in scope.",
+      "API+CLI spawnSync regression with timeout/SIGKILL is the right hang detector; claimed red ETIMEDOUT / green 12-pass is consistent with this patch. `h` is out of fragment but does not affect the FIFO-open assertion."
+    ],
+    "scopeLimits": [
+      "Narrow FIFO no-writer open hang only; not launcher, symlink-ancestor, uid/mode/size, CLI mapping, or financial/security acceptance.",
+      "Did not execute tests, verify file hashes, or review source outside the supplied function/test.",
+      "Assumes Linux POSIX FIFO semantics and real node:fs openSync/fstatSync/constants; not Windows named pipes.",
+      "Prior reviews pin parent source-02, not this blob; complete Grok source review remains open.",
+      "No wallet, chain, proof, or financial operation admitted."
+    ]
+  },
+  "observation": "grok-02-observation.json",
+  "observationSha256": "5e394628508560b1bc4d193eb9c22813cac507cf9fbe3516196faaf681727ef4",
+  "hostVerified": [
+    "Terminal end_turn, exit 0, no caller termination",
+    "Unchanged exact prompt, candidate, source and tests"
+  ],
+  "elapsedSeconds": 107.577,
+  "completeLauncherApproved": false,
+  "executionAdmitted": false
+}

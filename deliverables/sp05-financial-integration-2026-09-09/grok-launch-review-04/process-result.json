@@ -1,0 +1,51 @@
+{
+  "elapsedSeconds": 329.886,
+  "exitCode": 0,
+  "callerTerminated": false,
+  "returnedModel": "grok-4.6",
+  "eventCounts": {
+    "system": 1,
+    "message_start": 1,
+    "content_block_start": 2,
+    "thinking_delta": 327,
+    "content_block_stop": 2,
+    "text_delta": 1682,
+    "message_delta": 1,
+    "message_stop": 1,
+    "assistant": 1,
+    "result": 1
+  },
+  "terminal": {
+    "result": "```json\n{\n  \"schema\": \"moriarty.local-financial-launch-source/3\",\n  \"verdict\": \"APPROVED\",\n  \"reviewer\": \"Grok 4.6\",\n  \"scope\": \"Source-only correctness of the four supplied existing-wallet local launcher files. Not runtime, ledger, proof, financial, or containment acceptance. candidate04 integrate-local/proven-assets not redesigned. No independent re-hash, no tools, no wallet/network.\",\n  \"files\": [\n    {\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.mjs\",\n      \"sha256\": \"22057f50c1b120740b011c903803d08bb022a5dbff97a03ec9fdc9becfc3a3df\"\n    },\n    {\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs\",\n      \"sha256\": \"e4f4b8c5e63730dfeb3dc6f40c21466d18f2ae88e8963dd1a377106c92c375b5\"\n    },\n    {\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json\",\n      \"sha256\": \"4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195\"\n    },\n    {\n      \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.md\",\n      \"sha256\": \"29168290ab7a246b43c7c2fefae1627140a224da64d16678683b6259aeec6472\"\n    }\n  ],\n  \"blockers\": [],\n  \"delta_assessed\": \"O_RDONLY|O_NOFOLLOW|O_NONBLOCK open then fstat isFile() correctly fail-closes a writer-less FIFO; finally closes fd. CLI hashes/validates the plan only after that open, so the deadline+6s timer is never armed. Regression uses spawnSync timeout 2000/SIGKILL and requires LAUNCH_PRIVATE_FILE and generic CLI stderr.\",\n  \"checks\": {\n    \"argument_parsing\": \"PASS. CLI admits only argv [--run, --plan, ABSOLUTE_PATH, --sha256, 64-hex]. Plan bytes are hashed before JSON parse. Extra flags, relative paths, and inline secrets fail closed. Failure stderr is a fixed line; tests assert argument contents are not echoed.\",\n    \"privacy\": \"PASS under stated ownership. Import path does not read private files or load wallet SDK. Plan schema is exact and rejects embedded seed/role fields. Private reads require absolute path, non-symlink ancestors, O_NOFOLLOW, owner uid, mode&0o077==0, regular file, size (0,32MiB]. JSON/parse/permission errors collapse to codes. publicLaunchEvent projects submitted/stopped only. CLI stdout is status plus forced-false acceptance flags. umask 077; output 0700/0600 exclusive create+fsync. Seed buffer and signing-byte copy are zeroed on the success path; getSecretKey() copy limitation is documented.\",\n    \"wallet_identity\": \"PASS as source. Existing 32-byte hex seed only; HD account0/index0; no generated deployment key. Before start: Bech32 expectedAddress, roles.firstAddress, and signatureVerifyingKey(signingKeyFromBip340(secret)) vs keystore public key. After restore, before start: unshielded state networkId, publicKey, addressHex, Bech32. Missing/incompatible v1 envelopes fail closed. No snapshot overwrite.\",\n    \"restore_semantics\": \"PASS as source. All three child snapshots required; factory(c).restore(saved[kind]) only; no fresh-sync fallback, DUST registration, funding, or retry. outputDirectory mkdir exclusive. Synced DUST coins required after start. Snapshots are not claimed to hold post-run pending state.\",\n    \"durable_finalized_capture_before_submit\": \"PASS. Proxy submitTransaction requires ledger.Transaction own prototype, serialize size bound, deserialize('signature','proof','binding') round-trip, 64-hex hash, identifier bounds. Raw bytes fsynced then metadata fsynced (O_EXCL) before bound submit(canonical). Existing capture blocks a second submit. Historical fixture tests: bytes retained on inert submit throw; occupied metadata prevents even inert submit; .bin may remain if json create fails.\",\n    \"deadlines\": \"PASS as source-best-effort. Plan deadline in (now, now+1h]; within() races work; restore/init also stop-and-throw if already late; CLI process.exit(124) at deadline+6s. FIFO rejection is before that timer.\",\n    \"failure_cleanup\": \"PASS with containment residual. Pre-transfer: stop wallet or partial children, 5s cap, errors swallowed. Post-transfer: integration owns nested stop (candidate04). Inner publicIntegrationResult retained when present; outer catch writes a public failure record without exception text. Seed zeroization finally runs only after seed is in scope.\",\n    \"import_api_usage\": \"PASS fail-closed. Runtime loads pinned entries by file URL after hashing launch-runtime-pins.json (PIN_MANIFEST_SHA256 matches supplied pins digest) and each listed file. inspectLocalLaunchApi asserts WalletFacade.init, HDWallet.fromSeed, child wallet constructors, createKeystore, NoOpTransactionHistoryStorage, signingKeyFromBip340, setNetworkId, firstValueFrom. Transaction capture is exercised on the pinned protocol module and historical public fixture. Launch-path restore/start shapes are not executed by the inert tests.\"\n  },\n  \"assumptions\": [\n    \"Private paths are this user's; no same-UID concurrent replacement after open.\",\n    \"Outer process/cgroup containment and later resource/execution admission remain mandatory and are not provided by this source.\",\n    \"integrate-local candidate04 is the only producer of onStage summaries, onEvent payloads, and publicIntegrationResult; those objects are already public-closed. This launcher does not re-project stage files (unlike events).\",\n    \"Pinned wallet-sdk 1.2.0 treats ShieldedWallet/UnshieldedWallet/DustWallet as factories callable as factory(c).restore(saved), publishes restored unshielded.state before start(), and matches the used HD/keystore/ledger method names.\",\n    \"PINNED_NM resolution used by providers.mjs is the tree whose listed bytes are hashed; pins are not a full transitive supply-chain attestation (documented).\",\n    \"IPv6 loopback is fail-closed if URL.hostname is not exactly '[::1]'.\",\n    \"Inert tests did not restore, start, prove, or contact a network. Inspection flags walletStarted/keysCreated/networkRequests are declared constants, not measured telemetry.\"\n  ],\n  \"residuals_not_blockers\": [\n    \"Promise.race deadline can leave in-flight WalletFacade.init constructing after finally; CLI hard exit and outer containment are the backstop.\",\n    \"mkdirSync/durable plan write sit outside try/finally; seed buffer is not zeroed if those throw. Process exit still drops memory.\",\n    \"onStage writes the integration summary object after status/stage checks only.\",\n    \"privateJson maps symlink/permission/FIFO failures on role/snapshot files to LAUNCH_PRIVATE_JSON.\",\n    \"No swap-kind unit test; loan plan is the tested shape. Swap key exactness is in validateLocalLaunchPlan.\",\n    \"This vote does not accept any chain, proof, or financial result.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "subtype": "success",
+    "is_error": false,
+    "usage": {
+      "input_tokens": 23658,
+      "output_tokens": 18630,
+      "cache_read_input_tokens": 1664,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 23658,
+        "outputTokens": 18630,
+        "cacheReadInputTokens": 1664,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.02718776
+      }
+    },
+    "num_turns": 1,
+    "duration_ms": 324859,
+    "duration_api_ms": 324769,
+    "total_cost_usd": 0.02718776,
+    "session_id": "01a08965-d95f-7740-b66e-54f4ceae75a9"
+  },
+  "upstreamCancellationVerified": false,
+  "privateRawSha256": "60d02618ed8472e2662465be3ea08a4511777d0ae59bd46ce71da09169690253",
+  "scope": "Complete existing-wallet local launcher source only; imported integration candidate04 separately reviewed. No execution or financial acceptance."
+}
