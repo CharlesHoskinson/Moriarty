@@ -1,0 +1,284 @@
+{
+  "schema": "moriarty-independent-financial-source-review/v1",
+  "status": "COMPLETE",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "identityBasis": "Host-assigned independent GPT-6 Astra subagent; no separate external-provider model receipt was available to this reviewer.",
+    "agent": "/root/financial_schema_independent",
+    "independentOfSourceAuthor": true,
+    "sourceAuthorAgent": "/root/spec_audit_early",
+    "sourceAuthoredByReviewer": false
+  },
+  "reviewedAtUtc": "2026-09-10T22:12:46Z",
+  "candidate": {
+    "path": "deliverables/sp01-financial-operation-contract-2026-09-10/source-draft-candidate-03.json",
+    "sha256": "7942eb0af701fc9bebeb796b979a56fdd37b2311a89787b90a35bfe755af36e1",
+    "manifestCommit": "e986091f966b6550620cc926739e9e53c1e31e31",
+    "observedCheckoutHead": "28c7d1b64a00c5357f58d212fb38adffe96888f8",
+    "identityScope": "Exact manifest bytes and all 137 pinned file bytes, not a claim that the changing checkout HEAD equals manifestCommit.",
+    "pinnedFilesVerified": 137,
+    "mismatchedPins": [],
+    "financialSchemaSha256": "693559219ae197637f509c70485ccc6946403372f1ddfdbb04b7fcbd90a5d526",
+    "protectedExpressionPinsVerified": 101
+  },
+  "verdict": "REQUEST_CHANGES",
+  "sourceVerdict": "REQUEST_CHANGES",
+  "designVerdict": "REQUEST_CHANGES",
+  "verdictScope": "The finite reference Sigma and eight new pure constructor choices are coherent proposals. The claimed full38 deterministic consumer/binding layer still contains source-level omissions beyond the explicitly deferred signing, composition and product-rule work. This is not a runtime, successor-freeze, conformance or ledger review.",
+  "structuralVerdict": "APPROVE_SCOPED",
+  "genericContractComplete": false,
+  "scopeInspected": [
+    "All 186 record definitions, 28 enum definitions, seven variant families and other Sigma maps; all 38 operation argument/effect bindings; all 35 closed rule pairs and binding roles.",
+    "All sections of financial-consumers.md, rule-binding-and-admission.md, financial-work.md, financial-schema.md, financial-pure-extensions.md, DECLARATIVE-RULE-INTERFACE.md, MIXED-ARITHMETIC-PROPOSAL.md and STATE-AND-COMPOSITION.md.",
+    "The exact 56-node reference vault body, all 20 independent vault cases, all 13 independent request/message cases and the nine specified claim-link cases.",
+    "README and REMAINING-OBLIGATIONS boundaries; source roster/preservation checks. Historical operation descriptions were searched for alternative claim/reservation construction definitions rather than assumed to supersede current consumers."
+  ],
+  "findings": [
+    {
+      "id": "FIN03-GPT-F1",
+      "severity": "high",
+      "kind": "source-interface-closure",
+      "blocking": true,
+      "title": "MovementPolicy cannot bind the actual computed internal movement leg through the closed selector grammar",
+      "evidence": [
+        "rule-binding-and-admission.md: Selector forms and exact Context roots",
+        "financial-schema.json: /sigma/recordTypes/MovementPolicyInput, /sigma/recordTypes/OperationContext, /sigma/recordTypes/ExchangeArgs",
+        "financial-schema.json: /closedRuleSignatures/0/bindingRoles",
+        "financial-consumers.md:44 and 120",
+        "financial-work.md: fixed move helper"
+      ],
+      "observed": "MovementPolicyInput.quantity/from/to/resource must describe the current exact move. Exchange emits quote-derived inputFee, output-outputFee and outputFee legs. The selector grammar can only project Operand, Constant, State or the four named Context roots; none contains the computed current movement. It forbids arithmetic and has no previous-rule-result or movement-leg selector. ExchangeArgs contains input and minimumOutput, not the computed quote result. PolicyDefinition supplies one movementRule identifier, while the rule instance format has no per-leg dispatch discriminator.",
+      "counterexample": "For a valid quote with output=52, outputFee=3 and minimumOutput=40, the actual pool-to-payee quantity is49. Binding quantity to minimumOutput produces40; binding to a constant49 only handles that instance and fails when the next quote changes. Recomputing a quantity inside a policy body cannot repair an incorrectly bound required quantity parameter. Injecting a host-built undeclared input is outside the closed grammar.",
+      "inference": "The exact source table cannot instantiate required movement policies on all internal computed legs. This prevents the present binding/consumer layer from being a deterministic full38 source relation even if all external authority judgments are granted.",
+      "requestedChange": "Define a finite typed current-movement context with exact construction and access rules, or an equally explicit closed binding mechanism. Specify policy/rule instance selection for each leg and include its selector/input construction in the work schedule. Supply a two-state, nonzero-fee Exchange example proving each policy sees its actual leg quantities and actors."
+    },
+    {
+      "id": "FIN03-GPT-F2",
+      "severity": "high",
+      "kind": "generated-record-closure",
+      "blocking": true,
+      "title": "Several claimed generated claims and reservations lack complete field and identity derivations",
+      "evidence": [
+        "financial-consumers.md:237-250 ShareMint",
+        "financial-consumers.md:313-320 RequestOpen",
+        "financial-consumers.md:350-354 MessageSend",
+        "financial-consumers.md:272-288 PositionOpen",
+        "financial-schema.json: /sigma/recordTypes/ShareMintArgs, /sigma/recordTypes/VaultDefinition, /sigma/recordTypes/Balance, /sigma/recordTypes/Request, /sigma/recordTypes/Message, /sigma/recordTypes/Encumbrance, /sigma/recordTypes/Duty",
+        "rule-binding-and-admission.md: exact rule-table root/instance schemas"
+      ],
+      "observed": "ShareMint says it creates the exact declared share claim, but its Args, the vault and balance records do not identify or describe that claim, nor is a claim-template declaration present in the exact profile table. RequestOpen and positive MessageSend carry reservation/claim IDs but require new Encumbrance and Duty records without assigning every required field. For example, group/priority/releaseRule/seizureAuthority of generated encumbrances and the exact condition/priority/origin and beneficiary selection of generated duties are not fully derived. PositionOpen carries claim IDs and numeric deltas but no complete new Duty descriptions. The complete DebtCreate Duty equation demonstrates the required level of closure and is substantially more explicit.",
+      "counterexample": "With identical RequestOpen inputs, two fresh valid group names or release-rule references can yield distinct well-typed generated reservations while satisfying reservation=P and owned>=reserved. The source gives no exact selection equation. Alternatively, refusing to construct unspecified fields prevents the required opening operation. Supplying a different priority can affect future recovery, so this is not cosmetic serialization freedom.",
+      "inference": "Finite record type closure does not determine the generated financial state. Missing authority judgments cannot supply missing record construction semantics. The stated lack of unspecified row/formula/work choice is premature.",
+      "requestedChange": "Inventory every newly generated state object across all38 consumers and define each field as an exact operand/context/current-state projection, an immutable typed profile declaration, a fixed constant, or a specified checked calculation. Add the required closed declaration/argument forms where no source exists. Define deterministic freshness/ID derivations and complete affected-claim sets. Retain full output-record examples and invalid siblings."
+    },
+    {
+      "id": "FIN03-GPT-F3",
+      "severity": "medium",
+      "kind": "acknowledged-remaining-gate",
+      "blockingForSourceProposal": false,
+      "blockingForGenericCompletion": true,
+      "title": "Signing permissions and mode/work composition remain genuinely open",
+      "evidence": [
+        "REMAINING-OBLIGATIONS.md: Two schema boundaries",
+        "financial-consumers.md:522-526",
+        "rule-binding-and-admission.md: ordered admission steps4-8",
+        "financial-work.md: action budget selection"
+      ],
+      "observed": "The proposal explicitly defers complete claim creation/discharge/assignment permissions and occurrence/counter binding, plus the mode/budget-selection and five-composition partition relation. Current preparation wording selects ordinary work, while recovery servicing requires the separately acknowledged combined relation.",
+      "disposition": "Honest and acceptable as an explicit proposal boundary, not an exception permitting acceptance. These omissions independently prevent calling the generic execution/signing contract complete. No new operational dispatch is approved by this review."
+    },
+    {
+      "id": "FIN03-GPT-F4",
+      "severity": "low",
+      "kind": "source-version-clarity",
+      "blocking": false,
+      "title": "Consolidate stale constructor and definition-shape prose and pin the Boolean dependency",
+      "evidence": [
+        "financial-schema.md:45",
+        "DECLARATIVE-RULE-INTERFACE.md: DR1 RuleDefinition shape",
+        "rule-binding-and-admission.md: Definition exact shape",
+        "README.md:29-31",
+        "source-draft-candidate-03.json: scope and dependency pins"
+      ],
+      "observed": "financial-schema.md still says47 total; the signatures and actual catalog say48. DR1 gives an older exact RuleDefinition shape while the binding supplement gives a different exact shape; the latter is reasonably read as controlling, but its precedence text explicitly names selector shorthand rather than every conflicting definition field. Candidate scope calls all48 constructors pure although the preserved40 include statements. Boolean /1 is clearly described as separately owned and required; its now separately published candidate is not an exact dependency pin in this frozen financial manifest.",
+      "requestedChange": "In the next immutable candidate, state one exact rule-definition codec, use48 total/eight new pure constructors consistently, and record the exact separately accepted Boolean /1 dependency without changing the original101 /0 pins or claiming runtime acceptance."
+    }
+  ],
+  "designVotes": {
+    "eightPureConstructors": [
+      {
+        "choice": "ConstructShares",
+        "vote": "APPROVE_SCOPED",
+        "why": "Explicit UInt128-to-Shares<V,H> introduction closes dynamic share construction without confusing total vault supply with holder ownership or authorizing minting."
+      },
+      {
+        "choice": "ConstructVariant",
+        "vote": "APPROVE_SCOPED",
+        "why": "A finite tagged payload retains the exact nominal type and avoids an option-record sum whose inactive fields consume node/field bounds."
+      },
+      {
+        "choice": "ProjectVariant",
+        "vote": "APPROVE_SCOPED",
+        "why": "Exact case projection has a deterministic wrong-case error and does not cast unrelated assets or holders. It is a partial projection; no general total pattern matcher is claimed."
+      },
+      {
+        "choice": "ProjectSome",
+        "vote": "APPROVE_SCOPED",
+        "why": "Provides the missing explicit Option elimination. None rejection and short-circuit guarding are coherent under the separately required Boolean /1 semantics."
+      },
+      {
+        "choice": "ConvertUInt",
+        "vote": "APPROVE_SCOPED",
+        "why": "Explicit widening permits full128-domain products in UInt256 while checked narrowing rejects only an out-of-range final result. No nominal financial value is implicitly erased."
+      },
+      {
+        "choice": "ScalarValue",
+        "vote": "APPROVE_SCOPED",
+        "why": "Explicit quanta/mantissa/sign/magnitude access makes numeric erasure visible. UInt128 covers abs(SInt128.min); UInt256 covers abs(SignedAmount.min). Reconstructing a value grants no resource authority."
+      },
+      {
+        "choice": "ConstructAmount",
+        "vote": "APPROVE_SCOPED",
+        "why": "The exact UInt128 child and static asset index support source-built amounts while keeping actual availability, movement and authorization in financial consumers."
+      },
+      {
+        "choice": "Select",
+        "vote": "APPROVE_SCOPED",
+        "why": "One typed conditional value permits the four-direction vault rule and signed-delta formulas without a host branch. Whole-tree typing/static bounds and selected-arm dynamic work are compatible and observable."
+      }
+    ],
+    "financialModelChoices": [
+      {
+        "choice": "Full38 closed reference schema and monomorphized finite rule pairs",
+        "vote": "APPROVE_SCOPED",
+        "why": "Every referenced type resolves and the simultaneous schema bounds fit. This supplies a concrete reference ABI, not all corpus profiles or completed consumers."
+      },
+      {
+        "choice": "UInt256 intermediates and nominal wide product types",
+        "vote": "APPROVE_SCOPED",
+        "why": "(2^128-1)^2 fits unsigned256. Distinct AmountProduct/ScaledAmount/SignedScaledAmount/SignedAmount/NetAmount prevent spendable-asset and signed-net confusion; explicit128 overloads retain their own overflow behavior."
+      },
+      {
+        "choice": "Directional initialized zero-fee vault arithmetic",
+        "vote": "APPROVE_SCOPED",
+        "why": "Deposit/redeem floor and mint/withdraw ceil give1,3,4,2 respectively in the S3/V10 examples. The exact proposed Core body is expressive and agrees with all20 independent cases under its separately stated input domain; zero supply, fees and other vault models remain profile work."
+      },
+      {
+        "choice": "Receipt allocation, explicit fee classes and monotone gross counters",
+        "vote": "APPROVE_SCOPED",
+        "why": "Funding and settlement are distinct; allocated quantities cannot exceed receipt quantity; Fee cannot repay nominal debt; refunds do not restore gross allowance. The per-leg failure order is coherent. This vote approves these invariants, not the incomplete full binding implementation."
+      },
+      {
+        "choice": "Mint-to-IssuedDebt linkage and nominal duty conservation",
+        "vote": "APPROVE_SCOPED",
+        "why": "An explicitly promised debt must consume the full exact Issuance receipt with issuer=debtor and recipient=creditor. Derived debt duty fields and original=discharged+remaining preserve liability; unpromised issuance is allowed only under its explicit asset policy."
+      },
+      {
+        "choice": "Partial request fulfillment, claim and pending-input cancellation",
+        "vote": "APPROVE_SCOPED",
+        "why": "C=P+F+R and E=K+claimable keep units separate. Filling40 for52, claiming20 and cancelling60 leaves32 output duty and gross100. The funded-escrow restriction is explicit and cannot be advertised as all asynchronous models."
+      },
+      {
+        "choice": "Payload-only and funded local message closures",
+        "vote": "APPROVE_SCOPED",
+        "why": "q0 has no cash reservation/duty; q>0 release discharges the matching duty and retains terminal history. Receipt/finality/conflict/absence evidence remain mandatory independent predicates. Generated opening records still need F2."
+      },
+      {
+        "choice": "Signed position numeric updates and explicit claim-map dispositions",
+        "vote": "APPROVE_SCOPED",
+        "why": "Eight fixed slots, signed512 addition and final indexed bounds avoid wraparound and caller retagging. Margin uses exact funded input-output; fees are separate. Carry/Pay/AuthorizedDischarge preserve residual obligations when their affected set and external scopes are supplied."
+      },
+      {
+        "choice": "Negative accrual Reject/ReduceInterest, slash-as-burn and rebase-as-rate reference forms",
+        "vote": "APPROVE_SCOPED",
+        "why": "These are legitimate explicitly scoped models. They must not exclude required ACTUS/DeFi behaviors by fiat; reverse debt, other slashing and balance-rebase targets need justified profile/consumer extensions and unchanged coverage denominators."
+      },
+      {
+        "choice": "Exact full38 computed rule binding as currently encoded",
+        "vote": "REQUEST_CHANGES",
+        "why": "F1 prevents binding actual quote-derived movement legs through the closed selector schema."
+      },
+      {
+        "choice": "Complete generated claims/reservations as currently specified",
+        "vote": "REQUEST_CHANGES",
+        "why": "F2 leaves financially significant generated fields and share claim identities without a deterministic source."
+      },
+      {
+        "choice": "Finite helper-work approach",
+        "vote": "APPROVE_SCOPED",
+        "why": "Positive primitive charges, bounded full scans/copies and input-dependent conservative growth bounds are a sound proposed method. No exact full38 work trace or sufficient65,536 budget follows until all consumer constructors/bindings and composition selection are closed and tested."
+      }
+    ]
+  },
+  "tests": [
+    {
+      "name": "Exact pin audit",
+      "status": "PASS",
+      "result": "137/137 candidate pins and101/101 original expression pins matched; candidate and schema digests match the requested inputs."
+    },
+    {
+      "name": "check-financial-schema.py",
+      "status": "PASS_SCOPED",
+      "result": {
+        "records": 186,
+        "enums": 28,
+        "variantFamilies": 7,
+        "sigmaCanonicalBytes": 35139,
+        "sigmaJsonNodes": 2968,
+        "operations": 38,
+        "rules": 35,
+        "negativeControlsRejected": 6
+      },
+      "limits": "Catalog, reference closure, acyclicity, shape/bounds and preservation only; not a complete value or operation checker."
+    },
+    {
+      "name": "check-closure-derivations.py",
+      "status": "PASS_SCOPED",
+      "result": {
+        "preservedConstructors": 40,
+        "newPureConstructors": 8,
+        "totalConstructors": 48,
+        "referenceBodyNodes": 56,
+        "referenceBodyCanonicalBytes": 6372,
+        "integerDiscriminators": 11
+      },
+      "limits": "Author structural/arithmetic assertions were rerun and inspected; not full transitions."
+    },
+    {
+      "name": "Rule/operation cross-binding check",
+      "status": "PASS_SCOPED",
+      "result": "Every operation-required rule exists and lists that operation. This checks catalog linkage, not input expressibility; F1 survives it."
+    },
+    {
+      "name": "independent-request-cases-01.py",
+      "status": "PASS_SCOPED",
+      "result": "13 cases recorded; selected arithmetic/conservation assertions pass. All13 descriptions inspected. Currentness, authenticated recipient roles, atomic rollback and remote evidence were not executed by this arithmetic script."
+    },
+    {
+      "name": "independent-vault-arithmetic-01.py",
+      "status": "PASS_SCOPED",
+      "result": "All20 rational-oracle cases checked, including four wide-product discriminators."
+    },
+    {
+      "name": "Fresh reviewer vault AST type traversal and mathematical evaluator",
+      "status": "PASS_SCOPED",
+      "result": "Independently traversed the exact body with ReadArg/LitUInt/ConstructEnum/Eq/Select/ConvertUInt/Mul/FloorDiv/CeilDiv/ConstructRecord equations. Checked exact record field/type coverage. All20 supplied cases agree after explicit initialized-domain input admission. Successful Deposit/Mint enter24 nodes; Withdraw/Redeem enter28. Full syntax remains56. Full-domain fitting results equal UInt128.max; final overflow is rejected on checked narrowing.",
+      "limits": "Ephemeral reviewer Python command and output retained in tool transcript. This is a limited independent mathematical evaluator, not production Moriarty/K, source elaboration, a full financial profile or a general expression implementation."
+    },
+    {
+      "name": "Generated-field and computed-leg structural counterexample inspection",
+      "status": "FINDINGS_CONFIRMED",
+      "result": "Inspected complete relevant Args/state/rule-table fields and all current consumer sections, then searched historical operation descriptions for missing alternate derivations. No closed current-movement context or complete share/request/message generated-record construction was found."
+    }
+  ],
+  "limits": [
+    "No public-web research was needed for these internal specification and integer-arithmetic claims. No legal, market or protocol-conformance fact is asserted.",
+    "No operational campaign, ledger transaction, native proof, K execution or production evaluator was dispatched. Guarded status was inspected and its unresolved operational-history stop was preserved.",
+    "No source files or pinned artifacts were changed. Only this new independent review receipt is written.",
+    "No claim of all277 ACTUS fixtures,18 financial types,32 dispositions,72 historical DeFi rows,24 action targets, eight intents, three held-outs, eight regressions, five compositions, TX12 or VX6 completion. Required models outside the reference forms still require explicit extensions and validation.",
+    "The mandatory full38 authority/signing grammar, recovery/composition work relation, full profile bodies, source/Core/K correspondence, four acceptance obligations, Midnight Preview financial evidence and PCD remain separate gates.",
+    "This receipt is one independent substantive vote. Grok4.6 review and its actual returned identity/terminal evidence are separately required; this reviewer does not speak for Grok or supply a majority by itself.",
+    "The protected original101 expression files are deliberately preserved. The parent reported subsequent separate Boolean /1 publication; this receipt does not treat that report as runtime evidence or alter the frozen financial candidate."
+  ],
+  "revisitCondition": "Review a new pinned candidate that closes F1 and F2 with complete generated objects and actual computed-leg bindings, retains all38 operations and target denominators, and reconciles F4. Then independently check a complete funded combined history and invalid siblings; do not merely increase schema-count tests."
+}

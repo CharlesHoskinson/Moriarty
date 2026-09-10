@@ -1,0 +1,229 @@
+{
+  "status": "INDEPENDENT_SPECIFIED_ARITHMETIC_NOT_RUNTIME",
+  "scope": "Initialized homogeneous no-fee vault conversion arithmetic only. Does not assert solvency, liquidity, source expressibility, policy permission, conformance or ledger acceptance.",
+  "source": {
+    "path": "deliverables/sp01-financial-operation-contract-2026-09-10/MIXED-ARITHMETIC-PROPOSAL.md",
+    "sha256": "0b17de64ba7906280a3e79e01e3a3162d4d1e1ba20c329247d31faff35de3c09",
+    "section": "MA-D3"
+  },
+  "requiredExtension": "Current pure Core cannot express full-width UInt128 products for these four conversion directions. A reviewed explicit arithmetic extension is required.",
+  "cases": [
+    {
+      "id": "deposit-round-down",
+      "operation": "deposit",
+      "quantity": "4",
+      "supply": "3",
+      "valuation": "10",
+      "expect": {
+        "output": "1",
+        "resultUnit": "shares"
+      }
+    },
+    {
+      "id": "mint-round-up",
+      "operation": "mint",
+      "quantity": "1",
+      "supply": "3",
+      "valuation": "10",
+      "expect": {
+        "output": "4",
+        "resultUnit": "assets"
+      }
+    },
+    {
+      "id": "withdraw-round-up",
+      "operation": "withdraw",
+      "quantity": "4",
+      "supply": "3",
+      "valuation": "10",
+      "expect": {
+        "output": "2",
+        "resultUnit": "shares"
+      }
+    },
+    {
+      "id": "redeem-round-down",
+      "operation": "redeem",
+      "quantity": "1",
+      "supply": "3",
+      "valuation": "10",
+      "expect": {
+        "output": "3",
+        "resultUnit": "assets"
+      }
+    },
+    {
+      "id": "deposit-max-domain-product",
+      "operation": "deposit",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "output": "340282366920938463463374607431768211455",
+        "resultUnit": "shares"
+      },
+      "requiresProductWiderThan128": true
+    },
+    {
+      "id": "mint-max-domain-product",
+      "operation": "mint",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "output": "340282366920938463463374607431768211455",
+        "resultUnit": "assets"
+      },
+      "requiresProductWiderThan128": true
+    },
+    {
+      "id": "withdraw-max-domain-product",
+      "operation": "withdraw",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "output": "340282366920938463463374607431768211455",
+        "resultUnit": "shares"
+      },
+      "requiresProductWiderThan128": true
+    },
+    {
+      "id": "redeem-max-domain-product",
+      "operation": "redeem",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "output": "340282366920938463463374607431768211455",
+        "resultUnit": "assets"
+      },
+      "requiresProductWiderThan128": true
+    },
+    {
+      "id": "deposit-result-overflow",
+      "operation": "deposit",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "1",
+      "expect": {
+        "rejection": "RESULT_UINT128_BOUND"
+      }
+    },
+    {
+      "id": "mint-result-overflow",
+      "operation": "mint",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "1",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "rejection": "RESULT_UINT128_BOUND"
+      }
+    },
+    {
+      "id": "withdraw-result-overflow",
+      "operation": "withdraw",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "1",
+      "expect": {
+        "rejection": "RESULT_UINT128_BOUND"
+      }
+    },
+    {
+      "id": "redeem-result-overflow",
+      "operation": "redeem",
+      "quantity": "340282366920938463463374607431768211455",
+      "supply": "1",
+      "valuation": "340282366920938463463374607431768211455",
+      "expect": {
+        "rejection": "RESULT_UINT128_BOUND"
+      }
+    },
+    {
+      "id": "deposit-small-zero-rounding",
+      "operation": "deposit",
+      "quantity": "1",
+      "supply": "1",
+      "valuation": "2",
+      "expect": {
+        "output": "0",
+        "resultUnit": "shares"
+      }
+    },
+    {
+      "id": "withdraw-small-rounding",
+      "operation": "withdraw",
+      "quantity": "1",
+      "supply": "1",
+      "valuation": "2",
+      "expect": {
+        "output": "1",
+        "resultUnit": "shares"
+      }
+    },
+    {
+      "id": "mint-small-rounding",
+      "operation": "mint",
+      "quantity": "1",
+      "supply": "2",
+      "valuation": "1",
+      "expect": {
+        "output": "1",
+        "resultUnit": "assets"
+      }
+    },
+    {
+      "id": "redeem-small-zero-rounding",
+      "operation": "redeem",
+      "quantity": "1",
+      "supply": "2",
+      "valuation": "1",
+      "expect": {
+        "output": "0",
+        "resultUnit": "assets"
+      }
+    },
+    {
+      "id": "zero-supply-needs-explicit-rule",
+      "operation": "deposit",
+      "quantity": "1",
+      "supply": "0",
+      "valuation": "10",
+      "expect": {
+        "rejection": "OUTSIDE_INITIALIZED_SUBRULE"
+      }
+    },
+    {
+      "id": "zero-valuation-needs-explicit-rule",
+      "operation": "redeem",
+      "quantity": "1",
+      "supply": "10",
+      "valuation": "0",
+      "expect": {
+        "rejection": "OUTSIDE_INITIALIZED_SUBRULE"
+      }
+    },
+    {
+      "id": "deposit-zero-quantity-arithmetic",
+      "operation": "deposit",
+      "quantity": "0",
+      "supply": "3",
+      "valuation": "10",
+      "expect": {
+        "output": "0",
+        "resultUnit": "shares"
+      }
+    },
+    {
+      "id": "input-overflow-before-division",
+      "operation": "redeem",
+      "quantity": "340282366920938463463374607431768211456",
+      "supply": "340282366920938463463374607431768211455",
+      "valuation": "1",
+      "expect": {
+        "rejection": "INPUT_UINT128_BOUND"
+      }
+    }
+  ]
+}
