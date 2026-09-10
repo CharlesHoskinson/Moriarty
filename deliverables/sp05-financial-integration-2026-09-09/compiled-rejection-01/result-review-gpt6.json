@@ -1,0 +1,79 @@
+{
+  "schema": "moriarty.compiled-rejection-independent-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/spec_audit_early",
+  "reviewedAt": "2026-09-10T13:46:36.845138+00:00",
+  "verdict": "PASS_SCOPED",
+  "independence": {
+    "authoredCandidate": false,
+    "readOtherReviewerVerdict": false,
+    "priorWork": "Independent roadmap/specification review only; this review inspected implementation for the first time."
+  },
+  "candidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/review-candidate.json",
+    "sha256": "04b1bb622f610727ccb273e46f885b449f0d58998064919e28862b7de17c0abd",
+    "verifiedFileCount": 10,
+    "files": {
+      "experiments/moriarty-midnight-financial/ledger/compiled-rejection.mjs": "c573505ffc2fcbd091d5c19b3dab86db2f2aa8736f1b76aeb3dfe632cbbffa6f",
+      "experiments/moriarty-midnight-financial/ledger/compiled-rejection.test.mjs": "90034a3d4b1cf79245dce53080f53420492fac2f30437c8f244687f24c3aadad",
+      "experiments/moriarty-midnight-financial/package.json": "76cd0a21d57fd1bae775bca849e3cff4ca4ceba441593f30ac443c74b0c67d32",
+      "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "experiments/moriarty-midnight-financial/custody/swap.compact": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56",
+      "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/README.md": "eac0b12cd9e003978036cd5818573ea5ad714bb1ea90f0c33bf3879e3e8a0ae3",
+      "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/inputs-and-source.json": "1c1bc3da2059e32566b21dd63ce59651dd24a014ea98d85681b6c7220c98fda4",
+      "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/green-02.tap": "7d099e7ee7615be497f307a2ce97b2415fddb35dc0598216863b897976853e26",
+      "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/root-verification.tap": "26a72de52d7c85ba81b967ecc11089191f0d1679cf8dac19c92d0d609e4f17c0",
+      "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/loader-regression.tap": "0d673fedf9ab089bc13b7dad464672b1d353064c63913c26cc5c7315011da887"
+    }
+  },
+  "scope": "Correctness of the fixed actual generated swap/SDK call-preparation rejection helper and connected test controls on the retained 8150-byte historical initialized public state with synthetic private/role inputs. No ledger, Preview, custody authentication or full SP05.2 acceptance.",
+  "findings": [],
+  "sourceChecks": [
+    "Verified all 10 review-candidate file hashes and all 9 input/source plus 4 historical check file hashes/sizes. Rechecked exact frozen bytes after independent tests.",
+    "Inspected the actual pinned SDK createUnprovenCallTxFromInitialStates implementation at lines1330-1375: executable runtime runs circuit before creating returned unproven transaction; CompactError is wrapped by ContractRuntimeError and propagated with original assertion message.",
+    "Inspected retained generated contract guard order and custody/swap.compact close lines116-121. Program, network and revision guards precede provider capability validation; synthetic role bytes therefore do not establish authentication.",
+    "The helper calls the real imported SDK and genuine full-build loader. Three actual cases mock only a pass-through wrapper around the real loader; the SDK/generated execution is not replaced in these cases.",
+    "Public input equality compares all native serialized state bytes with the pinned original capture; private equality compares complete V8 serialized synthetic empty input before/after. This checks final serialized input preservation, not intermediate observations or node state.",
+    "Connected module mocks intercept the actual imported SDK/loader boundaries for false-success, unrelated-error, matching-message-without-cause, state mutation, private mutation and ZK lookup controls. There are no disconnected proof/balance/submit counters.",
+    "Finally cleanup executes on all paths after successful loader acquisition and fails closed on missing/false/throwing cleanup result. Actual loader post-close assertFresh rejection is checked by real-case tests.",
+    "Pinned SDK entry bytes are direct pins only; transitive dependency attestation is not claimed. Loader validates full retained artifact/source manifests and does not compile or prove.",
+    "Package script adds a separate explicit environment-dependent compiled rejection suite and experimental test module mocks. Required artifacts missing causes failure, not skip/install/rebuild.",
+    "Reviewed red, first-green, corrected-green and root-verification logs. Historical failing mutation-test result remains preserved; README correctly distinguishes missing checker red evidence from an already-rejecting generated circuit."
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "MORIARTY_SWAP_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json npm --prefix experiments/moriarty-midnight-financial run test:compiled-rejection",
+      "exitCode": 0,
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 891.715149,
+      "output": "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/gpt6-verification.tap",
+      "sha256": "4591cd19383e3e42de712517c59b346a89d08e40caddcbcc2f5952847c9cedd4"
+    },
+    {
+      "command": "node --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/proven-assets.test.mjs",
+      "exitCode": 0,
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 592.268483,
+      "output": "deliverables/sp05-financial-integration-2026-09-09/compiled-rejection-01/gpt6-loader-verification.tap",
+      "sha256": "d1833c3dd90b27f8e17af4a01701a08fefd1f7623ed1795229a87866e50fbd05"
+    }
+  ],
+  "limitations": [
+    "Historical initialized state is not current live ledger state. No current-state validity, canonical finality, node rejection, included rollback or on-chain nonmutation is established.",
+    "No original private store, authenticated real counterparty, wallet, network, compile, proof or service execution was involved. Payer/recipient/fee integration controls remain later obligations.",
+    "Cause shape and full serialized equality are checked within this fixed pinned local runtime; this is not a proof about arbitrary hostile SDKs or hidden intermediate effects.",
+    "11 current checker tests include only 3 real generated rejection cases; remaining controls deliberately mock the connected interfaces. They must not be counted as additional on-chain or authentic financial cases.",
+    "Both independent reviews remain required before publication; this verdict alone does not admit a campaign, reset resources, close SP05.2 or establish PCD."
+  ],
+  "campaignAdmissionGranted": false,
+  "ledgerNonmutationEstablished": false,
+  "sp052Complete": false,
+  "previewAcceptance": false,
+  "pcdAcceptance": false
+}
