@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 150.463,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "```json\n{\n  \"reviewer\": \"grok-4.6\",\n  \"candidateSha256\": \"4491d3440e9f0419df78e6f42154db53d541161765583cc514f912be0014c1a6\",\n  \"verdict\": \"PASS_SCOPED\",\n  \"scope\": \"Source-only publication merge of reviewed Preview-loan parent 63e47e1efecbbd7c0d4330da76e9f46742eec488 into main 6e92087c95c7614728eaefcdfc2e7f917c32535d. The only conflicting source is experiments/moriarty-midnight-financial/ledger/integrate-local.mjs, resolved from main by replacing the inline local RPC with import/reexport of createLocalRpc from financial-rpc.mjs while retaining the entire main local stale-loan path. This audit accepts the merged tree as a documentation-and-source publication of the already-reviewed first-period Preview loan (four finalized stages, 533972602 USD_TEST_ASSET lender payout, 4500000000 residual notional). It does not accept a new Preview run, financial acceptance, mandatory PCD, Preview swap, SP05 completion, or release.\",\n  \"findings\": [\n    {\n      \"id\": \"CANDIDATE_IDENTITY\",\n      \"severity\": \"info\",\n      \"detail\": \"Supplied candidate-01.json schema is moriarty.preview-publication-merge-candidate/1, parents are exactly 6e92087c95c7614728eaefcdfc2e7f917c32535d and 63e47e1efecbbd7c0d4330da76e9f46742eec488, and the stated file SHA256 matches the requested merge candidate. Candidate scope states original actual-run source remains at 63e47e1 and that no new Preview run is claimed on the merged tree.\"\n    },\n    {\n      \"id\": \"CONFLICT_RESOLUTION_INTEGRATE_LOCAL\",\n      \"severity\": \"info\",\n      \"detail\": \"Resolved integrate-local.mjs SHA256 beab9f0dfdc7fd4309475522bbdf820f1a7ab96dc7a673da5474ae6552fcbd92 matches candidate.resolutionSha256 and the supplied file blob. Versus main, the ~30-line inline createLocalRpc is removed and replaced by import {createLocalRpc} from './financial-rpc.mjs'; export {createLocalRpc}. Versus Preview, the main stale path is present in full: stale-loan-plan imports, STALE_* public failure codes, preflightLocalStaleLoan, realStaleDependencies, exclusive stale/recovery/continuation gates, history/wallet/preserve/prepare/submit phases, adverse result handling, and stale handle cleanup. No Preview helper call sites in the supplied diffs change createLocalRpc signature or local endpoint policy.\"\n    },\n    {\n      \"id\": \"NO_LOCAL_STALE_REGRESSION\",\n      \"severity\": \"info\",\n      \"detail\": \"launch-local.mjs is unchanged versus main and therefore keeps the reviewed local writer 64/66-hex identifier repair (transactionIdentifier /^[a-f0-9]{1,256}$/), stale launch mode, adverse candidate/outcome retention, and rpc1010 classifier already on main. Versus Preview those local-only surfaces are added, not replaced. Local TAP tests 1-2, 117-145 and 186/186 pass in the supplied transcript.\"\n    },\n    {\n      \"id\": \"PREVIEW_HELPER_SEMANTICS\",\n      \"severity\": \"info\",\n      \"detail\": \"Shared financial-rpc.mjs keeps local http loopback policy and the pinned Preview HTTPS endpoint. The visible change versus main's removed inline RPC is additional absolute-deadline checks during fetch and body read, which is a tightening already covered by local tests 4-9/22-23/29 and Preview tests 45-54. preview-launch.mjs is absent from both parent diffs, so Preview launch helpers are unchanged by this merge. Preview TAP 74/74 pass, including 66-hex identifier retention.\"\n    },\n    {\n      \"id\": \"DOCS_MATCH_SCOPED_LOAN\",\n      \"severity\": \"info\",\n      \"detail\": \"README and ROADMAP now state a bounded first-period Preview loan, four finalized stages at blocks 807289/807293/807297/807301, test-asset payout 533972602, residual 4500000000, raw wrapper FAILED and driver INCOMPLETE preserved with separate outer containment, and MC02/swap/PCD/release still open. Those limits match RESULT.md and scoped-approval-01.json (APPROVED_SCOPED, rawStatusesRewritten false, fullSP05Accepted false, mandatoryPcdAccepted false, releaseAccepted false).\"\n    },\n    {\n      \"id\": \"SOURCE_TESTS_SUPPLIED\",\n      \"severity\": \"info\",\n      \"detail\": \"Candidate tests object is local 186, preview 74, failures 0. Supplied TAP files hash to the candidate manifest (local-regression.tap ccbceb9a8abc89d4d73650a41ae83db6cbaee7134d96c60e219b38c3c2938f19, preview-regression.tap d12e6518ac2e83854271e24af99dab86a28dd17f0a29942b61cd154142114f16) and both transcripts report pass 186/74, fail 0. These are source regression tests, not a new network execution.\"\n    }\n  ],\n  \"conditions\": [\n    \"Treat 63e47e1 as the original Preview-loan run source; do not describe the merged tree as that exact run.\",\n    \"Do not claim a new Preview network test, replay, or settlement from this merge.\",\n    \"Keep producer raw statuses FAILED/INCOMPLETE and false nested acceptance flags; containment remains a separate observation.\",\n    \"Leave Preview swap, remaining SP05 financial coverage, mandatory PCD, and release as open hard gates; do not tick MC02.\",\n    \"This PASS_SCOPED covers source publication of an already independently audited first-period test-asset loan slice only.\",\n    \"Shared RPC deadline hardening is admitted here only as merge-visible tightening already independently reviewed, not as a new runtime authority.\"\n  ],\n  \"limitations\": [\n    \"No tools or operations were used. SHA256 digests were not recomputed; candidate, file, TAP, and resolution hashes are accepted as supplied bytes.\",\n    \"Non-conflicting tree membership is taken from the candidate manifest plus the two supplied parent diffs, not from an independent full-tree checkout.\",\n    \"Tests were not re-executed; only the supplied TAP transcripts were read.\",\n    \"This is not a chain re-read, financial-acceptance decision, or runtime/process-containment authority.\",\n    \"Original-run evidence quality remains that of the prior scoped Preview-loan audits; this merge audit does not reopen or replace those result reviews.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 79236,
+      "output_tokens": 7954,
+      "cache_read_input_tokens": 1152,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 79236,
+        "outputTokens": 7954,
+        "cacheReadInputTokens": 1152,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.03515124
+      }
+    },
+    "total_cost_usd": 0.03515124,
+    "session_id": "01a08c6f-91c1-7093-908c-89db9361aade"
+  }
+}

@@ -1,0 +1,9 @@
+// Controlled synthetic files only. No wallet/network/private originals.
+import assert from 'node:assert/strict';import fs from 'node:fs';import {syncBuiltinESMExports} from 'node:module';import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {persistPreviewWalletState} from '/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs';
+const dir=fs.mkdtempSync(join(tmpdir(),'moriarty-gpt6-persist-deadline-')),parent=join(dir,'.midnight-wallet-state/preview');fs.mkdirSync(parent,{recursive:true,mode:0o700});const wallet={},original={};for(const kind of ['shielded','unshielded','dust']){original[kind]=Buffer.from(JSON.stringify({version:1,state:'synthetic-old-'+kind}));fs.writeFileSync(join(parent,kind+'.json'),original[kind],{mode:0o600});wallet[kind]={serializeState:async()=> 'synthetic-new-'+kind};}
+let now=Date.now(),deadline=now+1000,unlinked=false,result,error;const realNow=Date.now,realUnlink=fs.unlinkSync,realFsync=fs.fsyncSync;
+Date.now=()=>now;fs.unlinkSync=(...args)=>{const r=realUnlink(...args);if(args[0]===join(parent,'.moriarty-persistence-pending.json'))unlinked=true;return r;};fs.fsyncSync=(...args)=>{const r=realFsync(...args);if(unlinked)now=deadline+1;return r;};syncBuiltinESMExports();
+try{try{result=await persistPreviewWalletState({wallet,stateDirectory:dir,allocationId:'synthetic-deadline',original,deadlineMs:deadline});}catch(e){error=e.message;}}
+finally{Date.now=realNow;fs.unlinkSync=realUnlink;fs.fsyncSync=realFsync;syncBuiltinESMExports();fs.rmSync(dir,{recursive:true,force:true});}
+console.log(JSON.stringify({scope:'Synthetic private-format snapshots only',deadlineCrossed:now>deadline,pendingMarkerRemoved:unlinked,result,error},null,2));assert.equal(error,'PREVIEW_LAUNCH_DEADLINE','Final fsync crossing cleanup deadline must not return PERSISTED');

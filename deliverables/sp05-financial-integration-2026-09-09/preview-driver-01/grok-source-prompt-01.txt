@@ -1,0 +1,1197 @@
+Independent Grok 4.6 high source audit. Return JSON only: reviewer, candidateSha256, verdict (PASS_SCOPED or BLOCKED), findings, checkedPredicates, limitations, remainingAcceptance. Candidate b1ddf67f5bd6f4b19aa2e1158bf3f9f816db1240c0de190bf3b2930ca44289f0. Assess exact two-file shared local/Preview driver. No other reviewer verdict provided. No tools or operations. Controlled tests are not actual Midnight evidence. User hard gate: actual Moriarty financial settlement on Midnight Preview remains mandatory; this slice only wires fixed financial sequencing. Do not invent an early PCD, independent-wallet or included-rollback gate. Examine actual producer-consumer interfaces, Preview target guards, frozen local behavior, sequence parameters, mandatory observation/comparison, reservation/ID retention, failures/cleanup.
+
+FILE /tmp/moriarty-preview-driver-source.json SHA256 b1ddf67f5bd6f4b19aa2e1158bf3f9f816db1240c0de190bf3b2930ca44289f0
+{
+  "schema": "moriarty.preview-driver-source/1",
+  "status": "SOURCE_REVIEW_PENDING",
+  "baseCommit": "68c6d9a79f8f520a2bfe54115d407b233cc1c184",
+  "scope": "Explicit Preview/local wrappers over shared fixed financial sequence; no live Preview acceptance",
+  "files": {
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-local.mjs": "f95d46b44c79729d1fdc8b515d6799e02791763a5399639479c6f667310ee624",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs": "4cf32c97cbd42a18fc8e5cb2265fb51cea606cb563f65aa5cc4bab92203055b9"
+  },
+  "frozenDependencies": {
+    "/tmp/moriarty-preview-owner-source.json": "00942b4bab990e02e6439fbc66ace37de7a9efa8ae1ccce4b28579bcc6fb58f7",
+    "/tmp/moriarty-preview-rpc-source.json": "22ec46929680876b33bf1e6c8b398ae9c74a71e23429c082a41ebd9a3a80bfac"
+  },
+  "checks": {
+    "/tmp/moriarty-preview-driver-regression.tap": "26360e89d792429f79c12b610acfa36e59572a4a69fc646c949e6b4651bd22d9",
+    "/tmp/moriarty-preview-driver-green.tap": "213a9887ca958dd5c6357544fb63cd0ff5f002850a76ae01356ad306de371d42",
+    "/tmp/moriarty-preview-driver-red.tap": "a14a42db7d353b95f4d051442a1717ddf450205b0055bc935ceb3b3a25c51b9b",
+    "/tmp/moriarty-preview-driver-baseline.tap": "a20b0d5b66d7626b38f2baf97ba1739885c2556daf71ec4bedcc68fccf8128c5"
+  }
+}
+
+
+FILE /home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-local.mjs SHA256 f95d46b44c79729d1fdc8b515d6799e02791763a5399639479c6f667310ee624
+import {EXISTING_SWAP,INITIALIZED_SWAP} from './continue-initialized-swap.mjs';
+import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
+import {readFileSync} from 'node:fs';
+import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
+import {INITIALIZED_LOAN} from './continue-initialized-loan.mjs';
+import {SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
+
+const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
+const BASE=1n<<64n;
+function mul(a,b) {return {aLo:a%BASE,aHi:a/BASE,bLo:b%BASE,bHi:b/BASE,lo:(a%BASE)*(b%BASE)%BASE,carry:(a%BASE)*(b%BASE)/BASE};}
+function div(n,d) {const q=n/d;return {q,r:n%d,product:mul(d,q)};}
+function bytes(hex) {if(typeof hex!=='string'||!/^[0-9a-f]{64}$/.test(hex))throw Error('INVALID_PUBLIC_BINDING');return Uint8Array.from(Buffer.from(hex,'hex'));}
+function secret(x) {if(!(x instanceof Uint8Array)||x.length!==32)throw Error('INVALID_ROLE_SECRET');return Uint8Array.from(x);}
+function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)throw Error('INVALID_CURRENT_TIME');return t;}
+
+
+const publicFailureCodes=new Set(['INVALID_INITIALIZED_SWAP','NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
+for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
+for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
+publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
+/** Closed public diagnostic shared by the producer and durable launcher boundary. */
+export function validatePublicDriverFailure(failure){
+  const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};
+  if(!failure||Object.getPrototypeOf(failure)!==Object.prototype)invalid();
+  const fields=Object.getOwnPropertyDescriptors(failure),keys=Reflect.ownKeys(fields);
+  if(keys.length!==3||!['phase','stage','code'].every(k=>Object.hasOwn(fields,k))||keys.some(k=>!Object.hasOwn(fields[k],'value')||!fields[k].enumerable))invalid();
+  const phase=fields.phase.value,stage=fields.stage.value,code=fields.code.value;
+  if(!['preflight','call','observe','compare'].includes(phase)||![null,'deploy','initialize','accrue','settle','swap','close'].includes(stage)||(code!=='UNCLASSIFIED_DRIVER_FAILURE'&&!publicFailureCodes.has(code)))invalid();
+  return {phase,stage,code};
+}
+function publicFailure(error,phase,stage){
+  const message=Object.getOwnPropertyDescriptor(error,'message');
+  const code=message&&Object.hasOwn(message,'value')&&publicFailureCodes.has(message.value)?message.value:'UNCLASSIFIED_DRIVER_FAILURE';
+  return validatePublicDriverFailure({phase,stage,code});
+}
+
+
+/**
+ * Executes the fixed target-bound I2 sequence. Caller must supply the reviewed native
+ * observer and full financial comparator; neither can be omitted. No CLI or
+ * public dispatch is exposed until the complete integration is reviewed.
+ * verifyStage must return an object with status PASS; every other outcome stops.
+ * This function owns provider cleanup even when preflight fails. Failures expose
+ * error.publicResult with known public IDs, reservations and cleanup disposition.
+ * Incomplete containment cannot return PASS. SDK private results are not copied.
+ */
+export function runLocalFinancialCase(options){return runFinancialCase(options,'undeployed');}
+/** Preview stage sequence only; caller owns chain/build/role validation and admission.
+ * Controlled callbacks can test sequencing, never establish Preview acceptance.
+ */
+export function runPreviewFinancialCase(options){return runFinancialCase(options,'preview');}
+async function runFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap},target) {
+  if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
+  const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
+  try {
+    if(network!==target)throw Error(target==='undeployed'?'LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK':'PREVIEW_DRIVER_REQUIRES_PREVIEW_NETWORK');
+    if(target==='preview'&&(existingDeployment!==undefined||initializedLoan!==undefined||initializedSwap!==undefined))throw Error('PREVIEW_LOCAL_RECOVERY_FORBIDDEN');
+    if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
+    if(typeof observe!=='function'||typeof verifyStage!=='function'||typeof now!=='function')throw Error('OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED');
+    if(!providers||typeof providers.execute!=='function'||typeof providers.cleanup!=='function'||typeof providers.stop!=='function'||typeof providers.getState!=='function'||typeof providers.getExecutionBinding!=='function')throw Error('GUARDED_PROVIDERS_REQUIRED');
+    // Integration supplies this identity only after public verification and private
+    // restore round trips. These shape checks do not establish those predicates.
+    let recovery,continuation;
+    if(initializedSwap!==undefined){
+      if(kind!=='swap'||existingDeployment!==undefined||initializedLoan!==undefined||!initializedSwap||Object.getPrototypeOf(initializedSwap)!==Object.prototype)throw Error('INVALID_INITIALIZED_SWAP');
+      const f=Object.getOwnPropertyDescriptors(initializedSwap);if(Reflect.ownKeys(f).length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(f,k)&&Object.hasOwn(f[k],'value'))||f.contractAddress.value!==INITIALIZED_SWAP.contractAddress||f.deployTxId.value!==EXISTING_SWAP.txId||f.initializeTxId.value!==INITIALIZED_SWAP.txId)throw Error('INVALID_INITIALIZED_SWAP');
+      continuation={contractAddress:f.contractAddress.value,deployTxId:f.deployTxId.value,initializeTxId:f.initializeTxId.value};
+    }
+    if(initializedLoan!==undefined){
+      if(kind!=='loan'||existingDeployment!==undefined||!initializedLoan||Object.getPrototypeOf(initializedLoan)!==Object.prototype)throw Error('INVALID_INITIALIZED_LOAN');
+      const fields=Object.getOwnPropertyDescriptors(initializedLoan),keys=Reflect.ownKeys(fields);
+      if(keys.length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(fields,k))||keys.some(k=>!Object.hasOwn(fields[k],'value')))throw Error('INVALID_INITIALIZED_LOAN');
+      if(fields.contractAddress.value!==INITIALIZED_LOAN.contractAddress||fields.initializeTxId.value!==INITIALIZED_LOAN.txId||fields.deployTxId.value!=='00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9')throw Error('INVALID_INITIALIZED_LOAN');
+      continuation={contractAddress:fields.contractAddress.value,deployTxId:fields.deployTxId.value,initializeTxId:fields.initializeTxId.value};
+    }
+    if(existingDeployment!==undefined) {
+      if(kind!=='loan')throw Error('EXISTING_DEPLOYMENT_REQUIRES_LOAN');
+      if(existingDeployment===null||typeof existingDeployment!=='object'||Object.getPrototypeOf(existingDeployment)!==Object.prototype)throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const fields=Object.getOwnPropertyDescriptors(existingDeployment),keys=Reflect.ownKeys(fields);
+      if(keys.length!==2||!keys.includes('contractAddress')||!keys.includes('txId')||keys.some(key=>!Object.hasOwn(fields[key],'value')))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const contractAddress=fields.contractAddress.value,txId=fields.txId.value;
+      if(typeof contractAddress!=='string'||!/^[0-9a-f]{64}$/.test(contractAddress)||typeof txId!=='string'||!/^[0-9a-f]{66}$/.test(txId))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      recovery={contractAddress,txId};
+    }
+    const first=secret(roles.firstSecret),second=secret(roles.secondSecret);
+    const firstAddress=bytes(roles.firstAddress),secondAddress=bytes(roles.secondAddress);
+    if(roles.firstAddress===roles.secondAddress)throw Error('DISTINCT_FINANCIAL_PARTICIPANTS_REQUIRED');
+    const program=bytes(bindings[kind].programDigest),net=bytes(networkTag);
+    const payerAddress=roles.firstAddress;
+    let initialBinding;
+    async function checkBinding() {
+      const observed=await providers.getExecutionBinding();
+      const prefix=target==='undeployed'?'LOCAL':'PREVIEW';
+      if(observed?.network?.networkId!==target||observed.sdkNetworkId!==target||observed.payerAddress!==payerAddress)throw Error(prefix+'_EXECUTION_BINDING_MISMATCH');
+      if(target==='preview'){
+        // These are configured public targets, not a fresh chain identity check.
+        if(!['https://rpc.preview.midnight.network','https://rpc.preview.midnight.network/'].includes(observed.network.node)||observed.network.indexer!=='https://indexer.preview.midnight.network/api/v4/graphql'||observed.network.indexerWS!=='wss://indexer.preview.midnight.network/api/v4/graphql/ws')throw Error('PREVIEW_EXECUTION_BINDING_ENDPOINT');
+      }
+      for(const [key,protocol] of target==='undeployed'?[['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']]:[['proofServer','http:']]) {
+        const url=new URL(observed.network[key]);
+        if(url.protocol!==protocol||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password||url.hash)throw Error(prefix+'_EXECUTION_BINDING_ENDPOINT');
+      }
+      const snapshot=JSON.stringify(observed);
+      if(initialBinding!==undefined&&snapshot!==initialBinding)throw Error(prefix+'_EXECUTION_BINDING_CHANGED');
+      initialBinding=snapshot;
+    }
+    await checkBinding();
+    sdk??=await loadFinancialContractsSdk();
+    let deployTxId;
+    if(continuation){
+      address=continuation.contractAddress;deployTxId=continuation.deployTxId;
+    } else if(recovery) {
+      address=recovery.contractAddress;
+      deployTxId=recovery.txId;
+    } else {
+      diagnosticPhase='call';diagnosticStage='deploy';
+      const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
+      address=deployed.deployTxData.public.contractAddress;bytes(address);
+      deployTxId=deployed.deployTxData.public.txId;
+    }
+    async function record(circuitId,txId) {
+      if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
+      transactionIds.add(txId);diagnosticPhase='observe';diagnosticStage=circuitId;
+      const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address,...(target==='preview'?{network:'preview'}:{})}));
+      diagnosticPhase='compare';
+      const comparison=await providers.execute('compare:'+circuitId,()=>verifyStage(circuitId,observation));
+      if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
+      stages.push(observation.receipt);
+    }
+    await record('deploy',deployTxId);
+    if(continuation)await record('initialize',continuation.initializeTxId);
+    async function call(circuitId,args) {
+      diagnosticPhase='call';diagnosticStage=circuitId;
+      const result=await providers.execute(circuitId,async()=>{await checkBinding();return sdk.submitCallTx(providers,{compiledContract,contractAddress:address,privateStateId:`sp05-${kind}`,circuitId,args});});
+      await record(circuitId,result.public.txId);
+    }
+    if(kind==='loan') {
+      if(!continuation)await call('initialize',[first,program,net,2n,time(now)]);
+      await call('accrue',[first,program,net,0n,2n,time(now),{h0:mul(5000000000n,8n),h1:mul(40000000000n,31n),h2:mul(100n,365n),h3:div(1240000000000n,36500n)}]);
+      await call('settle',[first,program,net,1n,2n,0n,533972602n,time(now),{unused:0n}]);
+    } else {
+      if(!continuation)await call('initialize',[second,program,net,3n,time(now)]);
+      await call('swap',[first,program,net,0n,4n,4n,0n,1n,10000n,19700n,time(now),{h0:mul(10000n,997n),h1:mul(9970000n,2000000n),h2:mul(1000000n,1000n),h3:div(19940000000000n,1009970000n)}]);
+      await call('close',[second,program,net,1n,3n,time(now),{unused:0n}]);
+    }
+  } catch(error) {
+    failure=error instanceof Error?error:Error('DRIVER_OPERATION_FAILED');
+    try {providers.stop?.('driver failed');}catch{/* Preserve the first failure. */}
+  } finally {
+    try {
+      const result=await providers.cleanup();
+      cleanup={walletStopped:result?.walletStopped===true,pendingOperations:Number.isSafeInteger(result?.pendingOperations)&&result.pendingOperations>=0?result.pendingOperations:null,containmentComplete:result?.containmentComplete===true};
+    } catch {cleanup={walletStopped:false,pendingOperations:null,containmentComplete:false};}
+  }
+  // Public operational evidence excludes provider reasons, private SDK results and keys.
+  let operationalState;
+  try {
+    const state=providers.getState?.();
+    for(const id of state?.identifiers??[])if(typeof id==='string'&&id)transactionIds.add(id);
+    operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
+  } catch {operationalState={unavailable:true};}
+  const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
+  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  if(failure||!contained) {
+    const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
+    error.publicResult=publicResult;throw error;
+  }
+  return publicResult;
+}
+
+
+FILE /home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs SHA256 4cf32c97cbd42a18fc8e5cb2265fb51cea606cb563f65aa5cc4bab92203055b9
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as driver from './run-local.mjs';
+const preview={networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
+const local={networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
+function fixture(kind='loan',network='preview'){
+ const calls=[],events=[],ids=[];let cleaned=0,stopped=0;
+ const roles={firstSecret:new Uint8Array(32).fill(1),secondSecret:new Uint8Array(32).fill(2),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)};
+ const binding={network:{...(network==='preview'?preview:local)},sdkNetworkId:network,payerAddress:roles.firstAddress};
+ const options={kind,network,roles,networkTag:'03'.repeat(32),compiledContract:{},now:()=>1700000000n,
+ providers:{getExecutionBinding:()=>binding,execute:async(stage,op)=>{events.push(stage);return op();},stop:()=>stopped++,cleanup:async()=>{cleaned++;return {walletStopped:true,pendingOperations:0,containmentComplete:true};},getState:()=>({identifiers:[...ids],reservedSubmissions:ids.length,reservedDustFee:123n,reservedGrossByAsset:{['04'.repeat(32)]:456n}})},
+ sdk:{deployContract:async(_p,o)=>{calls.push({stage:'deploy',options:o});ids.push('deploy');return {deployTxData:{public:{contractAddress:'ab'.repeat(32),txId:'deploy'},private:{secret:'PRIVATE_CANARY'}}};},submitCallTx:async(_p,o)=>{calls.push({stage:o.circuitId,options:o});ids.push(o.circuitId);return {public:{txId:o.circuitId},private:{secret:'PRIVATE_CANARY'}};}},
+ observe:async o=>{assert.equal(o.network,network==='preview'?'preview':undefined);return {receipt:{txId:o.txId},state:{stage:o.circuitId}};},verifyStage:(stage,o)=>{assert.equal(o.state.stage,stage);return {status:'PASS'};}};
+ return {options,binding,calls,events,counts:()=>({cleaned,stopped})};
+}
+for(const kind of ['loan','swap'])test('Preview '+kind+' reuses exact local custody arguments and guarded compare-before-next-call order',async()=>{
+ assert.equal(typeof driver.runPreviewFinancialCase,'function');
+ const p=fixture(kind),l=fixture(kind,'undeployed');
+ const result=await driver.runPreviewFinancialCase(p.options);await driver.runLocalFinancialCase(l.options);
+ assert.deepEqual(p.calls,l.calls);assert.deepEqual(p.events,l.events);
+ assert.deepEqual(p.calls.map(x=>x.stage),kind==='loan'?['deploy','initialize','accrue','settle']:['deploy','initialize','swap','close']);
+ assert.equal(result.schema,'moriarty.preview-financial-run/1');assert.equal(result.status,'PASS');
+ assert.equal(result.operationalState.reservedSubmissions,4);assert.equal(result.operationalState.reservedDustFee,'123');
+ assert.deepEqual(result.operationalState.reservedGrossByAsset,{['04'.repeat(32)]:'456'});
+ assert.equal(result.stages.length,4);assert.equal(p.counts().cleaned,1);assert.ok(!JSON.stringify(result).includes('PRIVATE_CANARY'));assert.match(result.scope,/not mandatory PCD acceptance/);
+});
+for(const [label,change,code] of [
+ ['wrong entry network',f=>f.options.network='undeployed','PREVIEW_DRIVER_REQUIRES_PREVIEW_NETWORK'],
+ ['wrong SDK network',f=>f.binding.sdkNetworkId='undeployed','PREVIEW_EXECUTION_BINDING_MISMATCH'],
+ ['wrong payer',f=>f.binding.payerAddress='ff'.repeat(32),'PREVIEW_EXECUTION_BINDING_MISMATCH'],
+ ['wrong node',f=>f.binding.network.node='https://rpc.mainnet.midnight.network','PREVIEW_EXECUTION_BINDING_ENDPOINT'],
+ ['wrong indexer',f=>f.binding.network.indexer='https://evil.test/api/v4/graphql','PREVIEW_EXECUTION_BINDING_ENDPOINT'],
+ ['wrong WS',f=>f.binding.network.indexerWS='ws://indexer.preview.midnight.network/api/v4/graphql/ws','PREVIEW_EXECUTION_BINDING_ENDPOINT'],
+ ['remote prover',f=>f.binding.network.proofServer='http://evil.test','PREVIEW_EXECUTION_BINDING_ENDPOINT'],
+ ...['existingDeployment','initializedLoan','initializedSwap'].map(key=>[key,f=>f.options[key]={},'PREVIEW_LOCAL_RECOVERY_FORBIDDEN'])
+])test('Preview rejects '+label+' before any SDK operation and cleans up',async()=>{
+ assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();change(f);
+ await assert.rejects(driver.runPreviewFinancialCase(f.options),e=>{assert.equal(e.message,code);assert.equal(e.publicResult.status,'FAILED');return true;});assert.equal(f.calls.length,0);assert.deepEqual(f.counts(),{cleaned:1,stopped:1});
+});
+test('Preview rejects stable-target binding mutation before the next submission',async()=>{
+ assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();
+ f.options.verifyStage=()=>{f.binding.newAllocation='unexpected-change';return {status:'PASS'};};
+ await assert.rejects(driver.runPreviewFinancialCase(f.options),{message:'PREVIEW_EXECUTION_BINDING_CHANGED'});assert.equal(f.calls.length,1);assert.equal(f.counts().cleaned,1);
+});
+for(const phase of ['budget','observe','compare'])test('Preview '+phase+' failure prevents next SDK call and retains known identifiers',async()=>{
+ assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();
+ if(phase==='budget')f.options.providers.execute=async(stage,op)=>{if(stage==='initialize')throw Error('BUDGET_STOP');return op();};
+ if(phase==='observe')f.options.observe=async()=>{throw Error('NONCANONICAL_BLOCK');};
+ if(phase==='compare')f.options.verifyStage=()=>({status:'FAIL'});
+ await assert.rejects(driver.runPreviewFinancialCase(f.options),e=>{assert.deepEqual(e.publicResult.transactionIds,['deploy']);assert.equal(e.publicResult.status,'FAILED');return true;});assert.equal(f.calls.length,1);assert.equal(f.counts().cleaned,1);
+});
+test('Preview incomplete cleanup cannot produce PASS',async()=>{
+ assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();f.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
+ await assert.rejects(driver.runPreviewFinancialCase(f.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);return true;});
+});
+
+
+FILE /home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/providers.mjs SHA256 40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74
+import {readFileSync, openSync, closeSync, writeFileSync, fsyncSync, renameSync, unlinkSync, linkSync, lstatSync, constants} from 'node:fs';
+import {createHash, randomUUID} from 'node:crypto';
+import {join, isAbsolute, dirname} from 'node:path';
+import {pathToFileURL} from 'node:url';
+
+export const PINNED_NM = '/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
+// Direct provider entry bytes are pinned; this is not a transitive supply-chain attestation.
+const PINS = {
+  "midnight-js-network-id": {"version": "4.1.1", "entry": "dist/index.mjs", "sha256": "c4c035dc49196098de80ec81b42a27632901da60f3e2a0bafa1876847f2db503"},
+  "midnight-js-node-zk-config-provider": {
+    "version": "4.1.1",
+    "entry": "dist/index.mjs",
+    "sha256": "0698e57a324a2f8e85f0593d4feb1166c46fce93b7f6be1f65e348e72d12c942"
+  },
+  "midnight-js-level-private-state-provider": {
+    "version": "4.1.1",
+    "entry": "dist/index.mjs",
+    "sha256": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1"
+  },
+  "midnight-js-indexer-public-data-provider": {
+    "version": "4.1.1",
+    "entry": "dist/index.mjs",
+    "sha256": "23a1883b796fbea037817ae0a7e0f5ed3c072a7d30974154a8de917893cd7f2f"
+  },
+  "midnight-js-http-client-proof-provider": {
+    "version": "4.1.1",
+    "entry": "dist/index.mjs",
+    "sha256": "f412603b4d2b262f864d9aa09eba0195a64de3ec258e2afe0e78f7c26354bc3c"
+  }
+};
+const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+export async function loadFinancialSdk() {
+  const result = {};
+  for (const [name, pin] of Object.entries(PINS)) {
+    const root = join(PINNED_NM, '@midnight-ntwrk', name);
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+    if (pkg.version !== pin.version || digest(readFileSync(join(root, pin.entry))) !== pin.sha256) throw Error('financial SDK pin mismatch: ' + name);
+    Object.assign(result, await import(pathToFileURL(join(root, pin.entry)).href));
+  }
+  return result;
+}
+function amount(value, label) {
+  if (typeof value !== 'bigint' || value < 0n) throw Error('invalid ' + label);
+  return value;
+}
+function integer(value, label) {
+  if (!Number.isSafeInteger(value) || value <= 0) throw Error('invalid ' + label);
+  return value;
+}
+function asset(value) {
+  if (typeof value !== 'string' || !/^[0-9a-f]{64}$/.test(value)) throw Error('invalid native asset');
+  return value;
+}
+function nativeTransaction(tx, ledger) {
+  if (!(tx instanceof ledger.Transaction) || Object.getPrototypeOf(tx) !== ledger.Transaction.prototype) throw Error('native Transaction required');
+  if (tx.rewards !== undefined || tx.guaranteedOffer !== undefined || (tx.fallibleOffer?.size ?? 0) !== 0) throw Error('shielded/transient/reward transaction unsupported');
+  if (!(tx.intents instanceof Map)) throw Error('native intents required');
+  for (const [, intent] of tx.intents) {
+    if (!(intent instanceof ledger.Intent)) throw Error('native Intent required');
+    if (intent.dustActions?.registrations.length) throw Error('DUST registration authorization unsupported; use an already registered wallet');
+  }
+  return tx;
+}
+function parts(recipe, ledger) {
+  if (!recipe || recipe.type !== 'UNBOUND_TRANSACTION' || Object.keys(recipe).some(k => !['type', 'baseTransaction', 'balancingTransaction'].includes(k))) throw Error('unsupported financial recipe; expected UNBOUND_TRANSACTION');
+  const txs = [recipe.baseTransaction, ...(recipe.balancingTransaction === undefined ? [] : [recipe.balancingTransaction])].map(tx => nativeTransaction(tx, ledger));
+  ledger.Transaction.deserialize('signature', 'proof', 'pre-binding', txs[0].serialize());
+  if (txs[1]) ledger.Transaction.deserialize('signature', 'pre-proof', 'pre-binding', txs[1].serialize());
+  return txs;
+}
+function semanticBytes(txs) {
+  return Buffer.from(txs.map(tx => tx.eraseProofs()).reduce((left, right) => left.merge(right)).serialize());
+}
+function inspect(txs, ledger, payer, verify) {
+  const gross = Object.create(null), seen = new Set();
+  let dustFee = 0n;
+  for (const tx of txs) {
+    for (const [segment, intent] of tx.intents) {
+      for (const offer of [intent.guaranteedUnshieldedOffer, intent.fallibleUnshieldedOffer]) {
+        if (offer === undefined) continue;
+        if (!(offer instanceof ledger.UnshieldedOffer)) throw Error('native UnshieldedOffer required');
+        if (verify && offer.signatures.length !== offer.inputs.length) throw Error('input signature count mismatch');
+        for (const [index, input] of offer.inputs.entries()) {
+          const key = input.intentHash + ':' + input.outputNo;
+          if (seen.has(key)) throw Error('duplicate consumed input');
+          seen.add(key);
+          if (input.owner !== payer) throw Error('input owner differs from selected payer');
+          const type = asset(input.type);
+          gross[type] = (gross[type] ?? 0n) + amount(input.value, 'gross input');
+          if (verify && ledger.verifySignature(input.owner, intent.signatureData(segment), offer.signatures[index]) !== true) throw Error('input signature verification failed');
+        }
+      }
+      if (intent.dustActions !== undefined) {
+        if (!(intent.dustActions instanceof ledger.DustActions)) throw Error('native DustActions required');
+        for (const spend of intent.dustActions.spends) {
+          if (!(spend instanceof ledger.DustSpend)) throw Error('native DustSpend required');
+          const key = 'dust:' + spend.oldNullifier;
+          if (seen.has(key)) throw Error('duplicate DUST spend');
+          seen.add(key);
+          dustFee += amount(spend.vFee, 'DUST fee');
+        }
+      }
+    }
+  }
+  return {gross, dustFee};
+}
+
+const encode = value => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? v.toString() : v);
+function bindingFor({walletContext, networkConfig, limits}) {
+  if (typeof limits?.allocationId !== 'string' || !limits.allocationId.trim() || !isAbsolute(limits.reservationStatePath ?? '')) throw Error('reservation allocationId and absolute reservationStatePath required');
+  if (typeof networkConfig?.networkId !== 'string' || !networkConfig.networkId) throw Error('reservation networkId required');
+  const network = {};
+  for (const key of ['networkId', 'node', 'indexer', 'indexerWS', 'proofServer']) {
+    if (typeof networkConfig[key] !== 'string' || !networkConfig[key]) throw Error('reservation network binding missing: ' + key);
+    network[key] = networkConfig[key];
+  }
+  const grossByAsset = {};
+  if (!limits.grossByAsset || Object.getPrototypeOf(limits.grossByAsset) !== Object.prototype) throw Error('reservation asset limits required');
+  for (const key of Object.keys(limits.grossByAsset).sort()) grossByAsset[asset(key)] = amount(limits.grossByAsset[key], 'asset allowance').toString();
+  return {allocationId: limits.allocationId, reservationStatePath: limits.reservationStatePath, accountId: walletContext.unshieldedKeystore.getBech32Address().toString(), payer: walletContext.unshieldedKeystore.getPublicKey(), network,
+    limits: {deadlineMs: integer(limits.deadlineMs, 'deadlineMs'), submissions: integer(limits.submissions, 'submissions'), dustFee: amount(limits.dustFee, 'dustFee').toString(), grossByAsset}};
+}
+function syncDirectory(path) { const fd = openSync(dirname(path), constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
+function safeStateParent(path) {
+  for (let dir = dirname(path); ; dir = dirname(dir)) {
+    const stat = lstatSync(dir);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('reservation path has a non-directory/symlink ancestor');
+    if (dirname(dir) === dir) break;
+  }
+}
+function reservationLock(path) {
+  safeStateParent(path);
+  let fd;
+  try { fd = openSync(path + '.lock', constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600); }
+  catch { throw Error('reservation lock exists or cannot be acquired; no automatic recovery'); }
+  // If any fsync/write fails, leave the lock for explicit recovery.
+  try { writeFileSync(fd, encode({pid: process.pid, nonce: randomUUID()})); fsyncSync(fd); } finally { closeSync(fd); }
+  syncDirectory(path);
+  let poisoned = false;
+  return {
+    write(record, fresh = false) {
+      const temp = path + '.' + randomUUID() + '.tmp';
+      try {
+        const fd = openSync(temp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+        try { writeFileSync(fd, encode(record) + '\n'); fsyncSync(fd); } finally { closeSync(fd); }
+        if (fresh) { linkSync(temp, path); unlinkSync(temp); } else renameSync(temp, path);
+        syncDirectory(path);
+      } catch (error) { poisoned = true; throw error; }
+    },
+    release() { if (!poisoned) { unlinkSync(path + '.lock'); syncDirectory(path); } },
+  };
+}
+function readReservations(path, binding) {
+  let state;
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0 || (process.getuid && stat.uid !== process.getuid())) throw Error('unsafe reservation file');
+    const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try { state = JSON.parse(readFileSync(fd, 'utf8')); } finally { closeSync(fd); }
+  } catch { throw Error('reservation state missing, corrupt, or unsafe; explicit recovery required'); }
+  if (encode(state.binding) !== encode(binding)) throw Error('reservation allocation binding mismatch');
+  if (Object.keys(state).sort().join(',') !== 'active,binding,identifiers,reservedDustFee,reservedGrossByAsset,reservedSubmissions,schema,stopped' || state.schema !== 'moriarty.financial-reservations/1') throw Error('reservation schema mismatch');
+  const decimal = value => typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value);
+  if (!Number.isSafeInteger(state.reservedSubmissions) || state.reservedSubmissions < 0 || state.reservedSubmissions > binding.limits.submissions || !decimal(state.reservedDustFee) || BigInt(state.reservedDustFee) > BigInt(binding.limits.dustFee)) throw Error('reservation counters corrupt');
+  if (!state.reservedGrossByAsset || Object.getPrototypeOf(state.reservedGrossByAsset) !== Object.prototype) throw Error('reservation asset counters corrupt');
+  for (const [key, value] of Object.entries(state.reservedGrossByAsset)) if (!(key in binding.limits.grossByAsset) || !decimal(value) || BigInt(value) > BigInt(binding.limits.grossByAsset[key])) throw Error('reservation asset counters corrupt');
+  if (typeof state.stopped !== 'boolean' || !Array.isArray(state.identifiers) || state.identifiers.some(id => typeof id !== 'string' || !id)) throw Error('reservation stop/identifiers corrupt');
+  if (state.active !== null && (!state.active || Object.keys(state.active).sort().join(',') !== 'owner,phase' || typeof state.active.owner !== 'string' || !['balancing', 'reserved', 'finalized', 'submitting'].includes(state.active.phase))) throw Error('reservation active operation corrupt');
+  return state;
+}
+/** Explicit allocation creation only. Never called by provider construction or recovery. */
+export function initializeFinancialReservations(options) {
+  const binding = bindingFor(options), path = options.limits.reservationStatePath;
+  const lock = reservationLock(path);
+  try {
+    try { lstatSync(path + '.allocation'); throw Error('reservation allocation already exists; missing state requires recovery'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try { lstatSync(path); throw Error('reservation state already exists'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const allocationFd = openSync(path + '.allocation', constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    try { writeFileSync(allocationFd, encode(binding) + '\n'); fsyncSync(allocationFd); } finally { closeSync(allocationFd); }
+    syncDirectory(path);
+    lock.write({schema: 'moriarty.financial-reservations/1', binding, reservedSubmissions: 0, reservedDustFee: '0', reservedGrossByAsset: {}, identifiers: [], active: null, stopped: false}, true);
+  } finally { lock.release(); }
+}
+function approvedBalance(original, recipe, ledger, payer, ttl, networkId) {
+  const base = recipe.baseTransaction;
+  const originalSegments = [...original.intents.keys()];
+  if (encode([...base.intents.keys()]) !== encode(originalSegments)) throw Error('balanced base changed approved segment identities');
+  const normalized = ledger.Transaction.deserialize('signature', 'proof', 'pre-binding', base.serialize());
+  const normalizedIntents = normalized.intents;
+  // Pinned wallet appends funding/change to each fallible offer, and guaranteed funding to the first intent.
+  for (const [segment, expected] of original.intents) {
+    const actual = base.intents.get(segment), restored = normalizedIntents.get(segment);
+    for (const key of ['guaranteedUnshieldedOffer', 'fallibleUnshieldedOffer']) {
+      const before = expected[key], after = actual[key];
+      const oldInputs = before?.inputs ?? [], oldOutputs = before?.outputs ?? [], oldSignatures = before?.signatures ?? [];
+      const inputs = after?.inputs ?? [], outputs = after?.outputs ?? [], signatures = after?.signatures ?? [];
+      // The native intents setter canonicalizes offer order, so preserve multiplicity rather than JS prefix position.
+      const additions = (before, after) => {
+        const remaining = [...after];
+        for (const row of before) {
+          const index = remaining.findIndex(value => encode(value) === encode(row));
+          if (index < 0) throw Error('balanced offer changed original approved effects');
+          remaining.splice(index, 1);
+        }
+        return remaining;
+      };
+      const addedInputs = additions(oldInputs, inputs), addedOutputs = additions(oldOutputs, outputs);
+      if (encode(signatures) !== encode(oldSignatures)) throw Error('balanced offer changed original approved signatures');
+      const imbalanceSegment = key === 'guaranteedUnshieldedOffer' ? 0 : segment;
+      const imbalances = new Map([...original.imbalances(imbalanceSegment)].filter(([token, value]) => token.tag === 'unshielded' && value !== 0n).map(([token, value]) => [token.raw, value]));
+      if (key === 'guaranteedUnshieldedOffer' && segment !== originalSegments[0] && (addedInputs.length || addedOutputs.length)) throw Error('balanced offer added funding outside approved segment');
+      for (const input of addedInputs) if (input.owner !== payer || !imbalances.has(input.type) || imbalances.get(input.type) >= 0n) throw Error('unnecessary or unauthorized payer funding');
+      for (const output of addedOutputs) if (output.owner !== ledger.addressFromKey(payer) || !imbalances.has(output.type)) throw Error('unauthorized balance change output');
+      restored[key] = before;
+    }
+    normalizedIntents.set(segment, restored);
+  }
+  normalized.intents = normalizedIntents;
+  // Removing only checked added funding must recover every original byte, including actions/transcripts/TTL/network.
+  if (!Buffer.from(normalized.serialize()).equals(Buffer.from(original.serialize()))) throw Error('balance changed original approved actions, transcripts or metadata');
+  for (const segment of [...originalSegments, 0]) for (const [token, value] of base.imbalances(segment)) if (token.tag === 'unshielded' && value !== 0n) throw Error('balanced approved unshielded effects are not balanced');
+  if (recipe.balancingTransaction !== undefined) {
+    const fee = recipe.balancingTransaction;
+    let firstFree = 1; while (original.intents.has(firstFree)) firstFree += 1;
+    if (fee.intents.size !== 1 || !fee.intents.has(firstFree)) throw Error('unexpected DUST balancing segment');
+    const intent = fee.intents.get(firstFree);
+    if (intent.actions.length || intent.guaranteedUnshieldedOffer !== undefined || intent.fallibleUnshieldedOffer !== undefined || !intent.dustActions || intent.ttl.getTime() !== Math.floor(ttl.getTime() / 1000) * 1000) throw Error('only DUST balancing actions are authorized');
+    const network = fee.toString(true).match(/^StandardTransaction \{ network_id: "([^"]+)"/);
+    if (!network || network[1] !== networkId) throw Error('DUST balancing network differs from allocation');
+  }
+}
+
+/** Fixed unshielded loan/swap provider. Requires an existing funded, DUST-registered wallet.
+ * limits.deadlineMs is an absolute epoch deadline. Reservations are cumulative, never refunded.
+ * sdk injection is for explicitly inert source tests; omit it for the pinned constructors.
+ */
+export async function createFinancialProviders({walletContext, networkConfig, zkConfigPath, privateStateConfig, limits, ledger, sdk, onEvent = () => {}} = {}) {
+  if (!limits || !ledger?.Transaction || typeof ledger.verifySignature !== 'function') throw Error('limits and native ledger required');
+  const deadline = integer(limits.deadlineMs, 'deadlineMs');
+  const maxSubmissions = integer(limits.submissions, 'submissions');
+  const maxDustFee = amount(limits.dustFee, 'dustFee');
+  if (!limits.grossByAsset || Object.getPrototypeOf(limits.grossByAsset) !== Object.prototype) throw Error('grossByAsset allowance required');
+  const caps = new Map(Object.entries(limits.grossByAsset).map(([key, value]) => [asset(key), amount(value, 'asset allowance')]));
+  if (Date.now() >= deadline) throw Error('financial deadline exceeded');
+  if (!walletContext?.wallet || !walletContext.unshieldedKeystore || !walletContext.shieldedSecretKeys || !walletContext.dustSecretKey) throw Error('existing WalletContext required');
+  const wallet = walletContext.wallet;
+  for (const key of ['balanceUnboundTransaction', 'signRecipe', 'finalizeRecipe', 'submitTransaction', 'stop']) if (typeof wallet[key] !== 'function') throw Error('wallet method missing: ' + key);
+  if (!isAbsolute(zkConfigPath ?? '') || !isAbsolute(privateStateConfig?.midnightDbName ?? '') || zkConfigPath === privateStateConfig.midnightDbName) throw Error('distinct absolute proven-asset and private-state locations required');
+  if (typeof privateStateConfig.privateStoragePasswordProvider !== 'function' || typeof privateStateConfig.privateStateStoreName !== 'string' || !privateStateConfig.privateStateStoreName) throw Error('private-state store and secret password provider required');
+  if (Object.keys(privateStateConfig).some(k => !['midnightDbName', 'privateStateStoreName', 'privateStoragePasswordProvider', 'signingKeyStoreName'].includes(k))) throw Error('unknown private-state option');
+  const accountId = walletContext.unshieldedKeystore.getBech32Address().toString();
+  const payer = walletContext.unshieldedKeystore.getPublicKey();
+  if (typeof accountId !== 'string' || !accountId.trim() || typeof payer !== 'string') throw Error('existing wallet account and verifying key required');
+  for (const [key, protocols] of [['indexer', ['http:', 'https:']], ['indexerWS', ['ws:', 'wss:']], ['proofServer', ['http:', 'https:']]]) {
+    if (!protocols.includes(new URL(networkConfig?.[key]).protocol)) throw Error('invalid network endpoint: ' + key);
+  }
+  if (typeof onEvent !== 'function') throw Error('onEvent required');
+  let stopped = false, reason, reservedSubmissions = 0, reservedDustFee = 0n, busy = false, cleanupPromise;
+  const reservedGross = new Map(), ids = new Set(), issued = new Map(), pending = new Set();
+  const binding = bindingFor({walletContext, networkConfig, limits}), statePath = limits.reservationStatePath, owner = randomUUID();
+  const selectedNetwork = Object.freeze({...binding.network});
+  let currentLock, record;
+  function hydrate(state) {
+    record = state; reservedSubmissions = state.reservedSubmissions; reservedDustFee = BigInt(state.reservedDustFee);
+    reservedGross.clear(); for (const [key, value] of Object.entries(state.reservedGrossByAsset)) reservedGross.set(key, BigInt(value));
+    for (const id of state.identifiers) ids.add(id);
+  }
+  function persist() {
+    if (!currentLock) throw Error('reservation lock not held');
+    record.reservedSubmissions = reservedSubmissions; record.reservedDustFee = reservedDustFee.toString();
+    record.reservedGrossByAsset = Object.fromEntries([...reservedGross].map(([key, value]) => [key, value.toString()]));
+    record.identifiers = [...ids]; currentLock.write(record);
+  }
+  { const lock = reservationLock(statePath); try { hydrate(readReservations(statePath, binding)); } finally { lock.release(); } }
+  if (record.stopped || record.active !== null) { stopped = true; reason = 'persisted stop or unresolved financial operation'; }
+  function getState() { return {stopped, reason, reservedSubmissions, reservedDustFee, reservedGrossByAsset: Object.fromEntries(reservedGross), identifiers: [...ids], pendingOperations: pending.size}; }
+  function stop(why = 'caller stop') {
+    stopped = true; reason ??= why;
+    if (why === 'cleanup' && record.active === null) return;
+    if (currentLock) { record.stopped = true; persist(); return; }
+    let lock;
+    try { lock = reservationLock(statePath); const state = readReservations(statePath, binding); state.stopped = true; state.identifiers = [...new Set([...state.identifiers, ...ids])]; lock.write(state); }
+    catch { /* Existing/poisoned lock itself bars reconstruction; local stop remains latched. */ }
+    finally { lock?.release(); }
+  }
+  function checkDeadline() {
+    if (stopped) throw Error('financial provider stopped: ' + reason);
+    if (!currentLock) {
+      const lock = reservationLock(statePath);
+      try {
+        const state = readReservations(statePath, binding);
+        if (state.stopped || (state.active !== null && state.active.owner !== owner)) { stopped = true; reason = 'persisted stop or unresolved financial operation'; throw Error('financial provider stopped: ' + reason); }
+      } finally { lock.release(); }
+    }
+    if (Date.now() >= deadline) { stop('deadline exceeded'); throw Error('financial deadline exceeded'); }
+  }
+  async function execute(label, operation) {
+    checkDeadline();
+    let timer;
+    const task = Promise.resolve().then(() => { checkDeadline(); return operation(); });
+    pending.add(task);
+    task.then(() => pending.delete(task), () => pending.delete(task));
+    try {
+      const result = await Promise.race([task, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('financial deadline exceeded: ' + label)), Math.min(deadline - Date.now(), 2147483647)); })]);
+      checkDeadline();
+      return result;
+    } catch (error) {
+      stop('ambiguous or failed ' + label);
+      // Do not expose provider exception text or private transaction/witness data in events.
+      try { onEvent({kind: 'stopped', operation: label, identifiers: [...ids], reservationRetained: true, pendingOperations: pending.size}); } catch { /* stop already latched */ }
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+  function guarded(provider) {
+    return new Proxy(provider, {get(target, key) {
+      const value = Reflect.get(target, key, target);
+      if (typeof value !== 'function') return value;
+      return (...args) => {
+        checkDeadline();
+        // Preserve synchronous SDK methods such as setContractAddress.
+        if (value.constructor.name !== 'AsyncFunction') {
+          try {
+            const result = value.apply(target, args);
+            return result?.then ? execute(String(key), () => result) : result;
+          } catch (error) { stop('provider operation failed: ' + String(key)); throw error; }
+        }
+        return execute(String(key), () => value.apply(target, args));
+      };
+    }});
+  }
+  function checkAllowance({gross, dustFee}) {
+    if (reservedSubmissions >= maxSubmissions) throw Error('submission allowance exceeded');
+    for (const [type, value] of Object.entries(gross)) if (!caps.has(type) || value + (reservedGross.get(type) ?? 0n) > caps.get(type)) throw Error('gross asset allowance exceeded');
+    if (reservedDustFee + dustFee > maxDustFee) throw Error('DUST fee allowance exceeded');
+  }
+  async function exclusive(kind, operation) {
+    checkDeadline();
+    if (busy) throw Error('concurrent financial operation unsupported');
+    const lock = reservationLock(statePath);
+    try {
+      hydrate(readReservations(statePath, binding));
+      if (record.stopped || (record.active !== null && (kind !== 'submit' || record.active.owner !== owner || record.active.phase !== 'finalized'))) throw Error('persisted stop or unresolved reservation operation');
+      currentLock = lock; busy = true;
+      try { return await operation(); } catch (error) { stop('financial operation failed'); throw error; }
+      finally { busy = false; currentLock = undefined; }
+    } finally { lock.release(); }
+  }
+  const walletProvider = {
+    getCoinPublicKey() { checkDeadline(); return walletContext.shieldedSecretKeys.coinPublicKey; },
+    getEncryptionPublicKey() { checkDeadline(); return walletContext.shieldedSecretKeys.encryptionPublicKey; },
+    balanceTx(tx, ttl = new Date(deadline)) { return exclusive('balance', async () => {
+      nativeTransaction(tx, ledger);
+      ledger.Transaction.deserialize('signature', 'proof', 'pre-binding', tx.serialize());
+      if (!(ttl instanceof Date) || !Number.isFinite(ttl.getTime()) || ttl.getTime() <= Date.now()) throw Error('invalid transaction ttl');
+      checkAllowance(inspect([tx], ledger, payer, false));
+      const original = ledger.Transaction.deserialize('signature', 'proof', 'pre-binding', tx.serialize());
+      record.active = {owner, phase: 'balancing'}; persist();
+      const recipe = await execute('balance', () => wallet.balanceUnboundTransaction(tx, {shieldedSecretKeys: walletContext.shieldedSecretKeys, dustSecretKey: walletContext.dustSecretKey}, {ttl, tokenKindsToBalance: ['unshielded', 'dust']}));
+      const unsigned = parts(recipe, ledger);
+      approvedBalance(original, recipe, ledger, payer, ttl, selectedNetwork.networkId);
+      checkAllowance(inspect(unsigned, ledger, payer, false));
+      const beforeSign = semanticBytes(unsigned.map(t => t.eraseSignatures()));
+      const signed = await execute('sign', () => wallet.signRecipe(recipe, data => { checkDeadline(); return walletContext.unshieldedKeystore.signData(data); }));
+      const signedParts = parts(signed, ledger);
+      if (!beforeSign.equals(semanticBytes(signedParts.map(t => t.eraseSignatures())))) throw Error('signing changed semantic bytes');
+      const budget = inspect(signedParts, ledger, payer, true);
+      checkAllowance(budget);
+      const approved = semanticBytes(signedParts); // Snapshot before facade can mutate objects.
+      checkDeadline();
+      reservedSubmissions += 1;
+      reservedDustFee += budget.dustFee;
+      for (const [type, value] of Object.entries(budget.gross)) reservedGross.set(type, (reservedGross.get(type) ?? 0n) + value);
+      for (const part of signedParts) for (const id of part.identifiers()) ids.add(id);
+      record.active = {owner, phase: 'reserved'}; persist();
+      const finalized = await execute('finalize', () => wallet.finalizeRecipe(signed));
+      nativeTransaction(finalized, ledger);
+      if (!approved.equals(semanticBytes([finalized]))) throw Error('finalization changed semantic bytes');
+      // The pinned native deserializer enforces the finalized marker, independent of JS shapes.
+      ledger.Transaction.deserialize('signature', 'proof', 'binding', finalized.serialize());
+      const bytes = Buffer.from(finalized.serialize());
+      for (const id of finalized.identifiers()) ids.add(id);
+      issued.set(digest(bytes), {bytes, used: false});
+      record.active = {owner, phase: 'finalized'}; persist();
+      return finalized;
+    }); },
+  };
+  const midnightProvider = {submitTx(tx) { return exclusive('submit', async () => {
+    nativeTransaction(tx, ledger);
+    const bytes = Buffer.from(tx.serialize()), ticket = issued.get(digest(bytes));
+    if (!ticket || !ticket.bytes.equals(bytes) || ticket.used) throw Error('transaction was not issued or was already submitted');
+    checkDeadline(); ticket.used = true;
+    record.active = {owner, phase: 'submitting'}; persist();
+    const txIdentifiers = tx.identifiers();
+    const txHash = tx.transactionHash();
+    // Capture notification even if the facade resolves after our deadline race.
+    const id = await execute('submit', async () => {
+      const observedId = await wallet.submitTransaction(tx);
+      if (typeof observedId !== 'string' || !txIdentifiers.includes(observedId)) throw Error('submission returned an unrelated identifier');
+      ids.add(observedId);
+      onEvent({kind: 'submitted', txId: observedId, identifiers: txIdentifiers, transactionHash: txHash});
+      return observedId;
+    });
+    record.active = null; persist();
+    return id;
+  }); }};
+  sdk ??= await loadFinancialSdk();
+  if (!stopped) checkDeadline();
+  if (typeof sdk.getNetworkId !== 'function') throw Error('pinned SDK network accessor required');
+  function getExecutionBinding() { return Object.freeze({network: selectedNetwork, payerAddress: ledger.addressFromKey(payer), sdkNetworkId: sdk.getNetworkId()}); }
+  const zkConfigProvider = new sdk.NodeZkConfigProvider(zkConfigPath);
+  const privateStateProvider = sdk.levelPrivateStateProvider({...privateStateConfig, accountId});
+  const publicDataProvider = sdk.indexerPublicDataProvider(selectedNetwork.indexer, selectedNetwork.indexerWS);
+  const proofProvider = sdk.httpClientProofProvider(selectedNetwork.proofServer, zkConfigProvider);
+  async function cleanup() {
+    if (cleanupPromise) return cleanupPromise;
+    stop('cleanup');
+    cleanupPromise = (async () => {
+      let timer;
+      try {
+        await Promise.race([Promise.resolve().then(() => wallet.stop()), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('wallet cleanup timeout')), 5000); })]);
+        // Pinned level provider closes its database per operation. Indexer exposes no dispose API.
+        return {walletStopped: true, pendingOperations: pending.size, containmentComplete: false, indexerDisposal: 'not-exposed-by-pinned-sdk'};
+      } catch { return {walletStopped: false, pendingOperations: pending.size, containmentComplete: false, indexerDisposal: 'not-exposed-by-pinned-sdk'}; }
+      finally { clearTimeout(timer); }
+    })();
+    return cleanupPromise;
+  }
+  return {walletProvider, midnightProvider, zkConfigProvider: guarded(zkConfigProvider), privateStateProvider: guarded(privateStateProvider), publicDataProvider: guarded(publicDataProvider), proofProvider: guarded(proofProvider), cleanup, stop, getState, getExecutionBinding, checkDeadline, execute};
+}
+
+
+FILE /home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/run-local.test.mjs SHA256 59ad6b1c1f939a9016fccf99c2efec260ab3b0052d542dfbd752ffc85cd535af
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {retainPublicIntegrationResult} from './launch-local.mjs';
+import {runLocalFinancialCase} from './run-local.mjs';
+const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
+const network={networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
+const complete={walletStopped:true,pendingOperations:0,containmentComplete:true};
+const product=(a,b,lo)=>({aLo:a,aHi:0n,bLo:b,bHi:0n,lo,carry:0n});
+function harness(kind='loan') {
+ const calls=[],address='ab'.repeat(32),ids=[];
+ let cleaned=0,stopped=0;
+ const roles={firstSecret:new Uint8Array(32).fill(1),secondSecret:new Uint8Array(32).fill(2),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)};
+ const binding={network:{...network},payerAddress:roles.firstAddress,sdkNetworkId:'undeployed'};
+ const options={kind,network:'undeployed',compiledContract:{},roles,networkTag:'03'.repeat(32),now:()=>1700000000n,
+ providers:{execute:async(_,f)=>f(),stop:()=>stopped++,cleanup:async()=>{cleaned++;return complete;},getState:()=>({identifiers:[...ids],pendingOperations:0,reservedSubmissions:ids.length,reservedDustFee:0n,reservedGrossByAsset:{}}),getExecutionBinding:()=>binding},
+ sdk:{deployContract:async(p,o)=>{calls.push({stage:'deploy',options:o});ids.push('deploy');return {deployTxData:{public:{contractAddress:address,txId:'deploy'},private:{canary:'NEVER_PUBLISH'}}};},submitCallTx:async(p,o)=>{calls.push({stage:o.circuitId,options:o});ids.push(o.circuitId);return {public:{txId:o.circuitId},private:{canary:'NEVER_PUBLISH'}};}},
+ observe:async x=>({receipt:{txId:x.txId},state:{observed:x.circuitId}}),verifyStage:()=>({status:'PASS'})};
+ return {options,calls,binding,ids,counts:()=>({cleaned,stopped})};
+}
+for(const kind of ['loan','swap'])test(`${kind} exact custody arguments and hints pass every comparison before next call`,async()=>{
+ const h=harness(kind),seen=[];h.options.verifyStage=(stage,x)=>{seen.push(stage);assert.equal(h.calls.at(-1).stage,stage);assert.equal(x.state.observed,stage);return {status:'PASS'};};
+ const out=await runLocalFinancialCase(h.options);const r=h.options.roles,p=Uint8Array.from(Buffer.from(bindings[kind].programDigest,'hex')),n=new Uint8Array(32).fill(3),t=1700000000n;
+ assert.deepEqual(h.calls[0].options.args,[r.firstSecret,r.secondSecret,{bytes:Uint8Array.from(Buffer.from(r.firstAddress,'hex'))},{bytes:Uint8Array.from(Buffer.from(r.secondAddress,'hex'))},p,n]);
+ const expected=kind==='loan'?[
+ ['initialize',[r.firstSecret,p,n,2n,t]],
+ ['accrue',[r.firstSecret,p,n,0n,2n,t,{h0:product(5000000000n,8n,40000000000n),h1:product(40000000000n,31n,1240000000000n),h2:product(100n,365n,36500n),h3:{q:33972602n,r:27000n,product:product(36500n,33972602n,1239999973000n)}}]],
+ ['settle',[r.firstSecret,p,n,1n,2n,0n,533972602n,t,{unused:0n}]]
+ ]:[
+ ['initialize',[r.secondSecret,p,n,3n,t]],
+ ['swap',[r.firstSecret,p,n,0n,4n,4n,0n,1n,10000n,19700n,t,{h0:product(10000n,997n,9970000n),h1:product(9970000n,2000000n,19940000000000n),h2:product(1000000n,1000n,1000000000n),h3:{q:19743n,r:162290000n,product:product(1009970000n,19743n,19939837710000n)}}]],
+ ['close',[r.secondSecret,p,n,1n,3n,t,{unused:0n}]]];
+ assert.deepEqual(h.calls.slice(1).map(x=>[x.stage,x.options.args]),expected);assert.deepEqual(seen,['deploy',...expected.map(x=>x[0])]);assert.equal(out.status,'PASS');assert.deepEqual(out.cleanup,complete);assert.deepEqual(out.transactionIds,seen);assert.ok(!JSON.stringify(out).includes('NEVER_PUBLISH'));assert.equal(h.counts().cleaned,1);
+});
+for(const result of [false,undefined,{status:'Rejected'},{status:'FAIL'}])test(`returned comparator failure ${JSON.stringify(result)} stops before next SDK call`,async()=>{
+ const h=harness();h.options.verifyStage=()=>result;
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.match(e.message,/FINANCIAL_COMPARISON_REQUIRED_PASS/);assert.deepEqual(e.publicResult.transactionIds,['deploy']);return true;});assert.equal(h.calls.length,1);assert.equal(h.counts().cleaned,1);
+});
+test('thrown comparator error retains observed ID and cleans up',async()=>{
+ const h=harness();h.options.verifyStage=()=>{throw Error('COMPARISON_FAILED');};await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'COMPARISON_FAILED');assert.deepEqual(e.publicResult.transactionIds,['deploy']);return true;});assert.equal(h.calls.length,1);assert.equal(h.counts().cleaned,1);
+});
+for(const mutate of [h=>h.options.network='preview',h=>h.binding.network.networkId='preview',h=>h.binding.sdkNetworkId='preview',h=>h.binding.payerAddress='ff'.repeat(32),h=>h.binding.network.node='https://rpc.preview.midnight.network',h=>h.options.roles.firstSecret=new Uint8Array(1)])test('preflight mismatch prevents deployment but cleans up owned provider',async()=>{
+ const h=harness();mutate(h);await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.publicResult.status,'FAILED');return true;});assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+test('network identity changed after deploy blocks the next SDK stage',async()=>{
+ const h=harness();h.options.verifyStage=()=>{h.binding.sdkNetworkId='preview';return {status:'PASS'};};await assert.rejects(runLocalFinancialCase(h.options),/LOCAL_EXECUTION_BINDING/);assert.equal(h.calls.length,1);
+});
+for(const cleanup of [{walletStopped:false,pendingOperations:0,containmentComplete:false},{walletStopped:true,pendingOperations:1,containmentComplete:false}])test('incomplete cleanup cannot yield driver PASS',async()=>{
+ const h=harness();h.options.providers.cleanup=async()=>cleanup;await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.deepEqual(e.publicResult.cleanup,cleanup);assert.equal(e.publicResult.transactionIds.length,4);return true;});
+});
+test('cleanup rejection preserves the primary failure and provider-known identifiers',async()=>{
+ const h=harness();h.options.sdk.deployContract=async()=>{h.ids.push('late-public-id');throw Error('SUBMIT_UNKNOWN');};h.options.providers.cleanup=async()=>{throw Error('PRIVATE_CLEANUP_CANARY');};await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'SUBMIT_UNKNOWN');assert.deepEqual(e.publicResult.transactionIds,['late-public-id']);assert.equal(e.publicResult.cleanup.containmentComplete,false);assert.ok(!JSON.stringify(e.publicResult).includes('PRIVATE_CLEANUP_CANARY'));return true;});
+});
+
+test('observation failure keeps SDK ID and never invokes comparator or next call',async()=>{
+ const h=harness();let compared=0;h.options.observe=async()=>{throw Error('NONCANONICAL_BLOCK');};h.options.verifyStage=()=>{compared++;return {status:'PASS'};};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'NONCANONICAL_BLOCK');assert.deepEqual(e.publicResult.transactionIds,['deploy']);return true;});assert.equal(compared,0);assert.equal(h.calls.length,1);assert.equal(h.counts().cleaned,1);
+});
+
+const recoveredIdentity=()=>({contractAddress:'ab'.repeat(32),txId:'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9'});
+function recoveryHarness() {
+ const h=harness();h.options.existingDeployment=recoveredIdentity();
+ for(const name of ['deployContract','createUnprovenDeployTx','findDeployedContract','prepareFinancialDeployment'])Object.defineProperty(h.options.sdk,name,{get(){throw Error('RECOVERY_DEPLOY_API_FORBIDDEN:'+name);}});
+ return h;
+}
+test('recovered loan observes historical deployment once then submits exactly three calls',async()=>{
+ const h=recoveryHarness(),events=[];
+ h.options.providers.execute=async(stage,f)=>{events.push(stage);return f();};
+ h.options.observe=async x=>{assert.equal(x.contractAddress,h.options.existingDeployment.contractAddress);return {receipt:{txId:x.txId},state:{observed:x.circuitId}};};
+ const out=await runLocalFinancialCase(h.options);
+ assert.deepEqual(events,['observe:deploy','compare:deploy','initialize','observe:initialize','compare:initialize','accrue','observe:accrue','compare:accrue','settle','observe:settle','compare:settle']);
+ assert.deepEqual(h.calls.map(x=>x.stage),['initialize','accrue','settle']);
+ assert.ok(h.calls.every(x=>x.options.contractAddress===recoveredIdentity().contractAddress&&x.options.privateStateId==='sp05-loan'));
+ assert.equal(out.status,'PASS');assert.equal(out.stages.length,4);assert.deepEqual(out.transactionIds,[recoveredIdentity().txId,'initialize','accrue','settle']);assert.equal(out.operationalState.reservedSubmissions,3);assert.deepEqual(h.counts(),{cleaned:1,stopped:0});
+});
+for(const value of [null,[],{},'identity',{...recoveredIdentity(),extra:true},{...recoveredIdentity(),contractAddress:'ab'},{...recoveredIdentity(),contractAddress:'AB'.repeat(32)},{...recoveredIdentity(),txId:''},{...recoveredIdentity(),txId:'deploy'},{...recoveredIdentity(),txId:'cd'.repeat(32)},{...recoveredIdentity(),txId:'CD'.repeat(33)},Object.assign(Object.create({extra:true}),recoveredIdentity()),Object.defineProperty(recoveredIdentity(),'hidden',{value:true}),Object.assign(recoveredIdentity(),{[Symbol('extra')]:true})])test('malformed recovery identity fails before observations or SDK calls',async()=>{
+ const h=harness();h.options.existingDeployment=value;let observed=0;h.options.observe=()=>{observed++;throw Error('OBSERVATION_FORBIDDEN');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'INVALID_EXISTING_DEPLOYMENT');assert.deepEqual(e.publicResult.transactionIds,[]);return true;});assert.equal(h.calls.length,0);assert.equal(observed,0);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+});
+test('recovery rejects accessors without invoking them',async()=>{
+ const h=harness();h.options.existingDeployment=Object.defineProperty(recoveredIdentity(),'txId',{get(){throw Error('GETTER_FORBIDDEN');}});
+ await assert.rejects(runLocalFinancialCase(h.options),/INVALID_EXISTING_DEPLOYMENT/);assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+test('swap recovery is rejected before deployment or observation',async()=>{
+ const h=harness('swap');h.options.existingDeployment=recoveredIdentity();await assert.rejects(runLocalFinancialCase(h.options),/EXISTING_DEPLOYMENT_REQUIRES_LOAN/);assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+for(const outcome of ['FAIL','throw','observe'])test(`historical recovery ${outcome} stops all calls and retains public identity`,async()=>{
+ const h=recoveryHarness();let compared=0;
+ h.options.verifyStage=()=>{compared++;if(outcome==='throw')throw Error('HISTORICAL_FAILURE');return {status:'FAIL'};};
+ if(outcome==='observe')h.options.observe=()=>{throw Error('HISTORICAL_FAILURE');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.publicResult.status,'FAILED');assert.equal(e.publicResult.contractAddress,recoveredIdentity().contractAddress);assert.deepEqual(e.publicResult.transactionIds,[recoveredIdentity().txId]);assert.deepEqual(e.publicResult.stages,[]);return true;});
+ assert.equal(compared,outcome==='observe'?0:1);assert.equal(h.calls.length,0);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+});
+test('recovery identity is captured before asynchronous binding checks',async()=>{
+ const h=recoveryHarness(),seen=[];
+ h.options.providers.getExecutionBinding=async()=>{h.options.existingDeployment.contractAddress='ef'.repeat(32);h.options.existingDeployment.txId='12'.repeat(32);return h.binding;};
+ h.options.observe=async x=>{seen.push(x);return {receipt:{txId:x.txId}};};
+ const out=await runLocalFinancialCase(h.options);assert.equal(out.contractAddress,recoveredIdentity().contractAddress);assert.equal(seen[0].txId,recoveredIdentity().txId);assert.ok(h.calls.every(x=>x.options.contractAddress===recoveredIdentity().contractAddress));
+});
+
+test('recovered loan cannot pass with incomplete containment',async()=>{
+ const h=recoveryHarness();h.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);assert.equal(e.publicResult.operationalState.reservedSubmissions,3);return true;});
+});
+
+
+test('public failure retains a known observer code and closed phase without SDK details',async()=>{
+ const h=harness();h.options.observe=async()=>{throw Error('NOT_FINALIZED');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.deepEqual(e.publicResult.failure,{phase:'observe',stage:'deploy',code:'NOT_FINALIZED'});return true;});
+});
+test('public failure never copies an unknown SDK message or object',async()=>{
+ const h=harness();h.options.observe=async()=>{const e=Error('PRIVATE_VALUE_ABC123');e.privateState={secret:'PRIVATE_OTHER'};throw e;};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.deepEqual(e.publicResult.failure,{phase:'observe',stage:'deploy',code:'UNCLASSIFIED_DRIVER_FAILURE'});assert.ok(!JSON.stringify(e.publicResult).includes('PRIVATE_'));return true;});
+});
+
+for(const message of ['NOT_FINALIZED','PRIVATE_SDK_FAILURE'])test(`launcher durably retains actual driver failure: ${message}`,async()=>{
+ const h=harness(),directory=mkdtempSync(join(tmpdir(),'moriarty-driver-retention-'));
+ h.options.observe=async()=>{throw Object.assign(Error(message),{private:{secret:'PRIVATE_CANARY'}});};
+ try{
+  await assert.rejects(runLocalFinancialCase(h.options),error=>{
+   const driver=error.publicResult;
+   const result={schema:'moriarty.local-financial-integration/1',status:'FAILED',kind:'loan',sourceTestOnly:false,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:undefined,assetBindings:undefined,phase:'driver',driver,cleanup:driver.cleanup,setupPendingOperations:0,comparisons:[],financialComparison:undefined,scope:'Source-only fixture; no network acceptance'};
+   retainPublicIntegrationResult(directory,result);
+   const raw=readFileSync(join(directory,'integration-result.json'),'utf8'),saved=JSON.parse(raw);
+   assert.deepEqual(saved.driver.failure,{phase:'observe',stage:'deploy',code:message==='NOT_FINALIZED'?message:'UNCLASSIFIED_DRIVER_FAILURE'});
+   assert.deepEqual(saved.driver.transactionIds,['deploy']);assert.deepEqual(saved.cleanup,complete);
+   assert.ok(!raw.includes('PRIVATE_')&&!raw.includes('NEVER_PUBLISH'));return true;
+  });
+  assert.equal(h.calls.length,1);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+ }finally{rmSync(directory,{recursive:true,force:true});}
+});
+
+function initializedDriverFixture(){
+ const h=harness();h.options.initializedLoan={contractAddress:'ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713',deployTxId:'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9',initializeTxId:'006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af36d9b46'};
+ delete h.options.sdk.deployContract;return h;
+}
+test('fixed initialized loan compares both histories once then calls only accrue and settle',async()=>{
+ const h=initializedDriverFixture(),seen=[];h.options.verifyStage=stage=>{seen.push(stage);return {status:'PASS'};};
+ const result=await runLocalFinancialCase(h.options);
+ assert.deepEqual(h.calls.map(c=>c.stage),['accrue','settle']);assert.deepEqual(seen,['deploy','initialize','accrue','settle']);assert.equal(result.stages.length,4);
+ assert.deepEqual(result.transactionIds.slice(0,2),[h.options.initializedLoan.deployTxId,h.options.initializedLoan.initializeTxId]);
+ assert.deepEqual(h.calls[0].options.args.slice(3,5),[0n,2n]);assert.deepEqual(h.calls[1].options.args.slice(3,7),[1n,2n,0n,533972602n]);
+});
+for(const historical of ['deploy','initialize'])test(`failed historical ${historical} comparison prevents continuation calls`,async()=>{
+ const h=initializedDriverFixture();h.options.verifyStage=stage=>({status:stage===historical?'FAIL':'PASS'});
+ await assert.rejects(runLocalFinancialCase(h.options),/FINANCIAL_COMPARISON_REQUIRED_PASS/);assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+test('initialized driver rejects combined modes and altered fixed history before SDK calls',async()=>{
+ for(const change of [h=>h.options.kind='swap',h=>h.options.existingDeployment={contractAddress:'ab'.repeat(32),txId:'01'.repeat(33)},h=>h.options.initializedLoan.contractAddress='ab'.repeat(32),h=>h.options.initializedLoan.initializeTxId='01'.repeat(33),h=>h.options.initializedLoan.cursor=2]){
+  const h=initializedDriverFixture();change(h);await assert.rejects(runLocalFinancialCase(h.options),/INITIALIZED_LOAN/);assert.equal(h.calls.length,0);
+ }
+});
+
+
+FILE /tmp/moriarty-preview-driver-review.md SHA256 c992e1d51d232b1262e5948db5074b520ad5735251c464b578a2f01f8d376d59
+# Explicit Preview financial stage driver
+
+Source-only slice in `/home/charl/Moriarty/.worktrees/sp05-preview-owner`: modified `ledger/run-local.mjs`, new `ledger/run-preview.test.mjs`. Source hashes in `/tmp/moriarty-preview-driver-source.json`. All four owner files and three RPC files were independently rehashed and remain byte-identical to their frozen candidates. No publication, live operation or admission.
+
+Private shared sequence is selected only by explicit `runLocalFinancialCase(options)` and `runPreviewFinancialCase(options)` wrappers. Local network guards, endpoint restrictions, recovery/continuation behavior, result schema and default observer arguments remain intact. Preview requires both requested and SDK/provider network to be preview, exact configured Preview node/indexer/indexerWS targets, existing local HTTP proof endpoint policy, matching payer and stable full provider binding before every SDK action. It refuses local deployment recovery and initialized loan/swap shortcuts.
+
+Both targets use the existing guarded provider.execute calls, exact deploy/initialize/accrue/settle or deploy/initialize/swap/close arguments and hints, observe then mandatory PASS comparison before the next action, existing reservation/public-ID projection, and owned provider cleanup. Preview adds network:preview to observer arguments so the reviewed receipt selector can be connected explicitly by the future integration. Its result schema is moriarty.preview-financial-run/1; the local durable writer is deliberately not extended here. Scope remains uncertified I2, not mandatory PCD acceptance.
+
+Tests first failed on the missing Preview export. Focused GREEN69/69; composed regression164/164, no skips. Existing local exact argument assertions remain green, and new Preview tests compare the actual sequence arguments against the existing local path. New controls reject wrong target/SDK network/payer/endpoints, changed binding, local history shortcuts, failed observation/comparison or guarded execution, and incomplete cleanup. Synthetic roles and inert SDK/provider callbacks exercise callable production sequencing; they do not produce actual proofs or chain effects.
+
+Command from repository root:
+
+```
+node --experimental-test-module-mocks --test experiments/moriarty-midnight-financial/ledger/run-preview.test.mjs experiments/moriarty-midnight-financial/ledger/run-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-driver.test.mjs experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs
+```
+
+Raw RED/GREEN/regression and baseline logs `/tmp/moriarty-preview-driver-*.tap`; git diff --check passed. Future integration must still bind actual Preview genesis/protocol/build/roles/identity, real financial observer/comparator, provider reservations, durable results and separately admitted execution. Configured hostnames do not establish current availability or chain identity. No private inputs, wallet, network, services, compiler, prover or transaction dispatch used.
+
+
+FILE /tmp/moriarty-preview-driver-regression.tap SHA256 26360e89d792429f79c12b610acfa36e59572a4a69fc646c949e6b4651bd22d9
+✔ initialized swap compares both histories before exactly swap and close (5.789106ms)
+✔ initialized swap failed deploy comparison prevents new submissions (0.821213ms)
+✔ initialized swap failed initialize comparison prevents new submissions (0.316359ms)
+✔ initialized swap rejects altered, mixed and accessor identities without calling SDK (1.201901ms)
+✔ initialized composition replays history once before store access and only submits swap and close (16.417813ms)
+✔ initialized publicCheck failure stops calls and cleans owned resources (1.904897ms)
+✔ initialized checkWallet failure stops calls and cleans owned resources (0.918483ms)
+✔ initialized preserveStore failure stops calls and cleans owned resources (1.440359ms)
+✔ initialized checkPrivate failure stops calls and cleans owned resources (8.116428ms)
+✔ failed initialized historical deploy comparison prevents snapshot and providers (10.072535ms)
+✔ failed initialized historical initialize comparison prevents snapshot and providers (1.191323ms)
+✔ initialized actual store mismatch stops before setup (2.37158ms)
+✔ initialized actual limits mismatch stops before setup (1.553651ms)
+✔ initialized actual role mismatch stops before setup (1.994099ms)
+✔ initialized actual build mismatch stops before setup (1.785139ms)
+✔ production rejects continuation adapters; source fixture requires every gate (2.864105ms)
+✔ initialized publicCheck requires its closed success result (1.056395ms)
+✔ initialized preserveStore requires its closed success result (1.613392ms)
+✔ initialized checkPrivate requires its closed success result (1.415281ms)
+✔ closed swap plan reads both actual public histories from same source result (75.421268ms)
+✔ closed swap plan rejects consumed allocation and altered/exclusive descriptor (0.357614ms)
+✔ closed swap plan rejects consumed allocation and altered/exclusive descriptor (0.152523ms)
+✔ closed swap plan rejects consumed allocation and altered/exclusive descriptor (0.137832ms)
+✔ closed swap plan rejects consumed allocation and altered/exclusive descriptor (0.062116ms)
+✔ closed swap plan rejects consumed allocation and altered/exclusive descriptor (0.047569ms)
+✔ composed swap plan getters rejected without invocation before setup (0.31529ms)
+✔ missing initialized mint stops before preservation and new dispatch (0.885679ms)
+✔ retains closed swap diagnostic SWAP_CONTINUATION_DEPLOY_STATE (0.649719ms)
+✔ retains closed swap diagnostic SWAP_CONTINUATION_PRIVATE_READ (1.585903ms)
+✔ retains closed swap diagnostic SWAP_CONTINUATION_WALLET_HISTORY (0.548559ms)
+✔ full composition prepares address then binds colors once and records every stage before next call (7.69797ms)
+✔ wrong network rejects before preparation and bounded-cleans supplied wallet (0.690187ms)
+✔ wrong SDK network rejects before preparation and bounded-cleans supplied wallet (1.993682ms)
+✔ wrong payer rejects before preparation and bounded-cleans supplied wallet (0.366263ms)
+✔ public endpoint rejects before preparation and bounded-cleans supplied wallet (0.197499ms)
+✔ missing protocol rejects before preparation and bounded-cleans supplied wallet (0.152425ms)
+✔ unknown logical asset rejects before preparation and bounded-cleans supplied wallet (0.196286ms)
+✔ provider construction failure preserves failure and cleans wallet/assets (2.673097ms)
+✔ driver failure before its cleanup ownership guard falls back to wallet cleanup (4.128676ms)
+✔ driver throw without cleanup receipt falls back to owned providers exactly once (2.757605ms)
+✔ onStage failed retention stops before another transaction (2.443437ms)
+✔ source adapters cannot silently switch into production mode (0.459877ms)
+✔ local RPC uses one bounded nonredirecting request and validates its response identity (41.034008ms)
+✔ local RPC aborts an unresponsive inert request by absolute deadline (33.441013ms)
+✔ swap waits for exact wallet mint after durable initialize comparison and before actual driver swap (5.651214ms)
+✔ missing initialized wallet mint stops actual driver before swap and close (0.947012ms)
+✔ wallet sync that crosses the admission deadline prevents swap (9.492362ms)
+✔ asset mutation after a recorded stage stops before the next SDK stage (3.864597ms)
+✔ inert contained success is explicitly source-only and never financial acceptance (1.421733ms)
+✔ RPC rejects mismatched IDs and oversized bodies without a retry (0.983108ms)
+✔ protocol and reviewed callbacks remain captured after asynchronous preparation starts (1.785397ms)
+✔ recovery composition restores before real driver, observes historical deploy once and submits only three calls (8.013391ms)
+✔ recovery publicCheck failure stops before driver and cleans owned resources (1.05056ms)
+✔ recovery checkWallet failure stops before driver and cleans owned resources (0.695264ms)
+✔ recovery reconstruct failure stops before driver and cleans owned resources (0.393669ms)
+✔ recovery inspectStore failure stops before driver and cleans owned resources (0.47011ms)
+✔ recovery restore failure stops before driver and cleans owned resources (0.496948ms)
+✔ recovery wallet synchronization rejection prevents constructor, store and driver (0.518049ms)
+✔ recovery rejects actual allocation differing from closed plan before recovery work (0.29408ms)
+✔ recovery rejects actual submissions differing from closed plan before recovery work (0.499183ms)
+✔ recovery rejects actual dust differing from closed plan before recovery work (0.378969ms)
+✔ recovery rejects actual gross cap differing from closed plan before recovery work (0.783771ms)
+✔ recovery rejects actual deadline differing from closed plan before recovery work (0.349637ms)
+✔ recovery rejects actual journal differing from closed plan before recovery work (0.267471ms)
+✔ recovery rejects actual store directory differing from closed plan before recovery work (0.295103ms)
+✔ recovery rejects actual store namespace differing from closed plan before recovery work (0.23895ms)
+✔ recovery rejects actual role differing from closed plan before recovery work (1.635876ms)
+✔ recovery rejects actual wallet differing from closed plan before recovery work (0.566002ms)
+✔ recovery rejects actual network tag differing from closed plan before recovery work (1.456351ms)
+✔ recovery rejects actual build differing from closed plan before recovery work (1.058535ms)
+✔ recovery plan rejects changed deployment identity and unchecked identity shortcut (0.477595ms)
+✔ production integration rejects recovery adapters before loading runtime or touching private state (0.175459ms)
+✔ source recovery requires all recovery adapters (4.534084ms)
+✔ nonempty recovery destination stops before provider creation and driver (2.592072ms)
+✔ recovery rejects deployment identity getter before cloning or executing it (0.719011ms)
+✔ initialized composition replays history once before store access and only submits accrue and settle (2.735261ms)
+✔ initialized publicCheck failure stops calls and cleans owned resources (7.585729ms)
+✔ initialized checkWallet failure stops calls and cleans owned resources (5.142915ms)
+✔ initialized preserveStore failure stops calls and cleans owned resources (1.266975ms)
+✔ initialized checkPrivate failure stops calls and cleans owned resources (0.921585ms)
+✔ failed initialized historical deploy comparison prevents snapshot and providers (1.004435ms)
+✔ failed initialized historical initialize comparison prevents snapshot and providers (8.487554ms)
+✔ initialized actual store mismatch stops before setup (1.793775ms)
+✔ initialized actual limits mismatch stops before setup (8.359302ms)
+✔ initialized actual role mismatch stops before setup (0.544992ms)
+✔ initialized actual build mismatch stops before setup (0.408953ms)
+✔ production rejects continuation adapters; source fixture requires every gate (15.818479ms)
+✔ initialized publicCheck requires its closed success result (0.711369ms)
+✔ initialized preserveStore requires its closed success result (1.640729ms)
+✔ initialized checkPrivate requires its closed success result (2.581122ms)
+✔ integration failure emits only a closed code and excludes unknown SDK text (2.773409ms)
+✔ actual production preflight failure survives durable launcher retention with its closed code (0.946118ms)
+✔ control composes actual driver, observer/native decoder and comparator with source-only durable retention (167.105525ms)
+✔ composed negative: wrong payer binding after durable deploy stops and preserves charged public failure evidence (36.05198ms)
+✔ composed negative: wrong indexed recipient in initialize stops and preserves charged public failure evidence (36.663698ms)
+✔ composed negative: deleted wire fee fields stops and preserves charged public failure evidence (13.763638ms)
+✔ composed negative: deleted observed fee fields stops and preserves charged public failure evidence (14.753641ms)
+✔ composed negative: understated native debit after actual observer stops and preserves charged public failure evidence (13.968874ms)
+✔ composed negative: wrong native payer in settle observation stops and preserves charged public failure evidence (62.055276ms)
+✔ loan exact custody arguments and hints pass every comparison before next call (4.900863ms)
+✔ swap exact custody arguments and hints pass every comparison before next call (0.959685ms)
+✔ returned comparator failure false stops before next SDK call (0.739981ms)
+✔ returned comparator failure undefined stops before next SDK call (0.445608ms)
+✔ returned comparator failure {"status":"Rejected"} stops before next SDK call (0.863788ms)
+✔ returned comparator failure {"status":"FAIL"} stops before next SDK call (0.790749ms)
+✔ thrown comparator error retains observed ID and cleans up (0.414857ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (0.156775ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (0.200405ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (0.29699ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (5.268128ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (0.207831ms)
+✔ preflight mismatch prevents deployment but cleans up owned provider (0.154134ms)
+✔ network identity changed after deploy blocks the next SDK stage (0.484037ms)
+✔ incomplete cleanup cannot yield driver PASS (1.257364ms)
+✔ incomplete cleanup cannot yield driver PASS (0.88762ms)
+✔ cleanup rejection preserves the primary failure and provider-known identifiers (0.961776ms)
+✔ observation failure keeps SDK ID and never invokes comparator or next call (0.862517ms)
+✔ recovered loan observes historical deployment once then submits exactly three calls (1.615345ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.467217ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.127497ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.221182ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.249871ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.208404ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.100723ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.120404ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.125897ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.192105ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.090254ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.200755ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.071311ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.106088ms)
+✔ malformed recovery identity fails before observations or SDK calls (0.066568ms)
+✔ recovery rejects accessors without invoking them (0.194714ms)
+✔ swap recovery is rejected before deployment or observation (0.105007ms)
+✔ historical recovery FAIL stops all calls and retains public identity (0.285514ms)
+✔ historical recovery throw stops all calls and retains public identity (0.590619ms)
+✔ historical recovery observe stops all calls and retains public identity (0.193181ms)
+✔ recovery identity is captured before asynchronous binding checks (1.865929ms)
+✔ recovered loan cannot pass with incomplete containment (1.185369ms)
+✔ public failure retains a known observer code and closed phase without SDK details (1.093646ms)
+✔ public failure never copies an unknown SDK message or object (0.62321ms)
+✔ launcher durably retains actual driver failure: NOT_FINALIZED (1.662332ms)
+✔ launcher durably retains actual driver failure: PRIVATE_SDK_FAILURE (0.66552ms)
+✔ fixed initialized loan compares both histories once then calls only accrue and settle (0.564498ms)
+✔ failed historical deploy comparison prevents continuation calls (0.20454ms)
+✔ failed historical initialize comparison prevents continuation calls (0.129172ms)
+✔ initialized driver rejects combined modes and altered fixed history before SDK calls (0.473629ms)
+✔ Preview loan reuses exact local custody arguments and guarded compare-before-next-call order (3.58015ms)
+✔ Preview swap reuses exact local custody arguments and guarded compare-before-next-call order (1.792777ms)
+✔ Preview rejects wrong entry network before any SDK operation and cleans up (0.521545ms)
+✔ Preview rejects wrong SDK network before any SDK operation and cleans up (0.303938ms)
+✔ Preview rejects wrong payer before any SDK operation and cleans up (0.268991ms)
+✔ Preview rejects wrong node before any SDK operation and cleans up (0.607166ms)
+✔ Preview rejects wrong indexer before any SDK operation and cleans up (0.499076ms)
+✔ Preview rejects wrong WS before any SDK operation and cleans up (0.231199ms)
+✔ Preview rejects remote prover before any SDK operation and cleans up (0.364316ms)
+✔ Preview rejects existingDeployment before any SDK operation and cleans up (0.317101ms)
+✔ Preview rejects initializedLoan before any SDK operation and cleans up (0.290586ms)
+✔ Preview rejects initializedSwap before any SDK operation and cleans up (0.310612ms)
+✔ Preview rejects stable-target binding mutation before the next submission (0.383933ms)
+✔ Preview budget failure prevents next SDK call and retains known identifiers (0.228145ms)
+✔ Preview observe failure prevents next SDK call and retains known identifiers (0.138952ms)
+✔ Preview compare failure prevents next SDK call and retains known identifiers (0.564165ms)
+✔ Preview incomplete cleanup cannot produce PASS (0.462504ms)
+ℹ tests 164
+ℹ suites 0
+ℹ pass 164
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 702.774338
+
+UNMODIFIED BASE DRIVER
+import {EXISTING_SWAP,INITIALIZED_SWAP} from './continue-initialized-swap.mjs';
+import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
+import {readFileSync} from 'node:fs';
+import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
+import {INITIALIZED_LOAN} from './continue-initialized-loan.mjs';
+import {SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
+
+const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
+const BASE=1n<<64n;
+function mul(a,b) {return {aLo:a%BASE,aHi:a/BASE,bLo:b%BASE,bHi:b/BASE,lo:(a%BASE)*(b%BASE)%BASE,carry:(a%BASE)*(b%BASE)/BASE};}
+function div(n,d) {const q=n/d;return {q,r:n%d,product:mul(d,q)};}
+function bytes(hex) {if(typeof hex!=='string'||!/^[0-9a-f]{64}$/.test(hex))throw Error('INVALID_PUBLIC_BINDING');return Uint8Array.from(Buffer.from(hex,'hex'));}
+function secret(x) {if(!(x instanceof Uint8Array)||x.length!==32)throw Error('INVALID_ROLE_SECRET');return Uint8Array.from(x);}
+function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)throw Error('INVALID_CURRENT_TIME');return t;}
+
+
+const publicFailureCodes=new Set(['INVALID_INITIALIZED_SWAP','NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
+for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
+for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
+publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
+/** Closed public diagnostic shared by the producer and durable launcher boundary. */
+export function validatePublicDriverFailure(failure){
+  const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};
+  if(!failure||Object.getPrototypeOf(failure)!==Object.prototype)invalid();
+  const fields=Object.getOwnPropertyDescriptors(failure),keys=Reflect.ownKeys(fields);
+  if(keys.length!==3||!['phase','stage','code'].every(k=>Object.hasOwn(fields,k))||keys.some(k=>!Object.hasOwn(fields[k],'value')||!fields[k].enumerable))invalid();
+  const phase=fields.phase.value,stage=fields.stage.value,code=fields.code.value;
+  if(!['preflight','call','observe','compare'].includes(phase)||![null,'deploy','initialize','accrue','settle','swap','close'].includes(stage)||(code!=='UNCLASSIFIED_DRIVER_FAILURE'&&!publicFailureCodes.has(code)))invalid();
+  return {phase,stage,code};
+}
+function publicFailure(error,phase,stage){
+  const message=Object.getOwnPropertyDescriptor(error,'message');
+  const code=message&&Object.hasOwn(message,'value')&&publicFailureCodes.has(message.value)?message.value:'UNCLASSIFIED_DRIVER_FAILURE';
+  return validatePublicDriverFailure({phase,stage,code});
+}
+
+
+/**
+ * Executes the fixed local I2 sequence. Caller must supply the reviewed native
+ * observer and full financial comparator; neither can be omitted. No CLI or
+ * public dispatch is exposed until the complete integration is reviewed.
+ * verifyStage must return an object with status PASS; every other outcome stops.
+ * This function owns provider cleanup even when preflight fails. Failures expose
+ * error.publicResult with known public IDs, reservations and cleanup disposition.
+ * Incomplete containment cannot return PASS. SDK private results are not copied.
+ */
+export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap}) {
+  if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
+  const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
+  try {
+    if(network!=='undeployed')throw Error('LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK');
+    if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
+    if(typeof observe!=='function'||typeof verifyStage!=='function'||typeof now!=='function')throw Error('OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED');
+    if(!providers||typeof providers.execute!=='function'||typeof providers.cleanup!=='function'||typeof providers.stop!=='function'||typeof providers.getState!=='function'||typeof providers.getExecutionBinding!=='function')throw Error('GUARDED_PROVIDERS_REQUIRED');
+    // Integration supplies this identity only after public verification and private
+    // restore round trips. These shape checks do not establish those predicates.
+    let recovery,continuation;
+    if(initializedSwap!==undefined){
+      if(kind!=='swap'||existingDeployment!==undefined||initializedLoan!==undefined||!initializedSwap||Object.getPrototypeOf(initializedSwap)!==Object.prototype)throw Error('INVALID_INITIALIZED_SWAP');
+      const f=Object.getOwnPropertyDescriptors(initializedSwap);if(Reflect.ownKeys(f).length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(f,k)&&Object.hasOwn(f[k],'value'))||f.contractAddress.value!==INITIALIZED_SWAP.contractAddress||f.deployTxId.value!==EXISTING_SWAP.txId||f.initializeTxId.value!==INITIALIZED_SWAP.txId)throw Error('INVALID_INITIALIZED_SWAP');
+      continuation={contractAddress:f.contractAddress.value,deployTxId:f.deployTxId.value,initializeTxId:f.initializeTxId.value};
+    }
+    if(initializedLoan!==undefined){
+      if(kind!=='loan'||existingDeployment!==undefined||!initializedLoan||Object.getPrototypeOf(initializedLoan)!==Object.prototype)throw Error('INVALID_INITIALIZED_LOAN');
+      const fields=Object.getOwnPropertyDescriptors(initializedLoan),keys=Reflect.ownKeys(fields);
+      if(keys.length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(fields,k))||keys.some(k=>!Object.hasOwn(fields[k],'value')))throw Error('INVALID_INITIALIZED_LOAN');
+      if(fields.contractAddress.value!==INITIALIZED_LOAN.contractAddress||fields.initializeTxId.value!==INITIALIZED_LOAN.txId||fields.deployTxId.value!=='00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9')throw Error('INVALID_INITIALIZED_LOAN');
+      continuation={contractAddress:fields.contractAddress.value,deployTxId:fields.deployTxId.value,initializeTxId:fields.initializeTxId.value};
+    }
+    if(existingDeployment!==undefined) {
+      if(kind!=='loan')throw Error('EXISTING_DEPLOYMENT_REQUIRES_LOAN');
+      if(existingDeployment===null||typeof existingDeployment!=='object'||Object.getPrototypeOf(existingDeployment)!==Object.prototype)throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const fields=Object.getOwnPropertyDescriptors(existingDeployment),keys=Reflect.ownKeys(fields);
+      if(keys.length!==2||!keys.includes('contractAddress')||!keys.includes('txId')||keys.some(key=>!Object.hasOwn(fields[key],'value')))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const contractAddress=fields.contractAddress.value,txId=fields.txId.value;
+      if(typeof contractAddress!=='string'||!/^[0-9a-f]{64}$/.test(contractAddress)||typeof txId!=='string'||!/^[0-9a-f]{66}$/.test(txId))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      recovery={contractAddress,txId};
+    }
+    const first=secret(roles.firstSecret),second=secret(roles.secondSecret);
+    const firstAddress=bytes(roles.firstAddress),secondAddress=bytes(roles.secondAddress);
+    if(roles.firstAddress===roles.secondAddress)throw Error('DISTINCT_FINANCIAL_PARTICIPANTS_REQUIRED');
+    const program=bytes(bindings[kind].programDigest),net=bytes(networkTag);
+    const payerAddress=roles.firstAddress;
+    let initialBinding;
+    async function checkBinding() {
+      const observed=await providers.getExecutionBinding();
+      if(observed?.network?.networkId!=='undeployed'||observed.sdkNetworkId!=='undeployed'||observed.payerAddress!==payerAddress)throw Error('LOCAL_EXECUTION_BINDING_MISMATCH');
+      for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']]) {
+        const url=new URL(observed.network[key]);
+        if(url.protocol!==protocol||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password||url.hash)throw Error('LOCAL_EXECUTION_BINDING_ENDPOINT');
+      }
+      const snapshot=JSON.stringify(observed);
+      if(initialBinding!==undefined&&snapshot!==initialBinding)throw Error('LOCAL_EXECUTION_BINDING_CHANGED');
+      initialBinding=snapshot;
+    }
+    await checkBinding();
+    sdk??=await loadFinancialContractsSdk();
+    let deployTxId;
+    if(continuation){
+      address=continuation.contractAddress;deployTxId=continuation.deployTxId;
+    } else if(recovery) {
+      address=recovery.contractAddress;
+      deployTxId=recovery.txId;
+    } else {
+      diagnosticPhase='call';diagnosticStage='deploy';
+      const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
+      address=deployed.deployTxData.public.contractAddress;bytes(address);
+      deployTxId=deployed.deployTxData.public.txId;
+    }
+    async function record(circuitId,txId) {
+      if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
+      transactionIds.add(txId);diagnosticPhase='observe';diagnosticStage=circuitId;
+      const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address}));
+      diagnosticPhase='compare';
+      const comparison=await providers.execute('compare:'+circuitId,()=>verifyStage(circuitId,observation));
+      if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
+      stages.push(observation.receipt);
+    }
+    await record('deploy',deployTxId);
+    if(continuation)await record('initialize',continuation.initializeTxId);
+    async function call(circuitId,args) {
+      diagnosticPhase='call';diagnosticStage=circuitId;
+      const result=await providers.execute(circuitId,async()=>{await checkBinding();return sdk.submitCallTx(providers,{compiledContract,contractAddress:address,privateStateId:`sp05-${kind}`,circuitId,args});});
+      await record(circuitId,result.public.txId);
+    }
+    if(kind==='loan') {
+      if(!continuation)await call('initialize',[first,program,net,2n,time(now)]);
+      await call('accrue',[first,program,net,0n,2n,time(now),{h0:mul(5000000000n,8n),h1:mul(40000000000n,31n),h2:mul(100n,365n),h3:div(1240000000000n,36500n)}]);
+      await call('settle',[first,program,net,1n,2n,0n,533972602n,time(now),{unused:0n}]);
+    } else {
+      if(!continuation)await call('initialize',[second,program,net,3n,time(now)]);
+      await call('swap',[first,program,net,0n,4n,4n,0n,1n,10000n,19700n,time(now),{h0:mul(10000n,997n),h1:mul(9970000n,2000000n),h2:mul(1000000n,1000n),h3:div(19940000000000n,1009970000n)}]);
+      await call('close',[second,program,net,1n,3n,time(now),{unused:0n}]);
+    }
+  } catch(error) {
+    failure=error instanceof Error?error:Error('DRIVER_OPERATION_FAILED');
+    try {providers.stop?.('driver failed');}catch{/* Preserve the first failure. */}
+  } finally {
+    try {
+      const result=await providers.cleanup();
+      cleanup={walletStopped:result?.walletStopped===true,pendingOperations:Number.isSafeInteger(result?.pendingOperations)&&result.pendingOperations>=0?result.pendingOperations:null,containmentComplete:result?.containmentComplete===true};
+    } catch {cleanup={walletStopped:false,pendingOperations:null,containmentComplete:false};}
+  }
+  // Public operational evidence excludes provider reasons, private SDK results and keys.
+  let operationalState;
+  try {
+    const state=providers.getState?.();
+    for(const id of state?.identifiers??[])if(typeof id==='string'&&id)transactionIds.add(id);
+    operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
+  } catch {operationalState={unavailable:true};}
+  const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
+  const publicResult={schema:'moriarty.local-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  if(failure||!contained) {
+    const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
+    error.publicResult=publicResult;throw error;
+  }
+  return publicResult;
+}

@@ -4,12 +4,13 @@
  * This predicate does not establish receipt provenance, finality or proofs.
  * It performs no wallet/store/network operations and grants no dispatch authority.
  */
-import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
+import {indexedOwnerDecoderForNetwork} from './indexed-owner.mjs';
 export const SWAP_WALLET_FAILURE_CODES=Object.freeze(['ROLES','ASSETS','RECEIPT','HISTORY','NATIVE_IDENTITY','NATIVE_ACTION','NATIVE_MINT','NATIVE_OUTPUT','SYNC','PENDING','COIN_SHAPE','AVAILABLE','OWNER','OUTPUT'].map(x=>'SWAP_WALLET_'+x));
 const check=(ok,label)=>{if(!ok)throw Error('SWAP_WALLET_'+label);};
 const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const height=x=>Number.isSafeInteger(x)&&x>=0;
-export function assertSwapInitializedWallet({receipt,roles,assetBindings,synced}){
+export function assertSwapInitializedWallet({receipt,roles,assetBindings,synced,network='undeployed'}){
+ let decodeOwner;try{decodeOwner=indexedOwnerDecoderForNetwork(network);}catch{throw Error('SWAP_WALLET_OWNER');}
  check(hex(roles?.firstAddress)&&hex(roles?.secondAddress)&&roles.firstAddress!==roles.secondAddress,'ROLES');
  check(hex(assetBindings?.ASSET_A)&&hex(assetBindings?.ASSET_B)&&assetBindings.ASSET_A!==assetBindings.ASSET_B,'ASSETS');
  check(receipt?.schema==='moriarty.finalized-financial-stage/1'&&receipt.circuitId==='initialize'&&receipt.acceptance==='uncertified-I2-observation'&&receipt.protocolVersion===1000000,'RECEIPT');
@@ -24,7 +25,7 @@ export function assertSwapInitializedWallet({receipt,roles,assetBindings,synced}
  const u=synced.unshielded;check(Array.isArray(u.availableCoins)&&Array.isArray(u.pendingCoins)&&u.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PENDING');
  const coins=u.availableCoins.map(c=>{check(c?.utxo&&hex(c.utxo.intentHash)&&height(c.utxo.outputNo),'COIN_SHAPE');return c.utxo;});
  const found=coins.filter(c=>c.intentHash===o.intentHash&&c.outputNo===o.offerIndex);check(found.length===1,'AVAILABLE');
- const coin=found[0];let owner;try{owner=decodeLocalIndexedOwner(coin.owner);}catch{throw Error('SWAP_WALLET_OWNER');}
+ const coin=found[0];let owner;try{owner=decodeOwner(coin.owner);}catch{throw Error('SWAP_WALLET_OWNER');}
  check(owner===o.owner&&coin.type===o.type&&typeof coin.value==='bigint'&&coin.value===100000n,'OUTPUT');
  const mintedOutput=Object.freeze({segment:o.segment,section:o.section,owner:o.owner,type:o.type,value:o.value,intentHash:o.intentHash,outputNo:o.offerIndex});
  return Object.freeze({status:'SWAP_INITIALIZED_WALLET_VERIFIED',mintedOutput,dispatchAuthorized:false});

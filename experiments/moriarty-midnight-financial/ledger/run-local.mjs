@@ -36,7 +36,7 @@ function publicFailure(error,phase,stage){
 
 
 /**
- * Executes the fixed local I2 sequence. Caller must supply the reviewed native
+ * Executes the fixed target-bound I2 sequence. Caller must supply the reviewed native
  * observer and full financial comparator; neither can be omitted. No CLI or
  * public dispatch is exposed until the complete integration is reviewed.
  * verifyStage must return an object with status PASS; every other outcome stops.
@@ -44,11 +44,17 @@ function publicFailure(error,phase,stage){
  * error.publicResult with known public IDs, reservations and cleanup disposition.
  * Incomplete containment cannot return PASS. SDK private results are not copied.
  */
-export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap}) {
+export function runLocalFinancialCase(options){return runFinancialCase(options,'undeployed');}
+/** Preview stage sequence only; caller owns chain/build/role validation and admission.
+ * Controlled callbacks can test sequencing, never establish Preview acceptance.
+ */
+export function runPreviewFinancialCase(options){return runFinancialCase(options,'preview');}
+async function runFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap},target) {
   if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
   const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
   try {
-    if(network!=='undeployed')throw Error('LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK');
+    if(network!==target)throw Error(target==='undeployed'?'LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK':'PREVIEW_DRIVER_REQUIRES_PREVIEW_NETWORK');
+    if(target==='preview'&&(existingDeployment!==undefined||initializedLoan!==undefined||initializedSwap!==undefined))throw Error('PREVIEW_LOCAL_RECOVERY_FORBIDDEN');
     if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
     if(typeof observe!=='function'||typeof verifyStage!=='function'||typeof now!=='function')throw Error('OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED');
     if(!providers||typeof providers.execute!=='function'||typeof providers.cleanup!=='function'||typeof providers.stop!=='function'||typeof providers.getState!=='function'||typeof providers.getExecutionBinding!=='function')throw Error('GUARDED_PROVIDERS_REQUIRED');
@@ -84,13 +90,18 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     let initialBinding;
     async function checkBinding() {
       const observed=await providers.getExecutionBinding();
-      if(observed?.network?.networkId!=='undeployed'||observed.sdkNetworkId!=='undeployed'||observed.payerAddress!==payerAddress)throw Error('LOCAL_EXECUTION_BINDING_MISMATCH');
-      for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']]) {
+      const prefix=target==='undeployed'?'LOCAL':'PREVIEW';
+      if(observed?.network?.networkId!==target||observed.sdkNetworkId!==target||observed.payerAddress!==payerAddress)throw Error(prefix+'_EXECUTION_BINDING_MISMATCH');
+      if(target==='preview'){
+        // These are configured public targets, not a fresh chain identity check.
+        if(!['https://rpc.preview.midnight.network','https://rpc.preview.midnight.network/'].includes(observed.network.node)||observed.network.indexer!=='https://indexer.preview.midnight.network/api/v4/graphql'||observed.network.indexerWS!=='wss://indexer.preview.midnight.network/api/v4/graphql/ws')throw Error('PREVIEW_EXECUTION_BINDING_ENDPOINT');
+      }
+      for(const [key,protocol] of target==='undeployed'?[['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']]:[['proofServer','http:']]) {
         const url=new URL(observed.network[key]);
-        if(url.protocol!==protocol||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password||url.hash)throw Error('LOCAL_EXECUTION_BINDING_ENDPOINT');
+        if(url.protocol!==protocol||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password||url.hash)throw Error(prefix+'_EXECUTION_BINDING_ENDPOINT');
       }
       const snapshot=JSON.stringify(observed);
-      if(initialBinding!==undefined&&snapshot!==initialBinding)throw Error('LOCAL_EXECUTION_BINDING_CHANGED');
+      if(initialBinding!==undefined&&snapshot!==initialBinding)throw Error(prefix+'_EXECUTION_BINDING_CHANGED');
       initialBinding=snapshot;
     }
     await checkBinding();
@@ -110,7 +121,7 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     async function record(circuitId,txId) {
       if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
       transactionIds.add(txId);diagnosticPhase='observe';diagnosticStage=circuitId;
-      const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address}));
+      const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address,...(target==='preview'?{network:'preview'}:{})}));
       diagnosticPhase='compare';
       const comparison=await providers.execute('compare:'+circuitId,()=>verifyStage(circuitId,observation));
       if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
@@ -149,7 +160,7 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
   } catch {operationalState={unavailable:true};}
   const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
-  const publicResult={schema:'moriarty.local-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
   if(failure||!contained) {
     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
     error.publicResult=publicResult;throw error;

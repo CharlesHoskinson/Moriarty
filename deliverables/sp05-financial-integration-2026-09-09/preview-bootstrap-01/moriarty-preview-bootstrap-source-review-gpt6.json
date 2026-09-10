@@ -1,0 +1,75 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerIdentity": {
+    "agent": "/root/spec_audit_early",
+    "model": "gpt-6-astra",
+    "independentOfAuthor": true,
+    "author": "recovery_store",
+    "otherCurrentReviewVerdictInspected": false
+  },
+  "candidateSha256": "6dd025b7f2527485f9b05e75ad151b3fa110a3c9a2a73c0f31cc277897a284db",
+  "verdict": "BLOCKED",
+  "scope": "Existing-wallet Preview bootstrap, persistence and controlled full-swap composition plus package command wiring. Source-only, no CLI execution or actual resource approval.",
+  "sourceHashes": {
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs": "05f255e141192e698713e2217ade25f6bed8d07013fde19a35f8bd396926aa30",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs": "7ed66aa79c6fa69ad4ecbeaa7fda855a6bb02a4ff0c6caecb168215f8273e5be",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-swap-composition.test.mjs": "e9531c2eebfc85a384202a9850b47a6c3c5cb0c1009f0da0cff355a275c9bf3e",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/package.json": "bb9e9305929edb54e3ea4750669266dfc553cabe796dee435697ca73e90791e0"
+  },
+  "pinsVerified": {
+    "newSourceAndPackage": 4,
+    "authorLogs": 9,
+    "ownerRpcDriverIntegrationBoundaryDependencies": 16
+  },
+  "findings": [
+    {
+      "id": "G6-PREVIEW-BOOTSTRAP-01",
+      "severity": "blocking",
+      "location": "experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs:persistPreviewWalletState final unlink/fsync/return",
+      "title": "Final directory fsync can cross cleanup deadline and still report PERSISTED",
+      "evidence": "Independent connected synthetic-file reproducer instruments the final real fsync after pending marker removal to advance Date.now to deadline+1. Exact current helper returns {status:PERSISTED,children:3} instead of rejecting PREVIEW_LAUNCH_DEADLINE. Earlier deadline checks and standard tests do not cover this final boundary.",
+      "requiredCorrection": "Check deadline after the final directory sync before returning success. Preserve original negative evidence and add connected final-fsync lateness control. The completed consistent file set need not be rolled back or represented as a mixed pending state; distinguish completed writes from on-time success.",
+      "impact": "A purported five-second bounded persistence success can be reported after its supplied deadline. No actual wallet or operational run was involved; this finding does not claim snapshot corruption or false Preview financial acceptance."
+    }
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "npm --prefix experiments/moriarty-midnight-financial run test:preview",
+      "cwd": "/home/charl/Moriarty/.worktrees/sp05-preview-owner",
+      "exitCode": 0,
+      "tests": 73,
+      "pass": 73,
+      "fail": 0,
+      "skip": 0,
+      "evidence": "/tmp/moriarty-preview-bootstrap-gpt6-verification.tap"
+    },
+    {
+      "command": "node /tmp/moriarty-preview-persist-deadline-reproducer.mjs",
+      "exitCode": 1,
+      "expectedFailure": true,
+      "evidence": "/tmp/moriarty-preview-persist-deadline-reproducer.json"
+    }
+  ],
+  "evidenceHashes": {
+    "/tmp/moriarty-preview-bootstrap-gpt6-verification.tap": "32e381cdb2fea0d87fbbb0af78c4a6ed6af0305b92f05892a27cc371530b18f6",
+    "/tmp/moriarty-preview-persist-deadline-reproducer.mjs": "bfe33afead0faf0cd81891feba6aff55ac03db490354a2d7fa12aafea46b8c85",
+    "/tmp/moriarty-preview-persist-deadline-reproducer.json": "853a5fb46d887958013c34331686f229abbd6dd09efbbb80139bc7a31cd91a3c"
+  },
+  "checkedScope": [
+    "Public plan, retained build/runtime and genesis preflight precede private preparation. Output and contract-store directories are exclusive. Pending persistence marker refuses private reads/restore. All three existing snapshot envelopes are read/validated before HD derivation or facade initialization; missing/invalid state has no create fallback.",
+    "SDK Preview selection, derived Bech32/native payer and signing identity precede wallet start. Restored unshielded state network/address/key is matched. Connected progress, DUST availability and no pending coin/DUST state precede integration.",
+    "Native pre-submit retention and corrected public boundary02 integrate through the existing exported helpers. Package preview command requires explicit run/plan/hash arguments; import is inert. CLI was not run.",
+    "Persistence serializes all three SDK state strings, verifies original private bytes, writes/fsyncs an exclusive backup and all three replacement envelopes, creates/fsyncs pending marker before any rename, verifies replacements, syncs parent, then removes marker. Interrupted second rename preserves original backups and pending marker; another launch fails closed.",
+    "Wallet stop remains in finally if persistence fails. Outer process/service containment remains a separate obligation.",
+    "Controlled full swap composition invokes actual native observer/comparator/minted-coin gate against retained local transactions and reconstructed synthetic-capability state; it is not actual Preview financial execution."
+  ],
+  "limitations": [
+    "Candidate requires correction and independent review before source approval; no operative bootstrap or resource run approved.",
+    "Exclusive admitted wallet use, trusted filesystem, original state/role provenance and current Preview chain/protocol compatibility remain launcher/admission assumptions requiring concrete binding.",
+    "Serialization does not prove all children represent the same chain height; pending marker provides interrupted file-set detection only.",
+    "Only synthetic test directories and public retained fixtures were used. No original private data, live RPC/network, wallet operation, services, proofs, compilation or transaction submission.",
+    "All Preview financial and mandatory PCD hard gates remain open."
+  ],
+  "reviewedAt": "2026-09-10T16:58:21.080580+00:00"
+}

@@ -1,0 +1,7 @@
+import assert from 'node:assert/strict';import {readFileSync,mkdtempSync,rmSync} from 'node:fs';import {join} from 'node:path';import {tmpdir} from 'node:os';
+import {retainPreviewIntegrationResult} from '/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-launch.mjs';
+const file='/home/charl/Moriarty/.worktrees/sp05-preview-owner/deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/run-public/integration-result.json',results=[];
+for(const [field,mutate] of [['numeric transaction identifier',r=>r.driver.transactionIds[0]=1],['numeric native transaction hash',r=>r.driver.stages[0].transaction.transactionHash=1],['boolean native input owner',r=>r.driver.stages.at(-1).transaction.inputs[0].owner=true]]){
+ const r=JSON.parse(readFileSync(file));r.schema='moriarty.preview-financial-integration/1';r.status='FAILED';r.driver.schema='moriarty.preview-financial-run/1';mutate(r);const d=mkdtempSync(join(tmpdir(),'moriarty-preview-gpt6-types-'));let rejected=false,code;try{try{retainPreviewIntegrationResult(d,r);}catch(e){rejected=true;code=e.message;}results.push({field,rejected,code});}finally{rmSync(d,{recursive:true,force:true});}
+}
+console.log(JSON.stringify({scope:'Controlled public fixture only',results},null,2));assert.ok(results.every(r=>r.rejected),'Typed native identity fields must reject non-string values');

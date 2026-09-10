@@ -210,3 +210,34 @@ test('a canonical but unequal indexed owner fails full native output comparison'
  const f=actualInitializeFixture([20363]);f.data.unshielded.created[0].owner=indexedOwner('aa'.repeat(32));
  await assert.rejects(module.observeFinalizedStage(f.options),/INDEXED_OUTPUTS_MISMATCH/);assert.equal(f.counts().states,0);
 });
+
+// These are controlled indexer encodings of public local bytes, not Preview
+// transactions. Network selection here binds owner encoding only.
+test('explicit Preview receipt selection decodes both spent and created SDK owners',async()=>{
+ const {tx,address,contractAddress}=await nativeFixture({deploy:true});
+ const blockHash='03'.repeat(32),intent=[...tx.intents.values()][0];let states=0;
+ const data={tx,txId:tx.identifiers()[0],identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:10,protocolVersion:8,fees:{paidFees:'0',estimatedFees:'0'},unshielded:{spent:[{owner:indexedOwner(address,'preview'),tokenType:'01'.repeat(32),value:100n,intentHash:'02'.repeat(32)}],created:[{owner:indexedOwner(address,'preview'),tokenType:'01'.repeat(32),value:70n,intentHash:intent.intentHash(0)}]}};
+ const provider={watchForTxData:async()=>data,queryContractState:async()=>{states++;return new stateRuntime.ContractState();}};
+ const rpc=async name=>({chain_getFinalizedHead:'0x'+blockHash,chain_getHeader:{number:'0xa'},chain_getBlockHash:'0x'+blockHash}[name]);
+ const args={network:'preview',provider,rpc,ledger,expectedProtocolVersion:8,txId:data.txId,contractAddress,circuitId:'deploy',decodeState:()=>({}),deadlineMs:Date.now()+5000};
+ const observed=await module.observeFinalizedStage(args);
+ assert.equal(observed.receipt.transaction.inputs[0].owner,address);
+ assert.equal(observed.receipt.transaction.outputs[0].owner,address);
+ assert.equal(states,1);
+ for(const side of ['spent','created']){
+  data.unshielded[side][0].owner=indexedOwner(address);
+  await assert.rejects(module.observeFinalizedStage(args),{message:'INVALID_INDEXED_OWNER'});
+  data.unshielded[side][0].owner=indexedOwner(address,'preview');
+ }
+ await assert.rejects(module.observeFinalizedStage({...args,network:undefined}),{message:'INVALID_INDEXED_OWNER'});
+ data.unshielded.created[0].owner=indexedOwner('aa'.repeat(32),'preview');
+ await assert.rejects(module.observeFinalizedStage(args),{message:'INDEXED_OUTPUTS_MISMATCH'});
+ assert.equal(states,1);
+});
+test('unsupported receipt owner network fails before any observation even with no indexed rows',async()=>{
+ let calls=0;const trap=async()=>{calls++;throw Error('UNEXPECTED_OBSERVATION');};
+ for(const network of ['mainnet','Preview','preview_extra','',null,{},()=>{}]){
+  await assert.rejects(module.observeFinalizedStage({network,contractAddress:'01'.repeat(32),expectedProtocolVersion:8,txId:'test',deadlineMs:Date.now()+1000,provider:{watchForTxData:trap},rpc:trap}),{message:'INVALID_INDEXED_OWNER_NETWORK'});
+ }
+ assert.equal(calls,0);
+});

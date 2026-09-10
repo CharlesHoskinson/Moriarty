@@ -2,7 +2,7 @@
 
 Moriarty is an experimental language and toolchain for **bounded financial contracts on Midnight**. Developers describe financial state, permitted actions, payment obligations and authorization rules. The goal is to compile those descriptions into Compact and require each transaction to carry a proof that its execution and the contract history it extends satisfy the agreement.
 
-You can currently author and simulate contracts, inspect their effects, and generate restricted Compact execution kernels. Proof-carrying financial settlement is still under development. This repository is not a production SDK or an audited deployment.
+You can currently author and simulate contracts, inspect their effects, and generate restricted Compact execution kernels. A [bounded loan has executed on Midnight Preview](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md), including independently checked accrual and a first-period payment. Mandatory proof-carrying financial settlement is still under development. This repository is not a production SDK or an audited deployment.
 
 ## Financial semantics above Compact
 
@@ -447,13 +447,13 @@ The complete [roadmap](ROADMAP.md) lists the implementation sequence, acceptance
 | --- | --- | --- |
 | Language | Bounded grammar, types, canonical encoding, evaluator and executable reference examples | Complete implementation review and extend the semantics for all required financial cases |
 | Compilation | Restricted source-derived Compact kernels and local result comparisons | Full effect mapping and compiler-to-ledger correspondence |
-| Network integration | [Reviewed local loan trace](deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/REVIEWED-RESULT.md) with finalized partial-payment effects; hello-world finalized on Preview | Local swap, then both financial cases on Preview with complete effect comparison |
+| Network integration | [Reviewed Preview loan](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md): four finalized stages, native payment and full historical-state comparison; local loan and swap traces retained | Preview swap, remaining financial coverage and mandatory PCD acceptance |
 | Recursive proofs | Native backend investigation and a prepared checked encoding | Produce and independently verify retained recursive proofs |
 | Acceptance | Local semantic checks and interfaces that reject without a backend | Enforce all mandatory claims, authorization and replay protection in the actual ledger path |
 | Privacy and composition | Specified handoff and composition requirements | Private witness transfer, proved split/join and preservation of residual obligations |
 | Financial coverage | ACTUS and DeFi source requirements and representative local cases | Full behavioral conformance, including the held-out cases |
 
-Preview is the public integration target. The local loan trace establishes scoped financial asset movement with residual principal; Preview evidence still establishes hello-world connectivity only. Neither establishes PCD acceptance. The [completion plan](openspec/MORIARTY-COMPLETION-PROGRAM.md) defines the dependencies and evidence required to close these gaps.
+Midnight Preview execution is a hard release gate. The reviewed Preview loan establishes a bounded first-period test-asset payment with residual principal. Both independent audits preserve the raw wrapper `FAILED`/driver `INCOMPLETE` records and separately observed process containment. Preview swap, full financial coverage and mandatory PCD acceptance remain open. The [completion plan](openspec/MORIARTY-COMPLETION-PROGRAM.md) defines the dependencies and evidence required to close these gaps.
 
 ## Research vault
 

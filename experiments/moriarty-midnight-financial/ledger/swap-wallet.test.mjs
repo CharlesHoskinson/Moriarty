@@ -51,3 +51,10 @@ function actualFallibleFixture(){
 }
 test('actual compiled swap fallible mint matches its exact SDK-decoded available coin',()=>{const {f}=actualFallibleFixture(),r=run(f);assert.equal(r.mintedOutput.section,'fallible');assert.equal(r.mintedOutput.segment,36489);assert.equal(r.dispatchAuthorized,false);});
 test('fallible mint cannot use the guaranteed origin namespace',()=>{const {f,raw}=actualFallibleFixture(),tx=actualLedger.Transaction.deserialize('signature','proof','binding',raw);f.receipt.transaction.outputs[0].intentHash=[...tx.intents.values()][0].intentHash(0);assert.throws(()=>run(f),/SWAP_WALLET_AVAILABLE/);});
+
+test('Preview swap available coin uses explicit SDK owner network while default stays local',()=>{
+ const {f}=actualFallibleFixture();f.synced.unshielded.availableCoins[0].utxo.owner=address(f.roles.firstAddress,'preview');
+ assert.throws(()=>run(f),{message:'SWAP_WALLET_OWNER'});
+ assert.equal(api.assertSwapInitializedWallet({...f,network:'preview'}).status,'SWAP_INITIALIZED_WALLET_VERIFIED');
+ assert.throws(()=>api.assertSwapInitializedWallet({...f,network:'mainnet'}),{message:'SWAP_WALLET_OWNER'});
+});

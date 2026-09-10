@@ -1,7 +1,7 @@
 import {extractNativeContractBalances} from './contract-balances.mjs';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
+import {indexedOwnerDecoderForNetwork} from './indexed-owner.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function requireThat(ok, code) { if (!ok) throw new Error(code); }
@@ -103,9 +103,9 @@ export async function beforeDeadline(operation, deadlineMs) {
   } finally { clearTimeout(timer); }
 }
 
-function indexedRows(rows) {
+function indexedRows(rows,decodeOwner) {
   requireThat(Array.isArray(rows),'MISSING_INDEXED_UTXOS');
-  return rows.map(x=>({owner:decodeLocalIndexedOwner(x.owner),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
+  return rows.map(x=>({owner:decodeOwner(x.owner),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
 }
 
 function nativeRows(rows) {
@@ -117,7 +117,9 @@ function nativeRows(rows) {
  * finalized bytes and block-pinned state, never from an expected financial fixture.
  * The RPC/indexer remain explicit external trust dependencies.
  */
-export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAddress,circuitId,decodeState,deadlineMs,expectedProtocolVersion}) {
+export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAddress,circuitId,decodeState,deadlineMs,expectedProtocolVersion,network='undeployed'}) {
+  // This selects indexed-owner encoding, not chain/genesis acceptance.
+  const decodeOwner=indexedOwnerDecoderForNetwork(network);
   hex(contractAddress,'CONTRACT_ADDRESS');
   requireThat(Number.isSafeInteger(expectedProtocolVersion) && expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
   requireThat(typeof txId==='string' && txId.length>0,'TX_ID');
@@ -167,8 +169,8 @@ export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAd
   // strings have no verified encoding/overhead relationship to that debit.
   // Historical public replay demonstrates unequal values for a successful call.
   // Retain both; authorization charges the full native amount without refunds.
-  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.spent)),sorted(nativeRows(decoded.inputs))),'INDEXED_INPUTS_MISMATCH');
-  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.created)),sorted(nativeRows(decoded.outputs))),'INDEXED_OUTPUTS_MISMATCH');
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.spent,decodeOwner)),sorted(nativeRows(decoded.inputs))),'INDEXED_INPUTS_MISMATCH');
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.created,decodeOwner)),sorted(nativeRows(decoded.outputs))),'INDEXED_OUTPUTS_MISMATCH');
   const config={type:'blockHash',blockHash};
   const state=await wait(()=>provider.queryContractState(contractAddress,config));
   requireThat(state!==null && state!==undefined,'MISSING_CONTRACT_STATE');
