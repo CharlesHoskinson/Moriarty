@@ -1,0 +1,17 @@
+profile "moriarty-expression-source/1";
+
+agreement QuoteCounter {
+  asset Cash: Asset;
+  action step(delta: UInt64) {
+    requires obs.ready and delta > u64(0);
+    let rounded = floor_div(i128(-5), i128(2));
+    let quote = record<Quote> { amount: amount(5, Cash), count: delta };
+    let choices = collection<UInt64, 2>(u64(7), delta);
+    let optional = some<Amount<Cash>>(quote.amount);
+    let empty = none<Amount<Cash>>();
+    let mode = Mode.Open;
+    next.counter = pre.counter + choices[u64(1)];
+    emit QuoteNotice quote;
+    ensures post.counter == pre.counter + delta;
+  }
+}
