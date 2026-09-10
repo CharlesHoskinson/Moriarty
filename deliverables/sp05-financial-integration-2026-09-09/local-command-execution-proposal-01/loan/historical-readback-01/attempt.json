@@ -1,0 +1,41 @@
+{
+  "status": "CONSUMED",
+  "admissionSha256": "12a438d2c11ee6ff2b5202f4445eb97050461146fb5f48a3fc6cce32ffd456d9",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-loan-historical-readback-stop-01",
+    "--on-active=240s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-node moriarty-midnight-indexer",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-historical-readback-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-node moriarty-midnight-indexer"
+  ],
+  "diagnosticArgvTemplate": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-loan-historical-readback-01",
+    "--property=Type=exec",
+    "--property=RemainAfterExit=yes",
+    "--property=MemoryMax=4294967296",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=180",
+    "--property=TimeoutStopSec=1",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "--property=UMask=0077",
+    "--property=StandardOutput=null",
+    "--property=StandardError=null",
+    "--working-directory=/home/charl/Moriarty/.worktrees/sp05-local-completion",
+    "/usr/local/bin/node",
+    "/home/charl/Moriarty/.worktrees/sp05-local-completion/deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/historical-readback-01/probe.mjs"
+  ],
+  "submissionsAllowed": 0,
+  "retryAllowed": false
+}
