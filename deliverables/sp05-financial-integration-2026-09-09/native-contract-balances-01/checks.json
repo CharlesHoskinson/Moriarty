@@ -1,0 +1,39 @@
+{
+  "schema": "moriarty.native-contract-balances-source-check/1",
+  "status": "SOURCE_TESTS_PASS",
+  "files": {
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "887208f2f2a63b19a495db016eced69989c934cb8ac0eea3b55ba957878ae836",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs": "a70626c61c1e8ef23050dc433677af4203fa110ac03af0fbbf8468678af9aea7",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-deploy-state.bin": "c76e8b3604c83b2f19d6dec2c7ee8b96b06fa7f159374a3847b36537e754ffec",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-initialize-state.bin": "5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/indexed-initialize-state.bin": "1f0724d2afe55e1c2aa22580f1bf9f0eed1a30e74b7a04ff78fe622a1e6fb30f",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36"
+  },
+  "command": "node --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs",
+  "checks": {
+    "red": {
+      "tests": "22",
+      "pass": "0",
+      "fail": "22",
+      "duration_ms": "152.444603",
+      "sha256": "ee98cb2361ce332d0e11a1bfd3bba9b80f27d136e93a10075b3a49cf90653c44"
+    },
+    "green": {
+      "tests": "22",
+      "pass": "22",
+      "fail": "0",
+      "duration_ms": "109.11967",
+      "sha256": "c0fe119a5b85cd9d2634a4ab21bbfe1c5273236d3149400efaeae1d97c3ed63b"
+    }
+  },
+  "nativeEvidence": "Actual retained swap deploy and initialize ContractState bytes deserialize with installed protocol ledger8.1; deploy empty, initialize two unshielded reserves A1000000 and B2000000. Actual initialized loan is empty. Serialize bytes unchanged by extraction.",
+  "sourceFacts": {
+    "ledgerTypes": "ledger-v8.d.ts46-58 TokenType union has {tag:unshielded,raw}, {tag:shielded,raw}, {tag:dust};809 ContractState.balance is Map<TokenType,bigint>.",
+    "commentLimitation": "Type comments mention35-byte strings, but actual pinned serialized native token IDs in retained state are32-byte64lowercase hex. Fixed unshielded financial observer enforces32bytes.",
+    "unsupportedTypes": "Shielded and DUST variants reject; they are not silently omitted or conflated with raw unshielded IDs.",
+    "boundary": "4096 entries; unique raw IDs; exact plain token own data fields; amount bigint0 through2^128-1; frozen detached decimal-string map."
+  },
+  "fixtureLimitations": "Malformed state/map/token/amount/duplicate/overflow tests use explicitly supplied FixtureState class; they do not claim native WASM accepts malformed objects. Actual native-state tests use real retained public bytes.",
+  "scope": "Only new helper/test and new evidence directory. No providers imported by helper; supplied pinned ledger/state only. No source12 integration, wallet/private reads, network/services, transaction creation, proofs or compiler execution.",
+  "acceptance": "Read-only extraction tests; no new finality or ledger/financial acceptance."
+}

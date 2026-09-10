@@ -19,7 +19,7 @@ export function assertSwapInitializedWallet({receipt,roles,assetBindings,synced}
  check(Array.isArray(tx.actions)&&tx.actions.length===1&&tx.actions[0]?.kind==='call'&&tx.actions[0].entryPoint==='initialize'&&tx.actions[0].address===receipt.contractAddress&&Number.isInteger(tx.actions[0].segment)&&tx.actions[0].segment>=0&&tx.actions[0].segment<=65535,'NATIVE_ACTION');
  check(Array.isArray(tx.inputs)&&tx.inputs.length===0&&Array.isArray(tx.outputs)&&tx.outputs.length===1,'NATIVE_MINT');
  const o=tx.outputs[0];
- check(o&&Object.keys(o).sort().join(',')==='intentHash,offerIndex,owner,section,segment,type,value'&&o.segment===tx.actions[0].segment&&o.section==='guaranteed'&&o.offerIndex===0&&o.owner===roles.firstAddress&&o.type===assetBindings.ASSET_A&&o.value==='100000'&&hex(o.intentHash),'NATIVE_OUTPUT');
+ check(o&&Object.keys(o).sort().join(',')==='intentHash,offerIndex,owner,section,segment,type,value'&&o.segment===tx.actions[0].segment&&['guaranteed','fallible'].includes(o.section)&&o.offerIndex===0&&o.owner===roles.firstAddress&&o.type===assetBindings.ASSET_A&&o.value==='100000'&&hex(o.intentHash),'NATIVE_OUTPUT');
  for(const kind of ['shielded','unshielded','dust']){const p=synced?.[kind]?.progress;check(p?.isConnected===true&&typeof p.isStrictlyComplete==='function'&&p.isStrictlyComplete()===true,'SYNC');}
  const u=synced.unshielded;check(Array.isArray(u.availableCoins)&&Array.isArray(u.pendingCoins)&&u.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PENDING');
  const coins=u.availableCoins.map(c=>{check(c?.utxo&&hex(c.utxo.intentHash)&&height(c.utxo.outputNo),'COIN_SHAPE');return c.utxo;});

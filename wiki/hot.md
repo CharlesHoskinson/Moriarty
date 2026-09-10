@@ -22,18 +22,18 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-10T09:59:32.345606+00:00
+updated_at: 2026-09-10T10:38:55.104875+00:00
 ---
 
 # Current research context
 
 The [complete roadmap](../ROADMAP.md) and [report reconciliation](../openspec/REPORT-RECONCILIATION-2026-09-07.md) control current work. MC01-MC08 acceptance remains open.
 
-Preview is the public target. Hello-world receipts establish connectivity only; financial settlement and PCD remain open.
+Preview financial settlement and PCD remain open.
 
 [[wiki/index|Research index]] · [[wiki/moriarty-architecture|Architecture]] · [[wiki/open-questions|Open questions]] · [[wiki/workflow|Workflow]]
 
-The current [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends financial blocks, EBNF/static judgments and K. `.mori` is the source extension. Prioritize pinned action fixtures and a small K/evaluator comparison with a surviving obligation; no native proof loop is armed by this research.
+The [language/action dossier](../deliverables/defi-language-design-2026-09-07/README.md) recommends bounded `.mori` financial blocks and K. Prioritize surviving obligations and pinned fixtures; research arms no proof loop.
 
 The [four complete DeFi papers](../deliverables/defi-taxonomy-papers-2026-09-08/README.md) now have page-cited taxonomies and a graph. The [design comparison](../deliverables/defi-taxonomy-papers-2026-09-08/DESIGN-IMPLICATIONS.md) proposes twelve tests for shares, debt, clocks, atomic repayment, liquidation, requests and authority. Keep orthogonal facets and explicit external assumptions. Use the partial-payment/residual-duty case in the next admitted language/K slice; source intake does not close SP01–SP12.
 
@@ -49,4 +49,4 @@ The [TypeScript-style language report and PL checklist](../deliverables/language
 
 [Security-token report and asset transformations](../deliverables/security-token-transformations-2026-09-09/README.md): SRC-0110 recommends explicit assets, claims, encumbrances and operation-specific authority. Define the model in SP01, types and reductions/K in SP02–03, servicing/DeFi behavior in SP07–08, and history/composition/conformance in SP06/SP09–12. Preserve the current admitted SP05 loan/swap work; test each later supported profile on Docker then Preview. The eight new cases are proposals; report citations and standards status remain unverified.
 
-[[wiki/midnight-readiness-lessons|Midnight lessons]]: [Local loan trace reviewed](../deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/REVIEWED-RESULT.md): accrue and settle finalized, all four comparisons pass, lender payment/change/residual principal verified. Inner cleanup remains incomplete; outer containment independently observed. Preserve identities and charges. Next: wallet mint synchronization before local swap, then explicit Preview financial entry. PCD remains open.
+[[wiki/midnight-readiness-lessons|Midnight lessons]]: local loan trace reviewed; source11 composed rejection tests reviewed. The [failed local swap](../deliverables/sp05-financial-integration-2026-09-09/local-swap-01/reviewed-result.json) stopped at initialize comparison. Native reserves A 1000000/B 2000000 conflict with an empty indexed projection; downstream `AMOUNT_CONTRACT_BALANCES` is reproduced with synthetic role commitments. Exact updater cause remains open. Native-balance observer repair is under source-only test, not acceptance. Preserve all private state and eight charged reservations / 2400000000000008 SPECK; no reused allocation or automatic retry. Keep the measured 900-second Grok review allowance. Local swap, Preview, failed-transaction nonmutation and PCD gates remain open.

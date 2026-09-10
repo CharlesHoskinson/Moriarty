@@ -1,3 +1,4 @@
+import {extractNativeContractBalances} from './contract-balances.mjs';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
@@ -171,14 +172,10 @@ export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAd
   const config={type:'blockHash',blockHash};
   const state=await wait(()=>provider.queryContractState(contractAddress,config));
   requireThat(state!==null && state!==undefined,'MISSING_CONTRACT_STATE');
-  const balances=await wait(()=>provider.queryUnshieldedBalances(contractAddress,config));
-  requireThat(Array.isArray(balances),'MISSING_CONTRACT_BALANCES');
-  const contractBalances={};
-  for (const balance of balances) {
-    const color=hex(balance.tokenType,'BALANCE_ASSET');
-    requireThat(!(color in contractBalances),'DUPLICATE_BALANCE_ASSET');
-    contractBalances[color]=amount(balance.balance,'BALANCE_AMOUNT');
-  }
+  // Complete public balances belong to the same exact-block native state.
+  // The separate indexer projection omitted actual swap reserves in retained
+  // evidence. Do not substitute that projection for native contract balances.
+  const contractBalances=extractNativeContractBalances({state});
   // Keep decoded contract state separate and private to the comparator. No
   // uncontrolled caller object is spread into the publishable receipt.
   return {receipt:{schema:'moriarty.finalized-financial-stage/1',txId,contractAddress,circuitId,transaction:decoded,blockHash,blockHeight:data.blockHeight,finalizedHead,finalizedHeight,protocolVersion:data.protocolVersion,indexerIdentifiers:[...data.identifiers],fees:{nativeDebit:{asset:'DUST',unit:'SPECK',amount:decoded.dustFee},indexerReported:{paid:paidFees,estimated:estimatedFees,sourceUnitLabel:'DUST',encoding:'unresolved',nativeDebitRelationship:'unresolved'}},contractBalances,acceptance:'uncertified-I2-observation'},state:decodeState(state.data)};

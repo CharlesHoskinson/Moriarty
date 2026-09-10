@@ -3,6 +3,8 @@
  * Native transaction bytes and financial public states come from retained loan
  * evidence. Role capability commitments alone are replaced with commitments to
  * synthetic test secrets; no original private roles or state are accessed.
+ * ContractState containers have controlled empty balances; decoded financial
+ * fields are reconstructed from retained summaries, not decoded from those containers.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,6 +19,7 @@ import {observeFinalizedStage} from './receipt.mjs';
 import {createFinancialComparator} from './financial-comparison.mjs';
 import {retainPublicIntegrationResult} from './launch-local.mjs';
 const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+const stateRuntime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
 const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
 const {MidnightBech32m,UnshieldedAddress}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-address-format/dist/index.js')).href);
 const D=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
@@ -50,9 +53,9 @@ function fixture({wireMutation,observationMutation,bindingMutation}={}){
   const row=x=>({owner:MidnightBech32m.encode('undeployed',new UnshieldedAddress(Buffer.from(x.owner,'hex'))).toString(),tokenType:x.type,value:BigInt(x.value),intentHash:x.intentHash});
   const data={tx:ledger.Transaction.deserialize('signature','proof','binding',raws[stage]),txId:r.txId,txHash:r.transaction.transactionHash,identifiers:r.transaction.identifiers,status:'SucceedEntirely',protocolVersion:r.protocolVersion,blockHash:r.blockHash,blockHeight:r.blockHeight,fees:{paidFees:r.fees.indexerReported.paid,estimatedFees:r.fees.indexerReported.estimated},unshielded:{created:r.transaction.outputs.map(row),spent:r.transaction.inputs.map(row)}};
   if(wireMutation)wireMutation(stage,data);
-  const provider={watchForTxData:async id=>{watched.push(stage);assert.equal(id,r.txId);return data;},queryContractState:async()=>({data:stage}),queryUnshieldedBalances:async()=>Object.entries(r.contractBalances).map(([tokenType,value])=>({tokenType,balance:BigInt(value)}))};
+  const provider={watchForTxData:async id=>{watched.push(stage);assert.equal(id,r.txId);return data;},queryContractState:async()=>new stateRuntime.ContractState(),queryUnshieldedBalances:async()=>Object.entries(r.contractBalances).map(([tokenType,value])=>({tokenType,balance:BigInt(value)}))};
   const rpc=async(method,args)=>method==='chain_getHeader'?{number:'0x'+r.blockHeight.toString(16)}:method==='chain_getBlockHash'?'0x'+r.blockHash:'0x'+r.blockHash;
-  const observed=await observeFinalizedStage({...o,provider,rpc});if(observationMutation)observationMutation(stage,observed);return observed;
+  const observed=await observeFinalizedStage({...o,provider,rpc,decodeState:()=>o.decodeState(stage)});if(observationMutation)observationMutation(stage,observed);return observed;
  }};
  return {options,calls,compared,watched,state:()=>({stopped,closed,charges,gross,priorCount,priorDust})};
 }

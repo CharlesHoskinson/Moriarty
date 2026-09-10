@@ -6,6 +6,7 @@ import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 const require = createRequire('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/package.json');
 const ledger = await import(pathToFileURL(require.resolve('@midnight-ntwrk/ledger-v8')).href);
+const stateRuntime=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs');
 const module = await import('./receipt.mjs').catch(() => ({}));
 const addressCodec=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js');
 const indexedOwner=(hex,network='undeployed')=>addressCodec.MidnightBech32m.encode(network,new addressCodec.UnshieldedAddress(Buffer.from(hex,'hex'))).toString();
@@ -60,7 +61,7 @@ test('finality observer checks canonical block and queries state at the same blo
   const {tx} = await nativeFixture();
   const hash='03'.repeat(32), address='04'.repeat(32); const queries=[];
   const finalized={tx,txId:tx.identifiers()[0],identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash:hash,blockHeight:10,protocolVersion:8,fees:{paidFees:'12',estimatedFees:'12'},unshielded:{created:[],spent:[]}};
-  const provider={watchForTxData:async()=>finalized,queryContractState:async(a,c)=>{queries.push([a,c]);return {data:'state'};},queryUnshieldedBalances:async(a,c)=>{queries.push([a,c]);return [];} };
+  const provider={watchForTxData:async()=>finalized,queryContractState:async(a,c)=>{queries.push([a,c]);return new stateRuntime.ContractState();},queryUnshieldedBalances:async(a,c)=>{queries.push([a,c]);return [];} };
   const rpc=async name=>({chain_getFinalizedHead:'0x'+hash,chain_getHeader:{number:'0xa'},chain_getBlockHash:'0x'+hash}[name]);
   // A native no-call fixture cannot masquerade as settlement of the named contract.
   await assert.rejects(module.observeFinalizedStage({provider,rpc,ledger,expectedProtocolVersion:8,txId:finalized.txId,contractAddress:address,circuitId:'settle',decodeState:()=>({}),deadlineMs:Date.now()+1000}),/CONTRACT_ACTION/);
@@ -73,12 +74,12 @@ test('observer traverses native deployment bytes with inert RPC and rejects fina
   const blockHash='03'.repeat(32), queries=[];
   const [segment,intent]=[...tx.intents][0];
   const data={tx,txId:tx.identifiers()[0],identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:10,protocolVersion:8,fees:{paidFees:'0',estimatedFees:'0'},unshielded:{spent:[{owner:indexedOwner(address),tokenType:'01'.repeat(32),value:100n,intentHash:'02'.repeat(32)}],created:[{owner:indexedOwner(address),tokenType:'01'.repeat(32),value:70n,intentHash:intent.intentHash(0)}]}};
-  const provider={watchForTxData:async()=>data,queryContractState:async(a,c)=>{queries.push([a,c]);return {data:'observed-state'};},queryUnshieldedBalances:async(a,c)=>{queries.push([a,c]);return [];} };
+  const provider={watchForTxData:async()=>data,queryContractState:async(a,c)=>{queries.push([a,c]);return new stateRuntime.ContractState();},queryUnshieldedBalances:async(a,c)=>{queries.push([a,c]);return [];} };
   let canonical='0x'+blockHash;
   const rpc=async name=>({chain_getFinalizedHead:'0x'+blockHash,chain_getHeader:{number:'0xa'},chain_getBlockHash:canonical}[name]);
-  const args={provider,rpc,ledger,expectedProtocolVersion:8,txId:data.txId,contractAddress,circuitId:'deploy',decodeState:x=>({actual:x}),deadlineMs:Date.now()+5000};
+  const args={provider,rpc,ledger,expectedProtocolVersion:8,txId:data.txId,contractAddress,circuitId:'deploy',decodeState:()=>({actual:'observed-state'}),deadlineMs:Date.now()+5000};
   const observed=await module.observeFinalizedStage(args);
-  assert.deepEqual(queries,[[contractAddress,{type:'blockHash',blockHash}],[contractAddress,{type:'blockHash',blockHash}]]);
+  assert.deepEqual(queries,[[contractAddress,{type:'blockHash',blockHash}]]);
   assert.deepEqual(observed.state,{actual:'observed-state'});
   assert.equal(observed.receipt.transaction.inputs[0].value,'100');
   assert.equal(observed.receipt.transaction.proofVerified,false);
@@ -104,7 +105,8 @@ test('contract effect projection retains mints, contract IO and precise public p
 });
 
 // Replay actual historical public bytes and indexer fields. State/RPC are inert
-// adapters: this is a regression test, not a new network or financial execution.
+// adapters with empty native test-state containers: this is a regression test,
+// not a new network or financial execution.
 test('historical DUST replay preserves unequal fee fields and exact indexed identifiers', async()=>{
   const at=name=>new URL('./fixtures/historical-dust/'+name,import.meta.url);
   const raw=readFileSync(at('transaction.bin'));
@@ -115,7 +117,7 @@ test('historical DUST replay preserves unequal fee fields and exact indexed iden
   const txId=captured.identifiers[0];
   const data={tx,txId,identifiers:captured.identifiers,txHash:captured.hash,status:'SucceedEntirely',blockHash:captured.block.hash,blockHeight:captured.block.height,protocolVersion:captured.protocolVersion,fees:captured.fees,unshielded:{spent:[],created:[]}};
   assert.equal(data.identifiers.length,2); assert.equal(tx.identifiers().length,2);
-  const provider={watchForTxData:async()=>data,queryContractState:async()=>({data:'inert-test-state'}),queryUnshieldedBalances:async()=>[]};
+  const provider={watchForTxData:async()=>data,queryContractState:async()=>new stateRuntime.ContractState(),queryUnshieldedBalances:async()=>[]};
   const rpc=async name=>({chain_getFinalizedHead:historical.finality.finalizedHash,chain_getHeader:{number:'0x'+historical.finality.finalizedHeight.toString(16)},chain_getBlockHash:historical.transaction.canonicalNodeHash}[name]);
   const args={provider,rpc,ledger,txId,contractAddress:'ddc676b1bfb36f29665caf17b4ae5016595af74c3dc4165e638b6af77ef40b4f',circuitId:'storeMessage',expectedProtocolVersion:1000000,decodeState:()=>({inert:true}),deadlineMs:Date.now()+5000};
   const observed=await module.observeFinalizedStage(args);
@@ -153,7 +155,7 @@ function actualInitializeFixture(heights=[20362,20363]){
  const tx=ledger.Transaction.deserialize('signature','proof','binding',raw),row=JSON.parse(readFileSync(new URL('stopped-indexer-effects.json',realInitializeRoot))).rows[0];
  const blockHash='7f61e4c7225c456400e852f3648cf7fcad958bb05ed84002441782764093c94f',priorHash='09'.repeat(32),olderHash='08'.repeat(32);let watches=0,heads=0,states=0;
  const data={tx,txId:'006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af36d9b46',identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:20363,protocolVersion:1000000,fees:{paidFees:'1',estimatedFees:'1'},unshielded:{spent:[],created:[{owner:indexedOwner(row.ownerRaw),tokenType:row.tokenTypeRaw,value:20000000000n,intentHash:row.intentHash}]}};
- const provider={watchForTxData:async()=>{watches++;return data;},queryContractState:async()=>{states++;return {data:'inert-decoded-state'};},queryUnshieldedBalances:async()=>[]};
+ const provider={watchForTxData:async()=>{watches++;return data;},queryContractState:async()=>{states++;return new stateRuntime.ContractState();},queryUnshieldedBalances:async()=>[]};
  const rpc=async(method,params)=>{
   if(method==='chain_getFinalizedHead'){const h=heights[Math.min(heads++,heights.length-1)];return '0x'+(h===20363?blockHash:h===20362?priorHash:olderHash);}
   if(method==='chain_getHeader')return {number:'0x'+(params[0]==='0x'+blockHash?20363:params[0]==='0x'+priorHash?20362:20361).toString(16)};

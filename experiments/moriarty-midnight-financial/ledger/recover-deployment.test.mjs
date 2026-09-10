@@ -8,9 +8,10 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {PINNED_NM} from './providers.mjs';
 const api=await import('./recover-deployment.mjs').catch(()=>({}));
 const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+const stateRuntime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
 const raw=readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/local-execution-04/run-public/public-transactions/0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c.bin',import.meta.url));
 const native=()=>ledger.Transaction.deserialize('signature','proof','binding',raw);
-const initial=()=>[...native().intents.values()].flatMap(i=>i.actions)[0].initialState;
+const initial=()=>stateRuntime.ContractState.deserialize([...native().intents.values()].flatMap(i=>i.actions)[0].initialState.serialize());
 test('recovery binds actual retained loan bytes, every identifier and original state without constructing a deployment',()=>{
  assert.equal(typeof api.inspectExistingLoanBytes,'function');
  const b=api.inspectExistingLoanBytes(raw,ledger);assert.equal(b.contractAddress,'ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713');assert.equal(b.txId,'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9');assert.equal(b.identifiers.length,2);assert.ok(b.oldDustNullifiers.length>0);assert.equal(b.spentUnshieldedInputs.length,0);
@@ -18,7 +19,7 @@ test('recovery binds actual retained loan bytes, every identifier and original s
 });
 test('complete native state comparison rejects authority, operation-set and balance changes',()=>{
  assert.equal(typeof api.assertExistingLoanState,'function');assert.doesNotThrow(()=>api.assertExistingLoanState(initial(),ledger));
- const authority=initial();authority.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(authority.maintenanceAuthority.committee,1,1n);assert.throws(()=>api.assertExistingLoanState(authority,ledger),/RECOVERY_STATE/);
+ const authority=initial();authority.maintenanceAuthority=new stateRuntime.ContractMaintenanceAuthority(authority.maintenanceAuthority.committee,1,1n);assert.throws(()=>api.assertExistingLoanState(authority,ledger),/RECOVERY_STATE/);
  const balance=initial();balance.balance=new Map([[{tag:'unshielded',raw:'22'.repeat(32)},1n]]);assert.throws(()=>api.assertExistingLoanState(balance,ledger),/RECOVERY_STATE/);
  const extra=initial();extra.setOperation('unexpected',extra.operation('initialize'));assert.throws(()=>api.assertExistingLoanState(extra,ledger),/RECOVERY_STATE/);
 });
@@ -51,7 +52,7 @@ test('public recovery gate verifies native receipt, canonical finality and whole
  const {options}=publicFixture();const r=await api.verifyExistingLoanPublic(options);assert.equal(r.status,'PUBLIC_STATE_VERIFIED');assert.equal(r.observation.receipt.circuitId,'deploy');assert.equal(r.binding.txId,options.provider?api.EXISTING_LOAN.txId:'');
 });
 test('public recovery gate stops on nonfinality, changed current state, receipt mismatch or stale tip',async()=>{
- for(const change of [f=>f.options.tip.timestampMs-=61000,f=>f.options.tip.finalizedHeight-=3,f=>f.data.status='FailEntirely',f=>f.data.blockHeight++,f=>f.options.rpc=async method=>method==='chain_getHeader'?{number:'0x1'}:'0x'+api.EXISTING_LOAN.blockHash,f=>f.options.provider.queryContractState=async()=>{const s=initial();s.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);return s;}]){const f=publicFixture();change(f);await assert.rejects(api.verifyExistingLoanPublic(f.options));}
+ for(const change of [f=>f.options.tip.timestampMs-=61000,f=>f.options.tip.finalizedHeight-=3,f=>f.data.status='FailEntirely',f=>f.data.blockHeight++,f=>f.options.rpc=async method=>method==='chain_getHeader'?{number:'0x1'}:'0x'+api.EXISTING_LOAN.blockHash,f=>f.options.provider.queryContractState=async()=>{const s=initial();s.maintenanceAuthority=new stateRuntime.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);return s;}]){const f=publicFixture();change(f);await assert.rejects(api.verifyExistingLoanPublic(f.options));}
 });
 
 function recoveryPlanFixture(){
@@ -128,7 +129,7 @@ function movingFinalityFixture({changedCurrent=false,movesDuringQuery=false,lag=
  };
  f.options.provider.queryContractState=async(_address,query)=>{
   const hash=query?.blockHash?.replace(/^0x/,'')??'latest';stateHashes.push(hash);const s=initial();
-  if(changedCurrent&&hash==='latest')s.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);
+  if(changedCurrent&&hash==='latest')s.maintenanceAuthority=new stateRuntime.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n);
   return s;
  };
  f.options.readCurrentTip=async()=>({status:'READY',hash:newHash,height:height+1,finalizedHash:'0x'+newHash,finalizedHeight:height+1,timestampMs:Date.now()});
@@ -252,7 +253,7 @@ test('wallet coin identity rejects flattened and malformed wrappers',()=>{
 
 const initializedRaw=readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/run-public/public-transactions/1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6.bin',import.meta.url));
 const initializedBytes=readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/indexed-initialize-state.bin',import.meta.url));
-const initializedState=()=>ledger.ContractState.deserialize(initializedBytes);
+const initializedState=()=>stateRuntime.ContractState.deserialize(initializedBytes);
 const initializeId='006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af36d9b46',initializeHash='1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6',initializeBlock='7f61e4c7225c456400e852f3648cf7fcad958bb05ed84002441782764093c94f';
 function initializedPublicFixture(){
  const f=publicFixture(),watches=[],stateReads=[],rpcReads=[],headHash='ab'.repeat(32),headHeight=20364;
@@ -292,7 +293,7 @@ for(const [name,change,code] of [
 });
 for(const target of ['deploy','initialize','latest'])test(`initialized public gate rejects wrong complete ${target} state`,async()=>{
  assert.equal(typeof api.verifyInitializedLoanPublic,'function');const f=initializedPublicFixture(),query=f.options.provider.queryContractState;
- f.options.provider.queryContractState=async(a,config)=>{const match=target==='deploy'?config?.blockHash===api.EXISTING_LOAN.blockHash:target==='initialize'?config?.blockHash===initializeBlock:config===undefined;if(!match)return query(a,config);const state=target==='deploy'?initial():initializedState();state.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(state.maintenanceAuthority.committee,1,1n);return state;};
+ f.options.provider.queryContractState=async(a,config)=>{const match=target==='deploy'?config?.blockHash===api.EXISTING_LOAN.blockHash:target==='initialize'?config?.blockHash===initializeBlock:config===undefined;if(!match)return query(a,config);const state=target==='deploy'?initial():initializedState();state.maintenanceAuthority=new stateRuntime.ContractMaintenanceAuthority(state.maintenanceAuthority.committee,1,1n);return state;};
  await assert.rejects(api.verifyInitializedLoanPublic(f.options),/RECOVERY_STATE_MISMATCH|INITIALIZED_STATE_MISMATCH/);assert.deepEqual(f.watches,[api.EXISTING_LOAN.txId,initializeId]);
 });
 test('initialized public gate samples forward movement without repeating history watches',async()=>{

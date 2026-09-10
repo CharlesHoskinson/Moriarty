@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T09:59:32.345615+00:00
+updated_at: 2026-09-10T10:38:55.104875+00:00
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Preserve swap failure and native balance evidence
+
+Updated [[wiki/midnight-readiness-lessons|Midnight lessons]] with reviewed source11 composed rejection tests, the independently reviewed failed swap, two retained new reservations and eight cumulative charges. Native state contains A 1000000/B 2000000 despite an empty indexed map; downstream comparison failure is reproduced under synthetic role bindings. Exact updater cause and live acceptance remain open. Native-balance source repair is under test. Recorded measured Grok review times without waiving review or allocation gates.
 
 ## [2026-09-10] save | Finalized local loan trace with residual principal
 

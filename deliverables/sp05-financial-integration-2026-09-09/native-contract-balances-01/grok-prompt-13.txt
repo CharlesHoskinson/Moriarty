@@ -1,0 +1,1027 @@
+Independent source review, Grok 4.6 high. Review candidate13 SHA256 0402b2632b28e67fabcd8217ad29953a46b86bcd2e44a0909c3f8f6a4fffe3b0. GPT6 implements; you audit. Do not execute commands or access private data. Supplied source only; do not claim independent hashing or tests. No operational allocation or financial acceptance. Return one final valid fenced JSON object: candidateSha256, verdict PASS_SCOPED or CHANGES_REQUESTED, scope, findings, limitations. Never infer approval from test totals.
+Previous candidate12 was rejected because queryContractState creates protocol/compact-runtime ContractState, NOT protocol/ledger -> ledger-v8 ContractState. Another supplied-source Grok audit missed this boundary. Actual 8150-byte indexed initialize state has 1M tokenA and 2M tokenB while indexed balance table is empty. Source13 binds exact producer class. Native transaction decoding remains ledger-v8. Inspect real SDK query test with controlled HTTPS transport, class pins, strict balance map, invalid fields/amounts, closed diagnostics, exact-block observation, and isolated continuation helpers. Actual initialize mint was FALLIBLE physical segment36489, index0, value100000A. Gate now accepts guaranteed OR fallible only with matching native identity; no pending wallet transactions, exact available coin after durable financial comparison. Continuation helper has not been wired into production. Under user scope, no new credentials/addresses/stores/redeployment/reset, original eight cumulative reservations and failed initialization comparison remain. Successful source tests do not establish actual initialize finality or swap/close financial acceptance. Current core450 and supplement15 tests pass. Evaluate production correctness, avoid speculative scope expansion.
+
+Manifest:
+{
+  "schema": "moriarty.source-review-candidate/1",
+  "scope": "Correct SDK-produced native ContractState class and exact-block balances; retained actual fallible mint wallet gate; isolated initialized-swap continuation utilities (not wired). Source review only, no operational allocation or financial acceptance.",
+  "priorReviewedCommit": "30418f9",
+  "supersedesRejectedCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-candidate-12.json",
+    "sha256": "7dc65b008f67683377e2ff0eb621bf7082bd2378026fa73c830b87dec76ded4f"
+  },
+  "createdAt": "2026-09-10T11:17:32.102067+00:00",
+  "files": {
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/checks.json": "773be812c1af5a4923e092ada4354ffaa00aa4d603d79ec23c912762fe345d72",
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/final-bindings-green.tap": "35d3622a479e47c87765ae8591af4bd76ef00e7fe2473449e613dc8435dd352f",
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/final-green.tap": "0d62edffe11260e1ce7a62804f2f709a28aa6aaecdea9931007534d90fbb0c99",
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/green.tap": "ac24f313dae40e3fff0bb2f9e6e09be24398f6f508c0a8c654733e7fcc68d000",
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/provider-class-boundary-failure.tap": "bdc97f9fd9aca2d31ff48b4a2ca6db6f972138a51e66e33ac79fe25589a22a0c",
+    "deliverables/sp05-financial-integration-2026-09-09/initialized-swap-continuation-01/red.tap": "2abfdef91f05de142aab7e85b9eb4acdf3e45605b5b0faf84f2c9a775293b1c1",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/DESIGN.md": "d0fa386b056d1d2969230251a6fba81069761ea4b6f2461b49847dab7b3c3259",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/PRODUCER-CLASS-CORRECTION-13.md": "49310a8c95958814c04d3e2749721bd4e8d14e98ad97d2ce1b85c2bc4fad4bd3",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/REJECTED-12.md": "e9dc69bb3b7c108bd5b0bb07627dcd8327937b385704f53f09223c0e82327f56",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/checks.json": "86e4be0b2cc58cb96b032705469d706d54cc354a6cdc242d9f561532658702aa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/fallible-mint-green.tap": "5e6ca46d828caf64363584d8ea205ff63d550d8c3fd03542fb2b4b0be5526227",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/fallible-mint-red.tap": "1d427f4de17f3e68464cda2f7d36bd358c38585f56e48f36a60c65016b38612b",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/focused-green.tap": "8ebca7f1316fca71bbad7d3da190b77be3c236ce298326748cdffcb86c9d494f",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/gpt6-sdk-class-observation-12.json": "7b0c2e76920ccbc4265162afa518b86cae4860555517e0e242af256f90eded70",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/gpt6-sdk-class-reproduction-12.mjs": "04152ac49f9198e4a15180195a8e2b1965a2c9d748590cf0ed4f9daed07b387d",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/green.tap": "c0fe119a5b85cd9d2634a4ab21bbfe1c5273236d3149400efaeae1d97c3ed63b",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/grok-result-12.json": "827669c14f6c2209f3553f571c270f29f70d2d780c9f3e1c929561be4b92c7e7",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/grok-start-12.json": "27f78d1eaa6162deb8c81e3db964bb5ac7bdb2e85320a12d7f0c592d56d070c3",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/ledger-regression-15.tap": "69440096dcc750888216af4258e3ede8190207cd8e8607c3f25506ee566d7ffa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/ledger-regression-16.tap": "0ca240b6d7ad5b4c095e361fae3b650b7d84bef8a86de662029359c3ac00dbe7",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/observer-green.tap": "73c80fe803aafa6cfa0364ad4b3c9deed40e0307b88bfcbed6d713ced46db02f",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/observer-red.tap": "eea7046c3051121b94f582a302711249a4e6d44366df28bf58b43e1b72c67e20",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/provider-boundary-green-02.tap": "ccbebf7caeec7d82a9d547b487967ca430531f6ccfcebb234a8d8ccf255c1ea1",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/provider-boundary-green.tap": "cc5014fd570052e54e0da0b492b3c29469b63ffd05ba0636e40beb857196bd70",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/provider-boundary-red.tap": "01ddd5eb7abece7bf6cf7c346c2c7ebdd70afdff1bd7896a1316a45a1e82a8a6",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/provider-method-green.tap": "cd18438ec37445b1deb958534893e40be6afa37933fc7bd541bb42af079d1caa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/provider-method-interception-failed.tap": "e7b1df84ccf394b9b4869a77ce49ec79043e9a2cc1acce5413cc6f456b176e73",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/red.tap": "ee98cb2361ce332d0e11a1bfd3bba9b80f27d136e93a10075b3a49cf90653c44",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/regression-16-command.json": "e030e09ba1e5c51f944517070396f8dc86c1a6d7fce5026caef7d3c1b1368f95",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/review-gpt6-12.json": "1ce50416e201bccba08ad6c68f67518ed9487348c7507b19844285a3049cbeaa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/integrate-local.mjs": "f089bccccbea0fdd56ec35b74c9e3864ad093a797c0030cdd387d6f4db343de2",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/integration-negative.test.mjs": "80d9f3e125a5381580a96e6c343c0a9ae89b5570a926574ed6347bce01345cab",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/receipt.mjs": "c4b33be2e23da1d8f068eb4c19529147d7fd7a32c44e9109f2cb9de71ca4829e",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/receipt.test.mjs": "e7ff4228688379a51c1c4938a0892401639198b831e2364ae5c043929ff633a5",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/recover-deployment.test.mjs": "d5770828a10182fd59196ac6d3620996ad3280c26a4617624f6775dc11b8ac81",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/run-local.mjs": "e44e7f92845abe458277d4309c7ffa703ee8e7d0de98689660d916022c2dd7df",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/swap-wallet.mjs": "59b7bd87cf6ee21203f7e42b02717de3f572042dd55b22f00a438d07eaa5d999",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/swap-wallet.test.mjs": "ff3ff7b14939c466e4a55471470f091dc7b3424becb4e2ccf02baa428b5ed8f2",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-candidate-12.json": "7dc65b008f67683377e2ff0eb621bf7082bd2378026fa73c830b87dec76ded4f",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/contract-balances.mjs": "55a214ba0f0ef0ac0b3d5ca87e7a4263e9c7290edcf5ed8758c736218740dc70",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/contract-balances.test.mjs": "a70626c61c1e8ef23050dc433677af4203fa110ac03af0fbbf8468678af9aea7",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/integrate-local.mjs": "9883de86d5f75048e4c889b86f8352e02cb2c838d846efff2606aabf13d9f324",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/integration-negative.test.mjs": "875a3af195b23cc6a1b5fb1e0a0e4befbe7a82e5da4b16cef3efb34f1c68a94d",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/receipt-native-balances.test.mjs": "2c1728c72676b9a9ad27ebd37321e2875a466b96a270da7a6944548b82ed9489",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/receipt.mjs": "27057f75dc64eb4202e9056a9d326bd7f26ec68a3e2153c35430ec22eb941f9d",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/receipt.test.mjs": "776c2a9135b11ade0b9d0dd866f8573edc531014442826160fee19c8ba4789d6",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12/run-local.mjs": "0129ab9329f2d281a9217d769f1bd91b396e79ea3aeb3a99647effacfba968d7",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-snapshot-12.json": "7d994abf1f8cb4e61f781a718612b89195b78bcddc0fc1232d0fc4823f675492",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/supplemental-green-13.tap": "090ed074fe27e7cea35db2fb5b9ceeb965d11034380edfd885012d117a5186b5",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/acquisition-provenance.json": "72691cf3c58138faf78a2a33df9409bdca45e549d55d3161a452265d853c42a6",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/decode-public.mjs": "c2b0ee2556dd3e501c9a5ce372497c97d114c643338ca4fc9089be0c6ec98d68",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/decoded-public.json": "990fc66113dc30ce28a0e87db03446dae042f26aed05c128025018819665afa2",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/diagnosis-manifest.json": "1fd128eb306b2d88365ef851346f016cc42b26705db9f9a033016a23ec77d5ef",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/findings.md": "95c6514fdb215842c132f6b07d0cbeb36bd3f704d4e45ec0ef0e0a6977c4d9fb",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-deploy-state.bin": "c76e8b3604c83b2f19d6dec2c7ee8b96b06fa7f159374a3847b36537e754ffec",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-initialize-state.bin": "5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexer-tree-provenance.json": "3b669a447872537249237a947459412e1c85016637a82169161d03b61b080243",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexer-tree.json": "fd778f96ac3a7423c92509225ce38559948b555e82e2a429c687a44634d4156f",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/post-diagnosis-container.json": "fc9b731bac86c88523c44b015ce045a1561b1b8cb1229362927d2605d458dff8",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-and-input-hashes.json": "3d1a597471bef816b624d033fe5c65ef53ad7fc51f79ebdc4b2cff1009368b51",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_contract_action.rs": "64a01efa8b736a9b025eb00e9ffeb5fb395f636010e5655a17366c23cc555961",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_ledger_state.rs": "332b66ddff7d4bdd349491f7b851a08ecb65d6a9bad56d1226b85a5f0e953003",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_transaction.rs": "f60d84b78b3506ff7da651e08298e52e37d06a7ad05881ca2e4dbd13c35a5f52",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_infra_storage.rs": "7a0409039493b1b830330c6c67b8cfa10595150e0aa0dc622c38cb19e4b8b119",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-indexer-common_src_domain_ledger_contract_state.rs": "7f6bebe8aebcaee3389e5f8d7b8e1cbb2a5e02834f43752ebbc3d4267813e8c9",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-copy.json": "48993d9dff38d9efc3a3628658d0a62b263cbe9c668a088a7b603888fe36a113",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-queries.json": "950ad27b3dddd27fa0f265e3a9dea0125a3e135615dca30574cb1ed0d95702ee",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-query.py": "6ed3dfe4b3806cf8c23b0dc022fce06aa122dcbb7b044dfe5d71f790efa77b4e",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-result.json": "a9e8c2b0072b7badca8ff863a118ec08dee24f539d5df71a856ee3843abd8fa2",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/updater-source-provenance.json": "ae835267f239febad7858c16d1e5bce76f3c3283c42f58fcd5d3b9f41c638267",
+    "experiments/moriarty-midnight-financial/ledger/README.md": "ef3fd724700bf4c2f32138b583f2c6a38b3a61debc1007515b3d0502af230711",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs": "6c733306b1e644d7fb1473c677aecd3101ce66dc79cb0bcb01408b7ca27c315a",
+    "experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs": "0bd23f3852315d2c40f2fce151a0111814df841747faee612ba87a6de009c0ed",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.mjs": "5907e8af27217910e2e2546409a70909eb9bd077be6fcc33872ac44a1e6da766",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.test.mjs": "4c5874d4026dd87b486078934ee5fa3fb32161552cc43422b72cbd506852f08c",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.mjs": "ed9698646230a50df55b346ca65fb47e2090924dd0e160ca46f2b7149dd25578",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.test.mjs": "879d2973c68e8363608ade3e411f8d36715738078c5acf4aeb203756f642216f",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.mjs": "568fd5602f9b3a6da38b64ed571e97a73374d59a022e757d0a8c7a3adf35ac80",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.test.mjs": "34bb884eb6e9b9ba1c5366ed5848b87fede35ddbb14f2596e05dd5a0a0c7b75e",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs": "daa6ffde84689d830aa3904329070001cee0f41b682cf68e2f9e22ca9c495223",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs": "1abd2b20aca91e1d75bc386a91864978b44c9df7fb8a5ad1dd8dba1a96803224",
+    "experiments/moriarty-midnight-financial/ledger/financial-expectations.json": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/REPORT.md": "523dc5d0139e28bfb4fe2f91711d895d5830d5ab1bcb164dfb695d7e2fda5e57",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/acquire.py": "bb018e3a12b44c1635dfbdb7df953973864932a84e33f05bf27cc9fcc484547b",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/files.json": "6f6bb0ce75c1ca2174457462f414ec9639ba85100120d6a43d614f51a8fd56ad",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/historical-finality.json": "f40830ca31662e9ab40cbffc3e3517ad4103ff72cee8c8d55644bb5c28cabef7",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/inspect-v2.mjs": "d99fd358ca8c05605a46e561a50a531e5531c10399fdf55c00bde55eb36ee5ec",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/inspect.mjs": "9263aeda27caf12d8b70a5234748fa516820023aba3bcd5c5945aaa51bdbc2b9",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/native-observation.json": "64935eca501593874b046ad89448b883d164418d51772eea8d778cb5fe8937e4",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/request.json": "e4000b0f2517f9d632579122c13758f87dbb65eb6808829b7108f9e911ec7b1c",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/response.json": "e011c09bf5dcd0d44b7fe738e3bd7b4f33bbf458239f8d41c4a6271baccf0222",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/retrieval.json": "5c97c2eae4938aabb28889663d8a3154f627f55b358916691cf8565309c78b88",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/source-hashes.json": "9860dcead246816471c20b87298794cc46fd2959d7705ae9a5f36ef87da390a4",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/transaction.bin": "f79580fe0075dc26ae3f97f10557706f340cdf7a3b3118cd65a72b4fd870110a",
+    "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "3a61f8abe0fb1192099d5d0a09d6b7107acacf439c82205f9038c34d8107d08b",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "9883de86d5f75048e4c889b86f8352e02cb2c838d846efff2606aabf13d9f324",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs": "a929eef13446da6a6fe22c89336a8cd13dd12272e8db5fca69f7760e1bf8ada2",
+    "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs": "8cf88e2c056b881edf430ee2f2f62f642dba457890cc0123c00f9471d789164b",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "ace66630e1a903e085fee9b00de02fc5c75187539a8449b9039240a87a573e5e",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs": "3a2616b67109cfb4b60059f737bfacdaa9f5a908c843b540764215193e2e203c",
+    "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json": "4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs": "057b1db6663bb92e251026628727bbf0784aad4c7de9b97c1434bf49a856264d",
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.test.mjs": "abc1a9f359c80baf74b01abc363ce31360af829a1787792cd2e91cba517a8746",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.test.mjs": "e99e0324ef62fc51e1ab9b52d1730c482dea2cfa58505f207f40cca932c0468b",
+    "experiments/moriarty-midnight-financial/ledger/provider-native-balances.test.mjs": "f816929494c563934c1aba76134a934703213f91b334318660205d5468211c36",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/providers.test.mjs": "af8cd21c447a5fb40b44585d570403e9e853b240d66dddb1e37fcb07fbc51add",
+    "experiments/moriarty-midnight-financial/ledger/receipt-native-balances.test.mjs": "3219b19f70f2a59f136b56b269bccbbdde73233fb16c99521c7081416e818ed3",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "ae0fd41e68e8effe80e02c5c85b331bc564f9c5a2792bdd6f38f3fb4bf5c2a44",
+    "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs": "012ec1fc51be8243d61706ffe76edd17b909513d9ad8ee3a6926a9eb53c86f6a",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "3dafc762de817de6c508aa6cbd3dd3c955287c41382953f4752784e03ef67ccf",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs": "18c288a1db1613fc958f9156e60453cb5045a3b96ca43e38a49185cb5d65cd74",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "03d4109d7e2d85f439d345166f7d5ddeedc20f78f31bb371e813d88c35f5f9a3",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs": "ba32f7469cf8e735e31a574dd53f1d9722ddc0e9caf4b28bcc2156a8012b7c90",
+    "experiments/moriarty-midnight-financial/ledger/run-build-bounded.py": "dc2f8e386222722fa86a2318fafc0b38add66a09ab55eecdaadfff2d2302fa8d",
+    "experiments/moriarty-midnight-financial/ledger/run-build-bounded.test.py": "8792690cc8870e9cdc416a3625de0355e5323da3220b1a1f9b6f8b1c0d5bf94d",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0129ab9329f2d281a9217d769f1bd91b396e79ea3aeb3a99647effacfba968d7",
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs": "59ad6b1c1f939a9016fccf99c2efec260ab3b0052d542dfbd752ffc85cd535af",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs": "d67eb0838598e192b8cf473491ff9f88583c621335e763cb50bd439de944f43d",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.test.mjs": "c54ba2bca22405fdec52b1f7cfdb6ce049b089e0ea4455d2dbb59c1bb46e03d8"
+  }
+}
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/PRODUCER-CLASS-CORRECTION-13.md
+# Provider state and fallible swap mint correction
+
+This successor replaces rejected source12. The state extractor imports the same explicit ESM protocol/compact-runtime entry used by the installed public-data provider. Direct protocol/runtime package and entry bytes are pinned. The production extractor has no caller-supplied class override and rejects transaction-ledger states. Transaction decoding still uses ledger-v8. A separate pure map projector tests malformed map entries without bypassing production state identity. These direct pins do not attest every transitive dependency.
+
+The observer reads unshielded reserves from the exact-block SDK ContractState used by the decoder. Existing receipt shape, native transaction/signature checks, financial comparator and conservation rules remain unchanged. Closed diagnostics retain native balance failures and AMOUNT_CONTRACT_BALANCES. Historical test fixtures now produce the actual SDK state class.
+
+An actual SDK queryContractState regression intercepts Node HTTPS before sockets/DNS, checks its exact query/offset, returns the retained8150-byte native state and verifies provider-class identity and1M A/2M B. The initial CJS interception failed with an .invalid DNS attempt and is retained as failed evidence; it is not the passing no-network test.
+
+The retained initialized swap mint is fallible, physical segment36489, origincc0511b9583d85ccea1e63ba024a04a6f0dd1dce86aa0f83e92f8917b42e3548, output0,100000 A. The ordinary wallet predicate now supports both native guaranteed and fallible outputs after the unchanged durable financial comparison. It preserves exact action segment, owner, asset, amount, origin and index, strict sync and no-pending checks. Actual retained native bytes and reconstructed SDK wallet wire reproduce the old guaranteed-only rejection, then pass; the guaranteed origin namespace cannot replace the actual fallible origin. This is source-only evidence, not recovered wallet synchronization or initialize finality.
+
+New isolated initialized-swap utilities bind exact deploy/initialize bytes, whole8150-byte state, original maintenance identity, reserve map and actual minted output. Private readback uses sequential passed-provider reads only after caller preservation checks; such SDK reads may have side effects. These utilities are not yet connected to a launch/driver continuation and grant no execution authority. The original swap/private store and eight cumulative reservations remain preserved.
+
+Verification:450tests pass in the complete previously released ledger test set, with no skips, plus14new isolated continuation utility tests and one actual-provider boundary test checked separately. Full command list and TAP artifacts name their exact scopes. A separately admitted continuation must re-establish canonical history/current state, preserve private state, verify the original identities and charge only new swap/close calls. No Preview, fullSP05, independent multiparty or PCD acceptance follows from source review.
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/REJECTED-12.md
+# Source12 rejected before execution
+
+GPT-6 independently reproduced a blocking producer-class mismatch: queryContractState returns protocol/compact-runtime ContractState, while source12 required transaction ledger-v8 ContractState. The same8150-byte state has correct balances in both runtimes, but their JavaScript constructors are distinct. Source12 would fail CONTRACT_BALANCE_STATE before financial comparison.
+
+Grok's supplied-source review returned PASS_SCOPED after289.364seconds; it did not execute the actual SDK boundary. GPT-6 returned CHANGES_REQUESTED with the actual reproduction. Preserve both responses. Source12 was not admitted or dispatched. Its448passing tests constructed the wrong runtime class for provider states and did not establish the production boundary.
+
+source-snapshot-12/ preserves the rejected implementation bytes. Source-candidate-12 live paths describe that version, not successor code. The source13 correction binds the actual provider class and tests the real SDK method with controlled transport. No failed source verdict is rewritten.
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/review-gpt6-12.json
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/recovery_source_audit",
+    "interface": "Codex independent source reviewer",
+    "productionAuthor": false
+  },
+  "reviewedAt": "2026-09-10T10:41:56.277354+00:00",
+  "candidateSha256": "7dc65b008f67683377e2ff0eb621bf7082bd2378026fa73c830b87dec76ded4f",
+  "verdict": "CHANGES_REQUESTED",
+  "sourceVerdict": "CHANGES_REQUESTED",
+  "resourceVerdict": "NOT_REVIEWED",
+  "resultVerdict": "NOT_REVIEWED",
+  "fileCount": 110,
+  "allCandidateHashesMatch": true,
+  "findings": [
+    {
+      "id": "GPT6-SOURCE12-001",
+      "severity": "blocking",
+      "location": "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs:10",
+      "title": "Actual SDK ContractState fails the ledger-v8 instanceof gate",
+      "evidence": [
+        "Installed midnight-js-indexer-public-data-provider/dist/index.mjs:6 imports ContractState from midnight-js-protocol/compact-runtime; deserializeContractState at569 uses that class, and queryContractState at849 returns its instance.",
+        "midnight-js-protocol/compact-runtime reexports compact-runtime, whose index.js:28 reexports ContractState from onchain-runtime-v3. Production integrate-local loadNativeRuntime:68 instead passes midnight-js-protocol/ledger, reexporting ledger-v8.",
+        "Independently imported both exact installed modules and deserialized the actual8150-byte indexed initialized state through the SDK class: sdk.ContractState !== ledger.ContractState and state instanceof ledger.ContractState is false. Native balance contains exactly1M A/2M B. Calling the new helper with actual SDK state and actual production ledger rejects CONTRACT_BALANCE_STATE.",
+        "The same bytes deserialized using ledger-v8 pass the helper. contract-balances.test.mjs and receipt-native-balances.test.mjs:15 use ledger-v8 constructors, which masks the real provider boundary even while all47focused tests pass."
+      ],
+      "impact": "Every production observeFinalizedStage reaching the SDK state read will fail at the new class gate, including ordinary deployment and public recovery/continuation observations. This is fail-closed rejection of valid SDK states, not unsound financial acceptance; nevertheless the repair is not usable in production.",
+      "requestedCorrection": "Bind validation to the exact native class returned by the installed SDK, or perform an explicitly validated canonical conversion to the intended ledger-v8 type before extracting balances. Preserve rejection of plain adapter objects and unsupported token types. Add a regression that uses the SDK compact-runtime ContractState import to deserialize retained actual bytes, supplies the normal production ledger module to the actual observer, and exercises the exact-block balance path."
+    }
+  ],
+  "checks": [
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/receipt.mjs:172",
+      "result": "Balance extraction now uses the same exact-block queryContractState result that supplies decoded public financial state. Separate queryUnshieldedBalances is removed; receipt schema and conservation comparator remain unchanged. This design direction addresses the observed empty separate projection, but the cross-runtime class blocker prevents actual execution."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs:12",
+      "result": "Read bounded actual Map size/iterator,<=4096entries, exact own tag/raw data fields, plain token object, unshielded64hex identity, nonnegative u128 bigint, duplicate raw identity rejection and detached frozen decimal output. Unsupported shielded/DUST balances reject rather than disappear. None of these predicates resolves the erroneous state-class boundary."
+    },
+    {
+      "location": "experiments/moriarty-midnight-financial/ledger/run-local.mjs:18",
+      "result": "Closed helper error list and observed AMOUNT_CONTRACT_BALANCES are consistently added to driver and integration allowlists; shared existing validator/launcher retention remains. No arbitrary SDK error text is admitted."
+    },
+    {
+      "location": "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/findings.md",
+      "result": "Retained evidence distinguishes indexed Success from canonical finality and synthetic capability/finality reproduction from live financial acceptance. Exact updater shared-reference cause remains a stated unproven hypothesis. Source review does not amend the previously reviewed failed swap result."
+    },
+    {
+      "location": "installed @midnight-ntwrk/ledger-v8/ledger-v8.d.ts:807",
+      "result": "Declaration describes balance as public balances held by contract. Independently observed both runtime decoders expose the same actual1M/2M unshielded reserve map from retained bytes, while their JavaScript class identities differ."
+    }
+  ],
+  "independentReproduction": {
+    "status": "REPRODUCED_SOURCE12_BLOCKER",
+    "sameContractStateClass": false,
+    "sdkStateInstanceofLedgerV8": false,
+    "actualInitializedStateBytes": 8150,
+    "helperError": "CONTRACT_BALANCE_STATE",
+    "sdkNativeBalances": [
+      [
+        {
+          "tag": "unshielded",
+          "raw": "e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4"
+        },
+        "2000000"
+      ],
+      [
+        {
+          "tag": "unshielded",
+          "raw": "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166"
+        },
+        "1000000"
+      ]
+    ],
+    "ledgerV8FixturePass": {
+      "e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4": "2000000",
+      "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166": "1000000"
+    },
+    "scope": "Actual SDK-deserialization import and retained public bytes; no provider connection, network, private state or source change."
+  },
+  "independentVerification": {
+    "command": "node --test experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs experiments/moriarty-midnight-financial/ledger/receipt-native-balances.test.mjs experiments/moriarty-midnight-financial/ledger/receipt.test.mjs experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs",
+    "exitCode": 0,
+    "tests": 47,
+    "pass": 47,
+    "fail": 0,
+    "skipped": 0,
+    "durationMs": 2555.491133,
+    "transcriptSha256": "bdbc50ba9cdae1dd3f583c9f4cd947e007754688e298fa74a8bc23174a1ceb17",
+    "interpretation": "Existing focused suite passes but substitutes ledger-v8 state instances. Independent actual SDK-class check above reproduces the production blocker."
+  },
+  "retainedFullRegression": {
+    "tests": 448,
+    "pass": 448,
+    "fail": 0,
+    "skipped": 0,
+    "durationMs": 50454.096291,
+    "scope": "Retained full-suite evidence; does not cover actual SDK class identity."
+  },
+  "scope": "Exact source12 correction audit only. No source edits, service/network/wallet/private-store reads, resource approval, operational dispatch or live acceptance.",
+  "limitations": [
+    "No proof or chain finality was independently verified. Actual public native bytes were decoded offline only.",
+    "Current diagnosis supports native reserve/projection mismatch; it does not reproduce the exact indexer updater cause or recover the original private exception text.",
+    "Helper type checks cannot be credited as production-safe merely because synthetic supplied-class tests pass. The failing real SDK identity must be covered before successor approval."
+  ],
+  "reviewedFileHashes": {
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/attempt-result.json": "20b287e40dff3e5a0b84da59fdb1e944362d772206cbb5ff7d4586b0de63ad61",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/public-capture-manifest.json": "8e93c3d063103adde0ff16a783a00a4791d1807c64c917a5e61b9f19c3c3221f",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/result-review-gpt6.json": "4f84e9915b23e06d0d5f49f8f950704d54e80b6a645aa5e0cb9406ff43fded15",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/result-review-grok.json": "aad37280dfc385d0ecb02f858736cafed3b3aed93e28da01406b0fdd85fcb545",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/reviewed-result.json": "d3c18d261d4c9cd809038978faf678f9f4390cd39ef23abc73f0a5daa0f6c2b5",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/001.json": "7b60fd36d70b41563f179c1c41801990cd0ea6f1be1b1f003ef11bcb1ae57797",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/002.json": "9c33af80e93fde29f646cc88b40c7324a51fcf41527af38e78d05bfd09248d0d",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/003.json": "7ef18dc0b0cbb744a289b5c6f6d7dcb57bd740157630eefb116898e32cae7a78",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/004.json": "b6f525d1093d506a0fce494ef4d4b2d2d3840e1e2f63a75ebd608756f4ffabb6",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/005.json": "941af8129cd8a00818ef1cf924b9285c2077404092c0b361d9fa620417c16465",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/006.json": "fb61d1ec2fbc0bae51090a5e843305eee3fcda926eba07d323914e2c5f7d259f",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/007.json": "8d125cd6462ae93f3ee6cfd5317bab5e8210096a7de1a7b787fb6631343f1c8a",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/integration-result.json": "510802e84e7336ca7785c23b6ab3bb359d7aeb2b3d6000637bf6d293c4cce4c2",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/public-transactions/31677c341ab6900f144b5205c6be51dbaf81a06607307e7864be378a4472f91d.bin": "31677c341ab6900f144b5205c6be51dbaf81a06607307e7864be378a4472f91d",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/public-transactions/31677c341ab6900f144b5205c6be51dbaf81a06607307e7864be378a4472f91d.json": "56b38404ca0192f0a31cca162cd025da107e060677073830b5da3d4ba7eaffe2",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/public-transactions/3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4.bin": "3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/public-transactions/3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4.json": "065e5ef30f861cef294bd217c825c95bb296f4ffb362bba9e47233617bc94e1e",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/reservations.json": "09f0090d4b20668eb200cd9a0fd5ce8856d7843c319ab545ebb6036322335292",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/reservations.json.allocation": "e9fd5dbc45c0a9a3c7321ee38e39eef012c537b54184a65d9889a3761c6b72a6",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/run-public/stage-deploy.json": "fe64787d2fb9d940661ed75c0b718439ce98232f64b3c85f43ef95cd452bba3b",
+    "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/terminal-containment.json": "f2ce1321462e933a5d544256aae54176b45220e43c810d9e429257905ab885a9",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/DESIGN.md": "d0fa386b056d1d2969230251a6fba81069761ea4b6f2461b49847dab7b3c3259",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/checks.json": "86e4be0b2cc58cb96b032705469d706d54cc354a6cdc242d9f561532658702aa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/focused-green.tap": "8ebca7f1316fca71bbad7d3da190b77be3c236ce298326748cdffcb86c9d494f",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/green.tap": "c0fe119a5b85cd9d2634a4ab21bbfe1c5273236d3149400efaeae1d97c3ed63b",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/ledger-regression-15.tap": "69440096dcc750888216af4258e3ede8190207cd8e8607c3f25506ee566d7ffa",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/observer-green.tap": "73c80fe803aafa6cfa0364ad4b3c9deed40e0307b88bfcbed6d713ced46db02f",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/observer-red.tap": "eea7046c3051121b94f582a302711249a4e6d44366df28bf58b43e1b72c67e20",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/red.tap": "ee98cb2361ce332d0e11a1bfd3bba9b80f27d136e93a10075b3a49cf90653c44",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/integrate-local.mjs": "f089bccccbea0fdd56ec35b74c9e3864ad093a797c0030cdd387d6f4db343de2",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/integration-negative.test.mjs": "80d9f3e125a5381580a96e6c343c0a9ae89b5570a926574ed6347bce01345cab",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/receipt.mjs": "c4b33be2e23da1d8f068eb4c19529147d7fd7a32c44e9109f2cb9de71ca4829e",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/receipt.test.mjs": "e7ff4228688379a51c1c4938a0892401639198b831e2364ae5c043929ff633a5",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-before/run-local.mjs": "e44e7f92845abe458277d4309c7ffa703ee8e7d0de98689660d916022c2dd7df",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/acquisition-provenance.json": "72691cf3c58138faf78a2a33df9409bdca45e549d55d3161a452265d853c42a6",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/decode-public.mjs": "c2b0ee2556dd3e501c9a5ce372497c97d114c643338ca4fc9089be0c6ec98d68",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/decoded-public.json": "990fc66113dc30ce28a0e87db03446dae042f26aed05c128025018819665afa2",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/diagnosis-manifest.json": "1fd128eb306b2d88365ef851346f016cc42b26705db9f9a033016a23ec77d5ef",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/findings.md": "95c6514fdb215842c132f6b07d0cbeb36bd3f704d4e45ec0ef0e0a6977c4d9fb",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-deploy-state.bin": "c76e8b3604c83b2f19d6dec2c7ee8b96b06fa7f159374a3847b36537e754ffec",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-initialize-state.bin": "5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexer-tree-provenance.json": "3b669a447872537249237a947459412e1c85016637a82169161d03b61b080243",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexer-tree.json": "fd778f96ac3a7423c92509225ce38559948b555e82e2a429c687a44634d4156f",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/post-diagnosis-container.json": "fc9b731bac86c88523c44b015ce045a1561b1b8cb1229362927d2605d458dff8",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-and-input-hashes.json": "3d1a597471bef816b624d033fe5c65ef53ad7fc51f79ebdc4b2cff1009368b51",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_contract_action.rs": "64a01efa8b736a9b025eb00e9ffeb5fb395f636010e5655a17366c23cc555961",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_ledger_state.rs": "332b66ddff7d4bdd349491f7b851a08ecb65d6a9bad56d1226b85a5f0e953003",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_domain_transaction.rs": "f60d84b78b3506ff7da651e08298e52e37d06a7ad05881ca2e4dbd13c35a5f52",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-chain-indexer_src_infra_storage.rs": "7a0409039493b1b830330c6c67b8cfa10595150e0aa0dc622c38cb19e4b8b119",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/source-indexer-common_src_domain_ledger_contract_state.rs": "7f6bebe8aebcaee3389e5f8d7b8e1cbb2a5e02834f43752ebbc3d4267813e8c9",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-copy.json": "48993d9dff38d9efc3a3628658d0a62b263cbe9c668a088a7b603888fe36a113",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-queries.json": "950ad27b3dddd27fa0f265e3a9dea0125a3e135615dca30574cb1ed0d95702ee",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-query.py": "6ed3dfe4b3806cf8c23b0dc022fce06aa122dcbb7b044dfe5d71f790efa77b4e",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/stopped-indexer-result.json": "a9e8c2b0072b7badca8ff863a118ec08dee24f539d5df71a856ee3843abd8fa2",
+    "deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/updater-source-provenance.json": "ae835267f239febad7858c16d1e5bce76f3c3283c42f58fcd5d3b9f41c638267",
+    "experiments/moriarty-midnight-financial/ledger/README.md": "ef3fd724700bf4c2f32138b583f2c6a38b3a61debc1007515b3d0502af230711",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.test.mjs": "6c733306b1e644d7fb1473c677aecd3101ce66dc79cb0bcb01408b7ca27c315a",
+    "experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs": "0bd23f3852315d2c40f2fce151a0111814df841747faee612ba87a6de009c0ed",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.mjs": "5907e8af27217910e2e2546409a70909eb9bd077be6fcc33872ac44a1e6da766",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.test.mjs": "4c5874d4026dd87b486078934ee5fa3fb32161552cc43422b72cbd506852f08c",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.mjs": "568fd5602f9b3a6da38b64ed571e97a73374d59a022e757d0a8c7a3adf35ac80",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.test.mjs": "34bb884eb6e9b9ba1c5366ed5848b87fede35ddbb14f2596e05dd5a0a0c7b75e",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "55a214ba0f0ef0ac0b3d5ca87e7a4263e9c7290edcf5ed8758c736218740dc70",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs": "a70626c61c1e8ef23050dc433677af4203fa110ac03af0fbbf8468678af9aea7",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs": "1abd2b20aca91e1d75bc386a91864978b44c9df7fb8a5ad1dd8dba1a96803224",
+    "experiments/moriarty-midnight-financial/ledger/financial-expectations.json": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/REPORT.md": "523dc5d0139e28bfb4fe2f91711d895d5830d5ab1bcb164dfb695d7e2fda5e57",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/acquire.py": "bb018e3a12b44c1635dfbdb7df953973864932a84e33f05bf27cc9fcc484547b",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/files.json": "6f6bb0ce75c1ca2174457462f414ec9639ba85100120d6a43d614f51a8fd56ad",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/historical-finality.json": "f40830ca31662e9ab40cbffc3e3517ad4103ff72cee8c8d55644bb5c28cabef7",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/inspect-v2.mjs": "d99fd358ca8c05605a46e561a50a531e5531c10399fdf55c00bde55eb36ee5ec",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/inspect.mjs": "9263aeda27caf12d8b70a5234748fa516820023aba3bcd5c5945aaa51bdbc2b9",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/native-observation.json": "64935eca501593874b046ad89448b883d164418d51772eea8d778cb5fe8937e4",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/request.json": "e4000b0f2517f9d632579122c13758f87dbb65eb6808829b7108f9e911ec7b1c",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/response.json": "e011c09bf5dcd0d44b7fe738e3bd7b4f33bbf458239f8d41c4a6271baccf0222",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/retrieval.json": "5c97c2eae4938aabb28889663d8a3154f627f55b358916691cf8565309c78b88",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/source-hashes.json": "9860dcead246816471c20b87298794cc46fd2959d7705ae9a5f36ef87da390a4",
+    "experiments/moriarty-midnight-financial/ledger/fixtures/historical-dust/transaction.bin": "f79580fe0075dc26ae3f97f10557706f340cdf7a3b3118cd65a72b4fd870110a",
+    "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "3a61f8abe0fb1192099d5d0a09d6b7107acacf439c82205f9038c34d8107d08b",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "9883de86d5f75048e4c889b86f8352e02cb2c838d846efff2606aabf13d9f324",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs": "a929eef13446da6a6fe22c89336a8cd13dd12272e8db5fca69f7760e1bf8ada2",
+    "experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs": "875a3af195b23cc6a1b5fb1e0a0e4befbe7a82e5da4b16cef3efb34f1c68a94d",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "ace66630e1a903e085fee9b00de02fc5c75187539a8449b9039240a87a573e5e",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs": "3a2616b67109cfb4b60059f737bfacdaa9f5a908c843b540764215193e2e203c",
+    "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json": "4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs": "057b1db6663bb92e251026628727bbf0784aad4c7de9b97c1434bf49a856264d",
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.test.mjs": "abc1a9f359c80baf74b01abc363ce31360af829a1787792cd2e91cba517a8746",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.test.mjs": "e99e0324ef62fc51e1ab9b52d1730c482dea2cfa58505f207f40cca932c0468b",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/providers.test.mjs": "af8cd21c447a5fb40b44585d570403e9e853b240d66dddb1e37fcb07fbc51add",
+    "experiments/moriarty-midnight-financial/ledger/receipt-native-balances.test.mjs": "2c1728c72676b9a9ad27ebd37321e2875a466b96a270da7a6944548b82ed9489",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "27057f75dc64eb4202e9056a9d326bd7f26ec68a3e2153c35430ec22eb941f9d",
+    "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs": "776c2a9135b11ade0b9d0dd866f8573edc531014442826160fee19c8ba4789d6",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "3dafc762de817de6c508aa6cbd3dd3c955287c41382953f4752784e03ef67ccf",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs": "d5770828a10182fd59196ac6d3620996ad3280c26a4617624f6775dc11b8ac81",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "03d4109d7e2d85f439d345166f7d5ddeedc20f78f31bb371e813d88c35f5f9a3",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs": "ba32f7469cf8e735e31a574dd53f1d9722ddc0e9caf4b28bcc2156a8012b7c90",
+    "experiments/moriarty-midnight-financial/ledger/run-build-bounded.py": "dc2f8e386222722fa86a2318fafc0b38add66a09ab55eecdaadfff2d2302fa8d",
+    "experiments/moriarty-midnight-financial/ledger/run-build-bounded.test.py": "8792690cc8870e9cdc416a3625de0355e5323da3220b1a1f9b6f8b1c0d5bf94d",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0129ab9329f2d281a9217d769f1bd91b396e79ea3aeb3a99647effacfba968d7",
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs": "59ad6b1c1f939a9016fccf99c2efec260ab3b0052d542dfbd752ffc85cd535af",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs": "59b7bd87cf6ee21203f7e42b02717de3f572042dd55b22f00a438d07eaa5d999",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.test.mjs": "ff3ff7b14939c466e4a55471470f091dc7b3424becb4e2ccf02baa428b5ed8f2",
+    "deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/source-candidate-12.json": "7dc65b008f67683377e2ff0eb621bf7082bd2378026fa73c830b87dec76ded4f",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs": "23a1883b796fbea037817ae0a7e0f5ed3c072a7d30974154a8de917893cd7f2f",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs": "24e261044bcf1b12452393d31a0d1965335397e03a32b288822ffd06fb1c012b",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs": "4db121cdee21bb88cecca5dc1433c6d30cc12c1ac1f4c5e40a606440e08ac840",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/index.js": "c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36"
+  }
+}
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/native-contract-balances-01/gpt6-sdk-class-observation-12.json
+{
+  "status": "REPRODUCED_SOURCE12_BLOCKER",
+  "sameContractStateClass": false,
+  "sdkStateInstanceofLedgerV8": false,
+  "actualInitializedStateBytes": 8150,
+  "helperError": "CONTRACT_BALANCE_STATE",
+  "sdkNativeBalances": [
+    [
+      {
+        "tag": "unshielded",
+        "raw": "e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4"
+      },
+      "2000000"
+    ],
+    [
+      {
+        "tag": "unshielded",
+        "raw": "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166"
+      },
+      "1000000"
+    ]
+  ],
+  "ledgerV8FixturePass": {
+    "e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4": "2000000",
+    "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166": "1000000"
+  },
+  "scope": "Actual SDK-deserialization import and retained public bytes; no provider connection, network, private state or source change."
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/contract-balances.mjs
+/** Public state is produced by the SDK Compact runtime; transactions use a
+ * different ledger runtime. Bind the state class to the actual provider import.
+ * These direct package/entry pins are not a transitive supply-chain attestation.
+ * Import reads only public installed code, never providers, wallets or secrets.
+ */
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+const root=PINNED_NM+'/@midnight-ntwrk/';
+const pins={
+ 'midnight-js-protocol/package.json':'bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd',
+ 'midnight-js-protocol/dist/compact-runtime.mjs':'24e261044bcf1b12452393d31a0d1965335397e03a32b288822ffd06fb1c012b',
+ 'compact-runtime/package.json':'ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c',
+ 'compact-runtime/dist/index.js':'c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde'
+};
+for(const [path,digest] of Object.entries(pins))if(createHash('sha256').update(readFileSync(root+path)).digest('hex')!==digest)throw Error('CONTRACT_BALANCE_RUNTIME_PIN');
+const {ContractState:ProviderContractState}=await import(pathToFileURL(root+'midnight-js-protocol/dist/compact-runtime.mjs').href);
+export const CONTRACT_BALANCE_FAILURE_CODES=Object.freeze(['RUNTIME_PIN','STATE','MAP','COUNT','TOKEN','TOKEN_FIELDS','AMOUNT','DUPLICATE'].map(x=>'CONTRACT_BALANCE_'+x));
+const check=(ok,label)=>{if(!ok)throw Error('CONTRACT_BALANCE_'+label);};
+const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,'size').get;
+export function extractNativeContractBalances({state}){
+ check(state instanceof ProviderContractState,'STATE');
+ return projectUnshieldedContractBalanceMap(state.balance);
+}
+/** Pure map projection; establishes no state identity, provenance or dispatch. */
+export function projectUnshieldedContractBalanceMap(balances){
+ check(balances instanceof Map,'MAP');
+ const size=mapSize.call(balances);check(Number.isSafeInteger(size)&&size>=0&&size<=4096,'COUNT');
+ const result={};let count=0;
+ // Use the actual Map iterator, not caller-overridden iterable methods.
+ for(const [token,amount] of Map.prototype.entries.call(balances)){
+  check(++count<=4096,'COUNT');
+  check(token&&Object.getPrototypeOf(token)===Object.prototype,'TOKEN');
+  const fields=Object.getOwnPropertyDescriptors(token);
+  check(Reflect.ownKeys(fields).length===2&&Object.hasOwn(fields,'tag')&&Object.hasOwn(fields,'raw')&&Object.hasOwn(fields.tag,'value')&&Object.hasOwn(fields.raw,'value'),'TOKEN_FIELDS');
+  const tag=fields.tag.value,raw=fields.raw.value;
+  check(tag==='unshielded'&&typeof raw==='string'&&/^[a-f0-9]{64}$/.test(raw),'TOKEN');
+  check(typeof amount==='bigint'&&amount>=0n&&amount<(1n<<128n),'AMOUNT');
+  check(!Object.hasOwn(result,raw),'DUPLICATE');result[raw]=amount.toString();
+ }
+ check(count===size,'COUNT');return Object.freeze(result);
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/contract-balances.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {join} from 'node:path';
+import {PINNED_NM} from './providers.mjs';
+const api=await import('./contract-balances.mjs').catch(()=>({}));
+const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
+const transactionRuntime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+const D=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
+const state=stage=>ledger.ContractState.deserialize(readFileSync(new URL(`swap-initialize-diagnosis-01/indexed-${stage}-state.bin`,D)));
+const colorA='5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166',colorB='e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4';
+const extract=options=>{assert.equal(typeof api.extractNativeContractBalances,'function');return options.ledger===fixtureLedger?api.projectUnshieldedContractBalanceMap(options.state.balance):api.extractNativeContractBalances({state:options.state});};
+test('actual retained swap deployment has empty native contract balances',()=>{assert.deepEqual(extract({state:state('deploy'),ledger}),{});});
+test('actual retained initialized swap native state contains both exact pool reserves',()=>{
+ const s=state('initialize'),before=Buffer.from(s.serialize()),out=extract({state:s,ledger});assert.deepEqual(out,{[colorA]:'1000000',[colorB]:'2000000'});assert.ok(Object.isFrozen(out));assert.deepEqual(Buffer.from(s.serialize()),before);
+});
+test('actual retained initialized loan native state has no contract custody balance',()=>{const s=ledger.ContractState.deserialize(readFileSync(new URL('local-recovery-03/indexed-initialize-state.bin',D)));assert.deepEqual(extract({state:s,ledger}),{});});
+// Controlled fixtures exercise the pure map projector for invalid values that
+// native WASM setters normally reject. They do not bypass production state identity.
+class FixtureState {constructor(balance){this.balance=balance;}}
+const fixtureLedger={ContractState:FixtureState};
+const token=()=>({tag:'unshielded',raw:colorA});
+for(const [name,make] of [
+ ['plain state',()=>({state:{balance:new Map()},ledger})],['missing state',()=>({ledger})],['wrong native class',()=>({state:new FixtureState(new Map()),ledger})],
+ ['not a Map',()=>({state:new FixtureState([]),ledger:fixtureLedger})],['negative value',()=>({state:new FixtureState(new Map([[token(),-1n]])),ledger:fixtureLedger})],['overflow value',()=>({state:new FixtureState(new Map([[token(),1n<<128n]])),ledger:fixtureLedger})],['number value',()=>({state:new FixtureState(new Map([[token(),1]])),ledger:fixtureLedger})],['string value',()=>({state:new FixtureState(new Map([[token(),'1']])),ledger:fixtureLedger})],
+ ['plain string token',()=>({state:new FixtureState(new Map([[colorA,1n]])),ledger:fixtureLedger})],['dust token',()=>({state:new FixtureState(new Map([[{tag:'dust'},1n]])),ledger:fixtureLedger})],['shielded token',()=>({state:new FixtureState(new Map([[{tag:'shielded',raw:colorA},1n]])),ledger:fixtureLedger})],['short token',()=>({state:new FixtureState(new Map([[{tag:'unshielded',raw:'aa'},1n]])),ledger:fixtureLedger})],['uppercase token',()=>({state:new FixtureState(new Map([[{tag:'unshielded',raw:colorA.toUpperCase()},1n]])),ledger:fixtureLedger})],['extra field',()=>({state:new FixtureState(new Map([[{...token(),extra:1},1n]])),ledger:fixtureLedger})],['duplicate token identity',()=>({state:new FixtureState(new Map([[token(),1n],[token(),2n]])),ledger:fixtureLedger})],['oversized map',()=>({state:new FixtureState(new Map(Array.from({length:4097},(_,i)=>[{tag:'unshielded',raw:i.toString(16).padStart(64,'0')},1n]))),ledger:fixtureLedger})]
+])test(`native balance extraction rejects ${name}`,()=>{assert.throws(()=>extract(make()),/CONTRACT_BALANCE/);});
+test('closed token fields reject getters, hidden fields, symbols and inherited shapes without getter access',()=>{
+ let reads=0;const getter={tag:'unshielded',get raw(){reads++;return colorA;}};
+ const hidden=Object.defineProperty(token(),'extra',{value:1}),symbol=Object.assign(token(),{[Symbol('extra')]:1}),inherited=Object.assign(Object.create({}),token());
+ for(const t of [getter,hidden,symbol,inherited])assert.throws(()=>extract({state:new FixtureState(new Map([[t,1n]])),ledger:fixtureLedger}),/CONTRACT_BALANCE/);assert.equal(reads,0);
+});
+test('zero and maximum u128 are retained exactly in detached frozen decimal map',()=>{const map=new Map([[token(),0n],[{tag:'unshielded',raw:colorB},(1n<<128n)-1n]]),out=extract({state:new FixtureState(map),ledger:fixtureLedger});assert.deepEqual(out,{[colorA]:'0',[colorB]:'340282366920938463463374607431768211455'});map.clear();assert.equal(out[colorA],'0');assert.ok(Object.isFrozen(out));});
+
+test('actual transaction-runtime ContractState cannot replace the SDK provider state class',()=>{assert.notEqual(ledger.ContractState,transactionRuntime.ContractState);const bytes=readFileSync(new URL('swap-initialize-diagnosis-01/indexed-initialize-state.bin',D));assert.throws(()=>api.extractNativeContractBalances({state:transactionRuntime.ContractState.deserialize(bytes)}),/CONTRACT_BALANCE_STATE/);assert.deepEqual(api.extractNativeContractBalances({state:ledger.ContractState.deserialize(bytes)}),{[colorA]:'1000000',[colorB]:'2000000'});});
+
+
+FILE experiments/moriarty-midnight-financial/ledger/provider-native-balances.test.mjs
+/** Actual SDK public-provider method, controlled cross-fetch transport only.
+ * No HTTP server, WebSocket connection, wallet or private-store access.
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import https from 'node:https';
+import http from 'node:http';
+import {Writable,PassThrough} from 'node:stream';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {extractNativeContractBalances} from './contract-balances.mjs';
+
+const providerPath=join(PINNED_NM,'@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs');
+const compact=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
+const transactions=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+const address='8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261';
+const blockHash='f268da29bb3e6e81f8a97bae0eb53938f3a146fce677deb5c7ae18b8c5335386';
+const stateBytes=readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-initialize-state.bin',import.meta.url));
+
+test('actual SDK queryContractState producer passes native balance extraction with its compact-runtime class',async t=>{
+ assert.equal(stateBytes.length,8150);
+ assert.equal(createHash('sha256').update(stateBytes).digest('hex'),'5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c');
+ // Intercept below the installed cross-fetch ponyfill, before any socket or
+ // DNS creation. The SDK, GraphQL query, Apollo decoding and WASM stay real.
+ const requests=[];
+ t.mock.method(http,'request',()=>{throw Error('HTTP_FORBIDDEN');});
+ t.mock.method(https,'request',(options)=>{
+  assert.equal(options.hostname,'indexer-fixture.invalid');
+  assert.equal(options.path,'/graphql');assert.equal(options.method,'POST');
+  const chunks=[];
+  const request=new Writable({write(chunk,_encoding,done){chunks.push(Buffer.from(chunk));done();},final(done){
+   const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));requests.push(body);
+   assert.equal(body.operationName,'CONTRACT_STATE_QUERY');
+   assert.deepEqual(body.variables,{address,offset:{blockOffset:{hash:blockHash}}});
+   assert.match(body.query,/contractAction\(address: \$address, offset: \$offset\)/);
+   const response=new PassThrough();response.statusCode=200;response.statusMessage='OK';response.headers={'content-type':'application/json'};
+   queueMicrotask(()=>{request.emit('response',response);response.end(JSON.stringify({data:{contractAction:{__typename:'ContractCall',state:stateBytes.toString('hex')}}}));});done();
+  }});
+  request.abort=()=>request.destroy();return request;
+ });
+ class NoWebSocket {static CONNECTING=0;static OPEN=1;static CLOSING=2;static CLOSED=3;constructor(){throw Error('WEBSOCKET_FORBIDDEN');}}
+ try{
+  const {indexerPublicDataProvider}=await import(pathToFileURL(providerPath).href);
+  const provider=indexerPublicDataProvider('https://indexer-fixture.invalid/graphql','wss://indexer-fixture.invalid/graphql',NoWebSocket);
+  const state=await provider.queryContractState(address,{type:'blockHash',blockHash});
+  assert.equal(requests.length,1);
+  assert.ok(state instanceof compact.ContractState);
+  assert.equal(state instanceof transactions.ContractState,false);
+  assert.deepEqual(Buffer.from(state.serialize()),stateBytes);
+  assert.deepEqual(extractNativeContractBalances({state}),{
+   '5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166':'1000000',
+   'e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4':'2000000',
+  });
+  assert.deepEqual(Buffer.from(state.serialize()),stateBytes);
+ }finally{t.mock.restoreAll();}
+});
+
+
+FILE experiments/moriarty-midnight-financial/ledger/receipt-native-balances.test.mjs
+/** Retained actual swap bytes/state, controlled transport/finality context.
+ * These regressions establish the observer's balance source, not live finality. */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {observeFinalizedStage,decodeNativeFinancialTransaction} from './receipt.mjs';
+const ledger=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs'));
+const stateRuntime=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs'));
+assert.notEqual(stateRuntime.ContractState,ledger.ContractState,'SDK state producer and transaction runtime are distinct classes');
+const codec=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js'));
+const root=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
+function fixture(){
+ const raw=readFileSync(new URL('local-swap-01/run-public/public-transactions/3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4.bin',root));
+ const tx=ledger.Transaction.deserialize('signature','proof','binding',raw),native=decodeNativeFinancialTransaction(raw,ledger);
+ const state=stateRuntime.ContractState.deserialize(readFileSync(new URL('swap-initialize-diagnosis-01/indexed-initialize-state.bin',root)));
+ const hash='f268da29bb3e6e81f8a97bae0eb53938f3a146fce677deb5c7ae18b8c5335386';
+ const data={tx,txId:native.identifiers.at(-1),identifiers:native.identifiers,txHash:native.transactionHash,status:'SucceedEntirely',blockHash:hash,blockHeight:20393,protocolVersion:1000000,fees:{paidFees:'1',estimatedFees:'1'},unshielded:{spent:[],created:native.outputs.map(o=>({owner:codec.MidnightBech32m.encode('undeployed',new codec.UnshieldedAddress(Buffer.from(o.owner,'hex'))).toString(),tokenType:o.type,value:BigInt(o.value),intentHash:o.intentHash}))}};
+ const queries=[];let separateReads=0;
+ const provider={watchForTxData:async()=>data,queryContractState:async(a,c)=>{queries.push([a,c]);return state;},queryUnshieldedBalances:async()=>{separateReads++;return [];}};
+ const args={provider,ledger,txId:data.txId,contractAddress:native.actions[0].address,circuitId:'initialize',decodeState:x=>x,deadlineMs:Date.now()+10000,expectedProtocolVersion:1000000,rpc:async name=>name==='chain_getHeader'?{number:'0x4fa9'}:'0x'+hash};
+ return {args,state,queries,hash,separateReads:()=>separateReads};
+}
+const expected={'5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166':'1000000','e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4':'2000000'};
+test('observer reads actual initialized reserves from its exact-block native state, not empty separate index',async()=>{
+ const f=fixture(),before=f.state.serialize(),observed=await observeFinalizedStage(f.args);
+ assert.deepEqual(observed.receipt.contractBalances,expected);assert.equal(f.separateReads(),0);
+ assert.deepEqual(f.queries,[[f.args.contractAddress,{type:'blockHash',blockHash:f.hash}]]);assert.deepEqual(f.state.serialize(),before);
+});
+test('an unavailable separate balance projection cannot suppress complete native balances',async()=>{
+ const f=fixture();f.args.provider.queryUnshieldedBalances=async()=>{throw Error('SEPARATE_PROJECTION_MUST_NOT_BE_READ');};
+ const observed=await observeFinalizedStage(f.args);assert.deepEqual(observed.receipt.contractBalances,expected);
+});
+test('observer rejects a plain object in place of native exact-block contract state',async()=>{
+ const f=fixture();f.args.provider.queryContractState=async()=>({data:f.state.data,balance:f.state.balance});
+ await assert.rejects(observeFinalizedStage(f.args),/CONTRACT_BALANCE_STATE/);
+});
+
+
+FILE experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs
+/** Fixed swap initialize wallet gate. Caller must supply the actual
+ * observeFinalizedStage receipt AFTER a durable PASS initialize comparison,
+ * then await wallet.waitForSyncedState under the existing absolute deadline.
+ * This predicate does not establish receipt provenance, finality or proofs.
+ * It performs no wallet/store/network operations and grants no dispatch authority.
+ */
+import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
+export const SWAP_WALLET_FAILURE_CODES=Object.freeze(['ROLES','ASSETS','RECEIPT','HISTORY','NATIVE_IDENTITY','NATIVE_ACTION','NATIVE_MINT','NATIVE_OUTPUT','SYNC','PENDING','COIN_SHAPE','AVAILABLE','OWNER','OUTPUT'].map(x=>'SWAP_WALLET_'+x));
+const check=(ok,label)=>{if(!ok)throw Error('SWAP_WALLET_'+label);};
+const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+const height=x=>Number.isSafeInteger(x)&&x>=0;
+export function assertSwapInitializedWallet({receipt,roles,assetBindings,synced}){
+ check(hex(roles?.firstAddress)&&hex(roles?.secondAddress)&&roles.firstAddress!==roles.secondAddress,'ROLES');
+ check(hex(assetBindings?.ASSET_A)&&hex(assetBindings?.ASSET_B)&&assetBindings.ASSET_A!==assetBindings.ASSET_B,'ASSETS');
+ check(receipt?.schema==='moriarty.finalized-financial-stage/1'&&receipt.circuitId==='initialize'&&receipt.acceptance==='uncertified-I2-observation'&&receipt.protocolVersion===1000000,'RECEIPT');
+ check(hex(receipt.contractAddress)&&![roles.firstAddress,roles.secondAddress].includes(receipt.contractAddress)&&hex(receipt.blockHash)&&typeof receipt.finalizedHead==='string'&&/^0x[a-f0-9]{64}$/.test(receipt.finalizedHead)&&height(receipt.blockHeight)&&height(receipt.finalizedHeight)&&receipt.finalizedHeight>=receipt.blockHeight,'HISTORY');
+ const tx=receipt.transaction;
+ check(tx&&hex(tx.transactionHash)&&tx.rawSha256===tx.transactionHash&&Array.isArray(tx.identifiers)&&typeof receipt.txId==='string'&&/^[a-f0-9]{66}$/.test(receipt.txId)&&tx.identifiers.includes(receipt.txId)&&tx.proofVerified===false&&tx.ledgerAccepted===false,'NATIVE_IDENTITY');
+ check(Array.isArray(tx.actions)&&tx.actions.length===1&&tx.actions[0]?.kind==='call'&&tx.actions[0].entryPoint==='initialize'&&tx.actions[0].address===receipt.contractAddress&&Number.isInteger(tx.actions[0].segment)&&tx.actions[0].segment>=0&&tx.actions[0].segment<=65535,'NATIVE_ACTION');
+ check(Array.isArray(tx.inputs)&&tx.inputs.length===0&&Array.isArray(tx.outputs)&&tx.outputs.length===1,'NATIVE_MINT');
+ const o=tx.outputs[0];
+ check(o&&Object.keys(o).sort().join(',')==='intentHash,offerIndex,owner,section,segment,type,value'&&o.segment===tx.actions[0].segment&&['guaranteed','fallible'].includes(o.section)&&o.offerIndex===0&&o.owner===roles.firstAddress&&o.type===assetBindings.ASSET_A&&o.value==='100000'&&hex(o.intentHash),'NATIVE_OUTPUT');
+ for(const kind of ['shielded','unshielded','dust']){const p=synced?.[kind]?.progress;check(p?.isConnected===true&&typeof p.isStrictlyComplete==='function'&&p.isStrictlyComplete()===true,'SYNC');}
+ const u=synced.unshielded;check(Array.isArray(u.availableCoins)&&Array.isArray(u.pendingCoins)&&u.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PENDING');
+ const coins=u.availableCoins.map(c=>{check(c?.utxo&&hex(c.utxo.intentHash)&&height(c.utxo.outputNo),'COIN_SHAPE');return c.utxo;});
+ const found=coins.filter(c=>c.intentHash===o.intentHash&&c.outputNo===o.offerIndex);check(found.length===1,'AVAILABLE');
+ const coin=found[0];let owner;try{owner=decodeLocalIndexedOwner(coin.owner);}catch{throw Error('SWAP_WALLET_OWNER');}
+ check(owner===o.owner&&coin.type===o.type&&typeof coin.value==='bigint'&&coin.value===100000n,'OUTPUT');
+ const mintedOutput=Object.freeze({segment:o.segment,section:o.section,owner:o.owner,type:o.type,value:o.value,intentHash:o.intentHash,outputNo:o.offerIndex});
+ return Object.freeze({status:'SWAP_INITIALIZED_WALLET_VERIFIED',mintedOutput,dispatchAuthorized:false});
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/swap-wallet.test.mjs
+import test from 'node:test';
+import {readFileSync} from 'node:fs';
+import {decodeNativeFinancialTransaction} from './receipt.mjs';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
+import {join} from 'node:path';
+import {PINNED_NM} from './providers.mjs';
+const api=await import('./swap-wallet.mjs').catch(()=>({}));
+const require=createRequire(join(PINNED_NM,'../package.json')),{Schema}=require('effect');
+const {WalletSyncUpdateSchema}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js')).href);
+const {MidnightBech32m,UnshieldedAddress}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-address-format/dist/index.js')).href);
+const owner='9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb';
+const address=(hex,network='undeployed')=>MidnightBech32m.encode(network,new UnshieldedAddress(Buffer.from(hex,'hex'))).toString();
+// Synthetic base fixture; actual retained fallible mint regression appears below.
+// Exact fixed swap mint quantity, actual installed GraphQL-to-wallet decoder.
+function fixture(){
+ const roles={firstAddress:owner,secondAddress:'22'.repeat(32)},assetBindings={ASSET_A:'33'.repeat(32),ASSET_B:'44'.repeat(32)},origin='55'.repeat(32),txId='00'+'66'.repeat(32),hash='77'.repeat(32),contract='88'.repeat(32);
+ const output={segment:21861,section:'guaranteed',owner,type:assetBindings.ASSET_A,value:'100000',intentHash:origin,offerIndex:0};
+ const receipt={schema:'moriarty.finalized-financial-stage/1',circuitId:'initialize',contractAddress:contract,txId,blockHash:'99'.repeat(32),blockHeight:100,finalizedHead:'0x'+'aa'.repeat(32),finalizedHeight:101,protocolVersion:1000000,acceptance:'uncertified-I2-observation',transaction:{transactionHash:hash,rawSha256:hash,identifiers:[txId],proofVerified:false,ledgerAccepted:false,inputs:[],outputs:[output],actions:[{kind:'call',address:contract,entryPoint:'initialize',segment:21861}]}};
+ const wire={type:'UnshieldedTransaction',transaction:{id:1,hash,type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789027704001},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{owner:address(owner),tokenType:assetBindings.ASSET_A,value:'100000',intentHash:origin,outputIndex:0,ctime:1,registeredForDustGeneration:false}],spentUtxos:[]};
+ const coin=Schema.decodeUnknownSync(WalletSyncUpdateSchema)(wire).createdUtxos[0];
+ const progress=()=>({isConnected:true,isStrictlyComplete:()=>true});const synced={shielded:{progress:progress()},unshielded:{progress:progress(),availableCoins:[coin],pendingCoins:[]},dust:{progress:progress(),state:{pendingDust:[]}}};
+ return {receipt,roles,assetBindings,synced};
+}
+const run=f=>{assert.equal(typeof api.assertSwapInitializedWallet,'function');return api.assertSwapInitializedWallet(f);};
+test('fixed swap mint matches an actual SDK decoded available coin, without authority claims',()=>{
+ const f=fixture(),r=run(f);assert.equal(r.status,'SWAP_INITIALIZED_WALLET_VERIFIED');assert.equal(r.dispatchAuthorized,false);assert.equal(r.mintedOutput.owner,owner);assert.equal(r.mintedOutput.value,'100000');assert.equal(r.mintedOutput.outputNo,0);assert.ok(Object.isFrozen(r)&&Object.isFrozen(r.mintedOutput));
+ assert.notEqual(f.synced.unshielded.availableCoins[0].utxo.owner,owner,'real wallet boundary is Bech32m');
+});
+for(const [name,change] of [
+ ['missing receipt',f=>f.receipt=undefined],['wrong stage',f=>f.receipt.circuitId='swap'],['wrong tx hash',f=>f.receipt.transaction.rawSha256='00'.repeat(32)],['missing id',f=>f.receipt.transaction.identifiers=[]],['unfinalized metadata',f=>f.receipt.finalizedHeight=99],['wrong protocol',f=>f.receipt.protocolVersion=9],
+ ['missing mint',f=>f.receipt.transaction.outputs=[]],['extra mint',f=>f.receipt.transaction.outputs.push({...f.receipt.transaction.outputs[0]})],['native input',f=>f.receipt.transaction.inputs=[{}]],['wrong action',f=>f.receipt.transaction.actions[0].entryPoint='swap'],['wrong contract',f=>f.receipt.transaction.actions[0].address='00'.repeat(32)],['wrong physical segment',f=>f.receipt.transaction.outputs[0].segment++],['wrong native section',f=>f.receipt.transaction.outputs[0].section='unknown'],['wrong native index',f=>f.receipt.transaction.outputs[0].offerIndex=1],['wrong native owner',f=>f.receipt.transaction.outputs[0].owner=f.roles.secondAddress],['wrong native type',f=>f.receipt.transaction.outputs[0].type=f.assetBindings.ASSET_B],['wrong native value',f=>f.receipt.transaction.outputs[0].value='10000'],['malformed native origin',f=>f.receipt.transaction.outputs[0].intentHash='bad'],
+ ['same roles',f=>f.roles.secondAddress=owner],['same assets',f=>f.assetBindings.ASSET_B=f.assetBindings.ASSET_A],['disconnected shielded',f=>f.synced.shielded.progress.isConnected=false],['incomplete unshielded',f=>f.synced.unshielded.progress.isStrictlyComplete=()=>false],['missing dust progress',f=>delete f.synced.dust.progress],['pending dust',f=>f.synced.dust.state.pendingDust=[{}]],['pending coin',f=>f.synced.unshielded.pendingCoins=[f.synced.unshielded.availableCoins[0]]],['missing available coin',f=>f.synced.unshielded.availableCoins=[]],['duplicate available coin',f=>f.synced.unshielded.availableCoins.push(f.synced.unshielded.availableCoins[0])],
+ ['rawhex wallet owner',f=>f.synced.unshielded.availableCoins[0].utxo.owner=owner],['wrong wallet owner',f=>f.synced.unshielded.availableCoins[0].utxo.owner=address(f.roles.secondAddress)],['wrong wallet network',f=>f.synced.unshielded.availableCoins[0].utxo.owner=address(owner,'preview')],['wrong wallet type',f=>f.synced.unshielded.availableCoins[0].utxo.type=f.assetBindings.ASSET_B],['wrong wallet amount',f=>f.synced.unshielded.availableCoins[0].utxo.value=99999n],['string wallet amount',f=>f.synced.unshielded.availableCoins[0].utxo.value='100000'],['wrong wallet origin',f=>f.synced.unshielded.availableCoins[0].utxo.intentHash='ab'.repeat(32)],['wrong wallet index',f=>f.synced.unshielded.availableCoins[0].utxo.outputNo=1],['flattened coin',f=>f.synced.unshielded.availableCoins=[f.synced.unshielded.availableCoins[0].utxo]]
+])test(`swap mint gate rejects ${name}`,()=>{const f=fixture();change(f);assert.throws(()=>run(f),/SWAP_WALLET/);});
+test('unrelated correctly shaped coins do not hide exact mint duplicates or fund the predicate',()=>{const f=fixture(),other={utxo:{...f.synced.unshielded.availableCoins[0].utxo,intentHash:'bb'.repeat(32)}};f.synced.unshielded.availableCoins.unshift(other);assert.equal(run(f).status,'SWAP_INITIALIZED_WALLET_VERIFIED');f.synced.unshielded.availableCoins.pop();assert.throws(()=>run(f),/SWAP_WALLET/);});
+
+// Actual transaction/effects; reconstructed wallet wire and finality/sync context
+// are source-only. This does not recover missing live observation or wallet state.
+const actualLedger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+function actualFallibleFixture(){
+ const d=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
+ const raw=readFileSync(new URL('local-swap-01/run-public/public-transactions/3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4.bin',d));
+ const native=decodeNativeFinancialTransaction(raw,actualLedger),o=native.outputs[0],state=JSON.parse(readFileSync(new URL('swap-initialize-diagnosis-01/decoded-public.json',d))).records.find(x=>x.stage==='initialize').decodedState;
+ assert.equal(o.section,'fallible');assert.equal(o.segment,36489);assert.equal(o.intentHash,'cc0511b9583d85ccea1e63ba024a04a6f0dd1dce86aa0f83e92f8917b42e3548');
+ const f=fixture();f.roles={firstAddress:state.traderAddress.bytes,secondAddress:state.providerAddress.bytes};f.assetBindings={ASSET_A:state.colorA,ASSET_B:state.colorB};
+ f.receipt={...f.receipt,transaction:native,txId:native.identifiers.at(-1),contractAddress:native.actions[0].address,blockHash:'f268da29bb3e6e81f8a97bae0eb53938f3a146fce677deb5c7ae18b8c5335386',blockHeight:20393,finalizedHeight:20393,finalizedHead:'0xf268da29bb3e6e81f8a97bae0eb53938f3a146fce677deb5c7ae18b8c5335386'};
+ const wire={type:'UnshieldedTransaction',transaction:{id:1,hash:native.transactionHash,type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789035768000},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{owner:address(o.owner),tokenType:o.type,value:o.value,intentHash:o.intentHash,outputIndex:o.offerIndex,ctime:1,registeredForDustGeneration:false}],spentUtxos:[]};
+ f.synced.unshielded.availableCoins=Schema.decodeUnknownSync(WalletSyncUpdateSchema)(wire).createdUtxos;return {f,raw};
+}
+test('actual compiled swap fallible mint matches its exact SDK-decoded available coin',()=>{const {f}=actualFallibleFixture(),r=run(f);assert.equal(r.mintedOutput.section,'fallible');assert.equal(r.mintedOutput.segment,36489);assert.equal(r.dispatchAuthorized,false);});
+test('fallible mint cannot use the guaranteed origin namespace',()=>{const {f,raw}=actualFallibleFixture(),tx=actualLedger.Transaction.deserialize('signature','proof','binding',raw);f.receipt.transaction.outputs[0].intentHash=[...tx.intents.values()][0].intentHash(0);assert.throws(()=>run(f),/SWAP_WALLET_AVAILABLE/);});
+
+
+FILE experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.mjs
+/** One retained initialized swap only. No explicit store creation or writes,
+ * dispatch, service, finality or acceptance authority. Passed provider reads may
+ * have SDK side effects; caller first preserves the existing store and verifies
+ * history/current public state.
+ */
+import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
+import {decodeNativeFinancialTransaction} from './receipt.mjs';
+import {projectUnshieldedContractBalanceMap} from './contract-balances.mjs';
+import {assertSwapInitializedWallet} from './swap-wallet.mjs';
+const check=(ok,label)=>{if(!ok)throw Error('SWAP_CONTINUATION_'+label);};
+const sha=raw=>createHash('sha256').update(raw).digest('hex');
+export const INITIALIZED_SWAP=Object.freeze({"transactionHash":"3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4","txId":"00d081a157b4485e2df800852750a60ef2d7071f7c347490b775a4c6595d78d42c","contractAddress":"8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261","initializedStateSha256":"5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c","buildReceiptSha256":"3789da217a36cecd5f7603cbbaead32671418da36ecc5c2d20b1709b9577f362","sourceManifestHash":"a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6","networkTag":"e72f7a21a0397844563b4206f887b779ffa0d937c2d1b2339441faa1f08b9846","expectedProtocolVersion":1000000,"traderAddress":"9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb","providerAddress":"c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e",identifiers:Object.freeze(["0003173e5329ad680ae188223b53711fd36c915ea48480551297983668d1abdb37", "00d081a157b4485e2df800852750a60ef2d7071f7c347490b775a4c6595d78d42c"])});
+export const EXISTING_SWAP=Object.freeze({"transactionHash":"31677c341ab6900f144b5205c6be51dbaf81a06607307e7864be378a4472f91d","txId":"009936facb7e8454084dca61c325da89ffb5f7b4d6f4c54770872b456574eb0da6","contractAddress":"8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261","initialStateSha256":"c76e8b3604c83b2f19d6dec2c7ee8b96b06fa7f159374a3847b36537e754ffec",identifiers:Object.freeze(["000ac9a488b2781aeb373d798f3531b669504f826e69c125833ae6069935fcae8d", "009936facb7e8454084dca61c325da89ffb5f7b4d6f4c54770872b456574eb0da6"])});
+const MINTED_OUTPUT=Object.freeze({"segment": 36489, "section": "fallible", "owner": "9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb", "type": "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166", "value": "100000", "intentHash": "cc0511b9583d85ccea1e63ba024a04a6f0dd1dce86aa0f83e92f8917b42e3548", "outputNo": 0});
+const BALANCES=Object.freeze({"e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4": "2000000", "5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166": "1000000"});
+const AUTHORITY='5702bb28fce06bea68b4fb2dad29ca6694c4021cbc1bf3f04d995cbb885815d2';
+function inspect(raw,ledger,identity,kind){
+ check(raw instanceof Uint8Array&&raw.length>0&&raw.length<=16*1024*1024&&sha(raw)===identity.transactionHash,'NATIVE_HASH');
+ const decoded=decodeNativeFinancialTransaction(raw,ledger),tx=ledger.Transaction.deserialize('signature','proof','binding',raw);
+ check(decoded.transactionHash===identity.transactionHash&&isDeepStrictEqual(decoded.identifiers,identity.identifiers),'NATIVE_IDENTIFIERS');
+ const a=decoded.actions[0];check(decoded.actions.length===1&&a.address===identity.contractAddress&&a.kind===kind&&a.segment===(kind==='deploy'?1:36489)&&(kind==='deploy'||a.entryPoint==='initialize'),'NATIVE_ACTION');
+ check(decoded.inputs.length===0,'NATIVE_INPUTS');
+ const oldDustNullifiers=[...tx.intents.values()].flatMap(i=>i.dustActions?.spends??[]).map(s=>s.oldNullifier);check(oldDustNullifiers.length>0&&oldDustNullifiers.every(n=>typeof n==='bigint'),'NATIVE_DUST');
+ return {decoded,tx,binding:{...identity,oldDustNullifiers:Object.freeze(oldDustNullifiers),spentUnshieldedInputs:Object.freeze(decoded.inputs.map(x=>Object.freeze({...x}))),proofVerified:false,ledgerAccepted:false}};
+}
+export function inspectExistingSwapBytes(raw,ledger){
+ const {decoded,tx,binding}=inspect(raw,ledger,EXISTING_SWAP,'deploy');check(decoded.outputs.length===0,'NATIVE_OUTPUT');
+ const a=[...tx.intents.values()].flatMap(i=>i.actions)[0];check(a instanceof ledger.ContractDeploy&&sha(a.initialState.serialize())===EXISTING_SWAP.initialStateSha256,'NATIVE_DEPLOY_STATE');return Object.freeze(binding);
+}
+export function inspectInitializedSwapBytes(raw,ledger){
+ const {decoded,binding}=inspect(raw,ledger,INITIALIZED_SWAP,'call');check(decoded.outputs.length===1,'NATIVE_OUTPUT');const {offerIndex,...row}=decoded.outputs[0],mintedOutput={...row,outputNo:offerIndex};check(isDeepStrictEqual(mintedOutput,MINTED_OUTPUT),'NATIVE_OUTPUT');return Object.freeze({...binding,mintedOutput:Object.freeze(mintedOutput)});
+}
+/** SDK and ledger state producers differ; serialize explicitly before native inspection. */
+export function assertInitializedSwapState(state,ledger){
+ check(state&&typeof state.serialize==='function','STATE_TYPE');const raw=Buffer.from(state.serialize());check(raw.length===8150&&sha(raw)===INITIALIZED_SWAP.initializedStateSha256,'STATE_MISMATCH');
+ const native=ledger.ContractState.deserialize(raw);check(Buffer.from(native.serialize()).equals(raw),'STATE_CANONICAL');check(isDeepStrictEqual(projectUnshieldedContractBalanceMap(native.balance),BALANCES),'STATE_BALANCES');
+ const a=native.maintenanceAuthority;check(a.threshold===1&&a.counter===0n&&isDeepStrictEqual(a.committee,[AUTHORITY]),'STATE_AUTHORITY');return true;
+}
+/** Authenticated existing-state readback, after public and preserved-store checks. */
+export async function verifyInitializedSwapPrivate({provider,signingKey,contractState,ledger}){
+ assertInitializedSwapState(contractState,ledger);let key;try{key=ledger.signatureVerifyingKey(signingKey);}catch{throw Error('SWAP_CONTINUATION_SIGNING_AUTHORITY');}check(key===AUTHORITY,'SIGNING_AUTHORITY');
+ let setAddress,get,getKey;try{setAddress=provider?.setContractAddress;get=provider?.get;getKey=provider?.getSigningKey;}catch{throw Error('SWAP_CONTINUATION_PRIVATE_PROVIDER');}check([setAddress,get,getKey].every(f=>typeof f==='function'),'PRIVATE_PROVIDER');
+ let value;try{await setAddress.call(provider,INITIALIZED_SWAP.contractAddress);value=await get.call(provider,'sp05-swap');}catch{throw Error('SWAP_CONTINUATION_PRIVATE_READ');}
+ check(value!==null&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype&&Reflect.ownKeys(value).length===0,'PRIVATE_STATE');
+ let stored;try{stored=await getKey.call(provider,INITIALIZED_SWAP.contractAddress);}catch{throw Error('SWAP_CONTINUATION_PRIVATE_READ');}check(stored===signingKey,'PRIVATE_KEY');
+ return Object.freeze({status:'PRIVATE_STATE_CHECKED',contractAddress:INITIALIZED_SWAP.contractAddress,txId:INITIALIZED_SWAP.txId,dispatchAuthorized:false});
+}
+/** Receipt must come from the current finalized observer and durable comparison.
+ * Reuse the ordinary mint availability gate, but bind this exact retained mint.
+ */
+export function assertInitializedSwapMintedOutput({receipt,roles,assetBindings,synced}){
+ check(roles?.firstAddress===INITIALIZED_SWAP.traderAddress&&roles?.secondAddress===INITIALIZED_SWAP.providerAddress&&assetBindings?.ASSET_A===MINTED_OUTPUT.type&&assetBindings?.ASSET_B==='e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4','WALLET_BINDING');
+ check(receipt?.txId===INITIALIZED_SWAP.txId&&receipt.contractAddress===INITIALIZED_SWAP.contractAddress&&receipt.transaction?.transactionHash===INITIALIZED_SWAP.transactionHash,'WALLET_HISTORY');
+ check(receipt.transaction.outputs?.length===1,'NATIVE_OUTPUT');const {offerIndex,...row}=receipt.transaction.outputs[0];check(isDeepStrictEqual({...row,outputNo:offerIndex},MINTED_OUTPUT),'NATIVE_OUTPUT');
+ return assertSwapInitializedWallet({receipt,roles,assetBindings,synced});
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.test.mjs
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {pathToFileURL} from 'node:url';import {join} from 'node:path';import {PINNED_NM} from './providers.mjs';
+const api=await import('./continue-initialized-swap.mjs').catch(()=>({}));
+const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href),compact=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
+const D=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url),hashes={deploy:'31677c341ab6900f144b5205c6be51dbaf81a06607307e7864be378a4472f91d',initialize:'3fec717c8d31e6da9b9ace76c9f209bdbda11fe9d27f5d870c6edf428d2be7b4'};
+const raws=Object.fromEntries(Object.entries(hashes).map(([k,h])=>[k,readFileSync(new URL('local-swap-01/run-public/public-transactions/'+h+'.bin',D))]));
+const stateBytes=readFileSync(new URL('swap-initialize-diagnosis-01/indexed-initialize-state.bin',D));const state=()=>ledger.ContractState.deserialize(stateBytes);
+const call=(name,...args)=>{assert.equal(typeof api[name],'function');return api[name](...args);};
+test('actual retained swap history descriptors preserve exact identities, fallible mint and spent bindings',()=>{
+ const d=call('inspectExistingSwapBytes',raws.deploy,ledger),i=call('inspectInitializedSwapBytes',raws.initialize,ledger);assert.equal(d.transactionHash,hashes.deploy);assert.equal(i.transactionHash,hashes.initialize);assert.equal(d.contractAddress,i.contractAddress);assert.equal(i.mintedOutput.section,'fallible');assert.equal(i.mintedOutput.segment,36489);assert.equal(i.mintedOutput.intentHash,'cc0511b9583d85ccea1e63ba024a04a6f0dd1dce86aa0f83e92f8917b42e3548');assert.equal(i.mintedOutput.value,'100000');assert.equal(i.mintedOutput.outputNo,0);assert.equal(i.proofVerified,false);for(const b of [d,i]){assert.ok(b.oldDustNullifiers.length>0);assert.deepEqual(b.spentUnshieldedInputs,[]);assert.ok(Object.isFrozen(b)&&Object.isFrozen(b.identifiers));}
+});
+test('actual initialized state accepts both native and SDK compact state producers via serialized bytes',()=>{for(const s of [state(),compact.ContractState.deserialize(stateBytes)])assert.equal(call('assertInitializedSwapState',s,ledger),true);});
+test('altered native identities and swapped history reject',()=>{for(const [fn,raw] of [['inspectExistingSwapBytes',raws.deploy],['inspectInitializedSwapBytes',raws.initialize]]){const b=Buffer.from(raw);b[0]^=1;for(const x of [b,new Uint8Array(),null,fn==='inspectExistingSwapBytes'?raws.initialize:raws.deploy])assert.throws(()=>call(fn,x,ledger),/SWAP_CONTINUATION_NATIVE/);}});
+test('whole initialized state rejects balances, authority and old deploy state',()=>{for(const mutate of [s=>s.balance=new Map(),s=>s.maintenanceAuthority=new ledger.ContractMaintenanceAuthority(s.maintenanceAuthority.committee,1,1n)]){const s=state();mutate(s);assert.throws(()=>call('assertInitializedSwapState',s,ledger),/SWAP_CONTINUATION_STATE/);}const deployed=ledger.ContractState.deserialize(readFileSync(new URL('swap-initialize-diagnosis-01/indexed-deploy-state.bin',D)));assert.throws(()=>call('assertInitializedSwapState',deployed,ledger),/SWAP_CONTINUATION_STATE/);});
+function privateFixture(){const calls=[],key='synthetic-key-not-an-original-secret';let busy=false;const provider={setContractAddress(a){calls.push('address');assert.equal(a,'8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261');},async get(id){assert.equal(id,'sp05-swap');calls.push('get');busy=true;await Promise.resolve();busy=false;return {};},async getSigningKey(){assert.equal(busy,false);calls.push('key');return key;}};for(const name of ['set','setSigningKey','clear','remove'])Object.defineProperty(provider,name,{get(){throw Error('WRITE_FORBIDDEN');}});return {calls,provider,options:{provider,signingKey:key,contractState:compact.ContractState.deserialize(stateBytes),ledger:{...ledger,signatureVerifyingKey:k=>{assert.equal(k,key);return '5702bb28fce06bea68b4fb2dad29ca6694c4021cbc1bf3f04d995cbb885815d2';}}}};}
+test('private readback scopes swap and performs only sequential reads without secret or dispatch token',async()=>{const f=privateFixture(),r=await call('verifyInitializedSwapPrivate',f.options);assert.deepEqual(f.calls,['address','get','key']);assert.equal(r.status,'PRIVATE_STATE_CHECKED');assert.equal(r.dispatchAuthorized,false);assert.ok(Object.isFrozen(r));assert.ok(!JSON.stringify(r).includes(f.options.signingKey));});
+for(const bad of [null,undefined,[],{extra:1},Object.create(null),Object.assign({},{[Symbol('hidden')]:1})])test('nonempty/missing private state prevents signing-key read',async()=>{const f=privateFixture();f.provider.get=async()=>{f.calls.push('get');return bad;};await assert.rejects(call('verifyInitializedSwapPrivate',f.options),/SWAP_CONTINUATION_PRIVATE_STATE/);assert.deepEqual(f.calls,['address','get']);});
+test('private getter, read errors and key mismatch reject without private error disclosure',async()=>{const f=privateFixture();f.provider.get=async()=>Object.defineProperty({},'hidden',{get(){throw Error('GETTER_FORBIDDEN');}});await assert.rejects(call('verifyInitializedSwapPrivate',f.options),/SWAP_CONTINUATION_PRIVATE_STATE/);const g=privateFixture();g.provider.get=async()=>{throw Error('PRIVATE_CANARY');};await assert.rejects(call('verifyInitializedSwapPrivate',g.options),e=>e.message==='SWAP_CONTINUATION_PRIVATE_READ');const h=privateFixture();h.provider.getSigningKey=async()=> 'other';await assert.rejects(call('verifyInitializedSwapPrivate',h.options),/SWAP_CONTINUATION_PRIVATE_KEY/);});
+test('wrong signing identity and changed state stop before provider access',async()=>{const f=privateFixture();f.options.ledger=ledger;await assert.rejects(call('verifyInitializedSwapPrivate',f.options),/SWAP_CONTINUATION_SIGNING/);assert.deepEqual(f.calls,[]);const g=privateFixture();g.options.contractState=state();g.options.contractState.balance=new Map();await assert.rejects(call('verifyInitializedSwapPrivate',g.options),/SWAP_CONTINUATION_STATE/);assert.deepEqual(g.calls,[]);});
+test('retained fallible mint reuses ordinary wallet gate through actual SDK wire decoder',async()=>{
+ const {createRequire}=await import('node:module');const require=createRequire(join(PINNED_NM,'../package.json'));const {Schema}=require('effect');const {WalletSyncUpdateSchema}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js')).href);const {MidnightBech32m,UnshieldedAddress}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-address-format/dist/index.js')).href);
+ const b=call('inspectInitializedSwapBytes',raws.initialize,ledger),m=b.mintedOutput;const {decodeNativeFinancialTransaction}=await import('./receipt.mjs');
+ // Actual native transaction identity/output with synthetic finality metadata;
+ // no current finalized receipt or live wallet synchronization is claimed.
+ const receipt={schema:'moriarty.finalized-financial-stage/1',circuitId:'initialize',acceptance:'uncertified-I2-observation',protocolVersion:1000000,contractAddress:b.contractAddress,txId:b.txId,blockHash:'ab'.repeat(32),blockHeight:1,finalizedHead:'0x'+'ab'.repeat(32),finalizedHeight:1,transaction:decodeNativeFinancialTransaction(raws.initialize,ledger)};
+ const roles={firstAddress:m.owner,secondAddress:'c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e'},assetBindings={ASSET_A:m.type,ASSET_B:'e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4'};
+ const wire={type:'UnshieldedTransaction',transaction:{id:1,hash:b.transactionHash,type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789027704001},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{owner:MidnightBech32m.encode('undeployed',new UnshieldedAddress(Buffer.from(m.owner,'hex'))).toString(),tokenType:m.type,value:m.value,intentHash:m.intentHash,outputIndex:m.outputNo,ctime:1,registeredForDustGeneration:false}],spentUtxos:[]};
+ const progress=()=>({isConnected:true,isStrictlyComplete:()=>true}),synced={shielded:{progress:progress()},unshielded:{progress:progress(),availableCoins:Schema.decodeUnknownSync(WalletSyncUpdateSchema)(wire).createdUtxos,pendingCoins:[]},dust:{progress:progress(),state:{pendingDust:[]}}};
+ assert.equal(call('assertInitializedSwapMintedOutput',{receipt,roles,assetBindings,synced}).status,'SWAP_INITIALIZED_WALLET_VERIFIED');
+ const wrong=structuredClone(receipt);wrong.transaction.outputs[0].section='guaranteed';assert.throws(()=>call('assertInitializedSwapMintedOutput',{receipt:wrong,roles,assetBindings,synced}),/SWAP_CONTINUATION_NATIVE_OUTPUT/);
+ synced.unshielded.pendingCoins=[synced.unshielded.availableCoins[0]];assert.throws(()=>call('assertInitializedSwapMintedOutput',{receipt,roles,assetBindings,synced}),/SWAP_WALLET_PENDING/);
+});
+
+
+FILE experiments/moriarty-midnight-financial/ledger/receipt.mjs
+import {extractNativeContractBalances} from './contract-balances.mjs';
+import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
+import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
+
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+function requireThat(ok, code) { if (!ok) throw new Error(code); }
+function hex(value, label) {
+  requireThat(typeof value === 'string' && /^[0-9a-f]{64}$/.test(value), `INVALID_${label}`);
+  return value;
+}
+function amount(value, label) {
+  requireThat(typeof value === 'bigint' && value >= 0n && value < 1n << 128n, `INVALID_${label}`);
+  return value.toString();
+}
+function decimal(value, label) {
+  requireThat(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), `INVALID_${label}`);
+  return amount(BigInt(value),label);
+}
+function sorted(value) { return value.map(item=>JSON.stringify(item)).sort(); }
+
+/** Closed public projection of the pinned ledger Effects type. */
+export function projectTranscriptEffects(effects) {
+  const arrays=['claimedNullifiers','claimedShieldedReceives','claimedShieldedSpends','claimedContractCalls'];
+  const maps=['shieldedMints','unshieldedMints','unshieldedInputs','unshieldedOutputs','claimedUnshieldedSpends'];
+  requireThat(effects && Object.keys(effects).length===arrays.length+maps.length,'EFFECT_SHAPE');
+  for(const key of arrays) requireThat(Array.isArray(effects[key]) && effects[key].length===0,'UNSUPPORTED_EFFECT_'+key);
+  for(const key of maps) requireThat(effects[key] instanceof Map,'EFFECT_MAP_'+key);
+  requireThat(effects.shieldedMints.size===0,'UNSUPPORTED_SHIELDED_MINT');
+  function token(type) {requireThat(type?.tag==='unshielded','UNSUPPORTED_EFFECT_TOKEN');return hex(type.raw,'EFFECT_ASSET');}
+  function quantities(map,key) {
+    const result={};for(const [type,value] of map) {const id=key(type);requireThat(!(id in result),'DUPLICATE_EFFECT_ASSET');result[id]=amount(value,'EFFECT_AMOUNT');}return result;
+  }
+  return {
+    unshieldedMints:quantities(effects.unshieldedMints,x=>hex(x,'MINT_DOMAIN')),
+    unshieldedInputs:quantities(effects.unshieldedInputs,token),
+    unshieldedOutputs:quantities(effects.unshieldedOutputs,token),
+    claimedUnshieldedSpends:[...effects.claimedUnshieldedSpends].map(([key,value])=>{
+      requireThat(Array.isArray(key)&&key.length===2&&['user','contract'].includes(key[1]?.tag),'EFFECT_PAYOUT_SHAPE');
+      return {type:token(key[0]),recipientKind:key[1].tag,recipient:hex(key[1].address,'PAYOUT_ADDRESS'),amount:amount(value,'PAYOUT_AMOUNT')};
+    }),
+  };
+}
+
+/** Decode native public transaction bytes; this does not verify ZK proofs or ledger acceptance. */
+export function decodeNativeFinancialTransaction(raw, ledger) {
+  requireThat(raw instanceof Uint8Array && raw.length > 0 && raw.length <= 16*1024*1024,'TRANSACTION_BYTES');
+  const tx=ledger.Transaction.deserialize('signature','proof','binding',raw);
+  requireThat(Buffer.from(raw).equals(Buffer.from(tx.serialize())),'NONCANONICAL_TRANSACTION');
+  requireThat(!tx.rewards && !tx.guaranteedOffer && (!tx.fallibleOffer || tx.fallibleOffer.size===0),'UNSUPPORTED_SHIELDED_OR_REWARD');
+  requireThat(tx.intents instanceof Map && tx.intents.size > 0,'MISSING_INTENTS');
+  const inputs=[], outputs=[], actions=[], grossByAsset={}; const spent=new Set();
+  let dustFee=0n;
+  for (const [segment,intent] of tx.intents) {
+    requireThat(Number.isInteger(segment) && segment>=0 && segment<=65535,'INVALID_SEGMENT');
+    const signatureData=intent.signatureData(segment);
+    for (const [section,offer] of [['guaranteed',intent.guaranteedUnshieldedOffer],['fallible',intent.fallibleUnshieldedOffer]]) {
+      if (!offer) continue;
+      // Guaranteed offers execute in segment0 even when their intent is stored
+      // under a nonzero physical segment; fallible offers use that segment.
+      const intentHash=hex(intent.intentHash(section==='guaranteed'?0:segment),'INTENT_HASH');
+      requireThat(offer.signatures.length===offer.inputs.length,'INPUT_SIGNATURE_COUNT');
+      for (const [index,input] of offer.inputs.entries()) {
+        const owner=hex(ledger.addressFromKey(input.owner),'INPUT_OWNER');
+        requireThat(ledger.verifySignature(input.owner,signatureData,offer.signatures[index])===true,'MISSING_OR_INVALID_INPUT_SIGNATURE');
+        const type=hex(input.type,'INPUT_ASSET'), value=amount(input.value,'INPUT_VALUE');
+        const origin=hex(input.intentHash,'INPUT_ORIGIN');
+        requireThat(Number.isSafeInteger(input.outputNo) && input.outputNo>=0,'INVALID_OUTPUT_NUMBER');
+        const id=`${origin}:${input.outputNo}`; requireThat(!spent.has(id),'DUPLICATE_INPUT'); spent.add(id);
+        inputs.push({segment,section,owner,type,value,intentHash:origin,outputNo:input.outputNo});
+        grossByAsset[type]=(BigInt(grossByAsset[type]??'0')+input.value).toString();
+      }
+      offer.outputs.forEach((output,index)=>outputs.push({segment,section,owner:hex(output.owner,'OUTPUT_OWNER'),type:hex(output.type,'OUTPUT_ASSET'),value:amount(output.value,'OUTPUT_VALUE'),intentHash,offerIndex:index}));
+    }
+    for (const action of intent.actions) {
+      if (action instanceof ledger.ContractCall) {
+        const entryPoint=typeof action.entryPoint==='string'?action.entryPoint:Buffer.from(action.entryPoint).toString('hex');
+        const transcripts=[];
+        for(const [section,transcript] of [['guaranteed',action.guaranteedTranscript],['fallible',action.fallibleTranscript]]) {
+          if(transcript) transcripts.push({section,effects:projectTranscriptEffects(transcript.effects)});
+        }
+        actions.push({segment,kind:'call',address:hex(action.address,'CONTRACT_ADDRESS'),entryPoint,transcripts});
+      } else if (action instanceof ledger.ContractDeploy) {
+        actions.push({segment,kind:'deploy',address:hex(action.address,'CONTRACT_ADDRESS')});
+      } else throw new Error('UNSUPPORTED_CONTRACT_ACTION');
+    }
+    if (intent.dustActions) {
+      requireThat(intent.dustActions.registrations.length===0,'UNSUPPORTED_DUST_REGISTRATION');
+      for (const spend of intent.dustActions.spends) dustFee+=BigInt(amount(spend.vFee,'DUST_FEE'));
+    }
+  }
+  return {schema:'moriarty.native-financial-transaction/1',rawSha256:hash(raw),transactionHash:tx.transactionHash(),identifiers:[...tx.identifiers()],inputs,outputs,actions,grossByAsset,dustFee:dustFee.toString(),proofVerified:false,ledgerAccepted:false};
+}
+
+/** A shared absolute deadline; a timed-out observation is unknown, never successful. */
+export async function beforeDeadline(operation, deadlineMs) {
+  requireThat(Number.isSafeInteger(deadlineMs) && deadlineMs>Date.now(),'DEADLINE_EXPIRED');
+  let timer;
+  try {
+    return await Promise.race([Promise.resolve().then(operation),new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error('OBSERVATION_TIMEOUT_UNKNOWN')),deadlineMs-Date.now());
+    })]);
+  } finally { clearTimeout(timer); }
+}
+
+function indexedRows(rows) {
+  requireThat(Array.isArray(rows),'MISSING_INDEXED_UTXOS');
+  return rows.map(x=>({owner:decodeLocalIndexedOwner(x.owner),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
+}
+
+function nativeRows(rows) {
+  return rows.map(({owner,type,value,intentHash})=>({owner,type,value,intentHash}));
+}
+
+/**
+ * Read one confirmed stage through pinned SDK/RPC APIs. Observations come from
+ * finalized bytes and block-pinned state, never from an expected financial fixture.
+ * The RPC/indexer remain explicit external trust dependencies.
+ */
+export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAddress,circuitId,decodeState,deadlineMs,expectedProtocolVersion}) {
+  hex(contractAddress,'CONTRACT_ADDRESS');
+  requireThat(Number.isSafeInteger(expectedProtocolVersion) && expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
+  requireThat(typeof txId==='string' && txId.length>0,'TX_ID');
+  const wait=op=>beforeDeadline(op,deadlineMs);
+  const data=await wait(()=>provider.watchForTxData(txId));
+  requireThat(data.status==='SucceedEntirely','TRANSACTION_STATUS');
+  requireThat(data.tx instanceof ledger.Transaction,'NATIVE_TRANSACTION_REQUIRED');
+  const decoded=decodeNativeFinancialTransaction(data.tx.serialize(),ledger);
+  requireThat(decoded.identifiers.includes(txId) && data.txId===txId,'TRANSACTION_ID_MISMATCH');
+  requireThat(isDeepStrictEqual([...data.identifiers].sort(),[...decoded.identifiers].sort()),'IDENTIFIERS_MISMATCH');
+  requireThat(decoded.transactionHash===data.txHash,'TRANSACTION_HASH_MISMATCH');
+  requireThat(decoded.actions.length===1,'CONTRACT_ACTION_COUNT');
+  const action=decoded.actions[0];
+  requireThat(action.address===contractAddress && (circuitId==='deploy'?action.kind==='deploy':action.kind==='call' && action.entryPoint===circuitId),'CONTRACT_ACTION_MISMATCH');
+  requireThat(data.segmentStatusMap===undefined || [...data.segmentStatusMap.values()].every(s=>s==='SegmentSuccess'),'SEGMENT_FAILURE');
+  requireThat(Number.isSafeInteger(data.blockHeight) && data.blockHeight>=0,'BLOCK_HEIGHT');
+  const blockHash=hex(data.blockHash,'BLOCK_HASH');
+  // Indexed inclusion can precede node finality. Wait only for read-only
+  // finality progress, under both the existing caller and a 60-second bound.
+  const finalityStop=Math.min(deadlineMs,Date.now()+60000);
+  let finalizedHead,finalizedHeight,previous;
+  for(let sample=0;sample<60&&Date.now()<finalityStop;sample++){
+    const requestDeadline=Math.min(finalityStop,Date.now()+5000);
+    const readRpc=(method,params)=>beforeDeadline(()=>rpc(method,params,requestDeadline),requestDeadline);
+    finalizedHead=await readRpc('chain_getFinalizedHead',[]);
+    requireThat(typeof finalizedHead==='string'&&/^0x[a-f0-9]{64}$/.test(finalizedHead),'FINALIZED_HASH');
+    const header=await readRpc('chain_getHeader',[finalizedHead]);
+    requireThat(typeof header?.number==='string'&&/^0x[0-9a-f]+$/i.test(header.number),'FINALIZED_HEADER');
+    finalizedHeight=Number(BigInt(header.number));
+    requireThat(Number.isSafeInteger(finalizedHeight)&&finalizedHeight>=0,'FINALIZED_HEIGHT');
+    if(previous){
+      requireThat(finalizedHeight>=previous.height&&(finalizedHeight!==previous.height||finalizedHead===previous.hash),'FINALITY_REGRESSION');
+      if(finalizedHeight>previous.height)requireThat(await readRpc('chain_getBlockHash',[previous.height])===previous.hash,'FINALITY_CANONICAL_MISMATCH');
+    }
+    if(finalizedHeight>=data.blockHeight)break;
+    previous={height:finalizedHeight,hash:finalizedHead};
+    if(Date.now()<finalityStop)await beforeDeadline(()=>new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(1,finalityStop-Date.now()-1)))),finalityStop);
+  }
+  requireThat(Number.isSafeInteger(finalizedHeight)&&finalizedHeight>=data.blockHeight,'NOT_FINALIZED');
+  requireThat(finalizedHeight!==data.blockHeight||finalizedHead==='0x'+blockHash,'NONCANONICAL_FINALIZED_BLOCK');
+  const canonical=await wait(()=>rpc('chain_getBlockHash',[data.blockHeight]));
+  requireThat(typeof canonical==='string' && canonical.replace(/^0x/,'')===blockHash,'NONCANONICAL_BLOCK');
+  requireThat(Number.isInteger(data.protocolVersion) && data.protocolVersion===expectedProtocolVersion,'UNSUPPORTED_PROTOCOL');
+  const paidFees=decimal(data.fees?.paidFees,'PAID_FEES');
+  const estimatedFees=decimal(data.fees?.estimatedFees,'ESTIMATED_FEES');
+  // Native vFee includes the wallet-selected fee resource debit. The indexer
+  // strings have no verified encoding/overhead relationship to that debit.
+  // Historical public replay demonstrates unequal values for a successful call.
+  // Retain both; authorization charges the full native amount without refunds.
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.spent)),sorted(nativeRows(decoded.inputs))),'INDEXED_INPUTS_MISMATCH');
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.created)),sorted(nativeRows(decoded.outputs))),'INDEXED_OUTPUTS_MISMATCH');
+  const config={type:'blockHash',blockHash};
+  const state=await wait(()=>provider.queryContractState(contractAddress,config));
+  requireThat(state!==null && state!==undefined,'MISSING_CONTRACT_STATE');
+  // Complete public balances belong to the same exact-block native state.
+  // The separate indexer projection omitted actual swap reserves in retained
+  // evidence. Do not substitute that projection for native contract balances.
+  const contractBalances=extractNativeContractBalances({state});
+  // Keep decoded contract state separate and private to the comparator. No
+  // uncontrolled caller object is spread into the publishable receipt.
+  return {receipt:{schema:'moriarty.finalized-financial-stage/1',txId,contractAddress,circuitId,transaction:decoded,blockHash,blockHeight:data.blockHeight,finalizedHead,finalizedHeight,protocolVersion:data.protocolVersion,indexerIdentifiers:[...data.identifiers],fees:{nativeDebit:{asset:'DUST',unit:'SPECK',amount:decoded.dustFee},indexerReported:{paid:paidFees,estimated:estimatedFees,sourceUnitLabel:'DUST',encoding:'unresolved',nativeDebitRelationship:'unresolved'}},contractBalances,acceptance:'uncertified-I2-observation'},state:decodeState(state.data)};
+}
+
+
+Remaining production diff:
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+index f313f22..57c0ba5 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+@@ -1,3 +1,4 @@
++import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
+ /** Production composition for the fixed local I2 case. No wallet creation or CLI dispatch.
+  * Supplying existing handles transfers cleanup responsibility, including preflight failures.
+  * Execution still requires a separately reviewed launch with outer process containment.
+@@ -21,7 +22,7 @@ import {assertSwapInitializedWallet,SWAP_WALLET_FAILURE_CODES} from './swap-wall
+ 
+ const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
+ const publicIntegrationFailureCodes=new Set([
+- ...SWAP_WALLET_FAILURE_CODES,
++ ...SWAP_WALLET_FAILURE_CODES,...CONTRACT_BALANCE_FAILURE_CODES,'AMOUNT_CONTRACT_BALANCES',
+  'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST','INTEGRATION_CONTINUATION_ADAPTERS_REQUIRE_SOURCE_TEST','CONTINUATION_PUBLIC_RESULT','CONTINUATION_STORE_PRESERVATION','CONTINUATION_PRIVATE_RESULT',
+  'INITIALIZED_PRIVATE_PROVIDER','INITIALIZED_PRIVATE_READ','INITIALIZED_PRIVATE_STATE','INITIALIZED_PRIVATE_KEY','INITIALIZED_SIGNING_AUTHORITY','INITIALIZED_STATE_TYPE','INITIALIZED_STATE_MISMATCH','INITIALIZED_STATE_CANONICAL','INITIALIZED_WALLET_BINDING','INITIALIZED_WALLET_COINS','INITIALIZED_WALLET_AVAILABLE','INITIALIZED_WALLET_OUTPUT','INITIALIZED_WALLET_HISTORY',
+  'RECOVERY_WALLET_BINDING','RECOVERY_WALLET_TIME_CAP','RECOVERY_WALLET_SYNC','RECOVERY_WALLET_PENDING','RECOVERY_WALLET_COIN','RECOVERY_WALLET_SPENT_INPUT','RECOVERY_WALLET_DUST_CODEC','RECOVERY_WALLET_SPENT_DUST','RECOVERY_WALLET_REGISTERED_DUST','RECOVERY_WALLET_DUST_CAP',
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-local.mjs b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+index 5992015..dc722d7 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+@@ -1,3 +1,4 @@
++import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
+ import {readFileSync} from 'node:fs';
+ import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
+ import {INITIALIZED_LOAN} from './continue-initialized-loan.mjs';
+@@ -14,6 +15,8 @@ function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)t
+ 
+ const publicFailureCodes=new Set(['NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
+ for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
++for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
++publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
+ /** Closed public diagnostic shared by the producer and durable launcher boundary. */
+ export function validatePublicDriverFailure(failure){
+   const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};
