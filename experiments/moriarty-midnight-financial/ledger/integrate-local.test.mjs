@@ -27,18 +27,17 @@ function fixture() {
   options.adapters=adapters;return {options,adapters,calls,summaries,getLimits:()=>limits,sdk,driverSdk};
 }
 test('full composition prepares address then binds colors once and records every stage before next call',async()=>{
-  const f=fixture();let error;
-  try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
-  assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');
-  assert.equal(error.publicIntegrationResult.status,'INCOMPLETE');
-  assert.equal(error.publicIntegrationResult.sourceTestOnly,true);
-  assert.equal(error.publicIntegrationResult.networkAcceptance,false);
+  const f=fixture(),result=await integrateLocalFinancialCase(f.options);
+  assert.equal(result.status,'SOURCE_TEST_ONLY');
+  assert.equal(result.driver.status,'FINANCIAL_COMPLETE');
+  assert.equal(result.sourceTestOnly,true);
+  assert.equal(result.networkAcceptance,false);
   assert(f.calls.indexOf('prepare')<f.calls.indexOf('derive-color'));
   assert(f.calls.indexOf('derive-color')<f.calls.indexOf('initialize-allocation'));
   assert.equal(f.calls.filter(c=>c==='derive-color').length,1);
   for(const [stage,next] of [['deploy','initialize'],['initialize','accrue'],['accrue','settle']])assert(f.calls.indexOf('record:'+stage)<f.calls.indexOf(next));
   assert.equal(f.summaries.length,4);
-  assert(!JSON.stringify(error.publicIntegrationResult).includes('PRIVATE-DEPLOYMENT-CANARY'));
+  assert(!JSON.stringify(result).includes('PRIVATE-DEPLOYMENT-CANARY'));
   assert.equal(f.calls.at(-1),'asset-cleanup');
 });
 for(const [label,mutate] of [
@@ -110,11 +109,11 @@ function swapFixture(){
  return f;
 }
 test('swap waits for exact wallet mint after durable initialize comparison and before actual driver swap',async()=>{
- const f=swapFixture();let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
- assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
+ const f=swapFixture(),result=await integrateLocalFinancialCase(f.options);
+ assert.equal(result.status,'SOURCE_TEST_ONLY');assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
  assert.equal(f.calls.filter(c=>c==='swap-wallet-sync').length,1);
  assert(f.calls.indexOf('record:initialize')<f.calls.indexOf('swap-wallet-sync'));assert(f.calls.indexOf('swap-wallet-sync')<f.calls.indexOf('swap'));
- assert.deepEqual(error.publicIntegrationResult.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
+ assert.deepEqual(result.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
 });
 test('missing initialized wallet mint stops actual driver before swap and close',async()=>{
  const f=swapFixture(),sync=f.options.walletContext.wallet.waitForSyncedState;
@@ -163,7 +162,7 @@ test('protocol and reviewed callbacks remain captured after asynchronous prepara
   f.adapters.createComparator=async o=>{assert.equal(o.expectedProtocolVersion,1000000);return compare(o);};
   const observe=f.adapters.observe;
   f.adapters.observe=async o=>{assert.equal(o.expectedProtocolVersion,1000000);observed++;return observe(o);};
-  await assert.rejects(integrateLocalFinancialCase(f.options),/DRIVER_CLEANUP_INCOMPLETE/);
+  assert.equal((await integrateLocalFinancialCase(f.options)).status,'SOURCE_TEST_ONLY');
   assert.equal(observed,4);assert.equal(f.summaries.length,4);
 });
 
@@ -326,7 +325,7 @@ test('current and historical comparator allowances remain separate in each loan 
  for(const make of [fixture,recoveryFixture,continuationFixture]){
   const f=make(),o=f.options,original=f.adapters.createComparator;let observed;
   f.adapters.createComparator=async args=>{observed=args;return original(args);};
-  if(make===fixture)await assert.rejects(integrateLocalFinancialCase(o),{message:'DRIVER_CLEANUP_INCOMPLETE'});else await integrateLocalFinancialCase(o);
+  assert.equal((await integrateLocalFinancialCase(o)).status,'SOURCE_TEST_ONLY');
   assert.equal(observed.dustFeeCap,o.limits.dustFee);
   const expected=make===fixture?[]:make===recoveryFixture?[['deploy']]:[['deploy'],['initialize']];
   assert.deepEqual(observed.historicalFeeAllocations,expected.map(stages=>({stages,dustFeeCap:2000000000000000n})));

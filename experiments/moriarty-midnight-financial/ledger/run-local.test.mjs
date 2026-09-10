@@ -152,3 +152,8 @@ test('initialized driver rejects combined modes and altered fixed history before
   const h=initializedDriverFixture();change(h);await assert.rejects(runLocalFinancialCase(h.options),/INITIALIZED_LOAN/);assert.equal(h.calls.length,0);
  }
 });
+
+test('fresh local four-stage completion does not require external containment',async()=>{
+ const h=harness();h.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:0,containmentComplete:false});
+ const result=await runLocalFinancialCase(h.options);assert.equal(result.status,'FINANCIAL_COMPLETE');assert.equal(result.cleanup.containmentComplete,false);
+});

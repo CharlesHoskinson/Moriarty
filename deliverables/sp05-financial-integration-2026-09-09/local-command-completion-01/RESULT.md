@@ -1,0 +1,11 @@
+# Local command completion: reviewed source result
+
+Fresh local four-stage loan/swap commands can report `FINANCIAL_COMPLETE` after the financial comparator passes, wallet stop succeeds and pending work is zero. The actual CLI now applies strict completion checks to fresh plans while preserving the previous exit mapping for deployment recovery, initialized loan/swap and adverse-test plans. Extra comparison fields and hidden data are rejected; late completion/deadline failures retain their exact diagnostic codes.
+
+The [corrected candidate](source-candidate-02.json), SHA-256 `c58b6fbf83bdb95b2ee2d6620fd4c7528e28c9f5ab13cf341d067d2b44a71743`, has independent [GPT-6 Astra](independent-review-gpt6-02.json) and [Grok 4.6](independent-review-grok-02.json) source passes. Root and GPT-6 each ran the 222 targeted tests successfully; GPT-6 additionally ran 48 independent mode controls. Grok reviewed forwarded source without executing tests. [Retained verification](gpt6-final-verification-02/retention.json) preserves exact reviewer log/script copies and the root test log.
+
+Candidate01's initial PASS, supplemental failed review, Grok requested changes and exact original source remain intact through [the preservation map](original-preservation-01.json). The [correction](CORRECTION-02.md) explains the reproduced mode regression and nested comparison defects. Those failures are not erased by this source approval.
+
+These checks exercise controlled source paths and selectors, not an actual operational CLI invocation or process exit. The original local INCOMPLETE/exit-one records and the corrected Preview loan's missing raw exit remain unresolved. Local snapshot persistence is neither added nor inferred from wallet stop. External containment remains independent. All financial, network and proof acceptance flags remain false.
+
+Publication under the standing user instruction approves this reviewed source correction only. No resources, wallet operations, transactions, native compilation or proof are admitted here. Both loan and swap Preview caps remain consumed at two attempts each. Full SP05, mandatory proof/history correspondence and the Midnight Preview hard release gate remain open.
