@@ -86,6 +86,8 @@ Acceptance: the supported language profile has a tested frontend/evaluator/lower
 
 ### MC02: Actual financial operations on Preview
 
+The [reviewed local loan trace](deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/REVIEWED-RESULT.md) now retains four matching finalized stages, actual lender payment, borrower change and residual principal. Independent outer containment was observed separately from the raw inner `INCOMPLETE` result. Local swap and the Preview financial entry path remain next; the MC02 acceptance boxes stay open.
+
 - [ ] Implement the loan and swap integration contract with real asset identity, custody and authenticated participant roles.
 - [ ] Verify local Docker execution before admitted public submissions.
 - [ ] Finalize actual loan and swap operations on Preview and compare full state and all effects against independently derived expectations.
