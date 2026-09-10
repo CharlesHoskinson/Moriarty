@@ -1,0 +1,181 @@
+{
+  "schema": "moriarty.native-finalizer-tail-source-evidence/1",
+  "archive": {
+    "package": "midnight-circuits-7.2.4",
+    "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.2.4.crate",
+    "lockChecksum": "a3040d26341a9168a3db7adeb365da9b9b8e756bc911a08c5f76a6a93d441ca7",
+    "archiveSha256": "a3040d26341a9168a3db7adeb365da9b9b8e756bc911a08c5f76a6a93d441ca7"
+  },
+  "members": [
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/ecc/curves.rs",
+      "sha256": "85a43716841a21461eb9fe798eae82914020159be84c2b3b8829182c8440d93e",
+      "excerpts": [
+        {
+          "start": 277,
+          "end": 317,
+          "text": "// Implementation for Bls12-381.\nuse group::cofactor::CofactorGroup;\nuse midnight_curves::{Fp as BlsBase, G1Affine, G1Projective};\n\nimpl CircuitCurve for G1Projective {\n    type Base = BlsBase;\n    type ScalarField = <Self as Group>::Scalar;\n    type CryptographicGroup = G1Projective;\n\n    // BLS12-381 G1 cofactor.\n    const COFACTOR: u128 = 0x396c8c005555e1568c00aaab0000aaab;\n    const NUM_BITS_SUBGROUP: u32 = 255;\n\n    fn coordinates(&self) -> Option<(Self::Base, Self::Base)> {\n        if self.is_identity().into() {\n            return None;\n        }\n        let affine = self.to_affine();\n        Some((affine.x(), affine.y()))\n    }\n\n    fn from_xy(x: Self::Base, y: Self::Base) -> Option<Self> {\n        // Check the (short) Weierstrass curve equation: y\u00b2 = x\u00b3 + Ax + B\n        // The underlying `CurveAffine::from_xy` handles the identity coordinates\n        // without errors via a short-circuit check.\n        let a = <Self as WeierstrassCurve>::A;\n        let b = <Self as WeierstrassCurve>::B;\n        if y.square() != x.square() * x + a * x + b {\n            return None;\n        }\n        <G1Affine as CurveAffine>::from_xy(x, y).into_option().map(|p| p.into())\n    }\n\n    fn try_into_subgroup(self) -> Option<Self::CryptographicGroup> {\n        Some(self)\n    }\n}\n\nimpl WeierstrassCurve for G1Projective {\n    const A: Self::Base = midnight_curves::A;\n    const B: Self::Base = midnight_curves::B;"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/verifier/msm.rs",
+      "sha256": "d993a84d3de721e840edb9b4d8bbc6a4befead8fdf6d2e3596ed9bd83632f9f2",
+      "excerpts": [
+        {
+          "start": 346,
+          "end": 385,
+          "text": "    pub fn assign(\n        layouter: &mut impl Layouter<S::F>,\n        curve_chip: &S::CurveChip,\n        scalar_chip: &S::ScalarChip,\n        len: usize,\n        fixed_base_names: &[String],\n        msm_value: Value<Msm<S>>,\n    ) -> Result<Self, Error> {\n        let bases_val = msm_value.as_ref().map(|msm| msm.bases.clone()).transpose_vec(len);\n\n        let scalars_val = msm_value.as_ref().map(|msm| msm.scalars.clone()).transpose_vec(len);\n\n        let fixed_base_scalars_val = msm_value\n            .as_ref()\n            .map(|msm| {\n                // We only use the keys inside the Value to iterate over it in the right order,\n                // these are then discarded.\n                msm.fixed_base_scalars.iter().map(|s| *s.1).collect::<Vec<_>>()\n            })\n            .transpose_vec(fixed_base_names.len());\n\n        // Sort the fixed_base_names to ensure consistency with the BTreeMap.\n        let mut fixed_base_names = fixed_base_names.to_vec();\n        fixed_base_names.sort();\n\n        let bases = bases_val\n            .iter()\n            .map(|p| S::assign_without_subgroup_check(layouter, curve_chip, *p))\n            .collect::<Result<Vec<_>, Error>>()?;\n        let scalars = assign_bounded_scalars(layouter, scalar_chip, &scalars_val)?;\n        let fixed_base_scalars: BTreeMap<String, AssignedBoundedScalar<S::F>> = {\n            let scalars = assign_bounded_scalars(layouter, scalar_chip, &fixed_base_scalars_val)?;\n            fixed_base_names.iter().cloned().zip(scalars).collect()\n        };\n\n        Ok(AssignedMsm {\n            scalars,\n            bases,\n            fixed_base_scalars,\n        })"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/verifier/types.rs",
+      "sha256": "cada8e0c0bec8a99b7fdbf3ed5c68587be32a0f0ba2f9fa56a67d9601170eba3",
+      "excerpts": [
+        {
+          "start": 122,
+          "end": 129,
+          "text": "    /// Assigns a point without checking that it is part of the prime order\n    /// subgroup.\n    /// Allowing points outside the subgroup does not give any advantage to an\n    /// adversary in PLONK.\n    // TODO: Provide a formal analysis of subgroup soundness in this context.\n    fn assign_without_subgroup_check(\n        layouter: &mut impl Layouter<Self::F>,\n        curve_chip: &Self::CurveChip,"
+        },
+        {
+          "start": 170,
+          "end": 187,
+          "text": "    }\n\n    fn assign_without_subgroup_check(\n        layouter: &mut impl Layouter<Self::F>,\n        curve_chip: &Self::CurveChip,\n        base: Value<Self::C>,\n    ) -> Result<Self::AssignedPoint, Error> {\n        curve_chip.assign_without_subgroup_check(layouter, base)\n    }\n}\n\n/// Implementation of the SelfEmulation trait for bn256.\n#[cfg(feature = \"dev-curves\")]\n#[derive(Clone, Debug)]\npub struct BnEmulation {}\n\n#[cfg(feature = \"dev-curves\")]\nimpl SelfEmulation for BnEmulation {"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/ecc/foreign/weierstrass_chip.rs",
+      "sha256": "09a3126bc63526cb094e71a8956e67e31d109a543daca1a953e0143ef80c5c01",
+      "excerpts": [
+        {
+          "start": 339,
+          "end": 360,
+          "text": "    /// curve and lies in the prime-order subgroup.\n    ///\n    /// If you deliberately need to skip the subgroup check, use\n    /// [`EccInstructions::assign_without_subgroup_check`] instead.\n    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        if C::COFACTOR > 1 {\n            let cofactor = C::ScalarField::from_u128(C::COFACTOR);\n            // Exhibit a cofactor-root Q and assert h * Q = p in-circuit.\n            // This guarantees that p \u2208 C::CryptographicGroup = h \u00b7 E(Fp).\n            let cofactor_root = self.assign_without_subgroup_check(\n                layouter,\n                value.map(|point| point * cofactor.invert().unwrap()),\n            )?;\n            self.mul_by_constant(layouter, cofactor, &cofactor_root)\n        } else {\n            self.assign_without_subgroup_check(layouter, value)\n        }\n    }"
+        },
+        {
+          "start": 425,
+          "end": 437,
+          "text": "    fn assign_as_public_input(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        // Given our optimized way of constraining a point as public input, we\n        // cannot optimize the direct assignment as PI. We just compose `assign`\n        // with `constrain_as_public_input`.\n        let point = self.assign_without_subgroup_check(layouter, value)?;\n        self.constrain_as_public_input(layouter, &point)?;\n        Ok(point)\n    }\n}"
+        },
+        {
+          "start": 663,
+          "end": 699,
+          "text": "    fn is_zero(\n        &self,\n        _layouter: &mut impl Layouter<F>,\n        p: &AssignedForeignPoint<F, C, B>,\n    ) -> Result<AssignedBit<F>, Error> {\n        Ok(p.is_id.clone())\n    }\n}\n\nimpl<F, C, B, S, N> ControlFlowInstructions<F, AssignedForeignPoint<F, C, B>>\n    for ForeignWeierstrassEccChip<F, C, B, S, N>\nwhere\n    F: CircuitField,\n    C: WeierstrassCurve,\n    B: FieldEmulationParams<F, C::Base>,\n    S: ScalarFieldInstructions<F>,\n    S::Scalar: InnerValue<Element = C::ScalarField>,\n    N: NativeInstructions<F>,\n{\n    /// Returns `p` if `cond = 1` and `q` otherwise.\n    fn select(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n        p: &AssignedForeignPoint<F, C, B>,\n        q: &AssignedForeignPoint<F, C, B>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        let point = p.point.zip(q.point).zip(cond.value()).map(|((p, q), b)| if b { p } else { q });\n        let is_id = self.native_gadget.select(layouter, cond, &p.is_id, &q.is_id)?;\n        let x = self.base_field_chip().select(layouter, cond, &p.x, &q.x)?;\n        let y = self.base_field_chip().select(layouter, cond, &p.y, &q.y)?;\n        Ok(AssignedForeignPoint::<F, C, B> { point, is_id, x, y })\n    }\n}\n\nimpl<F, C, B, S, N> EccInstructions<F, C> for ForeignWeierstrassEccChip<F, C, B, S, N>\nwhere"
+        },
+        {
+          "start": 880,
+          "end": 905,
+          "text": "    fn mul_by_constant(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        scalar: C::ScalarField,\n        base: &Self::Point,\n    ) -> Result<Self::Point, Error> {\n        // We leverage the existing implementation for `mul_by_u128` when the scalar has\n        // 128 bits. Otherwise, we just default to a standard multiplication by an\n        // assigned-fixed scalar.\n        let scalar_as_big = scalar.to_biguint();\n        if scalar_as_big.bits() <= 128 {\n            let n = scalar_as_big\n                .to_u64_digits()\n                .iter()\n                .rev()\n                .fold(0u128, |acc, limb| (acc << 64) | (*limb as u128));\n\n            // `mul_by_u128` is incomplete (it cannot take the identity).\n            // Change the base in case it is the identity and then change\n            // the result back when necessary.\n            let id = self.assign_fixed(layouter, C::CryptographicGroup::identity())?;\n            let g = self.assign_fixed(layouter, C::CryptographicGroup::generator())?;\n            let p = self.select(layouter, &base.is_id, &g, base)?;\n            let r = self.mul_by_u128(layouter, n, &p)?;\n            return self.select(layouter, &base.is_id, &id, &r);\n        }"
+        },
+        {
+          "start": 945,
+          "end": 962,
+          "text": "    fn assign_without_subgroup_check(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<Self::Point, Error> {\n        let p = self.assign_point_unchecked(layouter, value)?;\n        let is_not_id = self.native_gadget.not(layouter, &p.is_id)?;\n        on_curve::assert_is_on_curve::<F, C, B, N>(\n            layouter,\n            &is_not_id,\n            &p.x,\n            &p.y,\n            self.base_field_chip(),\n            &self.config.on_curve_config,\n        )?;\n        Ok(p)\n    }\n"
+        },
+        {
+          "start": 1090,
+          "end": 1120,
+          "text": "    /// The point is not asserted (with constraints) to be on the curve.\n    /// The point may be the identity.\n    fn assign_point_unchecked(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        p: Value<C::CryptographicGroup>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        let values = p.map(|p| {\n            if C::CryptographicGroup::is_identity(&p).into() {\n                (C::Base::ZERO, C::Base::ZERO, true)\n            } else {\n                let coordinates =\n                    p.into().coordinates().expect(\"assign_point_unchecked: invalid point given\");\n                (coordinates.0, coordinates.1, false)\n            }\n        });\n        let x = self.base_field_chip().assign(layouter, values.map(|v| v.0))?;\n        let y = self.base_field_chip().assign(layouter, values.map(|v| v.1))?;\n        let is_id = self.native_gadget.assign(layouter, values.map(|v| v.2))?;\n        let p = AssignedForeignPoint::<F, C, B> {\n            point: p,\n            is_id,\n            x,\n            y,\n        };\n        Ok(p)\n    }\n\n    /// Given `p` and `q`, returns `p + q`.\n    ///\n    /// This function is incomplete because it is not designed to deal with"
+        },
+        {
+          "start": 1652,
+          "end": 1709,
+          "text": "    fn mul_by_u128(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        n: u128,\n        p: &AssignedForeignPoint<F, C, B>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        if n == 0 {\n            return self.assign_fixed(layouter, C::CryptographicGroup::identity());\n        };\n\n        // Assert that (n : u128) is smaller than ORDER / 2.\n        // This condition allows us to use incomplete addition in the loop below.\n        assert!(129 < C::ScalarField::NUM_BITS);\n\n        // Double-and-add (starting from the LSB)\n\n        let mut res = None;\n\n        // tmp will encode (2^i p) on every iteration, to be added (selectively) to res.\n        let mut tmp = p.clone();\n\n        // We iterate over the bits of n.\n        let mut n = n;\n        while n > 0 {\n            // In order to safetly use [incomplete_add] here, we need to show\n            // that these three preconditions are met when res != None:\n            //   (1) res != id\n            //   (2) tmp != id\n            //   (3) res.x != tmp.x   (i.e. res != \u00b1tmp)\n            //\n            // Note that p != id holds by assumption.\n            // Also, note that on the i-th iteration (counting from i = 0),\n            // at this point we have:\n            //    res := None or Some(k p) with 0 < k < 2^i\n            //    tmp := 2^i p\n            //\n            // (1) & (2) hold because all non-identity points have Scalar.ORDER order by\n            //           assumption, and 2^i is smaller than ORDER on every iteration.\n            // (3) holds because otherwise we would have k p = \u00b1 2^i p with 0 < k < 2^i.\n            //     Thus (k \u2213 2^i) p = id, which means that (k \u2213 2^i) is\n            //     a multiple of ORDER, however this is not possible as:\n            //        (i) k \u2213 2^i != 0 because 0 < k < 2^i\n            //       (ii) k - 2^i > -2^i > -ORDER    (because i < 128 < |ORDER|)\n            //      (iii) k + 2^i < 2^(i+1) < ORDER  (because i+1 < 129 < |ORDER|)\n            if !n.is_multiple_of(2) {\n                res = match res {\n                    None => Some(tmp.clone()),\n                    Some(acc) => Some(self.incomplete_add(layouter, &acc, &tmp)?),\n                };\n            }\n            n >>= 1;\n\n            if n > 0 {\n                tmp = self.double(layouter, &tmp)?\n            }\n        }\n\n        Ok(res.unwrap())"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/ecc/foreign/gates/weierstrass/on_curve.rs",
+      "sha256": "fadfda335aef25bf0921d5e1d3f311681f78e00281e2e560218bdd59448ab242",
+      "excerpts": [
+        {
+          "start": 65,
+          "end": 175,
+          "text": "        nb_parallel_range_checks: usize,\n        max_bit_len: u32,\n    ) -> ((BI, BI), Vec<(BI, BI)>)\n    where\n        F: CircuitField,\n        P: FieldEmulationParams<F, C::Base>,\n    {\n        let base = BI::from(2).pow(P::LOG2_BASE);\n        let nb_limbs = P::NB_LIMBS;\n        let moduli = P::moduli();\n        let bs = P::base_powers();\n        let bs2 = P::double_base_powers();\n\n        // Use signed representatives of 'a' and 'b' (closest to zero) so that\n        // (a+1)*sum_x and (a+b) terms are as small as possible. Critical for\n        // curves like P-256 where a = -3 and the unsigned representative q-3\n        // would require smaller (and potentially more) auxiliary moduli.\n        let a: BI = signed_repr::<C::Base>()(C::A.to_biguint().into());\n        let b: BI = signed_repr::<C::Base>()(C::B.to_biguint().into());\n        let a_plus_1 = &a + BI::one();\n        let a_plus_b = &a + &b;\n\n        // Recall that limbs x_i represent emulated field element 1 + sum_i base^i x_i.\n        // Let x := 1 + sum_i base^i x_i\n        //     y := 1 + sum_i base^i y_i\n        //     z := 1 + sum_i base^i z_i\n        //\n        // We will have a custom gate enforcing equation:\n        //   y^2 - (x * z + a * x + b) = 0  (mod m)\n        //\n        // So if z equals to x^2 (mod m), this is asserting that (x, y) satisfies the\n        // curve equation.\n        //\n        // Define:\n        //   sum_x := sum_i (base^i % m) * x_i\n        //   sum_y := sum_i (base^i % m) * y_i\n        //   sum_z := sum_i (base^i % m) * z_i\n        //  sum_xz := sum_i (sum_j (base^{i+j} % m) * x_i * z_j)\n        //  sum_y2 := sum_i (sum_j (base^{i+j} % m) * y_i * y_j)\n        //\n        // We enforce y^2 = x * z + a * x + b (mod m) with equation:\n        //   2 * sum_y + sum_y2 - (sum_xz + sum_z + (a + 1) * sum_x + (a + b)) = k * m\n\n        let limbs_max = vec![&base - BI::one(); nb_limbs as usize];\n        let limbs_max2 = vec![(&base - BI::one()).pow(2); (nb_limbs * nb_limbs) as usize];\n        let max_sum_x = sum_bigints(&bs, &limbs_max);\n        let max_sum_y = max_sum_x.clone();\n        let max_sum_z = max_sum_x.clone();\n        let max_sum_xz = sum_bigints(&bs2, &limbs_max2);\n        let max_sum_y2 = max_sum_xz.clone();\n\n        // expr = 2*sum_y + sum_y2 - sum_xz - sum_z - (a+1)*sum_x - (a+b)\n        // The (a+1)*sum_x term can be positive or negative depending on the\n        // curve. We use max/min with 0 to route it into the correct bound\n        // without branching on the sign of (a+1).\n        let expr_min =\n            -(&max_sum_xz + &max_sum_z + (&a_plus_1 * &max_sum_x).clone().max(BI::zero()))\n                - &a_plus_b;\n        let expr_max = BI::from(2) * &max_sum_y + &max_sum_y2\n            - (&a_plus_1 * &max_sum_x).min(BI::zero())\n            - &a_plus_b;\n        let expr_bounds = (expr_min, expr_max);\n\n        let expr_mj_bounds: Vec<_> = moduli\n            .iter()\n            .map(|mj| {\n                let bs_mj = bs.iter().map(|b| b.rem(mj)).collect::<Vec<_>>();\n                let bs2_mj = bs2.iter().map(|b| b.rem(mj)).collect::<Vec<_>>();\n                let max_sum_x_mj = sum_bigints(&bs_mj, &limbs_max);\n                let max_sum_y_mj = max_sum_x_mj.clone();\n                let max_sum_z_mj = max_sum_x_mj.clone();\n                let max_sum_xz_mj = sum_bigints(&bs2_mj, &limbs_max2);\n                let max_sum_y2_mj = max_sum_xz_mj.clone();\n                let a_plus_1_mj = signed_mod(&a_plus_1, mj);\n                let a_plus_b_mj = signed_mod(&a_plus_b, mj);\n                let a1_sum_x_mj = &a_plus_1_mj * &max_sum_x_mj;\n                let expr_mj_min =\n                    -(&max_sum_xz_mj + &max_sum_z_mj + a1_sum_x_mj.clone().max(BI::zero()))\n                        - &a_plus_b_mj;\n                let expr_mj_max = BI::from(2) * &max_sum_y_mj + &max_sum_y2_mj\n                    - a1_sum_x_mj.min(BI::zero())\n                    - &a_plus_b_mj;\n                (expr_mj_min, expr_mj_max)\n            })\n            .collect();\n        get_identity_auxiliary_bounds::<F, C::Base>(\n            \"on_curve\",\n            &moduli,\n            expr_bounds,\n            &expr_mj_bounds,\n            nb_parallel_range_checks,\n            max_bit_len,\n        )\n    }\n\n    /// Configures the foreign on_curve gate\n    pub fn configure<F, P>(\n        meta: &mut ConstraintSystem<F>,\n        field_chip_config: &FieldChipConfig,\n        cond_col: &Column<Advice>,\n        nb_parallel_range_checks: usize,\n        max_bit_len: u32,\n    ) -> OnCurveConfig<C>\n    where\n        F: CircuitField,\n        P: FieldEmulationParams<F, C::Base>,\n    {\n        let m = &C::Base::modulus().to_bigint().unwrap();\n        let moduli = P::moduli();\n        let bs = P::base_powers();\n        let bs2 = P::double_base_powers();"
+        },
+        {
+          "start": 304,
+          "end": 337,
+          "text": "            let y2s = ys.clone().map(|ys| pair_wise_prod(&ys, &ys));\n\n            let (k_min, u_max) = on_curve_config.u_bounds.clone();\n\n            // 2 * sum_y + sum_y2 - (sum_xz + sum_z + (a + 1) * sum_x + (a + b))\n            // = (u + k_min) * m\n            let expr = ys.clone().map(|v| BI::from(2) * sum_bigints(&bs, &v) - &a_plus_b)\n                + y2s.clone().map(|v| sum_bigints(&bs2, &v))\n                - xzs.clone().map(|v| sum_bigints(&bs2, &v))\n                - zs.clone().map(|v| sum_bigints(&bs, &v))\n                - xs.clone().map(|v| &a_plus_1 * sum_bigints(&bs, &v));\n            let u = expr.map(|e| compute_u(m, &e, (&k_min, &u_max), cond.value()));\n\n            let vs_values =\n                moduli.iter().zip(on_curve_config.vs_bounds.iter()).map(|(mj, vj_bounds)| {\n                    let bs_mj = bs.iter().map(|b| b.rem(mj)).collect::<Vec<_>>();\n                    let bs2_mj = bs2.iter().map(|b| b.rem(mj)).collect::<Vec<_>>();\n                    let (lj_min, vj_max) = vj_bounds.clone();\n\n                    let a_plus_1_mj = signed_mod(&a_plus_1, mj);\n                    let a_plus_b_mj = signed_mod(&a_plus_b, mj);\n\n                    // 2 * sum_y_mj + sum_y2_mj - (sum_xz_mj + sum_z_mj + signed_mod(a+1, mj)\n                    // * sum_x_mj + signed_mod(a+b, mj)) - u * (m % mj) - (k_min * m) % mj\n                    // = (vj + lj_min) * mj\n                    let expr_mj =\n                        ys.clone().map(|v| BI::from(2) * sum_bigints(&bs_mj, &v) - &a_plus_b_mj)\n                            + y2s.clone().map(|v| sum_bigints(&bs2_mj, &v))\n                            - xzs.clone().map(|v| sum_bigints(&bs2_mj, &v))\n                            - zs.clone().map(|v| sum_bigints(&bs_mj, &v))\n                            - xs.clone().map(|v| &a_plus_1_mj * sum_bigints(&bs_mj, &v));\n                    expr_mj.zip(u.clone()).map(|(e, u)| {\n                        compute_vj(m, mj, &e, &u, &k_min, (&lj_min, &vj_max), cond.value())\n                    })"
+        },
+        {
+          "start": 415,
+          "end": 408,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/field/foreign/field_chip.rs",
+      "sha256": "c7d2b105158e1c44ebb93be1929b5f2cb8444154364a70a59afd6d44fc32efe5",
+      "excerpts": [
+        {
+          "start": 424,
+          "end": 452,
+          "text": "    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: Value<K>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let base = BI::from(2).pow(P::LOG2_BASE);\n        // We shift the value of x by 1, remember that limbs {xi}_i represent integer\n        //   1 + sum_i base^i xi\n        let x = x.map(|v| {\n            let bi = (v - K::ONE).to_biguint().into();\n            bi_to_limbs(P::NB_LIMBS, &base, &bi)\n        });\n\n        // Range-check the cells in the range [0, base)\n        let x_cells = (0..P::NB_LIMBS)\n            .map(|i| x.clone().map(|limbs| bigint_to_fe::<F>(&limbs[i as usize])))\n            .zip(well_formed_log2_bounds::<F, K, P>().iter())\n            .map(|(xi_value, log2_bound)| {\n                self.native_gadget.assign_lower_than_fixed(\n                    layouter,\n                    xi_value,\n                    &(BigUint::one() << *log2_bound),\n                )\n            })\n            .collect::<Result<Vec<_>, Error>>()?;\n\n        Ok(AssignedField::<F, K, P> {\n            limb_values: x_cells,\n            limb_bounds: well_formed_bounds::<F, K, P>(),"
+        },
+        {
+          "start": 561,
+          "end": 578,
+          "text": "    fn assert_equal(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n    ) -> Result<(), Error> {\n        // We normalize the x and y before comparing them.\n        // Even though field elements may admit several representations in\n        // well-formed limbs form, an honest prover will use the canonical one,\n        // which allows them to always pass the following equality assertion if the two\n        // emulated field elements are indeed equal.\n        let x = self.normalize(layouter, x)?;\n        let y = self.normalize(layouter, y)?;\n        x.limb_values\n            .iter()\n            .zip(y.limb_values.iter())\n            .map(|(xi, yi)| self.native_gadget.assert_equal(layouter, xi, yi))\n            .collect::<Result<Vec<_>, _>>()?;"
+        },
+        {
+          "start": 592,
+          "end": 617,
+          "text": "    fn assert_equal_to_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        constant: K,\n    ) -> Result<(), Error> {\n        // We normalize x before comparing it to the constant.\n        // Even though field elements may admit several representations in\n        // well-formed limbs form, an honest prover will use the canonical one,\n        // which allows them to always pass the following equality assertion if the x\n        // is indeed equal to the given constant.\n        let x = self.normalize(layouter, x)?;\n        let constant_limbs = {\n            let constant = (constant - K::ONE).to_biguint().into();\n            let base = BI::from(2).pow(P::LOG2_BASE);\n            bi_to_limbs(P::NB_LIMBS, &base, &constant)\n        };\n        x.limb_values\n            .iter()\n            .zip(constant_limbs.iter())\n            .map(|(xi, ki)| {\n                self.native_gadget.assert_equal_to_fixed(layouter, xi, bigint_to_fe::<F>(ki))\n            })\n            .collect::<Result<Vec<_>, _>>()?;\n        Ok(())\n    }"
+        },
+        {
+          "start": 721,
+          "end": 752,
+          "text": "    fn select(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let z_limb_values = x\n            .limb_values\n            .iter()\n            .zip(y.limb_values.iter())\n            .map(|(xi, yi)| self.native_gadget.select(layouter, cond, xi, yi))\n            .collect::<Result<Vec<_>, _>>()?;\n        let z_limb_bounds = x\n            .limb_bounds\n            .iter()\n            .zip(y.limb_bounds.iter())\n            .map(|(xi_bounds, yi_bounds)| {\n                (\n                    min(&xi_bounds.0, &yi_bounds.0).clone(),\n                    max(&xi_bounds.1, &yi_bounds.1).clone(),\n                )\n            })\n            .collect::<Vec<_>>();\n        Ok(AssignedField::<F, K, P> {\n            limb_values: z_limb_values,\n            limb_bounds: z_limb_bounds,\n            _marker: PhantomData,\n        })\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "midnight-circuits-7.2.4/src/field/native/native_chip.rs",
+      "sha256": "2f1bff6a82043dec56015d41ee9bae4ac0658161a20c3505967e2caa81bd06f7",
+      "excerpts": [
+        {
+          "start": 329,
+          "end": 358,
+          "text": "    fn add_and_double_mul(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        (a, x): (F, &AssignedNative<F>),\n        (b, y): (F, &AssignedNative<F>),\n        (c, z): (F, &AssignedNative<F>),\n        k: F,\n        (m1, m2): (F, F),\n    ) -> Result<AssignedNative<F>, Error> {\n        let res_value = x\n            .value()\n            .zip(y.value())\n            .zip(z.value())\n            .map(|((x, y), z)| a * x + b * y + c * z + k + m1 * x * y + m2 * x * z);\n        layouter.assign_region(\n            || \"add and double mul\",\n            |mut region| {\n                self.copy_in_row(&mut region, x, &self.config.value_cols[0], 0)?;\n                self.copy_in_row(&mut region, y, &self.config.value_cols[1], 0)?;\n                self.copy_in_row(&mut region, z, &self.config.value_cols[2], 0)?;\n                let res =\n                    region.assign_advice(|| \"res\", self.config.value_cols[4], 0, || res_value)?;\n                let mut coeffs = [F::ZERO; NB_ARITH_COLS];\n                coeffs[0] = a; // coeff of x\n                coeffs[1] = b; // coeff of y\n                coeffs[2] = c; // coeff of z\n                coeffs[4] = -F::ONE; // coeff of res\n                self.custom(&mut region, &coeffs, F::ZERO, (m1, m2), k, 0)?;\n                Ok(res)\n            },"
+        },
+        {
+          "start": 682,
+          "end": 704,
+          "text": "    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<bool>,\n    ) -> Result<AssignedBit<F>, Error> {\n        layouter.assign_region(\n            || \"Assign big\",\n            |mut region| {\n                // Enforce x * x - x = 0\n                let b_value = value.map(|b| if b { F::ONE } else { F::ZERO });\n                let b = region.assign_advice(|| \"b\", self.config.value_cols[0], 0, || b_value)?;\n                self.copy_in_row(&mut region, &b, &self.config.value_cols[1], 0)?;\n                let mut coeffs = [F::ZERO; NB_ARITH_COLS];\n                coeffs[0] = -F::ONE; // coeff of x\n                self.custom(&mut region, &coeffs, F::ZERO, (F::ONE, F::ZERO), F::ZERO, 0)?;\n                Ok(AssignedBit(b))\n            },\n        )\n    }\n\n    fn assign_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,"
+        },
+        {
+          "start": 751,
+          "end": 762,
+          "text": "    fn assert_equal(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        y: &AssignedNative<F>,\n    ) -> Result<(), Error> {\n        layouter.assign_region(\n            || \"Assert equal\",\n            |mut region| region.constrain_equal(x.cell(), y.cell()),\n        )\n    }\n"
+        },
+        {
+          "start": 786,
+          "end": 794,
+          "text": "    fn assert_equal_to_fixed(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedNative<F>,\n        constant: F,\n    ) -> Result<(), Error> {\n        let c = self.assign_fixed(layouter, constant)?;\n        self.assert_equal(layouter, x, &c)\n    }"
+        },
+        {
+          "start": 1226,
+          "end": 1234,
+          "text": "    fn not(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        bit: &AssignedBit<F>,\n    ) -> Result<AssignedBit<F>, Error> {\n        let neg_bit = self.linear_combination(layouter, &[(-F::ONE, bit.0.clone())], F::ONE)?;\n        Ok(AssignedBit(neg_bit))\n    }\n}"
+        },
+        {
+          "start": 1480,
+          "end": 1498,
+          "text": "    fn select(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        cond: &AssignedBit<F>,\n        x: &AssignedNative<F>,\n        y: &AssignedNative<F>,\n    ) -> Result<AssignedNative<F>, Error> {\n        // Return bit * x + (1 - bit) * y.\n\n        // 0*bit + 0*x + 1*y + 0 + bit*x - bit*y\n        self.add_and_double_mul(\n            layouter,\n            (F::ZERO, &cond.0),\n            (F::ZERO, x),\n            (F::ONE, y),\n            F::ZERO,\n            (F::ONE, -F::ONE),\n        )\n    }"
+        }
+      ]
+    }
+  ],
+  "scope": "Already cached checksum-pinned archive only. No network or native execution."
+}

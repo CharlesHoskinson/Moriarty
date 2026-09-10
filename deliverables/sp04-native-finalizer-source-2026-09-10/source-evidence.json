@@ -1,0 +1,627 @@
+{
+  "schema": "moriarty-native-finalizer-source-evidence/1",
+  "atUtc": "2026-09-10T18:33:04.318824+00:00",
+  "pins": {
+    "native": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+    "ledger8": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+    "ledger9": "0d364eb9f8c388a0399d05f59f2468c96d765015"
+  },
+  "ledger9LockSha256": "57d94273a7df683e2ebd8d6210cd0e76ca530db968fbf9396b8fad9ede6fe951",
+  "pinnedGitSources": [
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/fp.rs",
+      "sha256": "f84ce4a466d7889850226d7fec6e21a7e54ae46f191259cd0654a9d2a4b833b3",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 830,
+          "end": 835,
+          "text": "    }\n\n    const MODULUS: &'static str = \"0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab\";\n    const NUM_BITS: u32 = NUM_BITS;\n    const CAPACITY: u32 = Self::NUM_BITS - 1;\n    const TWO_INV: Self = TWO_INV;"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/fq.rs",
+      "sha256": "fc48c49569fdd377477d47008c8103d8732ca1a68248ca9c1b2969ce33a35731",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 510,
+          "end": 517,
+          "text": "    /// Constant representing the modulus\n    const MODULUS: &'static str =\n        \"0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001\";\n\n    /// Converts a little-endian non-Montgomery form `repr` into a Montgomery\n    /// form `Fq`.\n    fn from_repr(repr: Self::Repr) -> CtOption<Self> {\n        Self::from_bytes_le(&repr)"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/g1.rs",
+      "sha256": "e8dbf9dde373ab771ac5e0dc19eff33ceddb1a4751b67548934565ffd51cd1f0",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 32,
+          "end": 48,
+          "text": "#[derive(Copy, Clone)]\n#[repr(transparent)]\npub struct G1Affine(pub(crate) blst_p1_affine);\n\nconst COMPRESSED_SIZE: usize = 48;\nconst UNCOMPRESSED_SIZE: usize = 96;\n\npub const A: Fp = Fp::ZERO;\npub const B: Fp = Fp(blst_fp {\n    // 0x04 in Montgomery form.\n    l: [\n        0xaa270000000cfff3,\n        0x53cc0032fc34000a,\n        0x478fe97a6b0a807f,\n        0xb1d37ebee6ba24d7,\n        0x8ec9733bbf78ab2f,\n        0x09d645513d83de7e,"
+        },
+        {
+          "start": 366,
+          "end": 382,
+          "text": "    /// Attempts to deserialize a compressed element.\n    fn from_compressed(bytes: &[u8; COMPRESSED_SIZE]) -> CtOption<Self> {\n        G1Affine::from_compressed_unchecked(bytes)\n            .and_then(|p| CtOption::new(p, p.is_torsion_free()))\n    }\n\n    /// Attempts to deserialize an uncompressed element, not checking if the\n    /// element is in the correct subgroup.\n    ///\n    /// **This is dangerous to call unless you trust the bytes you are reading;\n    /// otherwise, API invariants may be broken.** Please consider using\n    /// `from_compressed()` instead.\n    fn from_compressed_unchecked(bytes: &[u8; COMPRESSED_SIZE]) -> CtOption<Self> {\n        let mut raw = blst_p1_affine::default();\n        let success =\n            unsafe { blst_p1_uncompress(&mut raw, bytes.as_ptr()) == BLST_ERROR::BLST_SUCCESS };\n        CtOption::new(G1Affine(raw), Choice::from(success as u8))"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/g2.rs",
+      "sha256": "3d5ec5d05f3b959c3ceee41c65b701d09bd6cc9e0df30ce1506e0856e2cd7837",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 38,
+          "end": 41,
+          "text": "pub struct G2Affine(pub(crate) blst_p2_affine);\n\nconst COMPRESSED_SIZE: usize = 96;\nconst UNCOMPRESSED_SIZE: usize = 192;"
+        },
+        {
+          "start": 758,
+          "end": 781,
+          "text": "\n#[derive(Clone, Debug)]\npub struct G2Prepared {\n    pub(crate) lines: Vec<blst_fp6>,\n    infinity: bool,\n}\n\nimpl From<G2Affine> for G2Prepared {\n    fn from(affine: G2Affine) -> Self {\n        if affine.is_identity().into() {\n            G2Prepared {\n                lines: Vec::new(),\n                infinity: true,\n            }\n        } else {\n            let mut lines = vec![blst_fp6::default(); 68];\n            unsafe { blst_precompute_lines(lines.as_mut_ptr(), &affine.0) }\n            G2Prepared {\n                lines,\n                infinity: false,\n            }\n        }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/mod.rs",
+      "sha256": "7b29e92058a7bef014874f3dd8d8b0cb68f2b849a0774676f103a9708c27d979",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 26,
+          "end": 71,
+          "text": "/// BLS12-381 pairing engine.\n#[derive(Debug, Copy, Clone)]\npub struct Bls12;\n\nimpl Engine for Bls12 {\n    type Fr = Fq;\n    type G1 = G1Projective;\n    type G1Affine = G1Affine;\n    type G2 = G2Projective;\n    type G2Affine = G2Affine;\n    type Gt = Gt;\n\n    fn pairing(p: &Self::G1Affine, q: &Self::G2Affine) -> Self::Gt {\n        pairing(p, q)\n    }\n}\n\nimpl MultiMillerLoop for Bls12 {\n    type G2Prepared = G2Prepared;\n    type Result = MillerLoopResult;\n\n    /// Computes $$\\sum_{i=1}^n \\textbf{ML}(a_i, b_i)$$ given a series of terms\n    /// $$(a_1, b_1), (a_2, b_2), ..., (a_n, b_n).$$\n    fn multi_miller_loop(terms: &[(&Self::G1Affine, &Self::G2Prepared)]) -> Self::Result {\n        let mut res = blst::blst_fp12::default();\n\n        for (i, (p, q)) in terms.iter().enumerate() {\n            let mut tmp = blst::blst_fp12::default();\n            if (p.is_identity() | q.is_identity()).into() {\n                // Define pairing with zero as one, matching what `pairing` does.\n                tmp = Fp12::ONE.0;\n            } else {\n                unsafe {\n                    blst::blst_miller_loop_lines(&mut tmp, q.lines.as_ptr(), &p.0);\n                }\n            }\n            if i == 0 {\n                res = tmp;\n            } else {\n                unsafe {\n                    blst::blst_fp12_mul(&mut res, &res, &tmp);\n                }\n            }\n        }\n\n        MillerLoopResult(Fp12(res))"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/bls_pairing.rs",
+      "sha256": "78fdce27b82877ee7d5eb272bda530f2ea6e06edddbf0d94a149a2ac02167bb2",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 34,
+          "end": 48,
+          "text": "    fn default() -> Self {\n        MillerLoopResult(Fp12::ONE)\n    }\n}\n\nimpl pairing::MillerLoopResult for MillerLoopResult {\n    type Gt = Gt;\n\n    fn final_exponentiation(&self) -> Gt {\n        let mut out = blst_fp12::default();\n        unsafe { blst_final_exp(&mut out, &(self.0).0) };\n        Gt(Fp12(out))\n    }\n}\n"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/fp6.rs",
+      "sha256": "d7ae99fc4ccb78f1dada3041b59bc0fe75ebb72dd7cede2d9a2b396a930cbf7b",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 18,
+          "end": 22,
+          "text": "/// This represents an element $c_0 + c_1 v + c_2 v^2$ of $\\mathbb{F}_{p^6} =\n/// \\mathbb{F}_{p^2} / v^3 - u - 1$.\n#[derive(Copy, Clone)]\n#[repr(transparent)]\npub struct Fp6(pub(crate) blst_fp6);"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "curves/src/bls12_381/fp12.rs",
+      "sha256": "e354c38ad1c13fcbda1ba082ab61b7999930893e42a1dfa3be866b0d1f3f5f27",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 15,
+          "end": 19,
+          "text": "/// This represents an element $c_0 + c_1 w$ of $\\mathbb{F}_{p^12} =\n/// \\mathbb{F}_{p^6} / w^2 - v$.\n#[derive(Copy, Clone, PartialEq, Eq)]\n#[repr(transparent)]\npub struct Fp12(pub(crate) blst_fp12);"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/types.rs",
+      "sha256": "1bb05e4906aa1bac6aad94d34d941958dd405a8471444793eaa42fa844e22b6b",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 138,
+          "end": 161,
+          "text": "pub struct BlstrsEmulation {}\n\nimpl SelfEmulation for BlstrsEmulation {\n    type F = midnight_curves::Fq;\n    type C = midnight_curves::G1Projective;\n    type AssignedPoint = AssignedForeignPoint<Self::F, Self::C, Self::C>;\n    type Hash = PoseidonState<Self::F>;\n\n    type ScalarChip = NativeGadget<Self::F, P2RDecompositionChip<Self::F>, NativeChip<Self::F>>;\n    type CurveChip =\n        ForeignWeierstrassEccChip<Self::F, Self::C, Self::C, Self::ScalarChip, Self::ScalarChip>;\n    type SpongeChip = PoseidonChip<Self::F>;\n\n    type G1Affine = midnight_curves::G1Affine;\n    type G2Affine = midnight_curves::G2Affine;\n    type Engine = midnight_curves::Bls12;\n\n    fn msm(\n        layouter: &mut impl Layouter<Self::F>,\n        curve_chip: &Self::CurveChip,\n        scalars: &[(AssignedNative<Self::F>, usize)],\n        bases: &[Self::AssignedPoint],\n    ) -> Result<Self::AssignedPoint, Error> {\n        curve_chip.msm_by_bounded_scalars(layouter, scalars, bases)"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/field/foreign/params.rs",
+      "sha256": "4ad9077e02d1fd85924782c74504a4a22bb64077f9ec881a03746d4d29cc934a",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 100,
+          "end": 135,
+          "text": "{\n    let m = &K::modulus().to_bigint().unwrap();\n    let base = BI::from(2).pow(P::LOG2_BASE);\n    let nb_limbs = P::NB_LIMBS;\n\n    // The integer represented by limbs [x0, ..., x_{n-1}] is 1 + sum_i base^i xi\n\n    assert!(*m > BI::one());\n    assert!(base > BI::one());\n\n    // Assert that we can encode any integer in [Z_m] with [nb_limbs] limbs of size\n    // [base].\n    assert!(BI::pow(&base, nb_limbs) >= *m);\n\n    let base_powers = P::base_powers();\n    let double_base_powers = P::double_base_powers();\n\n    assert_eq!(base_powers.len(), nb_limbs as usize);\n    assert_eq!(double_base_powers.len(), (nb_limbs * nb_limbs) as usize);\n\n    let expected_powers = (0..nb_limbs).map(|i| BI::pow(&base, i).rem(m));\n    let expected_double_powers = (0..nb_limbs)\n        .flat_map(|i| (0..nb_limbs).map(|j| BI::pow(&base, i + j).rem(m)).collect::<Vec<_>>());\n\n    // Check that the powers in ModAP are congruent to the expected powers modulo m.\n    base_powers\n        .iter()\n        .chain(double_base_powers.iter())\n        .zip(expected_powers.chain(expected_double_powers))\n        .for_each(|(b, e)| {\n            // The assertion on the base powers being negative can be removed if we\n            // generalize the way upper-bounds are computed. ATM they are simply computed by\n            // considering the integer represented with all limbs set to (base-1).\n            assert!(!BI::is_negative(b));\n            assert_eq!(b.rem(m), e.rem(m))\n        });"
+        },
+        {
+          "start": 277,
+          "end": 288,
+          "text": "/// BLS12-381's Base field over BLS12-381's Scalar field.\nimpl FieldEmulationParams<midnight_curves::Fq, midnight_curves::Fp> for MultiEmulationParams {\n    const LOG2_BASE: u32 = 56;\n    const NB_LIMBS: u32 = 7;\n    fn moduli() -> Vec<BigInt> {\n        vec![\n            BigInt::from(2).pow(134),\n            BigInt::from(2).pow(134) - BigInt::from(1),\n        ]\n    }\n    const RC_LIMB_SIZE: u32 = 15;\n}"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/field/foreign/field_chip.rs",
+      "sha256": "3657c4ed47db83918b70e320b024b2d303031b1f7d091c7d087a7a498af7a5ef",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 59,
+          "end": 80,
+          "text": "/// Type for assigned emulated field elements of K over native field F.\n//  - `limb_values` is a vector of assigned cells representing the emulated element in base `base`.\n//  - `limb_bounds` is a vector of BigInt pairs containing a lower bound and an upper bound on the\n//    values of every limb in `limb_values`. Both bounds are inclusive. The lower bound can be\n//    negative; if that is the case, the limb value may have wrapped-around the native modulus below\n//    zero, this will be corrected later in the identities.\n//\n// The integer x represented by limbs [x0, ..., x_{n-1}] is defined as\n//   x := 1 + sum_i base^i xi\n//\n// The +1 shift is introduced so that integer 0 has a unique representation in\n// limbs form, this greatly simplifies comparisons with zero.\n//\n// An AssignedField is well-formed if limb_bounds = (0, base-1).\n//\n// We will perform additions or subtractions with AssignedField even if they\n// are not well-formed, by operating limb-wise and updating the bounds\n// accordingly.\n//\n// However, for multiplication, well-formedness of inputs is a requirement.\n// We can use the `normalize` function to make a AssignedField well-formed as long as the\n// `limb_bounds` have a moderate size."
+        },
+        {
+          "start": 894,
+          "end": 1008,
+          "text": "    fn mul(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n        multiplying_constant: Option<K>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let zero: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ZERO)?;\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n\n        if x == &zero || y == &zero {\n            return Ok(zero);\n        }\n\n        if x == &one {\n            return Ok(y.clone());\n        }\n\n        if y == &one {\n            return Ok(x.clone());\n        }\n\n        let y = match multiplying_constant {\n            None => y.clone(),\n            Some(k) => self.mul_by_constant(layouter, y, k)?,\n        };\n        self.assign_mul(layouter, x, &y, false)\n    }\n\n    fn div(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n        if y == &one {\n            return Ok(x.clone());\n        }\n\n        let y = self.normalize(layouter, y)?;\n        self.assert_non_zero(layouter, &y)?;\n        self.assign_mul(layouter, x, &y, true)\n    }\n\n    fn neg(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let zero: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ZERO)?;\n\n        if x == &zero {\n            return Ok(zero);\n        }\n\n        // Note that x := 1 + sum_i base^i xi.\n        // Thus z = -x is equal to -1 + sum_i base^i (xi + yi).\n        // Observe there is a -1 instead of the implicit 1, thus we cannot simply negate\n        // the limbs of x. We also need to add a factor of -2 to the least-significant\n        // limb to account for this difference.\n\n        let mut constants = vec![BI::from(-2)];\n        constants.resize(P::NB_LIMBS as usize, BI::zero());\n\n        let z_limb_values = x\n            .limb_values\n            .iter()\n            .zip(constants.iter().map(|ci| bigint_to_fe::<F>(ci)))\n            .map(|(xi, ci)| {\n                self.native_gadget.linear_combination(layouter, &[(-F::ONE, xi.clone())], ci)\n            })\n            .collect::<Result<Vec<_>, _>>()?;\n\n        let z = AssignedField::<F, K, P> {\n            limb_values: z_limb_values,\n            limb_bounds: x\n                .limb_bounds\n                .iter()\n                .zip(constants.iter())\n                .map(|(xi_bounds, ci)| (-&xi_bounds.1 + ci, -&xi_bounds.0 + ci))\n                .collect(),\n            _marker: PhantomData,\n        };\n        self.normalize_if_approaching_limit(layouter, &z)\n    }\n\n    fn inv(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n\n        if x == &one {\n            return Ok(one);\n        }\n\n        // We do not need to assert that x != 0 because the equation enforced by\n        // [assign_mul] will be 1 = z * x, which is unsatisfiable if x = 0.\n        self.assign_mul(layouter, &one, x, true)\n    }\n\n    fn inv0(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let is_zero = self.is_zero(layouter, x)?;\n        let zero = self.assign_fixed(layouter, K::ZERO)?;\n        let one = self.assign_fixed(layouter, K::ONE)?;\n        let invertible = self.select(layouter, &is_zero, &one, x)?;\n        let inverse = self.assign_mul(layouter, &one, &invertible, true)?;\n        self.select(layouter, &is_zero, &zero, &inverse)\n    }"
+        },
+        {
+          "start": 1357,
+          "end": 1408,
+          "text": "    pub fn configure(\n        meta: &mut ConstraintSystem<F>,\n        advice_columns: &[Column<Advice>],\n        nb_parallel_range_checks: usize,\n        max_bit_len: u32,\n    ) -> FieldChipConfig {\n        check_params::<F, K, P>();\n\n        let nb_limbs = P::NB_LIMBS;\n        let x_cols = advice_columns[..(nb_limbs as usize)].to_vec();\n        let y_cols = x_cols.clone();\n        let z_cols = advice_columns[(nb_limbs as usize)..(2 * nb_limbs as usize)].to_vec();\n\n        x_cols.iter().chain(z_cols.iter()).for_each(|&col| meta.enable_equality(col));\n\n        let u_col = advice_columns[nb_limbs as usize];\n        let v_cols = advice_columns\n            [(nb_limbs as usize + 1)..(nb_limbs as usize + 1 + P::moduli().len())]\n            .to_vec();\n\n        let mul_config = MulConfig::configure::<F, K, P>(\n            meta,\n            &x_cols,\n            &z_cols,\n            nb_parallel_range_checks,\n            max_bit_len,\n        );\n        let norm_config = NormConfig::configure::<F, K, P>(\n            meta,\n            &x_cols,\n            &z_cols,\n            nb_parallel_range_checks,\n            max_bit_len,\n        );\n\n        FieldChipConfig {\n            mul_config,\n            norm_config,\n            x_cols,\n            y_cols,\n            z_cols,\n            u_col,\n            v_cols,\n        }\n    }\n\n    // Creates a new AssignedField z, asserted to be well-formed and satisfy\n    // the emulated field relation x * y = z.\n    // If the [division] flag is set, the relation becomes z * y = x, in order to\n    // model the division (z = x / y).\n    // WARNING: When used for division, we must independently assert that y != 0\n    // (note that when y = 0, any value for z would satisfy the relation if x = 0)."
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/ecc/foreign/weierstrass_chip.rs",
+      "sha256": "d397651f3cd80beb47f5f714cdde95291193ef30296282e63e07777efaac1b0a",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 334,
+          "end": 357,
+          "text": "    N: NativeInstructions<F>,\n{\n    /// Assigns a private curve point and enforces in-circuit that it is on the\n    /// curve and lies in the prime-order subgroup.\n    ///\n    /// If you deliberately need to skip the subgroup check, use\n    /// [`EccInstructions::assign_without_subgroup_check`] instead.\n    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        if C::COFACTOR > 1 {\n            let cofactor = C::ScalarField::from_u128(C::COFACTOR);\n            // Exhibit a cofactor-root Q and assert h * Q = p in-circuit.\n            // This guarantees that p \u2208 C::CryptographicGroup = h \u00b7 E(Fp).\n            let cofactor_root = self.assign_without_subgroup_check(\n                layouter,\n                value.map(|point| point * cofactor.invert().unwrap()),\n            )?;\n            self.mul_by_constant(layouter, cofactor, &cofactor_root)\n        } else {\n            self.assign_without_subgroup_check(layouter, value)\n        }"
+        },
+        {
+          "start": 940,
+          "end": 956,
+          "text": "        })\n    }\n\n    fn assign_without_subgroup_check(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<Self::Point, Error> {\n        let p = self.assign_point_unchecked(layouter, value)?;\n        let is_not_id = self.native_gadget.not(layouter, &p.is_id)?;\n        on_curve::assert_is_on_curve::<F, C, B, N>(\n            layouter,\n            &is_not_id,\n            &p.x,\n            &p.y,\n            self.base_field_chip(),\n            &self.config.on_curve_config,"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "proofs/src/poly/kzg/params.rs",
+      "sha256": "3dffddf75e91d5b2555056756f99fb81b587f7ef0b38756a23d3960e5b52a24f",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 350,
+          "end": 400,
+          "text": "// TODO: see the issue at https://github.com/appliedzkp/halo2/issues/45\n// So we probably need much smaller verifier key. However for new bases in g1\n// should be in verifier keys.\n/// KZG multi-open verification parameters\n#[derive(Clone, Debug)]\npub struct ParamsVerifierKZG<E: MultiMillerLoop> {\n    pub(crate) s_g2: E::G2,\n    pub(crate) n_g2_prepared: E::G2Prepared,\n    pub(crate) s_g2_prepared: E::G2Prepared,\n}\n\nimpl<E: MultiMillerLoop + Debug> ParamsVerifierKZG<E>\nwhere\n    E::G2: Curve + ProcessedSerdeObject,\n{\n    /// Returns \\[\u03c4\\]\u2082, a commitment to \u03c4 in G2.\n    pub fn s_g2(&self) -> E::G2 {\n        self.s_g2\n    }\n\n    /// Writes parameters to buffer\n    pub fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()> {\n        self.s_g2.write(writer, format)?;\n        Ok(())\n    }\n\n    /// Reads params from a buffer.\n    pub fn read<R: io::Read>(reader: &mut R, format: SerdeFormat) -> io::Result<Self> {\n        let s_g2 = E::G2::read(reader, format)?;\n        let s_g2_prepared = E::G2Prepared::from(s_g2.into());\n        let n_g2_prepared = E::G2Prepared::from(-E::G2Affine::generator());\n\n        Ok(Self {\n            s_g2,\n            n_g2_prepared,\n            s_g2_prepared,\n        })\n    }\n}\n\nimpl<E: MultiMillerLoop + Debug> ParamsKZG<E> {\n    /// Consume the prover parameters into verifier parameters. Need to specify\n    /// the size of public inputs.\n    pub fn verifier_params(&self) -> ParamsVerifierKZG<E> {\n        let n_g2_prepared = E::G2Prepared::from((-self.g2).into());\n        let s_g2_prepared = E::G2Prepared::from(self.s_g2.into());\n        ParamsVerifierKZG {\n            s_g2: self.s_g2,\n            n_g2_prepared,\n            s_g2_prepared,\n        }"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "proofs/src/poly/kzg/msm.rs",
+      "sha256": "96fde9b0ced8e98a65350682d7ff1dc507eda090f0b37005304cb76c567bde21",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 292,
+          "end": 310,
+          "text": "    /// Performs final pairing check with given verifier params and two channel\n    /// linear combination\n    pub fn check(self, params: &ParamsVerifierKZG<E>) -> bool {\n        let left = if self.left.scalars.len() == 1 && self.left.scalars[0] == E::Fr::ONE {\n            self.left.bases[0]\n        } else {\n            self.left.eval()\n        };\n\n        let right = self.right.eval();\n\n        let (term_1, term_2) = (\n            (&left.into(), &params.s_g2_prepared),\n            (&right.into(), &params.n_g2_prepared),\n        );\n        let terms = &[term_1, term_2];\n\n        bool::from(E::multi_miller_loop(&terms[..]).final_exponentiation().is_identity())\n    }"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/verifier_gadget.rs",
+      "sha256": "d8f5539b7dcbff66074878a83dfeecd1303b1f5e9df84e1f5eaa3b87334e7952",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 850,
+          "end": 880,
+          "text": "    /// Prepares a plonk proof into a PCS instance that can be finalized or\n    /// batched. It is responsibility of the verifier to check the validity of\n    /// the instance columns. It is the in-circuit analog of \"prepare\" from\n    /// midnight-proofs at src/plonk/verifier.rs.\n    ///\n    /// The proof is considered to be valid if the resulting accumulator\n    /// satisfies the [invariant](crate::verifier::Accumulator::check)\n    /// with respect to the relevant `tau_in_g2`.\n    pub fn prepare<PCS: InCircuitPCS<S>>(\n        &self,\n        layouter: &mut impl Layouter<S::F>,\n        assigned_vk: &AssignedVk<S, PCS>,\n        assigned_committed_instances: &[PCS::AssignedCommitment],\n        assigned_instances: &[&[AssignedNative<S::F>]],\n        proof: Value<Vec<u8>>,\n    ) -> Result<AssignedAccumulator<S>, Error> {\n        let (trace, transcript) = self.parse_trace(\n            layouter,\n            assigned_vk,\n            assigned_committed_instances,\n            assigned_instances,\n            proof,\n        )?;\n\n        self.verify_algebraic_constraints(\n            layouter,\n            assigned_vk,\n            trace,\n            assigned_committed_instances,\n            assigned_instances,\n            transcript,"
+        }
+      ]
+    },
+    {
+      "family": "native",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-zk",
+      "commit": "695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7",
+      "path": "circuits/src/verifier/transcript_gadget.rs",
+      "sha256": "d95e66cd4675da68d38050a0500ef8834e1db5d3b2fbc3ec8f5e868a950bd626",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 75,
+          "end": 99,
+          "text": "        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        proof: Value<Vec<u8>>,\n    ) -> Result<(), Error> {\n        self.sponge_state = Some(self.sponge_chip.init(layouter, None)?);\n\n        // Unwrapping the witness. The amount of points read from the proof is\n        // fixed for a given `Architecture`, and does not depend on the size of\n        // the proof.\n        // The caveat with this approach is that our in-circuit verifier will not\n        // be able to verify that the proof did not include extra bytes after\n        // all the relevant bytes have been read. This is not an issue anyway.\n        let mut proof_bytes = Vec::new();\n        proof.clone().map(|pi| proof_bytes.extend_from_slice(&pi));\n        self.transcript_reader = Some(CircuitTranscript::init_from_bytes(&proof_bytes));\n\n        Ok(())\n    }\n\n    /// Absorbs a scalar into the transcript.\n    pub fn common_scalar(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        scalar: &AssignedNative<S::F>,\n    ) -> Result<(), Error> {"
+        },
+        {
+          "start": 145,
+          "end": 198,
+          "text": "    ///\n    /// # Warning\n    ///\n    /// The received points are not enforced to be in the prime-order subgroup.\n    pub fn read_commitment(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n        labels: &[PolynomialLabel],\n    ) -> Result<AssignedKZGMultiCommitment<S>, Error> {\n        let mut inners = Vec::with_capacity(labels.len());\n        for label in labels {\n            let reader =\n                self.transcript_reader.as_mut().expect(\"You must init the transcript gadget\");\n            // If an error, do not fail, assign a default commitment instead.\n            // (This allows us to parse dummy proofs.)\n            let point: Value<S::C> = match reader.read::<S::C>() {\n                Ok(point) => Value::known(point),\n                Err(_) => Value::known(S::C::default()),\n            };\n            let assigned_point =\n                S::assign_without_subgroup_check(layouter, &self.curve_chip, point)?;\n            inners.push(AssignedKZGCommitment::simple(assigned_point, label.clone()));\n        }\n\n        let assigned_com = AssignedKZGMultiCommitment(inners);\n        self.common_commitment(layouter, &assigned_com)?;\n\n        Ok(assigned_com)\n    }\n\n    /// Reads a scalar from the reader buffer, and adds it to the transcript.\n    /// Think of the read scalar as a witness freely chosen by the prover.\n    pub fn read_scalar(\n        &mut self,\n        layouter: &mut impl Layouter<S::F>,\n    ) -> Result<AssignedNative<S::F>, Error> {\n        let reader = self.transcript_reader.as_mut().expect(\"You must init the transcript gadget\");\n        // If an error, do not fail, assign a default scalar instead.\n        // (This allows us to parse dummy proofs.)\n        let scalar: Value<S::F> = match reader.read::<S::F>() {\n            Ok(scalar) => Value::known(scalar),\n            Err(_) => Value::known(S::F::ZERO),\n        };\n\n        let assigned_scalar = self.scalar_chip.assign(layouter, scalar)?;\n        self.common_scalar(layouter, &assigned_scalar)?;\n\n        Ok(assigned_scalar)\n    }\n}\n\n#[cfg(any(test, feature = \"testing\"))]\nuse midnight_proofs::plonk::{Advice, Column, ConstraintSystem, Fixed, Instance};\n"
+        }
+      ]
+    },
+    {
+      "family": "ledger8",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "transient-crypto/src/proofs.rs",
+      "sha256": "06a6d770b72cfedac6e2cad81fccbf905eec9f370e1e915422b2aa3f423e6462",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 64,
+          "end": 74,
+          "text": "pub type TranscriptHash = blake2b_simd::State;\n\nimpl ParamsProverProvider for base_crypto::data_provider::MidnightDataProvider {\n    async fn get_params(&self, k: u8) -> io::Result<ParamsProver> {\n        let name = Self::name_k(k);\n        let reader = self\n            .get_file(\n                &name,\n                &format!(\"public parameters for k={k} not found in cache\"),\n            )\n            .await?;"
+        },
+        {
+          "start": 103,
+          "end": 127,
+          "text": "/**\n * The maximum degree supported by the standard verifier key.\n * This limits the number of public inputs usable.\n */\npub const VERIFIER_MAX_DEGREE: u8 = 14;\n\n/// Parameters used for verifying with the `KZG` commitment scheme\n#[derive(Clone)]\npub struct ParamsVerifier(Arc<ParamsVerifierKZG<Bls12>>);\n\nimpl ParamsVerifier {\n    /// Reads in verifier parameters\n    pub fn read<R: Read>(reader: R) -> io::Result<Self> {\n        Ok(ParamsProver::read(reader)?.as_verifier())\n    }\n}\n\nconst PARAMS_VERIFIER_RAW: &[u8] = include_bytes!(\"../static/bls_midnight_2p14\");\n\nlazy_static! {\n    /// The midnight verifier parameters, up to [`VERIFIER_MAX_DEGREE`].\n    ///\n    /// Note that using this *will* embed these into the binary at compile time, if that's not what\n    /// you want, please use `ParamsVerifier::read` instead.\n    pub static ref PARAMS_VERIFIER: ParamsVerifier = ParamsVerifier::read(PARAMS_VERIFIER_RAW).expect(\"Static verifier parameters should be valid.\");"
+        },
+        {
+          "start": 551,
+          "end": 568,
+          "text": "\n    /// Checks a proof against a statement.\n    pub fn verify<F: Iterator<Item = Fr>>(\n        &self,\n        params: &ParamsVerifier,\n        proof: &Proof,\n        statement: F,\n    ) -> Result<(), VerifyingError> {\n        let vk = self.force_init()?;\n        let pi = statement.map(|f| f.0).collect::<Vec<_>>();\n        trace!(statement = ?pi, \"verifying proof against statement\");\n        midnight_zk_stdlib::verify::<DummyRelation, TranscriptHash>(\n            &params.0, &vk, &pi, None, &proof.0,\n        )\n        .map_err(|_| anyhow::anyhow!(\"Invalid proof\"))\n    }\n\n    /// Mocks the checking of a proof against a statement"
+        }
+      ]
+    },
+    {
+      "family": "ledger8",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "base-crypto/src/data_provider.rs",
+      "sha256": "4143bc2e003876a33d5179484aee224b150336a08a43e8746768318ea3b2f20a",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 150,
+          "end": 174,
+          "text": "    ),\n    (\n        \"bls_midnight_2p14\",\n        hexhash(b\"fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244\"),\n        \"public parameters for k=14\",\n    ),\n    (\n        \"bls_midnight_2p15\",\n        hexhash(b\"724c7c3d779148bb113c7ee9c034b2f27db16e6bdf315fde90105a9bad00b1de\"),\n        \"public parameters for k=15\",\n    ),\n    (\n        \"bls_midnight_2p16\",\n        hexhash(b\"09c877216d6589b370263e18af40a030a901b41a7a7c37ef58c9901db41f05c6\"),\n        \"public parameters for k=16\",\n    ),\n    (\n        \"bls_midnight_2p17\",\n        hexhash(b\"4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74\"),\n        \"public parameters for k=17\",\n    ),\n    (\n        \"bls_midnight_2p18\",\n        hexhash(b\"e8436dc5d8b598f169c127c745135d889744007e6d384ff126df8d1332522f86\"),\n        \"public parameters for k=18\","
+        },
+        {
+          "start": 200,
+          "end": 211,
+          "text": "    ),\n    (\n        \"bls_midnight_2p24\",\n        hexhash(b\"b0e6fa7a4ab4a79a1e6560966f267556409db44bab6d5fab3711ad6c6b623207\"),\n        \"public parameters for k=24\",\n    ),\n    (\n        \"bls_midnight_2p25\",\n        hexhash(b\"3289a751c938988cd2f54154d8722d1eda2cd11593064afdde82099b24ff4a58\"),\n        \"public parameters for k=25\",\n    ),\n];"
+        }
+      ]
+    },
+    {
+      "family": "ledger8",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "transient-crypto/src/curve.rs",
+      "sha256": "cf0eb95b43cbe339a506bb766defb6203736129097655f9da029315b12ee6f1c",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 48,
+          "end": 73,
+          "text": "use zeroize::DefaultIsZeroes;\n\n/// The outer, main curve\npub mod outer {\n    /// The base prime field, used to represent curve points\n    pub type Base = midnight_curves::Fp;\n    /// The scalar prime field, used in circuit\n    pub type Scalar = midnight_curves::Fq;\n    /// The affine representation of a curve point\n    pub type Affine = midnight_curves::G1Affine;\n    /// The size of the outer curve point in bytes\n    pub const POINT_BYTES: usize = Affine::compressed_size();\n}\n\n/// The embedded / cycle curve, used in-circuit mainly\npub mod embedded {\n    /// The base prime field, used to represent curve points; the scalar of [`outer`](super::outer)\n    pub type Base = midnight_curves::Fq;\n    /// The scalar prime field, used in embedded proofs\n    pub type Scalar = midnight_curves::Fr;\n    /// The affine representation of a curve point over the extended curve\n    /// (which contains the relevant cryptographic subgroup).\n    pub type AffineExtended = midnight_curves::JubjubExtended;\n    /// The affine representation of a curve point of the relevant cryptographic subgroup.\n    pub type Affine = midnight_curves::JubjubSubgroup;\n}"
+        }
+      ]
+    },
+    {
+      "family": "ledger8",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "zkir/src/ir.rs",
+      "sha256": "a35eff35c200c307f757f7e9e09b8c2c0955b11a05e977d0ded8c9091f0a8122",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 382,
+          "end": 404,
+          "text": "    /// Adds `a` and `b` in the prime field.\n    ///\n    /// One output `a + b`\n    Add {\n        /// The first value to add\n        a: Index,\n        /// The second value to add\n        b: Index,\n    },\n    /// Multiplies `a` and `b` in the prime field.\n    ///\n    /// One output `a * b`\n    Mul {\n        /// The first value to multiply\n        a: Index,\n        /// The second value to multiply\n        b: Index,\n    },\n    /// Negates `a` in the prime field.\n    ///\n    /// One output `-a`\n    Neg {\n        /// The value to negate"
+        }
+      ]
+    },
+    {
+      "family": "ledger8",
+      "repository": "/home/charl/Moriarty/repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb",
+      "path": "zkir/src/ir_vm.rs",
+      "sha256": "dafb779d9c1bca803f3b40d7b4afd077f7faba96735e49044bf30f6cdd78ee48",
+      "workingBytesMatchPinnedObject": true,
+      "excerpts": [
+        {
+          "start": 775,
+          "end": 804,
+          "text": "                        outer::Scalar::from(0),\n                    )?;\n                    mem_push(reconstituted, &mut memory)?;\n                }\n                I::EcAdd { a_x, a_y, b_x, b_y } => {\n                    let a =\n                        ecc_from_parts(std, layouter, idx(&memory, *a_x)?, idx(&memory, *a_y)?)?;\n                    let b =\n                        ecc_from_parts(std, layouter, idx(&memory, *b_x)?, idx(&memory, *b_y)?)?;\n                    let c = std.jubjub().add(layouter, &a, &b)?;\n                    mem_push(std.jubjub().x_coordinate(&c), &mut memory)?;\n                    mem_push(std.jubjub().y_coordinate(&c), &mut memory)?;\n                }\n                I::EcMul { a_x, a_y, scalar } => {\n                    let a =\n                        ecc_from_parts(std, layouter, idx(&memory, *a_x)?, idx(&memory, *a_y)?)?;\n                    let scalar = std.jubjub().convert(layouter, idx(&memory, *scalar)?)?;\n                    let b = std.jubjub().msm(layouter, &[scalar], &[a])?;\n                    mem_push(std.jubjub().x_coordinate(&b), &mut memory)?;\n                    mem_push(std.jubjub().y_coordinate(&b), &mut memory)?;\n                }\n                I::EcMulGenerator { scalar } => {\n                    let g: AssignedNativePoint<embedded::AffineExtended> = std\n                        .jubjub()\n                        .assign_fixed(layouter, embedded::Affine::generator())?;\n                    let scalar = std.jubjub().convert(layouter, idx(&memory, *scalar)?)?;\n                    let b = std.jubjub().msm(layouter, &[scalar], &[g])?;\n                    mem_push(std.jubjub().x_coordinate(&b), &mut memory)?;\n                    mem_push(std.jubjub().y_coordinate(&b), &mut memory)?;\n                }"
+        }
+      ]
+    },
+    {
+      "family": "ledger9",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "transient-crypto/src/proofs.rs",
+      "sha256": "4b5552c53f69ba230ddc0ee775220d4b88e2672814e68b3e3686ca35b6d50fe0",
+      "excerpts": [
+        {
+          "start": 63,
+          "end": 75,
+          "text": "\n/// The hash used during proof transcript processing\npub type TranscriptHash = blake2b_simd::State;\n\nimpl ParamsProverProvider for base_crypto::data_provider::MidnightDataProvider {\n    async fn get_params(&self, k: u8) -> io::Result<ParamsProver> {\n        let name = Self::name_k(k);\n        let reader = self\n            .get_file(\n                &name,\n                &format!(\"public parameters for k={k} not found in cache\"),\n            )\n            .await?;"
+        },
+        {
+          "start": 104,
+          "end": 130,
+          "text": "/**\n * The maximum degree supported by the standard verifier key.\n * This limits the number of public inputs usable.\n */\npub const VERIFIER_MAX_DEGREE: u8 = 14;\n\n/// Parameters used for verifying with the `KZG` commitment scheme\n#[derive(Clone)]\npub struct ParamsVerifier(Arc<ParamsVerifierKZG<Bls12>>);\n\nimpl ParamsVerifier {\n    /// Reads in verifier parameters\n    pub fn read<R: Read>(reader: R) -> io::Result<Self> {\n        Ok(ParamsProver::read(reader)?.as_verifier())\n    }\n}\n\nconst PARAMS_VERIFIER_RAW: &[u8] = include_bytes!(\"../static/bls_midnight_2p14\");\n\nlazy_static! {\n    /// The midnight verifier parameters, up to [`VERIFIER_MAX_DEGREE`].\n    ///\n    /// Note that using this *will* embed these into the binary at compile time, if that's not what\n    /// you want, please use `ParamsVerifier::read` instead.\n    pub static ref PARAMS_VERIFIER: ParamsVerifier = ParamsVerifier::read(PARAMS_VERIFIER_RAW).expect(\"Static verifier parameters should be valid.\");\n}\n"
+        },
+        {
+          "start": 560,
+          "end": 577,
+          "text": "    }\n\n    /// Checks a proof against a statement.\n    pub fn verify<F: Iterator<Item = Fr>>(\n        &self,\n        params: &ParamsVerifier,\n        proof: &Proof,\n        statement: F,\n    ) -> Result<(), VerifyingError> {\n        let vk = self.force_init()?;\n        let pi = statement.map(|f| f.0).collect::<Vec<_>>();\n        trace!(statement = ?pi, \"verifying proof against statement\");\n        midnight_zk_stdlib::verify::<DummyRelation, TranscriptHash>(\n            &params.0, &vk, &pi, None, &proof.0,\n        )\n        .map_err(|_| anyhow::anyhow!(\"Invalid proof\"))\n    }\n"
+        }
+      ]
+    },
+    {
+      "family": "ledger9",
+      "commit": "0d364eb9f8c388a0399d05f59f2468c96d765015",
+      "path": "transient-crypto/Cargo.toml",
+      "sha256": "6ac4bfa268441803ebb0ff64c5e4abd279c986e8044a5a579d2f7a2748eec89a",
+      "excerpts": [
+        {
+          "start": 25,
+          "end": 42,
+          "text": "serialize = { version = \"1.0.0\", path = \"../serialize\", package = \"midnight-serialize\" }\nstorage-core = { version = \"1.0.0\", path = \"../storage-core\", package = \"midnight-storage-core\" }\n\nff = \"^0.13.1\"\ngroup = \"^0.13.0\"\nmidnight-curves = { version = \"^0.3.1\" }\nmidnight-proofs = { version = \"^0.8.1\" }\nmidnight-circuits = { version = \"^7.2.2\" }\nmidnight-zk-stdlib = { version = \"^2.3.3\" }\nanyhow = { version = \"^1.0.102\" }\nlru = \"0.18.0\"\n\n# rand 0.9.0 is not yet supported by some of our dependencies, we will\n# stick with 0.8.0 for now.\nrand = { version = \"^0.8.4\", features = [\"getrandom\"] }\nlazy_static = \"^1.5.0\"\ntracing = { version = \"^0.1.41\" }\nconst-hex = \"^1.14.1\""
+        }
+      ]
+    }
+  ],
+  "lockedArchives": [
+    {
+      "package": "midnight-circuits-6.3.0",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-circuits-6.3.0.crate",
+      "lockChecksum": "54a61b5ebf24a3a2184c7423f373c024b5b1ddb536e65ce90596603455284681",
+      "archiveSha256": "54a61b5ebf24a3a2184c7423f373c024b5b1ddb536e65ce90596603455284681"
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-circuits-7.2.4.crate",
+      "lockChecksum": "a3040d26341a9168a3db7adeb365da9b9b8e756bc911a08c5f76a6a93d441ca7",
+      "archiveSha256": "a3040d26341a9168a3db7adeb365da9b9b8e756bc911a08c5f76a6a93d441ca7"
+    },
+    {
+      "package": "midnight-curves-0.2.1",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-curves-0.2.1.crate",
+      "lockChecksum": "71a947535f03578bdc6401354accbf515257dcbaca7fb6a73c48fb0c17281a6c",
+      "archiveSha256": "71a947535f03578bdc6401354accbf515257dcbaca7fb6a73c48fb0c17281a6c"
+    },
+    {
+      "package": "midnight-curves-0.3.1",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-curves-0.3.1.crate",
+      "lockChecksum": "efaa236cfabccb367c0a89e58a6e8f0b4ba70fb81efd07acfe1d3a0ec3bed081",
+      "archiveSha256": "efaa236cfabccb367c0a89e58a6e8f0b4ba70fb81efd07acfe1d3a0ec3bed081"
+    },
+    {
+      "package": "midnight-proofs-0.7.3",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-proofs-0.7.3.crate",
+      "lockChecksum": "86d40952370a114d52a1ca5a5730a1a96e07380bb1a632ef7f494bd38c7bd482",
+      "archiveSha256": "86d40952370a114d52a1ca5a5730a1a96e07380bb1a632ef7f494bd38c7bd482"
+    },
+    {
+      "package": "midnight-proofs-0.8.2",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-proofs-0.8.2.crate",
+      "lockChecksum": "22b1526bc7d9d1fad29505a15b81fe54aa7698a7dcd1948b447021bc8571f543",
+      "archiveSha256": "22b1526bc7d9d1fad29505a15b81fe54aa7698a7dcd1948b447021bc8571f543"
+    },
+    {
+      "package": "midnight-zk-stdlib-1.3.0",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-1.3.0.crate",
+      "lockChecksum": "627778ca64e3715b4f27cb63b9e93fd6cade0ace1e021ed8af520a88d60269ef",
+      "archiveSha256": "627778ca64e3715b4f27cb63b9e93fd6cade0ace1e021ed8af520a88d60269ef"
+    },
+    {
+      "package": "midnight-zk-stdlib-2.3.5",
+      "path": "/home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f/midnight-zk-stdlib-2.3.5.crate",
+      "lockChecksum": "01ec8ff46d47734090358ac4dbfb444f2bfeede7cecd792225fbd9333dcf7758",
+      "archiveSha256": "01ec8ff46d47734090358ac4dbfb444f2bfeede7cecd792225fbd9333dcf7758"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "src/field/foreign/params.rs",
+      "memberSha256": "4ce83dfe4587bbb86dd6bf26316224b2f628dd303a5910c331a380f183d71ddb",
+      "excerpts": [
+        {
+          "start": 277,
+          "end": 288,
+          "text": "/// BLS12-381's Base field over BLS12-381's Scalar field.\nimpl FieldEmulationParams<midnight_curves::Fq, midnight_curves::Fp> for MultiEmulationParams {\n    const LOG2_BASE: u32 = 56;\n    const NB_LIMBS: u32 = 7;\n    fn moduli() -> Vec<BigInt> {\n        vec![\n            BigInt::from(2).pow(134),\n            BigInt::from(2).pow(134) - BigInt::from(1),\n        ]\n    }\n    const RC_LIMB_SIZE: u32 = 15;\n}"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "src/field/foreign/field_chip.rs",
+      "memberSha256": "c7d2b105158e1c44ebb93be1929b5f2cb8444154364a70a59afd6d44fc32efe5",
+      "excerpts": [
+        {
+          "start": 894,
+          "end": 1010,
+          "text": "            _marker: PhantomData,\n        };\n        self.normalize_if_approaching_limit(layouter, &z)\n    }\n\n    fn mul(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n        multiplying_constant: Option<K>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let zero: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ZERO)?;\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n\n        if x == &zero || y == &zero {\n            return Ok(zero);\n        }\n\n        if x == &one {\n            return Ok(y.clone());\n        }\n\n        if y == &one {\n            return Ok(x.clone());\n        }\n\n        let y = match multiplying_constant {\n            None => y.clone(),\n            Some(k) => self.mul_by_constant(layouter, y, k)?,\n        };\n        self.assign_mul(layouter, x, &y, false)\n    }\n\n    fn div(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n        y: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n        if y == &one {\n            return Ok(x.clone());\n        }\n\n        let y = self.normalize(layouter, y)?;\n        self.assert_non_zero(layouter, &y)?;\n        self.assign_mul(layouter, x, &y, true)\n    }\n\n    fn neg(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let zero: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ZERO)?;\n\n        if x == &zero {\n            return Ok(zero);\n        }\n\n        // Note that x := 1 + sum_i base^i xi.\n        // Thus z = -x is equal to -1 + sum_i base^i (xi + yi).\n        // Observe there is a -1 instead of the implicit 1, thus we cannot simply negate\n        // the limbs of x. We also need to add a factor of -2 to the least-significant\n        // limb to account for this difference.\n\n        let mut constants = vec![BI::from(-2)];\n        constants.resize(P::NB_LIMBS as usize, BI::zero());\n\n        let z_limb_values = x\n            .limb_values\n            .iter()\n            .zip(constants.iter().map(|ci| bigint_to_fe::<F>(ci)))\n            .map(|(xi, ci)| {\n                self.native_gadget.linear_combination(layouter, &[(-F::ONE, xi.clone())], ci)\n            })\n            .collect::<Result<Vec<_>, _>>()?;\n\n        let z = AssignedField::<F, K, P> {\n            limb_values: z_limb_values,\n            limb_bounds: x\n                .limb_bounds\n                .iter()\n                .zip(constants.iter())\n                .map(|(xi_bounds, ci)| (-&xi_bounds.1 + ci, -&xi_bounds.0 + ci))\n                .collect(),\n            _marker: PhantomData,\n        };\n        self.normalize_if_approaching_limit(layouter, &z)\n    }\n\n    fn inv(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let one: AssignedField<F, K, P> = self.assign_fixed(layouter, K::ONE)?;\n\n        if x == &one {\n            return Ok(one);\n        }\n\n        // We do not need to assert that x != 0 because the equation enforced by\n        // [assign_mul] will be 1 = z * x, which is unsatisfiable if x = 0.\n        self.assign_mul(layouter, &one, x, true)\n    }\n\n    fn inv0(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        x: &AssignedField<F, K, P>,\n    ) -> Result<AssignedField<F, K, P>, Error> {\n        let is_zero = self.is_zero(layouter, x)?;\n        let zero = self.assign_fixed(layouter, K::ZERO)?;\n        let one = self.assign_fixed(layouter, K::ONE)?;\n        let invertible = self.select(layouter, &is_zero, &one, x)?;"
+        },
+        {
+          "start": 1362,
+          "end": 1408,
+          "text": "    pub fn configure(\n        meta: &mut ConstraintSystem<F>,\n        advice_columns: &[Column<Advice>],\n        nb_parallel_range_checks: usize,\n        max_bit_len: u32,\n    ) -> FieldChipConfig {\n        check_params::<F, K, P>();\n\n        let nb_limbs = P::NB_LIMBS;\n        let x_cols = advice_columns[..(nb_limbs as usize)].to_vec();\n        let y_cols = x_cols.clone();\n        let z_cols = advice_columns[(nb_limbs as usize)..(2 * nb_limbs as usize)].to_vec();\n\n        x_cols.iter().chain(z_cols.iter()).for_each(|&col| meta.enable_equality(col));\n\n        let u_col = advice_columns[nb_limbs as usize];\n        let v_cols = advice_columns\n            [(nb_limbs as usize + 1)..(nb_limbs as usize + 1 + P::moduli().len())]\n            .to_vec();\n\n        let mul_config = MulConfig::configure::<F, K, P>(\n            meta,\n            &x_cols,\n            &z_cols,\n            nb_parallel_range_checks,\n            max_bit_len,\n        );\n        let norm_config = NormConfig::configure::<F, K, P>(\n            meta,\n            &x_cols,\n            &z_cols,\n            nb_parallel_range_checks,\n            max_bit_len,\n        );\n\n        FieldChipConfig {\n            mul_config,\n            norm_config,\n            x_cols,\n            y_cols,\n            z_cols,\n            u_col,\n            v_cols,\n        }\n    }\n\n    // Creates a new AssignedField z, asserted to be well-formed and satisfy"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "src/ecc/foreign/weierstrass_chip.rs",
+      "memberSha256": "09a3126bc63526cb094e71a8956e67e31d109a543daca1a953e0143ef80c5c01",
+      "excerpts": [
+        {
+          "start": 335,
+          "end": 362,
+          "text": "    S::Scalar: InnerValue<Element = C::ScalarField>,\n    N: NativeInstructions<F>,\n{\n    /// Assigns a private curve point and enforces in-circuit that it is on the\n    /// curve and lies in the prime-order subgroup.\n    ///\n    /// If you deliberately need to skip the subgroup check, use\n    /// [`EccInstructions::assign_without_subgroup_check`] instead.\n    fn assign(\n        &self,\n        layouter: &mut impl Layouter<F>,\n        value: Value<C::CryptographicGroup>,\n    ) -> Result<AssignedForeignPoint<F, C, B>, Error> {\n        if C::COFACTOR > 1 {\n            let cofactor = C::ScalarField::from_u128(C::COFACTOR);\n            // Exhibit a cofactor-root Q and assert h * Q = p in-circuit.\n            // This guarantees that p \u2208 C::CryptographicGroup = h \u00b7 E(Fp).\n            let cofactor_root = self.assign_without_subgroup_check(\n                layouter,\n                value.map(|point| point * cofactor.invert().unwrap()),\n            )?;\n            self.mul_by_constant(layouter, cofactor, &cofactor_root)\n        } else {\n            self.assign_without_subgroup_check(layouter, value)\n        }\n    }\n\n    fn assign_fixed("
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "src/verifier/types.rs",
+      "memberSha256": "cada8e0c0bec8a99b7fdbf3ed5c68587be32a0f0ba2f9fa56a67d9601170eba3",
+      "excerpts": [
+        {
+          "start": 138,
+          "end": 153,
+          "text": "pub struct BlstrsEmulation {}\n\nimpl SelfEmulation for BlstrsEmulation {\n    type F = midnight_curves::Fq;\n    type C = midnight_curves::G1Projective;\n    type AssignedPoint = AssignedForeignPoint<Self::F, Self::C, Self::C>;\n    type Hash = PoseidonState<Self::F>;\n\n    type ScalarChip = NativeGadget<Self::F, P2RDecompositionChip<Self::F>, NativeChip<Self::F>>;\n    type CurveChip =\n        ForeignWeierstrassEccChip<Self::F, Self::C, Self::C, Self::ScalarChip, Self::ScalarChip>;\n    type SpongeChip = PoseidonChip<Self::F>;\n\n    type G1Affine = midnight_curves::G1Affine;\n    type G2Affine = midnight_curves::G2Affine;\n    type Engine = midnight_curves::Bls12;"
+        }
+      ]
+    },
+    {
+      "package": "midnight-circuits-7.2.4",
+      "member": "src/verifier/accumulator.rs",
+      "memberSha256": "68d3f2af25e496b379a7ffd4359ab030f8f1d947fe6b4b0e67b0540b3cde41d6",
+      "excerpts": [
+        {
+          "start": 130,
+          "end": 149,
+          "text": "            lhs: Msm::new(&lhs_bases, &lhs_scalars, &lhs_fixed_base_scalars),\n            rhs: Msm::new(&rhs_bases, &rhs_scalars, &rhs_fixed_base_scalars),\n        }\n    }\n\n    /// Checks whether the accumulator, when evaluated with the provided\n    /// fixed-bases, satisfies the pairing invariant w.r.t. the SRS verifier\n    /// parameters.\n    pub fn check(\n        &self,\n        params: &ParamsVerifierKZG<S::Engine>,\n        fixed_bases: &BTreeMap<String, S::C>,\n    ) -> bool {\n        let lhs = MSMKZG::<S::Engine>::from_base(&self.lhs.eval(fixed_bases));\n        let rhs = MSMKZG::<S::Engine>::from_base(&self.rhs.eval(fixed_bases));\n        DualMSM::new(lhs, rhs).check(params)\n    }\n\n    /// Returns a trivial accumulator that satisfies the pairing invariant.\n    ///"
+        }
+      ]
+    },
+    {
+      "package": "midnight-curves-0.3.1",
+      "member": "src/bls12_381/fp.rs",
+      "memberSha256": "b3820d0e1d3522c940c6bd76f4b231294faf8d667f0a20a4ec8b1ff80c11b7b0",
+      "excerpts": [
+        {
+          "start": 830,
+          "end": 835,
+          "text": "    }\n\n    const MODULUS: &'static str = \"0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab\";\n    const NUM_BITS: u32 = NUM_BITS;\n    const CAPACITY: u32 = Self::NUM_BITS - 1;\n    const TWO_INV: Self = TWO_INV;"
+        }
+      ]
+    },
+    {
+      "package": "midnight-curves-0.3.1",
+      "member": "src/bls12_381/fq.rs",
+      "memberSha256": "f12967e1d672175304ca4cac302a19e1e50d13d030759bd4a81003660174e874",
+      "excerpts": [
+        {
+          "start": 500,
+          "end": 507,
+          "text": "\n    /// Constant representing the modulus\n    const MODULUS: &'static str =\n        \"0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001\";\n\n    /// Converts a little-endian non-Montgomery form `repr` into a Montgomery\n    /// form `Fq`.\n    fn from_repr(repr: Self::Repr) -> CtOption<Self> {"
+        }
+      ]
+    }
+  ],
+  "absenceSearches": [
+    {
+      "package": "midnight-circuits-7.2.4",
+      "sourceFilesSearched": 139,
+      "regex": "pairing|miller|final_exponent|Fq12|Fp12|Fp6|Fp2",
+      "matches": [
+        {
+          "member": "midnight-circuits-7.2.4/src/parsing/scanner/mod.rs",
+          "line": 54,
+          "text": "/// A test vector pairing an input with expected marker-grouped outputs."
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/parsing/scanner/mod.rs",
+          "line": 58,
+          "text": "/// A test vector pairing an input with the expected raw output sequence."
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/accumulator.rs",
+          "line": 136,
+          "text": "/// fixed-bases, satisfies the pairing invariant w.r.t. the SRS verifier"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/accumulator.rs",
+          "line": 148,
+          "text": "/// Returns a trivial accumulator that satisfies the pairing invariant."
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/accumulator.rs",
+          "line": 179,
+          "text": "/// internal MSMs by pairing each named scalar with its base and moving"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/accumulator.rs",
+          "line": 357,
+          "text": "/// internal MSMs by pairing each named scalar with its base and moving"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/msm.rs",
+          "line": 140,
+          "text": "/// by pairing each named scalar with its base and moving them to regular"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/msm.rs",
+          "line": 472,
+          "text": "/// by pairing each named scalar with its base and moving them to regular"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/types.rs",
+          "line": 22,
+          "text": "pairing::{Engine, MultiMillerLoop},"
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/types.rs",
+          "line": 93,
+          "text": "/// Wrapper type for the pairing engine."
+        },
+        {
+          "member": "midnight-circuits-7.2.4/src/verifier/types.rs",
+          "line": 95,
+          "text": "+ MultiMillerLoop<"
+        }
+      ],
+      "scope": "Scoped lexical search plus inspected actual verifier API, not universal absence proof."
+    },
+    {
+      "package": "midnight-zk-stdlib-2.3.5",
+      "sourceFilesSearched": 7,
+      "regex": "pairing|miller|final_exponent|Fq12|Fp12|Fp6|Fp2",
+      "matches": [],
+      "scope": "Scoped lexical search plus inspected actual verifier API, not universal absence proof."
+    }
+  ],
+  "operations": "Read-only local public source and archive reads; no extraction/import/build/prove/network/private reads."
+}

@@ -1,0 +1,122 @@
+{
+  "schema": "moriarty.independent-native-finalizer-tail-review/1",
+  "reviewer": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/native_tail_audit",
+    "independentNonAuthor": true,
+    "priorBaseScheduleReviewRead": true,
+    "otherCurrentTailReviewerVerdictRead": false
+  },
+  "recordedAtUtc": "2026-09-10T19:20:47.060566+00:00",
+  "tailManifestSha256": "9bd79bc4c2c12be53eda68ccc92e80fb76d04b0dbbd8bb4ce9f0661f8c12fb04",
+  "priorAuditSha256": "30cdacc3aecb4ecae39cd92b9ed14680bec665130df99e7cdf794f2021ac884c",
+  "verdict": "PASS_SCOPED",
+  "scope": "Only conditional tail region-height accounting and exact cached-source point/subgroup boundaries. Prior base/schedule audit is immutable and supplies prior arithmetic assumptions. No full verifier bound or acceptance.",
+  "findings": [
+    {
+      "id": "TAIL-01",
+      "severity": "INFO",
+      "result": "VERIFIED_CONDITIONAL",
+      "detail": "24*7 selections +12*14 inverse-witness assignments +24*14 fixed equalities =672. Prepared lines:2*68*6=816 Fp slots. Four Frobenius calls each consume5 Fp2 and4 Fp coefficient requests, giving56 Fp slots; zero/one gives2. (816+56+2)*7=6118; subtotal6790. All constants are slots with no cache discount, not validated exact SRS/line/Montgomery values. Inverse-product arithmetic remains in the prior subtotal.",
+      "sources": [
+        "field/foreign/field_chip.rs:424-452,592-617,721-752,1568-1577",
+        "field/native/native_chip.rs:329-358,569-598,751-762,786-794,1480-1498",
+        "schedule-supplement-01/fp12_tower.c:667-731",
+        "schedule-supplement-01/schedule-results.json"
+      ]
+    },
+    {
+      "id": "TAIL-02",
+      "severity": "INFO",
+      "result": "VERIFIED_CONDITIONAL",
+      "detail": "For a=0,b=4 the source bounds reduce to [-quadratic-2*linear-4,quadratic+2*linear-4]. Independent integer derivation with uniform per-row range widths reproduces116,120,117. Each costs4 range rows plus a conservatively charged copy row. Already assigned normalized coordinates cost45+2+15=62; two14-row coordinate assignments, one Boolean row and two-row NOT accounting give93. This assumes the prior native5/foreign14, four parallel eight-bit layout and well-formed constrained limbs; normalize is a no-op on those bounds.",
+      "sources": [
+        "ecc/foreign/gates/weierstrass/on_curve.rs:65-175,290-408",
+        "ecc/foreign/weierstrass_chip.rs:945-962,1092-1115",
+        "field/native/native_chip.rs:682-704,858-901,1226-1234"
+      ]
+    },
+    {
+      "id": "TAIL-03",
+      "severity": "INFO",
+      "result": "VERIFIED_SOURCE_BOUNDARY",
+      "detail": "AssignedMsm::assign calls S::assign_without_subgroup_check on variable bases. SelfEmulation explicitly documents the omission and retains a formal subgroup soundness TODO. Identity coordinates are host-generated as zero but are not forced to zero by this assignment path; identity disables the curve equation. These source facts do not establish strict byte/point acceptance correspondence.",
+      "sources": [
+        "verifier/msm.rs:346-385",
+        "verifier/types.rs:122-131",
+        "ecc/foreign/weierstrass_chip.rs:1092-1115",
+        "ecc/foreign/gates/weierstrass/on_curve.rs:261-264"
+      ]
+    },
+    {
+      "id": "TAIL-04",
+      "severity": "INFO",
+      "result": "VERIFIED_UNRESOLVED_PRECONDITION",
+      "detail": "Subgroup-capable assign witnesses Q using assign_without_subgroup_check then invokes mul_by_constant(h,Q). h is126 bits so this enters mul_by_u128 after identity substitutions. Independent integer check verifies h*r=p-z and h=(z-1)^2/3; literal loop has125 doublings and47 incomplete additions. The helper justification explicitly assumes all nonidentity points have scalar-field order. An on-curve malicious Q has not been shown to satisfy that premise. This is an unresolved proof obligation, not a demonstrated exploit or a sound subgroup-check row bound.",
+      "sources": [
+        "ecc/curves.rs:277-317",
+        "ecc/foreign/weierstrass_chip.rs:338-360,880-905,1652-1709"
+      ]
+    },
+    {
+      "id": "TAIL-05",
+      "severity": "LOW",
+      "result": "NONBLOCKING_SOURCE_EXCERPT_DEFECT",
+      "detail": "source-evidence.json contains an empty reversed on_curve.rs excerpt start415,end408, and README cites this408-line file through489. The excerpt check accepts the empty slice vacuously. Independently inspected the full checksum-matched member, including omitted lines290-408, so this does not block the reviewed mathematics/source conclusions. Do not cite the empty excerpt as evidence."
+    }
+  ],
+  "requiredChanges": [],
+  "conditions": [
+    "6790 and93 are conditional region-height accounting only; neither is a complete circuit/domain bound or measured synthesis.",
+    "Exact constants, canonical bytes, identity semantics, subgroup preconditions, dynamic point counts, accumulator/MSM shape and statement binding remain unfrozen or unproved.",
+    "No claim of an exploit, sound subgroup replacement, full native verifier equivalence, backend/SRS/k selection, F0 go, F0a/F1 dispatch or resource admission follows.",
+    "Actual Midnight ledger acceptance and mandatory financial/proof acceptance gates remain unchanged; research cannot substitute for full proof acceptance."
+  ],
+  "meaningfulChecks": [
+    {
+      "command": "python3 tail-cost-analysis-01/count-tail.py",
+      "exitCode": 0,
+      "matchesFrozenResultsJson": true,
+      "verifiedManifestAndMembers": true
+    },
+    {
+      "command": "Independent offline Python integer and uniform-range-row recurrence derivation",
+      "exitCode": 0,
+      "result": {
+        "auxiliaryWidths": [
+          116,
+          120,
+          117
+        ],
+        "onCurveRows": 62,
+        "assignmentRows": 93,
+        "tailRows": 6790,
+        "cofactorDoublings": 125,
+        "cofactorIncompleteAdds": 47
+      }
+    },
+    {
+      "command": "Recheck tail manifest, all bound tail files, and prior audit digest after review",
+      "exitCode": 0,
+      "frozenBytesUnchanged": true
+    }
+  ],
+  "reviewerHarnessCorrections": [
+    "An initial read assumed a nonexistent schedule source-evidence.json; inspected actual manifest and used cached source members instead.",
+    "Initial independent range calculation used ceil(bits/32), which ignores the shared per-row range width. Replaced it with an independently enumerated allowed uniform row-size recurrence; corrected derivation reproduces all claimed widths. No candidate edits."
+  ],
+  "operations": {
+    "compiles": 0,
+    "proofs": 0,
+    "nativeExecutions": 0,
+    "network": 0,
+    "privateReads": 0,
+    "services": 0
+  },
+  "frozenTailFiles": {
+    "README.md": "01149bb16995ce26f51709f1ed4379a54870ac8a936dabdb434ccd6fb31b2e65",
+    "source-evidence.json": "6be8a74dd3cfffd94a9b66f9348119f92265df1edad652a408da08012bd2c57a",
+    "count-tail.py": "4686e90a8ecb428e2f0994feab08057c5a85b799f85506856bc7ea6af7557c80",
+    "results.json": "28e0ed4a9b5dcd6b64c394fcb87230408da9ddcb8ef8fbd228eb32b3d0700eaa"
+  }
+}
