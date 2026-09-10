@@ -18,6 +18,7 @@ const publicFailureCodes=new Set(['INVALID_INITIALIZED_SWAP','NOT_FINALIZED','FI
 for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
 for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
 publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
+publicFailureCodes.add('NATIVE_FEE_CAP_EXCEEDED');
 /** Closed public diagnostic shared by the producer and durable launcher boundary. */
 export function validatePublicDriverFailure(failure){
   const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};

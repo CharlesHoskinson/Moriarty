@@ -83,7 +83,7 @@ function buildObservedTrace(kind){
  return rows;
 }
 for(const kind of ['loan','swap'])test(`${kind} retained generated state and transcript effects match independent comparator (synthetic transport only)`,async()=>{
- const rows=buildObservedTrace(kind),comparator=await createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000});
+ const rows=buildObservedTrace(kind),comparator=await createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:2000000000000000n});
  for(const {stage,observation} of rows)assert.equal(comparator.verifyStage(stage,observation).status,'PASS');
  const result=comparator.finish();assert.equal(result.status,'PASS');assert.equal(result.networkAcceptance,false);assert.equal(result.proofAcceptance,false);
  assert.equal(rows.at(-1).observation.state.kernelState.f0,kind==='loan'?4500000000n:0n);
@@ -91,7 +91,7 @@ for(const kind of ['loan','swap'])test(`${kind} retained generated state and tra
 });
 test('actual generated financial state and actual transcript payout mutations are rejected',async()=>{
  for(const mutate of [o=>o.state.kernelState.f0=0n,o=>o.receipt.transaction.actions[0].transcripts[0].effects.claimedUnshieldedSpends[0].recipient=roles.firstAddress]){
-  const rows=buildObservedTrace('loan'),c=await createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000});
+  const rows=buildObservedTrace('loan'),c=await createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:2000000000000000n});
   for(const row of rows.slice(0,3))c.verifyStage(row.stage,row.observation);
   mutate(rows[3].observation);assert.throws(()=>c.verifyStage('settle',rows[3].observation));
  }
