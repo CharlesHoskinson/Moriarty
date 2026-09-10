@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 347.09,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "```json\n{\n  \"candidateSha256\": \"fb0456c56e3fac1e8a6dc0b7b513a57cb6269c65cd9b72197b2ae5ba655422e2\",\n  \"proposalSha256\": \"305a836113bcb9a76509c16b4620f385a166f567501889843c232fc9a9d33847\",\n  \"runnerSha256\": \"6549a7eaabfbca8db85fc499f9f3d66a8bae6bc31b06c26749d6b447bb5f8746\",\n  \"commandsSha256\": \"38d5949e95bb75ed622f5892027ff94ee1c278c9fc47a9f87c0538763933671b\",\n  \"sourceVerdict\": \"PASS_SCOPED\",\n  \"resourceVerdict\": \"APPROVE_BOUNDED_RUN\",\n  \"findings\": [\n    {\n      \"id\": \"CLOSED_PLAN_DUST_FEE_UNPINNED\",\n      \"severity\": \"residual\",\n      \"scope\": \"source\",\n      \"verdictImpact\": \"none\",\n      \"summary\": \"validateInitializedSwapPlan and validateLocalLaunchPlan close submissions=2, ASSET_A=100000, ASSET_B=0, and consumed allocation identity, but accept any positive dustFee < 2^128. The 2000000000000000 SPECK cap is enforced only by the resource proposal/runner assertions and the plan those files construct.\"\n    },\n    {\n      \"id\": \"INDEPENDENT_TIMER_OMITS_DOCKER_KILL\",\n      \"severity\": \"residual\",\n      \"scope\": \"resource\",\n      \"verdictImpact\": \"none\",\n      \"summary\": \"Armed timer argv is unit SIGKILL (5s) then docker stop -t 5 (20s). Proposal outerShutdown.dockerKillFallbackMaxSeconds=5 and the 1331 accounting include a docker kill that exists only on the setup-failure except path, not in the independent timer. Launcher ExecStopPost also docker-stops. Bound holds if docker stop returns; a stuck docker CLI can leave containers after the stop wrapper is killed.\"\n    }\n  ],\n  \"limitations\": [\n    \"Hashes were supplied and echoed; this review did not recompute candidate/proposal/runner/commands digests or execute tests.\",\n    \"Author-reported 511 ledger / 3 compiled / 49 focused / 269 broader passes are not live acceptance, financial comparison, proof, or network evidence.\",\n    \"Initialize finality is not taken from local-swap-01 attempt-result (initialize blockHeight/blockHash null; comparison not retained). Production reobserves both native transactions through unchanged observeFinalizedStage and pins deploy 20389/75f27b67 and initialize 20393/f268da29 plus full-state digests c76e8b36 and 5a1dcdb7. If those diagnosis pins do not match the preserved chain, the gate fails closed.\",\n    \"Historical financial PASS is required on those reobserved receipts before store snapshot and before swap/close. Source tests use synthetic comparator/transport; they do not prove the live initialize comparison will now pass.\",\n    \"Native reserves A1000000/B2000000 and fallible mint 100000 A are enforced from serialized ContractState / native outputs, not indexer balance strings. Empty indexed balances remain an unproven indexer discrepancy.\",\n    \"preserveInitializedSwapStore snapshots and inspects a copy for exact v2 encrypted swap/signing namespaces; authenticated empty private {} and maintenance/signing authority are checked later via the existing provider on the original store. SDK read side effects after snapshot remain a documented residual; no reconstruct/restore/deploy/initialize path is wired for this continuation.\",\n    \"New work is exactly two submissions (swap then close) on contract 8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261 with original wallet/roles/seed/password/store. No Preview, rebuild, new credentials, or financialAcceptance/networkAcceptance/proofAcceptance promotion.\",\n    \"Prior 8 reservations / 2400000000000008 SPECK stay charged; this attempt adds at most 2 / 2000000000000000 / A100000 / B0 (combined ceiling 10 / 4400000000000008). DustFee magnitude is runner-pinned, not source-closed.\",\n    \"Outer envelope: independent stop 1300s after arming, setup+activation 120s, wallet <=1200s, RuntimeMaxSec 1206, cleanup claim 1331 inside 1350, unchanged Docker image/limit/writable-layer pins. This vote does not admit or dispatch; executionAdmission remains UNBOUND until a later actual admission binds these reviews.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 82725,
+      "output_tokens": 18253,
+      "cache_read_input_tokens": 1152,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 82725,
+        "outputTokens": 18253,
+        "cacheReadInputTokens": 1152,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.04684248
+      }
+    },
+    "total_cost_usd": 0.04684248,
+    "session_id": "01a08b1a-f55e-70b3-b41d-946f00e9074a"
+  }
+}

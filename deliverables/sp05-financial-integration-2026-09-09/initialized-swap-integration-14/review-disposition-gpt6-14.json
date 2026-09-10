@@ -1,0 +1,52 @@
+{
+  "schema": "moriarty.independent-review-disposition/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/recovery_source_audit",
+    "productionAuthor": false
+  },
+  "reviewedAt": "2026-09-10T11:44:08.559608+00:00",
+  "candidateSha256": "fb0456c56e3fac1e8a6dc0b7b513a57cb6269c65cd9b72197b2ae5ba655422e2",
+  "proposalSha256": "305a836113bcb9a76509c16b4620f385a166f567501889843c232fc9a9d33847",
+  "runnerSha256": "6549a7eaabfbca8db85fc499f9f3d66a8bae6bc31b06c26749d6b447bb5f8746",
+  "rawGrokReviewSha256": "5265883e97f6e93d4977f3d1c65a15e1cf4bd093c646fa960da97a2ee84f34ff",
+  "priorGpt6ReviewSha256": "35fc32a80ccbfccf00d695f971dd4532e485693f43f8f11aed6394574ea649b0",
+  "verdict": "PASS_SCOPED",
+  "dispositions": [
+    {
+      "findingId": "INDEPENDENT_TIMER_OMITS_DOCKER_KILL",
+      "disposition": "FACTUALLY_CONTRADICTED_BY_RETAINED_ARGV",
+      "evidence": "Exact timer record SHA557ae48a includes the 5-second docker kill ExecStopPost property. Runner line48 admits/loads this record before operational boundary; line82 substitutes unit names across the entire argv without removing any entries; line88 passes the complete argv to systemd-run. The fallback survives unchanged and belongs to the independent timer-triggered service, not only the setup-failure path.",
+      "fallbackArgument": "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+      "originalTimerSha256": "557ae48a8e76cb794082a0edc9070a7977918f1083b2ed62cccc7070138ccccf",
+      "scope": "Static argument-presence verification; no systemd service was started and runtime execution of this future timer is not claimed."
+    },
+    {
+      "findingId": "CLOSED_PLAN_DUST_FEE_UNPINNED",
+      "disposition": "ACCURATE_SOURCE_CONFIGURABILITY_NOT_A_RESOURCE_DEFECT",
+      "evidence": "continue-swap-plan.mjs:38 validates a positive u128 decimal per-allocation cap; the exact magnitude is intentionally not fixed globally in source. This reviewed runner line41 asserts proposal dustFeeSpeck equals2000000000000000 and line137 copies it to plan.limits.dustFee. Integration line250 requires actual limits equal the closed plan; providers.mjs:334 rejects cumulative reservedDustFee + new dustFee above maxDustFee. Source configurability cannot enlarge this exact admitted allocation.",
+      "allocationDustFeeSpeck": "2000000000000000",
+      "priorReservedDustSpeck": "2400000000000008",
+      "combinedCeilingSpeck": "4400000000000008",
+      "scope": "The prior bounded resource vote remains conditioned on exact bytes and actual admission; no larger cap or new allocation is authorized."
+    }
+  ],
+  "resolvedTimerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-swap-continuation-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-swap-continuation-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "sourceVerdictUnchanged": "PASS_SCOPED",
+  "resourceVerdictUnchanged": "APPROVE_BOUNDED_RUN",
+  "scope": "Narrow public read-only/static disposition. Original Grok review and all frozen files preserved. No operational runner import/statements, service, wallet, private file or transaction execution. This record is not dispatch or independent containment evidence."
+}

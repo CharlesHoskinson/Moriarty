@@ -1,0 +1,89 @@
+{
+  "schema": "moriarty.initialized-swap-integration-source-checks/1",
+  "scope": "Source-only implementation; no service/private-original/proof/compiler/network/transaction access or execution admission",
+  "files": {
+    "experiments/moriarty-midnight-financial/ledger/continue-swap-plan.mjs": "369891fc909c3ed5cb55a3d84beb87a6cfb313352dfe286c44f5f22a584ccda8",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "40f1c4dc8a670b216fab22b945cbe77ef2a3a711de304bf2cd4bb5e1980fbaeb",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "ff36a27e5c63aea63339a08d09b20fe659f33c6b3ac796f9e1181ad78b1cc790",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "17d504be2dd761cfdfa84ebf8378205ae233b256aec10e99f5c1759a13c1b120",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "07882ea899c24f0d7e641e2f223e7a6574d6d3118cb6161ed98d10df2fb76989",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "0f2c1c159bce47da7d313aec0a7515c26e55c5053a40b51284a6dcdfc98f8e26",
+    "experiments/moriarty-midnight-financial/ledger/initialized-swap-driver.test.mjs": "b3df80138106ea4c60b3d28a6040e39c9c64fb853aa98d33fd92630afa25aa70",
+    "experiments/moriarty-midnight-financial/ledger/initialized-swap-public.test.mjs": "7e5f4a8dc6763fa1d168cfcdc968b14642e23bfcd3524216100c61ec9ff55ec7",
+    "experiments/moriarty-midnight-financial/ledger/initialized-swap-store.test.mjs": "8e32d1b7464ee06c16c66d6e7af7b2883f6af5be0461f49974e01e0044616953",
+    "experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs": "22c4998e37873735b6dea83963a6ef82ad88e5e805e7a367ac206fbbb062bae6"
+  },
+  "runs": [
+    {
+      "file": "red.tap",
+      "sha256": "86a5cde3a78b8aef379e40c71c8df33122341e34d28350bf2cffd994b9347bee",
+      "tests": "20",
+      "pass": "0",
+      "fail": "20",
+      "duration_ms": "850.714269"
+    },
+    {
+      "file": "first-green-attempt.tap",
+      "sha256": "63018ad25f0ba11cc69b8c90caa7f37d096eb851458102aafafd83fc4cdf6bfe",
+      "tests": "20",
+      "pass": "20",
+      "fail": "0",
+      "duration_ms": "1904.445761"
+    },
+    {
+      "file": "composed-first.tap",
+      "sha256": "167ef2ac0bc05772f974a696c22adc792a9819e99b8111fdc4661413c2412b91",
+      "tests": "23",
+      "pass": "23",
+      "fail": "0",
+      "duration_ms": "233.456551"
+    },
+    {
+      "file": "diagnostics-red.tap",
+      "sha256": "38ef80cfa5e5bcfc9f6d15e9cdb8f37c362a8acd93146ce13d155570650fd5cf",
+      "tests": "26",
+      "pass": "23",
+      "fail": "3",
+      "duration_ms": "240.021436"
+    },
+    {
+      "file": "diagnostics-red-corrected.tap",
+      "sha256": "8c08864ee70222f61a6569fabb70839f0708c2b48ab133e71c2aea0ec5bcb3f1",
+      "tests": "26",
+      "pass": "23",
+      "fail": "3",
+      "duration_ms": "244.014381"
+    },
+    {
+      "file": "green.tap",
+      "sha256": "fe609bcf489573df47c09b55f879000de59ba317bba02eaeff3e1f7d15551f4d",
+      "tests": "269",
+      "pass": "269",
+      "fail": "0",
+      "duration_ms": "48777.923342"
+    },
+    {
+      "file": "focused-green.tap",
+      "sha256": "db1392229c2a63639b17ab9e9a658538a9ff8605ee702601d2eec18d39ce8144",
+      "tests": "49",
+      "pass": "48",
+      "fail": "1",
+      "duration_ms": "2298.652802"
+    },
+    {
+      "file": "focused-green-final.tap",
+      "sha256": "9f53e4aea9bd62285023aeca4dd2ffc8b4b6ba474dd5e8766e22b711dedf3517",
+      "tests": "49",
+      "pass": "49",
+      "fail": "0",
+      "duration_ms": "2306.561734"
+    }
+  ],
+  "diffCheck": "git diff --check passed",
+  "notes": [
+    "RED covered driver/public/store before production patch. Composition and extra snapshot tests added after applying patch; their initial green is coverage, not a prior red claim.",
+    "diagnostics-red.tap preserved synthetic asynchronous checkWallet fixture mistake; corrected synchronous fixture in diagnostics-red-corrected.tap demonstrates actual missing allowlist codes.",
+    "focused-green.tap preserved synthetic spent input fixture using offerIndex; corrected to native input field outputNo in focused-green-final.tap. No production spent input behavior changed to accommodate fixture.",
+    "No new attempt or reservation. Original eight charged reservations unchanged."
+  ]
+}

@@ -1,3 +1,4 @@
+import {EXISTING_SWAP,INITIALIZED_SWAP} from './continue-initialized-swap.mjs';
 import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
 import {readFileSync} from 'node:fs';
 import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
@@ -13,7 +14,7 @@ function secret(x) {if(!(x instanceof Uint8Array)||x.length!==32)throw Error('IN
 function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)throw Error('INVALID_CURRENT_TIME');return t;}
 
 
-const publicFailureCodes=new Set(['NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
+const publicFailureCodes=new Set(['INVALID_INITIALIZED_SWAP','NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
 for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
 for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
 publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
@@ -43,7 +44,7 @@ function publicFailure(error,phase,stage){
  * error.publicResult with known public IDs, reservations and cleanup disposition.
  * Incomplete containment cannot return PASS. SDK private results are not copied.
  */
-export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan}) {
+export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap}) {
   if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
   const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
   try {
@@ -54,6 +55,11 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     // Integration supplies this identity only after public verification and private
     // restore round trips. These shape checks do not establish those predicates.
     let recovery,continuation;
+    if(initializedSwap!==undefined){
+      if(kind!=='swap'||existingDeployment!==undefined||initializedLoan!==undefined||!initializedSwap||Object.getPrototypeOf(initializedSwap)!==Object.prototype)throw Error('INVALID_INITIALIZED_SWAP');
+      const f=Object.getOwnPropertyDescriptors(initializedSwap);if(Reflect.ownKeys(f).length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(f,k)&&Object.hasOwn(f[k],'value'))||f.contractAddress.value!==INITIALIZED_SWAP.contractAddress||f.deployTxId.value!==EXISTING_SWAP.txId||f.initializeTxId.value!==INITIALIZED_SWAP.txId)throw Error('INVALID_INITIALIZED_SWAP');
+      continuation={contractAddress:f.contractAddress.value,deployTxId:f.deployTxId.value,initializeTxId:f.initializeTxId.value};
+    }
     if(initializedLoan!==undefined){
       if(kind!=='loan'||existingDeployment!==undefined||!initializedLoan||Object.getPrototypeOf(initializedLoan)!==Object.prototype)throw Error('INVALID_INITIALIZED_LOAN');
       const fields=Object.getOwnPropertyDescriptors(initializedLoan),keys=Reflect.ownKeys(fields);
@@ -122,7 +128,7 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
       await call('accrue',[first,program,net,0n,2n,time(now),{h0:mul(5000000000n,8n),h1:mul(40000000000n,31n),h2:mul(100n,365n),h3:div(1240000000000n,36500n)}]);
       await call('settle',[first,program,net,1n,2n,0n,533972602n,time(now),{unused:0n}]);
     } else {
-      await call('initialize',[second,program,net,3n,time(now)]);
+      if(!continuation)await call('initialize',[second,program,net,3n,time(now)]);
       await call('swap',[first,program,net,0n,4n,4n,0n,1n,10000n,19700n,time(now),{h0:mul(10000n,997n),h1:mul(9970000n,2000000n),h2:mul(1000000n,1000n),h3:div(19940000000000n,1009970000n)}]);
       await call('close',[second,program,net,1n,3n,time(now),{unused:0n}]);
     }

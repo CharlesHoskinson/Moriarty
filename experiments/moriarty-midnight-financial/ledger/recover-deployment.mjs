@@ -1,4 +1,5 @@
-/** Verified recovery predicates for the single retained local loan history.
+import {EXISTING_SWAP,INITIALIZED_SWAP,inspectExistingSwapBytes,inspectInitializedSwapBytes,assertInitializedSwapState} from './continue-initialized-swap.mjs';
+/** Verified recovery predicates for the fixed retained local loan and swap histories.
  * These helpers authorize no services, wallet, storage writes or submissions.
  */
 import {createHash} from 'node:crypto';
@@ -50,6 +51,13 @@ export function assertMetadataOnlyEntries(entries,accountId){
 }
 export function assertRecoveryWallet({synced,binding,timestampMs,dustCap}){
  check(binding?.transactionHash===EXISTING_LOAN.transactionHash&&Array.isArray(binding.oldDustNullifiers)&&binding.oldDustNullifiers.length>0&&Array.isArray(binding.spentUnshieldedInputs),'RECOVERY_WALLET_BINDING');
+ return assertHistoryWallet({synced,binding,timestampMs,dustCap});
+}
+export function assertSwapHistoryWallet({synced,binding,timestampMs,dustCap}){
+ check(binding?.deployment?.transactionHash===EXISTING_SWAP.transactionHash&&binding?.initialize?.transactionHash===INITIALIZED_SWAP.transactionHash&&Array.isArray(binding.oldDustNullifiers)&&binding.oldDustNullifiers.length>0&&Array.isArray(binding.spentUnshieldedInputs),'RECOVERY_WALLET_BINDING');
+ return assertHistoryWallet({synced,binding,timestampMs,dustCap});
+}
+function assertHistoryWallet({synced,binding,timestampMs,dustCap}){
  const now=Date.now();check(Number.isSafeInteger(timestampMs)&&timestampMs<=now&&now-timestampMs<=60000&&typeof dustCap==='bigint'&&dustCap>0n,'RECOVERY_WALLET_TIME_CAP');
  for(const kind of ['shielded','unshielded','dust']){const p=synced?.[kind]?.progress;check(p?.isConnected===true&&typeof p.isStrictlyComplete==='function'&&p.isStrictlyComplete()===true,'RECOVERY_WALLET_SYNC');}
  const u=synced.unshielded,d=synced.dust;check(Array.isArray(u.availableCoins)&&Array.isArray(u.pendingCoins)&&Array.isArray(d.state?.pendingDust)&&d.state.pendingDust.length===0,'RECOVERY_WALLET_PENDING');
@@ -172,6 +180,27 @@ export async function verifyInitializedLoanPublic({raw,rawInitialize,ledger,prov
  const {stateBlock,snapshotSamples,stateEvidence:initializeContractState}=await stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight:Math.max(d.finalizedHeight,i.finalizedHeight),historyHeight:i.blockHeight,checkStates:async wait=>{
   const [historicalDeploy,historicalInitialize,current]=await Promise.all([wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:d.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:i.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress))]);
   assertExistingLoanState(historicalDeploy,ledger);assertInitializedLoanState(historicalInitialize,ledger);assertInitializedLoanState(current,ledger);
+  // Copy the verified historical bytes instead of retaining a mutable provider object.
+  return ledger.ContractState.deserialize(historicalInitialize.serialize());
+ }});
+ const binding=Object.freeze({transactionHash:deployment.transactionHash,contractAddress:deployment.contractAddress,deployment,initialize,spentUnshieldedInputs:Object.freeze([...deployment.spentUnshieldedInputs,...initialize.spentUnshieldedInputs]),oldDustNullifiers:Object.freeze([...deployment.oldDustNullifiers,...initialize.oldDustNullifiers]),mintedOutput:initialize.mintedOutput});
+ return Object.freeze({status:'INITIALIZED_PUBLIC_STATE_VERIFIED',dispatchAuthorized:false,deploymentObservation,initializeObservation,initializeContractState,binding,tip:Object.freeze({...tip}),stateBlock,snapshotSamples,scope:'Read-only exact deploy/initialize history and unchanged initialized state in a stable indexed/finalized snapshot; no private access or dispatch authorization'});
+}
+
+export async function verifyInitializedSwapPublic({raw,rawInitialize,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
+ const {observeFinalizedStage}=await import('./receipt.mjs');
+ const deployment=inspectExistingSwapBytes(raw,ledger),initialize=inspectInitializedSwapBytes(rawInitialize,ledger);
+ check(expectedProtocolVersion===1000000,'INITIALIZED_PROTOCOL');checkPublicRecoveryTip(tip,readCurrentTip);
+ const common={provider,rpc,ledger,contractAddress:deployment.contractAddress,decodeState,deadlineMs,expectedProtocolVersion};
+ const deploymentObservation=await observeFinalizedStage({...common,txId:deployment.txId,circuitId:'deploy'});
+ const d=deploymentObservation.receipt;
+ check(d.transaction.transactionHash===deployment.transactionHash&&d.transaction.rawSha256===deployment.transactionHash&&d.blockHash==='75f27b677c24a38c1804935dd909e71d1b7e2719b920758f485e79de3b127202'&&d.blockHeight===20389,'RECOVERY_DEPLOY_RECEIPT');
+ const initializeObservation=await observeFinalizedStage({...common,txId:initialize.txId,circuitId:'initialize'});
+ const i=initializeObservation.receipt;
+ check(i.transaction.transactionHash===initialize.transactionHash&&i.transaction.rawSha256===initialize.transactionHash&&i.blockHash==='f268da29bb3e6e81f8a97bae0eb53938f3a146fce677deb5c7ae18b8c5335386'&&i.blockHeight===20393,'INITIALIZED_DEPLOYMENT_HISTORY');
+ const {stateBlock,snapshotSamples,stateEvidence:initializeContractState}=await stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight:Math.max(d.finalizedHeight,i.finalizedHeight),historyHeight:i.blockHeight,checkStates:async wait=>{
+  const [historicalDeploy,historicalInitialize,current]=await Promise.all([wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:d.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:i.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress))]);
+  check(historicalDeploy&&typeof historicalDeploy.serialize==='function'&&sha(historicalDeploy.serialize())===EXISTING_SWAP.initialStateSha256,'SWAP_CONTINUATION_DEPLOY_STATE');assertInitializedSwapState(historicalInitialize,ledger);assertInitializedSwapState(current,ledger);
   // Copy the verified historical bytes instead of retaining a mutable provider object.
   return ledger.ContractState.deserialize(historicalInitialize.serialize());
  }});

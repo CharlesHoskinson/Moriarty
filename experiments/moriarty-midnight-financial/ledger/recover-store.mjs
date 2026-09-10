@@ -78,10 +78,10 @@ export function assertEmptyRecoveryStore(path){
  * 321-357,390-414,776-787,798-804,827-833. This does not decrypt or authenticate.
  * Missing metadata and v1/plaintext would make SDK reads write/migrate the source.
  */
-function initializedEntries(entries,accountId){
- const address='ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713',account=sha(accountId).slice(0,32);
+function initializedEntries(entries,accountId,kind){
+ const address=kind==='loan'?'ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713':'8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261',store='sp05-'+kind,account=sha(accountId).slice(0,32);
  check(entries.length===4,'INITIALIZED_NAMESPACE');const values=new Map(entries);check(values.size===4,'INITIALIZED_NAMESPACE');
- for(const [scope,key] of [['sp05-loan',address+':sp05-loan'],['signing-keys',address]]){
+ for(const [scope,key] of [[store,address+':'+store],['signing-keys',address]]){
   const prefix='!'+scope+':'+account+'!',metaKey=prefix+'__midnight_encryption_metadata__',valueKey=prefix+key;
   check(values.has(metaKey)&&values.has(valueKey),'INITIALIZED_NAMESPACE');
   let metadata;try{metadata=JSON.parse(values.get(metaKey));}catch{throw Error('RECOVERY_STORE_METADATA');}
@@ -94,7 +94,9 @@ function initializedEntries(entries,accountId){
  * Caller completes the public gate and keeps the trusted OS account quiescent.
  * No decryption: existing provider subsequently verifies the exact state/key.
  */
-export async function preserveInitializedLoanStore({sourceDirectory,snapshotDirectory,inspectionDirectory,accountId}){
+export function preserveInitializedLoanStore(options){return preserveInitializedStore(options,'loan');}
+export function preserveInitializedSwapStore(options){return preserveInitializedStore(options,'swap');}
+async function preserveInitializedStore({sourceDirectory,snapshotDirectory,inspectionDirectory,accountId},kind){
  let sourceDigest,snapshotDigest,db,failure,result;
  try{
   check(typeof accountId==='string'&&accountId.trim().length>0&&accountId.length<=1024,'ACCOUNT');directory(sourceDirectory,true);
@@ -117,7 +119,7 @@ export async function preserveInitializedLoanStore({sourceDirectory,snapshotDire
    total+=k.length+v.length;check(k.length<=1024&&v.length<=4096&&total<=16384,'ENTRY_BOUND');
    check(Buffer.from(k.toString('utf8')).equals(k)&&Buffer.from(v.toString('utf8')).equals(v),'ENTRY_ENCODING');entries.push([k.toString('utf8'),v.toString('utf8')]);
   }
-  initializedEntries(entries,accountId);
+  initializedEntries(entries,accountId,kind);
   result=Object.freeze({status:'PRESERVED',sourceManifestSha256:sourceDigest,snapshotManifestSha256:snapshotDigest});
  }catch(e){failure=e.message?.startsWith('RECOVERY_STORE_')?e:Error('RECOVERY_STORE_PRESERVATION_FAILED');}
  finally{

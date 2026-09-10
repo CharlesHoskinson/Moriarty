@@ -1,3 +1,5 @@
+import {validateInitializedSwapPlan} from './continue-swap-plan.mjs';
+import {preflightLocalInitializedSwap} from './integrate-local.mjs';
 /** Existing-wallet local entry point. Actual execution requires separate admission
  * and outer process containment. Importing this module never reads private files,
  * constructs a wallet, imports SDK code, or contacts a service.
@@ -24,9 +26,11 @@ const childKinds=['shielded','unshielded','dust'];
 const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
 function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
 export function validateLocalLaunchPlan(p){
- const recovery=Object.hasOwn(p??{},'existingDeployment'),continuation=Object.hasOwn(p??{},'existingInitializedLoan');
+ const recovery=Object.hasOwn(p??{},'existingDeployment'),loanContinuation=Object.hasOwn(p??{},'existingInitializedLoan'),swapContinuation=Object.hasOwn(p??{},'existingInitializedSwap'),continuation=loanContinuation||swapContinuation;
+ check(!(loanContinuation&&swapContinuation),'LAUNCH_MUTUALLY_EXCLUSIVE_MODES');
+ const continuationField=swapContinuation?'existingInitializedSwap':'existingInitializedLoan';
  check(!(recovery&&continuation),'LAUNCH_MUTUALLY_EXCLUSIVE_MODES');
- exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory'+(recovery?',existingDeployment':continuation?',existingInitializedLoan':''));
+ exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory'+(recovery?',existingDeployment':continuation?','+continuationField:''));
  check(p.schema==='moriarty.local-financial-launch/1'&&['loan','swap'].includes(p.kind),'LAUNCH_SCHEMA');
  exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hex(p.build.receiptSha256)&&hex(p.build.sourceManifestHash),'LAUNCH_BUILD_HASH');
  exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');check(p.networkConfig.networkId==='undeployed','LAUNCH_NETWORK');
@@ -41,10 +45,10 @@ export function validateLocalLaunchPlan(p){
  exact(p.limits.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(p.limits.grossByLogicalAsset).every(decimal),'LAUNCH_ASSET_LIMITS');
  if(recovery||continuation){
   if(recovery)validateExistingLoanPlan(p.existingDeployment,p);
-  else validateInitializedLoanPlan(p.existingInitializedLoan,p);
+  else if(swapContinuation)validateInitializedSwapPlan(p.existingInitializedSwap,p);else validateInitializedLoanPlan(p.existingInitializedLoan,p);
   check(p.wallet.seedFile==='/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed'&&p.wallet.stateDirectory==='/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2'&&p.wallet.expectedAddress==='mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9','LAUNCH_RECOVERY_ORIGINAL_WALLET');
   check(p.roles.firstAddress==='9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb'&&p.roles.secondAddress==='c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e','LAUNCH_RECOVERY_ORIGINAL_ROLES');
-  const roots=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory,...(continuation?[p.existingInitializedLoan.snapshotDirectory,p.existingInitializedLoan.inspectionDirectory]:[p.existingDeployment.inspectionDirectory])];
+  const roots=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory,...(continuation?[p[continuationField].snapshotDirectory,p[continuationField].inspectionDirectory]:[p.existingDeployment.inspectionDirectory])];
   check(roots.every((a,i)=>roots.every((b,j)=>i===j||(a!==b&&!a.startsWith(b+'/')))),'LAUNCH_RECOVERY_DIRECTORY_OVERLAP');
   check(!p.privateState.passwordFile.startsWith(p.wallet.stateDirectory+'/'),'LAUNCH_RECOVERY_PRESERVE_WALLET');
  }
@@ -147,6 +151,7 @@ export async function launchLocalFinancialCase(plan){
  // Repeat the operational read-only gate inside the launcher, before seed/HD or writes.
  if(p.existingDeployment)await preflightLocalRecovery(p);
  if(p.existingInitializedLoan)await preflightLocalInitializedLoan(p);
+ if(p.existingInitializedSwap)await preflightLocalInitializedSwap(p);
  const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
  const password=await readLocalStoragePassword(p.privateState.passwordFile);
  const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
@@ -180,7 +185,7 @@ export async function launchLocalFinancialCase(plan){
   const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicLaunchEvent(e)),onStage:summary=>{check(summary?.status==='PASS'&&['deploy','initialize','accrue','settle','swap','close'].includes(summary.stage),'LAUNCH_STAGE');durableFile(join(p.outputDirectory,'stage-'+summary.stage+'.json'),summary);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}};
   let result;
   if(p.existingDeployment)options.recoveryPlan=p;
-  if(p.existingInitializedLoan)options.continuationPlan=p;
+  if(p.existingInitializedLoan||p.existingInitializedSwap)options.continuationPlan=p;
   try{result=await integrateLocalFinancialCase(options);}
   catch(error){if(error.publicIntegrationResult!==undefined)retainPublicIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('LOCAL_FINANCIAL_RUN_INCOMPLETE');}
   retainPublicIntegrationResult(p.outputDirectory,result);return result;
