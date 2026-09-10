@@ -1,0 +1,39 @@
+{
+  "schema": "moriarty.preview-swap-attempt/1",
+  "status": "CONSUMED",
+  "allocationId": "sp05-preview-swap-20260910-01",
+  "admissionSha256": "02874954a10c2f4ad24d9046ba6cf5db11eceb365e49514c5f7b7275b8c8729b",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-preview-swap-stop-01",
+    "--on-active=2500s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-preview-swap-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server"
+  ],
+  "retryAllowed": false,
+  "priorCharges": {
+    "priorLocalReservedSubmissions": 11,
+    "priorLocalReservedDustSpeck": "3300000000000011",
+    "priorLocalAdmittedDustCeilingSpeck": "4000000000000010",
+    "priorPreviewLoanReservedSubmissions": 4,
+    "priorPreviewLoanReservedDustSpeck": "1200000000000004",
+    "priorPreviewLoanAdmittedDustCeilingSpeck": "2000000000000000",
+    "priorCombinedReservedSubmissions": 15,
+    "priorCombinedReservedDustSpeck": "4500000000000015",
+    "priorCombinedAdmittedDustCeilingSpeck": "6000000000000010",
+    "thisAttemptAdditionalSubmissionsMax": 4,
+    "thisAttemptAdditionalDustCapSpeck": "2000000000000000",
+    "combinedReservedSubmissionCeiling": 19,
+    "combinedReservedPlusThisCapSpeck": "6500000000000015",
+    "combinedAdmittedCeilingPlusThisCapSpeck": "8000000000000010",
+    "reservedDustIsPaidFee": false,
+    "preservation": "All earlier local/Preview hello-world, build/compiler, proof, failed preflight, permission amendment, probe/runtime and reviewer charges remain consumed, including the loan preflight failure with no new wallet operation. This is not a global fee total or a refund/reset. Prior loan raw FAILED/INCOMPLETE remains separate from all four compared stages and observed outer containment."
+  }
+}

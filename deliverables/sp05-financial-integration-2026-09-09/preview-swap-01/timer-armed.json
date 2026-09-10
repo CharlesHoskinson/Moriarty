@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-preview-swap-stop-01",
+    "--on-active=2500s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-preview-swap-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server"
+  ],
+  "armingMonotonicSeconds": 86448.893872,
+  "nextElapseMonotonicMicroseconds": 88948893872,
+  "accuracyMicroseconds": 1000000,
+  "setupDeadlineMonotonicSeconds": 86568.893872,
+  "operationDeadlineMonotonicSeconds": 88938.893872,
+  "operationDeadlineMs": 1789065086491
+}
