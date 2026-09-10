@@ -45,3 +45,14 @@ The grammar rejects these declarations. They still belong to later owners.
 ## Missing RP01 freeze
 
 RP01 remains unfrozen. This profile does not promote a successor semantic contract, broaden accepted atomic scope, or close SP02. Static judgments, Core elaboration, K, and financial coverage stay later work.
+
+## Expression source component
+
+The separate [expression-source/1 candidate](expression-source.md) now connects
+real `.mori` expressions to the reviewed40-constructor Core evaluator through a
+trusted-schema API. It adds explicit numeric type metadata, signed values,
+records/options/collections, index access and direct record-valued emissions.
+Its exact implementation audits are pending. The included demo checks and
+updates ordinary state while retaining financial state; emissions are typed
+descriptors with no financial execution. Original syntax-only and funded entry
+points keep their exact profiles. Full agreement declarations and SP02 remain open.

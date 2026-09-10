@@ -1,6 +1,7 @@
-/** Bounded lexer/parser for moriarty-successor-syntax/0. */
+/** Bounded lexer/parser with explicit, separate syntax/0 and expression-source/1 entries. */
 
 export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
+export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
 
 export const SYNTAX_BOUNDS = Object.freeze({
   sourceUtf8Bytes: 65536,
@@ -58,6 +59,7 @@ export interface AgreementDecl {
 
 export interface TypeNode {
   tag: 'Type';
+  numeric?: true;
   name: string;
   arguments: TypeNode[];
   span: Span;
@@ -145,6 +147,7 @@ export interface Next {
 
 export interface Emit {
   tag: 'Emit';
+  expression?: Expression;
   type: TypeNode;
   fields: EffectField[];
   span: Span;
@@ -185,6 +188,7 @@ export interface BooleanLiteral {
 
 export interface Call {
   tag: 'Call';
+  typeArguments?: TypeNode[];
   name: string;
   arguments: Expression[];
   span: Span;
@@ -220,7 +224,21 @@ export interface Comparison {
   span: Span;
 }
 
+export interface RecordExpression {
+  tag: 'RecordExpression';
+  recordType: TypeNode;
+  fields: EffectField[];
+  span: Span;
+}
+export interface Index {
+  tag: 'Index';
+  object: Expression;
+  index: Expression;
+  span: Span;
+}
 export type Expression =
+  | RecordExpression
+  | Index
   | Identifier
   | IntegerLiteral
   | StringLiteral
@@ -231,11 +249,13 @@ export type Expression =
   | Binary
   | Comparison;
 
-const KEYWORDS = new Set([
+export const SOURCE_KEYWORDS = Object.freeze([
   'profile', 'agreement', 'unit', 'party', 'asset', 'const', 'state', 'action',
   'requires', 'let', 'next', 'emit', 'ensures',
   'true', 'false', 'not', 'and', 'or',
 ]);
+const KEYWORDS = new Set(SOURCE_KEYWORDS);
+export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'quantity', 'record']);
 
 const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
 const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
@@ -329,8 +349,10 @@ class Lexer {
   readonly n: number;
   readonly tokens: Token[] = [];
   readonly source: string;
+  readonly expressionProfile: boolean;
 
-  constructor(source: string) {
+  constructor(source: string, expressionProfile = false) {
+    this.expressionProfile = expressionProfile;
     this.source = source;
     this.n = source.length;
   }
@@ -446,7 +468,7 @@ class Lexer {
     }
 
     const ch = src[this.i]!;
-    if (ONE_CHAR.has(ch)) {
+    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']'))) {
       this.bumpAscii();
       this.emit(ch, startB, startI);
       return;
@@ -603,10 +625,14 @@ class Parser {
   readonly depths = new WeakMap<object, number>();
   extraTokenCount = 0;
   readonly tokens: Token[];
+  readonly profile: string;
 
-  constructor(tokens: Token[]) {
+  constructor(tokens: Token[], profile = SYNTAX_PROFILE) {
     this.tokens = tokens;
+    this.profile = profile;
   }
+
+  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE; }
 
   parseProgram(): Program {
     const profile = this.parseProfile();
@@ -696,8 +722,8 @@ class Parser {
   private parseProfile(): ProfileDecl {
     const kw = this.expect('profile');
     const str = this.expect('string');
-    if (str.decoded !== SYNTAX_PROFILE) {
-      this.fail('PROFILE_MISMATCH', `profile must be ${SYNTAX_PROFILE}`, str.start, str.end);
+    if (str.decoded !== this.profile) {
+      this.fail('PROFILE_MISMATCH', `profile must be ${this.profile}`, str.start, str.end);
     }
     const semi = this.expect(';');
     return this.counted({
@@ -792,7 +818,7 @@ class Parser {
     if (!this.at(')')) {
       parameters.push(this.parseParameter());
       while (this.at(',')) {
-        if (parameters.length >= SYNTAX_BOUNDS.parameters) {
+        if (parameters.length >= (this.expressionProfile ? 256 : SYNTAX_BOUNDS.parameters)) {
           this.fail('ARITY_BOUND', 'parameter bound exceeded');
         }
         this.advance();
@@ -881,7 +907,16 @@ class Parser {
     }
     if (this.at('emit')) {
       const kw = this.advance();
-      const type = this.parseType();
+      let type: TypeNode;
+      if (this.expressionProfile) {
+        const name = this.expectIdent();
+        type = this.expr({ tag: 'Type' as const, name: name.text, arguments: [], span: { start: name.start, end: name.end } }, 1);
+        if (!this.at('{')) {
+          const expression = this.parseExpression();
+          const semi = this.expect(';');
+          return this.counted({ tag: 'Emit', type, fields: [], expression, span: { start: kw.start, end: semi.end } });
+        }
+      } else type = this.parseType();
       this.expect('{');
       const fields: EffectField[] = [];
       if (!this.at('}')) {
@@ -929,7 +964,15 @@ class Parser {
     });
   }
 
-  private parseType(): TypeNode {
+  private parseType(allowNumeric = false): TypeNode {
+    if (allowNumeric && this.expressionProfile && (this.at('integer') || this.at('-'))) {
+      const start = this.peek().start;
+      const negative = this.at('-');
+      if (negative) this.advance();
+      const value = this.expect('integer');
+      return this.expr({ tag: 'Type' as const, numeric: true as const,
+        name: (negative ? '-' : '') + value.text, arguments: [], span: { start, end: value.end } }, 1);
+    }
     const name = this.expectIdent();
     let args: TypeNode[] = [];
     let depth = 1;
@@ -940,10 +983,10 @@ class Parser {
       if (this.at('>') || this.at('>=')) {
         this.fail('EMPTY_TYPE_ARGS', 'empty type argument list', this.peek().start, this.peek().start + 1);
       }
-      args.push(this.parseType());
+      args.push(this.parseType(true));
       while (this.at(',')) {
         this.advance();
-        args.push(this.parseType());
+        args.push(this.parseType(true));
       }
       end = this.expectGt();
       this.leaveNest();
@@ -1054,23 +1097,31 @@ class Parser {
 
   private parsePostfix(): Expression {
     let expr = this.parsePrimary();
-    while (this.at('.')) {
-      this.advance();
-      const field = this.expectIdent();
-      expr = this.expr(
-        {
-          tag: 'Projection' as const,
-          object: expr,
-          field: field.text,
-          span: { start: expr.span.start, end: field.end },
-        },
-        1 + this.depthOf(expr),
-      );
+    while (this.at('.') || (this.expressionProfile && this.at('['))) {
+      if (this.at('.')) {
+        this.advance();
+        const field = this.expectIdent();
+        expr = this.expr({ tag: 'Projection' as const, object: expr, field: field.text,
+          span: { start: expr.span.start, end: field.end } }, 1 + this.depthOf(expr));
+      } else {
+        this.enterNest(this.advance());
+        const index = this.parseExpression();
+        const close = this.expect(']');
+        this.leaveNest();
+        expr = this.expr({ tag: 'Index' as const, object: expr, index,
+          span: { start: expr.span.start, end: close.end } }, 1 + Math.max(this.depthOf(expr), this.depthOf(index)));
+      }
     }
     return expr;
   }
 
   private parsePrimary(): Expression {
+    if (this.expressionProfile && this.at('-')) {
+      const sign = this.advance();
+      const value = this.expect('integer');
+      return this.expr({ tag: 'IntegerLiteral' as const, value: '-' + value.text,
+        span: { start: sign.start, end: value.end } }, 1);
+    }
     if (this.at('integer')) {
       const t = this.advance();
       return this.expr(
@@ -1103,6 +1154,34 @@ class Parser {
     }
     if (this.at('ident')) {
       const name = this.advance();
+      let typeArguments: TypeNode[] | undefined;
+      if (this.expressionProfile && GENERIC_PRIMARIES.includes(name.text)) {
+        this.enterNest(this.peek());
+        this.expect('<');
+        typeArguments = [this.parseType(name.text !== 'record')];
+        while (this.at(',')) { this.advance(); typeArguments.push(this.parseType(true)); }
+        this.expectGt();
+        this.leaveNest();
+        if (name.text === 'record') {
+          if (typeArguments.length !== 1) this.fail('UNEXPECTED_TOKEN', 'record requires one type argument', name.start, this.peek().start);
+          this.enterNest(this.peek());
+          this.expect('{');
+          const fields: EffectField[] = [];
+          if (!this.at('}')) {
+            fields.push(this.parseEffectField());
+            while (this.at(',')) {
+              if (fields.length >= SYNTAX_BOUNDS.recordFields) this.fail('ARITY_BOUND', 'record field bound exceeded');
+              this.advance(); fields.push(this.parseEffectField());
+            }
+          }
+          const close = this.expect('}');
+          this.leaveNest();
+          const depth = 1 + Math.max(this.depthOf(typeArguments[0]), ...fields.map(f => this.depthOf(f.expression)));
+          return this.expr({ tag: 'RecordExpression' as const, recordType: typeArguments[0], fields,
+            span: { start: name.start, end: close.end } }, depth);
+        }
+        if (!this.at('(')) this.unexpected();
+      }
       if (this.at('(')) {
         this.enterNest(this.peek());
         this.advance();
@@ -1110,7 +1189,7 @@ class Parser {
         if (!this.at(')')) {
           args.push(this.parseExpression());
           while (this.at(',')) {
-            if (args.length >= SYNTAX_BOUNDS.callArguments) {
+            if (args.length >= (this.expressionProfile && name.text === 'collection' ? 128 : SYNTAX_BOUNDS.callArguments)) {
               this.fail('ARITY_BOUND', 'call argument bound exceeded');
             }
             this.advance();
@@ -1119,11 +1198,12 @@ class Parser {
         }
         const close = this.expect(')');
         this.leaveNest();
-        let depth = 1;
+        let depth = typeArguments ? 1 + Math.max(...typeArguments.map(t => this.depthOf(t))) : 1;
         for (const a of args) depth = Math.max(depth, 1 + this.depthOf(a));
         return this.expr(
           {
             tag: 'Call' as const,
+            ...(typeArguments ? { typeArguments } : {}),
             name: name.text,
             arguments: args,
             span: { start: name.start, end: close.end },
@@ -1161,11 +1241,20 @@ class Parser {
   }
 }
 
-export function parseSuccessorSource(source: string): Program {
+function parseSourceProfile(source: string, profile: string): Program {
   if (typeof source !== 'string') {
     fail('SOURCE_TYPE', 'source must be a string', 0, 0);
   }
   validateSource(source);
-  const tokens = new Lexer(source).tokenize();
-  return new Parser(tokens).parseProgram();
+  const tokens = new Lexer(source, profile === EXPRESSION_SOURCE_PROFILE).tokenize();
+  return new Parser(tokens, profile).parseProgram();
+}
+
+/** Original syntax-only entry point retains its exact profile. */
+export function parseSuccessorSource(source: string): Program {
+  return parseSourceProfile(source, SYNTAX_PROFILE);
+}
+/** Distinct expression-source entry point; no implicit profile migration. */
+export function parseSuccessorExpressionSource(source: string): Program {
+  return parseSourceProfile(source, EXPRESSION_SOURCE_PROFILE);
 }

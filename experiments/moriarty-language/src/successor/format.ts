@@ -1,5 +1,6 @@
 import {
   parseSuccessorSource,
+  parseSuccessorExpressionSource,
   SuccessorSyntaxError,
   SYNTAX_BOUNDS,
   type Declaration,
@@ -39,8 +40,10 @@ function exprPrec(expr: Expression): number {
     case 'StringLiteral':
     case 'BooleanLiteral':
     case 'Call':
+    case 'RecordExpression':
       return PREC_PRIMARY;
     case 'Projection':
+    case 'Index':
       return PREC_POSTFIX;
     case 'Unary':
       return PREC_NOT;
@@ -87,8 +90,13 @@ function formatExpressionInner(expr: Expression): string {
       return expr.value ? 'true' : 'false';
     case 'Call': {
       const args = expr.arguments.map((argument) => formatExpression(argument, PREC_NONE, 'none'));
-      return `${expr.name}(${args.join(', ')})`;
+      const types = expr.typeArguments ? `<${expr.typeArguments.map(formatType).join(', ')}>` : '';
+      return `${expr.name}${types}(${args.join(', ')})`;
     }
+    case 'RecordExpression':
+      return `record<${formatType(expr.recordType)}> { ${expr.fields.map(formatEffectField).join(', ')} }`;
+    case 'Index':
+      return `${formatExpression(expr.object, PREC_POSTFIX, 'operand')}[${formatExpression(expr.index, PREC_NONE, 'none')}]`;
     case 'Projection':
       return `${formatExpression(expr.object, PREC_POSTFIX, 'operand')}.${expr.field}`;
     case 'Unary':
@@ -130,6 +138,7 @@ function formatStatement(statement: Statement): string {
       return `next.${statement.name} = ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
     case 'Emit': {
       const type = formatType(statement.type);
+      if (statement.expression) return `emit ${type} ${formatExpression(statement.expression, PREC_NONE, 'none')};`;
       if (statement.fields.length === 0) return `emit ${type} {};`;
       return `emit ${type} { ${statement.fields.map(formatEffectField).join(', ')} };`;
     }
@@ -174,8 +183,7 @@ function formatProgram(program: Program): string {
   return `profile ${program.profile.raw};\n\nagreement ${program.agreement.name} {\n${inner}}\n`;
 }
 
-export function formatSuccessorSource(source: string): string {
-  const program = parseSuccessorSource(source);
+function formatParsedSource(program: Program): string {
   const formatted = formatProgram(program);
   if (utf8ByteLength(formatted) > SYNTAX_BOUNDS.sourceUtf8Bytes) {
     throw new SuccessorSyntaxError(
@@ -186,4 +194,10 @@ export function formatSuccessorSource(source: string): string {
     );
   }
   return formatted;
+}
+export function formatSuccessorSource(source: string): string {
+  return formatParsedSource(parseSuccessorSource(source));
+}
+export function formatSuccessorExpressionSource(source: string): string {
+  return formatParsedSource(parseSuccessorExpressionSource(source));
 }

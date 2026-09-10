@@ -1,0 +1,13 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
+const read = name => readFileSync(new URL('../spec/successor/examples/' + name, import.meta.url), 'utf8');
+const language = createExpressionSourceV1(read('expression-counter.schema.json'));
+const source = read('expression-counter.mori');
+const checked = language.check(source);
+const result = language.evaluate(source, read('expression-counter.snapshots.json'));
+assert.equal(checked.judgmentResult, 'SourceChecked');
+assert.equal(result.status, 'ExpressionPrepared');
+assert.deepEqual(result.post, { counter: '12', funds: '100' });
+assert.deepEqual(result.descriptors, [{ operation: 'QuoteNotice', fields: { amount: '5', count: '2' } }]);
+console.log(JSON.stringify({ sourceCheck: checked, localExpressionResult: result }, null, 2));
