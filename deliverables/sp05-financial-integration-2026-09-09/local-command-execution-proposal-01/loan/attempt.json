@@ -1,0 +1,35 @@
+{
+  "schema": "moriarty.local-command-attempt/1",
+  "status": "CONSUMED",
+  "allocationId": "sp05-local-loan-completion-20260910-01",
+  "admissionSha256": "df5b6ea28c11e56799fc3ab3da08793e3c9c5be625bfdbdd7c626dc83ebfae00",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-loan-completion-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-completion-01.service moriarty-sp05-local-loan-completion-preflight-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorCharges": {
+    "priorLocalReservations": 11,
+    "priorLocalReservedSpeck": "3300000000000011",
+    "priorCombinedReservations": 27,
+    "priorCombinedReservedSpeck": "8100000000000027",
+    "priorCombinedAdmittedCeilingsSpeck": "12000000000000010",
+    "additionalReservationsMax": 8,
+    "additionalDustCapSpeck": "4000000000000000",
+    "combinedReservationCeiling": 35,
+    "combinedReservedPlusNewCapsSpeck": "12100000000000027",
+    "combinedAdmittedCeilingsPlusNewCapsSpeck": "16000000000000010",
+    "scope": "Not predicted paid fees. Both new allocations remain separately capped; no historical surplus subsidy. All older failed/service/proof/compiler/reviewer charges, including unquantified totals, remain consumed."
+  },
+  "otherCaseAttemptSha256": null
+}

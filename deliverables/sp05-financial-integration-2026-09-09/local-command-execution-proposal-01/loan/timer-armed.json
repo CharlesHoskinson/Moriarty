@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-loan-completion-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-completion-01.service moriarty-sp05-local-loan-completion-preflight-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "armingMonotonicSeconds": 98898.187857,
+  "nextElapseMonotonicMicroseconds": 100198187857,
+  "accuracyMicroseconds": 1000000,
+  "setupDeadlineMonotonicSeconds": 99018.187857,
+  "shutdownWallMsProjection": 1789076345785
+}
