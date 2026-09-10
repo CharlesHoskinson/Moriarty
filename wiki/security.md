@@ -3,8 +3,9 @@ id: moriarty.security.boundaries
 type: security
 title: Moriarty security and trust boundaries
 status: active
-updated_at: 2026-09-02T18:20:00Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
+  - SRC-0110
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -13,7 +14,7 @@ sources:
   - SRC-0005
   - SRC-0007
 created: 2026-09-02
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
   - moriarty
   - research
@@ -52,3 +53,11 @@ claim for all of these boundaries.
 ## Vault valuation and claim boundaries — 2026-09-08
 
 **CLM-0933.** The [vault report comparison](../deliverables/erc4626-vault-report-2026-09-08/DESIGN-IMPLICATIONS.md) proposes separate valuation roles, explicit conversion/preview/limit/execution semantics, complete direct-transfer and rounding accounting, persistent request duties and versioned dependency/authority rules. Six proposed tests distinguish local share accounting from downstream collateral and recovery assumptions. Source: SRC-0104, lines 81–100, 125–147, 246–325; report as-of 2026-09-08; secondary synthesis; reviewed 2026-09-08; S2 inference/recommendation, not implemented or reproduced; confidence medium. Existing local ERC-4626/7540 snapshots support a limited method/lifecycle comparison; other external incident, standard-status and theorem assertions remain report claims. The four mandatory proof obligations retain their explicit domains and assumptions.
+
+## Security-token policy paths — 2026-09-09
+
+**CLM-0945.** The report proposes policy-path completeness: ordinary transfers and exceptional issuance/burn, recovery, liquidation, wrapper and migration paths must each apply their defined policy and scoped authority. A successful deposit does not establish a safe withdrawal or liquidation path; custody and receipt transfers can change who holds the economic claim. Source: SRC-0110, lines 365–413 and 447–473; report date 2026-09-09; secondary descriptive synthesis; reviewed 2026-09-09; S2 source argument and test recommendation; not implemented or reproduced; confidence medium. A cryptographic credential proves its declared predicate under issuer/freshness assumptions, not the truth of external facts or legal compliance.
+
+[Proposed AT01–AT08 cases](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md) cover wrapper restrictions, partial encumbrance/liquidation, pending redemption, scoped recovery, record dates, stale policy/migration, multi-asset batches and private eligibility. Bind asset domains and policy versions, preserve residual obligations, and distinguish a settlement hold from a freeze. Forced recovery is a new authorized transition, not deletion of history. All eight cases remain unexecuted proposals.
+
+The report's CIP-0113 mixed-policy, unfracking and third-party-action concerns remain contested assurance questions. Its current status, audit, deployment and legal assertions have not been independently verified in this intake. Opaque citation markers and two missing sandbox catalogs prevent treating its claimed primary-source review as our own evidence. [Full source and graph](../deliverables/security-token-transformations-2026-09-09/README.md); [[wiki/moriarty-architecture#Assets, claims and transformations — 2026-09-09|language and agenda fit]].

@@ -8,9 +8,10 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T20:18:05Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
   - SRC-0109
+  - SRC-0110
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -234,3 +235,7 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 ## TypeScript-style language accessibility and PL convergence
 
 [Report](../deliverables/language-design-2026-09-09/REPORT.md) · [feature checklist](../deliverables/language-design-2026-09-09/FEATURE-CHECKLIST.md) · [paper atlas](../deliverables/language-design-2026-09-09/PAPER-ATLAS.md) · [typed graph](../deliverables/language-design-2026-09-09/GRAPH.md) · [convergence](../deliverables/language-design-2026-09-09/CONVERGENCE.md). SRC-0109 and CLM-0940–0942 preserve thirteen academic documents, fourteen substantive official pages and twenty recommended labels with amendments/dissent. S2 research; no semantic freeze, participant experiment or proof/financial acceptance.
+
+## Security tokens and asset transformations — 2026-09-09
+
+[Report, interactive graph and design analysis](../deliverables/security-token-transformations-2026-09-09/README.md), SRC-0110, adds asset/claim/encumbrance distinctions and eight proposed transformation cases. CLM-0943–CLM-0945 are maintained in [[wiki/moriarty-architecture|architecture]] and [[wiki/security|security]]. Full report read; 100 graph nodes, 239 directed edges and seven communities. External citations remain unverified. Proposed SP01–SP12 refinements preserve current MC/RP acceptance gates.

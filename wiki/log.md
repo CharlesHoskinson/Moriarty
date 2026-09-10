@@ -8,9 +8,10 @@ updated: 2026-09-09
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T20:18:05Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
   - SRC-0109
+  - SRC-0110
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -1043,3 +1044,7 @@ SRC-0108 captures nine official K pages with Scrapling 0.4.15, robots policy, SH
 ## 2026-09-09 — Language design research and PL convergence
 
 SRC-0109 collects thirteen full academic documents and fourteen substantive official documentation pages, with hashes/locators and retained access gaps. CLM-0940–0942 and the [convergence report](../deliverables/language-design-2026-09-09/CONVERGENCE.md) distinguish twenty agreed feature labels from substantive amendments and dissent. Experiments remain specified-only. Added bounded grammar lessons and qualified the historical K status; no financial/proof gate changed.
+
+## [2026-09-09] ingest | Security-token report and asset transformations
+
+Captured the supplied 97,006-byte report unchanged as SRC-0110; all 565 lines read. Capture `capture-security-token-report9-20260909`; ingest `ingest-security-token-report9-20260909`. [Dossier and graph](../deliverables/security-token-transformations-2026-09-09/README.md) contain 100 nodes, 239 directed edges, seven communities, three extracted hyperedges and eight unexecuted proposed cases. CLM-0943–CLM-0945 extend architecture/security synthesis with explicit claim continuity and policy-path completeness. SRC-0109 is reserved by the existing syntax research branch; its identity is not reused. External citation tokens and two missing catalogs remain unresolved. No network requests, language implementation, proofs or Midnight transactions were performed by this intake.

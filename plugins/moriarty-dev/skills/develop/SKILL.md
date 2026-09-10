@@ -13,7 +13,7 @@ It enforces repository stop rules, prevents orchestration displacement, and dire
 1. **User Steering**: User requests, intent, or interruptions always take precedence over automatic action selection.
 2. **Product Routing**:
    - Current plugin implementation: GPT-6, as selected by the user. Follow later user routing for subsequent product work.
-   - Independent result review: a separate, fresh GPT-6 Astra reviewer checks the exact candidate bytes.
+   - Independent result review: separate, fresh GPT-6 Astra and Grok 4.6 high reviewers check the exact candidate bytes, per the September 9 user routing. Preserve historical verdict identities; both current audits are required.
    - Consequential design decisions retain majority rule (two substantive agreeing votes). Routine repairs within approved scope proceed without repeated design votes.
 3. **Guarded Dispatch**: Launch registered campaign actions through the plugin CLI `run`, which validates authority, candidate commitments, debit identity and stop rules in an atomic reservation. Routine authorized file inspection and source edits do not need a new runner, campaign or design vote.
 4. **Host Interception and Fallback**: Direct CLI execution (`cli.py run`) is the verified fallback procedure whenever host hook trust is unverified, degraded, or wrapper-only.

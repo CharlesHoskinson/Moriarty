@@ -3,9 +3,10 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-09T00:00:00Z
+updated_at: 2026-09-09T22:50:07Z
 sources:
   - SRC-0109
+  - SRC-0110
   - SRC-0104
   - SRC-0100
   - SRC-0101
@@ -189,3 +190,11 @@ The [collateral-vault supplement](../deliverables/erc4626-vault-report-2026-09-0
 **CLM-0941.** Current Elm commands/subscriptions differ from historical FRP. Unbounded queues and productive streams do not establish finite financial lifetime work. Unison handlers can resume multiple times, while immutable references do not establish authority or proof validity. Distinct source/Core/build/output/claim/execution identities and bounded dependencies are recommended. The [complete proposed payment data](../deliverables/language-design-2026-09-09/PAYMENT-FIXTURE.md) connects debt, custody, allocation, residual authority/work and prepared status without inventing admitted syntax. SRC-0109; scoped source facts plus S2 inference; no execution reproduced.
 
 Grammar lessons: completeness claims name a profile. [The grammar review](../deliverables/grammar-pl-review-2026-09-09/README.md) records the repository lesson that ISO14977 meta-identifiers use letters/digits (camelCase replaces unsuitable underscores). Check grammar, lexer, parser, formatter and README agreement separately from typing and financial correspondence. The [current README](../README.md) describes the bounded small-step projection; PL-agent votes are expert critique, not developer-usability evidence.
+
+## Assets, claims and transformations — 2026-09-09
+
+**CLM-0943.** The supplied security-token report separates financial lifecycle and entitlement from identity, transfer control and chain enforcement. Its useful contribution to Moriarty is an explicit account of how wrapping, pledging, liquidation, recovery and redemption change claims and retain obligations. Source: SRC-0110, report lines 317–385 and 539–555; report date 2026-09-09; secondary descriptive synthesis; reviewed 2026-09-09; source argument, S2; not reproduced; confidence medium. Its external citations are opaque and were not independently verified.
+
+**CLM-0944.** Recommend bounded asset/claim/encumbrance records and operation-specific transformation rules, with reusable financial and policy profiles. Keep asset quantities distinct from share units, economic exposure, legal title and nominal debt. Normal and exceptional authority must be separate. This extends the existing token-indexed amount/residual-duty direction; it does not add one Core constructor per standard. Source: SRC-0110, lines 317–473; S2 design inference/recommendation, reviewed 2026-09-09; not implemented or reproduced; confidence medium. [Three approaches, proposed semantics and eight cases](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md).
+
+Place the specification in SP01, types/EBNF in SP02, and Felleisen–Hieb reductions/K in SP03. SP07 owns scheduled servicing; SP08 owns DeFi transformations and pending claims; SP06/SP09 bind history and ledger correspondence; SP10 handles private bounded composition; SP11 conformance and SP12 developer release complete the path. SP04 requalifies affected native components. SP05 supplies Docker then Midnight Preview evidence only after the profile is admitted. The [exact sprint crosswalk](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md) preserves MC/RP gates, existing fixture counts and the shared-file ownership order. These are proposed refinements, not roadmap acceptance or new grammar. See [[wiki/security#Security-token policy paths — 2026-09-09|policy-path risks]].

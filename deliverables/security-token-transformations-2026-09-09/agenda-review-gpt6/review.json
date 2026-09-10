@@ -1,0 +1,156 @@
+{
+  "schema": "moriarty.independent-agenda-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "role": "fresh independent reviewer",
+    "identityBasis": "host-selected agent model; no external provider call"
+  },
+  "createdAt": "2026-09-09T23:13:48.616661+00:00",
+  "verdict": "CHANGES_REQUESTED",
+  "scope": "Six exact candidate files in agenda-verification.json; agenda integration only",
+  "branch": "feat/security-token-asset-agenda",
+  "head": "1da9fc95a167bb1198557e84416925c16472a696",
+  "files": [
+    {
+      "path": "openspec/ASSET-STUDY-INTEGRATION-2026-09-09.md",
+      "sha256": "db1eac48d0e39cd2580d47fdd9bcbc7411158c4a701cf3d030f3d50db93701bd",
+      "sha256Before": "db1eac48d0e39cd2580d47fdd9bcbc7411158c4a701cf3d030f3d50db93701bd",
+      "sha256After": "db1eac48d0e39cd2580d47fdd9bcbc7411158c4a701cf3d030f3d50db93701bd",
+      "unchanged": true
+    },
+    {
+      "path": "openspec/sprints/asset-study.json",
+      "sha256": "38135dcfb3c87b23b0d9118f87f111885cad1532e4d84bd209fffa8200501361",
+      "sha256Before": "38135dcfb3c87b23b0d9118f87f111885cad1532e4d84bd209fffa8200501361",
+      "sha256After": "38135dcfb3c87b23b0d9118f87f111885cad1532e4d84bd209fffa8200501361",
+      "unchanged": true
+    },
+    {
+      "path": "openspec/sprints/README.md",
+      "sha256": "a223fb892602f40d419147125d0938b9f6631180e36bc39b79e22b3c1bf645bb",
+      "sha256Before": "a223fb892602f40d419147125d0938b9f6631180e36bc39b79e22b3c1bf645bb",
+      "sha256After": "a223fb892602f40d419147125d0938b9f6631180e36bc39b79e22b3c1bf645bb",
+      "unchanged": true
+    },
+    {
+      "path": "openspec/sprints/coverage.json",
+      "sha256": "fda13fe287b9fc10b590f999106ba5623605ca783da65a9e08175656ac32302b",
+      "sha256Before": "fda13fe287b9fc10b590f999106ba5623605ca783da65a9e08175656ac32302b",
+      "sha256After": "fda13fe287b9fc10b590f999106ba5623605ca783da65a9e08175656ac32302b",
+      "unchanged": true
+    },
+    {
+      "path": "raw/assignments/moriarty-asset-study-integration-2026-09-09.md",
+      "sha256": "5aa566d7d9b57971825c29bf5870de6d36b409239e93ab5499bfc0f9aab0218d",
+      "sha256Before": "5aa566d7d9b57971825c29bf5870de6d36b409239e93ab5499bfc0f9aab0218d",
+      "sha256After": "5aa566d7d9b57971825c29bf5870de6d36b409239e93ab5499bfc0f9aab0218d",
+      "unchanged": true
+    },
+    {
+      "path": "ROADMAP.md",
+      "sha256": "0f2d061499f4798b709180ddbf324daf810f26980df4242d1cad73f1ac383bb0",
+      "sha256Before": "0f2d061499f4798b709180ddbf324daf810f26980df4242d1cad73f1ac383bb0",
+      "sha256After": "0f2d061499f4798b709180ddbf324daf810f26980df4242d1cad73f1ac383bb0",
+      "unchanged": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "medium",
+      "title": "SP10 composition and private-handoff task routing is reversed",
+      "location": "openspec/sprints/asset-study.json:352",
+      "evidence": [
+        "openspec/sprints/sp10-private-handoff-and-bounded-composition.md:31 defines SP10.1 as Realize every required operator",
+        "openspec/sprints/sp10-private-handoff-and-bounded-composition.md:39 defines SP10.2 as Demonstrate independent private continuation",
+        "openspec/sprints/sp10-private-handoff-and-bounded-composition.md:47 defines SP10.3 as Prove split/join and exercise recovery"
+      ],
+      "impact": "Existing task IDs pass structural validation but acceptance cases and requirements are assigned to the wrong task responsibilities. In particular, AT07 has no SP10.1 link and AT08 has no SP10.2 link.",
+      "requiredCorrections": [
+        {
+          "record": "AT07",
+          "field": "primaryTask",
+          "from": "SP10.2",
+          "to": "SP10.1",
+          "reason": "Mixed-policy settlement and its atomicity boundary belong to composition operators. Add SP10.3 as a contributor if split/join proof qualification is claimed."
+        },
+        {
+          "record": "AT08",
+          "field": "primaryTask",
+          "from": "SP10.1",
+          "to": "SP10.2",
+          "reason": "Private eligibility disclosure and handoff evidence belong to independent private continuation; retain SP09.3 for freshness and replay enforcement."
+        },
+        {
+          "record": "AS06",
+          "field": "tasks",
+          "from": "SP10.1",
+          "to": "SP10.2",
+          "reason": "Route private identity/credential assumptions to the actual privacy task; SP09.3 already owns policy enforcement."
+        },
+        {
+          "record": "AS10",
+          "field": "tasks",
+          "from": "SP10.1",
+          "to": "SP10.2",
+          "reason": "The disclosure and private/public boundary is part of the handoff package task."
+        },
+        {
+          "record": "AS08",
+          "field": "tasks",
+          "from": "SP10.2",
+          "to": "SP10.1",
+          "reason": "Route bounded composition to its operator task and retain SP10.3 for split/join and recovery; SP10.2 can remain additionally if a distinct custody/handoff contribution is described."
+        },
+        {
+          "record": "AT01",
+          "field": "contributingTasks",
+          "from": "SP10.2",
+          "to": "SP10.1",
+          "reason": "Wrapper policy closure is composition work; keep private continuation additionally only if a private-handoff contribution is intended."
+        }
+      ],
+      "owners": "MC06 remains the correct package owner; no new sprint or owner is needed."
+    }
+  ],
+  "checks": {
+    "candidateHashesBeforeAfter": "all six match manifest and remained unchanged",
+    "requirementCount": 11,
+    "caseCount": 8,
+    "existingTaskReferences": 35,
+    "coveredSprints": 12,
+    "allTaskIdsExist": true,
+    "requirementOwnersExistWithinReferencedSprintOwners": true,
+    "coveragePreservation": "Removing only new asset-study refinementCrosswalk restores HEAD coverage JSON exactly",
+    "structuralValidator": {
+      "command": "python3 openspec/sprints/verify.py",
+      "exitCode": 0,
+      "result": "pass; 12 sprints, 61 requirements, 21 stages, 239 original tasks, 45 sprint tasks, 18 report lessons, 18 modeled regressions, 24 comparative cases, 24 legacy gates"
+    },
+    "sourceCaptureDigest": "matches pinned SHA-256",
+    "mandatoryIntegration": "ROADMAP and shared sprint README require all AS/AT rows alongside affected task contracts; coverage.json registers crosswalk",
+    "stageAndCoverageGates": "preserved; no runtime allocation, semantic freeze, new backend or constructor admission",
+    "sourceClaims": "Report opaque citations and primary legal/current-status assertions remain explicitly unverified",
+    "oracleBoundary": "AT02 remains unimplemented; prior arithmetic cannot substitute for receipt encumbrance without complete reviewed equivalence",
+    "dockerPreviewBoundary": "Explicit Docker positive/rejection tests precede separately admitted Preview tests after native implementation and execution admission",
+    "sharedWriterBoundary": "SP07 shared financial Core/K first ownership and SP08 later integration preserved"
+  },
+  "sourceInspection": [
+    "AGENTS.md",
+    "plugins/moriarty-dev/skills/develop/SKILL.md",
+    "docs/FOOTGUNS.md",
+    "raw/assignments/moriarty-grok-review-routing-2026-09-09.md",
+    "deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md",
+    "deliverables/security-token-transformations-2026-09-09/sources/report.md lines 317-473",
+    "all twelve sprint task contracts and sprints.json",
+    "experiments/moriarty-language/src/successor/core.ts"
+  ],
+  "limits": [
+    "No network, wallet, key generation, prover, Docker or Preview execution performed.",
+    "No canonical vault or source file modified.",
+    "Graph index used for navigation only; current sprint sources controlled task findings.",
+    "Plugin status reported unresolved operational history; no dependent campaign dispatched.",
+    "This review does not approve implementation, source standards, legal conformance, or current deployment claims.",
+    "Unrelated research and reviewer-routing changes beyond the six files are outside scope."
+  ]
+}
