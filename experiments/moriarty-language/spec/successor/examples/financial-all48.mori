@@ -1,0 +1,48 @@
+profile "moriarty-financial-expression-source/1";
+  agreement AllExpressions {
+    action step(input: UInt64, row: Record<Row>) {
+      let number = u64(7);
+      let signed = i128(-5);
+      let truth = true;
+      let label = "hello";
+      let cash = amount(5,A);
+      let quantityValue = quantity<Units<USD,1>,2>(-5);
+      let sharesValue = shares(5,Vault,Holder);
+      let rateValue = rate(-5,2);
+      let priceValue = price(5,A,B,2);
+      let observed = obs.ready;
+      let before = pre.counter;
+      let recordValue = record<Row> { n: number };
+      let member = Mode.Open;
+      let present = some<UInt64>(number);
+      let absent = none<UInt64>();
+      let items = collection<UInt64,2>(number);
+      let projectedField = recordValue.n;
+      let accessedField = access_field(recordValue,"n");
+      let projectedIndex = items[u64(0)];
+      let accessedIndex = access_index(items,u64(0));
+      let sum = number + input;
+      let difference = number - input;
+      let product = number * input;
+      let floorValue = floor_div(signed,i128(2));
+      let ceilValue = ceil_div(signed,i128(2));
+      requires number == u64(7);
+      requires number < u64(8);
+      requires number <= u64(7);
+      requires number > u64(6);
+      requires number >= u64(7);
+      requires not false and observed or false;
+      requires floorValue == i128(-3) and ceilValue == i128(-2);
+      next.counter = before + input;
+      emit Notice row;
+      let constructedCash = amount<A>(5);
+      let constructedShares = shares<Vault,Holder>(5);
+      let tagged = variant<Quote,Cash>(constructedCash);
+      let untagged = project_variant<Cash>(tagged);
+      let extracted = some_value(present);
+      let widened = to_uint<256>(u256(7));
+      let scalar = quanta(untagged);
+      let selected = true ? scalar : floor_div(1,0);
+      ensures post.counter == pre.counter + input;
+    }
+  }

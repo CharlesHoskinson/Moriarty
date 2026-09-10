@@ -4,8 +4,6 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createExpressionSourceV1 } from './successor/expression-source-v1.ts';
 import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/expression-source-frontend.ts';
-import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
-import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
 import { SuccessorSyntaxError } from './successor/frontend.ts';
 
 type Input = 'arguments' | 'schema' | 'source';
@@ -24,7 +22,7 @@ class CliFailure extends Error {
 }
 const LIMIT = 65536;
 
-function argumentsFor(argv: string[]): { command: 'check' | 'format'; profile: string; source: string; schema?: string } {
+function argumentsFor(argv: string[]): { command: 'check' | 'format'; source: string; schema?: string } {
   const [command, flag, profile, ...rest] = argv;
   const fileName = (value: string | undefined): value is string =>
     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
@@ -33,9 +31,9 @@ function argumentsFor(argv: string[]): { command: 'check' | 'format'; profile: s
   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
   if (flag !== '--profile' || !profile || (!checking && !formatting))
     throw new CliFailure('CLI_USAGE', 'arguments');
-  if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
-  return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
-    : { command: 'format', profile, source: rest[0] };
+  if (profile !== EXPRESSION_SOURCE_PROFILE) throw new CliFailure('CLI_PROFILE', 'arguments');
+  return checking ? { command: 'check', schema: rest[1], source: rest[2] }
+    : { command: 'format', source: rest[0] };
 }
 
 /** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
@@ -73,13 +71,10 @@ function run(io: ProcessIo): void {
   const schema = args.command === 'check' ? readText(args.schema!, 'schema') : undefined;
   const source = readText(args.source, 'source');
   if (args.command === 'format') {
-    const formatted = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
-      ? formatFinancialExpressionSource(source) : formatExpressionSource(source);
+    const formatted = formatExpressionSource(source);
     io.stdout.write(formatted);
   } else {
-    const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
-      ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
-    const result = language.check(source);
+    const result = createExpressionSourceV1(schema!).check(source);
     if ('status' in result) {
       io.stderr.write(JSON.stringify(result) + '\n');
       io.exitCode = 1;

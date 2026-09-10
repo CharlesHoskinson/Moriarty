@@ -1,0 +1,162 @@
+Fresh independent narrow P4 correction review. Not an implementation acceptance. Both prior independent reviewers approved P1/P2/P3/P5 and agreed ternary grammar/right-association/static checking/lazy reduction/path/work counts, but P4 REQUEST_CHANGES solely because the zero-divisor example used DIV_ZERO instead of accepted ARITH_DENOMINATOR. Corrected PROPOSAL-02 changes ONLY that one token; original proposal and raw findings retained. Do not reopen unrelated P choices. Verify this correction is faithful to the published runtime and unchanged approved conditional semantics, and return JSON with proposalHash, P4Vote APPROVE_SCOPED or REQUEST_CHANGES, substantive reasons, requiredCorrections and scope. No source edits, code execution, network, private, financial, service or proof commands. This is static source-design review; root actual probe results are supporting observed evidence, not your own execution. Future source implementation still needs actual tests and fresh independent result audits.
+Original proposal SHA 0bd305f05dc85f0f95612ee9299cf180d45d2465d656378f341b1c2f8839d587; corrected SHA e843239755bc02925215b7419ce89da416da5e022a465e6fec931369ed985361
+Exact text delta: false has DIV_ZERO => false has ARITH_DENOMINATOR.
+Prior vote {"vote": "REQUEST_CHANGES", "reason": "Conditional precedence, right association, whole-tree static checking, lazy reduction, child paths and stated work counts match the runtime. However, the exact false-branch example specifies DIV_ZERO, while the pinned accepted runtime returns ARITH_DENOMINATOR. That diagnostic mismatch prevents approval of the exact proposed behavior.", "requiredCorrections": ["P4-R1"]}
+Unchanged grammar/semantics/context with corrected example:
+## Grammar, names, AST and formatting delta
+
+In the new profile only, lex `?` as punctuation. `:` is already punctuation.
+Keep source65536 bytes, tokens8192, AST8192/depth64, declarations/statements256,
+record fields64, collection arguments128, ordinary arguments64, parameters256.
+No new bound or optimistic-work admission is proposed.
+
+Replace the expression entry by:
+
+```ebnf
+expression = conditional ;
+conditional = disjunction, [ "?", expression, ":", conditional ] ;
+```
+
+Add to primary (exclude these names from the ordinary-primary alternative):
+
+```ebnf
+dynamicOrLiteral = ( "amount" | "shares" ), [ typeArgs ],
+                   "(", [ arguments ], ")" ;
+financialGeneric = ( "variant" | "project_variant" | "to_uint" ),
+                   typeArgs, "(", [ arguments ], ")" ;
+```
+
+`u256`, `some_value`, and the four scalar functions use existing ordinary call
+grammar. `typeArgs`, arguments and all postfix forms retain /1 definitions.
+For amount/shares, immediate `<` selects generic form, `(` selects literal form;
+there is no lookup-dependent ambiguity or arbitrary generic call admission.
+`variant<F.Tag>` fails parsing at `.`. Empty <> fails parsing, as in /1.
+
+Add `Conditional{condition,consequent,alternative,span}` to the expression AST;
+do not encode it as Call or eagerly lowered lets. Existing Call.typeArguments
+suffices for all new generic forms. Formatter precedence puts Conditional below
+Or and preserves right association, e.g. `(a ? b : c) ? d : e` needs the shown
+condition parentheses. Preserve arm order; never swap/fold equivalent choices.
+Postfix access on a conditional requires grouping, e.g. `(c ? x : y).field`.
+Roundtrip projects out spans/parentheses only, not constructor/type metadata or
+extra conversion nodes; AST and lowered-Core meaning must both agree.
+
+New type/intrinsic names are reserved as term binders in this profile only.
+The original expression-source/1 admission stays unchanged: for example, a
+previously valid /1 binder named `u256` remains valid there. Keep reservation
+tables profile-local; do not append financial names to shared /1 reserved sets.
+For source metadata admission, extend /1's fixed-generic-name exclusion with
+amount, shares, variant, project_variant, to_uint. Include variant family and tag
+names in schema-name checks and variant family names in binder collision checks.
+Thus schemas using these newly fixed names as identities fail SOURCE_SCHEMA_NAME
+under this new profile; do not rename them. Other nominal names can overlap a
+type/function spelling where existing metadata roles unambiguously permit it.
+Keep /1 enum-prefix collision rules and additionally reject an enum-family prefix
+that collides with a variant-family name. Keyword-named metadata remains outside
+this component's explicit source domain. Full source identity escaping remains a
+SP02 obligation, not hidden aliases or silent loss of metadata.
+
+## Select, arithmetic, work and diagnostics
+
+Select has lower precedence than `or`, right association, and both arms retained.
+The runtime checks all children in condition/consequent/alternative order, then
+checks condition Bool and exact equal arm types. It rejects top-level Unit or
+Operation arm types; no inferred common supertype, width or asset cast. The source
+checker delegates to this exact static order rather than short-circuiting checking
+because the condition is a literal. Nested data follows existing runtime rules.
+
+At runtime charge Select once, evaluate condition once, then only the chosen
+arm. Path child indices are0/1/2. Propagate the chosen child's original failure;
+unselected dynamic errors and work are absent. B counts all source-lowered Core
+nodes in both arms, plus statement wrappers, inserted != Not/Eq and every explicit
+conversion. It never requires workInitial >= B.
+
+Expression `true ? 7 : floor_div(1,0)` has B6 and actual work3; false has ARITH_DENOMINATOR
+at the division after5 entries. In `let x = ...;` add one Let node: B7, success4,
+false failure6. Budget3 on that Let enters Select and condition, then fails at
+the selected literal with workUsed3. No source constant folding changes this.
+
+Keep `*`, floor_div, ceil_div as the source routes to established numeric overloads:
+UInt256 same-width arithmetic/comparisons; Amount×UInt128→Amount;
+Amount×Amount→AmountProduct; Amount×correctly oriented Price→ScaledAmount;
+Amount×Rate→SignedScaledAmount; dimensional product/Amount cancellation;
+scaled amount division by the literal128-bit10^scale. No plain `/`, reassociation,
+implicit widening or helper expansion. `floor_div(a * p, 10000)` at scale4 is
+valid; replacing10000 with an equal-valued local, `to_uint<128>(10000)`, or u64
+rejects TYPE_SCALE_DIVISOR. The accepted literal u128(10000) remains LitUInt128.
+SignedAmount/NetAmount are not granted new arithmetic merely because they have
+source type spellings; use only the published runtime's closed overload table.
+
+Use existing source codes: malformed grammar→UNEXPECTED_TOKEN (or existing
+lexical/bound code); wrong generic/call count→SOURCE_ARITY; wrong nominal/numeric
+metadata role→SOURCE_TYPE_SHAPE; nonliteral u256/literal forms→SOURCE_LITERAL_SHAPE;
+unrecognized intrinsic→SOURCE_CALL. Structurally valid width17 reaches runtime
+TYPE_LITERAL; unknown family/tag/asset reaches TYPE_NAME; wrong child width/type
+reaches TYPE_MISMATCH; overflow/None/wrong active tag reach the runtime errors above.
+Metadata-shape failures use the offending metadata span; arity uses whole call;
+runtime semantic failures use their real enclosing Core node span/path. No new
+error family is needed. SOURCE_CALL is the inspected spelling in source40's
+lowerer and proposal03; all diagnostics must retain that closed set.
+
+Preserve source/1 phase order: transport/envelope; parse; trusted schema and source
+name/declaration checks; lower; whole-action static checking; typed snapshots;
+reduction. All pre-reduction errors have workUsed0. The outer snapshot transport
+cap is2000000 UTF-8 bytes before parsing; Pre/Args/Obs/schema retain independent
+65536-byte bounds. Exactly one source action still matches the complete Σ.args
+set and exact types. Input strings/results remain independently owned; invalid
+results expose neither tentative state nor descriptors.
+
+
+Published runtime SHA 779f831d97822fa3f553f07340ae2de7c5a746903d00501f94fe0d2657ad3dfd; enclosing numeric branch:
+nst index = BigInt(v[1]); if (index >= BigInt(v[0].length)) fail('INDEX_RANGE'); result = v[0][Number(index)];
+      } else if (k === 'ConstructRecord') result = Object.fromEntries(o.fields.map((f: any, i: number) => [f.name, v[i]]));
+      else if (k === 'ConstructEnum') result = o.member;
+      else if (k === 'ConstructSome') result = [v[0]];
+      else if (k === 'ConstructNone') result = [];
+      else if (k === 'ConstructCollection') result = v;
+      else if (['Add', 'Sub', 'Mul', 'FloorDiv', 'CeilDiv'].includes(k)) {
+        const a = BigInt(v[0]), b = BigInt(v[1]); let n: bigint;
+        if (k === 'Add') n = a + b;
+        else if (k === 'Sub') n = a - b;
+        else if (k === 'Mul') n = a * b;
+        else {
+          if (b <= 0n) fail('ARITH_DENOMINATOR');
+          let q = a / b, r = a % b; if (r < 0n) { q--; r += b; }
+          n = k === 'CeilDiv' && r !== 0n ? q + 1n : q;
+        }
+        result = String(n); if (!numericFits(type, result)) fail('ARITH_RANGE');
+      } else if (k === 'Eq') result = canonical(v[0]) === canonical(v[1]);
+      else if (['Lt', 'Lte', 'Gt', 'Gte'].includes(k)) {
+        const a = BigInt(v[0]), b = BigInt(v[1]); result = k === 'Lt' ? a < b : k === 'Lte' ? a <= b : k === 'Gt' ? a > b : a >= b;
+      } else if (k === 'Not') result = !v[0];
+      else if (k === 'Require' || k === 'Ensure') { if (!v[0]) fail(k === 'Require' ? 'GUARD_FAILED' 
+Root executed current published runtime with workInitial10:
+[
+  {
+    "condition": true,
+    "result": {
+      "judgmentResult": "ExpressionValue",
+      "type": [
+        "UInt128"
+      ],
+      "value": "7",
+      "workRemaining": "7"
+    }
+  },
+  {
+    "condition": false,
+    "result": {
+      "status": "Rejected",
+      "code": "ARITH_DENOMINATOR",
+      "span": {
+        "end": "0",
+        "kind": "synthetic",
+        "start": "0"
+      },
+      "nodePath": [
+        "2"
+      ],
+      "workUsed": "5"
+    }
+  }
+]

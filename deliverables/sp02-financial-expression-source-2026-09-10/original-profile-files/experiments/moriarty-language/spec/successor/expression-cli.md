@@ -1,26 +1,19 @@
 # Expression source command line
 
 Contract recorded before implementation for the existing SP02.3 adapter task.
-This command checks and formats the explicit expression-source/1 and
-financial-expression-source/1 profiles.
+This command checks and formats the explicit expression-source/1 profile.
 Its implementation and result audits remain pending. It does not add language
-semantics or execute financial operations. Each explicit profile selects its
-own reviewed expression source API.
+semantics or select the financial-expression runtime.
 
 Run from the repository root with exactly these positional argument forms:
 
 ```sh
 node experiments/moriarty-language/src/cli.ts check --profile moriarty-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-expression-source/1 SOURCE.mori
-node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
-node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 SOURCE.mori
 ```
 
 Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
-schema JSON consumed by the selected source factory; it is not a type-alias registry.
-The financial profile requires its runtime's variantTypes schema map. Its
-factory/formatter are createFinancialExpressionSourceV1/formatFinancialExpressionSource;
-the original profile uses createExpressionSourceV1/formatExpressionSource.
+schema JSON consumed by createExpressionSourceV1; it is not a type-alias registry.
 The --profile value is the literal profile identifier, not a path or inferred
 source header. Flags appear in the shown order, once each. Unknown commands,
 missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
@@ -35,7 +28,7 @@ writes the exact API Rejected record, without added/removed fields, as one JSON
 line to stderr and exits1; stdout is empty. This includes its code, span, nodePath
 and workUsed. No AST/Core or snapshot is accepted through this CLI.
 
-Formatting writes exactly the selected profile formatter's result to stdout and exits0,
+Formatting writes exactly formatExpressionSource(source) to stdout and exits0,
 with no stderr. It uses the same parser and formatter as the API, so it does not
 perform trusted-schema checking. Syntax or formatted-output-bound failures write
 one JSON Rejected record

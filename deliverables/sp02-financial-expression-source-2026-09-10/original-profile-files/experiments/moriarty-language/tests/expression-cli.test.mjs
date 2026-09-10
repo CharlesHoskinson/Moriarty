@@ -8,8 +8,6 @@ import { spawnSync } from 'node:child_process';
 import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
 import { formatExpressionSource } from '../src/successor/expression-source-frontend.ts';
 import { canonical } from '../src/successor/expression-wire-v1.ts';
-import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
-import { formatFinancialExpressionSource } from '../src/successor/financial-expression-source-frontend.ts';
 
 const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
 const directory = mkdtempSync(join(tmpdir(), 'moriarty-expression-cli-'));
@@ -155,20 +153,4 @@ test('expression CLI import has no command or stream side effects', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, '');
   assert.equal(result.stderr, '');
-});
-
-test('financial CLI explicit routing equals financial APIs and never infers the profile', () => {
-  const financial='moriarty-financial-expression-source/1';
-  const text=canonical({...JSON.parse(schema),variantTypes:{}}),schemaFile=file(text),language=createFinancialExpressionSourceV1(text);
-  for(const body of ['let x=true ? u256(7) : u256(8);','let x=false ? 7 : u64(8);','let x=some_value(none<UInt128>());']){
-    const s=source(body).replace(profile,financial),path=file(s);
-    const args=['check','--profile',financial,'--schema',schemaFile,path], expected=language.check(s);
-    if('status' in expected) failure(args,expected);
-    else {const result=invoke(args);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout,JSON.stringify(expected)+'\n');assert.equal(result.stderr,'');}
-    const formatted=invoke(['format','--profile',financial,path]);
-    assert.equal(formatted.status,0,formatted.stderr);assert.equal(formatted.stdout,formatFinancialExpressionSource(s));
-    failure(checkArgs(path),createExpressionSourceV1(schema).check(s));
-  }
-  const old=source('requires true;');
-  failure(['check','--profile',financial,'--schema',schemaFile,file(old)],language.check(old));
 });

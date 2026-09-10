@@ -1,0 +1,1442 @@
+diff --git a/experiments/moriarty-language/examples/financial-expression-source.mjs b/experiments/moriarty-language/examples/financial-expression-source.mjs
+new file mode 100644
+index 0000000..cfe46b3
+--- /dev/null
++++ b/experiments/moriarty-language/examples/financial-expression-source.mjs
+@@ -0,0 +1,17 @@
++import { readFileSync } from 'node:fs';
++import assert from 'node:assert/strict';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++const read=name=>readFileSync(new URL('../spec/successor/examples/financial-vault-quote.'+name,import.meta.url),'utf8');
++const source=read('mori'),language=createFinancialExpressionSourceV1(read('schema.json')),snapshots=read('snapshots.json');
++const checked=language.check(source),result=language.evaluate(source,snapshots);
++assert.equal(checked.judgmentResult,'SourceChecked');
++assert.equal(result.status,'ExpressionPrepared');
++assert.deepEqual(result.post,{last:'1'});
++assert.deepEqual(result.descriptors,[{operation:'Notice',fields:{allocation:'1',offered:'4'}}]);
++const selected=JSON.parse(snapshots);selected.Args.useSupplied=true;
++const rejected=language.evaluate(source,canonical(selected));
++assert.equal(rejected.code,'OPTION_NONE');
++assert.equal(rejected.status,'Rejected');
++assert.equal('post' in rejected,false);assert.equal('descriptors' in rejected,false);
++console.log(JSON.stringify({sourceCheck:checked,localQuote:result,selectedNone:rejected},null,2));
+diff --git a/experiments/moriarty-language/package.json b/experiments/moriarty-language/package.json
+index c310e88..64ed1b7 100644
+--- a/experiments/moriarty-language/package.json
++++ b/experiments/moriarty-language/package.json
+@@ -8,6 +8,7 @@
+     "typecheck": "tsc -p tsconfig.json",
+     "build": "tsc -p tsconfig.json",
+     "demo": "node examples/simulate.mjs",
+-    "expression-demo": "node examples/expression-source.mjs"
++    "expression-demo": "node examples/expression-source.mjs",
++    "financial-expression-demo": "node examples/financial-expression-source.mjs"
+   }
+ }
+diff --git a/experiments/moriarty-language/spec/successor/examples/financial-all48.mori b/experiments/moriarty-language/spec/successor/examples/financial-all48.mori
+new file mode 100644
+index 0000000..86b823e
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/financial-all48.mori
+@@ -0,0 +1,48 @@
++profile "moriarty-financial-expression-source/1";
++  agreement AllExpressions {
++    action step(input: UInt64, row: Record<Row>) {
++      let number = u64(7);
++      let signed = i128(-5);
++      let truth = true;
++      let label = "hello";
++      let cash = amount(5,A);
++      let quantityValue = quantity<Units<USD,1>,2>(-5);
++      let sharesValue = shares(5,Vault,Holder);
++      let rateValue = rate(-5,2);
++      let priceValue = price(5,A,B,2);
++      let observed = obs.ready;
++      let before = pre.counter;
++      let recordValue = record<Row> { n: number };
++      let member = Mode.Open;
++      let present = some<UInt64>(number);
++      let absent = none<UInt64>();
++      let items = collection<UInt64,2>(number);
++      let projectedField = recordValue.n;
++      let accessedField = access_field(recordValue,"n");
++      let projectedIndex = items[u64(0)];
++      let accessedIndex = access_index(items,u64(0));
++      let sum = number + input;
++      let difference = number - input;
++      let product = number * input;
++      let floorValue = floor_div(signed,i128(2));
++      let ceilValue = ceil_div(signed,i128(2));
++      requires number == u64(7);
++      requires number < u64(8);
++      requires number <= u64(7);
++      requires number > u64(6);
++      requires number >= u64(7);
++      requires not false and observed or false;
++      requires floorValue == i128(-3) and ceilValue == i128(-2);
++      next.counter = before + input;
++      emit Notice row;
++      let constructedCash = amount<A>(5);
++      let constructedShares = shares<Vault,Holder>(5);
++      let tagged = variant<Quote,Cash>(constructedCash);
++      let untagged = project_variant<Cash>(tagged);
++      let extracted = some_value(present);
++      let widened = to_uint<256>(u256(7));
++      let scalar = quanta(untagged);
++      let selected = true ? scalar : floor_div(1,0);
++      ensures post.counter == pre.counter + input;
++    }
++  }
+diff --git a/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+new file mode 100644
+index 0000000..36b6a40
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+@@ -0,0 +1,18 @@
++profile "moriarty-financial-expression-source/1";
++agreement VaultQuote {
++  action quote(deposit: UInt128, supply: UInt128, valuation: UInt128,
++               useSupplied: Bool, supplied: Option<UInt128>) {
++    requires valuation > 0;
++    let calculated = to_uint<128>(floor_div(
++      to_uint<256>(deposit) * to_uint<256>(supply),
++      to_uint<256>(valuation)));
++    let selected = useSupplied ? some_value(supplied) : calculated;
++    let allocation = shares<Vault, Alice>(selected);
++    let offered = amount<USD>(deposit);
++    let quote = variant<Quote, Allocation>(allocation);
++    let recovered = project_variant<Allocation>(quote);
++    next.last = quanta(recovered);
++    emit Notice { allocation: recovered, offered: offered };
++    ensures post.last == selected;
++  }
++}
+diff --git a/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json
+new file mode 100644
+index 0000000..b89d668
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json
+@@ -0,0 +1 @@
++{"args":{"deposit":["UInt128"],"supplied":["Option",["UInt128"]],"supply":["UInt128"],"useSupplied":["Bool"],"valuation":["UInt128"]},"assets":["USD"],"enumTypes":{},"fields":{"last":{"type":["UInt128"],"writeClass":"ordinary"}},"observations":{},"operations":{"Notice":"NoticeFields"},"parties":["Alice"],"recordTypes":{"NoticeFields":{"allocation":["Shares","Vault","Alice"],"offered":["Amount","USD"]}},"units":[],"variantTypes":{"Quote":{"Allocation":["Shares","Vault","Alice"],"Cash":["Amount","USD"]}},"vaults":["Vault"]}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.snapshots.json b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.snapshots.json
+new file mode 100644
+index 0000000..6e7aac0
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/examples/financial-vault-quote.snapshots.json
+@@ -0,0 +1 @@
++{"Args":{"deposit":"4","supplied":[],"supply":"3","useSupplied":false,"valuation":"10"},"Obs":{},"Pre":{"last":"0"},"workInitial":"1000"}
+\ No newline at end of file
+diff --git a/experiments/moriarty-language/spec/successor/expression-cli.md b/experiments/moriarty-language/spec/successor/expression-cli.md
+index f1ad4be..4913c36 100644
+--- a/experiments/moriarty-language/spec/successor/expression-cli.md
++++ b/experiments/moriarty-language/spec/successor/expression-cli.md
+@@ -1,19 +1,26 @@
+ # Expression source command line
+ 
+ Contract recorded before implementation for the existing SP02.3 adapter task.
+-This command checks and formats the explicit expression-source/1 profile.
++This command checks and formats the explicit expression-source/1 and
++financial-expression-source/1 profiles.
+ Its implementation and result audits remain pending. It does not add language
+-semantics or select the financial-expression runtime.
++semantics or execute financial operations. Each explicit profile selects its
++own reviewed expression source API.
+ 
+ Run from the repository root with exactly these positional argument forms:
+ 
+ ```sh
+ node experiments/moriarty-language/src/cli.ts check --profile moriarty-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
+ node experiments/moriarty-language/src/cli.ts format --profile moriarty-expression-source/1 SOURCE.mori
++node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
++node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 SOURCE.mori
+ ```
+ 
+ Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
+-schema JSON consumed by createExpressionSourceV1; it is not a type-alias registry.
++schema JSON consumed by the selected source factory; it is not a type-alias registry.
++The financial profile requires its runtime's variantTypes schema map. Its
++factory/formatter are createFinancialExpressionSourceV1/formatFinancialExpressionSource;
++the original profile uses createExpressionSourceV1/formatExpressionSource.
+ The --profile value is the literal profile identifier, not a path or inferred
+ source header. Flags appear in the shown order, once each. Unknown commands,
+ missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
+@@ -28,7 +35,7 @@ writes the exact API Rejected record, without added/removed fields, as one JSON
+ line to stderr and exits1; stdout is empty. This includes its code, span, nodePath
+ and workUsed. No AST/Core or snapshot is accepted through this CLI.
+ 
+-Formatting writes exactly formatExpressionSource(source) to stdout and exits0,
++Formatting writes exactly the selected profile formatter's result to stdout and exits0,
+ with no stderr. It uses the same parser and formatter as the API, so it does not
+ perform trusted-schema checking. Syntax or formatted-output-bound failures write
+ one JSON Rejected record
+diff --git a/experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf b/experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf
+new file mode 100644
+index 0000000..a450e21
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf
+@@ -0,0 +1,120 @@
++(* ISO/IEC 14977 EBNF for moriarty-financial-expression-source/1.
++   Source header must match exactly; syntax/0 remains separate.
++   Lexical rules are lexical.md plus profile-gated [, ] and ? punctuation.
++   Parentheses create no AST nodes. Conditional is right-associative below Or;
++   other precedence and associativity match syntax/0.
++   Generic names are excluded from ordinaryPrimaryName.
++   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
++   declarations256, statements256, record fields64, ordinary call arguments64,
++   collection intrinsic arguments128, action parameters256.
++   Integer lexical tokens remain unsigned canonical decimals; - is separate.
++   The source contract supplies all type/domain/metadata and diagnostic rules.
++   Parsing const/state or multiple actions does not make them executable.
++*)
++
++program = profileDecl, agreementDecl, ? end of file ? ;
++
++profileDecl = "profile", stringToken, ";" ;
++
++agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
++
++declaration = unitDecl
++            | partyDecl
++            | assetDecl
++            | constDecl
++            | stateDecl
++            | actionDecl ;
++
++unitDecl = "unit", identifier, ";" ;
++
++partyDecl = "party", identifier, ";" ;
++
++assetDecl = "asset", identifier, ":", type, ";" ;
++
++constDecl = "const", identifier, ":", type, "=", expression, ";" ;
++
++stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
++
++actionDecl = "action", identifier, "(", [ parameters ], ")",
++              "{", { statement }, { postcondition }, "}" ;
++
++parameters = parameter, { ",", parameter } ;
++
++parameter = identifier, ":", type ;
++
++statement = requirement | binding | update | emission ;
++
++requirement = "requires", expression, ";" ;
++
++binding = "let", identifier, "=", expression, ";" ;
++
++update = "next", ".", identifier, "=", expression, ";" ;
++
++emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
++
++effectFields = effectField, { ",", effectField } ;
++
++effectField = identifier, ":", expression ;
++
++postcondition = "ensures", expression, ";" ;
++
++type = identifier, [ typeArgs ] ;
++
++typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
++
++typeArgument = type | signedInteger ;
++signedInteger = [ "-" ], integerToken ;
++
++expression = conditional ;
++
++conditional = disjunction, [ "?", expression, ":", conditional ] ;
++
++disjunction = conjunction, { "or", conjunction } ;
++
++conjunction = negation, { "and", negation } ;
++
++negation = { "not" }, comparison ;
++
++comparison = sum, [ comparisonOp, sum ] ;
++
++comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
++
++sum = product, { ( "+" | "-" ), product } ;
++
++product = postfix, { "*", postfix } ;
++
++postfix = primary, { ".", identifier | "[", expression, "]" } ;
++
++ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record, amount, shares, variant, project_variant, to_uint ? ;
++
++primary = "-", integerToken
++        | integerToken
++        | stringToken
++        | "true"
++        | "false"
++        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
++        | genericCall
++        | dynamicOrLiteral
++        | financialGeneric
++        | recordLiteral
++        | "(", expression, ")" ;
++
++genericCall = ( "some" | "none" | "collection" | "quantity" ),
++              "<", typeArgument, { ",", typeArgument }, ">",
++              "(", [ arguments ], ")" ;
++
++dynamicOrLiteral = ( "amount" | "shares" ), [ typeArgs ],
++                   "(", [ arguments ], ")" ;
++
++financialGeneric = ( "variant" | "project_variant" | "to_uint" ),
++                   typeArgs, "(", [ arguments ], ")" ;
++
++recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
++
++arguments = expression, { ",", expression } ;
++
++identifier = ? ASCII identifier token defined in lexical.md ? ;
++
++integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
++
++stringToken = ? JSON string token defined in lexical.md ? ;
+diff --git a/experiments/moriarty-language/spec/successor/financial-expression-source.md b/experiments/moriarty-language/spec/successor/financial-expression-source.md
+new file mode 100644
+index 0000000..e25f8fc
+--- /dev/null
++++ b/experiments/moriarty-language/spec/successor/financial-expression-source.md
+@@ -0,0 +1,129 @@
++# Financial expression source /1
++
++Implementation candidate; independent source/result audits remain pending.
++The accepted design is the preserved
++[proposal02](../../../../deliverables/sp02-expression-source-2026-09-10/pure48-source-proposal-01/PROPOSAL-02.md)
++and its [decision](../../../../deliverables/sp02-expression-source-2026-09-10/pure48-source-proposal-01/DECISION-02.json).
++The [complete grammar](financial-expression-source-grammar.ebnf) adds conditional
++expressions and fixed generic calls to the separately preserved source/1 grammar.
++
++```javascript
++import { createFinancialExpressionSourceV1 } from '../../src/successor/financial-expression-source-v1.ts';
++const language = createFinancialExpressionSourceV1(schemaCanonicalJSON);
++language.check(source);
++language.elaborate(source);
++language.evaluate(source, snapshotCanonicalJSON);
++```
++
++The source header must be `profile "moriarty-financial-expression-source/1";`.
++The factory binds only `moriarty-financial-expression-contract/1`, including its
++required `variantTypes` schema map. Neither older profile is upgraded. APIs accept
++primitive source/schema/snapshot strings; every invocation owns new input and
++result trees. Returned Core is inspectable output, never accepted as evaluation
++input. Check and elaborate perform complete static checking with no reduction or
++typed snapshot certification. The additive financial runtime `.check()` uses that
++same static path and retains `.evaluate()` behavior and its result union.
++
++SourceChecked includes the sourceProfile and staticWorkBound. SourceElaborated
++also includes the runtime contract, agreement/action names and checked Core.
++Evaluate returns the financial expression runtime's existing result records.
++Snapshots have exactly Pre, Args, Obs and workInitial. The outer canonical JSON
++transport cap is2000000 UTF-8 bytes before parsing; source, schema and individual
++Pre/Args/Obs/Core components retain independent65536-byte caps. Profile lexical
++and AST limits remain unchanged; no caller may supply an optimistic work bound.
++
++## Values and source forms
++
++All forty original forms retain their spelling and node count. Added types are
++UInt256, Variant<F>, AmountProduct<A,B>, ScaledAmount<A,S>,
++SignedScaledAmount<A,S>, SignedAmount<A> and NetAmount<A>, also nested inside
++Option/Collection or named records. Indices are written directly in source and
++resolve in trusted Σ. AmountProduct type indices must be authored in sorted
++order, allowing equal assets; scale is0..18. No host type-alias registry exists.
++
++| Source | Core constructor | Meaning |
++| --- | --- | --- |
++| amount<A>(q) | ConstructAmount | UInt128 quanta into a pure Amount<A> value |
++| shares<V,H>(q) | ConstructShares | UInt128 units into a pure Shares<V,H> value |
++| variant<F,T>(x) | ConstructVariant | Exact declared payload into Variant<F> |
++| project_variant<T>(x) | ProjectVariant | Exact case projection; wrong active case rejects |
++| some_value(x) | ProjectSome | Option payload; None rejects |
++| to_uint<64/128/256>(x) | ConvertUInt | Explicit checked unsigned width conversion |
++| quanta/mantissa/is_negative/magnitude(x) | ScalarValue | Exact closed scalar projection overload |
++| condition ? consequent : alternative | Select | Lazy exact-type conditional expression |
++
++`u256(7)` is a one-node UInt256 literal. Its operand must be an integer literal;
++`u256(q)` does not convert a variable. Bare positive integers remain UInt128 and
++bare negative integers remain SInt128. `amount(5,A)` remains one LitAmount node;
++`amount<A>(5)` always retains ConstructAmount plus its LitUInt child. The same
++distinction applies to literal and generic shares. There is no folding, hidden
++width conversion or generic host function dispatch.
++
++ConvertUInt accepts unsigned integers only, with explicit range-checked narrowing
++and metered widening, including same-width conversion. To erase asset/holder
++indices, source must say so: `to_uint<256>(quanta(a))`, for a:Amount<A>, returns
++raw UInt256 quanta; `to_uint<256>(a)` rejects. ScalarValue overloads are exactly:
++quanta on Amount/Shares→UInt128; mantissa on Price→UInt128 or Rate/Quantity→SInt128;
++is_negative on Rate/Quantity/SignedAmount/NetAmount→Bool; magnitude on
++Rate/Quantity/NetAmount→UInt128 or SignedAmount→UInt256. No other pairing applies.
++No new signed256 literal, dynamic rate constructor, match statement or tag test
++is introduced. Variant family/tag metadata uses separate bare identifiers, never
++dotted metadata, runtime-selected names or implicitly refined payload types.
++
++The existing `*`, floor_div and ceil_div source forms select the published closed
++dimensional overloads. Scaled division requires a literal UInt128 exactly10^scale;
++an equal-valued local or conversion node does not satisfy TYPE_SCALE_DIVISOR.
++No plain division operator, implicit widening, multiply/divide fusion, asset cast,
++or extra arithmetic on SignedAmount/NetAmount is added by their type spellings.
++
++## Conditional evaluation and errors
++
++Conditional precedence is below `or`, associates right, and retains all three
++children. Condition must be Bool; arms must have the identical complete type,
++excluding top-level Unit/Operation, even when one arm would never run. Static
++checking visits condition, consequent and alternative. Dynamic execution charges
++Select once, evaluates condition once and enters only the chosen arm. Child paths
++are0,1,2 and errors retain their child's span/path. Both arms count toward B.
++
++`let x = true ? 7 : floor_div(1,0);` has B7 and actual work4. Replacing true with
++false rejects ARITH_DENOMINATOR after6 work at path[0,0,2]. Budget3 on the true
++case rejects entering its selected literal. Source spans are half-open UTF-8 byte
++offsets; formatting preserves operand order, metadata and every conversion node.
++
++The inherited phase order is transport, parse, schema/source declarations,
++lowering, whole-Core typing, typed snapshots, reduction. All pre-reduction errors
++have workUsed0. Wrong metadata shape/arity uses existing SOURCE_* diagnostics;
++valid unknown identifiers and wrong exact types reach the runtime's static codes.
++Financial generic/type/intrinsic term reservations are local to this profile.
++The original /1 still admits its previous binders, including u256. Financial
++metadata excludes the new fixed generic names as well as the old keyword/generic
++exclusions; unsupported identities reject SOURCE_SCHEMA_NAME without renaming.
++The corrected access_field operand order is retained in both source profiles.
++
++## Runnable source and remaining authoring
++
++Run `npm --prefix experiments/moriarty-language run financial-expression-demo`.
++The [vault quote](examples/financial-vault-quote.mori) explicitly widens its
++UInt128 inputs, floors4×3/10 and narrows to1, constructs holder-indexed shares and
++a variant, updates an ordinary counter and emits a local Notice. The demo also
++selects an absent optional input, which rejects OPTION_NONE without publishing
++state or descriptors. Its successful run has B43 and actual work41.
++[financial-all48.mori](examples/financial-all48.mori) is an executable fixture
++covering all constructor names; the tests separately check indexed overloads,
++all new type forms, scalar bounds, independent vault equations, rollback, spans,
++lazy work, formatter preservation and CLI/API equality.
++
++The [CLI adapter](expression-cli.md) supports explicit check/format selection for
++this profile as well as original expression-source/1. This is local expression
++evaluation: constructing amounts or shares and emitting a descriptor confers no
++funding, minting, availability, debit, signing or transfer authority. Ordinary
++writes remain schema-controlled and financial writes reject. No funded or ledger
++path is called.
++
++Full SP02 still requires source-defined schema and financial declarations with
++identity/denomination authority, genesis/constants/state initialization, multiple
++actions and deterministic selection, identity escaping, full obligation/request/
++time/valuation authoring, complete CLI surface and actual-participant syntax
++evaluation. The one-action trusted-schema component is not the final language.
++Financial transitions, K/proof correspondence, mandatory PCD, ACTUS/DeFi and
++Preview acceptance retain their independent gates.
+diff --git a/experiments/moriarty-language/src/cli.ts b/experiments/moriarty-language/src/cli.ts
+index 0bd5066..2cd51bc 100644
+--- a/experiments/moriarty-language/src/cli.ts
++++ b/experiments/moriarty-language/src/cli.ts
+@@ -4,6 +4,8 @@ import * as path from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { createExpressionSourceV1 } from './successor/expression-source-v1.ts';
+ import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/expression-source-frontend.ts';
++import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
++import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
+ import { SuccessorSyntaxError } from './successor/frontend.ts';
+ 
+ type Input = 'arguments' | 'schema' | 'source';
+@@ -22,7 +24,7 @@ class CliFailure extends Error {
+ }
+ const LIMIT = 65536;
+ 
+-function argumentsFor(argv: string[]): { command: 'check' | 'format'; source: string; schema?: string } {
++function argumentsFor(argv: string[]): { command: 'check' | 'format'; profile: string; source: string; schema?: string } {
+   const [command, flag, profile, ...rest] = argv;
+   const fileName = (value: string | undefined): value is string =>
+     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
+@@ -31,9 +33,9 @@ function argumentsFor(argv: string[]): { command: 'check' | 'format'; source: st
+   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
+   if (flag !== '--profile' || !profile || (!checking && !formatting))
+     throw new CliFailure('CLI_USAGE', 'arguments');
+-  if (profile !== EXPRESSION_SOURCE_PROFILE) throw new CliFailure('CLI_PROFILE', 'arguments');
+-  return checking ? { command: 'check', schema: rest[1], source: rest[2] }
+-    : { command: 'format', source: rest[0] };
++  if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
++  return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
++    : { command: 'format', profile, source: rest[0] };
+ }
+ 
+ /** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
+@@ -71,10 +73,13 @@ function run(io: ProcessIo): void {
+   const schema = args.command === 'check' ? readText(args.schema!, 'schema') : undefined;
+   const source = readText(args.source, 'source');
+   if (args.command === 'format') {
+-    const formatted = formatExpressionSource(source);
++    const formatted = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
++      ? formatFinancialExpressionSource(source) : formatExpressionSource(source);
+     io.stdout.write(formatted);
+   } else {
+-    const result = createExpressionSourceV1(schema!).check(source);
++    const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
++      ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
++    const result = language.check(source);
+     if ('status' in result) {
+       io.stderr.write(JSON.stringify(result) + '\n');
+       io.exitCode = 1;
+diff --git a/experiments/moriarty-language/src/successor/financial-expression-source-frontend.ts b/experiments/moriarty-language/src/successor/financial-expression-source-frontend.ts
+new file mode 100644
+index 0000000..a202edd
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/financial-expression-source-frontend.ts
+@@ -0,0 +1,3 @@
++/** Explicit financial profile entries; original source entries are unchanged. */
++export { parseSuccessorFinancialExpressionSource as parseFinancialExpressionSource, FINANCIAL_EXPRESSION_SOURCE_PROFILE } from './frontend.ts';
++export { formatSuccessorFinancialExpressionSource as formatFinancialExpressionSource } from './format.ts';
+diff --git a/experiments/moriarty-language/src/successor/financial-expression-source-lower.ts b/experiments/moriarty-language/src/successor/financial-expression-source-lower.ts
+new file mode 100644
+index 0000000..0abc066
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/financial-expression-source-lower.ts
+@@ -0,0 +1,7 @@
++/** Controlled financial source lowering; callers of the source API supply text only. */
++import { createSourceLowering } from './expression-source-lower.ts';
++import { sourceExtension } from './financial-expression-source-types.ts';
++import type { Schema } from './financial-expression-types-v1.ts';
++export function createFinancialSourceLowering(schema: Schema, parameters: Set<string>) {
++  return createSourceLowering(schema, parameters, sourceExtension(schema));
++}
+diff --git a/experiments/moriarty-language/src/successor/financial-expression-source-types.ts b/experiments/moriarty-language/src/successor/financial-expression-source-types.ts
+new file mode 100644
+index 0000000..25ad863
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/financial-expression-source-types.ts
+@@ -0,0 +1,153 @@
++/** Exact source spellings for the separately reviewed financial expression profile. */
++import { GENERIC_PRIMARIES, FINANCIAL_GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
++import type { Expression, TypeNode, Span } from './frontend.ts';
++import type { Schema, ValueType } from './financial-expression-types-v1.ts';
++import { ExpressionFailure } from './expression-wire-v1.ts';
++import { sourceFailure, sourceNode } from './expression-source-lower.ts';
++import type { SourceCoreNode } from './expression-source-lower.ts';
++
++const SCALARS = ['UInt64', 'UInt128', 'UInt256', 'SInt128', 'Bool', 'Text', 'Unit'];
++const INTRINSICS = ['u256', 'some_value', 'quanta', 'mantissa', 'is_negative', 'magnitude', ...FINANCIAL_GENERIC_PRIMARIES, 'u64', 'u128', 'i128', 'amount', 'shares', 'rate', 'price',
++  'access_field', 'access_index', 'floor_div', 'ceil_div', ...GENERIC_PRIMARIES];
++const TERM_RESERVED = new Set([...SOURCE_KEYWORDS, ...INTRINSICS, ...SCALARS,
++  'pre', 'post', 'obs', 'Amount', 'Shares', 'Rate', 'Price', 'Quantity', 'Units',
++  'Record', 'Enum', 'Operation', 'Option', 'Collection', 'Asset', 'Variant', 'AmountProduct', 'ScaledAmount', 'SignedScaledAmount', 'SignedAmount', 'NetAmount']);
++export function reservedSourceTerm(name: string): boolean { return TERM_RESERVED.has(name); }
++const METADATA_RESERVED = new Set([...SOURCE_KEYWORDS, ...GENERIC_PRIMARIES, ...FINANCIAL_GENERIC_PRIMARIES]);
++export function asciiIdentifier(s: string): boolean {
++  return /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(s) && !/[\r\n\u2028\u2029]/.test(s);
++}
++export function validateSourceSchemaNames(s: Schema): void {
++  const names: string[] = [];
++  for (const key of ['units', 'assets', 'vaults', 'parties']) names.push(...s[key]);
++  for (const key of ['recordTypes', 'enumTypes', 'variantTypes', 'fields', 'args', 'observations', 'operations']) names.push(...Object.keys(s[key]));
++  for (const fields of Object.values(s.recordTypes)) names.push(...Object.keys(fields as object));
++  for (const cases of Object.values(s.variantTypes)) names.push(...Object.keys(cases as object));
++  for (const members of Object.values(s.enumTypes)) names.push(...members as string[]);
++  if (names.some(n => !asciiIdentifier(n) || METADATA_RESERVED.has(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
++  const prefixes = new Set(['pre', 'post', 'obs']);
++  for (const key of ['units', 'assets', 'vaults', 'parties']) s[key].forEach((n: string) => prefixes.add(n));
++  for (const key of ['recordTypes', 'variantTypes', 'fields', 'args', 'observations', 'operations']) Object.keys(s[key]).forEach(n => prefixes.add(n));
++  if (Object.keys(s.enumTypes).some(n => prefixes.has(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
++}
++function arity(t: TypeNode, n: number): TypeNode[] {
++  if (t.arguments.length !== n) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.arguments;
++}
++function nominal(t: TypeNode): string {
++  if (t.numeric || t.arguments.length) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.name;
++}
++function numeric(t: TypeNode): string {
++  if (!t.numeric || t.arguments.length || t.name === '-0') sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  return t.name;
++}
++function units(t: TypeNode): string[][] {
++  if (t.numeric || t.name !== 'Units' || t.arguments.length % 2) sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  const pairs: string[][] = [];
++  for (let i = 0; i < t.arguments.length; i += 2) pairs.push([nominal(t.arguments[i]), numeric(t.arguments[i + 1])]);
++  return pairs;
++}
++export function sourceType(t: TypeNode): ValueType {
++  if (t.numeric) return sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++  if (SCALARS.includes(t.name)) { arity(t, 0); return [t.name]; }
++  if (['Amount', 'Record', 'Enum', 'Operation', 'Variant', 'SignedAmount', 'NetAmount'].includes(t.name)) return [t.name, nominal(arity(t, 1)[0])];
++  if (t.name === 'AmountProduct') { const a = arity(t, 2); return [t.name, nominal(a[0]), nominal(a[1])]; }
++  if (['ScaledAmount', 'SignedScaledAmount'].includes(t.name)) { const a = arity(t, 2); return [t.name, nominal(a[0]), numeric(a[1])]; }
++  if (t.name === 'Shares') { const a = arity(t, 2); return ['Shares', nominal(a[0]), nominal(a[1])]; }
++  if (t.name === 'Rate') return ['Rate', numeric(arity(t, 1)[0])];
++  if (t.name === 'Price') { const a = arity(t, 3); return ['Price', nominal(a[0]), nominal(a[1]), numeric(a[2])]; }
++  if (t.name === 'Quantity') { const a = arity(t, 2); return ['Quantity', units(a[0]), numeric(a[1])]; }
++  if (t.name === 'Option') return ['Option', sourceType(arity(t, 1)[0])];
++  if (t.name === 'Collection') { const a = arity(t, 2); return ['Collection', sourceType(a[0]), numeric(a[1])]; }
++  return sourceFailure('SOURCE_TYPE_SHAPE', t.span);
++}
++function integer(e: Expression, unsigned = false): string {
++  if (e.tag !== 'IntegerLiteral' || e.value === '-0' || (unsigned && e.value.startsWith('-')))
++    return sourceFailure('SOURCE_LITERAL_SHAPE', e.span);
++  return e.value;
++}
++function identity(e: Expression): string {
++  if (e.tag !== 'Identifier') return sourceFailure('SOURCE_LITERAL_SHAPE', e.span);
++  return e.name;
++}
++function count(actual: number, expected: number, span: Span): void {
++  if (actual !== expected) sourceFailure('SOURCE_ARITY', span);
++}
++export function sourceExtension(schema: Schema) {
++  return (e: Expression, lower: (e: Expression) => SourceCoreNode): SourceCoreNode | undefined => {
++    const n = (tag: string, operands: Record<string, any>) => sourceNode(tag, operands, e.span);
++    if (e.tag === 'Conditional') return n('Select', { condition: lower(e.condition), consequent: lower(e.consequent), alternative: lower(e.alternative) });
++    if (e.tag === 'IntegerLiteral') {
++      const value = integer(e);
++      return value.startsWith('-') ? n('LitSInt', { value }) : n('LitUInt', { width: '128', value });
++    }
++    if (e.tag === 'Index') return n('ProjectIndex', { collection: lower(e.object), index: lower(e.index) });
++    if (e.tag === 'RecordExpression') return n('ConstructRecord', { recordType: nominal(e.recordType),
++      fields: e.fields.map(f => ({ name: f.name, value: lower(f.expression) })) });
++    if (e.tag === 'Projection' && e.object.tag === 'Identifier') {
++      if (e.object.name === 'obs') return n('ReadObs', { name: e.field });
++      if (Object.hasOwn(schema.enumTypes, e.object.name)) return n('ConstructEnum', { enumType: e.object.name, member: e.field });
++    }
++    if (e.tag !== 'Call') return undefined;
++    const args = e.arguments, types = e.typeArguments ?? [];
++    if (['variant', 'project_variant', 'to_uint'].includes(e.name) || (['amount', 'shares'].includes(e.name) && types.length)) {
++      count(types.length, ['variant', 'shares'].includes(e.name) ? 2 : 1, e.span);
++      count(args.length, 1, e.span);
++      if (e.name === 'variant') return n('ConstructVariant', { family: nominal(types[0]), tag: nominal(types[1]), value: lower(args[0]) });
++      if (e.name === 'project_variant') return n('ProjectVariant', { tag: nominal(types[0]), value: lower(args[0]) });
++      if (e.name === 'to_uint') return n('ConvertUInt', { width: numeric(types[0]), value: lower(args[0]) });
++      if (e.name === 'amount') return n('ConstructAmount', { asset: nominal(types[0]), value: lower(args[0]) });
++      return n('ConstructShares', { vault: nominal(types[0]), holder: nominal(types[1]), value: lower(args[0]) });
++    }
++    if (['some_value', 'quanta', 'mantissa', 'is_negative', 'magnitude', 'u256'].includes(e.name)) {
++      count(types.length, 0, e.span); count(args.length, 1, e.span);
++      if (e.name === 'u256') return n('LitUInt', { width: '256', value: integer(args[0]) });
++      if (e.name === 'some_value') return n('ProjectSome', { value: lower(args[0]) });
++      return n('ScalarValue', { component: e.name === 'is_negative' ? 'negative' : e.name, value: lower(args[0]) });
++    }
++
++    if (['some', 'none', 'collection', 'quantity'].includes(e.name)) {
++      count(types.length, ['collection', 'quantity'].includes(e.name) ? 2 : 1, e.span);
++      if (e.name === 'collection') return n('ConstructCollection', { elementType: sourceType(types[0]), capacity: numeric(types[1]), items: args.map(lower) });
++      count(args.length, e.name === 'none' ? 0 : 1, e.span);
++      if (e.name === 'quantity') return n('LitQuantity', { units: units(types[0]), scale: numeric(types[1]), mantissa: integer(args[0]) });
++      return e.name === 'some' ? n('ConstructSome', { elementType: sourceType(types[0]), value: lower(args[0]) })
++        : n('ConstructNone', { elementType: sourceType(types[0]) });
++    }
++    count(types.length, 0, e.span);
++    if (['u64', 'u128', 'i128'].includes(e.name)) {
++      count(args.length, 1, e.span);
++      return e.name === 'i128' ? n('LitSInt', { value: integer(args[0]) })
++        : n('LitUInt', { width: e.name === 'u64' ? '64' : '128', value: integer(args[0]) });
++    }
++    if (e.name === 'amount') {
++      count(args.length, 2, e.span);
++      return n('LitAmount', { value: integer(args[0], true), asset: identity(args[1]) });
++    }
++    if (e.name === 'shares') {
++      count(args.length, 3, e.span);
++      return n('LitShares', { value: integer(args[0], true), vault: identity(args[1]), holder: identity(args[2]) });
++    }
++    if (e.name === 'rate') {
++      count(args.length, 2, e.span);
++      return n('LitRate', { mantissa: integer(args[0]), scale: integer(args[1], true) });
++    }
++    if (e.name === 'price') {
++      count(args.length, 4, e.span);
++      return n('LitPrice', { mantissa: integer(args[0], true), base: identity(args[1]), quote: identity(args[2]), scale: integer(args[3], true) });
++    }
++    if (e.name === 'access_index') {
++      count(args.length, 2, e.span);
++      return n('AccessIndex', { collection: lower(args[0]), index: lower(args[1]) });
++    }
++    if (e.name === 'access_field') {
++      count(args.length, 2, e.span);
++      const record = lower(args[0]);
++      const field = args[1];
++      if (field.tag !== 'StringLiteral' || !asciiIdentifier(field.decoded)) return sourceFailure('SOURCE_LITERAL_SHAPE', field.span);
++      return n('AccessField', { record, field: field.decoded });
++    }
++    return undefined;
++  };
++}
+diff --git a/experiments/moriarty-language/src/successor/financial-expression-source-v1.ts b/experiments/moriarty-language/src/successor/financial-expression-source-v1.ts
+new file mode 100644
+index 0000000..ffd0c6b
+--- /dev/null
++++ b/experiments/moriarty-language/src/successor/financial-expression-source-v1.ts
+@@ -0,0 +1,155 @@
++/** Source-only entry to local /1 expression evaluation. No financial operation
++ * interpreter, authorization, funded preparation, signing or ledger path is called. */
++import { parseFinancialExpressionSource, FINANCIAL_EXPRESSION_SOURCE_PROFILE } from './financial-expression-source-frontend.ts';
++import { SuccessorSyntaxError } from './frontend.ts';
++import type { ActionDecl, Program } from './frontend.ts';
++import { createFinancialExpressionContractV1, FINANCIAL_EXPRESSION_CONTRACT_V1 } from './financial-expression-v1.ts';
++import type { ExpressionResult } from './financial-expression-v1.ts';
++import { ExpressionFailure, SYNTHETIC_SPAN, bytes, canonical, closed, decimal, parseCanonical, scalarString } from './expression-wire-v1.ts';
++import { schemaShape, validateSchema, same } from './financial-expression-types-v1.ts';
++import type { Schema } from './financial-expression-types-v1.ts';
++import { sourceFailure, sourceSpan } from './expression-source-lower.ts';
++import type { SourceCoreNode } from './expression-source-lower.ts';
++import { createFinancialSourceLowering } from './financial-expression-source-lower.ts';
++import { sourceType, reservedSourceTerm, validateSourceSchemaNames } from './financial-expression-source-types.ts';
++
++export type SourceRejected = Extract<ExpressionResult, { status: 'Rejected' }>;
++export interface SourceElaborated {
++  judgmentResult: 'SourceElaborated';
++  sourceProfile: typeof FINANCIAL_EXPRESSION_SOURCE_PROFILE;
++  contract: typeof FINANCIAL_EXPRESSION_CONTRACT_V1;
++  agreement: string;
++  action: string;
++  staticWorkBound: string;
++  core: { statements: SourceCoreNode[]; span: ReturnType<typeof sourceSpan> };
++}
++export interface SourceChecked {
++  judgmentResult: 'SourceChecked';
++  sourceProfile: typeof FINANCIAL_EXPRESSION_SOURCE_PROFILE;
++  staticWorkBound: string;
++}
++const TRANSPORT_BYTES = 2_000_000;
++const COMPONENT_BYTES = 65536;
++function rejection(error: unknown, source: unknown): SourceRejected {
++  if (error instanceof ExpressionFailure) return { status: 'Rejected', code: error.code,
++    span: error.span, nodePath: error.path.map(String), workUsed: '0' };
++  if (error instanceof SuccessorSyntaxError) {
++    const validSource = typeof source === 'string' && source.length <= COMPONENT_BYTES
++      && scalarString(source) && bytes(source) <= COMPONENT_BYTES;
++    return { status: 'Rejected', code: error.code,
++      span: validSource ? { kind: 'source', start: String(error.start), end: String(error.end) } : SYNTHETIC_SPAN,
++      nodePath: [], workUsed: '0' };
++  }
++  throw error;
++}
++function sourceTransport(source: string): void {
++  if (typeof source !== 'string') throw new SuccessorSyntaxError('SOURCE_TYPE', 'source must be a string');
++  if (source.length > COMPONENT_BYTES || bytes(source) > COMPONENT_BYTES)
++    throw new SuccessorSyntaxError('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
++}
++function snapshots(text: string): Record<string, any> {
++  const r = parseCanonical(text, TRANSPORT_BYTES);
++  closed(r, ['Pre', 'Args', 'Obs', 'workInitial']);
++  decimal(r.workInitial);
++  if (r.workInitial.length > 6 || BigInt(r.workInitial) < 0n || BigInt(r.workInitial) > 65536n)
++    throw new ExpressionFailure('INPUT_BOUND');
++  for (const key of ['Pre', 'Args', 'Obs']) if (bytes(canonical(r[key])) > COMPONENT_BYTES)
++    throw new ExpressionFailure('INPUT_BOUND');
++  return r;
++}
++function sourceAction(program: Program, schema: Schema): ActionDecl {
++  const declarations = program.agreement.declarations;
++  const actions = declarations.filter((d): d is ActionDecl => d.tag === 'ActionDecl');
++  if (actions.length !== 1) sourceFailure('SOURCE_ACTION_COUNT', program.agreement.span);
++  const names = new Set<string>();
++  for (const d of declarations) {
++    if (names.has(d.name)) sourceFailure('SOURCE_DUPLICATE_DECLARATION', d.span);
++    names.add(d.name);
++    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl') sourceFailure('SOURCE_DECLARATION', d.span);
++    if (d.tag === 'ActionDecl') {
++      if (reservedSourceTerm(d.name)) sourceFailure('SOURCE_RESERVED_NAME', d.span);
++    } else {
++      if (d.tag === 'AssetDecl' && (d.type.numeric || d.type.name !== 'Asset' || d.type.arguments.length))
++        sourceFailure('SOURCE_DECLARATION_TYPE', d.type.span);
++      const roster = d.tag === 'UnitDecl' ? schema.units : d.tag === 'PartyDecl' ? schema.parties : schema.assets;
++      if (!roster.includes(d.name)) sourceFailure('SOURCE_DECLARATION_NAME', d.span);
++    }
++  }
++  const action = actions[0], parameters = new Set<string>();
++  const otherDeclarations = new Set<string>();
++  for (const key of ['units', 'assets', 'vaults', 'parties']) schema[key].forEach((n: string) => otherDeclarations.add(n));
++  for (const key of ['fields', 'observations', 'recordTypes', 'enumTypes', 'variantTypes', 'operations']) Object.keys(schema[key]).forEach(n => otherDeclarations.add(n));
++  for (const p of action.parameters) {
++    if (parameters.has(p.name)) sourceFailure('SOURCE_PARAMETER_NAMES', p.span);
++    parameters.add(p.name);
++    if (reservedSourceTerm(p.name) || otherDeclarations.has(p.name)) sourceFailure('SOURCE_RESERVED_NAME', p.span);
++  }
++  if (parameters.size !== Object.keys(schema.args).length || [...parameters].some(n => !Object.hasOwn(schema.args, n)))
++    sourceFailure('SOURCE_PARAMETER_NAMES', action.span);
++  for (const p of action.parameters) if (!same(sourceType(p.type), schema.args[p.name]))
++    sourceFailure('SOURCE_PARAMETER_TYPE', p.type.span);
++  return action;
++}
++function workBound(core: object): string {
++  let count = 0;
++  const pending: any[] = [core];
++  while (pending.length) {
++    const value = pending.pop();
++    if (value === null || typeof value !== 'object') continue;
++    if (Object.hasOwn(value, 'constructor') && typeof value.constructor === 'string') count++;
++    pending.push(...Object.values(value));
++  }
++  return String(count);
++}
++/** Trusted Σ is immutable text. Every request owns new trees, including checking
++ * and returned Core. The public evaluator never consumes caller-supplied Core. */
++export function createFinancialExpressionSourceV1(schemaCanonicalJSON: string) {
++  const schemaIsText = typeof schemaCanonicalJSON === 'string';
++  const trustedText = schemaIsText ? schemaCanonicalJSON : '';
++  function transport(source: string): void {
++    if (!schemaIsText) throw new ExpressionFailure('INPUT_SCHEMA');
++    if (trustedText.length > COMPONENT_BYTES || bytes(trustedText) > COMPONENT_BYTES) throw new ExpressionFailure('INPUT_BOUND');
++    sourceTransport(source);
++  }
++  function compile(source: string): SourceElaborated | SourceRejected {
++    const program = parseFinancialExpressionSource(source);
++    const schema: Schema = parseCanonical(trustedText, COMPONENT_BYTES);
++    schemaShape(schema); validateSchema(schema); validateSourceSchemaNames(schema);
++    const action = sourceAction(program, schema);
++    const lowering = createFinancialSourceLowering(schema, new Set(action.parameters.map(p => p.name)));
++    const statements = [...action.statements, ...action.postconditions].map(statement => {
++      if (statement.tag === 'Let' && reservedSourceTerm(statement.name)) sourceFailure('SOURCE_RESERVED_NAME', statement.span);
++      return lowering.statement(statement);
++    });
++    const core = { statements, span: sourceSpan(action.span) };
++    const checked = createFinancialExpressionContractV1(trustedText).check(canonical({ contract: FINANCIAL_EXPRESSION_CONTRACT_V1,
++      source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
++    if ('status' in checked) return checked;
++    return { judgmentResult: 'SourceElaborated', sourceProfile: FINANCIAL_EXPRESSION_SOURCE_PROFILE,
++      contract: FINANCIAL_EXPRESSION_CONTRACT_V1, agreement: program.agreement.name, action: action.name,
++      staticWorkBound: workBound(core), core };
++  }
++  return Object.freeze({
++    elaborate(source: string): SourceElaborated | SourceRejected {
++      try { transport(source); return compile(source); } catch (error) { return rejection(error, source); }
++    },
++    check(source: string): SourceChecked | SourceRejected {
++      try {
++        transport(source);
++        const compiled = compile(source);
++        if ('status' in compiled) return compiled;
++        return { judgmentResult: 'SourceChecked', sourceProfile: FINANCIAL_EXPRESSION_SOURCE_PROFILE, staticWorkBound: compiled.staticWorkBound };
++      } catch (error) { return rejection(error, source); }
++    },
++    evaluate(source: string, snapshotCanonicalJSON: string): ExpressionResult {
++      try {
++        transport(source);
++        const input = snapshots(snapshotCanonicalJSON);
++        const compiled = compile(source);
++        if ('status' in compiled) return compiled;
++        return createFinancialExpressionContractV1(trustedText).evaluate(canonical({ contract: FINANCIAL_EXPRESSION_CONTRACT_V1,
++          source, core: compiled.core, ...input }));
++      } catch (error) { return rejection(error, source); }
++    },
++  });
++}
+diff --git a/experiments/moriarty-language/src/successor/financial-expression-v1.ts b/experiments/moriarty-language/src/successor/financial-expression-v1.ts
+index 3bd5e3f..e9c373a 100644
+--- a/experiments/moriarty-language/src/successor/financial-expression-v1.ts
++++ b/experiments/moriarty-language/src/successor/financial-expression-v1.ts
+@@ -13,6 +13,9 @@ export type ExpressionResult =
+   | { status: 'Rejected'; code: string; span: ExpressionSpan; nodePath: string[]; workUsed: string }
+   | { status: 'ExpressionPrepared'; post: Record<string, any>; descriptors: any[]; workRemaining: string }
+   | { judgmentResult: 'ExpressionValue'; type: ValueType; value: any; workRemaining: string };
++export type ExpressionCheckResult =
++  | { judgmentResult: 'ExpressionChecked' }
++  | Extract<ExpressionResult, { status: 'Rejected' }>;
+ type Role = 'int' | 'id' | 'bool' | 'text' | 'type' | 'units' | 'view' | 'expr' | 'list' | 'fields';
+ const BINARY: [string, Role][] = [['left', 'expr'], ['right', 'expr']];
+ const OPERANDS: Record<string, [string, Role][]> = {
+@@ -318,7 +321,7 @@ class Machine {
+       valueBound(type, result, this.schema, 'VALUE_BOUND'); return result;
+     });
+   }
+-  run(request: string): ExpressionResult {
++  run(request: string, checkOnly = false): ExpressionResult | ExpressionCheckResult {
+     try {
+       // The largest legal separate components fit below this derived envelope
+       // limit even with JSON string escaping. Each semantic component still has
+@@ -349,6 +352,7 @@ class Machine {
+           this.infer(n, [i], n.constructor === 'Ensure', true);
+         }));
+       } else this.infer(r.core, [], false);
++      if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
+       const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
+       validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
+       this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
+@@ -368,16 +372,24 @@ class Machine {
+ 
+ /** The trusted host binds Σ once. Untrusted evaluate() requests cannot supply or
+  * reclassify it. This factory is not profile registration or financial authority. */
+-export function createFinancialExpressionContractV1(schemaCanonicalJSON: string): { evaluate(requestCanonicalJSON: string): ExpressionResult } {
++export function createFinancialExpressionContractV1(schemaCanonicalJSON: string): {
++  evaluate(requestCanonicalJSON: string): ExpressionResult;
++  check(requestCanonicalJSON: string): ExpressionCheckResult;
++} {
+   // Retain only the immutable text; every call gets a fresh owned schema tree.
+-  // Schema defects are returned through the same defined rejection boundary.
+-  return Object.freeze({ evaluate(requestCanonicalJSON: string): ExpressionResult {
++  // check() performs structure/schema/whole-action typing only: it cannot certify
++  // supplied snapshots, run guards, or publish a prepared state or descriptors.
++  function run(requestCanonicalJSON: string, checkOnly: boolean): ExpressionResult | ExpressionCheckResult {
+     let schema: Schema;
+     try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+     catch (error) {
+       if (!(error instanceof ExpressionFailure)) throw error;
+       return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+     }
+-    return new Machine(schema).run(requestCanonicalJSON);
+-  } });
++    return new Machine(schema).run(requestCanonicalJSON, checkOnly);
++  }
++  return Object.freeze({
++    evaluate: (request: string) => run(request, false) as ExpressionResult,
++    check: (request: string) => run(request, true) as ExpressionCheckResult,
++  });
+ }
+diff --git a/experiments/moriarty-language/src/successor/format.ts b/experiments/moriarty-language/src/successor/format.ts
+index ec2bbf7..79f1ed8 100644
+--- a/experiments/moriarty-language/src/successor/format.ts
++++ b/experiments/moriarty-language/src/successor/format.ts
+@@ -1,6 +1,7 @@
+ import {
+   parseSuccessorSource,
+   parseSuccessorExpressionSource,
++  parseSuccessorFinancialExpressionSource,
+   SuccessorSyntaxError,
+   SYNTAX_BOUNDS,
+   type Declaration,
+@@ -13,7 +14,8 @@ import {
+   type TypeNode,
+ } from './frontend.ts';
+ 
+-const PREC_NONE = 0;
++const PREC_NONE = -1;
++const PREC_CONDITIONAL = 0;
+ const PREC_OR = 1;
+ const PREC_AND = 2;
+ const PREC_NOT = 3;
+@@ -35,6 +37,7 @@ function indent(level: number): string {
+ 
+ function exprPrec(expr: Expression): number {
+   switch (expr.tag) {
++    case 'Conditional': return PREC_CONDITIONAL;
+     case 'Identifier':
+     case 'IntegerLiteral':
+     case 'StringLiteral':
+@@ -68,6 +71,7 @@ function needsParens(expr: Expression, parentPrec: number, side: Side): boolean
+   const prec = exprPrec(expr);
+   if (prec < parentPrec) return true;
+   if (prec > parentPrec) return false;
++  if (expr.tag === 'Conditional') return side === 'left';
+   if (expr.tag === 'Comparison') return true;
+   if (expr.tag === 'Binary') return side === 'right';
+   return false;
+@@ -80,6 +84,8 @@ function formatExpression(expr: Expression, parentPrec: number, side: Side): str
+ 
+ function formatExpressionInner(expr: Expression): string {
+   switch (expr.tag) {
++    case 'Conditional':
++      return `${formatExpression(expr.condition, PREC_CONDITIONAL, 'left')} ? ${formatExpression(expr.consequent, PREC_CONDITIONAL, 'none')} : ${formatExpression(expr.alternative, PREC_CONDITIONAL, 'right')}`;
+     case 'Identifier':
+       return expr.name;
+     case 'IntegerLiteral':
+@@ -201,3 +207,7 @@ export function formatSuccessorSource(source: string): string {
+ export function formatSuccessorExpressionSource(source: string): string {
+   return formatParsedSource(parseSuccessorExpressionSource(source));
+ }
++
++export function formatSuccessorFinancialExpressionSource(source: string): string {
++  return formatParsedSource(parseSuccessorFinancialExpressionSource(source));
++}
+diff --git a/experiments/moriarty-language/src/successor/frontend.ts b/experiments/moriarty-language/src/successor/frontend.ts
+index ad38aeb..34d2d95 100644
+--- a/experiments/moriarty-language/src/successor/frontend.ts
++++ b/experiments/moriarty-language/src/successor/frontend.ts
+@@ -1,7 +1,8 @@
+-/** Bounded lexer/parser with explicit, separate syntax/0 and expression-source/1 entries. */
++/** Bounded lexer/parser with explicit syntax, expression and financial-expression entries. */
+ 
+ export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
+ export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
++export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expression-source/1';
+ 
+ export const SYNTAX_BOUNDS = Object.freeze({
+   sourceUtf8Bytes: 65536,
+@@ -236,7 +237,16 @@ export interface Index {
+   index: Expression;
+   span: Span;
+ }
++export interface Conditional {
++  tag: 'Conditional';
++  condition: Expression;
++  consequent: Expression;
++  alternative: Expression;
++  span: Span;
++}
++
+ export type Expression =
++  | Conditional
+   | RecordExpression
+   | Index
+   | Identifier
+@@ -256,6 +266,7 @@ export const SOURCE_KEYWORDS = Object.freeze([
+ ]);
+ const KEYWORDS = new Set(SOURCE_KEYWORDS);
+ export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'quantity', 'record']);
++export const FINANCIAL_GENERIC_PRIMARIES = Object.freeze(['amount', 'shares', 'variant', 'project_variant', 'to_uint']);
+ 
+ const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
+ const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
+@@ -350,8 +361,10 @@ class Lexer {
+   readonly tokens: Token[] = [];
+   readonly source: string;
+   readonly expressionProfile: boolean;
++  readonly financialProfile: boolean;
+ 
+-  constructor(source: string, expressionProfile = false) {
++  constructor(source: string, expressionProfile = false, financialProfile = false) {
++    this.financialProfile = financialProfile;
+     this.expressionProfile = expressionProfile;
+     this.source = source;
+     this.n = source.length;
+@@ -468,7 +481,7 @@ class Lexer {
+     }
+ 
+     const ch = src[this.i]!;
+-    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']'))) {
++    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']')) || (this.financialProfile && ch === '?')) {
+       this.bumpAscii();
+       this.emit(ch, startB, startI);
+       return;
+@@ -632,7 +645,8 @@ class Parser {
+     this.profile = profile;
+   }
+ 
+-  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE; }
++  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE || this.financialProfile; }
++  private get financialProfile(): boolean { return this.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE; }
+ 
+   parseProgram(): Program {
+     const profile = this.parseProfile();
+@@ -1024,7 +1038,17 @@ class Parser {
+   }
+ 
+   private parseExpression(): Expression {
+-    return this.parseDisjunction();
++    const condition = this.parseDisjunction();
++    if (!this.financialProfile || !this.at('?')) return condition;
++    this.enterNest(this.peek());
++    this.advance();
++    const consequent = this.parseExpression();
++    this.expect(':');
++    const alternative = this.parseExpression();
++    this.leaveNest();
++    return this.expr({ tag: 'Conditional' as const, condition, consequent, alternative,
++      span: { start: condition.span.start, end: alternative.span.end } },
++      1 + Math.max(this.depthOf(condition), this.depthOf(consequent), this.depthOf(alternative)));
+   }
+ 
+   private parseDisjunction(): Expression {
+@@ -1155,7 +1179,10 @@ class Parser {
+     if (this.at('ident')) {
+       const name = this.advance();
+       let typeArguments: TypeNode[] | undefined;
+-      if (this.expressionProfile && GENERIC_PRIMARIES.includes(name.text)) {
++      const financialGeneric = this.financialProfile && FINANCIAL_GENERIC_PRIMARIES.includes(name.text);
++      const optionalGeneric = ['amount', 'shares'].includes(name.text);
++      if (this.expressionProfile && (GENERIC_PRIMARIES.includes(name.text)
++          || (financialGeneric && (!optionalGeneric || this.at('<'))))) {
+         this.enterNest(this.peek());
+         this.expect('<');
+         typeArguments = [this.parseType(name.text !== 'record')];
+@@ -1182,6 +1209,7 @@ class Parser {
+         }
+         if (!this.at('(')) this.unexpected();
+       }
++      if (financialGeneric && !this.at('(')) this.unexpected();
+       if (this.at('(')) {
+         this.enterNest(this.peek());
+         this.advance();
+@@ -1246,7 +1274,7 @@ function parseSourceProfile(source: string, profile: string): Program {
+     fail('SOURCE_TYPE', 'source must be a string', 0, 0);
+   }
+   validateSource(source);
+-  const tokens = new Lexer(source, profile === EXPRESSION_SOURCE_PROFILE).tokenize();
++  const tokens = new Lexer(source, profile !== SYNTAX_PROFILE, profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE).tokenize();
+   return new Parser(tokens, profile).parseProgram();
+ }
+ 
+@@ -1258,3 +1286,8 @@ export function parseSuccessorSource(source: string): Program {
+ export function parseSuccessorExpressionSource(source: string): Program {
+   return parseSourceProfile(source, EXPRESSION_SOURCE_PROFILE);
+ }
++
++/** Explicit financial expression entry, preserving the older profile parsers. */
++export function parseSuccessorFinancialExpressionSource(source: string): Program {
++  return parseSourceProfile(source, FINANCIAL_EXPRESSION_SOURCE_PROFILE);
++}
+diff --git a/experiments/moriarty-language/tests/expression-cli.test.mjs b/experiments/moriarty-language/tests/expression-cli.test.mjs
+index 8106053..d9ec6d6 100644
+--- a/experiments/moriarty-language/tests/expression-cli.test.mjs
++++ b/experiments/moriarty-language/tests/expression-cli.test.mjs
+@@ -8,6 +8,8 @@ import { spawnSync } from 'node:child_process';
+ import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
+ import { formatExpressionSource } from '../src/successor/expression-source-frontend.ts';
+ import { canonical } from '../src/successor/expression-wire-v1.ts';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { formatFinancialExpressionSource } from '../src/successor/financial-expression-source-frontend.ts';
+ 
+ const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
+ const directory = mkdtempSync(join(tmpdir(), 'moriarty-expression-cli-'));
+@@ -154,3 +156,19 @@ test('expression CLI import has no command or stream side effects', () => {
+   assert.equal(result.stdout, '');
+   assert.equal(result.stderr, '');
+ });
++
++test('financial CLI explicit routing equals financial APIs and never infers the profile', () => {
++  const financial='moriarty-financial-expression-source/1';
++  const text=canonical({...JSON.parse(schema),variantTypes:{}}),schemaFile=file(text),language=createFinancialExpressionSourceV1(text);
++  for(const body of ['let x=true ? u256(7) : u256(8);','let x=false ? 7 : u64(8);','let x=some_value(none<UInt128>());']){
++    const s=source(body).replace(profile,financial),path=file(s);
++    const args=['check','--profile',financial,'--schema',schemaFile,path], expected=language.check(s);
++    if('status' in expected) failure(args,expected);
++    else {const result=invoke(args);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout,JSON.stringify(expected)+'\n');assert.equal(result.stderr,'');}
++    const formatted=invoke(['format','--profile',financial,path]);
++    assert.equal(formatted.status,0,formatted.stderr);assert.equal(formatted.stdout,formatFinancialExpressionSource(s));
++    failure(checkArgs(path),createExpressionSourceV1(schema).check(s));
++  }
++  const old=source('requires true;');
++  failure(['check','--profile',financial,'--schema',schemaFile,file(old)],language.check(old));
++});
+diff --git a/experiments/moriarty-language/tests/financial-expression-source-profile.test.mjs b/experiments/moriarty-language/tests/financial-expression-source-profile.test.mjs
+new file mode 100644
+index 0000000..5565498
+--- /dev/null
++++ b/experiments/moriarty-language/tests/financial-expression-source-profile.test.mjs
+@@ -0,0 +1,59 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { parseFinancialExpressionSource, formatFinancialExpressionSource } from '../src/successor/financial-expression-source-frontend.ts';
++import { parseExpressionSource } from '../src/successor/expression-source-frontend.ts';
++import { parseSuccessorSource, FINANCIAL_GENERIC_PRIMARIES, GENERIC_PRIMARIES } from '../src/successor/frontend.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++const P='moriarty-financial-expression-source/1';
++const schema=patch=>({units:[],assets:[],vaults:[],parties:[],recordTypes:{},enumTypes:{},variantTypes:{},fields:{},args:{},observations:{},operations:{},...patch});
++const source=(body,params='')=>`profile "${P}";agreement Demo{action step(${params}){${body}}}`;
++const check=(s,patch)=>createFinancialExpressionSourceV1(canonical(schema(patch))).check(s);
++
++test('financial parser has gated punctuation, generic names, arities and unchanged old catalogs',()=>{
++  assert.deepEqual(GENERIC_PRIMARIES,['some','none','collection','quantity','record']);
++  assert.ok(Object.isFrozen(FINANCIAL_GENERIC_PRIMARIES));
++  assert.throws(()=>FINANCIAL_GENERIC_PRIMARIES.push('bad'),TypeError);
++  for(const [parse,profile] of [[parseExpressionSource,'moriarty-expression-source/1'],[parseSuccessorSource,'moriarty-successor-syntax/0']]){
++    assert.throws(()=>parse(source('let x=true?1:2;').replace(P,profile)),{code:'UNEXPECTED_CHAR'});
++  }
++  for(const text of ['let x=variant<F.T>(1);','let x=amount<>(1);','let x=true?1;','let x=variant(1);'])
++    assert.throws(()=>parseFinancialExpressionSource(source(text)),{code:'UNEXPECTED_TOKEN'});
++});
++
++test('financial source enforces lexical metadata roles and profile-local name domains',()=>{
++  for(const name of ['amount','shares','variant','project_variant','to_uint','requires'])
++    assert.equal(check(source(''),{assets:[name]}).code,'SOURCE_SCHEMA_NAME');
++  assert.equal(check(source(''),{variantTypes:{Family:{amount:['UInt128']}}}).code,'SOURCE_SCHEMA_NAME');
++  assert.equal(check(source(''),{variantTypes:{Family:{One:['UInt128']}},enumTypes:{Family:['One']}}).code,'SOURCE_SCHEMA_NAME');
++  assert.equal(check(source('','arg:UInt256'),{args:{arg:['UInt128']}}).code,'SOURCE_PARAMETER_TYPE');
++  assert.equal(check(source('let x=none<AmountProduct<1,A>>();')).code,'SOURCE_TYPE_SHAPE');
++  assert.equal(check(source('let x=to_uint<-0>(1);')).code,'SOURCE_TYPE_SHAPE');
++});
++
++test('financial schema variants retain distinct payloads, cycles and 128-case bound',()=>{
++  const cases=Object.fromEntries(Array.from({length:128},(_,i)=>['Case'+i,['Collection',['UInt128'],String(i)]]));
++  assert.equal(check(source('let x=none<Variant<Family>>();'),{variantTypes:{Family:cases}}).judgmentResult,'SourceChecked');
++  assert.equal(check(source(''),{variantTypes:{Family:{...cases,Extra:['UInt256']}}}).code,'INPUT_BOUND');
++  assert.equal(check(source(''),{variantTypes:{Family:{One:['UInt128'],Two:['UInt128']}}}).code,'INPUT_SCHEMA');
++  assert.equal(check(source(''),{variantTypes:{Family:{One:['Variant','Family']}}}).code,'TYPE_SCHEMA_CYCLE');
++  assert.equal(check(source(''),{variantTypes:{Family:{}}}).code,'INPUT_BOUND');
++});
++
++test('financial collections and action parameters retain 128 and 256 bounds',()=>{
++  const s=source(`let x=collection<UInt256,128>(${Array(128).fill('u256(1)').join(',')});`);
++  assert.equal(check(s).judgmentResult,'SourceChecked');
++  assert.equal(formatFinancialExpressionSource(formatFinancialExpressionSource(s)),formatFinancialExpressionSource(s));
++  assert.equal(check(source(`let x=collection<UInt256,128>(${Array(129).fill('u256(1)').join(',')});`)).code,'ARITY_BOUND');
++  const entries=Array.from({length:256},(_,i)=>['p'+i,['UInt256']]);
++  const params=entries.map(([name])=>name+':UInt256').join(',');
++  assert.equal(check(source('',params),{args:Object.fromEntries(entries)}).judgmentResult,'SourceChecked');
++  assert.equal(check(source('',params+',extra:UInt256')).code,'ARITY_BOUND');
++});
++
++test('financial source conditional depth, tokens and source bounds remain bounded',()=>{
++  const tooDeep='true ? 1 : '.repeat(70)+'1';
++  assert.equal(check(source(`let x=${tooDeep};`)).code,'NESTING_BOUND');
++  assert.equal(check(' '.repeat(65537)).code,'SOURCE_BOUND');
++  assert.equal(check(source('let x='+Array(9000).fill('1').join('+')+';')).code,'TOKEN_BOUND');
++});
+diff --git a/experiments/moriarty-language/tests/financial-expression-source-v1.test.mjs b/experiments/moriarty-language/tests/financial-expression-source-v1.test.mjs
+new file mode 100644
+index 0000000..b078d5a
+--- /dev/null
++++ b/experiments/moriarty-language/tests/financial-expression-source-v1.test.mjs
+@@ -0,0 +1,268 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
++import { formatFinancialExpressionSource, parseFinancialExpressionSource } from '../src/successor/financial-expression-source-frontend.ts';
++import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
++import { createFinancialExpressionContractV1 } from '../src/successor/financial-expression-v1.ts';
++import { canonical } from '../src/successor/expression-wire-v1.ts';
++
++const P = 'moriarty-financial-expression-source/1';
++const schema = (patch = {}) => ({ units: [], assets: [], vaults: [], parties: [], recordTypes: {}, enumTypes: {}, variantTypes: {}, fields: {}, args: {}, observations: {}, operations: {}, ...patch });
++const source = (body, params = '') => `profile "${P}"; agreement Demo { action step(${params}) { ${body} } }`;
++const input = (workInitial = '1000', Pre = {}, Args = {}, Obs = {}) => canonical({ Pre, Args, Obs, workInitial });
++const api = patch => createFinancialExpressionSourceV1(canonical(schema(patch)));
++const strip = value => Array.isArray(value) ? value.map(strip) : value && typeof value === 'object'
++  ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'span').map(([key, child]) => [key, strip(child)])) : value;
++const nominal = { assets: ['A','B'], vaults: ['Vault'], parties: ['Alice'],
++  variantTypes: { Quote: { Cash: ['Amount','A'], Shares: ['Shares','Vault','Alice'] } } };
++function assigned(expr, type, expected, patch = {}) {
++  const language = api({ ...patch, fields: { out: { type, writeClass: 'ordinary' } } });
++  const s = source(`next.out = ${expr};`);
++  const result = language.evaluate(s, input('1000', { out: expected }));
++  assert.equal(result.status, 'ExpressionPrepared', JSON.stringify(result));
++  assert.deepEqual(result.post.out, expected);
++  return language.elaborate(s);
++}
++function rejected(expr, code, patch = {}, work = '1000') {
++  const result = api(patch).evaluate(source(`let value = ${expr};`), input(work));
++  assert.equal(result.status, 'Rejected');
++  assert.equal(result.code, code, JSON.stringify(result));
++  return result;
++}
++
++test('financial source literals and dynamic constructors keep distinct nodes and charges', () => {
++  for (const [expr, constructor, nodes] of [['amount(5,A)','LitAmount',2], ['amount<A>(5)','ConstructAmount',3],
++    ['shares(5,Vault,Alice)','LitShares',2], ['shares<Vault,Alice>(5)','ConstructShares',3],
++    ['u256(5)','LitUInt',2], ['to_uint<256>(5)','ConvertUInt',3], ['to_uint<128>(5)','ConvertUInt',3]]) {
++    const s = source(`let x=${expr};`), language = api(nominal), e = language.elaborate(s);
++    assert.equal(e.judgmentResult, 'SourceElaborated', JSON.stringify(e));
++    assert.equal(e.core.statements[0].operands.value.constructor, constructor);
++    assert.equal(e.staticWorkBound, String(nodes));
++    assert.equal(language.evaluate(s, input(String(nodes))).workRemaining, '0');
++  }
++  for (const expr of ['amount(1+2,A)','shares(1+2,Vault,Alice)','u256(1+2)']) rejected(expr,'SOURCE_LITERAL_SHAPE',nominal);
++  for (const expr of ['amount<A>(u64(1))','shares<Vault,Alice>(u256(1))','to_uint<256>(amount(1,A))','to_uint<128>(-1)']) rejected(expr,'TYPE_MISMATCH',nominal);
++  rejected('to_uint<17>(1)','TYPE_LITERAL');
++});
++
++test('financial source UInt256 boundaries and explicit narrowing retain exact errors', () => {
++  const max = (2n**256n-1n).toString();
++  assigned(`u256(${max})`, ['UInt256'], max);
++  assigned('to_uint<256>(quanta(amount(7,A)))', ['UInt256'], '7', nominal);
++  rejected(`u256(${2n**256n})`,'TYPE_LITERAL');
++  rejected(`u256(${max}) + u256(1)`,'ARITH_RANGE');
++  rejected(`to_uint<128>(u256(${2n**128n}))`,'ARITH_RANGE');
++  rejected('u256(1) + 1','TYPE_MISMATCH');
++  assigned('to_uint<64>(to_uint<256>(u64(7)))', ['UInt64'], '7');
++});
++
++test('financial dynamic amount/share endpoints and child-entry work remain explicit',()=>{
++  for(const value of ['0',String(2n**128n-1n)]){
++    assigned(`amount<A>(${value})`,['Amount','A'],value,nominal);
++    assigned(`shares<Vault,Alice>(${value})`,['Shares','Vault','Alice'],value,nominal);
++  }
++  const result=rejected('amount<A>(7)','WORK_EXHAUSTED',nominal,'2');
++  assert.deepEqual(result.nodePath,['0','0','0']);assert.equal(result.workUsed,'2');
++  rejected(`shares<Vault,Alice>(${2n**128n-1n}+1)`,'ARITH_RANGE',nominal);
++  rejected('amount<Unknown>(7)','TYPE_NAME',nominal);
++  rejected('shares<Vault,Unknown>(7)','TYPE_NAME',nominal);
++});
++
++test('financial direct Emit preserves a conditional record operand and selected work',()=>{
++  const language=api({recordTypes:{Row:{n:['UInt128']}},operations:{Notice:'Row'},args:{a:['Record','Row'],b:['Record','Row']}});
++  const s=source('emit Notice true ? a : b;','a:Record<Row>,b:Record<Row>');
++  const e=language.elaborate(s);assert.equal(e.staticWorkBound,'5');
++  assert.equal(e.core.statements[0].operands.fields.constructor,'Select');
++  assert.deepEqual(language.evaluate(s,input('4',{}, {a:{n:'1'},b:{n:'2'}})),{status:'ExpressionPrepared',post:{},descriptors:[{operation:'Notice',fields:{n:'1'}}],workRemaining:'0'});
++});
++
++test('financial source lazy Select checks both arms and charges only selected nodes', () => {
++  const language = api();
++  const yes = source('let x=true ? 7 : floor_div(1,0);');
++  assert.equal(language.check(yes).staticWorkBound, '7');
++  assert.equal(language.evaluate(yes,input('4')).workRemaining, '0');
++  const no = source('let x=false ? 7 : floor_div(1,0);');
++  const result = language.evaluate(no,input('10'));
++  assert.equal(result.code,'ARITH_DENOMINATOR');
++  assert.deepEqual(result.nodePath,['0','0','2']);
++  assert.equal(result.workUsed,'6');
++  const exhausted = language.evaluate(yes,input('3'));
++  assert.equal(exhausted.code,'WORK_EXHAUSTED');
++  assert.deepEqual(exhausted.nodePath,['0','0','1']);
++  rejected('true ? 7 : u64(7)','TYPE_MISMATCH');
++  rejected('true ? amount(1,A) : amount(1,B)','TYPE_MISMATCH',nominal);
++  rejected('1 ? 7 : 8','TYPE_MISMATCH');
++  rejected('(floor_div(1,0) == 1) ? 7 : 8','ARITH_DENOMINATOR');
++});
++
++test('financial source variants/options project exact payloads and reject wrong cases', () => {
++  assigned('variant<Quote,Cash>(amount<A>(7))',['Variant','Quote'],{tag:'Cash',value:'7'},nominal);
++  assigned('quanta(project_variant<Cash>(variant<Quote,Cash>(amount<A>(7))))',['UInt128'],'7',nominal);
++  assigned('some_value(some<UInt256>(u256(7)))',['UInt256'],'7');
++  rejected('some_value(none<UInt128>())','OPTION_NONE');
++  rejected('project_variant<Cash>(variant<Quote,Shares>(shares<Vault,Alice>(7)))','VARIANT_CASE',nominal);
++  rejected('variant<Quote,Unknown>(7)','TYPE_NAME',nominal);
++  rejected('variant<Missing,Cash>(7)','TYPE_NAME',nominal);
++  rejected('variant<Quote,Cash>(7)','TYPE_MISMATCH',nominal);
++  rejected('project_variant<Cash>(7)','TYPE_MISMATCH',nominal);
++  assert.equal(api().evaluate(source('requires none<UInt128>() != none<UInt128>() and some_value(none<UInt128>()) > 0;'),input()).code,'GUARD_FAILED');
++});
++
++test('financial source indexed arithmetic uses exact price/rate and literal scale rules', () => {
++  assigned('floor_div(amount(10000,A)*u128(997)*amount(2000000,B), amount(1000000,A)*u128(1000)+amount(10000,A)*u128(997))',['Amount','B'],'19743',nominal);
++  assigned('ceil_div(amount(10000,A)*price(19743,B,A,4),u128(10000))',['Amount','B'],'19743',nominal);
++  assigned('floor_div(amount(5,A)*rate(-5,1),10)',['SignedAmount','A'],'-3',nominal);
++  assigned('ceil_div(amount(5,A)*rate(-5,1),10)',['SignedAmount','A'],'-2',nominal);
++  rejected('floor_div(amount(5,A)*rate(-5,1),to_uint<128>(10))','TYPE_SCALE_DIVISOR',nominal);
++  rejected('amount(5,A)*price(5,A,B,1)','TYPE_MISMATCH',nominal);
++  assigned('amount(5,B)*amount(3,A)',['AmountProduct','A','B'],'15',nominal);
++});
++
++test('financial source formatter preserves conditional AST association and exact Core', () => {
++  for(const expr of ['(true ? false : true) ? 1 : 2','true ? false ? 1 : 2 : 3',
++    'true ? 1 : false ? 2 : 3','false or true ? 1 : 2',
++    '(true ? record<Row>{n:1} : record<Row>{n:2}).n']) {
++    const s=source(`let value=${expr};`), formatted=formatFinancialExpressionSource(s);
++    assert.equal(formatFinancialExpressionSource(formatted),formatted);
++    assert.deepEqual(strip(parseFinancialExpressionSource(s)),strip(parseFinancialExpressionSource(formatted)));
++    const language=api({recordTypes:{Row:{n:['UInt128']}}});
++    assert.deepEqual(strip(language.elaborate(s).core),strip(language.elaborate(formatted).core));
++    assert.equal(language.evaluate(s,input()).status,'ExpressionPrepared');
++  }
++});
++
++test('financial source names are profile-local and original source/1 stays unchanged', () => {
++  const oldSchema=schema(); delete oldSchema.variantTypes;
++  const oldSource=source('let u256=7;let variant=8;requires u256 < variant;').replace(P,'moriarty-expression-source/1');
++  assert.equal(createExpressionSourceV1(canonical(oldSchema)).check(oldSource).judgmentResult,'SourceChecked');
++  for(const name of ['u256','variant','UInt256','magnitude']) assert.equal(api().check(source(`let ${name}=7;`)).code,'SOURCE_RESERVED_NAME');
++  assert.equal(api().check(oldSource).code,'PROFILE_MISMATCH');
++  assert.equal(createExpressionSourceV1(canonical(oldSchema)).check(source('let x=u256(7);')).code,'PROFILE_MISMATCH');
++});
++
++test('financial runtime additive check never evaluates or requires typed snapshots', () => {
++  const s=source('let x=true ? 1 : floor_div(1,0);'), language=api();
++  const elaborated=language.elaborate(s);
++  const runtime=createFinancialExpressionContractV1(canonical(schema()));
++  const request=canonical({contract:'moriarty-financial-expression-contract/1',source:s,core:elaborated.core,Pre:{unexpected:true},Args:{},Obs:{},workInitial:'0'});
++  assert.deepEqual(runtime.check(request),{judgmentResult:'ExpressionChecked'});
++  assert.equal(runtime.evaluate(request).code,'INPUT_SCHEMA');
++});
++
++test('one actual .mori fixture elaborates and evaluates all48 constructors', () => {
++  const s=readFileSync(new URL('../spec/successor/examples/financial-all48.mori',import.meta.url),'utf8');
++  const language=api({assets:['A','B'],parties:['Holder'],vaults:['Vault'],units:['USD'],
++    variantTypes:{Quote:{Cash:['Amount','A'],Shares:['Shares','Vault','Holder']}},
++    recordTypes:{Row:{n:['UInt64']}},enumTypes:{Mode:['Closed','Open']},args:{input:['UInt64'],row:['Record','Row']},
++    observations:{ready:['Bool']},fields:{counter:{type:['UInt64'],writeClass:'ordinary'}},operations:{Notice:'Row'}});
++  const e=language.elaborate(s); assert.equal(e.judgmentResult,'SourceElaborated',JSON.stringify(e));
++  const seen=new Set();
++  const visit=v=>{if(v&&typeof v==='object'){if(Object.hasOwn(v,'constructor'))seen.add(v.constructor);Object.values(v).forEach(visit);}};
++  visit(e.core);
++  assert.deepEqual([...seen].sort(),['LitUInt','LitSInt','LitBool','LitText','LitAmount','LitQuantity','LitShares','LitRate','LitPrice',
++    'ReadLocal','ReadArg','ReadObs','ReadPre','ProjectField','AccessField','ProjectIndex','AccessIndex','ConstructRecord','ConstructEnum',
++    'ConstructSome','ConstructNone','ConstructCollection','Add','Sub','Mul','FloorDiv','CeilDiv','Eq','Lt','Lte','Gt','Gte','Not','And','Or',
++    'Require','Let','NextWrite','Ensure','Emit','ConstructAmount','ConstructShares','ConstructVariant','ProjectVariant','ProjectSome',
++    'ConvertUInt','ScalarValue','Select'].sort());
++  const result=language.evaluate(s,input('1000',{counter:'10'},{input:'2',row:{n:'42'}},{ready:true}));
++  assert.equal(result.status,'ExpressionPrepared',JSON.stringify(result));
++  assert.deepEqual(result.post,{counter:'12'});
++  assert.deepEqual(result.descriptors,[{operation:'Notice',fields:{n:'42'}}]);
++});
++
++test('financial source exposes every new indexed type recursively without host aliases', () => {
++  const rows=[['UInt256',['UInt256'],'7'],['Variant<Quote>',['Variant','Quote'],{tag:'Cash',value:'7'}],
++    ['AmountProduct<A,B>',['AmountProduct','A','B'],'7'],['ScaledAmount<A,2>',['ScaledAmount','A','2'],'7'],
++    ['SignedScaledAmount<A,2>',['SignedScaledAmount','A','2'],'-7'],['SignedAmount<A>',['SignedAmount','A'],'-7'],
++    ['NetAmount<A>',['NetAmount','A'],'-7']];
++  for(const [spelling,type,value] of rows){
++    const language=api({...nominal,args:{arg:type},recordTypes:{Row:{v:type}},fields:{out:{type:['Collection',['Option',type],'1'],writeClass:'ordinary'}}});
++    const s=source(`let r=record<Row>{v:arg};next.out=collection<Option<${spelling}>,1>(some<${spelling}>(r.v));`,`arg:${spelling}`);
++    const result=language.evaluate(s,input('1000',{out:[]},{arg:value}));
++    assert.equal(result.status,'ExpressionPrepared',JSON.stringify(result));
++    assert.deepEqual(result.post.out,[[value]]);
++  }
++  const wrong=api({...nominal,args:{arg:['AmountProduct','B','A']}}).check(source('let x=arg;','arg:AmountProduct<B,A>'));
++  assert.equal(wrong.code,'TYPE_LITERAL');
++});
++
++test('financial source scalar projections follow the complete closed overload table', () => {
++  const rows=[['quanta','Amount<A>',['Amount','A'],'7',['UInt128'],'7'],
++    ['quanta','Shares<Vault,Alice>',['Shares','Vault','Alice'],'7',['UInt128'],'7'],
++    ['mantissa','Price<A,B,2>',['Price','A','B','2'],'7',['UInt128'],'7'],
++    ['mantissa','Rate<2>',['Rate','2'],'-7',['SInt128'],'-7'],
++    ['mantissa','Quantity<Units,2>',['Quantity',[],'2'],'-7',['SInt128'],'-7'],
++    ...[['Rate<2>',['Rate','2']],['Quantity<Units,2>',['Quantity',[],'2']],['SignedAmount<A>',['SignedAmount','A']],['NetAmount<A>',['NetAmount','A']]]
++      .map(([spelling,type])=>['is_negative',spelling,type,'-7',['Bool'],true]),
++    ...[['Rate<2>',['Rate','2'],-(2n**127n)],['Quantity<Units,2>',['Quantity',[],'2'],-(2n**127n)],['NetAmount<A>',['NetAmount','A'],-(2n**128n-1n)]]
++      .map(([spelling,type,value])=>['magnitude',spelling,type,String(value),['UInt128'],String(-value)]),
++    ['magnitude','SignedAmount<A>',['SignedAmount','A'],String(-(2n**255n)),['UInt256'],String(2n**255n)]];
++  for(const [fn,spelling,type,value,resultType,expected] of rows){
++    const language=api({...nominal,args:{arg:type},fields:{out:{type:resultType,writeClass:'ordinary'}}});
++    const result=language.evaluate(source(`next.out=${fn}(arg);`,`arg:${spelling}`),input('3',{out:expected},{arg:value}));
++    assert.equal(result.status,'ExpressionPrepared',JSON.stringify(result));
++    assert.equal(result.post.out,expected); assert.equal(result.workRemaining,'0');
++  }
++  for(const expr of ['quanta(7)','mantissa(amount(7,A))','magnitude(price(7,A,B,2))','is_negative(u256(0))']) rejected(expr,'TYPE_MISMATCH',nominal);
++  const s=source('let x=magnitude(arg);','arg:SignedScaledAmount<A,2>');
++  assert.equal(api({...nominal,args:{arg:['SignedScaledAmount','A','2']}}).check(s).code,'TYPE_MISMATCH');
++});
++
++test('financial source selected failure rolls back prior writes and descriptors with real byte paths', () => {
++  const patch={recordTypes:{Row:{}},operations:{Notice:'Row'},fields:{n:{type:['UInt128'],writeClass:'ordinary'},funds:{type:['UInt128'],writeClass:'financial'}}};
++  const s=source('let label="é😀";next.n=1;emit Notice {};let failed=true ? some_value(none<UInt128>()) : 7;');
++  const result=api(patch).evaluate(s,input('100',{n:'0',funds:'8'}));
++  const text='some_value(none<UInt128>())', start=s.indexOf(text);
++  assert.deepEqual(result,{status:'Rejected',code:'OPTION_NONE',span:{kind:'source',start:String(Buffer.byteLength(s.slice(0,start))),end:String(Buffer.byteLength(s.slice(0,start+text.length)))},nodePath:['3','0','1'],workUsed:'11'});
++  assert.equal(api(patch).evaluate(source('next.n=1;emit Notice {};ensures false;'),input('100',{n:'0',funds:'8'})).code,'ENSURES_FAILED');
++  assert.equal(api(patch).check(source('next.funds=1;')).code,'TYPE_FINANCIAL_WRITE');
++});
++
++test('financial source exact new-node spans, metadata operands and arity failures', () => {
++  const rows=[['amount<A>(5)','ConstructAmount',{asset:'A'}],['shares<Vault,Alice>(5)','ConstructShares',{vault:'Vault',holder:'Alice'}],
++    ['variant<Quote,Cash>(amount(5,A))','ConstructVariant',{family:'Quote',tag:'Cash'}],
++    ['project_variant<Cash>(variant<Quote,Cash>(amount(5,A)))','ProjectVariant',{tag:'Cash'}],
++    ['some_value(some<UInt128>(5))','ProjectSome',{}],['to_uint<256>(5)','ConvertUInt',{width:'256'}],
++    ['is_negative(rate(-1,0))','ScalarValue',{component:'negative'}],['true ? 5 : 6','Select',{}]];
++  for(const [expr,tag,metadata] of rows){
++    const s=source(`let label="é😀";let x=${expr};`),e=api(nominal).elaborate(s),n=e.core.statements[1].operands.value,start=s.indexOf(expr);
++    assert.equal(n.constructor,tag);for(const [k,v] of Object.entries(metadata))assert.equal(n.operands[k],v);
++    assert.deepEqual(n.span,{kind:'source',start:String(Buffer.byteLength(s.slice(0,start))),end:String(Buffer.byteLength(s.slice(0,start+expr.length)))});
++  }
++  for(const expr of ['amount<A,B>(5)','shares<Vault>(5)','variant<Quote>(5)','some_value()','to_uint<256>(1,2)']) rejected(expr,'SOURCE_ARITY',nominal);
++  for(const expr of ['amount<1>(5)','to_uint<UInt256>(5)','variant<Quote,Record<Row>>(5)']) rejected(expr,'SOURCE_TYPE_SHAPE',nominal);
++  assert.equal(api(nominal).check(source('let x=variant<Quote.Cash>(5);')).code,'UNEXPECTED_TOKEN');
++});
++
++test('financial source transport/ownership and phase priorities preserve source/1 contract', () => {
++  const language=api(),s=source('let x=true ? 7 : floor_div(1,0);');
++  const first=language.elaborate(s);first.core.statements[0].operands.value.constructor='bad';
++  assert.equal(language.evaluate(s,input('4')).status,'ExpressionPrepared');
++  assert.equal(language.evaluate('invalid',' '.repeat(2000001)).code,'INPUT_BOUND');
++  assert.equal(language.evaluate('invalid',input()).code,'UNEXPECTED_TOKEN');
++  let touched=false;const hostile={get value(){touched=true;throw Error('read');}};
++  assert.equal(language.check(hostile).code,'SOURCE_TYPE');
++  assert.equal(language.evaluate(s,hostile).code,'INPUT_SCHEMA');assert.equal(touched,false);
++  assert.equal(language.evaluate(source('let x=some_value(none<UInt128>());'),input('100',{}, {extra:'1'})).code,'INPUT_SCHEMA');
++  for(const method of ['elaborate','check','evaluate']){
++    const bad=source('let x=access_field(unknown(),"bad field");');
++    const result=method==='evaluate'?language.evaluate(bad,input()):language[method](bad);
++    assert.equal(result.code,'SOURCE_CALL');assert.equal(result.workUsed,'0');
++  }
++});
++
++const vaultOracle=JSON.parse(readFileSync(new URL('../../../deliverables/sp02-financial-pure-expression-2026-09-10/inputs/independent-vault-arithmetic-01.json',import.meta.url),'utf8'));
++for(const row of vaultOracle.cases) test(`financial source independent vault equation: ${row.id}`,()=>{
++  const shares=['deposit','withdraw'].includes(row.operation),ceil=['mint','withdraw'].includes(row.operation);
++  const numerator=shares?'supply':'valuation',denominator=shares?'valuation':'supply';
++  const s=source(`requires supply > 0;requires valuation > 0;next.out=to_uint<128>(${ceil?'ceil_div':'floor_div'}(to_uint<256>(q)*to_uint<256>(${numerator}),to_uint<256>(${denominator})));`,'q:UInt128,supply:UInt128,valuation:UInt128');
++  const language=api({args:{q:['UInt128'],supply:['UInt128'],valuation:['UInt128']},fields:{out:{type:['UInt128'],writeClass:'ordinary'}}});
++  assert.equal(language.check(s).staticWorkBound,'18');
++  const result=language.evaluate(s,input('18',{out:'0'},{q:row.quantity,supply:row.supply,valuation:row.valuation}));
++  if(row.expect.output!==undefined){assert.equal(result.status,'ExpressionPrepared',JSON.stringify(result));assert.equal(result.post.out,row.expect.output);assert.equal(result.workRemaining,'0');}
++  else {
++    const code={RESULT_UINT128_BOUND:'ARITH_RANGE',INPUT_UINT128_BOUND:'INPUT_VALUE',OUTSIDE_INITIALIZED_SUBRULE:'GUARD_FAILED'}[row.expect.rejection];
++    assert.ok(code);assert.equal(result.status,'Rejected');assert.equal(result.code,code,JSON.stringify(result));
++  }
++});

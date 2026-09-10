@@ -1,7 +1,6 @@
 import {
   parseSuccessorSource,
   parseSuccessorExpressionSource,
-  parseSuccessorFinancialExpressionSource,
   SuccessorSyntaxError,
   SYNTAX_BOUNDS,
   type Declaration,
@@ -14,8 +13,7 @@ import {
   type TypeNode,
 } from './frontend.ts';
 
-const PREC_NONE = -1;
-const PREC_CONDITIONAL = 0;
+const PREC_NONE = 0;
 const PREC_OR = 1;
 const PREC_AND = 2;
 const PREC_NOT = 3;
@@ -37,7 +35,6 @@ function indent(level: number): string {
 
 function exprPrec(expr: Expression): number {
   switch (expr.tag) {
-    case 'Conditional': return PREC_CONDITIONAL;
     case 'Identifier':
     case 'IntegerLiteral':
     case 'StringLiteral':
@@ -71,7 +68,6 @@ function needsParens(expr: Expression, parentPrec: number, side: Side): boolean 
   const prec = exprPrec(expr);
   if (prec < parentPrec) return true;
   if (prec > parentPrec) return false;
-  if (expr.tag === 'Conditional') return side === 'left';
   if (expr.tag === 'Comparison') return true;
   if (expr.tag === 'Binary') return side === 'right';
   return false;
@@ -84,8 +80,6 @@ function formatExpression(expr: Expression, parentPrec: number, side: Side): str
 
 function formatExpressionInner(expr: Expression): string {
   switch (expr.tag) {
-    case 'Conditional':
-      return `${formatExpression(expr.condition, PREC_CONDITIONAL, 'left')} ? ${formatExpression(expr.consequent, PREC_CONDITIONAL, 'none')} : ${formatExpression(expr.alternative, PREC_CONDITIONAL, 'right')}`;
     case 'Identifier':
       return expr.name;
     case 'IntegerLiteral':
@@ -206,8 +200,4 @@ export function formatSuccessorSource(source: string): string {
 }
 export function formatSuccessorExpressionSource(source: string): string {
   return formatParsedSource(parseSuccessorExpressionSource(source));
-}
-
-export function formatSuccessorFinancialExpressionSource(source: string): string {
-  return formatParsedSource(parseSuccessorFinancialExpressionSource(source));
 }

@@ -1,8 +1,7 @@
-/** Bounded lexer/parser with explicit syntax, expression and financial-expression entries. */
+/** Bounded lexer/parser with explicit, separate syntax/0 and expression-source/1 entries. */
 
 export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
 export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
-export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expression-source/1';
 
 export const SYNTAX_BOUNDS = Object.freeze({
   sourceUtf8Bytes: 65536,
@@ -237,16 +236,7 @@ export interface Index {
   index: Expression;
   span: Span;
 }
-export interface Conditional {
-  tag: 'Conditional';
-  condition: Expression;
-  consequent: Expression;
-  alternative: Expression;
-  span: Span;
-}
-
 export type Expression =
-  | Conditional
   | RecordExpression
   | Index
   | Identifier
@@ -266,7 +256,6 @@ export const SOURCE_KEYWORDS = Object.freeze([
 ]);
 const KEYWORDS = new Set(SOURCE_KEYWORDS);
 export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'quantity', 'record']);
-export const FINANCIAL_GENERIC_PRIMARIES = Object.freeze(['amount', 'shares', 'variant', 'project_variant', 'to_uint']);
 
 const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
 const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
@@ -361,10 +350,8 @@ class Lexer {
   readonly tokens: Token[] = [];
   readonly source: string;
   readonly expressionProfile: boolean;
-  readonly financialProfile: boolean;
 
-  constructor(source: string, expressionProfile = false, financialProfile = false) {
-    this.financialProfile = financialProfile;
+  constructor(source: string, expressionProfile = false) {
     this.expressionProfile = expressionProfile;
     this.source = source;
     this.n = source.length;
@@ -481,7 +468,7 @@ class Lexer {
     }
 
     const ch = src[this.i]!;
-    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']')) || (this.financialProfile && ch === '?')) {
+    if (ONE_CHAR.has(ch) || (this.expressionProfile && (ch === '[' || ch === ']'))) {
       this.bumpAscii();
       this.emit(ch, startB, startI);
       return;
@@ -645,8 +632,7 @@ class Parser {
     this.profile = profile;
   }
 
-  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE || this.financialProfile; }
-  private get financialProfile(): boolean { return this.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE; }
+  private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE; }
 
   parseProgram(): Program {
     const profile = this.parseProfile();
@@ -1038,17 +1024,7 @@ class Parser {
   }
 
   private parseExpression(): Expression {
-    const condition = this.parseDisjunction();
-    if (!this.financialProfile || !this.at('?')) return condition;
-    this.enterNest(this.peek());
-    this.advance();
-    const consequent = this.parseExpression();
-    this.expect(':');
-    const alternative = this.parseExpression();
-    this.leaveNest();
-    return this.expr({ tag: 'Conditional' as const, condition, consequent, alternative,
-      span: { start: condition.span.start, end: alternative.span.end } },
-      1 + Math.max(this.depthOf(condition), this.depthOf(consequent), this.depthOf(alternative)));
+    return this.parseDisjunction();
   }
 
   private parseDisjunction(): Expression {
@@ -1179,10 +1155,7 @@ class Parser {
     if (this.at('ident')) {
       const name = this.advance();
       let typeArguments: TypeNode[] | undefined;
-      const financialGeneric = this.financialProfile && FINANCIAL_GENERIC_PRIMARIES.includes(name.text);
-      const optionalGeneric = ['amount', 'shares'].includes(name.text);
-      if (this.expressionProfile && (GENERIC_PRIMARIES.includes(name.text)
-          || (financialGeneric && (!optionalGeneric || this.at('<'))))) {
+      if (this.expressionProfile && GENERIC_PRIMARIES.includes(name.text)) {
         this.enterNest(this.peek());
         this.expect('<');
         typeArguments = [this.parseType(name.text !== 'record')];
@@ -1209,7 +1182,6 @@ class Parser {
         }
         if (!this.at('(')) this.unexpected();
       }
-      if (financialGeneric && !this.at('(')) this.unexpected();
       if (this.at('(')) {
         this.enterNest(this.peek());
         this.advance();
@@ -1274,7 +1246,7 @@ function parseSourceProfile(source: string, profile: string): Program {
     fail('SOURCE_TYPE', 'source must be a string', 0, 0);
   }
   validateSource(source);
-  const tokens = new Lexer(source, profile !== SYNTAX_PROFILE, profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE).tokenize();
+  const tokens = new Lexer(source, profile === EXPRESSION_SOURCE_PROFILE).tokenize();
   return new Parser(tokens, profile).parseProgram();
 }
 
@@ -1285,9 +1257,4 @@ export function parseSuccessorSource(source: string): Program {
 /** Distinct expression-source entry point; no implicit profile migration. */
 export function parseSuccessorExpressionSource(source: string): Program {
   return parseSourceProfile(source, EXPRESSION_SOURCE_PROFILE);
-}
-
-/** Explicit financial expression entry, preserving the older profile parsers. */
-export function parseSuccessorFinancialExpressionSource(source: string): Program {
-  return parseSourceProfile(source, FINANCIAL_EXPRESSION_SOURCE_PROFILE);
 }
