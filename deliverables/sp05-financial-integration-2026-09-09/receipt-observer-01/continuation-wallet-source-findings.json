@@ -1,0 +1,412 @@
+{
+  "schema": "moriarty.continuation-wallet-source-findings/1",
+  "recordedAt": "2026-09-10T08:51:07.953890+00:00",
+  "status": "SOURCE_MAPPING_RESOLVED_NOT_LIVE_SPENDABILITY",
+  "scope": "Public installed SDK source and retained native/stopped-indexer JSON only. No SDK import/instantiation, wallet/private file read, DB open, service, query, spending, production edit or admission.",
+  "packages": [
+    {
+      "name": "@midnight-ntwrk/wallet-sdk",
+      "version": "1.2.0",
+      "packagePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk/package.json",
+      "packageSha256": "e47c2c120d65fa3e4a4241c1c7657fd18ffdd71ca11e8071547401ebda7e6698",
+      "launchManifestPackagePinMatches": true
+    },
+    {
+      "name": "@midnight-ntwrk/wallet-sdk-unshielded-wallet",
+      "version": "3.1.0",
+      "packagePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/package.json",
+      "packageSha256": "ff6af8e4bb3b610bf6260246643c8cc72f9e417e02d10160d864468af1275c7c",
+      "launchManifestPackagePinMatches": true
+    },
+    {
+      "name": "@midnight-ntwrk/wallet-sdk-indexer-client",
+      "version": "1.2.3",
+      "packagePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-indexer-client/package.json",
+      "packageSha256": "d7c216bd166280c5243bf67c209cdde8971907a6be55574915e85ea732889493",
+      "launchManifestPackagePinMatches": null
+    },
+    {
+      "name": "@midnight-ntwrk/wallet-sdk-utilities",
+      "version": "1.2.1",
+      "packagePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-utilities/package.json",
+      "packageSha256": "fe0a4932c93e49556dc0eed4439afed213e60faa6f30214470b97d8a492a4ffa",
+      "launchManifestPackagePinMatches": null
+    }
+  ],
+  "sources": [
+    {
+      "id": "wallet-getters",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js",
+      "sha256": "703c24afc04f7e6907a3fe581a429985512fa514ca58b377580200c687d828f0",
+      "lines": [
+        [
+          18,
+          45
+        ]
+      ],
+      "claim": "UnshieldedWalletState.availableCoins/pendingCoins call getAvailableCoins/getPendingCoins; progress returns underlying state.progress.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "coin-arrays",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/CoinsAndBalances.js",
+      "sha256": "021921caa82938abf81831a1c35b5576e4a2e0ea6ff1713eea97bb40f060f567",
+      "lines": [
+        [
+          4,
+          7
+        ],
+        [
+          22,
+          26
+        ]
+      ],
+      "claim": "Coin getters return availableUtxos/pendingUtxos arrays; balance calculation destructures {utxo} and reads utxo.type/utxo.value.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "wire-mapping",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js",
+      "sha256": "87f5778518f1940137ec221761248837f16ab694ec4ff54cf5832897608cae8b",
+      "lines": [
+        [
+          20,
+          64
+        ],
+        [
+          87,
+          108
+        ]
+      ],
+      "claim": "Wire fields owner/tokenType/value/intentHash/outputIndex become utxo.owner/type/value/intentHash/outputNo; metadata is separate ctime Date and registeredForDustGeneration boolean; schema receives created/spent arrays.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "utxo-state",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/UnshieldedState.js",
+      "sha256": "70d00e66c06e33a2d0fe9e022fbebd999a86353fc6b4b4c1f533933a5a848d9c",
+      "lines": [
+        [
+          3,
+          23
+        ],
+        [
+          45,
+          52
+        ],
+        [
+          63,
+          66
+        ]
+      ],
+      "claim": "UtxoWithMeta wrapper; identity key intentHash#outputNo; locally spending moves wrapper available->pending; successful sync removes spent from both and adds created to available; toArrays returns wrappers unchanged.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "sync-public-route",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/Sync.js",
+      "sha256": "4d30c4d5e7355448894fff87eef3e9ade9f235aab8bd4d02fe43143080ff3f22",
+      "lines": [
+        [
+          24,
+          42
+        ],
+        [
+          46,
+          70
+        ]
+      ],
+      "claim": "Actual public subscription is address/transactionId scoped; decoder feeds created/spent wrappers to CoreWallet; applies transaction.id as appliedId and progress event highestTransactionId.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "sync-progress",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncProgress.js",
+      "sha256": "90fcd467d117eda980570aa6cd8988614d5810ff006c6d5b9aef16d0d96c74e6",
+      "lines": [
+        [
+          1,
+          22
+        ]
+      ],
+      "claim": "Strict completeness is connected with zero appliedId/highestTransactionId gap; values originate as bigint.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "balancing-identity",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/Transacting.js",
+      "sha256": "299d5a91c3fd65ee21f917574435567f2146d47ef9b83f48b2e44d69a6e4a389",
+      "lines": [
+        [
+          270,
+          285
+        ]
+      ],
+      "claim": "Actual coin balancer explicitly maps available wrappers to utxo and compares intentHash plus outputNo; it does not compare physical segment as wallet identity.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "bigint-codec",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-utilities/dist/SafeBigInt.js",
+      "sha256": "ad494aa2200b4ad01bd057abe274da2b09d1b0790bc153afbd6fefc85c92f555",
+      "lines": [
+        [
+          14,
+          22
+        ]
+      ],
+      "claim": "Public wire value string decodes through BigInt(value); wallet domain value is bigint, not number or string.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "subscription-fields",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-indexer-client/dist/graphql/subscriptions/UnshieldedTransactions.js",
+      "sha256": "99c9cf1927f3cae0ec15cc66e85d1e10f09e469d78ee49b0347f4e63996bd300",
+      "lines": [
+        [
+          43,
+          64
+        ]
+      ],
+      "claim": "Both created/spent subscription records request owner, tokenType,value,outputIndex,intentHash,ctime,registration; progress requests highestTransactionId.",
+      "basis": "inspected-public-source"
+    },
+    {
+      "id": "native-origin",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+      "sha256": "34ea2903bb2640d15c2a5c6852dcee7cb9aa4d297db4caf413b9af3dd392ba88",
+      "lines": [
+        [
+          52,
+          71
+        ]
+      ],
+      "claim": "Current reviewed decoder uses intent.intentHash(0) for guaranteed outputs, physical segment for fallible outputs, and offer array index as offerIndex; existing input origins stay input.intentHash/outputNo.",
+      "basis": "retained-public-repository-evidence"
+    },
+    {
+      "id": "existing-recovery-guard",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "sha256": "f0e222c472b55f1ba162b69b390e462fec2dacfe655259129d247d62d9d7e62e",
+      "lines": [
+        [
+          50,
+          60
+        ]
+      ],
+      "claim": "Current guard retains strict child/DUST gates but compares flat c.intentHash/c.outputNo for old unshielded inputs; this does not inspect actual coin.utxo wrappers.",
+      "basis": "retained-public-repository-evidence"
+    },
+    {
+      "id": "actual-indexer-utxo",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/stopped-indexer-effects.json",
+      "sha256": "5d1c813533f9f59ec6e1c6168387a6da35d763178556cd92405f05f1a47fa436",
+      "lines": [
+        [
+          1,
+          22
+        ]
+      ],
+      "claim": "Stopped indexer row24 created by transaction35 has expected owner/color/origin/output_index0 and spending_transaction_id null at capture; this is historical public DB evidence, not current spendability.",
+      "basis": "retained-public-repository-evidence"
+    },
+    {
+      "id": "actual-native-output",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/indexed-initialize-decoded-02.json",
+      "sha256": "9fa249498cb2041831113c5c130f81ab8f11e7e5dd31a7c75bcd163ccef9a3b1",
+      "lines": [
+        [
+          1,
+          30
+        ]
+      ],
+      "claim": "Retained initialize decode: physical segment21861, guaranteed offerIndex0, original borrower, USD test color, value20e9, corrected guaranteed origin4d343d... .",
+      "basis": "retained-public-repository-evidence"
+    },
+    {
+      "id": "actual-indexer-transaction",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/stopped-indexer-result.json",
+      "sha256": "4caf2a09734533698045504d7d17bb1a6159d89ed8815fb40f52870a0aafad32",
+      "lines": [
+        [
+          1,
+          23
+        ]
+      ],
+      "claim": "Initialize transaction35 at height20363 with raw hash and submitted identifiers; stopped indexer observation does not independently prove canonical finality.",
+      "basis": "retained-public-repository-evidence"
+    },
+    {
+      "id": "original-deploy-empty-unshielded-inputs",
+      "path": "/home/charl/Moriarty/.worktrees/sp05-deadline-review/experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs",
+      "sha256": "622beec3064b94a0962ea40a24f0408d811db8d1f7e6309c7476dac82ffb1439",
+      "lines": [
+        [
+          16,
+          16
+        ]
+      ],
+      "claim": "Actual retained original deployment binding test asserts spentUnshieldedInputs.length===0; does not establish runtime missed-spend event.",
+      "basis": "inspected-public-repository-source"
+    },
+    {
+      "id": "effect-sync-decoder-export",
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/effect/dist/esm/Schema.js",
+      "sha256": "4127333b461a5ccc12d1b67a90d31f74efa5eebc666cc2e21cec0fdf97baa1b2",
+      "lines": [
+        [
+          249,
+          262
+        ]
+      ],
+      "claim": "Effect ESM Schema exports decodeUnknownSync for the proposed offline decoder fixture.",
+      "basis": "inspected-public-source"
+    }
+  ],
+  "expectedMintedUtxo": {
+    "initializeTransactionHash": "1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6",
+    "historicalIndexerTransactionId": 35,
+    "historicalIndexerUtxoRowId": 24,
+    "nativePhysicalSegment": 21861,
+    "nativeSection": "guaranteed",
+    "nativeOfferIndex": 0,
+    "walletPath": "synced.unshielded.availableCoins[i].utxo",
+    "intentHash": "4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603",
+    "outputNo": 0,
+    "owner": "9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb",
+    "type": "e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef",
+    "valueDecimal": "20000000000",
+    "runtimeValueType": "bigint",
+    "runtimeExpectedValueExpression": "20000000000n"
+  },
+  "representationMapping": [
+    {
+      "publicNative": "offerIndex",
+      "indexerWire": "outputIndex",
+      "wallet": "coin.utxo.outputNo",
+      "runtimeType": "number (require safe nonnegative integer)"
+    },
+    {
+      "publicNative": "intentHash (guaranteed intentHash(0))",
+      "indexerWire": "intentHash",
+      "wallet": "coin.utxo.intentHash",
+      "runtimeType": "64 lowercase hexadecimal string, no0x"
+    },
+    {
+      "publicNative": "owner",
+      "indexerWire": "owner",
+      "wallet": "coin.utxo.owner",
+      "runtimeType": "64 lowercase hexadecimal address string, not signing verification key or Bech32"
+    },
+    {
+      "publicNative": "type",
+      "indexerWire": "tokenType",
+      "wallet": "coin.utxo.type",
+      "runtimeType": "64 lowercase hexadecimal color string"
+    },
+    {
+      "publicNative": "value (public projection decimal string)",
+      "indexerWire": "value (decimal string)",
+      "wallet": "coin.utxo.value",
+      "runtimeType": "bigint"
+    }
+  ],
+  "proposedStrictPredicate": {
+    "basis": "Source-grounded proposed continuation gate; unperformed on actual wallet",
+    "preconditions": [
+      "Canonical finalized initialize/full financial comparison and exact unchanged initialized-state gates must pass first. This mapping does not establish them.",
+      "Retain strict connected and isStrictlyComplete()===true on shielded/unshielded/dust progress. Additionally require unshielded appliedId/highestTransactionId bigint, equal, and >=35n for this retained indexer instance; transaction35 is an offset guard, not a cryptographic identity substitute.",
+      "Validate arrays and every UtxoWithMeta record used by the gate: coin.utxo object with intentHash/owner/type 64lowercasehex strings, outputNo safe nonnegative integer, value positive bigint; malformed or flat-only entries fail rather than normalize."
+    ],
+    "identityCheck": [
+      "Identify rows by coin.utxo.intentHash===expected.intentHash AND coin.utxo.outputNo===0, not by amount or physical segment.",
+      "Require exactly one available row for this origin/index and zero pending rows for this origin/index.",
+      "Require that available row.utxo.owner/type equal the exact borrower/color and row.utxo.value===20000000000n. Reject duplicate-origin or conflicting-owner/color/value entries.",
+      "Do not require meta.registeredForDustGeneration===true for the minted USD_TEST_ASSET. That metadata flag is not the unshielded coin identity or the separate DUST balance requirement.",
+      "For every original deploy AND initialize spent unshielded origin/index, require absence from BOTH availableCoins and pendingCoins using c.utxo fields. Keep these checks separate from the minted-output presence predicate.",
+      "Retain no pendingDust, absent historical deploy+initialize DUST oldNullifiers via actual DustLocalState.findUtxoByNullifier, available registered DUST and balance at fresh canonical indexed time >= entire new cap. Retain per-balance/submission native-time guards."
+    ],
+    "publicResult": "Only a closed predicate status/identity digest should be emitted; never serialize wallet arrays/metadata/state.",
+    "notGuaranteed": "Availability in a synchronized observed wallet is eligibility for its balancer, not an unconditional guarantee of future consumption or ledger acceptance."
+  },
+  "findings": [
+    {
+      "id": "CONTINUATION-WALLET-WRAPPER-01",
+      "severity": "high",
+      "kind": "source-observed mapping defect",
+      "detail": "Existing assertRecoveryWallet line55 reads c.intentHash/c.outputNo although actual availableCoins/pendingCoins contain c.utxo. Real wrapped spent inputs can therefore be missed. A continuation must repair this predicate and test real wrapper shape; this receipt edits no frozen source and does not retroactively claim old wallet evidence.",
+      "sources": [
+        "existing-recovery-guard",
+        "wallet-getters",
+        "coin-arrays",
+        "wire-mapping",
+        "utxo-state"
+      ],
+      "historicalScope": "Original deployment binding has zero spentUnshieldedInputs (recover-deployment.test.mjs line16); therefore this source defect does not establish a historical missed unshielded spend. It remains a latent guard defect for any nonempty historic input list and must be corrected before applying it to continuation."
+    },
+    {
+      "id": "CONTINUATION-MINT-IDENTITY-01",
+      "severity": "resolved-source-question",
+      "kind": "source/evidence correspondence",
+      "detail": "Native guaranteed physical21861 offerIndex0 maps directly to wrapped utxo at origin4d343d... outputNo0. Do not substitute intentHash(21861), output_index24(rowid), transactionid35 or physicalsegment21861 for outputNo0.",
+      "sources": [
+        "native-origin",
+        "actual-native-output",
+        "actual-indexer-utxo",
+        "wire-mapping",
+        "balancing-identity"
+      ]
+    }
+  ],
+  "recommendedTests": [
+    "Actual public wire record decoded by installed SyncSchema produces wrapper with bigint20e9 and outputNo0; test wrapper, not a fabricated flat object.",
+    "Reject minted output missing, onlypending, duplicateorigin, wrongowner/color/value, incorrect nonzero-segment origin, or swapped rowid/transactionid/outputNo.",
+    "Wrapped historicalspentinput in either available/pending must fail; flat/malformed shape must fail closed.",
+    "Keep disconnected/gapped progress, pendingDUST, historicalspentDUST presence and insufficient fullcap tests; no live wallet required for these fixtures."
+  ],
+  "limitations": [
+    "No actual current availableCoins/pendingCoins array was read; present spendability remains unobserved. Historical spending_transaction_id null is only the stopped capture.",
+    "No live canonical finality/current UTXO query was performed. Concurrent later spending can invalidate observations; recheck through existing freshness and transaction guards.",
+    "SDK installed source beyond current direct launch-runtime pins was hashed here. Current manifest directly pins unshielded package/index/KeyStore/Serialization, not every inspected mapping module; this receipt is provenance, not automatic runtime admission of new dependency checks.",
+    "No full transitive dependency attestation or new supply-chain guarantee. No fee/funding/registration assumption is derived from the USD metadata flag.",
+    "A public output retained by source06/07 decoder is evidence of the candidate semantics and captured native bytes; independent source reviews and actual finality/comparison gates remain separate."
+  ],
+  "decoderFixtureProposal": {
+    "status": "SOURCE_ONLY_NOT_EXECUTED_BY_THIS_AGENT",
+    "modulePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js",
+    "export": "WalletSyncUpdateSchema",
+    "alternativeExport": "UnshieldedUpdateSchema",
+    "decoderModulePath": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/effect/dist/esm/Schema.js",
+    "decoderExport": "decodeUnknownSync",
+    "decoderInvocation": "decodeUnknownSync(WalletSyncUpdateSchema)(wire)",
+    "wire": {
+      "type": "UnshieldedTransaction",
+      "transaction": {
+        "id": 35,
+        "hash": "1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6",
+        "type": "RegularTransaction",
+        "protocolVersion": 1000000,
+        "block": {
+          "timestamp": 1789027704001
+        },
+        "transactionResult": {
+          "status": "SUCCESS",
+          "segments": null
+        }
+      },
+      "createdUtxos": [
+        {
+          "value": "20000000000",
+          "owner": "9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb",
+          "tokenType": "e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef",
+          "intentHash": "4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603",
+          "outputIndex": 0,
+          "ctime": 1,
+          "registeredForDustGeneration": false
+        }
+      ],
+      "spentUtxos": []
+    },
+    "syntheticMetadataCaution": "ctime1 and registeredForDustGenerationfalse are codec-fixture inputs only; actual retained SQL/native records cited here did not capture these metadata values. segments:null is schema scaffolding, not an independently observed segment result. Expected output is decoded.createdUtxos[0].utxo with bigintvalue and numericoutputNo0; no wallet construction required."
+  }
+}

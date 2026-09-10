@@ -1,4 +1,4 @@
-/** Verified recovery predicates for the single retained local loan history.
+/** Verified recovery predicates for the single retained, uninitialized local loan.
  * These helpers authorize no services, wallet, storage writes or submissions.
  */
 import {createHash} from 'node:crypto';
@@ -8,7 +8,6 @@ import {pathToFileURL} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
 import {PINNED_NM} from './providers.mjs';
 import {decodeNativeFinancialTransaction} from './receipt.mjs';
-import {inspectInitializedLoanBytes,assertInitializedLoanState} from './continue-initialized-loan.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const sha=b=>createHash('sha256').update(b).digest('hex');
 export const EXISTING_LOAN=Object.freeze({
@@ -53,10 +52,7 @@ export function assertRecoveryWallet({synced,binding,timestampMs,dustCap}){
  const now=Date.now();check(Number.isSafeInteger(timestampMs)&&timestampMs<=now&&now-timestampMs<=60000&&typeof dustCap==='bigint'&&dustCap>0n,'RECOVERY_WALLET_TIME_CAP');
  for(const kind of ['shielded','unshielded','dust']){const p=synced?.[kind]?.progress;check(p?.isConnected===true&&typeof p.isStrictlyComplete==='function'&&p.isStrictlyComplete()===true,'RECOVERY_WALLET_SYNC');}
  const u=synced.unshielded,d=synced.dust;check(Array.isArray(u.availableCoins)&&Array.isArray(u.pendingCoins)&&Array.isArray(d.state?.pendingDust)&&d.state.pendingDust.length===0,'RECOVERY_WALLET_PENDING');
- const coins=[...u.availableCoins,...u.pendingCoins].map(c=>{
-  const coin=c?.utxo;check(coin&&typeof coin.intentHash==='string'&&/^[a-f0-9]{64}$/.test(coin.intentHash)&&Number.isSafeInteger(coin.outputNo)&&coin.outputNo>=0,'RECOVERY_WALLET_COIN');return coin;
- });
- for(const spent of binding.spentUnshieldedInputs)check(!coins.some(c=>c.intentHash===spent.intentHash&&c.outputNo===spent.outputNo),'RECOVERY_WALLET_SPENT_INPUT');
+ for(const spent of binding.spentUnshieldedInputs)check(![...u.availableCoins,...u.pendingCoins].some(c=>c.intentHash===spent.intentHash&&c.outputNo===spent.outputNo),'RECOVERY_WALLET_SPENT_INPUT');
  check(typeof d.state.state?.findUtxoByNullifier==='function','RECOVERY_WALLET_DUST_CODEC');
  for(const old of binding.oldDustNullifiers)check(d.state.state.findUtxoByNullifier(old)===undefined,'RECOVERY_WALLET_SPENT_DUST');
  check(Array.isArray(d.availableCoins)&&d.availableCoins.length>0&&typeof d.balance==='function','RECOVERY_WALLET_REGISTERED_DUST');
@@ -79,27 +75,28 @@ export async function reconstructExistingLoan({compiledContract,zkConfigProvider
  const verified=Object.freeze({privateState:p.privateState,signingKey:p.signingKey});verifiedPrivateResults.add(verified);return verified;
 }
 
-function checkPublicRecoveryTip(tip,readCurrentTip){
+/** Public chain gate, before seed/private store access. Caller supplies only fixed read-only providers. */
+export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
+ const {observeFinalizedStage,beforeDeadline}=await import('./receipt.mjs');
+ const binding=inspectExistingLoanBytes(raw,ledger);let queryDeadline=deadlineMs;const wait=fn=>beforeDeadline(fn,queryDeadline);
  check(typeof readCurrentTip==='function','RECOVERY_INDEXER_READER');
- check(tip?.status==='READY'&&typeof tip.hash==='string'&&/^[a-f0-9]{64}$/.test(tip.hash)&&Number.isSafeInteger(tip.height)&&tip.height>=0&&Number.isSafeInteger(tip.finalizedHeight)&&Math.abs(tip.height-tip.finalizedHeight)<=2,'RECOVERY_TIP_FINALITY');
- check(Number.isSafeInteger(tip.timestampMs)&&tip.timestampMs<=Date.now()&&Date.now()-tip.timestampMs<=60000,'RECOVERY_TIP_TIME');
-}
-/** Internal fixed-loan snapshot sampler. Only canonical forward movement retries. */
-async function stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight,historyHeight,checkStates}){
- const {beforeDeadline}=await import('./receipt.mjs');
- let queryDeadline=deadlineMs;const wait=fn=>beforeDeadline(fn,queryDeadline);
  const indexedTip=async()=>{
   const t=Object.freeze({...await wait(()=>readCurrentTip(queryDeadline))});
   check(t.status==='READY'&&typeof t.hash==='string'&&/^[a-f0-9]{64}$/.test(t.hash)&&Number.isSafeInteger(t.height)&&t.height>=0&&t.finalizedHeight===t.height&&t.finalizedHash==='0x'+t.hash,'RECOVERY_INDEXER_FINALITY');
   check(Number.isSafeInteger(t.timestampMs)&&t.timestampMs<=Date.now()&&Date.now()-t.timestampMs<=60000,'RECOVERY_INDEXER_TIME');
   return t;
  };
+ check(tip?.status==='READY'&&typeof tip.hash==='string'&&/^[a-f0-9]{64}$/.test(tip.hash)&&Number.isSafeInteger(tip.height)&&tip.height>=0&&Number.isSafeInteger(tip.finalizedHeight)&&Math.abs(tip.height-tip.finalizedHeight)<=2,'RECOVERY_TIP_FINALITY');
+ check(Number.isSafeInteger(tip.timestampMs)&&tip.timestampMs<=Date.now()&&Date.now()-tip.timestampMs<=60000,'RECOVERY_TIP_TIME');
+ const observation=await observeFinalizedStage({provider,rpc,ledger,txId:binding.txId,contractAddress:binding.contractAddress,circuitId:'deploy',decodeState,deadlineMs,expectedProtocolVersion});
+ const r=observation.receipt;
+ check(r.transaction.transactionHash===binding.transactionHash&&r.transaction.rawSha256===binding.transactionHash&&r.blockHash===EXISTING_LOAN.blockHash&&r.blockHeight===EXISTING_LOAN.blockHeight,'RECOVERY_DEPLOY_RECEIPT');
  // The historical watch runs once. Only well-formed forward movement may
  // trigger another public snapshot; state/identity/provider failures are fatal.
  check(await wait(()=>rpc('chain_getBlockHash',[tip.height]))==='0x'+tip.hash,'RECOVERY_TIP_CANONICAL');
  const startedAt=Date.now();queryDeadline=Math.min(deadlineMs,startedAt+60000);
  const readRpc=(method,params)=>wait(()=>rpc(method,params,queryDeadline));
- const retry=Object.freeze({});let lastMovement,samples=0,finalityFloor=finalityHeight;
+ const retry=Object.freeze({});let lastMovement,samples=0,finalityFloor=r.finalizedHeight;
  const moved=async(phase,from,to)=>{
   check(to.height>from.height,'RECOVERY_INDEXER_FINALITY');
   check(await readRpc('chain_getBlockHash',[from.height])===from.hash,'RECOVERY_TIP_CANONICAL');
@@ -121,62 +118,23 @@ async function stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHei
    const indexed=await indexedTip(),anchor={hash:'0x'+indexed.hash,height:indexed.height};
    check(indexed.height>=finalityFloor,'RECOVERY_FINALITY_REGRESSION');
    const {hash:head,height}=await nodeTip();
-   check(height>=finalityHeight&&height>=tip.height&&height-tip.height<=2,'RECOVERY_CURRENT_HEIGHT');
+   check(height>=r.finalizedHeight&&height>=tip.height&&height-tip.height<=2,'RECOVERY_CURRENT_HEIGHT');
    if(anchor.hash!==head||anchor.height!==height)await moved('before-state',anchor,{hash:head,height});
    // A block filter selects an action IN that block, not state as of the block.
-   const stateEvidence=await checkStates(wait);
+   const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress))]);
+   assertExistingLoanState(historical,ledger);assertExistingLoanState(current,ledger);
    const after=await indexedTip();
    if(after.hash!==indexed.hash||after.height!==indexed.height)await moved('after-state',anchor,{hash:'0x'+after.hash,height:after.height});
    const end=await nodeTip();
    if(end.hash!==head||end.height!==height)await moved('final-node',anchor,end);
-   check(tip.height>=historyHeight&&Date.now()-tip.timestampMs<=60000,'RECOVERY_CURRENT_STATE_TIME');
-   return Object.freeze({stateBlock:Object.freeze({hash:head,height}),snapshotSamples:samples,stateEvidence});
+   check(tip.height>=r.blockHeight&&Date.now()-tip.timestampMs<=60000,'RECOVERY_CURRENT_STATE_TIME');
+   return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock:Object.freeze({hash:head,height}),snapshotSamples:samples,status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/latest-state checks in one stable indexed/finalized snapshot; bounded public sampling, no private recovery or financial acceptance'});
   }catch(error){if(error!==retry)throw error;}
   if(samples<6&&Date.now()<queryDeadline)await wait(()=>new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(1,queryDeadline-Date.now()-1)))));
  }
  const error=Error('RECOVERY_SNAPSHOT_UNSTABLE');
  error.recoveryObservation=Object.freeze({samples,elapsedMs:Date.now()-startedAt,reason:Date.now()>=queryDeadline?'deadline':'sample-limit',...lastMovement});
  throw error;
-}
-
-/** Public constructor-only gate; behavior remains distinct from initialized continuation. */
-export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
- const {observeFinalizedStage}=await import('./receipt.mjs');
- const binding=inspectExistingLoanBytes(raw,ledger);checkPublicRecoveryTip(tip,readCurrentTip);
- const observation=await observeFinalizedStage({provider,rpc,ledger,txId:binding.txId,contractAddress:binding.contractAddress,circuitId:'deploy',decodeState,deadlineMs,expectedProtocolVersion});
- const r=observation.receipt;
- check(r.transaction.transactionHash===binding.transactionHash&&r.transaction.rawSha256===binding.transactionHash&&r.blockHash===EXISTING_LOAN.blockHash&&r.blockHeight===EXISTING_LOAN.blockHeight,'RECOVERY_DEPLOY_RECEIPT');
- const {stateBlock,snapshotSamples}=await stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight:r.finalizedHeight,historyHeight:r.blockHeight,checkStates:async wait=>{
-  const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress))]);
-  assertExistingLoanState(historical,ledger);assertExistingLoanState(current,ledger);
- }});
- return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock,snapshotSamples,status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/latest-state checks in one stable indexed/finalized snapshot; bounded public sampling, no private recovery or financial acceptance'});
-}
-
-const INITIALIZE_BLOCK=Object.freeze({height:20363,hash:'7f61e4c7225c456400e852f3648cf7fcad958bb05ed84002441782764093c94f'});
-/** Public-only gate for exactly the retained deploy and initialize history.
- * Both watches run once; latest and historical full states are checked in the
- * bounded stable snapshot. The result grants no wallet/private access or dispatch.
- */
-export async function verifyInitializedLoanPublic({raw,rawInitialize,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
- const {observeFinalizedStage}=await import('./receipt.mjs');
- const deployment=inspectExistingLoanBytes(raw,ledger),initialize=inspectInitializedLoanBytes(rawInitialize,ledger);
- check(expectedProtocolVersion===1000000,'INITIALIZED_PROTOCOL');checkPublicRecoveryTip(tip,readCurrentTip);
- const common={provider,rpc,ledger,contractAddress:deployment.contractAddress,decodeState,deadlineMs,expectedProtocolVersion};
- const deploymentObservation=await observeFinalizedStage({...common,txId:deployment.txId,circuitId:'deploy'});
- const d=deploymentObservation.receipt;
- check(d.transaction.transactionHash===deployment.transactionHash&&d.transaction.rawSha256===deployment.transactionHash&&d.blockHash===EXISTING_LOAN.blockHash&&d.blockHeight===EXISTING_LOAN.blockHeight,'RECOVERY_DEPLOY_RECEIPT');
- const initializeObservation=await observeFinalizedStage({...common,txId:initialize.txId,circuitId:'initialize'});
- const i=initializeObservation.receipt;
- check(i.transaction.transactionHash===initialize.transactionHash&&i.transaction.rawSha256===initialize.transactionHash&&i.blockHash===INITIALIZE_BLOCK.hash&&i.blockHeight===INITIALIZE_BLOCK.height,'INITIALIZED_DEPLOYMENT_HISTORY');
- const {stateBlock,snapshotSamples,stateEvidence:initializeContractState}=await stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight:Math.max(d.finalizedHeight,i.finalizedHeight),historyHeight:i.blockHeight,checkStates:async wait=>{
-  const [historicalDeploy,historicalInitialize,current]=await Promise.all([wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:d.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress,{type:'blockHash',blockHash:i.blockHash})),wait(()=>provider.queryContractState(deployment.contractAddress))]);
-  assertExistingLoanState(historicalDeploy,ledger);assertInitializedLoanState(historicalInitialize,ledger);assertInitializedLoanState(current,ledger);
-  // Copy the verified historical bytes instead of retaining a mutable provider object.
-  return ledger.ContractState.deserialize(historicalInitialize.serialize());
- }});
- const binding=Object.freeze({transactionHash:deployment.transactionHash,contractAddress:deployment.contractAddress,deployment,initialize,spentUnshieldedInputs:Object.freeze([...deployment.spentUnshieldedInputs,...initialize.spentUnshieldedInputs]),oldDustNullifiers:Object.freeze([...deployment.oldDustNullifiers,...initialize.oldDustNullifiers]),mintedOutput:initialize.mintedOutput});
- return Object.freeze({status:'INITIALIZED_PUBLIC_STATE_VERIFIED',dispatchAuthorized:false,deploymentObservation,initializeObservation,initializeContractState,binding,tip:Object.freeze({...tip}),stateBlock,snapshotSamples,scope:'Read-only exact deploy/initialize history and unchanged initialized state in a stable indexed/finalized snapshot; no private access or dispatch authorization'});
 }
 
 const verifiedPrivateResults=new WeakSet(),consumedPrivateResults=new WeakSet();
