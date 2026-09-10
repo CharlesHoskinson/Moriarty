@@ -1,0 +1,54 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerIdentity": {
+    "agent": "/root/spec_audit_early",
+    "model": "gpt-6-astra",
+    "independentOfAuthor": true,
+    "otherCurrentReviewVerdictInspected": false
+  },
+  "candidateSha256": "22ec46929680876b33bf1e6c8b398ae9c74a71e23429c082a41ebd9a3a80bfac",
+  "verdict": "PASS_SCOPED",
+  "scope": "Three-file closed Preview/local read-only RPC extraction and transport boundary only. No operational or resource admission, endpoint availability finding, method support finding, or Preview chain acceptance.",
+  "sourceHashes": {
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/financial-rpc.mjs": "c9316e175c45c46dcda9f114f8097a0c2e562a8f0bf1424c4b760ddf37f6154c",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/preview-rpc.test.mjs": "588b42a4732aa6600bbd6e2cca392e24db5a2a611bdf4efd90a8c7b6b9aae7d3",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "33de8d4ced51b9c58b2ff541e048911f1a19ce6db3ae67b67720bc71fffa7047"
+  },
+  "pinsVerified": {
+    "source": 3,
+    "authorLogs": 2,
+    "unchangedPriorOwnerSource": 4,
+    "ownerCandidateSha256": "00942b4bab990e02e6439fbc66ace37de7a9efa8ae1ccce4b28579bcc6fb58f7"
+  },
+  "findings": [],
+  "reexecutedChecks": [
+    {
+      "command": "node --experimental-test-module-mocks --test experiments/moriarty-midnight-financial/ledger/preview-rpc.test.mjs experiments/moriarty-midnight-financial/ledger/finalized-state-rpc.test.mjs experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs",
+      "cwd": "/home/charl/Moriarty/.worktrees/sp05-preview-owner",
+      "tests": 104,
+      "pass": 104,
+      "fail": 0,
+      "skip": 0,
+      "exitCode": 0,
+      "evidence": "/tmp/moriarty-preview-rpc-gpt6-verification.tap",
+      "sha256": "610ebe03088b9536d9e0c6a38f6a55463ab9f1b6d04a452d9f6c461a2f921a59"
+    }
+  ],
+  "observations": [
+    "Preview endpoint is accepted by exact string comparison with optional trailing slash, before fetch access. Redirects are forbidden. Existing local loopback HTTP endpoint validation and exported API are preserved.",
+    "Only finalized head, explicit header hash, numeric canonical block height and explicit contract-address/block-hash state requests pass; transaction writes and malformed state parameters reject before transport.",
+    "Shared core enforces absolute deadline before dispatch, immediately after fetch and each streamed read, and after Promise.race return. Overdue timer starvation cannot yield late success in tested controls. Abort and timer cleanup execute on success and failure.",
+    "Responses are streamed with a 65536-byte total body ceiling and exact JSON-RPC version/request ID/result-without-error checks. RPC errors retain unknown classification without retries or fallback.",
+    "The configured Preview origin matches retained repository preview-verify.mjs line16; no current endpoint verification was performed.",
+    "The existing four owner source files are unchanged. This extraction does not connect a Preview wallet/launcher or produce financial evidence."
+  ],
+  "limitations": [
+    "Factory deadline is a shared caller-supplied absolute deadline; the function does not interpret a third per-request deadline argument or impose an independent five-second cap. Integration must pass the required capped deadline when constructing the factory, as documented.",
+    "65536-byte transport ceiling includes the JSON envelope and encoded data, so it is narrower than the native decoder size ceiling; an oversized response fails rather than falling back.",
+    "Current TLS/DNS deployment identity, endpoint availability, genesis, protocol, method support, canonical state semantics, fees, finality and financial effects remain unobserved here.",
+    "Synthetic transport tests do not close mandatory compiled Moriarty source/profile/compiler-bound financial execution on Midnight Preview, or any PCD acceptance gate.",
+    "No live RPC/network access, services, private inputs, wallets, proof generation, transaction submission or operational executor was used."
+  ],
+  "reviewedAt": "2026-09-10T16:07:08.818165+00:00"
+}

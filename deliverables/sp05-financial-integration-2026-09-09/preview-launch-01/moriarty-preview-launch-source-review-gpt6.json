@@ -1,0 +1,84 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerIdentity": {
+    "agent": "/root/spec_audit_early",
+    "model": "gpt-6-astra",
+    "independentOfAuthor": true,
+    "author": "graph_refresh",
+    "otherCurrentReviewVerdictInspected": false
+  },
+  "candidateSha256": "1d560b0f34f85bbd83ae20ce18a1bc22100f5ade5a863fae41490fed506b79cf",
+  "verdict": "BLOCKED",
+  "scope": "Frozen three-file Preview public plan/result/stage/event boundary, including connected integration producer fixtures. No source edit, bootstrap approval or operations.",
+  "sourceHashes": {
+    "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": "fbf2b733a77c198b3f8093ca376b18ead113761af2d2d033a1a18de04653f6d5",
+    "experiments/moriarty-midnight-financial/ledger/preview-launch.test.mjs": "89cfa7e0744ddbfefcaf26b4180d4b3dc920ff4cc705d8bbaff5d77a8308b4e0",
+    "experiments/moriarty-midnight-financial/ledger/preview-launch-integration.test.mjs": "62ba22bfe513863710884bedec9d6c5a46ac41e3445eda82d2ab20435d9bf65d"
+  },
+  "pinsVerified": {
+    "source": 3,
+    "authorEvidence": 3
+  },
+  "findings": [
+    {
+      "id": "G6-PREVIEW-PUBLIC-01",
+      "severity": "blocking",
+      "location": "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs:39",
+      "title": "Value-type dispatch bypasses acceptance and native identity field constraints",
+      "evidence": "publicClone only checks false-only acceptance inside the boolean branch and ID/hash constraints inside the string branch. On the unchanged writer, nested financialComparison.proofAcceptance=true is rejected, but the same field set to string PASS or number 1 is written. Numeric driver.transactionIds[0], numeric native transactionHash, and boolean native input owner also write successfully.",
+      "impact": "The published boundary is not fail closed for documented nested acceptance/identity types; malformed or truthy acceptance claims can be retained as evidence. This does not assert current honest integration emits those values or that any live result was affected.",
+      "requiredCorrection": "Validate constrained field types/values independently of the supplied value type before generic cloning. All five acceptance keys must be exactly false when present. Native ID/hash scalar values must have required string encodings; preserve legitimate identifier arrays and nested address/bytes object representations. Add wrong-type controls through actual durable writer, not a mirror helper.",
+      "reproducerCommands": [
+        "node /tmp/moriarty-preview-writer-acceptance-reproducer.mjs",
+        "node /tmp/moriarty-preview-writer-field-types-reproducer.mjs"
+      ],
+      "reproducerExitCodes": [
+        1,
+        1
+      ]
+    }
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "node --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/preview-launch.test.mjs experiments/moriarty-midnight-financial/ledger/preview-launch-integration.test.mjs",
+      "cwd": "/home/charl/Moriarty/.worktrees/sp05-preview-owner",
+      "exitCode": 0,
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "skip": 0,
+      "evidence": "/tmp/moriarty-preview-launch-gpt6-verification.tap",
+      "limitation": "Existing green tests exercise malformed string values/boolean true but miss nonboolean acceptance and non-string identity values."
+    },
+    {
+      "command": "node /tmp/moriarty-preview-writer-acceptance-reproducer.mjs",
+      "exitCode": 1,
+      "expected": true
+    },
+    {
+      "command": "node /tmp/moriarty-preview-writer-field-types-reproducer.mjs",
+      "exitCode": 1,
+      "expected": true
+    }
+  ],
+  "evidenceHashes": {
+    "/tmp/moriarty-preview-launch-gpt6-verification.tap": "70caef4c909452296b084ed26fc9890e2015145a1893bcb90945519ccc26b208",
+    "/tmp/moriarty-preview-writer-acceptance-reproducer.mjs": "46a968c975a1fc74ed37db489ab0302c18eedd57eca0badfe52705fc077f435a",
+    "/tmp/moriarty-preview-writer-acceptance-reproducer.json": "22e76a6109e697a2ff6e81114996d2b703da08ae9bac932b2b435a2571d432af",
+    "/tmp/moriarty-preview-writer-field-types-reproducer.mjs": "fdcd1067cd7776a9f4e47f72203b7cd90fea509fb36907d219354e6eddf2be86",
+    "/tmp/moriarty-preview-writer-field-types-reproducer.json": "caa70d4a3395548a90ce713eca238a44b44654a71f6c0a2f4cdf1dcf59f78a7e"
+  },
+  "checkedScope": [
+    "Plan exact keys forbid recovery/adapters; configured Preview endpoints and original public payer/seed-path identity are checked without reading private contents. State-directory and second-role provenance still belong to actual launcher/admission.",
+    "Connected tests invoke actual Preview integrator/native observer/comparator then durable writers with retained local native transactions and synthetic roles/state fixtures. All four stage summaries and actual 66-hex SDK IDs survive current honest producer path.",
+    "Exclusive O_EXCL/O_NOFOLLOW result/stage writes, file and directory fsync, restrictive destination directory/file modes and symlink rejection are present. Private unknown keys, accessors/symbols and arbitrary diagnostic text are rejected in inspected controls.",
+    "Failure result optional fields and stopped-event operation text are handled without copying original private SDK error text."
+  ],
+  "limitations": [
+    "Current candidate is not approved for publication or operational admission until the type-validation blocker is fixed and corrected frozen source independently reviewed.",
+    "No actual Preview transaction, custody, endpoint availability, financial acceptance, mandatory PCD or whole-sprint closure is established.",
+    "Only retained public fixtures and temporary synthetic output directories were used; no private inputs, wallets, network, services, proofs or transactions were accessed."
+  ],
+  "reviewedAt": "2026-09-10T16:48:57.079966+00:00"
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": {
+    "agent": "/root/spec_audit_early",
+    "model": "gpt-6-astra",
+    "independentOfAuthor": true
+  },
+  "candidateSha256": "00942b4bab990e02e6439fbc66ace37de7a9efa8ae1ccce4b28579bcc6fb58f7",
+  "verdict": "PASS_SCOPED",
+  "scope": "Closed undeployed/preview indexed-owner codec and explicit receipt encoding selection only. No operational admission or Preview acceptance.",
+  "sourceHashes": {
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "7164ccf41de2bd611203a58f73efea440f7e71526b837d2c328d1b46a3345d2d",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/indexed-owner.test.mjs": "4066701efea51d41bb78abab6e30f656b6e6ee20f3987ece9af13e1ca903c3b3",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/receipt.mjs": "f7d0266f5a798bce4433a4c4e474e68f2fe67d824f40a1afe2bd0856a9673e46",
+    "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial/ledger/receipt.test.mjs": "6e7b7974b10f5f037dbcf7a04137f16b0f755220318d5048fc478dbff6870b0c"
+  },
+  "pinsVerified": {
+    "source": 4,
+    "retainedCheckLogs": 5
+  },
+  "findings": [],
+  "checks": [
+    {
+      "command": "node --experimental-test-module-mocks --test ledger/indexed-owner.test.mjs ledger/receipt.test.mjs ledger/integrate-local.test.mjs",
+      "cwd": "/home/charl/Moriarty/.worktrees/sp05-preview-owner/experiments/moriarty-midnight-financial",
+      "executedByReviewer": true,
+      "exitCode": 0,
+      "tests": 81,
+      "pass": 81,
+      "fail": 0,
+      "skip": 0,
+      "evidence": "/tmp/moriarty-preview-owner-gpt6-verification.tap",
+      "sha256": "c06d46b670fedbabaf06e38f2e3f731c4da71c7f599df19ce7cd678f910a5cc3"
+    },
+    {
+      "retainedAuthorRegression": "/tmp/moriarty-preview-owner-regression.tap",
+      "sha256": "ca3afde0e8d35fb0d27b87728379c24a4d3d90ae0a594837ccba320d4777b81e",
+      "executedByReviewer": false,
+      "reportedTests": 109,
+      "reportedPass": 109
+    }
+  ],
+  "observations": [
+    "Closed selector resolves before any receipt provider/RPC observation, including empty indexed row sets. Undefined remains undeployed for compatibility.",
+    "Actual installed pinned SDK codec rejects wrong network/type and noncanonical encodings by decode plus exact roundtrip and 32-byte lowercase native owner validation.",
+    "Preview tests exercise both spent and created owners against native signed transaction rows and reject mismatched network or decoded identity.",
+    "Existing local integration omits network selection and therefore retains undeployed behavior. No Preview launcher or wallet connection is added."
+  ],
+  "limitations": [
+    "Tests use synthetic native fixtures and controlled indexer/RPC objects; no Preview transactions or endpoint behavior were observed.",
+    "Encoding selection does not establish chain/genesis identity, wallet ownership authorization, endpoint trust, finality correctness, deployed compiler binding, or financial acceptance.",
+    "This bounded delta audit does not approve existing broader receipt deadline behavior or other unchanged receipt machinery.",
+    "No network, services, private inputs, proof generation, wallet execution, or transaction submission was performed."
+  ],
+  "reviewedAt": "2026-09-10T15:59:03.544578+00:00"
+}

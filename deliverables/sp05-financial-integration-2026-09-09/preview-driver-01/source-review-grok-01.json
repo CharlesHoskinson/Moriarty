@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 207.063,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"reviewer\": \"Grok 4.6 independent high source audit\",\n  \"candidateSha256\": \"b1ddf67f5bd6f4b19aa2e1158bf3f9f816db1240c0de190bf3b2930ca44289f0\",\n  \"verdict\": \"PASS_SCOPED\",\n  \"findings\": [],\n  \"checkedPredicates\": [\n    {\n      \"id\": \"two-file-scope\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"Candidate files[] are only ledger/run-local.mjs and ledger/run-preview.test.mjs. Shared runFinancialCase is not exported. No CLI, public dispatch, durable Preview writer, wallet constructor, or live admission path is added.\"\n    },\n    {\n      \"id\": \"producer-consumer-interfaces\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"Both wrappers require owned providers.cleanup before work; try-path requires execute, stop, getState, getExecutionBinding plus observe, verifyStage, and now. SDK deployContract/submitCallTx remain behind providers.execute. Public result is a closed object: schema, status, kind, contractAddress, stages, transactionIds, cleanup, operationalState, optional {phase,stage,code} failure, and an explicit non-PCD scope string. SDK private fields are not copied.\"\n    },\n    {\n      \"id\": \"preview-target-guards\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"runPreviewFinancialCase binds target 'preview'. Rejects network!=='preview', SDK/provider networkId/sdkNetworkId mismatch, payer mismatch, node not exact https://rpc.preview.midnight.network[/], indexer/indexerWS not the configured Preview GraphQL endpoints, non-loopback HTTP proofServer, binding JSON snapshot change before the next submit, and any existingDeployment/initializedLoan/initializedSwap with PREVIEW_LOCAL_RECOVERY_FORBIDDEN. Guards run before SDK operations.\"\n    },\n    {\n      \"id\": \"frozen-local-behavior\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"runLocalFinancialCase still forces undeployed. Local binding still requires undeployed network/SDK, payer match, and loopback http/ws node, indexer, indexerWS, and proofServer. Local observe args still omit network. Local schema remains moriarty.local-financial-run/1. Local recovery and initialized loan/swap continuation parsers, public failure validator, reservation projection, and cleanup/containment rule are unchanged from the supplied unmodified base aside from target parameterization.\"\n    },\n    {\n      \"id\": \"sequence-parameters\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"Shared body still runs loan deploy/initialize/accrue/settle or swap deploy/initialize/swap/close with the same privateStateId, deploy args, circuit args, and mul/div hints. Preview tests require p.calls===l.calls and p.events===l.events against the local wrapper.\"\n    },\n    {\n      \"id\": \"mandatory-observation-comparison\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"record() always execute(observe) then execute(compare) and throws FINANCIAL_COMPARISON_REQUIRED_PASS unless comparison.status==='PASS' before the next call. Preview observe receives network:'preview'; local does not. Missing observe/verifyStage/now still throws OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED.\"\n    },\n    {\n      \"id\": \"reservation-id-retention\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"Each observed txId is added before observe. getState identifiers are merged. operationalState projects reservedSubmissions, reservedDustFee string, and reservedGrossByAsset strings, or {unavailable:true}. Failure paths in the Preview tests retain ['deploy'] and still cleanup.\"\n    },\n    {\n      \"id\": \"failures-cleanup\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"catch stops the provider without replacing the first error. finally always attempts cleanup. PASS requires walletStopped, pendingOperations===0, and containmentComplete; otherwise INCOMPLETE/DRIVER_CLEANUP_INCOMPLETE. Closed public codes only; unknown SDK text becomes UNCLASSIFIED_DRIVER_FAILURE.\"\n    },\n    {\n      \"id\": \"no-invented-early-gates\",\n      \"result\": \"HOLD\",\n      \"evidence\": \"No PCD, independent-wallet, or included-rollback gate is introduced. Preview comment and publicResult.scope state that controlled sequencing is not mandatory PCD acceptance. Local durable writer is not extended.\"\n    }\n  ],\n  \"limitations\": [\n    \"No tools or operations were used; file SHA256 values, frozen owner/RPC hashes, and TAP hashes were not recomputed in this audit.\",\n    \"Controlled tests in run-preview.test.mjs use synthetic roles and inert SDK/provider callbacks. They are not Midnight Preview evidence, proofs, or chain effects.\",\n    \"run-preview.test.mjs checks Preview-versus-local call equality; exact mul/div products remain asserted by the unmodified local tests in the supplied regression log, which was not re-executed here.\",\n    \"providers.mjs and run-local.test.mjs were read only as producer/freeze context. They are not in candidate files[].\",\n    \"Configured Preview hostnames are allowlisted strings. They do not prove current availability, genesis, protocol, or chain identity.\"\n  ],\n  \"remainingAcceptance\": [\n    \"HARD GATE: actual Moriarty financial settlement on Midnight Preview remains mandatory. This slice only wires the fixed financial sequence behind explicit local/Preview wrappers.\",\n    \"Do not treat moriarty.preview-financial-run/1 status PASS, GREEN tests, or configured rpc.preview.midnight.network hostnames as Preview acceptance.\",\n    \"Future integration must still bind actual Preview genesis/protocol/build/roles/identity, the reviewed native observer, the full financial comparator, real provider reservations and public IDs, durable result retention, and separately admitted execution.\",\n    \"Do not invent an early PCD gate, independent-wallet gate, or included-rollback gate from this candidate.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 39721,
+      "output_tokens": 10798,
+      "cache_read_input_tokens": 256,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 39721,
+        "outputTokens": 10798,
+        "cacheReadInputTokens": 256,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.02454086
+      }
+    },
+    "total_cost_usd": 0.02454086,
+    "session_id": "01a08c25-9904-70d3-84d2-21c76180f287"
+  }
+}
