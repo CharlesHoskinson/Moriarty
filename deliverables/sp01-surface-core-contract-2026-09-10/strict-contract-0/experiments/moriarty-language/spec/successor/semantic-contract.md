@@ -1,12 +1,11 @@
 # Proposed successor expression contract
 
 Status: **PROPOSAL — SP01.3 expression layer only.** Contract identifier
-`moriarty-expression-contract/1`; this is not a registered execution profile.
+`moriarty-expression-contract/0`; this is not a registered execution profile.
 It does not replace `moriarty-funded-source/0`, the syntax profile, or archived
 candidate04. No full RP01, SP02, SP03, theorem, signature or Midnight acceptance
-follows from this document. The Boolean design change has two scoped independent
-votes; these exact revised source bytes still require fresh GPT-6/Grok result
-reviews. The 38 proposed financial operations are not defined here.
+follows from this document. All new choices below require the current independent
+GPT-6/Grok reviews. The 38 proposed financial operations are not defined here.
 
 This document and [static-semantics.md](static-semantics.md) give the meaning of
 all 40 expression constructors declared in candidate04 B.1. The complete index
@@ -31,7 +30,7 @@ The following are **new proposed choices**, not inherited approvals:
 
 | ID | Choice and reason |
 | --- | --- |
-| EX-D1 | Left-to-right short-circuit `And`/`Or`, matching the source design. Both operands are statically checked and all supplied snapshots admitted before reduction; only the selected right operand is evaluated. This deliberately replaces the strict EX-D1 of contract/0 under a distinct contract/1 identifier. |
+| EX-D1 | Strict left-to-right operands, including `And`/`Or`. Every subtree is checked and evaluated; an overflowing right operand is not hidden by false/true on the left. A later short-circuit language must use a distinct reviewed contract. |
 | EX-D2 | Checked same-type scalar arithmetic, indexed amount/share addition and subtraction, explicit quantity scale/unit arithmetic. No implicit asset, scale, width or debt conversion. This makes overflow and rounding visible. |
 | EX-D3 | `ReadPre` has a closed view operand `pre|post`; `post` is legal only in Ensure's condition. No new 41st constructor and no `ReadNext` are introduced. Read-view is part of Core encoding, never inferred from a name. |
 | EX-D4 | Every entered node costs one ordinary work unit. Finite helper operations do not each count as nodes. Recovery work is unchanged here. Failed preparation reports consumed local work, but publishes no candidate financial state/effects. This is a proposed local cost semantics, not native proof cost or authority consumption. |
@@ -40,18 +39,12 @@ The following are **new proposed choices**, not inherited approvals:
 | EX-D7 | Finite parameters below are proposal limits, independent of existing parser/funded bounds. UTF-8 spans are half-open byte offsets. Whole-action static rejection precedes any execution. |
 | EX-D8 | Unit is statement-result-only; schema fields are classified ordinary/financial. Raw NextWrite cannot bypass financial transitions. These are proposed type/registry mechanisms enforcing the inherited no-debt-erasure requirement. |
 
-The source proposal selects short-circuit `and`/`or`
+The earlier surface proposal explicitly selects short-circuit `and`/`or`
 ([line71](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:71)).
-This revision gives Core And/Or that same choice. The [reviewed decision](../../../../deliverables/sp01-surface-core-contract-2026-09-10/scoped-design-approval-01.json)
-approves the design, not these exact implementation bytes or full source/Core
-correspondence. Contract/0, its strict rejection cases and original approvals
-remain retrievable through the [preservation map](../../../../deliverables/sp01-surface-core-contract-2026-09-10/preservation-map-02.json).
-A compiler, signature or proof bound to the strict lineage cannot silently opt
-into /1. Source hashes and eventual semantic profile hashes remain distinct.
-
-The AMM fragment still needs mixed Amount products/division absent from this
-proposed overload table; those requirements remain open, not removed by
-TYPE_MISMATCH here.
+EX-D1 does not override it or establish source/Core correspondence. Resolve that
+choice before a surface/elaboration freeze. Its AMM fragment also needs mixed
+Amount products/division absent from this proposed overload table; those target
+requirements remain open, not removed by TYPE_MISMATCH here.
 
 Unresolved privacy, observation authentication, operation effects and signing
 policy are explicit external obligations. Mathematical values below do not
@@ -146,90 +139,27 @@ Writes and locals begin empty; descriptors begin empty. Existing duties,
 authority and recovery reserve are part of the supplied state, not fresh budget.
 Snapshots are assumed supplied consistently; this layer does not authenticate them.
 
-Distinguish an unentered constructor occurrence from a returned value. Literal
-syntax is a constructor occurrence; a returned Boolean value is not a fresh
-LitBool node. Every occurrence retains its original nodePath and span. Write
-`K°` for a constructor already entered; the circle is administrative machine
-notation, not a new Core constructor, value, encoding tag or work unit.
-
-The evaluation contexts are:
-
-```text
-C ::= []
-    | K°(v1,…,v(i−1),C,e(i+1),…,en)    K is not And or Or
-    | And°(C,e2)
-    | Or°(C,e2)
-```
-
-The generic K alternative ranges over its signature's **evaluatedOperands** in
-listed order, expanded in lexical list order. Metadata is not evaluated. For
-Let/NextWrite only the value is evaluated; Require/Ensure only the condition.
-Records/lists retain lexical operand order, never canonical field order.
-For And/Or, `evaluatedOperands=[left]` and `conditionalEvaluatedOperands` names
-the right operand with its selection predicate. Both still occur in the syntax
-and static traversal. Child indices count original expression operands, so
-left is p+[0] and right is p+[1] even when the right is skipped. There is no
-generic And°(v,C) or Or°(v,C) alternative.
+A frame `C ::= [] | K(v1,…,v(i−1),C,e(i+1),…,en)` ranges over the
+constructor's **evaluatedOperands**, in listed order, expanded in lexical list
+order. Metadata operands are not evaluated. For Let only its value is evaluated;
+NextWrite only its value; Require/Ensure only their condition. Read/literal nodes
+have no expression children. Record/list children are evaluated in source order,
+not canonical field order. All children of a well-typed expression are evaluated,
+including both sides of And/Or, before applying its rule.
 
 Small steps are deterministic proposals:
 
-1. On attempting to enter an occurrence with work=0, reject `WORK_EXHAUSTED` at
-   that occurrence without consuming work or entering children. Otherwise
-   decrement work once and mark it entered. Resuming a context never recharges it.
-2. Enter children through the contexts above. The first rejection discards the
-   entire continuation, tentative writes, locals and descriptors.
-3. For K other than And/Or, apply its rule after all evaluated children return
-   values. Primitive failure uses K's original span/path. For the entered Boolean
-   nodes use the four administrative contractions below after the left returns.
+1. On entering a node with work=0, reject `WORK_EXHAUSTED` at that node without
+   entering children. Otherwise decrement work by one and mark the node entered.
+   Resuming its context does not charge it again.
+2. Enter children left-to-right. The first rejection discards the entire control
+   continuation, tentative writes, locals and descriptors.
+3. Apply the constructor rule after all children return values. Primitive guard
+   order is specified by the rule. Failures point to that constructor's span.
 4. A statement's success advances to the next lexical statement. Ensure clauses
    are a suffix and see `post=pre overridden by writes`; that view does not commit.
 5. After all statements/ensures pass, check aggregate candidate encoding bounds
    and return `ExpressionPrepared(post,descriptors,workRemaining)`.
-
-The Boolean contractions are:
-
-```text
-And°(false,e2) -> false
-And°(true, e2) -> e2
-Or°(true, e2)  -> true
-Or°(false,e2)  -> e2
-```
-
-Each contraction costs zero work. A skipped case returns the already obtained
-left value and creates no chargeable literal. A selected case resumes the
-original right occurrence at p+[1], with that child's original span, even though
-the And/Or control node is removed. An enclosing context retains its own original
-provenance for a later parent failure. Selecting a child does not copy it, rebase
-it to p, or cause a second And/Or entry. If the remaining work is zero, a skipped
-case can finish; a selected unentered child rejects WORK_EXHAUSTED at p+[1].
-Left-child failures retain p+[0] plus their nested path; the right is not entered.
-
-Let C(e) be actual ordinary work on a successful pure expression, and let B(e)
-count one for every constructor occurrence in the whole syntax, including
-unselected branches:
-
-```text
-C(And(e1,e2)) = 1 + C(e1) + (C(e2) if e1 returns true  else 0)
-C(Or(e1,e2))  = 1 + C(e1) + (C(e2) if e1 returns false else 0)
-B(K(e1,…,en)) = 1 + sum_i B(ei)
-B(And(e1,e2)) = B(Or(e1,e2)) = 1 + B(e1) + B(e2)
-```
-
-Read/literal nodes have B=1; metadata and array/field wrappers add no work.
-For a failed evaluation, count only its entered-node prefix, not a missing entry
-or an unselected suffix. B is finite under the simultaneous source/Core bounds
-and conservatively bounds this local reduction work; it does not estimate
-validation overhead, lifecycle work or native proof cost. Admission and complete
-action typing are unchanged, and no skip can waive an aggregate limit or a
-registered conservative static-bound ceiling. No registered profile is changed
-here.
-
-The Boolean-only source/Core mapping is `a and b` to `And(core(a),core(b))` and
-`a or b` to `Or(core(a),core(b))`, once per source operator. The existing source
-left associativity gives `a and b and c` the shape `And(And(a,b),c)`. Original
-source spans must be retained. No If expansion, thunk, host callback or duplicate
-evaluation is introduced. This equation specifies the Boolean mapping; a full
-elaborator, parser-to-Core trace and correspondence proof remain unimplemented.
 
 Result is **ExpressionPrepared**, never accepted `Prepared`, `Complete` or
 `Pending`. It is not financially executable without the operation-layer rule.
@@ -249,14 +179,8 @@ or using recovery work belongs to the future lifecycle/acceptance relation.
 
 Span `[start,end)` is UTF-8 byte offsets, 0≤start≤end≤sourceBytes. Elaboration must
 retain real node spans; synthetic Core has explicit synthetic spans and cannot
-claim a source diagnostic. For a rejection, use the first offending node's span only when it is a valid P
-for the supplied source: closed shape, canonical integer offsets, ordered and
-in range, or synthetic with both offsets zero. If that span is absent, malformed
-or out of range, return `{kind:synthetic,start:0,end:0}` (with decimal-string
-offsets in the presentation tree). Keep the original offending nodePath and
-workUsed; do not clamp the malformed range, mutate the input, or erase its path.
-In particular INPUT_SPAN cannot copy an invalid input P into Rejected.span.
-Synthetic spans must be explicitly
+claim a source diagnostic. For malformed inputs use the first offending field's
+node span when available, otherwise `[0,0)`. Synthetic spans must be explicitly
 marked and exactly `[0,0)`; they cannot fabricate source offsets. `nodePath` is an ordered child-index
 path from the action root; statement index is its first element. For an isolated
 expression derivation, its root path is empty and children begin at index zero. For post-final

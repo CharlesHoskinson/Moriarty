@@ -122,23 +122,5 @@ class ContractTests(unittest.TestCase):
         self.assertEqual([], self.module.validate_booleans(c, b),
                          'This checker is structural; independent review must catch wrong semantic values.')
 
-    def test_malformed_input_span_requires_valid_diagnostic_fallback(self):
-        c, _ = self.inputs(); b = self.supplement()
-        row = next(r for r in b['cases'] if r['id'] == 'BC1-dead-invalid-source-span')
-        row['expected']['span'] = {'kind': 'synthetic', 'start': '0', 'end': '0'}
-        self.assertEqual([], self.module.validate_booleans(c, b))
-
-    def test_malformed_raw_span_cannot_be_reused_as_output(self):
-        c, _ = self.inputs(); b = self.supplement()
-        row = next(r for r in b['cases'] if r['id'] == 'BC1-dead-invalid-source-span')
-        row['expected']['span'] = row['core']['operands']['right']['span']
-        self.assertTrue(any('invalid-output-span' in e for e in self.module.validate_booleans(c, b)))
-
-    def test_valid_original_span_cannot_be_replaced_by_fallback(self):
-        c, _ = self.inputs(); b = self.supplement()
-        row = next(r for r in b['cases'] if r['id'] == 'BC1-source-selected-work-exhaustion')
-        row['expected']['span'] = {'kind': 'synthetic', 'start': '0', 'end': '0'}
-        self.assertTrue(any('rejection-span-provenance' in e for e in self.module.validate_booleans(c, b)))
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

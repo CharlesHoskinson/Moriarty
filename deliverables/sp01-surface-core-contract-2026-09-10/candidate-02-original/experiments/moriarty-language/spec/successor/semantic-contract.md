@@ -249,14 +249,8 @@ or using recovery work belongs to the future lifecycle/acceptance relation.
 
 Span `[start,end)` is UTF-8 byte offsets, 0≤start≤end≤sourceBytes. Elaboration must
 retain real node spans; synthetic Core has explicit synthetic spans and cannot
-claim a source diagnostic. For a rejection, use the first offending node's span only when it is a valid P
-for the supplied source: closed shape, canonical integer offsets, ordered and
-in range, or synthetic with both offsets zero. If that span is absent, malformed
-or out of range, return `{kind:synthetic,start:0,end:0}` (with decimal-string
-offsets in the presentation tree). Keep the original offending nodePath and
-workUsed; do not clamp the malformed range, mutate the input, or erase its path.
-In particular INPUT_SPAN cannot copy an invalid input P into Rejected.span.
-Synthetic spans must be explicitly
+claim a source diagnostic. For malformed inputs use the first offending field's
+node span when available, otherwise `[0,0)`. Synthetic spans must be explicitly
 marked and exactly `[0,0)`; they cannot fabricate source offsets. `nodePath` is an ordered child-index
 path from the action root; statement index is its first element. For an isolated
 expression derivation, its root path is empty and children begin at index zero. For post-final

@@ -1,6 +1,5 @@
 """Check completeness/references of the proposed documents. Never evaluate Core."""
 import json
-import re
 from pathlib import Path
 
 EXPECTED = frozenset('''LitUInt LitSInt LitBool LitText LitAmount LitQuantity
@@ -104,17 +103,6 @@ def validate(contract, cases):
     return errors
 
 
-def valid_output_span(span, source):
-    if (not isinstance(span, dict) or set(span) != {'kind', 'start', 'end'}
-            or span['kind'] not in {'source', 'synthetic'}
-            or any(not isinstance(span[k], str) or re.fullmatch(r'0|[1-9][0-9]*', span[k]) is None
-                   for k in ['start', 'end'])):
-        return False
-    start, end = int(span['start']), int(span['end'])
-    return ((start == end == 0) if span['kind'] == 'synthetic'
-            else 0 <= start <= end <= len(source.encode('utf-8')))
-
-
 def validate_booleans(contract, supplement):
     """Check fixture/reference structure and specified accounting, never reduce Core."""
     errors = []
@@ -197,14 +185,10 @@ def validate_booleans(contract, supplement):
                 path = tuple(int(i) for i in expected['nodePath'])
                 if expected.get('workUsed') != str(used) or path not in nodes:
                     raise ValueError('rejection-accounting-path')
-                if not valid_output_span(expected['span'], row['source']):
-                    raise ValueError('invalid-output-span')
-                original_span = nodes[path]['span']
-                diagnostic_span = original_span if valid_output_span(original_span, row['source']) else {'kind': 'synthetic', 'start': '0', 'end': '0'}
                 if row['rejectionPhase'] == 'snapshot':
                     if expected['span'] != {'kind': 'synthetic', 'start': '0', 'end': '0'} or path:
                         raise ValueError('snapshot-fallback')
-                elif expected['span'] != diagnostic_span:
+                elif expected['span'] != nodes[path]['span']:
                     raise ValueError('rejection-span-provenance')
                 if row['rejectionPhase'] != 'evaluation' and used != 0:
                     raise ValueError('admission-work')

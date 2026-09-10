@@ -1,6 +1,6 @@
 # Proposed static semantics and expression rules
 
-Status: **PROPOSAL**, expression contract/1 companion to [semantic-contract.md](semantic-contract.md).
+Status: **PROPOSAL**, companion to [semantic-contract.md](semantic-contract.md).
 Rules apply to the complete 40-constructor expression inventory, not to a newly
 accepted execution profile. Financial operation equations and full signing
 remain outside this contract. Rule IDs below are stable references for the
@@ -192,16 +192,10 @@ Shares, Rate, Quantity or Price. Compare underlying integer quanta/mantissas.
 Result Bool. They reject Bool, Text, Record, Enum, Option, Collection and Operation;
 there is no implicit ordering on identities or records.
 
-Not requires Bool and returns logical negation. And/Or require two Bool children;
-S0 checks both in lexical order regardless of a runtime selection. After whole
-input admission, evaluate the left. And returns false immediately on false and
-otherwise evaluates/returns the right Bool. Or returns true immediately on true
-and otherwise evaluates/returns the right Bool. A left or selected-right runtime
-failure propagates with its original provenance and consumed work; an unselected
-right produces no dynamic failure or work. E specifies the exact contexts,
-zero-cost contractions and original-occurrence paths. No truthiness, implicit
-cast or financial composition is encoded by these nodes. Pure short-circuiting
-does not skip admission or turn a Boolean operand into an effectful statement.
+Not requires Bool, returns logical negation. And/Or require two Bool children,
+evaluate both strictly in order, then return conjunction/disjunction. Runtime
+failure in a child wins over the eventual Boolean result. No control-flow or
+financial composition operator is encoded by these nodes.
 
 ## STMT — staging and descriptors
 
@@ -241,11 +235,7 @@ A failure's local work count remains diagnostic only, as defined in E.
 Every declared constructor has a positive and a distinguishing rejection case
 in expression-cases.json, derived from these equations by the author separately
 from the structural validator. Additional cases cover x=10→11, false ensures12,
-duplicate writes, next reads, misplaced post, mixed assets and two failures.
-The revision-specific Boolean cases in [boolean-cases.json](boolean-cases.json)
-cover short-circuit results, dynamic and static failures, exact work/path/span
-provenance and complete-action guards. The former strict Boolean cases remain
-historical /0 evidence, with explicit migration references in expression-cases.json.
-The validator checks their record completeness and references;
+duplicate writes, next reads, misplaced post, mixed assets, strict Boolean and
+two failures. The validator checks their record completeness and references;
 it neither interprets terms nor proves that a derivation is correct. Fresh
 reviewers must examine those derivations and the missing financial interfaces.

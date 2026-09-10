@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "moriarty-expression-cases/1",
+  "schemaVersion": "moriarty-expression-cases/0",
   "status": "author-derived-specified-only",
   "caseScope": "Mathematical Core judgments, not serialized evaluator-result captures. Terms assume structurally valid annotations embedded by representation.md. Unspecified spans are synthetic[0,0). Expected scalar/Unit values describe fragment judgments; derivationAccounting is not a field of a success result. Only a combined action has ExpressionPrepared post/descriptors/workRemaining. No parser, codec, runtime, K, proof, privacy or authority acceptance is claimed.",
   "cases": [
@@ -1291,7 +1291,7 @@
       "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
     },
     {
-      "id": "And-short-circuit-positive-v1",
+      "id": "And-positive",
       "constructor": "And",
       "kind": "positive",
       "term": "And(LitBool(false),LitBool(true))",
@@ -1300,19 +1300,13 @@
         "phase": "evaluation",
         "value": "Bool(false)",
         "financialEffects": [],
-        "workRemaining": "98"
+        "workRemaining": "97"
       },
-      "derivation": "Enter And and its left LitBool once; short-circuit returns the left value. Right is not entered. Total ordinary work 2.",
+      "derivation": "Both children evaluated; false andtrue=false.",
       "status": "author-derived-specified-only",
       "derivationAccounting": {
         "workInitial": "100",
-        "derivedWorkUsed": "2"
-      },
-      "supersedes": {
-        "contract": "moriarty-expression-contract/0",
-        "path": "deliverables/sp01-surface-core-contract-2026-09-10/strict-contract-0/experiments/moriarty-language/spec/successor/expression-cases.json",
-        "id": "And-positive",
-        "changedObservation": "derivedWorkUsed 3 to 2; right operand is no longer entered"
+        "derivedWorkUsed": "3"
       }
     },
     {
@@ -1336,7 +1330,7 @@
       "annotationMode": "synthetic Core fragment; root span kind synthetic, start=end0; no source-location evidence"
     },
     {
-      "id": "Or-short-circuit-positive-v1",
+      "id": "Or-positive",
       "constructor": "Or",
       "kind": "positive",
       "term": "Or(LitBool(true),LitBool(false))",
@@ -1345,19 +1339,13 @@
         "phase": "evaluation",
         "value": "Bool(true)",
         "financialEffects": [],
-        "workRemaining": "98"
+        "workRemaining": "97"
       },
-      "derivation": "Enter Or and its left LitBool once; short-circuit returns the left value. Right is not entered. Total ordinary work 2.",
+      "derivation": "Both children evaluated; true orfalse=true.",
       "status": "author-derived-specified-only",
       "derivationAccounting": {
         "workInitial": "100",
-        "derivedWorkUsed": "2"
-      },
-      "supersedes": {
-        "contract": "moriarty-expression-contract/0",
-        "path": "deliverables/sp01-surface-core-contract-2026-09-10/strict-contract-0/experiments/moriarty-language/spec/successor/expression-cases.json",
-        "id": "Or-positive",
-        "changedObservation": "derivedWorkUsed 3 to 2; right operand is no longer entered"
+        "derivedWorkUsed": "3"
       }
     },
     {
@@ -1656,6 +1644,22 @@
       "context": "Pure expression fragment, whose root path is empty; no statement index prefix."
     },
     {
+      "id": "strict-and-failure",
+      "term": "And(LitBool(false),Eq(FloorDiv(LitUInt(128,1),LitUInt(128,0)),LitUInt(128,0)))",
+      "expected": {
+        "code": "ARITH_DENOMINATOR",
+        "workUsed": 6,
+        "candidatePublished": false,
+        "nodePath": [
+          1,
+          0
+        ]
+      },
+      "derivation": "And1,false1,Eq1,FloorDiv1,1literal1,0literal1=6; false doesnot shortcircuit; Eqrightnotentered.",
+      "status": "author-derived-specified-only",
+      "context": "Pure expression fragment, whose root path is empty; no statement index prefix."
+    },
+    {
       "id": "static-before-guard",
       "term": "Require(LitBool(false));NextWrite(x,LitBool(true))",
       "expected": {
@@ -1809,26 +1813,6 @@
       },
       "derivation": "Schema dependency graph has R\u2192O\u2192R through the Option element. Even a None runtime value cannot make the cyclic type definition admissible.",
       "status": "author-derived-specified-only"
-    }
-  ],
-  "contract": "moriarty-expression-contract/1",
-  "booleanCases": "boolean-cases.json",
-  "historicalCaseReferences": [
-    {
-      "contract": "moriarty-expression-contract/0",
-      "path": "deliverables/sp01-surface-core-contract-2026-09-10/strict-contract-0/experiments/moriarty-language/spec/successor/expression-cases.json",
-      "id": "strict-and-failure",
-      "expected": {
-        "code": "ARITH_DENOMINATOR",
-        "workUsed": 6,
-        "candidatePublished": false,
-        "nodePath": [
-          1,
-          0
-        ]
-      },
-      "successorCase": "BC1-skip-and-denominator",
-      "disposition": "Historical rejection remains strict /0 evidence. In /1 the same term returns Bool(false), workUsed2; it is a new case identity, not a passing strict rejection."
     }
   ]
 }

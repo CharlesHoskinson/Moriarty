@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "moriarty-expression-contract/1",
+  "schemaVersion": "moriarty-expression-contract/0",
   "status": "proposed-not-registered",
   "ownerTask": "SP01.3",
   "fullRp01Complete": false,
@@ -83,11 +83,6 @@
       "path": "evidence/moriarty-completion-program-2026-09-07/SP01/independent-review-round-08/successor/gpt6-semantic-partial-review.md",
       "line": 9,
       "requirement": "complete every declared expression constructor; preserve financial open equations"
-    },
-    "DESIGN-BOOLEAN": {
-      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
-      "line": 71,
-      "requirement": "left-to-right short-circuit and/or with conservative whole-syntax static bounds"
     }
   },
   "constructors": [
@@ -1233,10 +1228,11 @@
       "result": "Bool",
       "rule": "CMP",
       "evaluatedOperands": [
-        "left"
+        "left",
+        "right"
       ],
-      "typing": "both operands Bool; recursively check left then right before reduction, including skipped branches",
-      "reduction": "return the left Bool value when left=false; otherwise evaluate and return the original right Bool occurrence; zero-cost contraction, no fresh literal or repeated node charge",
+      "typing": "both operands Bool; strict left-to-right",
+      "reduction": "return conjunction",
       "rejections": [
         "TYPE_MISMATCH"
       ],
@@ -1244,25 +1240,13 @@
       "entryWork": 1,
       "sources": [
         "DESIGN-LAYERS",
-        "SP01-CONTRACT",
-        "DESIGN-BOOLEAN"
+        "SP01-CONTRACT"
       ],
       "decisionStatus": "proposed",
       "caseIds": [
-        "And-short-circuit-positive-v1",
+        "And-positive",
         "And-reject"
-      ],
-      "conditionalEvaluatedOperands": [
-        {
-          "name": "right",
-          "when": "left=true"
-        }
-      ],
-      "staticOperands": [
-        "left",
-        "right"
-      ],
-      "evaluationOrder": "left-then-selected-right"
+      ]
     },
     {
       "constructor": "Or",
@@ -1279,10 +1263,11 @@
       "result": "Bool",
       "rule": "CMP",
       "evaluatedOperands": [
-        "left"
+        "left",
+        "right"
       ],
-      "typing": "both operands Bool; recursively check left then right before reduction, including skipped branches",
-      "reduction": "return the left Bool value when left=true; otherwise evaluate and return the original right Bool occurrence; zero-cost contraction, no fresh literal or repeated node charge",
+      "typing": "both operands Bool; strict left-to-right",
+      "reduction": "return disjunction",
       "rejections": [
         "TYPE_MISMATCH"
       ],
@@ -1290,25 +1275,13 @@
       "entryWork": 1,
       "sources": [
         "DESIGN-LAYERS",
-        "SP01-CONTRACT",
-        "DESIGN-BOOLEAN"
+        "SP01-CONTRACT"
       ],
       "decisionStatus": "proposed",
       "caseIds": [
-        "Or-short-circuit-positive-v1",
+        "Or-positive",
         "Or-reject"
-      ],
-      "conditionalEvaluatedOperands": [
-        {
-          "name": "right",
-          "when": "left=false"
-        }
-      ],
-      "staticOperands": [
-        "left",
-        "right"
-      ],
-      "evaluationOrder": "left-then-selected-right"
+      ]
     },
     {
       "constructor": "Require",
@@ -1499,11 +1472,5 @@
     "TYPE_CONSTRUCTOR"
   ],
   "scope": "Complete proposed expression inventory only; not full 38-operation financial semantics, signing, privacy or profile freeze. Static checker does not execute these reductions.",
-  "representation": "representation.md: normative type/value/schema/Core/span trees and exact byte/node measures; no production codec implemented",
-  "evaluationMetadata": {
-    "evaluatedOperands": "unconditionally evaluated expression operands in runtime order; static checking still visits every expression operand",
-    "conditionalEvaluatedOperands": "And/Or only: remaining original expression operands, evaluated once only when their when predicate holds; left/right nodePath indices remain 0/1",
-    "contexts": "semantic-contract.md:E excludes And/Or from the generic strict frame alternative",
-    "staticOperands": "For And/Or, both left and right are statically checked before reduction, including skipped branches."
-  }
+  "representation": "representation.md: normative type/value/schema/Core/span trees and exact byte/node measures; no production codec implemented"
 }

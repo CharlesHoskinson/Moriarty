@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "reviewKind": "fresh-independent-PL-source-and-scoped-design-audit",
+  "reviewer": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/boolean_reconciliation_audit",
+    "independentOfAuthor": true,
+    "author": "/root",
+    "identityBasis": "Fresh delegated host review context; no external provider response identity claim."
+  },
+  "reviewedAt": "2026-09-10T20:47:22.876885+00:00",
+  "candidatePath": "deliverables/sp01-surface-core-contract-2026-09-10/source-candidate-01.json",
+  "candidateSha256": "875281c39a626761c375d5d83292ce2e6c4ac3819c719e3ac3a91c112ebd2659",
+  "verdict": "APPROVE_SCOPED",
+  "sourceVerdict": "PASS_SCOPED",
+  "designVote": "APPROVE_SCOPED",
+  "scope": "Approve the concrete Boolean-only recommendation for a separately reviewed successor contract. This does not mutate or register expression-contract/0, prove correspondence, approve a compiler/runtime/K implementation, or discharge full RP01 or financial acceptance.",
+  "decision": "Change the next Core And/Or semantics to the source contract\u2019s left-to-right short-circuit evaluation while retaining exhaustive static checking, full input admission, finite conservative bounds, node-entry work and original child diagnostic provenance. No additional constructor is needed.",
+  "observations": [
+    {
+      "source": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:71",
+      "finding": "Source explicitly selects short-circuit and/or and conservative static-bound admission."
+    },
+    {
+      "source": "experiments/moriarty-language/spec/successor/semantic-contract.md:30",
+      "finding": "Published EX-D1 deliberately selects strict operands; the following source-conflict paragraph leaves reconciliation open. Historical approval is coherent in that narrower scope and cannot be reused for this changed behavior."
+    },
+    {
+      "source": "experiments/moriarty-language/spec/successor/grammar.ebnf:63; experiments/moriarty-language/src/successor/frontend.ts:987",
+      "finding": "Grammar and parser have or/and precedence tiers, left associativity and named Binary operator/left/right nodes. This is source inspection, not an elaboration result."
+    },
+    {
+      "source": "experiments/moriarty-language/spec/successor/static-semantics.md:S0,CMP,STMT; representation.md",
+      "finding": "All children are statically visited, whole Pre/Args/Obs snapshots are checked before work-metered reduction, Bool has no truthiness/coercion, and statements cannot be Boolean operands."
+    },
+    {
+      "source": "experiments/moriarty-language/spec/successor/semantic-contract.md:E",
+      "finding": "The exact inability-to-enter error is WORK_EXHAUSTED. Failed entry consumes no work; a successfully entered failing arithmetic constructor and its entered children do consume work."
+    }
+  ],
+  "contextAndWorkAudit": {
+    "contexts": "The proposed replacement is equivalent to allowing And(E,e2) and Or(E,e2), alongside existing contexts for every other constructor. The generic strict K context must exclude And/Or. After their left values return, the four specified contractions select a value or the right expression. No unrestricted And(v,E)/Or(v,E) rule may survive in the revised contract.",
+    "provenance": "Administrative contractions carry no entry charge. They retain the selected right occurrence at p+[1] with its own span. Enclosing constructor frames retain their own provenance. Left failures occur under p+[0]. The proposal explicitly prevents right-path rebasing and parent re-entry.",
+    "finiteWork": "On successful evaluation the selected path consumes 1+C(left), plus C(right) only when selected. This is at most the proposed 1+B(left)+B(right) by structural induction on the bounded syntax. Failure retains a finite entered-node prefix. This mathematical source argument is not a mechanized proof or native proof-cost estimate.",
+    "zeroRemaining": "A short-circuit contraction may finish at zero remaining work because it creates no entered literal node. A selected unentered right node at zero remaining work rejects WORK_EXHAUSTED at that child."
+  },
+  "specifiedCasesAudit": {
+    "count": 14,
+    "allOutcomesWorkAndPathsAgree": true,
+    "BOOL01to04": "And(false,true) false/2; And(true,false) false/3; Or(true,false) true/2; Or(false,true) true/3.",
+    "BOOL05to06": "Skipped right Eq(FloorDiv(1,0),0) does not evaluate: false/2 for And and true/2 for Or.",
+    "BOOL07to08": "Selected right arithmetic rejects ARITH_DENOMINATOR at [1,0] after six entries; the enclosing Eq right literal is not entered.",
+    "BOOL09": "Left arithmetic rejects ARITH_DENOMINATOR at [0,0] after five entries; the right Bool is not entered.",
+    "BOOL10to11": "Undeclared ReadArg(Missing) rejects TYPE_NAME at [1], work0; non-Bool right literal rejects TYPE_MISMATCH at the And root, work0. Both are static failures despite the false left literal.",
+    "BOOL12to14": "initialWork2 with selected right rejects WORK_EXHAUSTED at [1], work2; skipping with work2 succeeds false; initialWork1 rejects WORK_EXHAUSTED before left entry at [0], work1.",
+    "limitations": "These are schematic isolated-expression expectations with assumed well-formed metadata and snapshots. The count script only compares workUsed to the handwritten entry-list length. It does not validate semantics, admission, spans or a runtime. Concrete span and snapshot cases remain future implementation obligations."
+  },
+  "independentHandDerivedCorners": [
+    {
+      "term": "And(false,false)",
+      "result": false,
+      "workUsed": 2
+    },
+    {
+      "term": "And(true,true)",
+      "result": true,
+      "workUsed": 3
+    },
+    {
+      "term": "Or(false,false)",
+      "result": false,
+      "workUsed": 3
+    },
+    {
+      "term": "Or(true,true)",
+      "result": true,
+      "workUsed": 2
+    },
+    {
+      "term": "Or(false,true),initialWork2",
+      "error": "WORK_EXHAUSTED",
+      "workUsed": 2,
+      "nodePath": [
+        1
+      ]
+    },
+    {
+      "term": "Or(true,false),initialWork2",
+      "result": true,
+      "workUsed": 2
+    },
+    {
+      "term": "And(Or(false,true),Eq(FloorDiv(1,0),0))",
+      "error": "ARITH_DENOMINATOR",
+      "workUsed": 8,
+      "nodePath": [
+        1,
+        0
+      ]
+    },
+    {
+      "term": "Eq(And(true,false),true)",
+      "result": false,
+      "workUsed": 5
+    },
+    {
+      "term": "And(false,ReadArg(x)); declared x:Bool, Args missing x",
+      "error": "INPUT_SCHEMA",
+      "workUsed": 0,
+      "note": "Snapshot admission rejects before reduction; no diagnostic path claimed without a concrete wire fixture."
+    }
+  ],
+  "financialGuards": {
+    "preserved": true,
+    "reason": "The proposed change affects pure Bool operand evaluation. Require and Ensure still test their resulting Boolean and reject false; static placement/authority rules and complete snapshot checks are unchanged. Financial fields remain outside raw NextWrite authority, and Emit remains a separate statement producing descriptors. Gross-debit, net-goal, residual-duty, history, signing and ledger/proof acceptance obligations are not replaced by successful expression evaluation.",
+    "behaviorChange": "A dynamic error in a skipped pure branch ceases to reject. For example Require(Or(true,badArithmeticBool)) can succeed; Require(And(false,badArithmeticBool)) instead reaches GUARD_FAILED. This deliberate semantic difference must be reflected in the new profile and cannot be called equivalence with strict expression-contract/0."
+  },
+  "strongestCounterargument": "Strict evaluation exposes every dynamic child error and has branch-independent ordinary expression entry cost. Short-circuit semantics instead matches the stated developer source contract and requires explicit branch-sensitive diagnostic/cost rules. The proposal supplies those rules while retaining exhaustive validation and conservative admission. Neither choice establishes privacy or native proof cost.",
+  "requiredChanges": [],
+  "successorImplementationObligations": [
+    "Create a new candidate/revision and fresh votes before changing any frozen normative or profile bytes; update context grammar, CMP rules, signature evaluation-order metadata, derivations and cases together.",
+    "Keep all 8 And/Or truth-table combinations, skip/selection failures, both work-exhaustion directions, nested original paths and concrete spans in later implementation validation.",
+    "Add concrete rejected snapshot and invalid literal/span/aggregate-bound cases in skipped branches; keep whole-action static-before-runtime precedence.",
+    "Demonstrate parser/elaboration/evaluator/K correspondence separately, with source and semantic profile hashes distinguished. The source proposal only resolves the Boolean design conflict, not the full source/Core correspondence obligation."
+  ],
+  "checks": {
+    "frozenCandidateManifestSha256": "875281c39a626761c375d5d83292ce2e6c4ac3819c719e3ac3a91c112ebd2659",
+    "candidatePinsVerified": 9,
+    "protectedPublishedManifest": "deliverables/sp01-expression-contract-2026-09-10/source-candidate-02.json",
+    "protectedPublishedManifestSha256": "6511c74479e2f6e8f1bfbc38af3ce58600879b1b5ddfcc82a2bb46008956cae6",
+    "protectedPublishedFilesVerifiedUnchanged": 101,
+    "countCommand": "python3 deliverables/sp01-surface-core-contract-2026-09-10/check-counts-01.py",
+    "countCommandResult": {
+      "status": "PASS",
+      "specifiedNodeEntryCounts": 14,
+      "runtimeExecuted": false
+    },
+    "trackedWorktreeChangesAtReview": 0,
+    "noRuntimeKProofNetworkPrivateOrServiceExecution": true
+  },
+  "startupStatus": {
+    "capability": "SP01.6 loan-swap-subset",
+    "blockedAction": "implementation/repair of loan-swap-subset",
+    "reason": "operational history is unresolved or unverified",
+    "pendingTransactions": [],
+    "scopeDisposition": "Source review only; no dependent campaign dispatch."
+  }
+}
