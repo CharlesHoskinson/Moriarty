@@ -126,13 +126,13 @@ export async function integratePreviewFinancialCase(options){
     if(kind==='swap'&&stage==='initialize'){const synced=await within('swap-sync',()=>wallet.waitForSyncedState());assertSwapInitializedWallet({receipt:observation.receipt,roles,assetBindings,synced,network:'preview'});validDeadline(limits.deadlineMs);}return summary;}
   });}catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
   finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}
-  requireThat(driverResult?.status==='PASS'&&financialComparison?.status==='PASS'&&pending.size===0,'PREVIEW_INTEGRATION_INCOMPLETE');
+  requireThat(['PASS','FINANCIAL_COMPLETE'].includes(driverResult?.status)&&financialComparison?.status==='PASS'&&pending.size===0,'PREVIEW_INTEGRATION_INCOMPLETE');
  }catch(error){failure=error instanceof Error?error:Error('PREVIEW_INTEGRATION_FAILURE');}
  finally{
   if(!driverStarted||!driverResult?.cleanup){if(providers){try{cleanup=await providers.cleanup();}catch{cleanup=await stopWallet(wallet);}}else cleanup=await stopWallet(wallet);}else cleanup=driverResult.cleanup;
   if(loaded){try{await loaded.cleanup();}catch{failure??=Error('ASSET_LOADER_CLEANUP_FAILED');}}
  }
- if(!failure){try{validDeadline(limits.deadlineMs);requireThat(pending.size===0&&cleanup?.walletStopped===true&&cleanup.pendingOperations===0&&cleanup.containmentComplete===true,'PREVIEW_INTEGRATION_INCOMPLETE');}catch(error){failure=error;}}
- const result={schema:'moriarty.preview-financial-integration/1',status:failure?'FAILED':sourceTestOnly?'SOURCE_TEST_ONLY':'PASS',kind:options?.kind,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),scope:'Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance'};
+ if(!failure){try{validDeadline(limits.deadlineMs);requireThat(pending.size===0&&cleanup?.walletStopped===true&&cleanup.pendingOperations===0,'PREVIEW_INTEGRATION_INCOMPLETE');}catch(error){failure=error;}}
+ const result={schema:'moriarty.preview-financial-integration/1',status:failure?'FAILED':sourceTestOnly?'SOURCE_TEST_ONLY':cleanup.containmentComplete?'PASS':'FINANCIAL_COMPLETE',kind:options?.kind,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),scope:'Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance'};
  if(failure){failure.publicIntegrationResult=result;throw failure;}return result;
 }

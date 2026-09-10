@@ -160,8 +160,10 @@ async function runFinancialCase({kind,network,providers,compiledContract,roles,n
     operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
   } catch {operationalState={unavailable:true};}
   const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
-  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
-  if(failure||!contained) {
+  // Preview command completion does not attest to external process containment.
+  const previewComplete=target==='preview'&&stages.length===4&&cleanup.walletStopped&&cleanup.pendingOperations===0;
+  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':previewComplete?'FINANCIAL_COMPLETE':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  if(failure||(!contained&&!previewComplete)) {
     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
     error.publicResult=publicResult;throw error;
   }

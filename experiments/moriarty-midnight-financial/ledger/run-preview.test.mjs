@@ -53,3 +53,8 @@ test('Preview incomplete cleanup cannot produce PASS',async()=>{
  assert.equal(typeof driver.runPreviewFinancialCase,'function');const f=fixture();f.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
  await assert.rejects(driver.runPreviewFinancialCase(f.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);return true;});
 });
+
+test('Preview financial completion separates stopped wallet from unobserved external containment',async()=>{
+ const f=fixture('loan');f.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:0,containmentComplete:false});
+ const r=await driver.runPreviewFinancialCase(f.options);assert.equal(r.status,'FINANCIAL_COMPLETE');assert.deepEqual(r.cleanup,{walletStopped:true,pendingOperations:0,containmentComplete:false});
+});

@@ -5,7 +5,7 @@ import {readFileSync,mkdirSync,lstatSync,renameSync,unlinkSync,existsSync,openSy
 import {join,dirname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
-import {validatePreviewLaunchPlan,retainPreviewIntegrationResult,retainPreviewStage,publicPreviewLaunchEvent} from './preview-launch.mjs';
+import {validatePreviewLaunchPlan,retainPreviewIntegrationResult,retainPreviewStage,publicPreviewLaunchEvent,validatePreviewFinancialCompletion} from './preview-launch.mjs';
 import {readPrivateLaunchFile,readLocalStoragePassword,decodeSavedWalletEnvelope,inspectLocalLaunchRuntime,retainPublicSubmissions} from './launch-local.mjs';
 import {inspectFinancialBuild} from './proven-assets.mjs';
 import {createPreviewRpc} from './financial-rpc.mjs';
@@ -89,18 +89,20 @@ export async function launchPreviewFinancialCase(plan){
   for(const kind of childKinds)check(synced[kind]?.progress?.isConnected===true&&synced[kind].progress.isStrictlyComplete()===true,'PREVIEW_SYNC_INCOMPLETE');
   check(Array.isArray(synced.unshielded.pendingCoins)&&synced.unshielded.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PREVIEW_PENDING_WALLET');
   const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
-  let stopping;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));}finally{await target.stop();}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
+  let stopping,persisted=false,walletStopped=false;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));persisted=true;}finally{await target.stop();walletStopped=true;}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
   const retainedWallet=retainPublicSubmissions({wallet:persistentWallet,ledger,directory:submissionDirectory});
   const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicPreviewLaunchEvent(e)),onStage:s=>retainPreviewStage(p.outputDirectory,s)};
   phase='integration';ownershipTransferred=true;let result;
   try{result=await integratePreviewFinancialCase(options);}catch(error){if(error.publicIntegrationResult!==undefined)retainPreviewIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('PREVIEW_FINANCIAL_RUN_INCOMPLETE');}
+  check(persisted&&walletStopped,'PREVIEW_COMPLETION_PERSISTENCE');validatePreviewFinancialCompletion(result);
   retainPreviewIntegrationResult(p.outputDirectory,result);deadlineCheck(deadline);return result;
  }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('PREVIEW_FINANCIAL_LAUNCH_FAILED');}
  finally{seed?.fill(0);if(!ownershipTransferred){let timer;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Independent outer containment remains required. */}finally{clearTimeout(timer);}}}
 }
+export function previewFinancialExitCode(result,deadlineMs){deadlineCheck(deadlineMs);validatePreviewFinancialCompletion(result);deadlineCheck(deadlineMs);return 0;}
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
  let timer;
- try{const args=process.argv.slice(2);check(args.length===5&&args[0]==='--run'&&args[1]==='--plan'&&args[3]==='--sha256'&&hex(args[4]),'PREVIEW_LAUNCH_USAGE');const raw=readPrivateLaunchFile(args[2]);check(hash(raw)===args[4],'PREVIEW_PLAN_HASH');const p=validatePreviewLaunchPlan(JSON.parse(raw));timer=setTimeout(()=>process.exit(124),Math.max(1,p.limits.deadlineMs-Date.now()+6000));const r=await launchPreviewFinancialCase(p);process.stdout.write(JSON.stringify({status:r.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=r.status==='PASS'?0:2;}
+ try{const args=process.argv.slice(2);check(args.length===5&&args[0]==='--run'&&args[1]==='--plan'&&args[3]==='--sha256'&&hex(args[4]),'PREVIEW_LAUNCH_USAGE');const raw=readPrivateLaunchFile(args[2]);check(hash(raw)===args[4],'PREVIEW_PLAN_HASH');const p=validatePreviewLaunchPlan(JSON.parse(raw));timer=setTimeout(()=>process.exit(124),Math.max(1,p.limits.deadlineMs-Date.now()+6000));const r=await launchPreviewFinancialCase(p);process.stdout.write(JSON.stringify({status:r.status,containmentComplete:r.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=previewFinancialExitCode(r,p.limits.deadlineMs);}
  catch{process.stderr.write('Preview financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
  finally{clearTimeout(timer);}process.exit(process.exitCode??0);
 }

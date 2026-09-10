@@ -3,6 +3,7 @@
  */
 import {readFileSync,lstatSync,openSync,writeFileSync,closeSync,fsyncSync,constants} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
 import {dirname,join,isAbsolute,resolve} from 'node:path';
 import {decodePreviewIndexedOwner} from './indexed-owner.mjs';
 import {validatePublicDriverFailure} from './run-local.mjs';
@@ -31,7 +32,7 @@ export function validatePreviewLaunchPlan(p){
 }
 const KEYS=new Set('ASSET_A ASSET_B USD_TEST_ASSET acceptance actions address after amount asset assetADomain assetBDomain assetBindings blockHash blockHeight borrower borrowerAddress borrowerCapability build bytes circuitId claimedUnshieldedSpends cleanup colorA colorB comparisons containmentComplete contractAddress contractBalances driver dustFee effect0 effect1 effect2 effects encoding entryPoint estimated expectationsSha256 f0 f1 f2 f3 f4 f5 f6 f7 f8 failure failureCode fees finalizedHead finalizedHeight financialAcceptance financialComparison grossByAsset identifiers indexerFees indexerIdentifiers indexerReported initialized inputs intentHash kernelState kind lastAccrue lastClose lastSettle lastSwap ledgerAccepted lender lenderAddress lenderCapability nativeDebit nativeDebitRelationship nativeEffects nativeFee networkAcceptance networkTag offerIndex operationalState outputNo outputs owner paid participantNetDeltas pendingOperations phase programDigest proofAcceptance proofVerified protocolVersion provider providerAddress providerCapability publicState rawSha256 receiptSha256 recipient recipientKind remaining reservedDustFee reservedGrossByAsset reservedSubmissions revision schema scope section segment setupPendingOperations sourceManifestHash sourceTestOnly sourceUnitLabel stage stages status trader traderAddress traderCapability transaction transactionHash transactionIds transcripts txId type unit unshieldedInputs unshieldedMints unshieldedOutputs usdColor usdDomain v0 v1 v2 v3 v4 v5 value walletStopped unavailable code'.split(' '));
 const SCOPES=new Set(['All four stages match independent fixed loan/swap expectations; external observer, indexer and RPC trust remain; no PCD or proof acceptance','Exact fixed financial trace comparison over supplied finalized observations; no proof or network acceptance','Fixed I2 composition; source adapters and incomplete containment never establish financial network acceptance','Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance','Fixed Preview composition; only independently reviewed actual evidence establishes financial acceptance']);
-const VALUES=new Set('DUST SPECK unresolved uncertified-I2-observation loan swap deploy initialize accrue settle close call user contract guaranteed fallible PASS FAILED INCOMPLETE SOURCE_TEST_ONLY preflight allocate driver load-assets prepare-deployment providers public-identity observe compare'.split(' '));
+const VALUES=new Set('DUST SPECK unresolved uncertified-I2-observation loan swap deploy initialize accrue settle close call user contract guaranteed fallible PASS FINANCIAL_COMPLETE FAILED INCOMPLETE SOURCE_TEST_ONLY preflight allocate driver load-assets prepare-deployment providers public-identity observe compare'.split(' '));
 const HASH_FIELDS=new Set('rawSha256 transactionHash contractAddress address bytes owner intentHash programDigest networkTag usdColor usdDomain colorA colorB assetADomain assetBDomain borrowerCapability lenderCapability traderCapability providerCapability receiptSha256 sourceManifestHash expectationsSha256 type'.split(' '));
 const ID_FIELDS=new Set(['txId','transactionIds','identifiers','indexerIdentifiers']);
 const PREVIEW_FAILURES=new Set(['PREVIEW_NETWORK_CONFIG','PREVIEW_PUBLIC_IDENTITY_PIN','PREVIEW_WALLET_IDENTITY','PREVIEW_GENESIS_MISMATCH','PREVIEW_RECOVERY_FORBIDDEN','PREVIEW_INTEGRATION_INCOMPLETE','PREVIEW_INTEGRATION_FAILURE','INTEGRATION_DEADLINE']);
@@ -60,15 +61,39 @@ function publicClone(value){let count=0;const seen=new Set();function clone(v,ke
 function cleanup(c){exact(c,'walletStopped,pendingOperations,containmentComplete');check(typeof c.walletStopped==='boolean'&&typeof c.containmentComplete==='boolean'&&(c.pendingOperations===null||Number.isSafeInteger(c.pendingOperations)&&c.pendingOperations>=0),'PREVIEW_PUBLIC_CLEANUP');}
 function safeDirectory(directory){absolute(directory);for(let p=directory;;p=dirname(p)){const s=lstatSync(p);check(!s.isSymbolicLink(),'PREVIEW_PUBLIC_SYMLINK');if(p===directory)check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'PREVIEW_PUBLIC_DIRECTORY');if(dirname(p)===p)break;}}
 function durable(directory,name,value){safeDirectory(directory);const raw=Buffer.from(JSON.stringify(value)+'\n');check(raw.length<=8*1024*1024,'PREVIEW_PUBLIC_SIZE');const fd=openSync(join(directory,name),constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,raw);fsyncSync(fd);}finally{closeSync(fd);}const d=openSync(directory,constants.O_RDONLY|constants.O_DIRECTORY);try{fsyncSync(d);}finally{closeSync(d);}}
-export function retainPreviewIntegrationResult(directory,result){
+function checkedIntegrationResult(result){
  const keys=fields(result);exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope'+(keys.includes('failureCode')?',failureCode':''));
- check(result.schema==='moriarty.preview-financial-integration/1'&&['PASS','FAILED','SOURCE_TEST_ONLY'].includes(result.status)&&['loan','swap'].includes(result.kind)&&typeof result.sourceTestOnly==='boolean'&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'PREVIEW_PUBLIC_RESULT');check(result.status!=='PASS'||result.sourceTestOnly===false,'PREVIEW_PUBLIC_SOURCE_ONLY');check(result.status!=='SOURCE_TEST_ONLY'||result.sourceTestOnly===true,'PREVIEW_PUBLIC_SOURCE_ONLY');
+ check(result.schema==='moriarty.preview-financial-integration/1'&&['PASS','FINANCIAL_COMPLETE','FAILED','SOURCE_TEST_ONLY'].includes(result.status)&&['loan','swap'].includes(result.kind)&&typeof result.sourceTestOnly==='boolean'&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'PREVIEW_PUBLIC_RESULT');check(!['PASS','FINANCIAL_COMPLETE'].includes(result.status)||result.sourceTestOnly===false,'PREVIEW_PUBLIC_SOURCE_ONLY');check(result.status!=='SOURCE_TEST_ONLY'||result.sourceTestOnly===true,'PREVIEW_PUBLIC_SOURCE_ONLY');
  if(keys.includes('failureCode')){check(result.status==='FAILED','PREVIEW_PUBLIC_FAILURE');failureCode(result.failureCode);}cleanup(result.cleanup);
  if(result.build!==undefined){exact(result.build,'receiptSha256,sourceManifestHash');check(hash(result.build.receiptSha256)&&hash(result.build.sourceManifestHash),'PREVIEW_BUILD_HASH');}
- if(result.driver!==undefined){const d=result.driver,dk=fields(d);exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(dk.includes('assetBindings')?',assetBindings':'')+(dk.includes('failure')?',failure':''));check(d.schema==='moriarty.preview-financial-run/1'&&d.kind===result.kind&&['PASS','FAILED','INCOMPLETE'].includes(d.status),'PREVIEW_PUBLIC_DRIVER');cleanup(d.cleanup);if(dk.includes('failure'))validatePublicDriverFailure(d.failure);}
+ if(result.driver!==undefined){const d=result.driver,dk=fields(d);exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(dk.includes('assetBindings')?',assetBindings':'')+(dk.includes('failure')?',failure':''));check(d.schema==='moriarty.preview-financial-run/1'&&d.kind===result.kind&&['PASS','FINANCIAL_COMPLETE','FAILED','INCOMPLETE'].includes(d.status),'PREVIEW_PUBLIC_DRIVER');cleanup(d.cleanup);if(dk.includes('failure'))validatePublicDriverFailure(d.failure);}
  if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
- const out=publicClone(result);durable(directory,'integration-result.json',out);return {status:'RECORDED'};
+ const out=publicClone(result);if(out.status==='FINANCIAL_COMPLETE')completed(out);return out;
 }
+
+// Validate a completed command result, never upgrade historical FAILED/INCOMPLETE
+// records. Receipt authentication and financial comparison remain producer duties.
+function completed(r){
+ check(['PASS','FINANCIAL_COMPLETE'].includes(r.status)&&r.sourceTestOnly===false&&!Object.hasOwn(r,'failureCode')&&r.phase==='driver'&&r.setupPendingOperations===0,'PREVIEW_COMPLETION_REQUIRED');
+ check(r.cleanup.containmentComplete===(r.status==='PASS'),'PREVIEW_COMPLETION_CONTAINMENT');
+ const d=r.driver,f=r.financialComparison,order=r.kind==='loan'?['deploy','initialize','accrue','settle']:['deploy','initialize','swap','close'];
+ check(d&&f&&d.status===r.status&&!Object.hasOwn(d,'failure')&&f.status==='PASS'&&f.kind===r.kind&&f.contractAddress===d.contractAddress,'PREVIEW_COMPLETION_REQUIRED');
+ for(const c of [r.cleanup,d.cleanup])check(c.walletStopped===true&&c.pendingOperations===0,'PREVIEW_COMPLETION_REQUIRED');
+ check(isDeepStrictEqual(r.cleanup,d.cleanup)&&Array.isArray(d.stages)&&d.stages.length===4&&Array.isArray(r.comparisons)&&r.comparisons.length===4&&isDeepStrictEqual(f.stages,r.comparisons),'PREVIEW_COMPLETION_REQUIRED');
+ const ids=new Set();
+ for(const [i,stage] of order.entries()){
+  const receipt=d.stages[i],comparison=r.comparisons[i];
+  check(receipt.circuitId===stage&&receipt.contractAddress===d.contractAddress&&comparison.status==='PASS'&&comparison.kind===r.kind&&comparison.stage===stage&&comparison.txId===receipt.txId&&comparison.contractAddress===d.contractAddress&&comparison.blockHash===receipt.blockHash&&comparison.blockHeight===receipt.blockHeight,'PREVIEW_COMPLETION_REQUIRED');
+  check(receipt.transaction?.identifiers?.includes(receipt.txId)&&receipt.transaction.proofVerified===false&&receipt.transaction.ledgerAccepted===false,'PREVIEW_COMPLETION_REQUIRED');
+  for(const id of receipt.transaction.identifiers){check(!ids.has(id),'PREVIEW_COMPLETION_REQUIRED');ids.add(id);}
+ }
+ check(Array.isArray(d.transactionIds)&&d.transactionIds.length===ids.size&&new Set(d.transactionIds).size===ids.size&&d.transactionIds.every(id=>ids.has(id)),'PREVIEW_COMPLETION_REQUIRED');
+ check(d.operationalState?.reservedSubmissions===4&&decimal(d.operationalState.reservedDustFee)&&d.operationalState.unavailable===undefined,'PREVIEW_COMPLETION_REQUIRED');
+ return r;
+}
+export function validatePreviewFinancialCompletion(result){return completed(checkedIntegrationResult(result));}
+export function retainPreviewIntegrationResult(directory,result){const out=checkedIntegrationResult(result);durable(directory,'integration-result.json',out);return {status:'RECORDED'};}
+
 export function retainPreviewStage(directory,summary){fields(summary);check(summary.status==='PASS'&&['loan','swap'].includes(summary.kind)&&['deploy','initialize',...(summary.kind==='loan'?['accrue','settle']:['swap','close'])].includes(summary.stage)&&identifier(summary.txId)&&summary.networkAcceptance===false&&summary.proofAcceptance===false,'PREVIEW_PUBLIC_STAGE');const out=publicClone(summary);durable(directory,'stage-'+summary.stage+'.json',out);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}
 export function publicPreviewLaunchEvent(event){
  const keys=fields(event);check(['submitted','stopped'].includes(event.kind)&&Array.isArray(event.identifiers)&&event.identifiers.length<=128,'PREVIEW_PUBLIC_EVENT');

@@ -94,7 +94,7 @@ test('Preview composition uses real exclusive reservations and guarded provider 
   f.options.adapters.loadProviderSdk=async()=>({...await prior(),levelPrivateStateProvider:()=>({}),indexerPublicDataProvider:()=>({}),httpClientProofProvider:()=>({})});
   f.options.adapters.initializeReservations=initializeFinancialReservations;
   f.options.adapters.createProviders=createFinancialProviders;
-  await assert.rejects(run(f),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicIntegrationResult.driver.operationalState.reservedSubmissions,0);assert.equal(e.publicIntegrationResult.financialComparison.status,'PASS');assert.equal(e.publicIntegrationResult.cleanup.containmentComplete,false);return true;});
+  const r=await run(f);assert.equal(r.status,'SOURCE_TEST_ONLY');assert.equal(r.driver.status,'FINANCIAL_COMPLETE');assert.equal(r.driver.operationalState.reservedSubmissions,0);assert.equal(r.financialComparison.status,'PASS');assert.equal(r.cleanup.containmentComplete,false);
   assert.ok(readFileSync(f.options.limits.reservationStatePath).length>0);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
