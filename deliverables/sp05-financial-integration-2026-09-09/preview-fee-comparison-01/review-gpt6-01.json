@@ -1,0 +1,118 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/spec_audit_early",
+    "role": "independent non-author source reviewer",
+    "otherCurrentReviewerVerdictRead": false
+  },
+  "recordedAt": "2026-09-10T18:17:37.387923+00:00",
+  "candidateSha256": "38b4bbaf5c496f936f96b4bf3a8581ad6a5413af459a74d3dc7b8448f671541a",
+  "baseCommit": "7e1216f4ccda354896ad064d6f3fca7d8c408c06",
+  "verdict": "PASS_SCOPED",
+  "sourceVerdict": "PASS_SCOPED",
+  "scope": "Admission-bound native fee checking in the complete fixed loan/swap comparator and its local/Preview production callers; source-only. No operational admission or SP05 completion.",
+  "pinVerification": {
+    "count": 71,
+    "allMatchBeforeAndAfterTests": true,
+    "evidence": "gpt6-pins-01.json"
+  },
+  "productionSources": {
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "396dd61caee096e4c82df86ddd8814f89d2814a8d1201408405b4ad0b0f9942d",
+    "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs": "a4aa1d41d5785fedf388283117d82dbacbed275c72a6f686484a5ef953f42837",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "b56ce06b23499ff0ef7dd6b8076670565ea8d3054d223c3f62626841732ff616"
+  },
+  "findings": [
+    {
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs:62",
+      "detail": "Every comparator requires a finite uint128 bigint native SPECK cap. The accepted-stage counter uses exact bigint arithmetic and checks nativeFee <= cap - spent. Native receipt debit must still equal the decoded native transaction fee; unresolved indexer values cannot provide the ceiling. Any failed comparison stops the trace."
+    },
+    {
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs:73",
+      "detail": "Historical stage groups are a unique contiguous prefix with separately copied caps and separate counters. Neither old/current nor two different historical groups can transfer unused allowance. Counters update only after all financial validation succeeds. The remaining complete state/effect/UTXO/role/network/replay comparisons remain in force."
+    },
+    {
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs:35",
+      "detail": "Historical ceilings come from exact hash-bound original ADMITTED records and matching proposal hashes, each originally authorizing 2000000000000000 SPECK. Fixed local mappings correctly associate execution04 deployment, recovery03 initialize, continuation02 accrue/settle and swap01 deploy/initialize. Existing canonical public history gates bind fixed transaction bytes and identities; caller adapters remain source-test-only. This selected-trace check does not replace the reservation ledger or release any prior charge."
+    },
+    {
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs:120",
+      "detail": "Preview receives only its current limits.dustFee ceiling; local fresh/recovery/continuation/stale paths pass their current ceiling plus only fixed historical groups. All direct production comparator callsites were inspected. Closed driver/integration diagnostics preserve NATIVE_FEE_CAP_EXCEEDED; the connected Preview test rejects at the fourth stage and retains both codes while cleanup runs."
+    },
+    {
+      "severity": "INFO",
+      "result": "VERIFIED_WITH_LIMITS",
+      "source": "experiments/moriarty-midnight-financial/ledger/preview-fee-replay.test.mjs:1",
+      "detail": "Independent execution re-decodes all four exact retained Preview loan public native payloads and compares their full supplied financial trace under the original plan cap: 1200000000000004 <= 2000000000000000 SPECK. Synthetic capability commitments are explicitly substituted; no original secrets, new finality, proof verification, or renewed ledger acceptance are established. Original financial results and FAILED/INCOMPLETE wrappers remain hash-identical."
+    }
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "node --experimental-test-module-mocks --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs experiments/moriarty-midnight-financial/ledger/preview-swap-composition.test.mjs experiments/moriarty-midnight-financial/ledger/preview-fee-replay.test.mjs",
+      "exitCode": 0,
+      "pass": 172,
+      "fail": 0,
+      "skipped": 0,
+      "log": "gpt6-verification-01.tap"
+    },
+    {
+      "command": "MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/main-integration npm --prefix experiments/moriarty-midnight-financial run test:compiled",
+      "exitCode": 0,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0,
+      "log": "gpt6-compiled-01.tap"
+    },
+    {
+      "command": "node --test --test-reporter=tap deliverables/sp05-financial-integration-2026-09-09/preview-fee-comparison-01/gpt6-boundary-controls-01.test.mjs",
+      "exitCode": 0,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0,
+      "log": "gpt6-boundary-controls-01.tap"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "additionalControls": {
+    "fixtureBasis": "Public synthetic fixture copied from the candidate test; assertions independently added by this reviewer. No native network acceptance.",
+    "checks": [
+      "Zero cap accepts all-zero native debits and rejects a positive first debit for loan and swap",
+      "A 1000 SPECK historical deploy allowance cannot subsidize a different 122 SPECK initialize allowance",
+      "An exact uint128-maximum first debit passes, then the next positive debit fails without overflow"
+    ]
+  },
+  "requiredChanges": [],
+  "limitations": [
+    "No private wallet, seed, role secret, store, proof server, service, network or transaction operation was performed. Retained compiled artifact tests do not compile or prove.",
+    "Fee comparison checks observed accepted-stage debits; it is not pre-submission fee enforcement. Existing provider reservation enforcement remains necessary.",
+    "Exact original source/result hashes preserve historical failures. This fix does not satisfy the separately open valid-command exit-zero contract.",
+    "No full SP05, mandatory PCD settlement, release, or new Preview acceptance is claimed. A separate independent review and any later resource admission remain required."
+  ],
+  "separateNonCandidateDocumentCheck": {
+    "worktree": "/home/charl/Moriarty/.worktrees/sp05-adverse-integration",
+    "files": [
+      "README.md",
+      "ROADMAP.md"
+    ],
+    "result": "No factual blocker in the inspected diff. Explicit user-required Preview hard gate and unwaived original launcher exit1 gap correctly coexist with scoped completed financial evidence. This check is separate from the fee candidate binding."
+  },
+  "evidence": {
+    "gpt6-pins-01.json": "df07195c5c33982aef382ff10a5fd22e88f6a14e7812e85a7803240f799bcee9",
+    "gpt6-verification-01.tap": "86b968913e36d5c65d74d5ec82aefb9ea0489e7f2b48f3c6c7a877998b185987",
+    "gpt6-compiled-01.tap": "fc7c423b41f571c4487aa10ce771c27b33056cad309df93a453158d248c44823",
+    "gpt6-boundary-controls-01.test.mjs": "7d90d3aa76b7df1c6dfbd4bb1e32556143687ceacbd27624f23b3c6637568659",
+    "gpt6-boundary-controls-01.tap": "4239f261f171b079d98809785e48fc89dcd6aaf481fb2ac33ed52b0ae15571ac"
+  }
+}

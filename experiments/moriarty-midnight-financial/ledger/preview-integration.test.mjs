@@ -108,3 +108,11 @@ test('Preview integration cannot report completion after loader cleanup exceeds 
  const original=f.options.adapters.loadAssets;f.options.adapters.loadAssets=async()=>({...await original(),cleanup(){clock+=1001;}});
  await assert.rejects(run(f),{message:'INTEGRATION_DEADLINE'});
 });
+
+test('Preview actual observer/comparator composition rejects cumulative fees above its admitted cap',async()=>{
+ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
+ const f=fixture();f.options.limits.dustFee=total-1n;
+ await assert.rejects(run(f),e=>{assert.equal(e.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(e.publicIntegrationResult.failureCode,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(e.publicIntegrationResult.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');return true;});
+ assert.deepEqual(f.compared,stages.slice(0,3));assert.equal(f.state().closed,true);
+ const exact=fixture();exact.options.limits.dustFee=total;assert.equal((await run(exact)).financialComparison.status,'PASS');
+});

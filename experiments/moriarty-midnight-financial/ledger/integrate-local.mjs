@@ -28,7 +28,27 @@ import {INITIALIZED_LOAN,verifyInitializedLoanPrivate,assertInitializedLoanMinte
 import {assertSwapInitializedWallet,SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
 
 const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
+
+// These are the original, already admitted allocations for the fixed recovery
+// histories. No allowance is created from an observed debit or transferred to
+// new calls. The existing public recovery gates separately bind the exact txs.
+const historicalFeeSources={
+ 'local-execution-04':['b51f125bfb3769131a994d21938d466e95562bb77951c2a3a13ad210daedadbc','resource-proposal-02.json','ee0915b4c44e6fd45a753776e42c6356e65ab0ff34db410a07b3f216db50b292'],
+ 'local-recovery-03':['771104d9703efe4a3154e46a20c7d8dab2e78eb38061be50f4e23d85b66a85d3','resource-proposal-01.json','4c37ee8953ed9faf150497370a9729aa01091db33e5e33d0dfefa57d283ca50e'],
+ 'local-continuation-02':['75d3412bda16c2dd6ebcd9014915fb0f39d6fde6b32c5df66338e97f5d45148a','resource-proposal-01.json','efb14dd15da433393e022fed265890642700800b223b8a2557019e0d12fb9acd'],
+ 'local-swap-01':['65899327525fbfb4bc412ab9962e559a37644c10bbd7d58211c46342bc042dca','resource-proposal-01.json','6c9fb3df909cb0432e2463df6433e2d5678d8070da401b30287f0ec54b2295fe']
+};
+function historicalFeeAllocation(name,stages){
+ const [admissionHash,proposalFile,proposalHash]=historicalFeeSources[name];
+ const root=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/'+name+'/',import.meta.url);
+ const read=(file,digest)=>{const raw=readFileSync(new URL(file,root));requireThat(createHash('sha256').update(raw).digest('hex')===digest,'HISTORICAL_FEE_ADMISSION_PIN');return JSON.parse(raw);};
+ const admission=read('execution-admission.json',admissionHash),proposal=read(proposalFile,proposalHash);
+ requireThat(admission.status==='ADMITTED'&&admission.proposalSha256===proposalHash&&proposal.dustFeeSpeck==='2000000000000000','HISTORICAL_FEE_ADMISSION');
+ return {stages,dustFeeCap:BigInt(proposal.dustFeeSpeck)};
+}
+
 const publicIntegrationFailureCodes=new Set([
+ 'NATIVE_FEE_CAP_REQUIRED','NATIVE_FEE_CAP_EXCEEDED','HISTORICAL_FEE_ADMISSION_PIN','HISTORICAL_FEE_ADMISSION',
  'COMPLETE_INERT_STALE_ADAPTERS_REQUIRED','INTEGRATION_STALE_ADAPTERS_REQUIRE_SOURCE_TEST','STALE_ADVERSE_RESULT','STALE_HANDLE_CLEANUP','STALE_HISTORY_ORDER','STALE_INTEGRATION_BINDING','STALE_INTEGRATION_EXCLUSIVE','STALE_INTEGRATION_LIMITS','STALE_INTEGRATION_PLAN_REQUIRED','STALE_INTEGRATION_RETENTION','STALE_INTEGRATION_ROLES','STALE_INTEGRATION_STORE','STALE_PREPARATION_LATE','STALE_PUBLIC_CURRENT','STALE_PUBLIC_GENESIS','STALE_PUBLIC_HISTORY','STALE_PUBLIC_RESULT','STALE_STORE_PRESERVATION',
  'SWAP_CONTINUATION_DEPLOY_STATE','SWAP_CONTINUATION_NATIVE_HASH','SWAP_CONTINUATION_NATIVE_IDENTIFIERS','SWAP_CONTINUATION_NATIVE_ACTION','SWAP_CONTINUATION_NATIVE_INPUTS','SWAP_CONTINUATION_NATIVE_DUST','SWAP_CONTINUATION_NATIVE_OUTPUT','SWAP_CONTINUATION_NATIVE_DEPLOY_STATE','SWAP_CONTINUATION_STATE_TYPE','SWAP_CONTINUATION_STATE_MISMATCH','SWAP_CONTINUATION_STATE_CANONICAL','SWAP_CONTINUATION_STATE_BALANCES','SWAP_CONTINUATION_STATE_AUTHORITY','SWAP_CONTINUATION_SIGNING_AUTHORITY','SWAP_CONTINUATION_PRIVATE_PROVIDER','SWAP_CONTINUATION_PRIVATE_READ','SWAP_CONTINUATION_PRIVATE_STATE','SWAP_CONTINUATION_PRIVATE_KEY','SWAP_CONTINUATION_WALLET_BINDING','SWAP_CONTINUATION_WALLET_HISTORY','CONTINUATION_INTEGRATION_PLAN','INVALID_INITIALIZED_SWAP',
  ...SWAP_WALLET_FAILURE_CODES,...CONTRACT_BALANCE_FAILURE_CODES,'AMOUNT_CONTRACT_BALANCES',
@@ -291,13 +311,18 @@ export async function integrateLocalFinancialCase(options){
     const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
     const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
     const constructorArgs=[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)];
+    const historicalFeeAllocations=stale?[
+      historicalFeeAllocation('local-execution-04',['deploy']),historicalFeeAllocation('local-recovery-03',['initialize']),historicalFeeAllocation('local-continuation-02',['accrue','settle'])
+    ]:continuation?(swapContinuation?[historicalFeeAllocation('local-swap-01',['deploy','initialize'])]:[
+      historicalFeeAllocation('local-execution-04',['deploy']),historicalFeeAllocation('local-recovery-03',['initialize'])
+    ]):recovery?[historicalFeeAllocation('local-execution-04',['deploy'])]:[];
     let prepared,verifiedPrivate,checkedContinuation,checkedStale,comparator;
     const historicalSummaries=new Map();
     const compareAndRetain=async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const publicSummary=structuredClone(summary);const stored=await onStage(structuredClone(publicSummary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(publicSummary);return summary;};
     if(stale){
       phase='stale-public';checkedStale=await within('stale-public',()=>staleDeps.publicCheck(stalePlan));
       requireThat(checkedStale?.status==='SETTLED_LOAN_PUBLIC_VERIFIED'&&checkedStale.history?.length===4,'STALE_PUBLIC_RESULT');
-      phase='stale-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+      phase='stale-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
       for(const [i,stage] of ['deploy','initialize','accrue','settle'].entries()){const row=checkedStale.history[i];requireThat(row.stage===stage,'STALE_HISTORY_ORDER');await within('stale-history-'+stage,()=>compareAndRetain(stage,row.observation));}
       financialComparison=comparator.finish();
       phase='stale-wallet';const synced=await within('stale-sync',()=>wallet.waitForSyncedState());
@@ -308,7 +333,7 @@ export async function integrateLocalFinancialCase(options){
       requireThat(checkedContinuation?.status==='INITIALIZED_PUBLIC_STATE_VERIFIED'&&checkedContinuation.deploymentObservation?.receipt?.txId===historyDeploy.txId&&checkedContinuation.initializeObservation?.receipt?.txId===historyInitialize.txId,'CONTINUATION_PUBLIC_RESULT');
       phase='continuation-wallet';const synced=await within('continuation-sync',()=>wallet.waitForSyncedState());
       continuationDeps.checkWallet({synced,binding:checkedContinuation.binding,timestampMs:checkedContinuation.tip.timestampMs,dustCap:limits.dustFee});checkDeadline();
-      phase='continuation-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+      phase='continuation-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
       for(const [stage,observation] of [['deploy',checkedContinuation.deploymentObservation],['initialize',checkedContinuation.initializeObservation]])historicalSummaries.set(stage,await within('history-'+stage,()=>compareAndRetain(stage,observation)));
       if(swapContinuation){phase='continuation-mint';assertInitializedSwapMintedOutput({receipt:checkedContinuation.initializeObservation.receipt,roles,assetBindings:{ASSET_A:runtime.rawTokenType(bytes(sourceBindings.assetADomain),historyInitialize.contractAddress),ASSET_B:runtime.rawTokenType(bytes(sourceBindings.assetBDomain),historyInitialize.contractAddress)},synced});checkDeadline();}
       phase='continuation-preserve';const preserved=await within('continuation-preserve',()=>continuationDeps.preserveStore({sourceDirectory:continuation.privateStateDirectory,snapshotDirectory:continuation.snapshotDirectory,inspectionDirectory:continuation.inspectionDirectory,accountId:options.walletContext.unshieldedKeystore.getBech32Address().toString()}));requireThat(preserved?.status==='PRESERVED','CONTINUATION_STORE_PRESERVATION');
@@ -334,7 +359,7 @@ export async function integrateLocalFinancialCase(options){
     if(continuation){phase='continuation-private';const checked=await within('continuation-private',()=>continuationDeps.checkPrivate({provider:providers.privateStateProvider,signingKey:options.deploymentSigningKey,contractState:checkedContinuation.initializeContractState,ledger}));requireThat(checked?.status==='PRIVATE_STATE_CHECKED','CONTINUATION_PRIVATE_RESULT');}
     if(recovery){phase='recovery-restore';await within('recovery-restore',()=>recoveryDeps.restore(providers.privateStateProvider,verifiedPrivate));}
     const rpc=(method,params,requestDeadline=limits.deadlineMs)=>createLocalRpc({node:network.node,deadlineMs:Math.min(limits.deadlineMs,requestDeadline),fetchImpl:deps.fetch})(method,params);
-    comparator??=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+    comparator??=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
     if(stale){
       phase='stale-prepare';staleHandle=await within('stale-prepare',async()=>{const handle=await staleDeps.prepare({providers,rpc,receiptPath:buildBinding.receiptPath,borrowerSecret:roles.firstSecret,signingKey:options.deploymentSigningKey,deadlineMs:limits.deadlineMs,nowSeconds:now()});if(Date.now()>=limits.deadlineMs){await staleDeps.close(handle);throw Error('STALE_PREPARATION_LATE');}return handle;});
       phase='stale-submit';const handle=staleHandle;staleHandle=undefined;

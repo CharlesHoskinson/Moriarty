@@ -1,0 +1,313 @@
+diff --git a/experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs b/experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs
+index 47d9dfe..ba24bc3 100644
+--- a/experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/compiled-comparison.test.mjs
+@@ -83,7 +83,7 @@ function buildObservedTrace(kind){
+  return rows;
+ }
+ for(const kind of ['loan','swap'])test(`${kind} retained generated state and transcript effects match independent comparator (synthetic transport only)`,async()=>{
+- const rows=buildObservedTrace(kind),comparator=await createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000});
++ const rows=buildObservedTrace(kind),comparator=await createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:2000000000000000n});
+  for(const {stage,observation} of rows)assert.equal(comparator.verifyStage(stage,observation).status,'PASS');
+  const result=comparator.finish();assert.equal(result.status,'PASS');assert.equal(result.networkAcceptance,false);assert.equal(result.proofAcceptance,false);
+  assert.equal(rows.at(-1).observation.state.kernelState.f0,kind==='loan'?4500000000n:0n);
+@@ -91,7 +91,7 @@ for(const kind of ['loan','swap'])test(`${kind} retained generated state and tra
+ });
+ test('actual generated financial state and actual transcript payout mutations are rejected',async()=>{
+  for(const mutate of [o=>o.state.kernelState.f0=0n,o=>o.receipt.transaction.actions[0].transcripts[0].effects.claimedUnshieldedSpends[0].recipient=roles.firstAddress]){
+-  const rows=buildObservedTrace('loan'),c=await createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000});
++  const rows=buildObservedTrace('loan'),c=await createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:2000000000000000n});
+   for(const row of rows.slice(0,3))c.verifyStage(row.stage,row.observation);
+   mutate(rows[3].observation);assert.throws(()=>c.verifyStage('settle',rows[3].observation));
+  }
+diff --git a/experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs b/experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs
+index b7b1b38..a2cac62 100644
+--- a/experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs
+@@ -59,12 +59,25 @@ function publicBindings(kind,roles,networkTag,programDigest,runtime){
+  * replay proofs, establish ledger acceptance, or turn synthetic data into such
+  * evidence. No role secret or expected financial value is emitted as observation.
+  */
+-export async function createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion}){
++export async function createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap,historicalFeeAllocations=[]}){
+  check(kind==='loan'||kind==='swap','UNKNOWN_FINANCIAL_CASE');
+  check(Number.isSafeInteger(expectedProtocolVersion)&&expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
++ const validCap=x=>typeof x==='bigint'&&x>=0n&&x<=MAX;
++ check(validCap(dustFeeCap),'NATIVE_FEE_CAP_REQUIRED');
+  const raw=readFileSync(new URL('./financial-expectations.json',import.meta.url));
+  check(createHash('sha256').update(raw).digest('hex')===EXPECTATION_HASH,'EXPECTATION_PIN');
+  const expected=JSON.parse(raw).cases[kind];
++ // Historical stages retain their original allocation ceilings. Their unused
++ // allowance can never fund the current allocation. Copy before the first await.
++ check(Array.isArray(historicalFeeAllocations)&&historicalFeeAllocations.length<=4,'HISTORICAL_FEE_ALLOCATIONS');
++ const currentBudget={cap:dustFeeCap,spent:0n},stageBudgets=new Map();let prefix=0;
++ for(const allocation of historicalFeeAllocations){
++  keys(allocation,['stages','dustFeeCap'],'HISTORICAL_FEE_ALLOCATION');
++  check(validCap(allocation.dustFeeCap)&&Array.isArray(allocation.stages)&&allocation.stages.length>0,'HISTORICAL_FEE_ALLOCATION');
++  const budget={cap:allocation.dustFeeCap,spent:0n};
++  for(const stage of allocation.stages){check(prefix<4&&stage===expected.stageOrder[prefix++],'HISTORICAL_FEE_STAGE_ORDER');stageBudgets.set(stage,budget);}
++ }
++
+  checkRuntimePins(readFileSync);
+  const runtime=await import(pathToFileURL(RUNTIME_ROOT+'/dist/index.js').href);
+  const bindings=publicBindings(kind,roles,networkTag,expected.bindingParameters.programDigest,runtime);
+@@ -177,7 +190,10 @@ export async function createFinancialComparator({kind,roles,networkTag,expectedP
+    check(Array.isArray(tx.actions)&&tx.actions.length===1,'ACTION_COUNT');const a=tx.actions[0];keys(a,deploy?['segment','kind','address']:['segment','kind','address','entryPoint','transcripts'],'ACTION');
+    check(Number.isInteger(a.segment)&&a.segment>=0&&a.segment<=65535&&a.address===contractAddress&&a.kind===(deploy?'deploy':'call')&&(deploy||a.entryPoint===stageName),'ACTION_BINDING');
+    keys(r.fees,['nativeDebit','indexerReported'],'FEES');keys(r.fees.nativeDebit,['asset','unit','amount'],'NATIVE_FEE');check(r.fees.nativeDebit.asset==='DUST'&&r.fees.nativeDebit.unit==='SPECK','NATIVE_FEE_UNIT');
+-   check(decimal(r.fees.nativeDebit.amount,'NATIVE_FEE')===decimal(tx.dustFee,'TX_DUST_FEE'),'NATIVE_FEE_MISMATCH');
++   const nativeFee=decimal(r.fees.nativeDebit.amount,'NATIVE_FEE');
++   check(nativeFee===decimal(tx.dustFee,'TX_DUST_FEE'),'NATIVE_FEE_MISMATCH');
++   const feeBudget=stageBudgets.get(stageName)??currentBudget;
++   check(nativeFee<=feeBudget.cap-feeBudget.spent,'NATIVE_FEE_CAP_EXCEEDED');
+    keys(r.fees.indexerReported,['paid','estimated','sourceUnitLabel','encoding','nativeDebitRelationship'],'INDEXER_FEES');const indexer=r.fees.indexerReported;
+    decimal(indexer.paid,'INDEXER_PAID');decimal(indexer.estimated,'INDEXER_ESTIMATED');check(indexer.sourceUnitLabel==='DUST'&&indexer.encoding==='unresolved'&&indexer.nativeDebitRelationship==='unresolved','INDEXER_FEE_ENCODING');
+    compareState(observation.state,e,deploy);
+@@ -185,6 +201,7 @@ export async function createFinancialComparator({kind,roles,networkTag,expectedP
+    equalAmounts(actualBalances,Object.fromEntries(Object.entries(e.contractReserves).map(([asset,n])=>[colors[asset],BigInt(n)])),'CONTRACT_BALANCES');
+    const native=nativeEffects(a,e),io=financialIo(tx,e,actualBalances,native);
+    const summary={status:'PASS',kind,stage:stageName,publicState:projectPublicState(observation.state),nativeEffects:projectNativeEffects(native),txId:r.txId,contractAddress,blockHash:r.blockHash,blockHeight:r.blockHeight,grossByAsset:strings(io.gross),participantNetDeltas:io.participantNetDeltas,contractBalances:strings(actualBalances),nativeFee:structuredClone(r.fees.nativeDebit),indexerFees:structuredClone(indexer),scope:'Exact fixed financial trace comparison over supplied finalized observations; no proof or network acceptance',networkAcceptance:false,proofAcceptance:false};
++   feeBudget.spent+=nativeFee;
+    txIds.add(r.txId);txHashes.add(tx.transactionHash);rawHashes.add(tx.rawSha256);tx.identifiers.forEach(x=>identifiers.add(x));io.newInputs.forEach(x=>spentInputs.add(x));previousBalances=actualBalances;previousHeight=r.blockHeight;position++;summaries.push(summary);
+    return structuredClone(summary);
+   }catch(error){stopped=true;throw error;}
+diff --git a/experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs b/experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs
+index 2a25d56..829e13e 100644
+--- a/experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/financial-comparison.test.mjs
+@@ -49,7 +49,7 @@ function fixture(kind='loan') {
+  });
+  return {kind,stages,rows,colors};
+ }
+-async function comparator(kind='loan') {assert.equal(typeof api.createFinancialComparator,'function','financial comparator must exist');return api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000});}
++async function comparator(kind='loan') {assert.equal(typeof api.createFinancialComparator,'function','financial comparator must exist');return api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n});}
+ async function run(fx,mutate) {const c=await comparator(fx.kind);for(let i=0;i<fx.rows.length;i++){if(mutate)mutate(fx.rows[i],i,fx);c.verifyStage(fx.stages[i],fx.rows[i]);}return c.finish();}
+ 
+ test('complete loan and swap comparison preserves gross spending and residual duties',async()=>{
+@@ -96,7 +96,7 @@ test('rejects skipped stages and remains stopped after a failure',async()=>{
+  const fx=fixture(),c=await comparator();assert.throws(()=>c.finish(),/INCOMPLETE/);assert.throws(()=>c.verifyStage('initialize',fx.rows[1]),/STAGE_ORDER/);assert.throws(()=>c.verifyStage('deploy',fx.rows[0]),/STOPPED/);
+ });
+ test('rejects duplicate participants and never exposes role secrets',async()=>{
+- assert.equal(typeof api.createFinancialComparator,'function');await assert.rejects(api.createFinancialComparator({kind:'loan',roles:{...roles,secondAddress:roles.firstAddress},networkTag,expectedProtocolVersion:1000000}),/PARTICIPANTS/);
++ assert.equal(typeof api.createFinancialComparator,'function');await assert.rejects(api.createFinancialComparator({kind:'loan',roles:{...roles,secondAddress:roles.firstAddress},networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n}),/PARTICIPANTS/);
+  const r=await run(fixture());assert.equal(JSON.stringify(r).includes(Buffer.from(roles.firstSecret).toString('hex')),false);
+ });
+ 
+@@ -165,3 +165,42 @@ test('standalone runtime pin inspection rejects unchanged-version package or ent
+   assert.throws(()=>api.inspectFinancialRuntimePinsForSourceTest({sourceTestOnly:true,readFile}),suffix==='package.json'?/COMPACT_RUNTIME_PACKAGE_PIN/:/COMPACT_RUNTIME_ENTRY_PIN/);
+  }
+ });
++
++// The native transaction and receipt agree: rejection must come from admission,
++// not an artificial mismatch between their fee fields.
++test('matched native fees exceeding the admitted cumulative SPECK cap reject',async()=>{
++ const fx=fixture();const c=await api.createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:491n});
++ for(let i=0;i<3;i++)c.verifyStage(fx.stages[i],fx.rows[i]);
++ assert.throws(()=>c.verifyStage(fx.stages[3],fx.rows[3]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
++ assert.throws(()=>c.finish(),{message:'COMPARISON_STOPPED'});
++});
++
++test('exact cap and within cap pass for both complete financial traces',async()=>{
++ for(const kind of ['loan','swap'])for(const dustFeeCap of [492n,493n]){
++  const fx=fixture(kind),c=await api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap});
++  fx.rows.forEach((row,i)=>c.verifyStage(fx.stages[i],row));assert.equal(c.finish().status,'PASS');
++ }
++});
++test('self-consistent first fee above cap rejects despite unresolved lower indexer units',async()=>{
++ const fx=fixture();fx.rows[0].receipt.fees.nativeDebit.amount=fx.rows[0].receipt.transaction.dustFee='493';
++ fx.rows[0].receipt.fees.indexerReported.paid='1';
++ const c=await comparator();assert.throws(()=>c.verifyStage('deploy',fx.rows[0]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
++});
++test('a finite native SPECK cap is mandatory, with no unlimited source-fixture default',async()=>{
++ for(const dustFeeCap of [undefined,null,'492',492,-1n,1n<<128n,Infinity])await assert.rejects(api.createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap}),{message:'NATIVE_FEE_CAP_REQUIRED'});
++});
++test('historical surplus cannot subsidize current fees; historical groups also accumulate',async()=>{
++ const fx=fixture(),args={kind:'loan',roles,networkTag,expectedProtocolVersion:1000000};
++ const historicalFeeAllocations=[{stages:['deploy','initialize'],dustFeeCap:1000n}];
++ const c=await api.createFinancialComparator({...args,dustFeeCap:245n,historicalFeeAllocations});
++ historicalFeeAllocations[0].dustFeeCap=1000000n;historicalFeeAllocations[0].stages.push('settle');
++ for(let i=0;i<3;i++)c.verifyStage(fx.stages[i],fx.rows[i]);
++ assert.throws(()=>c.verifyStage('settle',fx.rows[3]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
++ const d=await api.createFinancialComparator({...args,dustFeeCap:1000n,historicalFeeAllocations:[{stages:['deploy','initialize'],dustFeeCap:245n}]});
++ d.verifyStage('deploy',fx.rows[0]);assert.throws(()=>d.verifyStage('initialize',fx.rows[1]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
++ const e=await api.createFinancialComparator({...args,dustFeeCap:246n,historicalFeeAllocations:[{stages:['deploy','initialize'],dustFeeCap:246n}]});
++ fx.rows.forEach((row,i)=>e.verifyStage(fx.stages[i],row));assert.equal(e.finish().status,'PASS');
++});
++test('historical stages must be a finite nonoverlapping contiguous prefix',async()=>{
++ for(const historicalFeeAllocations of [[{stages:['initialize'],dustFeeCap:123n}],[{stages:['deploy','deploy'],dustFeeCap:246n}],[{stages:['deploy'],dustFeeCap:undefined}]])await assert.rejects(api.createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n,historicalFeeAllocations}),/HISTORICAL_FEE/);
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs b/experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs
+index b34e23e..205adee 100644
+--- a/experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs
+@@ -97,3 +97,10 @@ for(const change of [p=>p.limits.allocationId='sp05-local-swap-01',p=>p.existing
+ test('composed swap plan getters rejected without invocation before setup',async()=>{for(const key of ['kind','existingInitializedSwap']){const f=continuationFixture();let calls=0;Object.defineProperty(f.options.continuationPlan,key,{get(){calls++;throw Error('GETTER_TRAP');}});await assert.rejects(integrateLocalFinancialCase(f.options),/CONTINUATION_INTEGRATION_PLAN/);assert.equal(calls,0);assert.deepEqual(f.calls,['wallet-stop']);}});
+ test('missing initialized mint stops before preservation and new dispatch',async()=>{const f=continuationFixture();f.options.walletContext.wallet.waitForSyncedState=async()=>{const s=syncedFixture();s.unshielded.availableCoins=[];return s;};await assert.rejects(integrateLocalFinancialCase(f.options),/SWAP_WALLET/);assert.ok(!f.calls.includes('continuation-preserve')&&!f.calls.includes('swap')&&!f.calls.includes('close'));});
+ for(const [gate,code] of [['publicCheck','SWAP_CONTINUATION_DEPLOY_STATE'],['checkPrivate','SWAP_CONTINUATION_PRIVATE_READ'],['checkWallet','SWAP_CONTINUATION_WALLET_HISTORY']])test('retains closed swap diagnostic '+code,async()=>{const f=continuationFixture();f.options.continuationAdapters[gate]=()=>{throw Error(code);};await assert.rejects(integrateLocalFinancialCase(f.options),e=>{assert.equal(e.publicIntegrationResult.failureCode,code);return true;});});
++
++test('historical fee allocations are bound separately from the new allowance',async()=>{
++ const f=continuationFixture(),original=f.adapters.createComparator;let args;
++ f.adapters.createComparator=async input=>{args=input;return original(input);};
++ await integrateLocalFinancialCase(f.options);assert.equal(args.dustFeeCap,f.options.limits.dustFee);
++ assert.deepEqual(args.historicalFeeAllocations,[['deploy','initialize']].map(stages=>({stages,dustFeeCap:2000000000000000n})));
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+index 2a663e2..14e763e 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+@@ -28,7 +28,27 @@ import {INITIALIZED_LOAN,verifyInitializedLoanPrivate,assertInitializedLoanMinte
+ import {assertSwapInitializedWallet,SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
+ 
+ const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
++
++// These are the original, already admitted allocations for the fixed recovery
++// histories. No allowance is created from an observed debit or transferred to
++// new calls. The existing public recovery gates separately bind the exact txs.
++const historicalFeeSources={
++ 'local-execution-04':['b51f125bfb3769131a994d21938d466e95562bb77951c2a3a13ad210daedadbc','resource-proposal-02.json','ee0915b4c44e6fd45a753776e42c6356e65ab0ff34db410a07b3f216db50b292'],
++ 'local-recovery-03':['771104d9703efe4a3154e46a20c7d8dab2e78eb38061be50f4e23d85b66a85d3','resource-proposal-01.json','4c37ee8953ed9faf150497370a9729aa01091db33e5e33d0dfefa57d283ca50e'],
++ 'local-continuation-02':['75d3412bda16c2dd6ebcd9014915fb0f39d6fde6b32c5df66338e97f5d45148a','resource-proposal-01.json','efb14dd15da433393e022fed265890642700800b223b8a2557019e0d12fb9acd'],
++ 'local-swap-01':['65899327525fbfb4bc412ab9962e559a37644c10bbd7d58211c46342bc042dca','resource-proposal-01.json','6c9fb3df909cb0432e2463df6433e2d5678d8070da401b30287f0ec54b2295fe']
++};
++function historicalFeeAllocation(name,stages){
++ const [admissionHash,proposalFile,proposalHash]=historicalFeeSources[name];
++ const root=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/'+name+'/',import.meta.url);
++ const read=(file,digest)=>{const raw=readFileSync(new URL(file,root));requireThat(createHash('sha256').update(raw).digest('hex')===digest,'HISTORICAL_FEE_ADMISSION_PIN');return JSON.parse(raw);};
++ const admission=read('execution-admission.json',admissionHash),proposal=read(proposalFile,proposalHash);
++ requireThat(admission.status==='ADMITTED'&&admission.proposalSha256===proposalHash&&proposal.dustFeeSpeck==='2000000000000000','HISTORICAL_FEE_ADMISSION');
++ return {stages,dustFeeCap:BigInt(proposal.dustFeeSpeck)};
++}
++
+ const publicIntegrationFailureCodes=new Set([
++ 'NATIVE_FEE_CAP_REQUIRED','NATIVE_FEE_CAP_EXCEEDED','HISTORICAL_FEE_ADMISSION_PIN','HISTORICAL_FEE_ADMISSION',
+  'COMPLETE_INERT_STALE_ADAPTERS_REQUIRED','INTEGRATION_STALE_ADAPTERS_REQUIRE_SOURCE_TEST','STALE_ADVERSE_RESULT','STALE_HANDLE_CLEANUP','STALE_HISTORY_ORDER','STALE_INTEGRATION_BINDING','STALE_INTEGRATION_EXCLUSIVE','STALE_INTEGRATION_LIMITS','STALE_INTEGRATION_PLAN_REQUIRED','STALE_INTEGRATION_RETENTION','STALE_INTEGRATION_ROLES','STALE_INTEGRATION_STORE','STALE_PREPARATION_LATE','STALE_PUBLIC_CURRENT','STALE_PUBLIC_GENESIS','STALE_PUBLIC_HISTORY','STALE_PUBLIC_RESULT','STALE_STORE_PRESERVATION',
+  'SWAP_CONTINUATION_DEPLOY_STATE','SWAP_CONTINUATION_NATIVE_HASH','SWAP_CONTINUATION_NATIVE_IDENTIFIERS','SWAP_CONTINUATION_NATIVE_ACTION','SWAP_CONTINUATION_NATIVE_INPUTS','SWAP_CONTINUATION_NATIVE_DUST','SWAP_CONTINUATION_NATIVE_OUTPUT','SWAP_CONTINUATION_NATIVE_DEPLOY_STATE','SWAP_CONTINUATION_STATE_TYPE','SWAP_CONTINUATION_STATE_MISMATCH','SWAP_CONTINUATION_STATE_CANONICAL','SWAP_CONTINUATION_STATE_BALANCES','SWAP_CONTINUATION_STATE_AUTHORITY','SWAP_CONTINUATION_SIGNING_AUTHORITY','SWAP_CONTINUATION_PRIVATE_PROVIDER','SWAP_CONTINUATION_PRIVATE_READ','SWAP_CONTINUATION_PRIVATE_STATE','SWAP_CONTINUATION_PRIVATE_KEY','SWAP_CONTINUATION_WALLET_BINDING','SWAP_CONTINUATION_WALLET_HISTORY','CONTINUATION_INTEGRATION_PLAN','INVALID_INITIALIZED_SWAP',
+  ...SWAP_WALLET_FAILURE_CODES,...CONTRACT_BALANCE_FAILURE_CODES,'AMOUNT_CONTRACT_BALANCES',
+@@ -291,13 +311,18 @@ export async function integrateLocalFinancialCase(options){
+     const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
+     const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
+     const constructorArgs=[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)];
++    const historicalFeeAllocations=stale?[
++      historicalFeeAllocation('local-execution-04',['deploy']),historicalFeeAllocation('local-recovery-03',['initialize']),historicalFeeAllocation('local-continuation-02',['accrue','settle'])
++    ]:continuation?(swapContinuation?[historicalFeeAllocation('local-swap-01',['deploy','initialize'])]:[
++      historicalFeeAllocation('local-execution-04',['deploy']),historicalFeeAllocation('local-recovery-03',['initialize'])
++    ]):recovery?[historicalFeeAllocation('local-execution-04',['deploy'])]:[];
+     let prepared,verifiedPrivate,checkedContinuation,checkedStale,comparator;
+     const historicalSummaries=new Map();
+     const compareAndRetain=async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const publicSummary=structuredClone(summary);const stored=await onStage(structuredClone(publicSummary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(publicSummary);return summary;};
+     if(stale){
+       phase='stale-public';checkedStale=await within('stale-public',()=>staleDeps.publicCheck(stalePlan));
+       requireThat(checkedStale?.status==='SETTLED_LOAN_PUBLIC_VERIFIED'&&checkedStale.history?.length===4,'STALE_PUBLIC_RESULT');
+-      phase='stale-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
++      phase='stale-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
+       for(const [i,stage] of ['deploy','initialize','accrue','settle'].entries()){const row=checkedStale.history[i];requireThat(row.stage===stage,'STALE_HISTORY_ORDER');await within('stale-history-'+stage,()=>compareAndRetain(stage,row.observation));}
+       financialComparison=comparator.finish();
+       phase='stale-wallet';const synced=await within('stale-sync',()=>wallet.waitForSyncedState());
+@@ -308,7 +333,7 @@ export async function integrateLocalFinancialCase(options){
+       requireThat(checkedContinuation?.status==='INITIALIZED_PUBLIC_STATE_VERIFIED'&&checkedContinuation.deploymentObservation?.receipt?.txId===historyDeploy.txId&&checkedContinuation.initializeObservation?.receipt?.txId===historyInitialize.txId,'CONTINUATION_PUBLIC_RESULT');
+       phase='continuation-wallet';const synced=await within('continuation-sync',()=>wallet.waitForSyncedState());
+       continuationDeps.checkWallet({synced,binding:checkedContinuation.binding,timestampMs:checkedContinuation.tip.timestampMs,dustCap:limits.dustFee});checkDeadline();
+-      phase='continuation-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
++      phase='continuation-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
+       for(const [stage,observation] of [['deploy',checkedContinuation.deploymentObservation],['initialize',checkedContinuation.initializeObservation]])historicalSummaries.set(stage,await within('history-'+stage,()=>compareAndRetain(stage,observation)));
+       if(swapContinuation){phase='continuation-mint';assertInitializedSwapMintedOutput({receipt:checkedContinuation.initializeObservation.receipt,roles,assetBindings:{ASSET_A:runtime.rawTokenType(bytes(sourceBindings.assetADomain),historyInitialize.contractAddress),ASSET_B:runtime.rawTokenType(bytes(sourceBindings.assetBDomain),historyInitialize.contractAddress)},synced});checkDeadline();}
+       phase='continuation-preserve';const preserved=await within('continuation-preserve',()=>continuationDeps.preserveStore({sourceDirectory:continuation.privateStateDirectory,snapshotDirectory:continuation.snapshotDirectory,inspectionDirectory:continuation.inspectionDirectory,accountId:options.walletContext.unshieldedKeystore.getBech32Address().toString()}));requireThat(preserved?.status==='PRESERVED','CONTINUATION_STORE_PRESERVATION');
+@@ -334,7 +359,7 @@ export async function integrateLocalFinancialCase(options){
+     if(continuation){phase='continuation-private';const checked=await within('continuation-private',()=>continuationDeps.checkPrivate({provider:providers.privateStateProvider,signingKey:options.deploymentSigningKey,contractState:checkedContinuation.initializeContractState,ledger}));requireThat(checked?.status==='PRIVATE_STATE_CHECKED','CONTINUATION_PRIVATE_RESULT');}
+     if(recovery){phase='recovery-restore';await within('recovery-restore',()=>recoveryDeps.restore(providers.privateStateProvider,verifiedPrivate));}
+     const rpc=(method,params,requestDeadline=limits.deadlineMs)=>createLocalRpc({node:network.node,deadlineMs:Math.min(limits.deadlineMs,requestDeadline),fetchImpl:deps.fetch})(method,params);
+-    comparator??=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
++    comparator??=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,historicalFeeAllocations}));
+     if(stale){
+       phase='stale-prepare';staleHandle=await within('stale-prepare',async()=>{const handle=await staleDeps.prepare({providers,rpc,receiptPath:buildBinding.receiptPath,borrowerSecret:roles.firstSecret,signingKey:options.deploymentSigningKey,deadlineMs:limits.deadlineMs,nowSeconds:now()});if(Date.now()>=limits.deadlineMs){await staleDeps.close(handle);throw Error('STALE_PREPARATION_LATE');}return handle;});
+       phase='stale-submit';const handle=staleHandle;staleHandle=undefined;
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
+index a391c35..6a3d846 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
+@@ -321,3 +321,14 @@ test('actual production preflight failure survives durable launcher retention wi
+   const raw=readFileSync(join(directory,'integration-result.json'),'utf8'),saved=JSON.parse(raw);assert.equal(saved.failureCode,result.failureCode);assert.equal(saved.phase,'preflight');assert.ok(!raw.includes('PRIVATE_'));return true;
+  });assert.deepEqual(f.calls,['wallet-stop']);}finally{rmSync(directory,{recursive:true,force:true});}
+ });
++
++test('current and historical comparator allowances remain separate in each loan mode',async()=>{
++ for(const make of [fixture,recoveryFixture,continuationFixture]){
++  const f=make(),o=f.options,original=f.adapters.createComparator;let observed;
++  f.adapters.createComparator=async args=>{observed=args;return original(args);};
++  if(make===fixture)await assert.rejects(integrateLocalFinancialCase(o),{message:'DRIVER_CLEANUP_INCOMPLETE'});else await integrateLocalFinancialCase(o);
++  assert.equal(observed.dustFeeCap,o.limits.dustFee);
++  const expected=make===fixture?[]:make===recoveryFixture?[['deploy']]:[['deploy'],['initialize']];
++  assert.deepEqual(observed.historicalFeeAllocations,expected.map(stages=>({stages,dustFeeCap:2000000000000000n})));
++ }
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
+index 2ccb7a5..45233a1 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs
+@@ -117,7 +117,7 @@ export async function integratePreviewFinancialCase(options){
+   const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
+   phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
+   phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
+-  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
++  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee}));
+   const freshSdk={deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
+   phase='driver';driverStarted=true;let driverFailure;
+   try{driverResult=await deps.driver({kind,network:'preview',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshSdk,
+diff --git a/experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs b/experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs
+index d9dcf2d..becff44 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integration-negative.test.mjs
+@@ -82,3 +82,10 @@ for(const c of [
+ ])test(`composed negative: ${c.name} stops and preserves charged public failure evidence`,async()=>{
+  const f=fixture(c.options),{result,error}=await runAndRetain(f);assert.ok(error);assert.equal(error.message,c.code);assert.equal(result.status,'FAILED');assert.deepEqual(f.calls,c.calls);assert.deepEqual(f.compared,c.compared);assert.equal(result.driver.transactionIds.length,c.calls.length);assert.equal(result.driver.failure.phase,c.code==='LOCAL_EXECUTION_BINDING_MISMATCH'?'call':['INDEXED_OUTPUTS_MISMATCH','INVALID_PAID_FEES'].includes(c.code)?'observe':'compare');assert.equal(result.driver.operationalState.reservedSubmissions,6+c.calls.length);const expectedCharge=1800000000000006n+c.calls.reduce((sum,stage)=>sum+BigInt(receiptByStage[stage].transaction.dustFee),0n);assert.equal(result.driver.operationalState.reservedDustFee,String(expectedCharge));assert.ok(f.state().charges>f.state().priorDust);assert.deepEqual(result.driver.operationalState.reservedGrossByAsset,c.calls.includes('settle')?{[color]:'20000000000'}:{});assert.equal(f.state().stopped,true);assert.equal(f.state().closed,true);assert.equal(result.financialAcceptance,false);assert.ok(result.driver.failure&&typeof result.failureCode==='string');assert.equal(result.sourceTestOnly,true);
+ });
++
++test('local actual observer/comparator composition enforces its admitted cumulative cap',async()=>{
++ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
++ const f=fixture();f.options.limits.dustFee=total-1n;const failed=await runAndRetain(f);
++ assert.equal(failed.error.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(failed.result.failureCode,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(failed.result.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');assert.deepEqual(f.compared,stages.slice(0,3));assert.equal(f.state().closed,true);
++ const exact=fixture();exact.options.limits.dustFee=total;const accepted=await runAndRetain(exact);assert.equal(accepted.error,undefined);assert.equal(accepted.result.financialComparison.status,'PASS');
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs b/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
+index e0968c6..195753c 100644
+--- a/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/preview-integration.test.mjs
+@@ -108,3 +108,11 @@ test('Preview integration cannot report completion after loader cleanup exceeds
+  const original=f.options.adapters.loadAssets;f.options.adapters.loadAssets=async()=>({...await original(),cleanup(){clock+=1001;}});
+  await assert.rejects(run(f),{message:'INTEGRATION_DEADLINE'});
+ });
++
++test('Preview actual observer/comparator composition rejects cumulative fees above its admitted cap',async()=>{
++ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
++ const f=fixture();f.options.limits.dustFee=total-1n;
++ await assert.rejects(run(f),e=>{assert.equal(e.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(e.publicIntegrationResult.failureCode,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(e.publicIntegrationResult.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');return true;});
++ assert.deepEqual(f.compared,stages.slice(0,3));assert.equal(f.state().closed,true);
++ const exact=fixture();exact.options.limits.dustFee=total;assert.equal((await run(exact)).financialComparison.status,'PASS');
++});
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-local.mjs b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+index 088e8c1..10858bb 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+@@ -18,6 +18,7 @@ const publicFailureCodes=new Set(['INVALID_INITIALIZED_SWAP','NOT_FINALIZED','FI
+ for(const code of SWAP_WALLET_FAILURE_CODES)publicFailureCodes.add(code);
+ for(const code of CONTRACT_BALANCE_FAILURE_CODES)publicFailureCodes.add(code);
+ publicFailureCodes.add('AMOUNT_CONTRACT_BALANCES');
++publicFailureCodes.add('NATIVE_FEE_CAP_EXCEEDED');
+ /** Closed public diagnostic shared by the producer and durable launcher boundary. */
+ export function validatePublicDriverFailure(failure){
+   const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};
+diff --git a/experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs b/experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs
+index aaa36ea..fb958df 100644
+--- a/experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/stale-loan-integration.test.mjs
+@@ -85,3 +85,10 @@ for(const mode of ['preflight-fails','existing-output'])test('actual launcher '+
+  const launch=await import('./launch-local.mjs?before-private-'+mode);
+  await assert.rejects(launch.launchLocalFinancialCase(p),e=>e.message===(mode==='preflight-fails'?'PUBLIC_PREFLIGHT_REJECTED':'EXCLUSIVE_OUTPUT_EXISTS'));assert.equal(preflights,1);assert.equal(privateReads,0);assert.equal(mkdirs,mode==='existing-output'?1:0);
+ });
++
++test('historical fee allocations are bound separately from the new allowance',async()=>{
++ const f=staleFixture(),original=f.adapters.createComparator;let args;
++ f.adapters.createComparator=async input=>{args=input;return original(input);};
++ await integrateLocalFinancialCase(f.options);assert.equal(args.dustFeeCap,f.options.limits.dustFee);
++ assert.deepEqual(args.historicalFeeAllocations,[['deploy'],['initialize'],['accrue','settle']].map(stages=>({stages,dustFeeCap:2000000000000000n})));
++});

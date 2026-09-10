@@ -117,7 +117,7 @@ export async function integratePreviewFinancialCase(options){
   const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
   phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
   phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
-  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee}));
   const freshSdk={deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
   phase='driver';driverStarted=true;let driverFailure;
   try{driverResult=await deps.driver({kind,network:'preview',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshSdk,

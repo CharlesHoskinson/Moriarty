@@ -85,3 +85,10 @@ for(const mode of ['preflight-fails','existing-output'])test('actual launcher '+
  const launch=await import('./launch-local.mjs?before-private-'+mode);
  await assert.rejects(launch.launchLocalFinancialCase(p),e=>e.message===(mode==='preflight-fails'?'PUBLIC_PREFLIGHT_REJECTED':'EXCLUSIVE_OUTPUT_EXISTS'));assert.equal(preflights,1);assert.equal(privateReads,0);assert.equal(mkdirs,mode==='existing-output'?1:0);
 });
+
+test('historical fee allocations are bound separately from the new allowance',async()=>{
+ const f=staleFixture(),original=f.adapters.createComparator;let args;
+ f.adapters.createComparator=async input=>{args=input;return original(input);};
+ await integrateLocalFinancialCase(f.options);assert.equal(args.dustFeeCap,f.options.limits.dustFee);
+ assert.deepEqual(args.historicalFeeAllocations,[['deploy'],['initialize'],['accrue','settle']].map(stages=>({stages,dustFeeCap:2000000000000000n})));
+});

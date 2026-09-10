@@ -59,25 +59,12 @@ function publicBindings(kind,roles,networkTag,programDigest,runtime){
  * replay proofs, establish ledger acceptance, or turn synthetic data into such
  * evidence. No role secret or expected financial value is emitted as observation.
  */
-export async function createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap,historicalFeeAllocations=[]}){
+export async function createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion}){
  check(kind==='loan'||kind==='swap','UNKNOWN_FINANCIAL_CASE');
  check(Number.isSafeInteger(expectedProtocolVersion)&&expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
- const validCap=x=>typeof x==='bigint'&&x>=0n&&x<=MAX;
- check(validCap(dustFeeCap),'NATIVE_FEE_CAP_REQUIRED');
  const raw=readFileSync(new URL('./financial-expectations.json',import.meta.url));
  check(createHash('sha256').update(raw).digest('hex')===EXPECTATION_HASH,'EXPECTATION_PIN');
  const expected=JSON.parse(raw).cases[kind];
- // Historical stages retain their original allocation ceilings. Their unused
- // allowance can never fund the current allocation. Copy before the first await.
- check(Array.isArray(historicalFeeAllocations)&&historicalFeeAllocations.length<=4,'HISTORICAL_FEE_ALLOCATIONS');
- const currentBudget={cap:dustFeeCap,spent:0n},stageBudgets=new Map();let prefix=0;
- for(const allocation of historicalFeeAllocations){
-  keys(allocation,['stages','dustFeeCap'],'HISTORICAL_FEE_ALLOCATION');
-  check(validCap(allocation.dustFeeCap)&&Array.isArray(allocation.stages)&&allocation.stages.length>0,'HISTORICAL_FEE_ALLOCATION');
-  const budget={cap:allocation.dustFeeCap,spent:0n};
-  for(const stage of allocation.stages){check(prefix<4&&stage===expected.stageOrder[prefix++],'HISTORICAL_FEE_STAGE_ORDER');stageBudgets.set(stage,budget);}
- }
-
  checkRuntimePins(readFileSync);
  const runtime=await import(pathToFileURL(RUNTIME_ROOT+'/dist/index.js').href);
  const bindings=publicBindings(kind,roles,networkTag,expected.bindingParameters.programDigest,runtime);
@@ -190,10 +177,7 @@ export async function createFinancialComparator({kind,roles,networkTag,expectedP
    check(Array.isArray(tx.actions)&&tx.actions.length===1,'ACTION_COUNT');const a=tx.actions[0];keys(a,deploy?['segment','kind','address']:['segment','kind','address','entryPoint','transcripts'],'ACTION');
    check(Number.isInteger(a.segment)&&a.segment>=0&&a.segment<=65535&&a.address===contractAddress&&a.kind===(deploy?'deploy':'call')&&(deploy||a.entryPoint===stageName),'ACTION_BINDING');
    keys(r.fees,['nativeDebit','indexerReported'],'FEES');keys(r.fees.nativeDebit,['asset','unit','amount'],'NATIVE_FEE');check(r.fees.nativeDebit.asset==='DUST'&&r.fees.nativeDebit.unit==='SPECK','NATIVE_FEE_UNIT');
-   const nativeFee=decimal(r.fees.nativeDebit.amount,'NATIVE_FEE');
-   check(nativeFee===decimal(tx.dustFee,'TX_DUST_FEE'),'NATIVE_FEE_MISMATCH');
-   const feeBudget=stageBudgets.get(stageName)??currentBudget;
-   check(nativeFee<=feeBudget.cap-feeBudget.spent,'NATIVE_FEE_CAP_EXCEEDED');
+   check(decimal(r.fees.nativeDebit.amount,'NATIVE_FEE')===decimal(tx.dustFee,'TX_DUST_FEE'),'NATIVE_FEE_MISMATCH');
    keys(r.fees.indexerReported,['paid','estimated','sourceUnitLabel','encoding','nativeDebitRelationship'],'INDEXER_FEES');const indexer=r.fees.indexerReported;
    decimal(indexer.paid,'INDEXER_PAID');decimal(indexer.estimated,'INDEXER_ESTIMATED');check(indexer.sourceUnitLabel==='DUST'&&indexer.encoding==='unresolved'&&indexer.nativeDebitRelationship==='unresolved','INDEXER_FEE_ENCODING');
    compareState(observation.state,e,deploy);
@@ -201,7 +185,6 @@ export async function createFinancialComparator({kind,roles,networkTag,expectedP
    equalAmounts(actualBalances,Object.fromEntries(Object.entries(e.contractReserves).map(([asset,n])=>[colors[asset],BigInt(n)])),'CONTRACT_BALANCES');
    const native=nativeEffects(a,e),io=financialIo(tx,e,actualBalances,native);
    const summary={status:'PASS',kind,stage:stageName,publicState:projectPublicState(observation.state),nativeEffects:projectNativeEffects(native),txId:r.txId,contractAddress,blockHash:r.blockHash,blockHeight:r.blockHeight,grossByAsset:strings(io.gross),participantNetDeltas:io.participantNetDeltas,contractBalances:strings(actualBalances),nativeFee:structuredClone(r.fees.nativeDebit),indexerFees:structuredClone(indexer),scope:'Exact fixed financial trace comparison over supplied finalized observations; no proof or network acceptance',networkAcceptance:false,proofAcceptance:false};
-   feeBudget.spent+=nativeFee;
    txIds.add(r.txId);txHashes.add(tx.transactionHash);rawHashes.add(tx.rawSha256);tx.identifiers.forEach(x=>identifiers.add(x));io.newInputs.forEach(x=>spentInputs.add(x));previousBalances=actualBalances;previousHeight=r.blockHeight;position++;summaries.push(summary);
    return structuredClone(summary);
   }catch(error){stopped=true;throw error;}
