@@ -1,0 +1,101 @@
+{
+  "scope": "Independent handwritten derivations from candidate02 rules, specified-only. These are not captured Core executions or full serialization fixtures. Each premise assumes other closed-schema, byte/node/depth, span and work prerequisites are valid unless explicitly varied.",
+  "cases": [
+    {
+      "id": "require-after-ensure",
+      "term": "Ensure(LitBool(true));Require(LitBool(true))",
+      "expected": "TYPE_STATEMENT_PLACEMENT; workUsed 0",
+      "reason": "S0 action grammar and Require signature forbid an ordinary statement after the suffix begins."
+    },
+    {
+      "id": "duplicate-before-child",
+      "term": "R={x:UInt128,y:Bool}; ConstructRecord(R,[(x,ReadLocal(missing)),(x,LitUInt(128,0))])",
+      "expected": "TYPE_DUPLICATE_FIELD; workUsed 0",
+      "reason": "Resolve R, scan duplicates before coverage and child typing; the missing local cannot win."
+    },
+    {
+      "id": "coverage-before-child",
+      "term": "R={x:UInt128,y:Bool}; ConstructRecord(R,[(x,ReadLocal(missing))])",
+      "expected": "TYPE_RECORD_FIELDS; workUsed 0",
+      "reason": "After duplicate scan, missing y precedes child name resolution."
+    },
+    {
+      "id": "input-shape-before-domain",
+      "term": "Valid typed empty action; Pre.a:UInt64 has canonical string 18446744073709551616; Pre.b:Bool has a string true",
+      "expected": "INPUT_SCHEMA; workUsed 0",
+      "reason": "S0 snapshot shape stage precedes mathematical domains; b is wrong scalar kind. No runtime evaluation."
+    },
+    {
+      "id": "static-before-input-domain",
+      "term": "Well-shaped and bounded Pre.x:UInt64 has canonical string 18446744073709551616; action Require(LitUInt(128,1))",
+      "expected": "TYPE_MISMATCH; workUsed 0",
+      "reason": "Whole-action typing is before typed snapshot mathematical domains."
+    },
+    {
+      "id": "unknown-vs-unit-annotation",
+      "term": "ConstructNone([Mystery]) versus ConstructNone([Unit])",
+      "expected": "INPUT_SCHEMA versus TYPE_NAME; workUsed 0",
+      "reason": "Unknown tag is not a recognized tree. Unit is a recognized annotation but not a value type; no W(Unit,a) measurement occurs."
+    },
+    {
+      "id": "zero-work",
+      "term": "Require(LitBool(true)), workInitial=0",
+      "expected": "WORK_EXHAUSTED; workUsed 0; statement path [0]",
+      "reason": "Cannot enter Require, so its child is not entered."
+    },
+    {
+      "id": "exact-work",
+      "term": "Require(LitBool(true)), workInitial=2; empty valid Pre",
+      "expected": "ExpressionPrepared with empty post/descriptors and workRemaining 0",
+      "reason": "Root and literal cost two; successful finalization has no extra node charge."
+    },
+    {
+      "id": "strict-or",
+      "term": "Or(LitBool(true),Eq(FloorDiv(LitUInt(128,1),LitUInt(128,0)),LitUInt(128,0)))",
+      "expected": "ARITH_DENOMINATOR; workUsed 6; fragment path [1,0]",
+      "reason": "Or, left literal, Eq, division and two division literals enter before failure; no short circuit."
+    },
+    {
+      "id": "empty-index",
+      "term": "AccessIndex(ReadArg(xs),LitUInt(64,0)); xs:Collection<UInt128,128>=[]",
+      "expected": "INDEX_RANGE; workUsed 3",
+      "reason": "Capacity 128 does not create any actual element; alias has the same charge as ProjectIndex."
+    },
+    {
+      "id": "descriptor-129",
+      "term": "129 Emit(O,ReadArg(fields)) statements; tiny valid record and sufficient work",
+      "expected": "DESCRIPTOR_BOUND at statement index128; workUsed 258",
+      "reason": "Each Emit and ReadArg costs two; count exceeds128 even though tiny descriptor bytes/nodes fit. No financial effects or published result."
+    },
+    {
+      "id": "depth-local",
+      "term": "Admitted internal local x with 64 value levels; ConstructSome(T,ReadLocal(x))",
+      "expected": "VALUE_BOUND at Some; fragment workUsed 2",
+      "reason": "Value depth becomes65. A value of depth64 is not an admissible top-level snapshot field because the snapshot root would make65; the local-context premise is deliberate."
+    },
+    {
+      "id": "cancelled-undeclared-unit",
+      "term": "Quantity operand mentions Ghost with nonzero exponent; division would cancel Ghost",
+      "expected": "TYPE_NAME before derived normalization; workUsed 0",
+      "reason": "Operand symbol lookup occurs before cancellation, so undeclared units cannot disappear through arithmetic."
+    },
+    {
+      "id": "source-synthetic",
+      "term": "Synthetic span start=end=1 on otherwise valid Core",
+      "expected": "INPUT_SPAN; workUsed 0",
+      "reason": "Synthetic spans must be exactly zero even when offsets are ordered."
+    },
+    {
+      "id": "quantity-unit-overflow",
+      "term": "Mul quantities whose shared unit exponent is127 and1, each valid operand",
+      "expected": "TYPE_QUANTITY_DOMAIN; workUsed 0",
+      "reason": "Result exponent128 violates static unit bounds, even if mantissa product is zero."
+    },
+    {
+      "id": "equality-nominal",
+      "term": "Eq on identical record payloads with distinct Record<R> and Record<S> types",
+      "expected": "TYPE_MISMATCH; workUsed 0",
+      "reason": "Structural equality requires exact nominal type first; equal field payloads do not erase identity."
+    }
+  ]
+}
