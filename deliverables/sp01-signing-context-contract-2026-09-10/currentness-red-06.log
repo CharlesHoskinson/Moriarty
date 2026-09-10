@@ -1,0 +1,90 @@
+test_reserved_duty_survives_split_join (__main__.BackingHistory.test_reserved_duty_survives_split_join) ... ok
+test_empty_graph_root_must_be_available (__main__.CurrentnessBoundary.test_empty_graph_root_must_be_available) ... FAIL
+test_final_join_output_cannot_be_reported_current_when_consumed (__main__.CurrentnessBoundary.test_final_join_output_cannot_be_reported_current_when_consumed) ... FAIL
+test_foreign_consumption_does_not_reject_available_history (__main__.CurrentnessBoundary.test_foreign_consumption_does_not_reject_available_history) ... ok
+test_seed_currentness_precedes_graph_financial_derivation (__main__.CurrentnessBoundary.test_seed_currentness_precedes_graph_financial_derivation) ... FAIL
+test_seed_head_must_be_available_before_import (__main__.CurrentnessBoundary.test_seed_head_must_be_available_before_import) ... FAIL
+test_untouched_sibling_must_be_available (__main__.CurrentnessBoundary.test_untouched_sibling_must_be_available) ... FAIL
+test_bound_occurrences_independent_branches (__main__.ExactBranches.test_bound_occurrences_independent_branches) ... ok
+test_terminal_seed_cannot_split (__main__.ExactBranches.test_terminal_seed_cannot_split) ... ok
+test_action_cannot_spend_sibling (__main__.Histories.test_action_cannot_spend_sibling) ... ok
+test_actual_split_independent_actions_join (__main__.Histories.test_actual_split_independent_actions_join) ... ok
+test_cloned_work_and_caps (__main__.Histories.test_cloned_work_and_caps) ... ok
+test_consumed_predecessor (__main__.Histories.test_consumed_predecessor) ... ok
+test_debt_cannot_be_dropped (__main__.Histories.test_debt_cannot_be_dropped) ... ok
+test_duplicate_branch (__main__.Histories.test_duplicate_branch) ... ok
+test_no_implicit_composition_authority (__main__.Histories.test_no_implicit_composition_authority) ... ok
+test_origin_and_profile_not_replaceable (__main__.Histories.test_origin_and_profile_not_replaceable) ... ok
+test_overlapping_account_and_backing (__main__.Histories.test_overlapping_account_and_backing) ... ok
+test_prefix_counted_twice (__main__.Histories.test_prefix_counted_twice) ... ok
+test_prior_prefix_is_linked_not_supplied (__main__.Histories.test_prior_prefix_is_linked_not_supplied) ... ok
+test_retired_work_not_restored (__main__.Histories.test_retired_work_not_restored) ... ok
+test_wrong_charge (__main__.Histories.test_wrong_charge) ... ok
+
+======================================================================
+FAIL: test_empty_graph_root_must_be_available (__main__.CurrentnessBoundary.test_empty_graph_root_must_be_available)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 103, in test_empty_graph_root_must_be_available
+    g=fixture();g['nodes']=[];g['current']=[{'node':B.digest('root',g['seed']),'output':'0'}];ctx=context(g);self.assertEqual(B.validate(g,ctx)['status'],'SOURCE_GRAPH_VALID');ctx['consumedOutputs'].add(B.refkey(g['current'][0]));self.expect(g,ctx,'CURRENTNESS')
+                                                                                                                                                                                                                                      ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 95, in expect
+    def expect(self,g,ctx,code):self.assertEqual(B.validate(g,ctx).get('firstPredicate'),code)
+                                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'CURRENTNESS'
+
+======================================================================
+FAIL: test_final_join_output_cannot_be_reported_current_when_consumed (__main__.CurrentnessBoundary.test_final_join_output_cannot_be_reported_current_when_consumed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 101, in test_final_join_output_cannot_be_reported_current_when_consumed
+    g=fixture();ctx=context(g);ctx['consumedOutputs'].add(B.refkey(g['current'][0]));self.expect(g,ctx,'CURRENTNESS')
+                                                                                     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 95, in expect
+    def expect(self,g,ctx,code):self.assertEqual(B.validate(g,ctx).get('firstPredicate'),code)
+                                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'CURRENTNESS'
+
+======================================================================
+FAIL: test_seed_currentness_precedes_graph_financial_derivation (__main__.CurrentnessBoundary.test_seed_currentness_precedes_graph_financial_derivation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 99, in test_seed_currentness_precedes_graph_financial_derivation
+    g=fixture();ctx=context(g);ctx['base']['consumed'].add(g['seed']['steps'][-1]['stateHash']);g['nodes'][0]['outputs'][0]['state']['balances']['alice.A']='99';reseal(g);self.expect(g,ctx,'SEED_CURRENTNESS')
+                                                                                                                                                                           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 95, in expect
+    def expect(self,g,ctx,code):self.assertEqual(B.validate(g,ctx).get('firstPredicate'),code)
+                                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'OUTPUT_RELATION' != 'SEED_CURRENTNESS'
+- OUTPUT_RELATION
++ SEED_CURRENTNESS
+
+
+======================================================================
+FAIL: test_seed_head_must_be_available_before_import (__main__.CurrentnessBoundary.test_seed_head_must_be_available_before_import)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 97, in test_seed_head_must_be_available_before_import
+    g=fixture();ctx=context(g);self.assertEqual(B.validate(g,ctx)['status'],'SOURCE_GRAPH_VALID');ctx['base']['consumed'].add(g['seed']['steps'][-1]['stateHash']);self.expect(g,ctx,'SEED_CURRENTNESS')
+                                                                                                                                                                   ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 95, in expect
+    def expect(self,g,ctx,code):self.assertEqual(B.validate(g,ctx).get('firstPredicate'),code)
+                                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'SEED_CURRENTNESS'
+
+======================================================================
+FAIL: test_untouched_sibling_must_be_available (__main__.CurrentnessBoundary.test_untouched_sibling_must_be_available)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 105, in test_untouched_sibling_must_be_available
+    g=fixture();split,left=g['nodes'][:2];g['nodes']=[split,left];g['current']=sorted([ref(left),ref(split,1)],key=lambda x:(x['node'],int(x['output'])));ctx=context(g);self.assertEqual(B.validate(g,ctx)['status'],'SOURCE_GRAPH_VALID');ctx['consumedOutputs'].add(B.refkey(ref(split,1)));self.expect(g,ctx,'CURRENTNESS')
+                                                                                                                                                                                                                                                                                               ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp01-expression-contract/deliverables/sp01-signing-context-contract-2026-09-10/branch-checker-06.test.py", line 95, in expect
+    def expect(self,g,ctx,code):self.assertEqual(B.validate(g,ctx).get('firstPredicate'),code)
+                                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: None != 'CURRENTNESS'
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.208s
+
+FAILED (failures=5)

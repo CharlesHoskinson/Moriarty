@@ -1,0 +1,613 @@
+{
+  "status": "SPECIFIED_ONLY_NO_CONTEXTUAL_VALIDATOR",
+  "numericScope": "small exact integers in abstract named asset quanta; NOT current wire/SDK fixtures",
+  "histories": [
+    {
+      "id": "H-LOAN",
+      "scope": "separate fully funded loan genesis and repayment; abstract units USD, no rate convention assumed",
+      "declaredFields": [
+        "alive",
+        "loan01"
+      ],
+      "genesisInputs": [
+        {
+          "id": "fund-L",
+          "owner": "lender",
+          "asset": "USD",
+          "amount": 100
+        }
+      ],
+      "authority": {
+        "debtor": "borrower",
+        "creditor": "lender",
+        "obligation": "Loan01",
+        "creationCap": 100,
+        "additionCap": 110,
+        "outstandingCap": 110,
+        "borrowerGrossRepaymentCap": 110
+      },
+      "states": [
+        {
+          "id": "L0",
+          "predecessor": null,
+          "balances": {
+            "lender.USD": 100,
+            "borrower.USD": 0
+          },
+          "debt": {
+            "created": 0,
+            "accrued": 0,
+            "repaid": 0,
+            "writtenOff": 0,
+            "credited": 0,
+            "outstanding": 0
+          },
+          "work": [
+            20,
+            4
+          ]
+        },
+        {
+          "id": "L1",
+          "predecessor": "L0",
+          "effects": [
+            [
+              "Transfer",
+              "lender",
+              "borrower",
+              "USD",
+              100
+            ],
+            [
+              "CreateDebt",
+              "Loan01",
+              100
+            ]
+          ],
+          "balances": {
+            "lender.USD": 0,
+            "borrower.USD": 100
+          },
+          "debt": {
+            "created": 100,
+            "accrued": 0,
+            "repaid": 0,
+            "writtenOff": 0,
+            "credited": 0,
+            "outstanding": 100
+          },
+          "work": [
+            17,
+            4
+          ],
+          "illustrativeCharge": 3
+        },
+        {
+          "id": "L2",
+          "predecessor": "L1",
+          "effects": [
+            [
+              "AuthorizedAccrual",
+              "Loan01",
+              10
+            ]
+          ],
+          "balances": {
+            "lender.USD": 0,
+            "borrower.USD": 100
+          },
+          "debt": {
+            "created": 100,
+            "accrued": 10,
+            "repaid": 0,
+            "writtenOff": 0,
+            "credited": 0,
+            "outstanding": 110
+          },
+          "work": [
+            15,
+            4
+          ],
+          "illustrativeCharge": 2
+        },
+        {
+          "id": "L3",
+          "predecessor": "L2",
+          "effects": [
+            [
+              "Transfer",
+              "borrower",
+              "lender",
+              "USD",
+              60
+            ],
+            [
+              "RepayDebt",
+              "Loan01",
+              60
+            ]
+          ],
+          "balances": {
+            "lender.USD": 60,
+            "borrower.USD": 40
+          },
+          "debt": {
+            "created": 100,
+            "accrued": 10,
+            "repaid": 60,
+            "writtenOff": 0,
+            "credited": 0,
+            "outstanding": 50
+          },
+          "work": [
+            12,
+            4
+          ],
+          "illustrativeCharge": 3,
+          "borrowerGrossConsumed": 60,
+          "borrowerGrossRemaining": 50
+        }
+      ],
+      "expected": "Duty50 survives; token total100 unchanged. Loan genesis cannot reference swap declaration."
+    },
+    {
+      "id": "H-SWAP-CANCEL",
+      "scope": "separate swap genesis, partial fill and escrow-backed cancellation; fixed quantities, not an AMM formula claim",
+      "declaredFields": [
+        "alive",
+        "trader_a",
+        "pool_a",
+        "pool_b",
+        "trader_b"
+      ],
+      "genesisInputs": [
+        {
+          "id": "fund-TA",
+          "owner": "trader",
+          "asset": "A",
+          "amount": 100000
+        },
+        {
+          "id": "fund-PA",
+          "owner": "pool",
+          "asset": "A",
+          "amount": 1000000
+        },
+        {
+          "id": "fund-PB",
+          "owner": "pool",
+          "asset": "B",
+          "amount": 2000000
+        }
+      ],
+      "authority": {
+        "traderGrossCapA": 10000,
+        "traderFeeCapB": 30,
+        "traderNetGoalB": 19743,
+        "poolGrossCapB": 19773,
+        "allowedPayerB": "pool",
+        "allowedRecipientB": "trader",
+        "cancelPolicy": "retain-reserved-duty",
+        "feeRecipient": "feeSink"
+      },
+      "states": [
+        {
+          "id": "S0",
+          "predecessor": null,
+          "balances": {
+            "trader.A": 100000,
+            "pool.A": 1000000,
+            "trader.B": 0,
+            "pool.B": 2000000,
+            "feeSink.B": 0
+          },
+          "remainingWork": [
+            20,
+            4
+          ],
+          "request": "Pending",
+          "traderGrossA": 0,
+          "traderReceiptsB": 0,
+          "traderFeesB": 0,
+          "traderNetB": 0
+        },
+        {
+          "id": "S1",
+          "predecessor": "S0",
+          "effects": [
+            [
+              "Transfer",
+              "trader",
+              "pool",
+              "A",
+              10000
+            ],
+            [
+              "Transfer",
+              "pool",
+              "trader",
+              "B",
+              19743
+            ],
+            [
+              "Fee",
+              "trader",
+              "feeSink",
+              "B",
+              30
+            ]
+          ],
+          "balances": {
+            "trader.A": 90000,
+            "pool.A": 1010000,
+            "trader.B": 19713,
+            "pool.B": 1980257,
+            "feeSink.B": 30
+          },
+          "remainingWork": [
+            16,
+            4
+          ],
+          "illustrativeCharge": 4,
+          "request": "PartialGoalPending",
+          "traderGrossA": 10000,
+          "traderReceiptsB": 19743,
+          "traderFeesB": 30,
+          "traderNetB": 19713,
+          "poolGrossRemainingB": 30
+        },
+        {
+          "id": "S2",
+          "predecessor": "S1",
+          "effects": [
+            [
+              "ReserveDuty",
+              "pool",
+              "trader",
+              "B",
+              30,
+              "reserve-C"
+            ]
+          ],
+          "balances": {
+            "trader.A": 90000,
+            "pool.A": 1010000,
+            "trader.B": 19713,
+            "pool.B": 1980257,
+            "feeSink.B": 30
+          },
+          "poolFreeB": 1980227,
+          "poolReservedB": 30,
+          "remainingWork": [
+            16,
+            3
+          ],
+          "illustrativeRecoveryCharge": 1,
+          "request": "CancelledWithDuty",
+          "duty": {
+            "id": "duty-C",
+            "debtor": "pool",
+            "creditor": "trader",
+            "asset": "B",
+            "amount": 30,
+            "reservation": "reserve-C"
+          },
+          "traderGrossA": 10000,
+          "traderReceiptsB": 19743,
+          "traderFeesB": 30,
+          "traderNetB": 19713,
+          "poolGrossRemainingB": 30
+        }
+      ],
+      "expected": "No terminal net-goal success at S1; explicit pending residual is required. Cancel preserves a funded30 duty and historical caps; balance reservation is not another transfer."
+    },
+    {
+      "id": "H-REFUND",
+      "authority": {
+        "grossCap": 100,
+        "feeCap": 5
+      },
+      "steps": [
+        {
+          "debit": 60,
+          "refund": 0,
+          "fee": 0,
+          "grossConsumed": 60,
+          "remainingGross": 40,
+          "walletDelta": -60
+        },
+        {
+          "debit": 0,
+          "refund": 20,
+          "fee": 0,
+          "grossConsumed": 60,
+          "remainingGross": 40,
+          "walletDelta": -40
+        },
+        {
+          "debit": 40,
+          "refund": 0,
+          "fee": 5,
+          "grossConsumed": 100,
+          "remainingGross": 0,
+          "walletDelta": -85
+        }
+      ],
+      "expected": "Next debit1 rejects even after refund20; next fee1 rejects fee cap."
+    },
+    {
+      "id": "H-PARTITION",
+      "scope": "abstract same-origin disjoint continuation partition; not a composition proof",
+      "parent": {
+        "ordinary": 12,
+        "recovery": 4,
+        "grossRemaining": 40,
+        "sharedPrefixGross": 60,
+        "duty": 50
+      },
+      "splitCharge": 2,
+      "children": [
+        {
+          "id": "left",
+          "ordinary": 6,
+          "recovery": 1,
+          "grossRemaining": 25,
+          "duty": 50
+        },
+        {
+          "id": "right",
+          "ordinary": 4,
+          "recovery": 3,
+          "grossRemaining": 15,
+          "duty": 0
+        }
+      ],
+      "branchSteps": [
+        {
+          "id": "left",
+          "ordinaryCharge": 1,
+          "newGross": 10
+        },
+        {
+          "id": "right",
+          "ordinaryCharge": 1,
+          "newGross": 5
+        }
+      ],
+      "joinCharge": 1,
+      "joined": {
+        "ordinary": 7,
+        "recovery": 4,
+        "grossRemaining": 25,
+        "cumulativeGross": 75,
+        "duty": 50
+      },
+      "expected": "Prefix60 counted once, branch delta15 once; one duty owner, distinct consumed siblings."
+    },
+    {
+      "id": "H-RACE-MIGRATION",
+      "scope": "abstract registry inputs are assumed, not authenticated evidence",
+      "start": {
+        "current": "r0",
+        "spent": [],
+        "work": 6,
+        "grossConsumed": 60,
+        "remainingGross": 40,
+        "duty": 50
+      },
+      "winner": {
+        "operation": "fill",
+        "consumes": "r0",
+        "produces": "r1",
+        "work": 5,
+        "grossConsumed": 70,
+        "remainingGross": 30,
+        "duty": 50
+      },
+      "staleCancel": {
+        "consumes": "r0",
+        "expectedPredicate": "CURRENTNESS"
+      },
+      "migration": {
+        "consumes": "r1",
+        "produces": "r2",
+        "work": 4,
+        "grossConsumed": 70,
+        "remainingGross": 30,
+        "duty": 50,
+        "spent": [
+          "r0",
+          "r1"
+        ]
+      },
+      "expected": "After migration, r0 and r1 stay spent. Cancellation retry requires a new current permitted plan, not replay."
+    }
+  ],
+  "negativeCases": [
+    {
+      "id": "N-META",
+      "finding": "C04-F2",
+      "positiveSibling": "valid typed debt_id/qty arguments",
+      "mutation": "reverse binding array order",
+      "independentExpected": "metadata remains obligation identity; exact bytes/digest change",
+      "targetPredicate": "DISPLAY_METADATA"
+    },
+    {
+      "id": "N-LOAN-DECL",
+      "finding": "C04-F3",
+      "positiveSibling": "H-LOAN L0\u2192L1",
+      "mutation": "use swap declaredFields",
+      "independentExpected": "loan01 undeclared; exact declaration coverage fails",
+      "targetPredicate": "DECLARATION"
+    },
+    {
+      "id": "N-FUND",
+      "finding": "C04-F3",
+      "positiveSibling": "H-LOAN L0\u2192L1",
+      "mutation": "remove fund-L input but retain100 outgoing value",
+      "independentExpected": "100 value has no admitted source",
+      "targetPredicate": "FUNDING"
+    },
+    {
+      "id": "N-ORIGIN",
+      "finding": "C04-F3",
+      "positiveSibling": "H-LOAN L0\u2192L1",
+      "mutation": "omit original loan authorization preimage",
+      "independentExpected": "missing body fails before debt or work checks",
+      "targetPredicate": "PREIMAGE"
+    },
+    {
+      "id": "N-GROSS",
+      "finding": "C04-F6",
+      "positiveSibling": "H-REFUND",
+      "mutation": "debit41 instead of40 in third step",
+      "independentExpected": "cumulative101>100 despite refund20",
+      "targetPredicate": "GROSS_CAP"
+    },
+    {
+      "id": "N-FEE",
+      "finding": "C04-F6",
+      "positiveSibling": "H-REFUND",
+      "mutation": "fee6 instead of5 in third step",
+      "independentExpected": "cumulative6>5",
+      "targetPredicate": "FEE_CAP"
+    },
+    {
+      "id": "N-DEBT",
+      "finding": "C04-F6",
+      "positiveSibling": "H-LOAN L2\u2192L3",
+      "mutation": "set post outstanding1",
+      "independentExpected": "110-60=50, not1",
+      "targetPredicate": "DEBT_CONSERVATION"
+    },
+    {
+      "id": "N-FRAME",
+      "finding": "C04-F6",
+      "positiveSibling": "H-LOAN L2\u2192L3",
+      "mutation": "set borrower balance41 without effect",
+      "independentExpected": "cash101 instead of100",
+      "targetPredicate": "FINANCIAL_FRAME"
+    },
+    {
+      "id": "N-NET",
+      "finding": "C04-F4",
+      "positiveSibling": "H-SWAP-CANCEL S0\u2192S1",
+      "mutation": "claim terminal Complete instead of pending goal",
+      "independentExpected": "19743-30=19713<19743",
+      "targetPredicate": "NET_GOAL"
+    },
+    {
+      "id": "N-BACKING",
+      "finding": "C04-F4",
+      "positiveSibling": "H-SWAP-CANCEL S1\u2192S2",
+      "mutation": "make free authorized B backing29 before cancel via separately admitted reservation of1980228",
+      "independentExpected": "30 duty cannot reserve from29; rebuild that predecessor history",
+      "targetPredicate": "DUTY_BACKING"
+    },
+    {
+      "id": "N-DOUBLE-BACKING",
+      "finding": "C04-F4",
+      "positiveSibling": "H-SWAP-CANCEL S1\u2192S2",
+      "mutation": "same reserve-C assigned to second30 duty",
+      "independentExpected": "one reservation cannot secure two independent30 claims",
+      "targetPredicate": "BACKING_UNIQUENESS"
+    },
+    {
+      "id": "N-PAYER",
+      "finding": "C04-F4",
+      "positiveSibling": "H-SWAP-CANCEL S1\u2192S2",
+      "mutation": "change duty debtor from pool to trader",
+      "independentExpected": "recipient has no assumed obligation to owe itself the deficit",
+      "targetPredicate": "DUTY_AUTHORITY"
+    },
+    {
+      "id": "N-WORK",
+      "finding": "C04-F5",
+      "positiveSibling": "H-PARTITION",
+      "mutation": "certificate claims splitCharge0 when fixed illustrative charge2",
+      "independentExpected": "derive2; aftercharge remaining10 not12",
+      "targetPredicate": "WORK_DERIVATION"
+    },
+    {
+      "id": "N-CLONE",
+      "finding": "C04-F5",
+      "positiveSibling": "H-PARTITION",
+      "mutation": "give both children ordinary12 recovery4 gross40",
+      "independentExpected": "ordinary24>10 recovery8>4 gross80>40",
+      "targetPredicate": "PARTITION"
+    },
+    {
+      "id": "N-JOIN",
+      "finding": "C04-F5",
+      "positiveSibling": "H-PARTITION",
+      "mutation": "join left twice",
+      "independentExpected": "duplicate consumed identity rejects before summation",
+      "targetPredicate": "PREDECESSOR_UNIQUENESS"
+    },
+    {
+      "id": "N-CANCEL-RACE",
+      "finding": "C04-F6",
+      "positiveSibling": "H-RACE-MIGRATION",
+      "mutation": "submit staleCancel after winner",
+      "independentExpected": "r0 consumed, later financial predicates not reached",
+      "targetPredicate": "CURRENTNESS"
+    },
+    {
+      "id": "N-MIGRATE-REPLAY",
+      "finding": "C04-F6",
+      "positiveSibling": "H-RACE-MIGRATION",
+      "mutation": "migration clears spent r0",
+      "independentExpected": "migration cannot resurrect a spent predecessor",
+      "targetPredicate": "HISTORY_PRESERVATION"
+    },
+    {
+      "id": "N-MIGRATE-WORK",
+      "finding": "C04-F5",
+      "positiveSibling": "H-RACE-MIGRATION",
+      "mutation": "r2 work6 rather than4",
+      "independentExpected": "current5 minus1=4, not genesis6",
+      "targetPredicate": "WORK_CONSERVATION"
+    },
+    {
+      "id": "N-EXACT",
+      "finding": "C04-F6",
+      "positiveSibling": "exact receiving-output19743 plan",
+      "mutation": "deliver19744 and rebuild post/effects",
+      "independentExpected": "exact rejects; otherwise identical AtLeast19743 permits",
+      "targetPredicate": "INTENT_REFINEMENT"
+    },
+    {
+      "id": "N-INPUT-FEE",
+      "finding": "C04-F6",
+      "positiveSibling": "admitted fee-only action with input-asset net goal0",
+      "mutation": "zero eligible receipts, authorized fee30",
+      "independentExpected": "net=-30<0; action must be authorized first",
+      "targetPredicate": "NET_GOAL"
+    },
+    {
+      "id": "N-EXPIRED",
+      "finding": "C04-F6",
+      "positiveSibling": "valid registry window[100,200),now199",
+      "mutation": "advance assumed authenticated now to200",
+      "independentExpected": "consistent expired window; not an inverted interval",
+      "targetPredicate": "ACTIVATION"
+    },
+    {
+      "id": "N-REVOKED",
+      "finding": "C04-F6",
+      "positiveSibling": "valid current registry entry/key",
+      "mutation": "mark same entry revoked with fresh registry witness",
+      "independentExpected": "cryptographic validity cannot override current revocation",
+      "targetPredicate": "ACTIVATION"
+    },
+    {
+      "id": "N-LABEL",
+      "finding": "C04-F6",
+      "positiveSibling": "any complete positive sibling",
+      "mutation": "add intendedFailureStage=currentness without changing inputs",
+      "independentExpected": "computed result remains positive; label is not validator input",
+      "targetPredicate": "LABEL_IGNORED"
+    }
+  ],
+  "fixtureImplementationObligation": "Rebuild full dependent canonical preimages and supply all earlier valid predicates before claiming isolated rejection; these abstract cases do not implement that validator."
+}
