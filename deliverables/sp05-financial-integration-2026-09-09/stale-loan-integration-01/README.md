@@ -1,0 +1,29 @@
+# Fixed stale-loan operational integration — source candidate
+
+Base68c6d9a. This source increment adds the exclusive existingStaleLoan mode to the existing launch-local entry and integrateLocalFinancialCase. Wallet bootstrap, identity/HD checks, tip guard, public submission capture, guarded providers and cleanup remain shared. No live campaign, private input, proof, compiler, service start or transaction submission was run. Resource/command drafts live separately under local-stale-loan-01 and require both source/resource reviews and an explicit new admission.
+
+The fixed plan binds original wallet/roles/recovered03 store/password, full build, four historical native transactions, reviewed prior result and exact settled source state. It allows one new submission, zero USD gross debit and at most1e15 SPECK DUST, with new output/snapshot/inspection paths. Actual launcher public preflight and exclusive output mkdir/fsync happen before role/password/saved-wallet/seed reads. Existing output fails before any such read. No old deploy, initialize, accrue or settle call is replayed.
+
+Public preflight reobserves all four historical transactions through the existing canonical receipt observer and matches exact native raw hashes, then captures fresh full finalized loan state. The existing native financial comparator independently rechecks those observations against original role capabilities before wallet/store gates. Wallet synchronization checks all four historical DUST nullifiers and spent unshielded inputs; it does not demand the initialized minted output still be spendable after settle. Snapshot+inspection preservation precedes private provider construction. Original initialized private/key check is retained in the prepared stale helper.
+
+Only the stale helper runs after those gates: actual current queried SDK Zswap/parameters plus retained initialized contract state, normal proof/balance/issued-ticket submission, durable exact public candidate and outcome callbacks, post-terminal barrier and later full finalized after-state. Native candidate projection is redecoded from exact raw bytes before retaining, rejecting nested private SDK material. Final adverse snapshots must match the pinned public full state/decoded shape (including zero USD entry); diagnostics, fee accounting and reservation fields are closed. Bigints/byte fields are projected to public JSON. No private raw SDK data, password, signing material or arbitrary cause object is written.
+
+A live PASS additionally requires helper nonmutation true, node rejection true, full native hash/byte equality, later-than-terminal barrier, zero setup/provider/cleanup pending operations and independently established cleanup. Existing provider cleanup reports containmentComplete false, so actual inner INCOMPLETE remains retained for separate outer containment review; it is not silently promoted. Source adapters can only return SOURCE_TEST_ONLY.
+
+## Typed RPC pool rejection extension
+
+The new checkout extends accepted helper02 narrowly: actual node-client SubmissionError with exact submitted txData and an actual RpcError code1010 can establish NODE_RPC_INVALID_TRANSACTION after the existing exact capabilities/Effect wrappers. The retained Polkadot SDK registry at660acefe… maps AUTHOR1000+POOL_INVALID_TX10 to invalid pool transaction, and distinguishes unknown validity1011. This is a trusted-node mapping assumption; the deployed image's implementation correspondence is not established by the source study. It does not identify the stale subtype, paid fee or included rollback. Invalid watch status remains supported. Code1011, a fake RpcError-shaped object, transport failures, wrong bytes and wrong phase remain unknown. Old helper02 files/evidence in the audited checkout remain unchanged.
+
+## Meaningful checks
+
+From experiments/moriarty-midnight-financial:
+
+`MORIARTY_LOAN_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/loan-output/build/build-receipt.json node --experimental-test-module-mocks --test ledger/stale-loan-*.test.mjs ledger/provider-positive-fee.test.mjs ledger/integrate-local.test.mjs ledger/launch-local.test.mjs ledger/initialized-swap-integration.test.mjs`
+
+focused-final-02.tap:144PASS,0fail,0skip. This includes unchanged loan/swap/launcher regressions, strict plan10tests, public native-state gate controls, actual integration dispatch/order and failing gates, actual launcher pre-private stopping, exclusive/fsynced public writer and nested-private/accessor/reuse controls, positive native fee provider control, actual generated/SDK synthetic capability preparation, and actual default submission-service/node-client controlled API classification. Public preflight tests use the actual bounded RPC/native snapshot reader and exact retained raw histories but a controlled historical observer; existing receipt observer tests remain its evidence. No controlled transport test is an actual node acceptance result.
+
+Initial combined regression exposed eager SDK imports violating the existing import-only launcher contract; the new helper/native reader are now lazy-loaded. Its failed log is retained. The initial builtin-FS module mock failed to redefine a readonly constant; the corrected launcher boundary test uses supported method mocking and syncBuiltinESMExports. These fixture failures are preserved, not promoted to production failures. RPC1010 extension has an actual connected fail-first RED and five-case GREEN.
+
+## Remaining gates
+
+Freeze the matching concrete one-shot resource/command proposal, obtain both actual candidate-bound source/resource votes, then admit exactly one operation. Independent outer systemd/Docker containment and all old ten reservations/3000000000000010 SPECK, probe runtimes/reviews and other historical charges remain separate and consumed. No allocation reset or automatic retry. Preview and the remaining SP05 obligations stay open.

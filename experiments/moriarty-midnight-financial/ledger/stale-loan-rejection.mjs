@@ -34,6 +34,9 @@ export function classifyStaleLoanFailure(error,phase,submittedBytes){
  if(failure instanceof WalletSubmissionError)failure=failure.cause;
  if(phase==='submit'&&failure instanceof TransactionInvalidError&&submittedBytes instanceof Uint8Array&&submittedBytes.length>0&&failure.txData instanceof Uint8Array&&Buffer.from(failure.txData).equals(Buffer.from(submittedBytes)))return Object.freeze({status:'NODE_REJECTED',phase,code:'NODE_TRANSACTION_INVALID',nodeRejectionEstablished:true,stalePredicateEstablished:false});
  const rpcCode=phase==='submit'&&failure instanceof SubmissionError&&failure.txData instanceof Uint8Array&&submittedBytes instanceof Uint8Array&&Buffer.from(failure.txData).equals(Buffer.from(submittedBytes))&&failure.cause instanceof RpcError&&failure.cause.code===1010?1010:undefined;
+ // Trusted local node author-RPC mapping: AUTHOR1000 + POOL_INVALID_TX10.
+ // This identifies pool invalidity, not its subtype, paid fee or included rollback.
+ if(rpcCode===1010)return Object.freeze({status:'NODE_REJECTED',phase,code:'NODE_RPC_INVALID_TRANSACTION',rpcCode,nodeRejectionEstablished:true,stalePredicateEstablished:false});
  const codes=['OBSERVATION_TIMEOUT_UNKNOWN','RPC_DEADLINE','STALE_LOAN_DEADLINE'];
  return Object.freeze({status:phase==='submit'||phase==='observe'?'OUTCOME_UNKNOWN':'REJECTED_BEFORE_SUBMISSION',phase,...(rpcCode===undefined?{}:{rpcCode}),code:codes.includes(error?.message)?error.message:'UNCLASSIFIED_'+phase.toUpperCase()+'_FAILURE',nodeRejectionEstablished:false});
 }

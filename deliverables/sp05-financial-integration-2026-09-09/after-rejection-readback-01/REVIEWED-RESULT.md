@@ -1,0 +1,13 @@
+# Reviewed local rejection and financial endpoint equality
+
+GPT-6 Astra and Grok 4.6 independently accepted this read-only result for the previously rejected loan candidate `29612e0e094e7a6e5dfc9b714e5b3f66fd9a15dbbb43b46c7906c584a011bad0`. Its actual trusted-node RPC 1010 rejection is preserved in the [original attempt](../local-stale-loan-01/REVIEWED-RESULT.md).
+
+The historical BEFORE state was reobserved at the exact preflight anchor, block 20422. A new canonical barrier was sampled at 20425 after the original rejection and terminal containment. The AFTER snapshot was at block 20426, strictly later than that barrier. The complete 8055-byte native states, every decoded field and the complete native balance map were equal, including the explicit zero USD balance. Both states hash to `552d58ff2918332665b179b37a70907c4492a02b5c56d7db05dce5e427e573e0`.
+
+This satisfies the scoped local failed-transaction/nonmutation case for this one candidate as **trusted-node equality at the recorded canonical endpoints plus actual pool rejection**. It does not exclude intermediate or transient changes, unrelated off-contract changes, or establish an included rollback. RPC 1010 does not identify the stale-specific reason. No authenticated state proof or deployed-node bytecode attestation is claimed; separate wire receipts for genesis and final canonical rechecks were not retained.
+
+The probe completed in 7741 ms. Its diagnostic exited successfully, the node and diagnostic were contained within the admitted bound, and the indexer and prover remained stopped. No new submission, proof or DUST debit occurred. All 11 reservations, 3300000000000011 SPECK and the 4000000000000010 SPECK admitted ceiling remain intact; actual rejected-candidate paid fees remain unknown. The original missing integration report remains missing.
+
+[GPT-6 review](result-review-gpt6-01.json), [actual Grok 24 response](result-rpc-review-grok-01.json), [retained result](attempt-result.json), [full snapshots](probe-result.json), and [hash checks](reviewed-result-checks.json) provide the evidence. GPT-6 independently decoded the retained native states and checked file pins. Grok reviewed the supplied immutable packet without re-execution or hash recomputation. Its separate Preview RPC source verdict is not a financial execution result.
+
+This is local `undeployed` evidence. The hard gate requiring compiled Moriarty loan and swap financial settlement on Midnight Preview remains open, together with the remaining SP05 requirements, SP09 mandatory verification, SP11 coverage and SP12 release obligations. No new attempt is authorized by this summary.

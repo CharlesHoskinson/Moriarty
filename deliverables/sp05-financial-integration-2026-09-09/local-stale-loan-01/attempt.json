@@ -1,0 +1,30 @@
+{
+  "schema": "moriarty.local-stale-loan-attempt/1",
+  "status": "CONSUMED",
+  "allocationId": "sp05-stale-loan-01",
+  "admissionSha256": "468c14b8f742a58bc6cacd5f7ab814633a44f575c90fe1b9bcc27d5c66154376",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-stale-loan-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-stale-loan-01.service moriarty-sp05-stale-loan-preflight-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorCharges": {
+    "reservedSubmissions": 10,
+    "reservedDustSpeck": "3000000000000010",
+    "newMaximumSubmissionReservation": 1,
+    "newMaximumDustSpeck": "1000000000000000",
+    "combinedReservationCeiling": 11,
+    "combinedDustCeilingSpeck": "4000000000000010",
+    "otherCharges": "Every failed/partial probe, both finalized-state probes, build, compiler, proof, SDK/runtime, service and review charge remains consumed. No refund, reset or consumed transaction reuse."
+  }
+}

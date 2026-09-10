@@ -1,0 +1,40 @@
+{
+  "status": "CONSUMED",
+  "admissionSha256": "1c74fb6f9f0320fa6d40a9f5278b88dd2cf032b4c9a5c943a4f69f0b75e58d34",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-after-rejection-readback-stop-01",
+    "--on-active=180s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-after-rejection-readback-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-node"
+  ],
+  "diagnosticArgvTemplate": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-after-rejection-readback-01",
+    "--property=Type=exec",
+    "--property=MemoryMax=4294967296",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=90",
+    "--property=TimeoutStopSec=1",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "--property=UMask=0077",
+    "--property=StandardOutput=null",
+    "--property=StandardError=null",
+    "--working-directory=/home/charl/Moriarty/.worktrees/sp05-adverse-integration",
+    "/usr/local/bin/node",
+    "/home/charl/Moriarty/.worktrees/sp05-adverse-integration/deliverables/sp05-financial-integration-2026-09-09/after-rejection-readback-01/probe.mjs"
+  ],
+  "submissionsAllowed": 0,
+  "retryAllowed": false
+}

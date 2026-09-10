@@ -23,8 +23,6 @@ import {validateInitializedLoanPlan} from './continue-loan-plan.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
-// SDK transaction identifiers are not 32-byte transaction hashes.
-const transactionIdentifier=x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x);
 const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
 const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
 const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
@@ -98,7 +96,7 @@ export function retainPublicSubmissions({wallet,ledger,directory}){
    const raw=Buffer.from(tx.serialize());check(raw.length>0&&raw.length<=16*1024*1024,'LAUNCH_PUBLIC_TRANSACTION_SIZE');
    const canonical=ledger.Transaction.deserialize('signature','proof','binding',raw);
    check(Buffer.from(canonical.serialize()).equals(raw),'LAUNCH_NONCANONICAL_TRANSACTION');
-   const transactionHash=canonical.transactionHash(),identifiers=[...canonical.identifiers()];check(hex(transactionHash)&&identifiers.length>0&&identifiers.length<=128&&identifiers.every(transactionIdentifier),'LAUNCH_TRANSACTION_IDENTITY');
+   const transactionHash=canonical.transactionHash(),identifiers=[...canonical.identifiers()];check(hex(transactionHash)&&identifiers.length>0&&identifiers.length<=128&&identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_TRANSACTION_IDENTITY');
    const file=transactionHash+'.bin';
    durableBytes(join(directory,file),raw);
    durableFile(join(directory,transactionHash+'.json'),{schema:'moriarty.public-submission-bytes/1',transactionHash,identifiers,rawSha256:hash(raw),bytes:raw.length,file,scope:'Finalized public native bytes retained before wallet submission; submission and ledger acceptance unknown'});
@@ -147,7 +145,7 @@ function validatePublicAdverseValue(value){
  if(value.equality!==undefined){exact(value.equality,'status,beforeHash,afterHash,stateSha256,nodeRejectionEstablished,scope');check(value.equality.status==='FINANCIAL_STATE_UNCHANGED'&&typeof value.equality.scope==='string'&&value.equality.nodeRejectionEstablished===false&&hex(value.equality.stateSha256)&&/^0x[a-f0-9]{64}$/.test(value.equality.beforeHash)&&/^0x[a-f0-9]{64}$/.test(value.equality.afterHash),'LAUNCH_ADVERSE_EQUALITY');}
  if(value.terminalBarrier!==undefined){exact(value.terminalBarrier,'blockHash,blockHeight');check(/^0x[a-f0-9]{64}$/.test(value.terminalBarrier.blockHash)&&Number.isSafeInteger(value.terminalBarrier.blockHeight)&&value.terminalBarrier.blockHeight>=0,'LAUNCH_ADVERSE_BARRIER');}
  if(value.feeAccounting!==undefined){exact(value.feeAccounting,'candidateDustFeeSpeck,paidFeeSpeck,paidStatus,reservationReleasePerformed');check(decimal(value.feeAccounting.candidateDustFeeSpeck)&&value.feeAccounting.paidFeeSpeck===null&&value.feeAccounting.paidStatus==='UNKNOWN'&&value.feeAccounting.reservationReleasePerformed===false,'LAUNCH_ADVERSE_FEES');}
- if(value.reservations!==undefined){const r=publicJsonValue(value.reservations);exact(r,'reservedSubmissions,reservedDustFee,reservedGrossByAsset,identifiers,pendingOperations');check(Number.isSafeInteger(r.reservedSubmissions)&&r.reservedSubmissions>=0&&r.reservedSubmissions<=1&&decimal(r.reservedDustFee)&&r.reservedGrossByAsset&&Object.getPrototypeOf(r.reservedGrossByAsset)===Object.prototype&&Object.entries(r.reservedGrossByAsset).every(([k,v])=>hex(k)&&decimal(v)&&BigInt(v)===0n)&&Array.isArray(r.identifiers)&&r.identifiers.every(transactionIdentifier)&&Number.isSafeInteger(r.pendingOperations)&&r.pendingOperations>=0,'LAUNCH_ADVERSE_RESERVATIONS');}
+ if(value.reservations!==undefined){const r=publicJsonValue(value.reservations);exact(r,'reservedSubmissions,reservedDustFee,reservedGrossByAsset,identifiers,pendingOperations');check(Number.isSafeInteger(r.reservedSubmissions)&&r.reservedSubmissions>=0&&r.reservedSubmissions<=1&&decimal(r.reservedDustFee)&&r.reservedGrossByAsset&&Object.getPrototypeOf(r.reservedGrossByAsset)===Object.prototype&&Object.entries(r.reservedGrossByAsset).every(([k,v])=>hex(k)&&decimal(v)&&BigInt(v)===0n)&&Array.isArray(r.identifiers)&&r.identifiers.every(hex)&&Number.isSafeInteger(r.pendingOperations)&&r.pendingOperations>=0,'LAUNCH_ADVERSE_RESERVATIONS');}
  if(value.financialNonmutationEstablished)check(value.status==='NODE_REJECTION_FINANCIAL_NONMUTATION'&&value.rejection?.nodeRejectionEstablished===true&&value.equality?.status==='FINANCIAL_STATE_UNCHANGED'&&value.before&&value.after&&value.terminalBarrier&&value.after.blockHeight>value.terminalBarrier.blockHeight&&value.terminalBarrier.blockHeight>=value.before.blockHeight,'LAUNCH_ADVERSE_ACCEPTANCE');
 }
 export async function retainPublicAdverseCandidate(directory,value){
@@ -163,7 +161,7 @@ export function retainPublicAdverseOutcome(directory,value){
 }
 export function publicLaunchEvent(e){
  check(e&&['submitted','stopped'].includes(e.kind),'LAUNCH_EVENT_KIND');
- check(Array.isArray(e.identifiers)&&e.identifiers.length<=128&&e.identifiers.every(transactionIdentifier),'LAUNCH_EVENT_IDS');
+ check(Array.isArray(e.identifiers)&&e.identifiers.length<=128&&e.identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_EVENT_IDS');
  if(e.kind==='submitted'){check(typeof e.txId==='string'&&e.identifiers.includes(e.txId)&&hex(e.transactionHash),'LAUNCH_EVENT_TX');return {kind:e.kind,txId:e.txId,identifiers:[...e.identifiers],transactionHash:e.transactionHash};}
  check(Number.isSafeInteger(e.pendingOperations)&&e.pendingOperations>=0&&e.reservationRetained===true,'LAUNCH_EVENT_STOP');
  return {kind:e.kind,identifiers:[...e.identifiers],reservationRetained:true,pendingOperations:e.pendingOperations};
