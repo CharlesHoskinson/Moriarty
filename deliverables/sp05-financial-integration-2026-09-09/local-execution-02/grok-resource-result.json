@@ -1,0 +1,51 @@
+{
+  "elapsedSeconds": 300.524,
+  "exitCode": 0,
+  "callerTerminated": false,
+  "returnedModel": "grok-4.6",
+  "eventCounts": {
+    "system": 1,
+    "message_start": 1,
+    "content_block_start": 2,
+    "thinking_delta": 24,
+    "content_block_stop": 2,
+    "text_delta": 2038,
+    "message_delta": 1,
+    "message_stop": 1,
+    "assistant": 1,
+    "result": 1
+  },
+  "terminal": {
+    "result": "```json\n{\n  \"schema\": \"moriarty.fixed-local-loan-resource/2\",\n  \"verdict\": \"APPROVED\",\n  \"reviewer\": \"Grok 4.6\",\n  \"kind\": \"resource-proposal-only\",\n  \"not\": [\n    \"source re-review\",\n    \"execution admission\",\n    \"network/proof/financial acceptance\",\n    \"live preflight substitute\"\n  ],\n  \"files\": [\n    {\n      \"path\": \"resource-proposal.json\",\n      \"sha256\": \"62781cac1c59628ac40cf1f06985878e543dfe64db302e8a13ff0354b0b5bc98\"\n    },\n    {\n      \"path\": \"commands.md\",\n      \"sha256\": \"d853085cd7be4309e6a9c305c5e06cd207aa8f0c4a8b3fdd538f3753eb792f10\"\n    },\n    {\n      \"path\": \"cgroup-smoke.json\",\n      \"sha256\": \"0840a5d6dd171bc7f1cb78b8986fb5c99b3c55c0f2c0c5f39d21f62f7baee482\"\n    },\n    {\n      \"path\": \"current-build-inspection.json\",\n      \"sha256\": \"f9000c3c2e51f7725d7a784f9c244de45df26b613df894b088c7abfd21726d98\"\n    }\n  ],\n  \"prior_source_review\": {\n    \"verdict\": \"APPROVED\",\n    \"unchanged_bytes_required\": [\n      {\n        \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.mjs\",\n        \"sha256\": \"22057f50c1b120740b011c903803d08bb022a5dbff97a03ec9fdc9becfc3a3df\"\n      },\n      {\n        \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs\",\n        \"sha256\": \"e4f4b8c5e63730dfeb3dc6f40c21466d18f2ae88e8963dd1a377106c92c375b5\"\n      },\n      {\n        \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json\",\n        \"sha256\": \"4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195\"\n      },\n      {\n        \"path\": \"experiments/moriarty-midnight-financial/ledger/launch-local.md\",\n        \"sha256\": \"29168290ab7a246b43c7c2fefae1627140a224da64d16678683b6259aeec6472\"\n      }\n    ]\n  },\n  \"blockers\": [],\n  \"assessment\": {\n    \"gross_usd\": \"PASS. One loan, submissions=4, USD_TEST_ASSET decimal 20000000000 as the native initialize mint and the settle input that is fully consumed (pay 533972602 + change 19466027398). Refunds do not replenish the cap. Fail closed if selection exceeds it. Swap assets are out of scope.\",\n    \"dust_cap\": \"PASS as a finite tolerance, not a fee prediction. dustFeeSpeck 2000000000000000 (2 DUST) covers stated 1.2 DUST wallet overhead plus 0.8 DUST headroom. Indexer paidFees must not be substituted. Over-tolerance stops the attempt and keeps the charge.\",\n    \"proving_retries\": \"PASS. High-level bound is four contract proveTx entries and four wallet finalize entries. Per-callback HTTP is at most four attempts (three SDK retries). WASM callback multiplicity is not established; no total HTTP count and no extra run/stage retry. All internal retries consume the same 1200s/proof-server CPU-memory envelope and the arming+1300s Docker shutdown.\",\n    \"host_limits\": \"PASS as a finite ceiling, tight. Launcher cgroup 4 GiB RSS, swap 0, 200% CPU, RuntimeMaxSec 1206, KillMode=control-group, SIGKILL. Three existing containers remain 5 GiB / 10 GiB memory+swap / 4 CPUs, restart=no, layers preserved. Aggregate 19 GiB RSS + up to 15 GiB container swap, 14 CPU. Commands require MemAvailable>=20 GiB and disk>=4 GiB before arming. No aggregate disk quota is claimed; four public payloads <=16 MiB each.\",\n    \"existing_identities_state\": \"PASS as a proposal. Borrower firstAddress+expectedAddress and distinct lender secondAddress are public payout bindings only; no new wallet, faucet, registration, compiler run, or preprod/Preview action. Seed and hello-world-dedicated-v2 snapshots are reused unchanged (0600/0700, exclusive sibling contract-state and output under the private base). Launcher restore/identity/DUST checks remain the runtime gate.\",\n    \"deadlines\": \"PASS. Timer is armed before containers. Setup+activation must complete by arming+120s with no deferred start. plan.deadlineMs = min(now+1200000, timer shutdown-start), which stays inside the launcher one-hour max. Independent shutdown at arming+1300s kills the full launcher cgroup then docker-stops the three named containers. Claimed chain 5+20+5s plus AccuracySec=1s => latest cleanup 1331 inside the 1350s envelope. RuntimeMaxSec 1206 may outlive 1300s on late activation; the outer timer is the binding cut.\",\n    \"charges_cleanup\": \"PASS. Distinct successor allocation; prior SP05 compile/review/campaign debits are kept. No credit restore on timeout (timeout is not cancellation). Retain public native bytes, reservations, contract state, original snapshots, and Docker layers. Do not delete evidence. Inner integration may stay INCOMPLETE even if four comparisons match; that is not PASS and not Preview/PCD acceptance. Outer cgroup-empty + containers-stopped is a separate I2 observation.\"\n  },\n  \"conditions_before_admission\": [\n    \"Fast-forward the named worktree to the four approved launcher source hashes above; do not invoke predecessor source-02.\",\n    \"Plan.build must be the loan inspection only: receiptSha256 51ee2d4d60216464a9ace67966ba0ab253699844187aeb5652b46dc6e9ca5bf7, sourceManifestHash a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6. Do not use the swap inspection.\",\n    \"plan.limits.dustFee must be the decimal string 2000000000000000; plan.limits.grossByLogicalAsset.USD_TEST_ASSET must be 20000000000; submissions 4; kind loan; networkId undeployed; loopback URLs exactly as proposed.\",\n    \"networkTag and expectedProtocolVersion must be the observed genesis hash (no 0x) and observed local indexer protocolVersion. No guessed 1000000 or package/image default.\",\n    \"Before containers: exclusive absent unit/timer/run directory; container names/imageSha256/limits/restart=no/stopped match the proposal; MemAvailable>=20 GiB; free disk>=4 GiB; stop timer active with observed AccuracySec<=1s and NextElapse=arming+1300s.\",\n    \"systemd-run must actually set ExecStopPost to a bounded docker stop/kill of the three names; do not paste the argv block without it. After the timer's docker stop, confirm containers are stopped; if not, use the bounded docker kill. Record full argv, plan SHA-256, arming time, activation time, and stop-timer elapse before wallet launch.\",\n    \"Activation only if arming+120s has not expired and shutdown has not begun. Uncertain/late activation: immediate bounded kill/stop, no restart.\",\n    \"Private files owner-only, no symlink ancestors, distinct wallet/state/output directories. Capability secrets and password are new 32-byte material, not wallet keys. Original snapshot bytes unchanged.\",\n    \"cgroup-smoke PASS is only parent/child SIGKILL evidence, not timer/Docker/envelope proof. This vote is not GPT-6's and does not execute or accept the loan.\"\n  ],\n  \"residuals\": [\n    \"Literal timer argv is prose, not a single copy-paste line; admission must retain the armed unit properties.\",\n    \"docker kill fallback is specified on launcher ExecStopPost; the independent timer text lists docker stop. Envelope still holds only if step 6 verifies stopped state.\",\n    \"20 GiB MemAvailable vs 19 GiB configured RSS is slim if all four memory ceilings bind at once.\",\n    \"1200s can lose to four serial 300s prove abort windows; that is a retained failure, not authority to enlarge.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "subtype": "success",
+    "is_error": false,
+    "usage": {
+      "input_tokens": 26393,
+      "output_tokens": 15960,
+      "cache_read_input_tokens": 25216,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 26393,
+        "outputTokens": 15960,
+        "cacheReadInputTokens": 25216,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.02739618
+      }
+    },
+    "num_turns": 1,
+    "duration_ms": 295732,
+    "duration_api_ms": 295661,
+    "total_cost_usd": 0.02739618,
+    "session_id": "01a08965-d95f-7740-b66e-54f4ceae75a9"
+  },
+  "upstreamCancellationVerified": false,
+  "privateRawSha256": "98676670414df6a258c6fd4ee3f22a211dbf12c8d9e69976f9b4eb1fca95ec3a",
+  "scope": "One independent resource vote; reuses reviewer own completed source context. No wallet/network/proof operation. Adequate high-effort time per user correction."
+}

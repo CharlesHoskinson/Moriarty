@@ -1,0 +1,226 @@
+{
+  "actualStartMonotonicMicroseconds": 37804987620,
+  "activationElapsedSeconds": 2.4697959999975865,
+  "properties": "ActiveState=active\nSubState=running\nTimeoutStopUSec=5s\nRuntimeMaxUSec=20min 6s\nMainPID=852476\nExecStopPost={ path=/usr/bin/timeout ; argv[]=/usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-local-loan-01.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=4294967296\nMemorySwapMax=0\nKillMode=control-group",
+  "commands": [
+    {
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-sp05-local-stop-01",
+        "--on-active=1300s",
+        "--timer-property=AccuracySec=1s",
+        "--property=Type=oneshot",
+        "--property=TimeoutStartSec=25s",
+        "--property=TimeoutStopSec=5s",
+        "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+        "/usr/bin/bash",
+        "-c",
+        "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.005,
+      "stdout": "",
+      "stderr": "Running timer as unit: moriarty-sp05-local-stop-01.timer\nWill run service as unit: moriarty-sp05-local-stop-01.service"
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "call",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1",
+        "org.freedesktop.systemd1.Manager",
+        "GetUnit",
+        "s",
+        "moriarty-sp05-local-stop-01.timer"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.003,
+      "stdout": "o \"/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dstop_2d01_2etimer\"",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "get-property",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dstop_2d01_2etimer",
+        "org.freedesktop.systemd1.Timer",
+        "NextElapseUSecMonotonic"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.003,
+      "stdout": "t 39102517824",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "call",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1",
+        "org.freedesktop.systemd1.Manager",
+        "GetUnit",
+        "s",
+        "moriarty-sp05-local-stop-01.timer"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.002,
+      "stdout": "o \"/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dstop_2d01_2etimer\"",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "get-property",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dstop_2d01_2etimer",
+        "org.freedesktop.systemd1.Timer",
+        "AccuracyUSec"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.002,
+      "stdout": "t 1000000",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "systemctl",
+        "--user",
+        "is-active",
+        "moriarty-sp05-local-stop-01.timer"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.003,
+      "stdout": "active",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "start",
+        "moriarty-midnight-node"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.29,
+      "stdout": "moriarty-midnight-node",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "docker",
+        "start",
+        "moriarty-midnight-indexer",
+        "moriarty-midnight-proof-server"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.37,
+      "stdout": "moriarty-midnight-indexer\nmoriarty-midnight-proof-server",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/local/bin/node",
+        "/home/charl/Moriarty/.worktrees/sp05-financial-integration/experiments/moriarty-midnight-network/verify-local.mjs"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.227,
+      "stdout": "{\n  \"verifiedAt\": \"2026-09-10T03:58:34.479Z\",\n  \"network\": \"undeployed\",\n  \"indexerUrl\": \"http://127.0.0.1:18088/api/v4/graphql\",\n  \"nodeUrl\": \"http://127.0.0.1:19944\",\n  \"transactions\": [\n    {\n      \"name\": \"nightTransfer\",\n      \"transactionHash\": \"688950548f6336fda3111805fdab9bc86ba52f6347ae32475186ae13cd93a22e\",\n      \"blockHeight\": 7,\n      \"blockHash\": \"e441535bd2dc5dbfde900524ec200922d1a89c393d3d06e25e370e69198a09fa\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    },\n    {\n      \"name\": \"dustRegistration\",\n      \"transactionHash\": \"8684923571bffa5fbf51dfa846824710eeef8bd5266f588e6d4faa9101e6770c\",\n      \"blockHeight\": 12,\n      \"blockHash\": \"c44a35c5408149e49292c270fbf8b55778f82a12bf25663c5ffb49af99286687\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    },\n    {\n      \"name\": \"compactCall\",\n      \"transactionHash\": \"f4e56dac8272d76d66f734c0e8ed590123cec093b21ad0aa2d152c2cadadf5e3\",\n      \"blockHeight\": 201,\n      \"blockHash\": \"203196e10d837870fae49c6c9a9ecb0c8c9ed180c3279817c924c5f8615bf6e1\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    },\n    {\n      \"name\": \"dedicatedWalletCompactCall\",\n      \"transactionHash\": \"e8b42e7ad71a47bbdc2b1bb5f604e220974b71bbb45acf2ec52ea23d53542373\",\n      \"blockHeight\": 305,\n      \"blockHash\": \"1e83dee5667f4f2ed63970bb432e915c1bdab2ac97dd9e7adc3aa53d1f41d908\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    },\n    {\n      \"name\": \"compactDeploy\",\n      \"transactionHash\": \"f43447889de0e907748a28816330cb0633555cb3e66fa10e5b14733dacc6d9ac\",\n      \"blockHeight\": 86,\n      \"blockHash\": \"5d21c7a5d3f071fc628e0cf5ea989a798458dc414e7fe0ff838bf0e77857cfdd\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    },\n    {\n      \"name\": \"dedicatedWalletCompactDeploy\",\n      \"transactionHash\": \"aa67f2e86a2aa53e448b9e405838d38d524520d10652e8a5c96575c6dc9e56a3\",\n      \"blockHeight\": 293,\n      \"blockHash\": \"24650b8cc220d40852d89defdca28fc39a78a1639679dd8cf06af33578388780\",\n      \"indexerStatus\": \"SUCCESS\",\n      \"nodeHashMatch\": true\n    }\n  ],\n  \"finality\": {\n    \"finalizedHeight\": 20225,\n    \"finalizedHash\": \"0x0d3219ca0a80f84e947db228fc0c42b58b4d44f1b4cf68663c9edd5f8a43e647\",\n    \"highestReceipt\": 305,\n    \"coversAllReceipts\": true\n  }\n}",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "systemctl",
+        "--user",
+        "is-active",
+        "moriarty-sp05-local-stop-01.timer"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.004,
+      "stdout": "active",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-sp05-local-loan-01.service",
+        "--property=Type=exec",
+        "--property=MemoryMax=4294967296",
+        "--property=MemorySwapMax=0",
+        "--property=CPUQuota=200%",
+        "--property=RuntimeMaxSec=1206",
+        "--property=TimeoutStopSec=5",
+        "--property=KillMode=control-group",
+        "--property=FinalKillSignal=SIGKILL",
+        "--property=SendSIGKILL=yes",
+        "--property=UMask=0077",
+        "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+        "--property=StandardOutput=append:/home/charl/.local/state/moriarty/sp05-local-loan-20260909-01/sdk.stdout",
+        "--property=StandardError=append:/home/charl/.local/state/moriarty/sp05-local-loan-20260909-01/sdk.stderr",
+        "--working-directory=/home/charl/Moriarty/.worktrees/sp05-financial-integration/experiments/moriarty-midnight-financial",
+        "/usr/local/bin/node",
+        "ledger/launch-local.mjs",
+        "--run",
+        "--plan",
+        "/home/charl/.local/state/moriarty/sp05-local-loan-20260909-01/plan.json",
+        "--sha256",
+        "c3aeae01eca50067bd01df909a1af4da61b9ea2dc0c115ea42cd9cd5fbd4eaaf"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.022,
+      "stdout": "",
+      "stderr": "Running as unit: moriarty-sp05-local-loan-01.service; invocation ID: 09e0da3962354757a98f400f4c87fbde"
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "call",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1",
+        "org.freedesktop.systemd1.Manager",
+        "GetUnit",
+        "s",
+        "moriarty-sp05-local-loan-01.service"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.002,
+      "stdout": "o \"/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dloan_2d01_2eservice\"",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "busctl",
+        "--user",
+        "get-property",
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1/unit/moriarty_2dsp05_2dlocal_2dloan_2d01_2eservice",
+        "org.freedesktop.systemd1.Service",
+        "ExecMainStartTimestampMonotonic"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.002,
+      "stdout": "t 37804987620",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "systemctl",
+        "--user",
+        "show",
+        "moriarty-sp05-local-loan-01.service",
+        "--property=ActiveState,SubState,MainPID,ControlGroup,MemoryMax,MemorySwapMax,CPUQuotaPerSecUSec,RuntimeMaxUSec,TimeoutStopUSec,KillMode,ExecStopPost"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.005,
+      "stdout": "ActiveState=active\nSubState=running\nTimeoutStopUSec=5s\nRuntimeMaxUSec=20min 6s\nMainPID=852476\nExecStopPost={ path=/usr/bin/timeout ; argv[]=/usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-local-loan-01.service\nCPUQuotaPerSecUSec=2s\nMemoryMax=4294967296\nMemorySwapMax=0\nKillMode=control-group",
+      "stderr": ""
+    }
+  ],
+  "scope": "Observed launcher activation only; no financial or ledger success inferred"
+}
