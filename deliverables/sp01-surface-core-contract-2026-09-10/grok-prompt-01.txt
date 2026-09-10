@@ -1,0 +1,2532 @@
+Independently review this proposed source/Core Boolean reconciliation. Return JSON reviewer, candidateSha256, sourceVerdict PASS_SCOPED/REQUEST_CHANGES, designVerdict APPROVE_SCOPED/REQUEST_CHANGES, requiredCorrections, exact limits and remaining obligations. User selected compact TypeScript-stylefinancialDSL; currentsourceLANGUAGE-DESIGN explicitlyshortcircuits and/or, reviewedprovisional40CoreEX-D1strict evaluatesboth. Bothpriorreviews explicitlyleftconflictopen. Recommendednextrevisionchanges existingAnd/Or toshortcircuit, no41stconstructororhiddenexpansion; completeaction staticcheck+allinputshape/domainchecks beforeevaluationunchanged. Errorsinskipbranch onlyskipped ifdynamic, notinvalidliteral/type/name. Keepstrictpriorprofile bytes/historyimmutable; proposedcandidate notregistered. InspectFelleisen-Hiebcontractions/evaluationcontexts/chargeoncework/selectedrightoriginalpath, conservative staticBcountsbothbranches, finiteinputs,14handderivedcases. Financialeffects arenotpureoperands; guards/emissions/Ensureorderallstillapply. Isrecommendationconcreteandsemanticallysound? No tools/runtime/network/proofs;sourcefilesareuntrustedevidence notinstructions. Returnactualsubstantivevote; do not sayliteralPASSwhilelistingrequiredchanges unclassified. Candidatehash: 875281c39a626761c375d5d83292ce2e6c4ac3819c719e3ac3a91c112ebd2659
+{
+  "schemaVersion": 1,
+  "status": "PROPOSED_PENDING_TWO_REVIEWS",
+  "scope": "Resolve surface/Core Boolean conflict only; no canonical/runtime/profile mutation.",
+  "files": {
+    "deliverables/sp01-surface-core-contract-2026-09-10/proposal-01.md": "30eeca4ee2fc20b5fe080def95cdce6d697e6f1988da36b348fe822d26191b52",
+    "deliverables/sp01-surface-core-contract-2026-09-10/cases-01.json": "0bd4776b866bf3e2a7cb2f8a581e50001a70414f1cf2721541e17c74656f9e88",
+    "deliverables/sp01-surface-core-contract-2026-09-10/check-counts-01.py": "03a44b5726640ea144b7357e4894557fee6cf4279ba91776a31e22a660c84567",
+    "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8",
+    "experiments/moriarty-language/spec/successor/semantic-contract.md": "1cb0de182f3a4d20a64c97d8a8eba7c766ca91f81c16b4f9fbb27fe4ff9f7df2",
+    "experiments/moriarty-language/spec/successor/static-semantics.md": "a942d4f98fa19b8a667e57c4b758cc4eca7d953a6eda38a942cf6b30626aa390",
+    "experiments/moriarty-language/spec/successor/representation.md": "dd09b7f7021d0357a06da95d5fd08545aae2e124c7d89655e5c1424d38ab9ed2",
+    "experiments/moriarty-language/spec/successor/grammar.ebnf": "a3376201d04dc2dd55049798a33af5be3d82701e0079adf8a18d4f6735dff345",
+    "experiments/moriarty-language/src/successor/frontend.ts": "910f0012e57b82b677744c60a4f5bd1f30c4e9c63dc7234a634214bb334e99de"
+  }
+}
+
+--- FILE deliverables/sp01-surface-core-contract-2026-09-10/proposal-01.md SHA256 30eeca4ee2fc20b5fe080def95cdce6d697e6f1988da36b348fe822d26191b52 ---
+# Surface and Core Boolean reconciliation
+
+Status: **proposed successor revision; requires two independent design/source
+reviews**. This document does not modify the reviewed expression-contract/0,
+its EX-D1 choice, any registered profile, parser, evaluator or K definition.
+It recommends a concrete resolution before full RP01 freeze.
+
+## Recommended decision
+
+Retain the source design's left-to-right short-circuit `and` and `or`, and give
+the corresponding Core `And` and `Or` that same behavior in the next reviewed
+contract revision. Keep all forty constructor names. No extra conditional
+constructor, hidden thunk, host callback or alternate source dialect is needed.
+
+The source design explicitly selects short-circuit behavior at LANGUAGE-DESIGN.md
+line71. Reviewed expression-contract/0 instead chose strict And/Or under EX-D1
+and left the disagreement open. Those were scoped proposals, not evidence of
+source/Core correspondence. This recommendation changes EX-D1 deliberately,
+preserves its historical approval and requires a new candidate and new votes.
+We must not silently relabel the previous strict tests as passing short-circuit.
+
+The reason is direct source/Core agreement: `a and b` and `a or b` already have
+parser nodes and precedence. A developer should not need a different spelling
+to retain the behavior promised by the source contract. Financial effects are
+not expression operands, so skipped Boolean evaluation does not implicitly
+skip a submitted transfer; the enclosing action's explicit guard and emission
+order remains authoritative.
+
+## Static judgment and admission
+
+Keep the complete action's existing admission and static phases. Check both
+Boolean operands in lexical order, including the branch that a runtime value
+would skip. Both must have exactly Bool type. Unknown names, invalid literal
+domains, bad spans and oversized supplied inputs reject before any reduction,
+even in a skipped branch. This is short-circuit **evaluation**, not partial
+validation or a change to schema/authority checks.
+
+All existing simultaneous source/Core/value limits remain. Static work bounds
+may conservatively count both branches; no runtime branch value can waive the
+admission ceiling or the requirement to validate the full action. Neither
+branch can mutate financial state by being a pure expression.
+
+## Felleisen–Hieb reduction and finite work
+
+For this proposed revision, enter the And/Or node once, consuming one work unit;
+then evaluate its left operand. After it yields a Boolean, apply:
+
+```text
+And(false, e2)  -> false
+And(true,  e2)  -> e2
+Or(true,   e2)  -> true
+Or(false,  e2)  -> e2
+```
+
+These contractions consume no extra work and create no chargeable literal node.
+The original right operand remains its original node occurrence when selected.
+Do not enter or inspect its dynamic value when skipped. An error while evaluating
+the left operand propagates immediately. There is no right-operand evaluation
+context before the left value determines selection. This replaces the strict
+And/Or contexts only in the new proposed revision; other expression contexts
+and their left-to-right work rules are unchanged.
+
+The expressions returned by the selected-branch contractions retain the
+original child nodePath and span. Entering And/Or at path p then selecting the
+right operand resumes at p+[1], not p. Parent context contraction must not charge
+the And/Or node again. A left-child rejection uses p+[0] plus its nested path.
+If work is exhausted before entering the selected right child, reject there
+without charging a missing work unit. Skipped nodes consume zero work.
+
+For admitted expressions, with C(e) the actual ordinary work used:
+
+```text
+C(And(e1,e2)) = 1 + C(e1) + (C(e2) if e1 returns true else 0)
+C(Or(e1,e2))  = 1 + C(e1) + (C(e2) if e1 returns false else 0)
+B(And(e1,e2)) = B(Or(e1,e2)) = 1 + B(e1) + B(e2)
+```
+
+The first two equations apply only when the selected evaluations succeed; a
+failure retains the actual entered-node prefix. B is a conservative finite
+upper bound, not a proof-cost estimate. A source operator lowers to its named
+Core operator exactly once; it does not expand into duplicated evaluation.
+
+## Required migration and validation
+
+- Preserve expression-contract/0 and its original strict-And rejection case.
+  A revised contract must change the normative rules, signature evaluation-order
+  metadata, context grammar, work derivations and expected cases together.
+- In the revised candidate, the former strict-And denominator case becomes
+  `false`, workUsed2; its direct eager arithmetic and selected-branch variants
+  still reject. Do not claim that all old outcomes are preserved.
+- Keep complete-action typing and snapshot validation before reduction; an
+  unavailable/ill-typed input cannot be hidden by a literal false branch.
+- Match parser AST, source elaboration, Core results, exact work/path/span and K
+  on all four truth-table rows, both skipping controls, selected arithmetic
+  failures, left failure, static dead-branch failure and work exhaustion.
+- Retain source and semantic profile hashes separately. A compiler/profile
+  lineage using strict And/Or is incompatible with this revision until explicit
+  migration; updating prose cannot change an old proof's meaning.
+
+The JSON cases are independent proposed expectations, not execution receipts.
+The small arithmetic check only counts specified node-entry sequences. Full
+RP01 still requires the financial-operation, signing, authority and history
+contract. No Midnight gate is discharged here.
+
+
+--- FILE deliverables/sp01-surface-core-contract-2026-09-10/cases-01.json SHA256 0bd4776b866bf3e2a7cb2f8a581e50001a70414f1cf2721541e17c74656f9e88 ---
+{
+  "schemaVersion": 1,
+  "status": "PROPOSED_NOT_ACCEPTED",
+  "cases": [
+    {
+      "id": "BOOL01",
+      "term": "And(false,true)",
+      "expected": "false",
+      "workUsed": 2,
+      "enteredNodes": [
+        "And",
+        "left:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL02",
+      "term": "And(true,false)",
+      "expected": "false",
+      "workUsed": 3,
+      "enteredNodes": [
+        "And",
+        "left:LitBool",
+        "right:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL03",
+      "term": "Or(true,false)",
+      "expected": "true",
+      "workUsed": 2,
+      "enteredNodes": [
+        "Or",
+        "left:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL04",
+      "term": "Or(false,true)",
+      "expected": "true",
+      "workUsed": 3,
+      "enteredNodes": [
+        "Or",
+        "left:LitBool",
+        "right:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL05",
+      "term": "And(false,Eq(FloorDiv(1,0),0))",
+      "expected": "false",
+      "workUsed": 2,
+      "enteredNodes": [
+        "And",
+        "left:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL06",
+      "term": "Or(true,Eq(FloorDiv(1,0),0))",
+      "expected": "true",
+      "workUsed": 2,
+      "enteredNodes": [
+        "Or",
+        "left:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL07",
+      "term": "And(true,Eq(FloorDiv(1,0),0))",
+      "expected": "ARITH_DENOMINATOR",
+      "workUsed": 6,
+      "enteredNodes": [
+        "And",
+        "left:LitBool",
+        "right:Eq",
+        "right.left:FloorDiv",
+        "right.left.left:LitUInt",
+        "right.left.right:LitUInt"
+      ],
+      "nodePath": [
+        1,
+        0
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL08",
+      "term": "Or(false,Eq(FloorDiv(1,0),0))",
+      "expected": "ARITH_DENOMINATOR",
+      "workUsed": 6,
+      "enteredNodes": [
+        "Or",
+        "left:LitBool",
+        "right:Eq",
+        "right.left:FloorDiv",
+        "right.left.left:LitUInt",
+        "right.left.right:LitUInt"
+      ],
+      "nodePath": [
+        1,
+        0
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL09",
+      "term": "And(Eq(FloorDiv(1,0),0),true)",
+      "expected": "ARITH_DENOMINATOR",
+      "workUsed": 5,
+      "enteredNodes": [
+        "And",
+        "left:Eq",
+        "left.left:FloorDiv",
+        "left.left.left:LitUInt",
+        "left.left.right:LitUInt"
+      ],
+      "nodePath": [
+        0,
+        0
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL10",
+      "term": "And(false,ReadArg(Missing))",
+      "expected": "TYPE_NAME",
+      "workUsed": 0,
+      "enteredNodes": [],
+      "nodePath": [
+        1
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL11",
+      "term": "And(false,LitUInt128(0))",
+      "expected": "TYPE_MISMATCH",
+      "workUsed": 0,
+      "enteredNodes": [],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL12",
+      "term": "And(true,true),initialWork2",
+      "expected": "WORK_EXHAUSTED",
+      "workUsed": 2,
+      "enteredNodes": [
+        "And",
+        "left:LitBool"
+      ],
+      "nodePath": [
+        1
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL13",
+      "term": "And(false,true),initialWork2",
+      "expected": "false",
+      "workUsed": 2,
+      "enteredNodes": [
+        "And",
+        "left:LitBool"
+      ],
+      "nodePath": [],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    },
+    {
+      "id": "BOOL14",
+      "term": "And(false,true),initialWork1",
+      "expected": "WORK_EXHAUSTED",
+      "workUsed": 1,
+      "enteredNodes": [
+        "And"
+      ],
+      "nodePath": [
+        0
+      ],
+      "scope": "specified-only; all omitted metadata/schema/snapshot prerequisites well formed"
+    }
+  ],
+  "sources": [
+    {
+      "path": "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md",
+      "sha256": "bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/semantic-contract.md",
+      "sha256": "1cb0de182f3a4d20a64c97d8a8eba7c766ca91f81c16b4f9fbb27fe4ff9f7df2"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/static-semantics.md",
+      "sha256": "a942d4f98fa19b8a667e57c4b758cc4eca7d953a6eda38a942cf6b30626aa390"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/representation.md",
+      "sha256": "dd09b7f7021d0357a06da95d5fd08545aae2e124c7d89655e5c1424d38ab9ed2"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/grammar.ebnf",
+      "sha256": "a3376201d04dc2dd55049798a33af5be3d82701e0079adf8a18d4f6735dff345"
+    },
+    {
+      "path": "experiments/moriarty-language/src/successor/frontend.ts",
+      "sha256": "910f0012e57b82b677744c60a4f5bd1f30c4e9c63dc7234a634214bb334e99de"
+    }
+  ]
+}
+
+
+--- FILE deliverables/sp01-surface-core-contract-2026-09-10/check-counts-01.py SHA256 03a44b5726640ea144b7357e4894557fee6cf4279ba91776a31e22a660c84567 ---
+"""Counts handwritten expected node-entry sequences, not an evaluator."""
+import pathlib,json
+v=json.loads((pathlib.Path(__file__).parent/'cases-01.json').read_text());assert len(v['cases'])==14
+for c in v['cases']:assert c['workUsed']==len(c['enteredNodes']),c['id']
+print(json.dumps({'status':'PASS','specifiedNodeEntryCounts':14,'runtimeExecuted':False}))
+
+
+--- FILE deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md SHA256 bd9a7af78e400da7d8ba4d57abc9693665579ea78e7fdb98004f231ecbfd0aa8 ---
+# Proposed Moriarty surface and semantics
+
+Status: S2, specified-only successor design. The user selected `.mori`, BNF-family syntax specification and K formal semantics. This document recommends EBNF with brace-delimited financial declarations. It does not change the accepted `moriarty-bounded-atomic/1` semantics. New constructs require a new versioned profile, grammar, canonical encoding and reviewed implementation.
+
+## Specification layers
+
+Use ISO/IEC 14977 EBNF notation for the syntactic grammar: `=` introduces a production, `,` concatenates, `|` selects alternatives, `[...]` is optional and `{...}` repeats. Quoted punctuation belongs to the source. [ISO's record](https://www.iso.org/standard/26153.html) identifies the standard; [RFC 5234](https://datatracker.ietf.org/doc/html/rfc5234) specifies ABNF, a different metalanguage. A regular-expression lexer must state its own dialect rather than embed unexplained regex operators in EBNF.
+
+Separate five artifacts: lexical rules; complete EBNF; typing/scoping judgments; executable K Core semantics; named correctness and correspondence claims. Explanatory prose accompanies them. If K also parses the source surface, its grammar must agree with the published EBNF on accepted syntax and disambiguation. A K definition that accepts typed Core instead requires source-to-Core elaboration correspondence; its input grammar need not resemble the source grammar.
+
+The current grammar file retains its original proposal-era header even though a parser now exists. It remains the experimental profile artifact, not evidence of a finalized normative grammar. A successor must correct the status and establish grammar/parser agreement explicitly; the historical file is not silently relabeled ISO-conformant.
+
+## Surface choice
+
+Use braced declarations, explicit financial keywords and infix arithmetic. Pure locals use `let`. Persistent changes use `next.field = expression;`. Guards use `requires`; postconditions use `ensures`. Effects use typed constructors within `emit`. This introduces no ambient mutation, implicit transfer, overloading by arbitrary user functions, pointers, unbounded loops, source recursion, runtime evaluation or executable macros.
+
+S-expressions remain useful as an optional diagnostic rendering of Core, not a second supported source language. JSON remains an interchange/debug format and must still pass canonical schema checks. Neither diagnostic format is an alternate trusted compiler input.
+
+The following is a proposed action fragment, not runnable code. Its enclosing agreement must declare the asset units, bound participants, custody, fee policy, supported claims and execution bounds.
+
+```text
+action swap(amount_in: Amount<A>, min_out: Amount<B>) {
+  requires amount_in > amount(0, A);
+
+  let adjusted = amount_in * fee_numerator;
+  let numerator = adjusted * pre.reserve_b;
+  let denominator = pre.reserve_a * fee_denominator + adjusted;
+  let output = floor_div(numerator, denominator);
+
+  requires output >= min_out;
+  requires output < pre.reserve_b;
+
+  next.reserve_a = pre.reserve_a + amount_in;
+  next.reserve_b = pre.reserve_b - output;
+
+  emit Transfer { asset: asset_a, from: trader, to: pool, amount: amount_in };
+  emit Transfer { asset: asset_b, from: pool, to: trader, amount: output };
+
+  ensures post.reserve_a == pre.reserve_a + amount_in;
+  ensures post.reserve_b == pre.reserve_b - output;
+}
+```
+
+`A` and `B` are nominal units. `asset_a` and `asset_b` are distinct typed asset identities supplied by settlement bindings that map each unit to its ledger asset and quantum. A unit name is not itself an asset identifier.
+
+`pre` is immutable. `next` writes a tentative field exactly once; unwritten fields retain their pre-state value. All right-hand sides use pre-state, parameters, constants, observations or earlier immutable locals. Reads of `next` are forbidden. `post` is available only in final `ensures` clauses after the tentative state is assembled. Clauses execute in lexical order, and `ensures` clauses form a suffix; the first failed clause gives the deterministic diagnostic. There is no externally visible intermediate state.
+
+This differs from the existing `set`/`state` profile, where later reads can see earlier writes. Migration must explicitly translate those reads to named locals or reconstructed post-state values. A file extension rename alone never opts into the proposed behavior.
+
+## Lexical and grammar contract
+
+Proposed lexical decisions: UTF-8 input; ASCII identifiers matching `[A-Za-z][A-Za-z0-9_]*` with registered length bounds; case-sensitive keywords; decimal nonnegative integer tokens without ambiguous leading zeros; JSON-compatible strings with Unicode scalar validation; ASCII token whitespace. Choose `//` line comments and non-nesting `/* ... */` comments for the successor, counted in source-byte limits and excluded from executable claims. Preserve exact source hashes separately from normalized semantic hashes. Comments do not prove a property or modify authorization.
+
+No floating-point literals, implicit unit coercions or plain division. Named `floor_div` and `ceil_div` require positive denominators and a registered rounding policy; division-by-zero and out-of-range intermediates reject. The existing profile only implements its current division forms; `ceil_div` is a proposed extension motivated by share conversion targets.
+
+This EBNF excerpt defines the action statement shapes. It is deliberately not a complete grammar: `identifier`, `type`, `expression`, `fieldname` and effectrecord productions are supplied by the successor's full lexical/expression/type grammar before admission.
+
+```ebnf
+action = "action", identifier, "(", [ parameters ], ")",
+         "{", { statement }, { postcondition }, "}" ;
+parameters = parameter, { ",", parameter } ;
+parameter = identifier, ":", type ;
+statement = requirement | binding | update | emission ;
+requirement = "requires", expression, ";" ;
+binding = "let", identifier, "=", expression, ";" ;
+update = "next", ".", fieldname, "=", expression, ";" ;
+emission = "emit", effectrecord, ";" ;
+postcondition = "ensures", expression, ";" ;
+```
+
+Specify precedence from tightest to loosest: parentheses/calls/projections; multiplication; addition/subtraction; one non-chained comparison; `not`; `and`; `or`. Thus `not a == b` means `not (a == b)` in this proposal. This is another explicit change from the atomic profile. Expressions evaluate left to right, and arithmetic is not reassociated without an intermediate-bound preservation argument. `and`/`or` short-circuit left to right; the compiler still rejects programs whose conservative static bound exceeds the registered maximum. Parenthesized Boolean groups are encouraged by formatter hints.
+
+Before freeze: write all productions, keyword/reserved-name rules, token priority, string decoding, expression precedence and diagnostic ordering. Generate positive and negative cases, including Unicode spans and nesting limits. Require formatter idempotence and preservation of normalized AST/Core, not equality of source hashes after whitespace edits.
+
+## Static semantics
+
+Use `Γ; Δ ⊢ e : τ ! ε` for expressions and `Γ; Δ ⊢ action ⇒ Δ' ! E` for actions. `Γ` contains ordinary bindings and scope; `Δ` contains owned resources/capabilities; `ε` and `E` describe effects. Pure expressions have empty effects. Typing is paired with a resource bound judgment and explicit visibility constraints.
+
+Proposed type families:
+
+- `Amount<Asset>` for nonnegative token quantities; `Quantity<Unit>` and bounded signed quantities for prices, cash-flow calculations and nominal obligations where required. Debt uses debtor/creditor orientation rather than an unexplained sign convention.
+- `Rate`, `Price<A,B>`, `Shares<Vault>`, `Party`, `AssetId` and identified `Position`/`Obligation`/`Request` resources. Shares are distinct from underlying assets.
+- Separate observation timestamps, payment dates, exercise windows and authorization expiry. Calendars, day-count and business-day policies are named financial definitions; ACTUS supplies their reference cases.
+- Finite records, enums, options and collections with registered maximum sizes. Public/private annotations constrain disclosure, with explicit authorized declassification; commitments do not make private data publicly available.
+
+For example, addition requires identical asset units:
+
+```text
+Γ ⊢ x : Amount<A>     Γ ⊢ y : Amount<A>
+-------------------------------------
+Γ ⊢ x + y : Amount<A>
+```
+
+Arithmetic range and overflow obligations remain additional judgments or runtime rejection conditions. Ownership prevents duplication/loss of identities but does not establish quantitative conservation. Mint/burn requires a defining authority and accounting rule. Unsupported types, observations, effects or claims reject before proof work.
+
+## Operational semantics in K
+
+Define the meaning of the typed Core, with source elaboration checked separately. [K's configuration/rewrite model](https://kframework.org/docs/user_manual/) is the selected executable framework. Begin with cells for control, immutable pre-state, tentative writes, locals, obligations, ordered effects, observations, authority, predecessor descriptors, remaining work and result status.
+
+The semantic boundary is:
+
+```text
+Eval(profile, program, pre, action, observations, authority, predecessors)
+  = Reject(code, span)
+  | Prepared(post, effects, duties, residualAuthority, successors, workRemaining)
+```
+
+Rules evaluate finite expressions, validate requirements, stage each write/effect, assemble post-state and check postconditions. A reject result discards all tentative financial changes. The language's rejection rule cannot promise that an attempted network submission incurred no external fee.
+
+`Prepared` records a candidate, not acceptance. No K test or host-computed success flag can replace native verification. The K model needs separate acceptance rules and an explicit ledger/environment interface for observations, consumption, ordering and finality.
+
+Every admitted profile registers bounds on source size, value/intermediate arithmetic, expression depth, collections, schedule events, observations, writes, effects, duties, predecessor fan-in and accepted lifetime work. A finite well-founded measure must decrease under each evaluation rule or bounded expansion. Recursive proofs do not enable source recursion. Splits partition remaining work and authority; joins cannot replenish spent allowance. Rejected external submissions are outside the accepted-lifecycle count.
+
+## Obligations and workflows
+
+An obligation has an identity, parties, denomination, outstanding amount or bounded calculation, trigger/payment dates, allocation rule and status. A payment discharges only the amount specified by that rule. Changes to nominal principal, capitalized interest, fees and token transfers are separate effects. No cash movement does not mean no financial transition.
+
+Pending requests retain identity, controller, committed assets/shares, claimable entitlement and residual amount. Their statuses are explicit; queue capacity and continuation work are bounded. Cancellation, default, write-off and loss allocation need named authority and effects.
+
+Closure requires duties to be discharged, explicitly resolved under authority, or assigned exactly once to an identified successor that preserves them. Expiry and exhausted work cannot implement deletion. Reserve recovery work when admitting an agreement; if required future steps cannot fit, reject the profile or instance rather than promise unlimited continuation.
+
+Composition has five distinct operators in the semantic design: sequencing, disjoint parallel composition, shared-state interleaving, atomic synchronization and asynchronous messaging. Exact spellings remain to be specified with examples. Each requires different conflict, custody, authority and residual rules. A generic `and` is only Boolean conjunction and cannot stand for financial composition.
+
+Private succession must provide the next participant with usable witness material, accepted predecessor evidence, residual duties/authority/work and recovery information. A commitment is insufficient if the recipient cannot construct the next witness. MC06 must demonstrate this in an isolated participant environment.
+
+## Mandatory proof acceptance
+
+A deployment fixes allowed semantic versions, claim specifications and verifier/key lineage. Authorization has two modes. An exact plan commits to the selected execution payload. An outcome intent commits to constraints before the solver selects execution: network/deployment domain, permitted programs/profiles, mandatory claim root, principal, nonce, expiry, observation policy, gross spending, net delivery, recipients/calls/fees, liability authority and partial-fill/residual rules. It need not fix a concrete next state, route or complete effect list. Predecessor constraints may pin a state or describe an admitted context; their interpretation is explicit in the profile.
+
+The concrete execution statement binds the signed authorization digest to the selected program/profile, predecessor identities, actual observations, next state, complete effects, duties, successors and remaining authority/work. IntentRefinement proves that this concrete execution satisfies the signed constraints. It must not require a second exact-plan signature in outcome mode. Exact-plan mode additionally checks equality with its signed execution commitment.
+
+Use a versioned non-circular construction: canonical unsigned authorization payload, authorization digest/signature, then concrete execution statement referencing that digest, then proof. For exact-plan mode, the authorization payload carries the hash of an execution body that excludes the authorization digest, signature and proof; the later statement binds both. No proof bytes or self-referential statement hash enter the payload they authenticate.
+
+Acceptance requires canonical/bounded inputs, authenticated current authorization, admissible observations, unique current predecessor consumption, native verification of the exact statement and exact binding to ledger effects. Four claims remain mandatory: ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance. Genesis and administrative transitions need explicit cases. No source option disables them; unsupported mandatory claims fail closed.
+
+History compliance does not prove oracle truth, prevent global double-spending by itself or establish timely settlement. The ledger and observation interface have those separate responsibilities. Proof-system soundness, key trust and private witness availability remain stated assumptions or independently tested obligations.
+
+For partial fills, acceptance persists consumption by authorization identity (network/deployment/principal/nonce): cumulative gross debits, fees, net delivered amounts, outstanding liabilities, residual rights and remaining work. Every successor proves an update of that record; refunds cannot restore consumed gross allowance. Atomic ledger consumption prevents concurrent fills from spending the same residual authority. Reloading or changing a solver does not reset the record. MC04/MC05 must implement and test these cumulative rules before accepting multi-transaction outcome intents.
+
+K work must establish named claims for bounded evaluation, type/state preservation, failure atomicity, quantitative accounting, residual-duty preservation, authority non-amplification and work conservation. Correspondence compares all observable obligations, fees, resource identities, locks, messages and outputs across source/Core, K, the TypeScript evaluator, Compact and Midnight acceptance. Matching only final balances is insufficient.
+
+## Decision and next implementation slice
+
+Proceed with this surface as the working design, subject to matched developer tasks and independent review. Implement the complete grammar/lexical/static contract and a narrow K Core slice for checked arithmetic, a guard, a staged update and a transfer candidate. Then add a partial-payment case with a surviving obligation before extending the proof relation. Use ACTUS and the action matrix to choose each extension.
+
+This prevents a formalization campaign from outrunning the financial target study. The next deliverable must show source, typed Core, K trace, evaluator result and an independent expected financial result for the same case. Native proving and ledger settlement remain separate admission milestones.
+
+
+--- FILE experiments/moriarty-language/spec/successor/semantic-contract.md SHA256 1cb0de182f3a4d20a64c97d8a8eba7c766ca91f81c16b4f9fbb27fe4ff9f7df2 ---
+# Proposed successor expression contract
+
+Status: **PROPOSAL — SP01.3 expression layer only.** Contract identifier
+`moriarty-expression-contract/0`; this is not a registered execution profile.
+It does not replace `moriarty-funded-source/0`, the syntax profile, or archived
+candidate04. No full RP01, SP02, SP03, theorem, signature or Midnight acceptance
+follows from this document. All new choices below require the current independent
+GPT-6/Grok reviews. The 38 proposed financial operations are not defined here.
+
+This document and [static-semantics.md](static-semantics.md) give the meaning of
+all 40 expression constructors declared in candidate04 B.1. The complete index
+is [expression-signatures.json](expression-signatures.json). The exact mathematical
+JSON embedding and every byte/node aggregate are defined by
+[representation.md](representation.md); no implementation may choose another
+layout for these semantic bounds. Structural validation
+of that index is distinct from the [specified derivation cases](expression-cases.json).
+The documents, not the structural validator, define the proposed semantics.
+
+## Authority and decisions
+
+Inherited requirements: immutable pre-state; sequential immutable locals;
+one tentative write per field; no `next` reads; post-state available only in the
+final `ensures` suffix; first lexical failed clause; financial rollback; finite
+work; distinct nominal debt and tokens; no host flag establishes acceptance.
+Sources: [LANGUAGE-DESIGN](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:46),
+[SP01.3](../../../../openspec/sprints/sp01-financial-contract-and-execution-admission.md:49),
+[SP03](../../../../openspec/sprints/sp03-executable-bounded-semantics-in-k.md:39).
+
+The following are **new proposed choices**, not inherited approvals:
+
+| ID | Choice and reason |
+| --- | --- |
+| EX-D1 | Strict left-to-right operands, including `And`/`Or`. Every subtree is checked and evaluated; an overflowing right operand is not hidden by false/true on the left. A later short-circuit language must use a distinct reviewed contract. |
+| EX-D2 | Checked same-type scalar arithmetic, indexed amount/share addition and subtraction, explicit quantity scale/unit arithmetic. No implicit asset, scale, width or debt conversion. This makes overflow and rounding visible. |
+| EX-D3 | `ReadPre` has a closed view operand `pre|post`; `post` is legal only in Ensure's condition. No new 41st constructor and no `ReadNext` are introduced. Read-view is part of Core encoding, never inferred from a name. |
+| EX-D4 | Every entered node costs one ordinary work unit. Finite helper operations do not each count as nodes. Recovery work is unchanged here. Failed preparation reports consumed local work, but publishes no candidate financial state/effects. This is a proposed local cost semantics, not native proof cost or authority consumption. |
+| EX-D5 | AccessField/AccessIndex are exact aliases of ProjectField/ProjectIndex, including errors and work. Core preserves their names; an optimizer may not delete their node charge without a separate correspondence argument. |
+| EX-D6 | Emit appends a typed operation descriptor only. Effects and financial state changes require the separately defined financial-operation transition. There is no default Transfer, repayment or other execution guessed from the descriptor. |
+| EX-D7 | Finite parameters below are proposal limits, independent of existing parser/funded bounds. UTF-8 spans are half-open byte offsets. Whole-action static rejection precedes any execution. |
+| EX-D8 | Unit is statement-result-only; schema fields are classified ordinary/financial. Raw NextWrite cannot bypass financial transitions. These are proposed type/registry mechanisms enforcing the inherited no-debt-erasure requirement. |
+
+The earlier surface proposal explicitly selects short-circuit `and`/`or`
+([line71](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:71)).
+EX-D1 does not override it or establish source/Core correspondence. Resolve that
+choice before a surface/elaboration freeze. Its AMM fragment also needs mixed
+Amount products/division absent from this proposed overload table; those target
+requirements remain open, not removed by TYPE_MISMATCH here.
+
+Unresolved privacy, observation authentication, operation effects and signing
+policy are explicit external obligations. Mathematical values below do not
+establish permission to disclose a value, condition, error or state. A future
+public execution profile must bind its confidentiality and observation policy;
+this proposal cannot accept a private workflow by omitting that policy.
+
+## V — finite domains and values
+
+A candidate binds a finite schema environment Σ and input snapshot before
+checking the action. No host callback, arbitrary JSON, mutable object reference,
+user function, recursion or implicit cast is a Core value.
+
+Proposed simultaneous limits: 65,536 source UTF-8 bytes; 4,096 AST nodes;
+64 nesting depth; 256 declarations and 256 statements; 64 fields per record;
+128 members per collection/enum; 1,024 UTF-8 bytes per Text; identifiers match
+`[A-Za-z][A-Za-z0-9_]{0,63}`; at most 65,536 canonical UTF-8 bytes and 4,096
+nodes in each complete input value or assembled candidate state; at most 128
+operation descriptors, each within the same value limits; work 0..65,536.
+A value node is one scalar or compound value constructor; names, type metadata
+and tags are not additional value nodes. A compound contributes one plus its
+child value nodes, counting repeated occurrences separately. AST nodes count
+entered constructor occurrences, not metadata or list containers.
+
+All aggregate collections, including Σ, arguments, observations and pre-state,
+are checked against those byte/node/depth bounds as complete records, not only
+against per-field bounds. Σ type definitions form an acyclic graph. Cardinalities
+must fit simultaneously: products of individual maxima do not grant larger
+aggregate limits. Inputs failing a bound never enter evaluation.
+
+These maxima are proposed contract parameters motivated by the retained bounded
+proposal and parser. They have no native fit, runtime performance or usability
+claim. Changing a maximum changes this contract's eventual profile digest.
+
+Values have exact types, recursively:
+
+- `UInt64`: 0..2^64−1; `UInt128`: 0..2^128−1;
+  `SInt128`: −2^127..2^127−1; `Bool`. `Unit` is a statement-result marker only,
+  not a storable, argument, observation, field or collection/option element type.
+- `Text`: a well-formed Unicode scalar sequence whose UTF-8 is at most 1,024
+  bytes. No normalization; comparison is exact decoded scalar equality.
+- `Amount<A>`: UInt128 quanta indexed by a declared asset identifier A.
+- `Shares<V,H>`: UInt128 share quanta indexed by a declared vault V and holder H.
+- `Rate<S>`: signed SInt128 mantissa with type-level scale S, 0..18; value m/10^S.
+- `Price<A,B,S>`: UInt128 mantissa, declared distinct base A and quote B,
+  scale S, direction fixed as base-per-quote; value m/10^S A per B.
+  In particular Price<AssetB,AssetA,4>(19743) is 1.9743 AssetB per AssetA,
+  matching the retained swap convention; parameter order is not interchangeable.
+- `Quantity<U,S>`: SInt128 mantissa with scale S and a canonical unit vector U over the separate declared Σ.units roster.
+  U contains at most eight distinct identifier/exponent pairs in increasing ASCII
+  identifier order. Exponents are nonzero integers −128..127. An empty vector
+  is dimensionless. Values denote m/10^S times the product of symbol powers.
+- `Record<R>`: every field of the declared record R exactly once, with its
+  declared type. Field names are sorted by ASCII identifier for value encoding;
+  source constructor operands retain lexical order for evaluation.
+- `Enum<E>`: one member of declared enum E. Payload enums are not implicit;
+  use a record plus an option when required.
+- `Option<T>`: `None<T>` or `Some<T>(v:T)`.
+- `Collection<T,N>`: ordered values all of T, length 0..N, 0≤N≤128. Capacity is
+  in the type; equal lengths do not make different capacities/types equal.
+- `Operation<O>`: descriptor `{operation:O, fields:Record<R_O>}` for a declared
+  operation O with exact operand schema R_O. It contains no executable callback.
+  This descriptor is formed by Emit; it is not a ledger effect.
+
+Record schemas may encode financial identities and debt records, but these
+expressions confer no authority to create/change a financial resource. Persistent
+field registry entries include `writeClass=ordinary|financial`; only ordinary
+fields may be targeted by NextWrite. Financial fields are read-only at this
+layer. A profile must define the complete financial operation relation and
+reconcile its footprint with staged ordinary writes before financial execution.
+This prevents a raw next-write from erasing debt or bypassing cash effects.
+
+Core metadata comprises identifiers, integers, type references, record field
+names, enum members and read views. It is bounded, not executable. Numeric
+metadata and values use canonical decimal strings: unsigned `0|[1-9][0-9]*`;
+signed adds `-[1-9][0-9]*`. No `+`, leading zeros or `-0`. Booleans use JSON
+booleans. Each Core node is a closed tagged record with its named operands and
+span, no extra keys. No duplicate JSON keys. Canonical serialization uses sorted
+object keys, ordered arrays, UTF-8 with no BOM, no insignificant whitespace and
+no Unicode normalization; escaping is JSON minimal (quote/backslash/control
+characters escaped, other scalar characters emitted). Quote/backslash use their
+short JSON escapes; backspace, form-feed, newline, carriage-return and tab use
+\b, \f, \n, \r and \t respectively; other U+0000..U+001F use lowercase
+\u00xx. This fixes the escaping choice. Any future wire codec
+must implement and test this; the structural checker is not that codec.
+
+## E — evaluation contexts and frames
+
+The configuration is `⟨control, pre, writes, locals, args, obs, descriptors,
+workInitial, workRemaining, result⟩`. Pre/args/obs/Σ are immutable finite snapshots.
+Writes and locals begin empty; descriptors begin empty. Existing duties,
+authority and recovery reserve are part of the supplied state, not fresh budget.
+Snapshots are assumed supplied consistently; this layer does not authenticate them.
+
+A frame `C ::= [] | K(v1,…,v(i−1),C,e(i+1),…,en)` ranges over the
+constructor's **evaluatedOperands**, in listed order, expanded in lexical list
+order. Metadata operands are not evaluated. For Let only its value is evaluated;
+NextWrite only its value; Require/Ensure only their condition. Read/literal nodes
+have no expression children. Record/list children are evaluated in source order,
+not canonical field order. All children of a well-typed expression are evaluated,
+including both sides of And/Or, before applying its rule.
+
+Small steps are deterministic proposals:
+
+1. On entering a node with work=0, reject `WORK_EXHAUSTED` at that node without
+   entering children. Otherwise decrement work by one and mark the node entered.
+   Resuming its context does not charge it again.
+2. Enter children left-to-right. The first rejection discards the entire control
+   continuation, tentative writes, locals and descriptors.
+3. Apply the constructor rule after all children return values. Primitive guard
+   order is specified by the rule. Failures point to that constructor's span.
+4. A statement's success advances to the next lexical statement. Ensure clauses
+   are a suffix and see `post=pre overridden by writes`; that view does not commit.
+5. After all statements/ensures pass, check aggregate candidate encoding bounds
+   and return `ExpressionPrepared(post,descriptors,workRemaining)`.
+
+Result is **ExpressionPrepared**, never accepted `Prepared`, `Complete` or
+`Pending`. It is not financially executable without the operation-layer rule.
+For a descriptor-free ordinary action it specifies a tentative state only.
+An external financial rule must consume descriptors, account for its own work,
+produce complete ordered effects, preserve duties and resolve postcondition
+visibility before the combined language can execute. This missing composition
+is not silently given an evaluation order here.
+
+Rejection is `Rejected(code, span, nodePath, workUsed)` with no post-state or
+financial effects; workUsed is local attempted reduction cost, not a committed
+ledger/authority charge. Input admission/static rejection has workUsed=0.
+Runtime workUsed=workInitial−workRemaining includes the entered failing node
+unless failure is inability to enter it. No failed preparation increases a
+stored work budget or permits an on-chain retry. Continuing, charging a failure
+or using recovery work belongs to the future lifecycle/acceptance relation.
+
+Span `[start,end)` is UTF-8 byte offsets, 0≤start≤end≤sourceBytes. Elaboration must
+retain real node spans; synthetic Core has explicit synthetic spans and cannot
+claim a source diagnostic. For malformed inputs use the first offending field's
+node span when available, otherwise `[0,0)`. Synthetic spans must be explicitly
+marked and exactly `[0,0)`; they cannot fabricate source offsets. `nodePath` is an ordered child-index
+path from the action root; statement index is its first element. For an isolated
+expression derivation, its root path is empty and children begin at index zero. For post-final
+aggregate failure use the action's span/path. No wrapping private data in errors.
+
+## R — primitive reduction rules
+
+The exact rules and all overloads appear in the companion static contract.
+Common rules apply to all 40 nodes: admission and typing first; entering/child
+ordering above; no mutation by pure expressions; no implicit helper effects;
+checked finite result before returning. Integer checks compare mathematical
+integers to the declared bounds and never wrap. A multiplication checks its
+product before any subsequent division, even when the final quotient would fit.
+Literal/metadata validity is checked statically; runtime snapshot equality and
+value domain checks occur during whole-input admission, not arbitrary late reads.
+
+Post-state fields not written retain their exact pre-state values, including
+financial records and identities. No integer debt subtraction is a transfer.
+Only the operation-layer contract can authorize discharge/write-off/migration;
+RequestFulfill/Claim, MessageRefund, RewardAccrue/Claim and EventClaimSettle
+remain underdetermined in candidate04. This file invents no payout or funding rule.
+
+## Open interfaces and theorem scope
+
+The archived signing proposal's 38 financial rows, genesis funding, full
+contextual negative histories, cancellation backing and display identity fixes
+remain open. This 40-constructor document does not reconcile the full RP01
+challenge map or vote on an accepted base-Core membership list.
+
+A later combined contract must resolve financial-operation execution versus
+ordinary staged writes and postconditions, authenticated/labelled observations,
+privacy and disclosure, canonical codec implementation, lifecycle/authority work
+and acceptance statuses. Until then, a full successor runtime must reject an
+attempt to execute these missing interfaces; descriptor preparation alone cannot
+be exposed as a completed financial action.
+
+The six SP03.3 obligations remain determinism, progress-or-defined-rejection,
+type preservation, finite termination, residual-duty conservation and
+elaboration/evaluator correspondence **for the frozen base domain**. This source
+contract and its derivations are not mechanized proofs. No K proof or frontend
+correspondence is performed here. The existing Transfer/Repay evaluator, numeric
+K evidence and compiled Midnight loan/swap evidence retain their original scope.
+
+
+--- FILE experiments/moriarty-language/spec/successor/static-semantics.md SHA256 a942d4f98fa19b8a667e57c4b758cc4eca7d953a6eda38a942cf6b30626aa390 ---
+# Proposed static semantics and expression rules
+
+Status: **PROPOSAL**, companion to [semantic-contract.md](semantic-contract.md).
+Rules apply to the complete 40-constructor expression inventory, not to a newly
+accepted execution profile. Financial operation equations and full signing
+remain outside this contract. Rule IDs below are stable references for the
+[machine-readable signatures](expression-signatures.json).
+
+## S0 — judgments and admission order
+
+Σ is the bounded acyclic schema registry from V. Γ contains four disjoint
+namespaces: immutable locals L, typed arguments A, typed observations O and
+persistent fields F. Names are identifiers; no implicit fallback across
+namespaces. T includes the finite ground and recursively constructed types in V.
+Unit is a statement-result marker, excluded from T and every Σ data schema,
+input, field, record member, option and collection element. Asking for Unit as a
+value type (for example ConstructNone(Unit)) rejects TYPE_NAME. It cannot be
+introduced by a read or projection.
+
+Exact type equality includes every asset, holder, vault, scale, unit vector,
+record/enum identity and collection capacity. No subtyping or implicit casts.
+
+`Σ;Γ;phase ⊢ e:T` is total as an algorithm on the admitted finite syntax:
+visit constructor operands in their named/source order, recursively check all
+children (including both Boolean branches), then apply the listed rule. If no
+listed overload applies, reject TYPE_MISMATCH. Unknown tags reject
+TYPE_CONSTRUCTOR. Unrecognized metadata/fields reject INPUT_SCHEMA. Bounds or
+malformed spans reject INPUT_BOUND/INPUT_SPAN before typing. Malformed literal
+values reject TYPE_LITERAL. Missing names/types/fields reject TYPE_NAME.
+
+Admission precedes reduction:
+
+1. Validate closed structure, duplicate-key freedom, canonical scalar metadata,
+   raw aggregate JSON byte bounds, schema JSON-tree bounds, Core AST bounds and
+   spans in preorder, first defect wins. Type-dependent individual W/value-node
+   bounds wait until types are resolved; no undefined type-size function is called. Structural
+   parsing itself is an implementation obligation; these rules do not claim a
+   supplied hostile object is already safe.
+2. Validate Σ in identifier order: acyclic declared references and bounded shapes;
+   validate action parameter/field/observation declarations. Field registries,
+   not callers, assign ordinary/financial write classes.
+3. Typecheck the complete action in lexical order, including unexecuted statements.
+   At each statement check its placement/target/binder before its expression,
+   then check expression operands recursively before its result constraint.
+4. Validate snapshots in order Pre, Args, Obs, each in identifier order. Missing/
+   extra names or a value tree differing from its resolved type shape rejects
+   INPUT_SCHEMA. Then check individual W and typed aggregate node/depth bounds
+   (INPUT_BOUND), then mathematical value domains (INPUT_VALUE). In each stage
+   inspect children in the type-defined field/list order. No missing read can
+   surface after a preceding guard. This is before all reduction, not a late read.
+5. Start work-metered reduction. The exact shape, size, annotation-versus-value distinction and admission
+   phase are fixed by [representation.md](representation.md). Static checks consume no semantic work; bounded
+   validation overhead still exists and is not a native-cost estimate.
+
+Thus a later static error precedes an earlier *runtime* guard failure. Lexical
+first-failure means first in the relevant admission/static/runtime phase, not
+an excuse to skip checking later source. No diagnostics list is authoritative
+for deciding which side effects to commit: all rejection paths publish none.
+
+Actions are statement lists `Require|Let|NextWrite|Emit` followed by zero or more
+Ensure. Those five nodes cannot nest as expression operands. A pure expression
+never returns Unit or mutates a frame. Statement results below are Unit, including
+Let (it binds a typed value but is not an expression returning that value).
+This corrects the earlier candidate's ambiguous Let result T and is a new proposal.
+
+## L — literals
+
+All literals take metadata only, have no evaluated child and cost one on entry.
+The indicated type is determined statically; literal domain validity is checked
+there after structural admission. Wrong JSON scalar kinds fail INPUT_SCHEMA
+earlier; in particular LitBool(1) cannot reach TYPE_LITERAL. Only true/false
+have a structurally valid Boolean literal representation.
+
+| Rule | Constructor metadata | Type and exact value |
+| --- | --- | --- |
+| L-U | LitUInt(width,value) | width 64 or 128; type UInt64/UInt128; value in that unsigned range |
+| L-I | LitSInt(value) | SInt128, exact signed integer |
+| L-B | LitBool(value) | Bool, literal true/false only |
+| L-T | LitText(value) | Text, exact decoded bounded scalar string |
+| L-A | LitAmount(asset,value) | Amount<asset>, declared asset, UInt128 quanta |
+| L-Q | LitQuantity(units,scale,mantissa) | Quantity<units,scale>, canonical declared units and SInt128 mantissa |
+| L-S | LitShares(vault,holder,value) | Shares<vault,holder>, declared identities, UInt128 quanta |
+| L-R | LitRate(scale,mantissa) | Rate<scale>, scale 0..18, SInt128 mantissa |
+| L-P | LitPrice(base,quote,scale,mantissa) | Price<base,quote,scale>, distinct declared assets, UInt128 mantissa |
+
+There is no LitDebt. A financial record read from a declared schema is not a
+primitive numeric amount. No arithmetic overload operates on a Debt record.
+
+## READ — immutable reads
+
+ReadLocal(name), ReadArg(name) and ReadObs(name) return exactly L[name], A[name]
+and O[name], with their declared types. Names must exist at that lexical point.
+ReadObs is a pure read of the supplied snapshot: it emits no Observe effect and
+makes no oracle truth/currentness assertion. All read nodes cost one.
+
+ReadPre(view,field) accepts metadata view `pre|post` only. `pre` selects F in
+immutable pre; `post` selects the assembled overridden F. Type is F[field].
+`post` is permitted anywhere inside an Ensure condition and nowhere else;
+violation rejects TYPE_POST_SCOPE. `next` rejects TYPE_NEXT_READ. Both views
+have the same declared field type. A private/unauthenticated observation remains
+private/unauthenticated; these semantics contain no implicit declassification.
+
+## ACCESS — projection
+
+ProjectField(record,field) and AccessField(record,field) require
+record:Record<R> and metadata field in R. Result type is R[field], result value
+is that exact field, no copy-as-authority or ownership claim. A wrong field is
+TYPE_NAME; a non-record child is TYPE_MISMATCH.
+
+ProjectIndex(collection,index) and AccessIndex(collection,index) require
+Collection<T,N> and UInt64. Result type T. After both children evaluate, require
+index < actual length; otherwise INDEX_RANGE. This is runtime length, not just
+capacity. The finite index check never performs an unchecked host array read.
+Empty collections therefore reject every index. Aliases have identical rules.
+
+## BUILD — finite constructors
+
+ConstructRecord(recordType,fields): metadata recordType R must be declared.
+First resolve R. Then scan the entire field-name list in lexical order for
+duplicates, rejecting TYPE_DUPLICATE_FIELD at the first repeated name. Only
+after that scan succeeds compare the set to R; missing/extra fields reject
+TYPE_RECORD_FIELDS. Perform both checks before any child typing/evaluation.
+Each named expression field therefore occurs once and exactly covers R. Evaluate field expressions in lexical order; require each type equal
+to R[field]. Return Record<R> sorted by name for representation. Extra evaluation
+order is not introduced by sorting. Aggregate value bounds checked last.
+
+ConstructEnum(enumType,member): both metadata; member must belong to declared E;
+return Enum<E>(member), otherwise TYPE_ENUM_MEMBER. No runtime payload or effect.
+
+ConstructSome(elementType,value): explicit T metadata; require value:T;
+return Some<T>(value). ConstructNone(elementType): return None<T>, no child.
+T must be a finite registered type; never infer None's type from a later use.
+
+ConstructCollection(elementType,capacity,items): metadata T,N (0≤N≤128), ordered
+expression list length≤N; check shape before children, else TYPE_COLLECTION_BOUND.
+All children have exactly T. Return Collection<T,N> preserving order. Any result
+of BUILD exceeding the aggregate value/byte/depth bounds rejects VALUE_BOUND
+at that constructor, after its children and before returning the value.
+A well-shaped undeclared nominal type reference rejects TYPE_NAME during
+schema/static resolution. An unknown wire tag rejects INPUT_SCHEMA. A cyclic
+type dependency rejects TYPE_SCHEMA_CYCLE during schema validation, including
+Operation<O> through its operand Record and any Option/Collection wrappers.
+
+## ARITH — exact overloads and guard order
+
+Arithmetic is strict. Evaluate left then right, then apply the following rules.
+Unless listed, an operand-type combination rejects TYPE_MISMATCH statically.
+For scalar integer operations, both operands and result have the identical type
+T in UInt64, UInt128 or SInt128. Add/Sub/Mul use mathematical +/−/× and reject
+ARITH_RANGE when the result does not fit T. There is no widening then truncation.
+
+| Operation | Additional admitted overloads | Result and checks after children |
+| --- | --- | --- |
+| Add/Sub | Amount<A>, Shares<V,H>, Rate<S>, Quantity<U,S>, with exactly equal indices | Same type; operate on quanta/mantissas and check its underlying UInt128/SInt128 range |
+| Mul | Quantity<U1,S1>, Quantity<U2,S2> | Quantity<normalize(U1+U2), S1+S2>; result type must satisfy unit/scale bounds; SInt128 mantissa product must fit |
+| FloorDiv/CeilDiv | Quantity<U1,S1>, Quantity<U2,S2> | Quantity<normalize(U1−U2), S1−S2>; result scale must be 0..18 and units bounded; denominator mantissa positive; floor/ceil of the mantissa quotient, checked SInt128 |
+
+For Quantity Mul/Div, type-level exponent and scale arithmetic uses exact
+mathematical integers during static checking; no runtime numeric widening is
+implied. Normalize merges equal symbols and removes zero exponents; reject
+TYPE_QUANTITY_DOMAIN if the result has >8 symbols, exponent outside −128..127,
+or scale outside 0..18. These are representation restrictions, not a claim every
+mathematically meaningful dimensional operation is representable. In particular,
+no implicit rescale repairs a negative division scale. A later rescale operation
+requires explicit source requirements and cannot be silently introduced here.
+
+Scalar FloorDiv/CeilDiv require denominator >0, otherwise ARITH_DENOMINATOR
+before quotient computation. For integer numerator n and positive d, compute
+unique integers q,r with n=q*d+r and 0≤r<d. FloorDiv returns q; CeilDiv returns
+q if r=0, otherwise q+1. Check result range, else ARITH_RANGE. This includes
+negative SInt128 numerators: −5/2 gives floor −3, ceil −2. No floating point.
+Quantity division uses the same rule on mantissas, retaining the derived scale.
+
+No plain `/`; no Rate*Amount or Amount/Price implicit money conversion;
+no Price arithmetic, Amount multiplication, Shares across different holders,
+Width mixing, comparison-driven casts or Debt-as-Amount. Missing target-required
+overloads stay explicit SP01 decisions; these signatures do not silently remove
+those financial requirements from RP01. Conversion operations require their
+separate financial contracts.
+
+## CMP — comparisons and Booleans
+
+Eq requires identical value types T; admits scalar values and finite Record,
+Enum, Option and Collection recursively, including indexed financial *values*.
+Operation descriptors may be compared structurally but comparison grants no
+financial authority. Records compare the same named fields; collection elements
+compare in order; None equals None of the same T, never Some. Text equality is
+exact decoded scalar equality. Result Bool. No pointer or host object equality.
+
+Lt/Lte/Gt/Gte accept identical scalar integer types or equal-index Amount,
+Shares, Rate, Quantity or Price. Compare underlying integer quanta/mantissas.
+Result Bool. They reject Bool, Text, Record, Enum, Option, Collection and Operation;
+there is no implicit ordering on identities or records.
+
+Not requires Bool, returns logical negation. And/Or require two Bool children,
+evaluate both strictly in order, then return conjunction/disjunction. Runtime
+failure in a child wins over the eventual Boolean result. No control-flow or
+financial composition operator is encoded by these nodes.
+
+## STMT — staging and descriptors
+
+Require(cond): require Bool. Evaluate cond; false rejects GUARD_FAILED, true
+returns Unit with unchanged frames. Ensure(cond): same, but legal only in the
+final suffix and false rejects ENSURES_FAILED. Ensure changes no state.
+
+Let(name,value): name must be fresh in L and not shadow any argument, declaration
+or reserved pre/post/next name; violation TYPE_DUPLICATE_BINDER. No self reference:
+check/evaluate value under the old L, then extend L once. Type of binding is
+value's type. Statement returns Unit. Later locals can read it.
+
+NextWrite(field,value): field declared ordinary; financial fields reject
+TYPE_FINANCIAL_WRITE. Check field exists and has no previous NextWrite in this
+action before checking value; duplicate rejects TYPE_DUPLICATE_WRITE. Require
+value's type equals field type; evaluate value against immutable pre, prior
+locals/args/obs, never tentative writes. Stage writes[field]=value; return Unit.
+No state mutation is externally visible. Whole-action static tracking detects
+all duplicate writes even if an earlier runtime guard would have failed.
+
+Emit(operation,fields): metadata operation O must be registered with exact
+operand Record<R_O>; require fields:Record<R_O>. Evaluate fields; append
+Operation<O>(fields), preserving order. Check descriptor count/aggregate bound,
+else DESCRIPTOR_BOUND. Return Unit. The operation registry supplies an operand
+schema, not a callable semantic function. No balance, debt, allowance or work
+transition is inferred from the descriptor. Executable operation interpretation
+requires a separate reviewed relation and may not treat this return as success
+of the corresponding financial action.
+
+After all statements and Ensure conditions succeed, finalize the ordinary
+post-state and check aggregate bounds, otherwise VALUE_BOUND. Every non-written
+field is exactly retained. Stage assembly has no extra expression node charge.
+A failure's local work count remains diagnostic only, as defined in E.
+
+## Cases and acceptance limits
+
+Every declared constructor has a positive and a distinguishing rejection case
+in expression-cases.json, derived from these equations by the author separately
+from the structural validator. Additional cases cover x=10→11, false ensures12,
+duplicate writes, next reads, misplaced post, mixed assets, strict Boolean and
+two failures. The validator checks their record completeness and references;
+it neither interprets terms nor proves that a derivation is correct. Fresh
+reviewers must examine those derivations and the missing financial interfaces.
+
+
+--- FILE experiments/moriarty-language/spec/successor/representation.md SHA256 dd09b7f7021d0357a06da95d5fd08545aae2e124c7d89655e5c1424d38ab9ed2 ---
+# Proposed normative representation and size
+
+Proposed correction for EX-G6-F1. This specifies a mathematical embedding and size
+function, not an implemented encoder, decoder or accepted execution profile.
+It supplements V/S0 of the expression contract and must be reviewed with them.
+No financial-operation semantics or signing hash domain is added.
+
+## Canonical JSON spelling
+
+Let J(x) be the UTF-8 byte string for the **exact JSON tree** below: object keys
+sorted in Unicode scalar order (all protocol/field keys here are ASCII), arrays
+in listed order, no whitespace/BOM, no normalization. Quote/backslash and
+backspace/form-feed/newline/carriage-return/tab use their short JSON escapes;
+remaining U+0000..U+001F use lowercase `\u00xx`; other scalar values are emitted
+as UTF-8. JSON numbers, null, unpaired surrogates and duplicate object keys do
+not occur in these trees. Every integer, including metadata, spans and capacities,
+is a canonical decimal string. JSON booleans remain booleans. This determines
+spelling; the tables below determine the tree.
+
+`bytes(x)=length(J(x))` counts every key, quote, escape, delimiter and array/object
+wrapper. No pretty-printed, tagged, implementation-specific or host-memory size
+can substitute for this function. Receiving a different layout rejects
+INPUT_SCHEMA before evaluating a term; it cannot become an alternative size
+interpretation. A noncanonical spelling rejects INPUT_SCHEMA before evaluation
+when a wire input is supplied. Schematic mathematical derivations must state the
+same tree even though no transport decoder is implemented in this task.
+
+## Types: t(T)
+
+Types always use the following JSON arrays. Type references are not inlined
+through named record/enum definitions. The finite acyclic schema resolves them.
+The right side below is a JSON tree: metavariables stand for their specified
+JSON subtrees or strings, not text interpolation.
+
+| Type | t(T) |
+| --- | --- |
+| UInt64, UInt128, SInt128, Bool, Text | `["UInt64"]`, `["UInt128"]`, `["SInt128"]`, `["Bool"]`, `["Text"]` respectively |
+| Amount<A> | `["Amount", A]` |
+| Shares<V,H> | `["Shares", V, H]` |
+| Rate<S> | `["Rate", decimal(S)]` |
+| Price<A,B,S> | `["Price", A, B, decimal(S)]` |
+| Quantity<U,S> | `["Quantity", [[symbol,decimal(exponent)],...], decimal(S)]` with U in canonical symbol order |
+| Record<R>, Enum<E> | `["Record",R]`, `["Enum",E]` |
+| Option<T> | `["Option",t(T)]` |
+| Collection<T,N> | `["Collection",t(T),decimal(N)]` |
+| Operation<O> | `["Operation",O]` |
+
+Unit has no value embedding: it is a statement-result marker, never a valid
+input/schema member. The Core annotation token `["Unit"]` is nevertheless
+structurally recognized so ConstructNone(Unit) reaches static value-type
+resolution and rejects TYPE_NAME. W(Unit,a) is undefined for every a and must
+never be measured or admitted. A nominal reference `["Record","AbsentType"]`
+is likewise a well-shaped annotation that rejects TYPE_NAME if undeclared. No implicit width/asset/scale/vault conversion is encoded.
+Unknown type-annotation tags and wrong array arity reject INPUT_SCHEMA.
+Well-shaped but undeclared identifiers reject TYPE_NAME at static resolution.
+A resolved t(T) used by W is defined only after those checks.
+
+## Values: v(T,a)
+
+A type T and its schema are always known before interpreting v. Type metadata
+is deliberately stored in t and Σ rather than repeated on every scalar value.
+
+| Value type | v(T,a) |
+| --- | --- |
+| UInt64, UInt128, SInt128 | canonical decimal string for a |
+| Bool, Text | JSON boolean or exact decoded JSON string |
+| Amount, Shares, Rate, Price, Quantity | canonical decimal string for quanta/mantissa; indices and scale remain in t(T) |
+| Record<R> | JSON object `{field:v(R[field],a[field]),...}` with exactly R's fields |
+| Enum<E> | member identifier string |
+| Option<T> None | `[]` |
+| Option<T> Some(a) | `[v(T,a)]` |
+| Collection<T,N> | `[v(T,a0),...,v(T,ak)]`, length at most N; an empty collection is `[]` |
+| Operation<O> | `{"operation":O,"fields":v(Record<R_O>,a.fields)}` |
+
+Option and collection empty arrays are unambiguous because T is known; a decoder
+cannot infer T from an untyped value. The exact type-indexed standalone value
+encoding is `W(T,a)={"type":t(T),"value":v(T,a)}`. The complete value byte bound
+is **bytes(W)**, including the type wrapper. Mathematical value nodes remain
+one scalar/compound constructor plus child nodes. W and t metadata do not add
+value nodes. Record fields and collection/Some elements are child occurrences;
+None, enum members and numeric/indexed scalar values each have one value node.
+An Operation value has one node plus the value nodes of its fields record.
+Value depth is one for a scalar/empty constructor and one plus maximum child
+depth for a nonempty constructor. Snapshot and descriptor-sequence roots add
+one depth level. The bound is64 for each individually checked value/aggregate;
+type metadata and W do not add mathematical value depth.
+Repeated occurrences count separately, even if the host shares a reference.
+
+Every individual input field value and constructed value must fit 65,536 bytes
+as W and 4,096 value nodes. Literal values use the same rule; simpler literal
+limits remain in force. Aggregate snapshot/state bounds below are additional,
+not a replacement for the individual value bound.
+
+## Σ and aggregate snapshot trees
+
+Σ is exactly the following object. Each map is a JSON object keyed by the
+relevant declared identifier. Each shown key is required, including empty maps.
+Roster arrays are sorted unique identifiers. Enum member arrays are sorted
+unique identifiers. Declaration/field order for schema validation is increasing
+identifier order. Source expression/statement evaluation order is unchanged.
+
+```text
+{
+  "units": [unitSymbol,...],
+  "assets": [asset,...],
+  "vaults": [vault,...],
+  "parties": [party,...],
+  "recordTypes": {R: {field:t(T),...},...},
+  "enumTypes": {E:[member,...],...},
+  "fields": {field:{"type":t(T),"writeClass":"ordinary"|"financial"},...},
+  "args": {name:t(T),...},
+  "observations": {name:t(T),...},
+  "operations": {O:R_O,...}
+}
+```
+
+Every Quantity unit symbol must occur in Σ.units, including the symbols in
+literal units and derived unit vectors. Unit atoms are not free text or implicit
+asset names: the future source elaborator must bind source `unit` declarations
+to this exact roster. An undeclared unit rejects TYPE_NAME during type/literal
+checking. Symbols eliminated by normalization still must be declared in the
+operand types; cancellation cannot hide an undeclared unit.
+
+For schema acyclicity, recursively traverse every Option/Collection type to its
+element and every record field to its type. Treat each named record R and
+operation O as a dependency node: Record<R> references R; Operation<O> references
+O; O has an edge to its operand record R_O. Record fields recursively contribute
+all such edges even through Option or Collection. Reject any directed cycle
+before value admission with TYPE_SCHEMA_CYCLE, including R→Option<Operation<O>>→O→R. Enum and indexed
+scalar types are leaves; field/argument/observation types are roots. Finite
+capacities or a None value do not permit recursive schemas.
+
+This is a meta-notation for a closed object, not a JSON document with `...` or
+union bars. R_O is a declared record type identifier; no host callback/function,
+financial effect equation or signature is encoded there. Profiles still owe
+those independent financial semantics. Σ cannot be extended by a caller merely
+to classify a debt field ordinary; the complete reviewed profile must own it.
+
+`Args`, `Obs` and `Pre` are each exactly `{name:v(T_name,value),...}`, using
+Σ.args, Σ.observations and Σ.fields respectively. All declared fields occur
+exactly once. `Post` has the identical field/type layout to Pre, with staged
+ordinary values substituted and all other values unchanged. Neither snapshot
+repeats Σ or wraps field values in W. Each snapshot has its own 65,536-byte and
+4,096-value-node bound: one outer record node plus the field value nodes.
+The input schema, Args, Obs and Pre are checked separately; there is no unstated
+single 65,536-byte bound on their concatenation. Σ has its own 65,536-byte bound.
+
+Schema-size nodes are exactly JSON-tree nodes (one for each object, array and
+scalar occurrence; object keys do not add nodes). Σ must have at most 4,096 such
+nodes and maximum JSON-tree depth64 (root depth1). Schema metadata limits remain
+in force. These schema-size nodes are not expression work or financial values.
+
+`Descriptors` is one array of v(Operation<O>,descriptor) trees in emitted order;
+its size includes its outer brackets/commas, operation names and field wrappers.
+It has at most128 entries, at most65,536 bytes and at most4,096 value nodes,
+counting one outer sequence node plus each Operation value's nodes. Empty is
+`[]`, two bytes and one sequence node. Each descriptor must also fit W's
+individual bound. Exceeding an append's individual or aggregate size rejects
+DESCRIPTOR_BOUND; other constructed values use VALUE_BOUND. No financial effect
+list is substituted for this array.
+
+An ExpressionPrepared presentation tree is exactly
+`{"status":"ExpressionPrepared","post":Post,"descriptors":Descriptors,"workRemaining":decimal(workRemaining)}`.
+A Rejected presentation tree is exactly
+`{"status":"Rejected","code":code,"span":P,"nodePath":[decimal(index),...],"workUsed":decimal(workUsed)}`.
+These result wrappers do not impose a new aggregate65,536-byte gate: the bound
+is on Post/Descriptors individually, as stated above. Their presentation byte
+size is nevertheless exactly bytes(tree), and their finite size follows from
+the component limits. nodePath length is at most65 (statement plus constructor
+depth), and indexes are bounded by the corresponding operand/list cardinality.
+No caller can use a smaller presentation to waive the component bounds.
+
+Locals and tentative writes are internal finite maps, not separately admitted
+wire snapshots. Each stored value satisfies its individual bound, and there
+are at most256 binders/writes by the statement bound. This gives a finite
+product bound on these intermediate maps, not an additional 65,536-byte rejection
+at each Let/NextWrite. Post assembly and Descriptors have the aggregate limits
+above. Host memory usage and native proof cost are not established by these
+logical bounds.
+
+## Core and span trees
+
+Core metadata operands are encoded by role:
+
+- Identifier, enum member, view and field operands: the exact strings.
+- Width/capacity/scale/integer literal operands: canonical signed decimal
+  strings at structural admission. The constructor's static rule then enforces
+  its width, sign and range; e.g. LitAmount(A,-1) is well-shaped but TYPE_LITERAL.
+  A JSON number or noncanonical string such as "+1" is INPUT_SCHEMA instead.
+- Boolean/Text literal operands: the JSON boolean/string itself.
+- Type operands: the structurally recognized type-annotation arrays above,
+  then resolve to t(T) during checking; recordType/enumType operands use the
+  named identifier. No arbitrary free type-name string stands for a type array.
+- Quantity units metadata: U as the type table's ordered array of pairs.
+- Evaluated expression operand: recursively N(child).
+- Expression list: array of N(children) in lexical order.
+- Named expression list: array `[{"name":field,"value":N(child)},...]` in
+  lexical order, never sorted as a substitute for evaluation order.
+
+A node N is exactly `{"constructor":name,"operands":{operandName:encodedOperand,...},"span":P}`,
+with operand names exactly as expression-signatures.json. No inferred tag,
+unknown operand, extra type annotation or missing span is allowed. Shared AST
+objects are encoded as repeated occurrences, not pointer IDs.
+
+P is exactly `{"kind":"source"|"synthetic","start":decimal(start),"end":decimal(end)}`.
+Source is a separate supplied well-formed UTF-8 byte string of at most65,536
+bytes. A source span requires that artifact and is within its actual byte
+length, as specified by E; a caller-supplied length without the source cannot
+establish a source span. Range validation alone is not source/Core correspondence.
+A synthetic span is **always start=end=0** and establishes no source location.
+Reject a synthetic span claiming a nonzero source offset with INPUT_SPAN.
+Span integers use signed canonical strings structurally; negative/out-of-order
+values reject INPUT_SPAN, not a late expression error. A pure fragment
+judgment can use synthetic spans; only a future source elaborator can produce
+source span evidence. Spans and constructor/operand keys are included in
+canonical Core byte size but are not extra AST/work nodes.
+
+An action A is exactly `{"statements":[N(statement),...],"span":P}`. The final
+Ensure suffix is part of this same lexical array. A's canonical bytes must fit
+65,536; its AST occurrence count must fit4,096; constructor nesting depth64;
+statement count256. Action/root/span wrappers add bytes, but not work nodes.
+The source's own 65,536-byte bound is separate. Size failure of a supplied Core
+node/action is INPUT_BOUND at admission, workUsed0. Literal values and metadata
+still require their finite-type checks. This does not install a trusted Core
+input API in the existing funded-source runtime.
+
+Admitted schema/input bounds are tested before reduction. For pure construction
+or candidate finalization, compute this exact mathematical embedding and size;
+if it exceeds its bound, reject VALUE_BOUND at the constructor/action span with
+no published post-state. Emit append size failure instead uses DESCRIPTOR_BOUND.
+No implementation may return UNKNOWN, omit metadata, substitute a tagged layout
+or defer the size check until after publication. An unknown wire type tag rejects INPUT_SCHEMA; a well-shaped reference with
+missing schema definition rejects TYPE_NAME during schema/static checking.
+Neither can reach value sizing. The old proposal's wire is not implicitly inherited.
+
+
+## Structural versus static failure ordering
+
+Schema/metadata validation first checks JSON tree shape, permitted tags/keys,
+scalar kinds, canonical integer spelling, raw aggregate bytes, schema/Core
+structural nodes and spans. Type-dependent W sizes and value node/depth counts
+are computed only after type resolution.
+It does not check a constructor literal's numeric domain, Text1024-byte bound,
+unit-vector ordering/uniqueness, declaration membership, or an expression's
+operand/result type until static checking. Thus a LitUInt with canonical2^64
+passes shape and fails TYPE_LITERAL; LitText1025 ASCII characters can pass the
+whole-action65,536-byte bound and then fail TYPE_LITERAL. A unit-vector pair
+array of valid identifiers/integer strings is structurally valid; duplicated
+unit symbols on LitQuantity fail TYPE_LITERAL, undeclared symbols TYPE_NAME.
+Values in supplied snapshots are different: after resolving their declared
+types, wrong representation shapes reject INPUT_SCHEMA, individual W or typed
+node/depth bounds reject INPUT_BOUND, and mathematical domain violations reject
+INPUT_VALUE, in that order in S0's snapshot stage. Raw snapshot byte bounds were
+already checked structurally. All of this occurs before reduction.
+
+A named expression list is an array, so duplicate field *names* are structurally
+representable and reach ConstructRecord's static TYPE_DUPLICATE_FIELD rule.
+Duplicate keys in any JSON object still reject INPUT_SCHEMA. ReadPre's view
+is a string at shape validation: pre/post/next are recognized source/Core view
+spellings; next fails TYPE_NEXT_READ statically, post outside Ensure fails
+TYPE_POST_SCOPE. Other view strings reject INPUT_SCHEMA. Unknown operation or
+local/argument/observation/field names that are valid identifier strings reach
+TYPE_NAME, rather than being disguised as malformed wire trees.
+
+These rules resolve the phase for the existing specified cases. Cases are
+mathematical terms, not serialized input captures: their assumed well-formed
+metadata must be embedded exactly as above to reproduce the named predicate.
+A contradictory earlier admission defect would invalidate that case isolation.
+
+
+--- FILE experiments/moriarty-language/spec/successor/grammar.ebnf SHA256 a3376201d04dc2dd55049798a33af5be3d82701e0079adf8a18d4f6735dff345 ---
+(*
+  ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
+  Provisional syntax profile; parser implemented. Not a semantic freeze.
+  Concatenation is comma. Alternation is vertical bar.
+  Square brackets are optional. Braces are zero or more repetition.
+  Quoted text is a terminal. A special sequence names a lexical token
+  defined in lexical.md. Every nonterminal used below is defined here
+  or is such a lexical token.
+*)
+
+program = profileDecl, agreementDecl, ? end of file ? ;
+
+profileDecl = "profile", stringToken, ";" ;
+
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | constDecl
+            | stateDecl
+            | actionDecl ;
+
+unitDecl = "unit", identifier, ";" ;
+
+partyDecl = "party", identifier, ";" ;
+
+assetDecl = "asset", identifier, ":", type, ";" ;
+
+constDecl = "const", identifier, ":", type, "=", expression, ";" ;
+
+stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
+
+actionDecl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", type, "{", [ effectFields ], "}", ";" ;
+
+effectFields = effectField, { ",", effectField } ;
+
+effectField = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ typeArgs ] ;
+
+typeArgs = "<", type, { ",", type }, ">" ;
+
+expression = disjunction ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparisonOp, sum ] ;
+
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier } ;
+
+primary = integerToken
+        | stringToken
+        | "true"
+        | "false"
+        | identifier, [ "(", [ arguments ], ")" ]
+        | "(", expression, ")" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+stringToken = ? JSON string token defined in lexical.md ? ;
+
+(* Grammar interpretation and additional admission constraints:
+   1. The source contains exactly one profileDecl and one agreementDecl.
+   2. The profile string must be the characters moriarty-successor-syntax/0.
+   3. Unparenthesized a < b < c is rejected. (a < b) < c and a < (b < c)
+      are syntactically admitted; their typing is a separate check.
+   4. typeArgs is nonempty. Foo<> is not a type.
+   5. Parentheses do not create AST nodes. They only group.
+   6. not binds looser than comparison: not a == b parses as not (a == b).
+   7. or, and, +, -, and * associate to the left.
+   8. Call arguments, parameters, and effect fields have no trailing comma.
+   9. function, import, loop, obligation, request, composition, observation,
+      settlement, policy, status, reserve, and effect-schema forms are not
+      productions of this profile.
+  10. Bounds in syntax-profile.json are simultaneous and not part of EBNF.
+*)
+
+
+--- FILE experiments/moriarty-language/src/successor/frontend.ts SHA256 910f0012e57b82b677744c60a4f5bd1f30c4e9c63dc7234a634214bb334e99de ---
+/** Bounded lexer/parser for moriarty-successor-syntax/0. */
+
+export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
+
+export const SYNTAX_BOUNDS = Object.freeze({
+  sourceUtf8Bytes: 65536,
+  identifierAsciiCharacters: 64,
+  decodedStringUtf8Bytes: 1024,
+  integerTokenDigits: 78,
+  tokenCount: 8192,
+  astNodes: 8192,
+  nestingDepth: 64,
+  totalDeclarations: 256,
+  statementsPerAction: 256,
+  callArguments: 64,
+  parameters: 64,
+  recordFields: 64,
+});
+
+export class SuccessorSyntaxError extends Error {
+  readonly code: string;
+  readonly start: number;
+  readonly end: number;
+  constructor(code: string, message: string, start: number = 0, end: number = start) {
+    super(message);
+    this.name = 'SuccessorSyntaxError';
+    this.code = code;
+    this.start = start;
+    this.end = end;
+  }
+}
+
+export interface Span {
+  start: number;
+  end: number;
+}
+
+export interface Program {
+  tag: 'Program';
+  profile: ProfileDecl;
+  agreement: AgreementDecl;
+  span: Span;
+}
+
+export interface ProfileDecl {
+  tag: 'ProfileDecl';
+  value: string;
+  raw: string;
+  span: Span;
+}
+
+export interface AgreementDecl {
+  tag: 'AgreementDecl';
+  name: string;
+  declarations: Declaration[];
+  span: Span;
+}
+
+export interface TypeNode {
+  tag: 'Type';
+  name: string;
+  arguments: TypeNode[];
+  span: Span;
+}
+
+export interface Parameter {
+  tag: 'Parameter';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface EffectField {
+  tag: 'EffectField';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface UnitDecl {
+  tag: 'UnitDecl';
+  name: string;
+  span: Span;
+}
+
+export interface PartyDecl {
+  tag: 'PartyDecl';
+  name: string;
+  span: Span;
+}
+
+export interface AssetDecl {
+  tag: 'AssetDecl';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface ConstDecl {
+  tag: 'ConstDecl';
+  name: string;
+  type: TypeNode;
+  value: Expression;
+  span: Span;
+}
+
+export interface StateDecl {
+  tag: 'StateDecl';
+  name: string;
+  type: TypeNode;
+  value: Expression;
+  span: Span;
+}
+
+export interface ActionDecl {
+  tag: 'ActionDecl';
+  name: string;
+  parameters: Parameter[];
+  statements: Statement[];
+  postconditions: Ensures[];
+  span: Span;
+}
+
+export type Declaration = UnitDecl | PartyDecl | AssetDecl | ConstDecl | StateDecl | ActionDecl;
+
+export interface Requires {
+  tag: 'Requires';
+  expression: Expression;
+  span: Span;
+}
+
+export interface Let {
+  tag: 'Let';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface Next {
+  tag: 'Next';
+  name: string;
+  expression: Expression;
+  span: Span;
+}
+
+export interface Emit {
+  tag: 'Emit';
+  type: TypeNode;
+  fields: EffectField[];
+  span: Span;
+}
+
+export type Statement = Requires | Let | Next | Emit;
+
+export interface Ensures {
+  tag: 'Ensures';
+  expression: Expression;
+  span: Span;
+}
+
+export interface Identifier {
+  tag: 'Identifier';
+  name: string;
+  span: Span;
+}
+
+export interface IntegerLiteral {
+  tag: 'IntegerLiteral';
+  value: string;
+  span: Span;
+}
+
+export interface StringLiteral {
+  tag: 'StringLiteral';
+  raw: string;
+  decoded: string;
+  span: Span;
+}
+
+export interface BooleanLiteral {
+  tag: 'BooleanLiteral';
+  value: boolean;
+  span: Span;
+}
+
+export interface Call {
+  tag: 'Call';
+  name: string;
+  arguments: Expression[];
+  span: Span;
+}
+
+export interface Projection {
+  tag: 'Projection';
+  object: Expression;
+  field: string;
+  span: Span;
+}
+
+export interface Unary {
+  tag: 'Unary';
+  operator: 'not';
+  operand: Expression;
+  span: Span;
+}
+
+export interface Binary {
+  tag: 'Binary';
+  operator: '*' | '+' | '-' | 'and' | 'or';
+  left: Expression;
+  right: Expression;
+  span: Span;
+}
+
+export interface Comparison {
+  tag: 'Comparison';
+  operator: '==' | '!=' | '<' | '<=' | '>' | '>=';
+  left: Expression;
+  right: Expression;
+  span: Span;
+}
+
+export type Expression =
+  | Identifier
+  | IntegerLiteral
+  | StringLiteral
+  | BooleanLiteral
+  | Call
+  | Projection
+  | Unary
+  | Binary
+  | Comparison;
+
+const KEYWORDS = new Set([
+  'profile', 'agreement', 'unit', 'party', 'asset', 'const', 'state', 'action',
+  'requires', 'let', 'next', 'emit', 'ensures',
+  'true', 'false', 'not', 'and', 'or',
+]);
+
+const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
+const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
+const ONE_CHAR = new Set(['{', '}', '(', ')', '<', '>', ',', ':', ';', '.', '=', '+', '-', '*']);
+const IDENT_LIKE = /[\p{L}\p{N}\p{Pc}\p{Mn}\p{Mc}]/u;
+
+interface Token {
+  kind: string;
+  start: number;
+  end: number;
+  text: string;
+  raw?: string;
+  decoded?: string;
+}
+
+function fail(code: string, message: string, start = 0, end = start): never {
+  throw new SuccessorSyntaxError(code, message, start, end);
+}
+
+function isAsciiLetter(c: number): boolean {
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+}
+
+function isAsciiIdentCont(c: number): boolean {
+  return isAsciiLetter(c) || (c >= 48 && c <= 57) || c === 95;
+}
+
+function isDigit(c: number): boolean {
+  return c >= 48 && c <= 57;
+}
+
+function utf8SizeCu(c: number): number {
+  return c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+}
+
+function utf8SizeCp(cp: number): number {
+  if (cp < 0x80) return 1;
+  if (cp < 0x800) return 2;
+  if (cp < 0x10000) return 3;
+  return 4;
+}
+
+function hexDigit(c: number): number {
+  if (c >= 48 && c <= 57) return c - 48;
+  if (c >= 65 && c <= 70) return c - 55;
+  if (c >= 97 && c <= 102) return c - 87;
+  return -1;
+}
+
+function codePointAt(source: string, i: number): number {
+  const c = source.charCodeAt(i);
+  if (c >= 0xd800 && c <= 0xdbff) {
+    return 0x10000 + ((c - 0xd800) << 10) + (source.charCodeAt(i + 1) - 0xdc00);
+  }
+  return c;
+}
+
+function isNonAsciiIdentLike(cp: number): boolean {
+  return cp >= 128 && IDENT_LIKE.test(String.fromCodePoint(cp));
+}
+
+function validateSource(source: string): void {
+  const n = source.length;
+  if (n > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+    fail('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
+  }
+  let bytes = 0;
+  for (let i = 0; i < n; i++) {
+    const c = source.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = i + 1 < n ? source.charCodeAt(i + 1) : 0;
+      if (d < 0xdc00 || d > 0xdfff) {
+        fail('INVALID_UTF8', 'lone UTF-16 surrogate', bytes, bytes);
+      }
+      bytes += 4;
+      i++;
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      fail('INVALID_UTF8', 'lone UTF-16 surrogate', bytes, bytes);
+    } else {
+      bytes += utf8SizeCu(c);
+    }
+    if (bytes > SYNTAX_BOUNDS.sourceUtf8Bytes) {
+      fail('SOURCE_BOUND', 'source exceeds UTF-8 byte bound');
+    }
+  }
+}
+
+class Lexer {
+  i = 0;
+  b = 0;
+  readonly n: number;
+  readonly tokens: Token[] = [];
+  readonly source: string;
+
+  constructor(source: string) {
+    this.source = source;
+    this.n = source.length;
+  }
+
+  tokenize(): Token[] {
+    while (true) {
+      this.skipIgnored();
+      if (this.i >= this.n) break;
+      this.scanToken();
+    }
+    this.tokens.push({ kind: 'eof', start: this.b, end: this.b, text: '' });
+    return this.tokens;
+  }
+
+  private bumpAscii(): void {
+    this.i++;
+    this.b++;
+  }
+
+  private bumpCp(): void {
+    const c = this.source.charCodeAt(this.i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      this.i += 2;
+      this.b += 4;
+    } else {
+      this.i += 1;
+      this.b += utf8SizeCu(c);
+    }
+  }
+
+  private emit(kind: string, startB: number, startI: number, extra?: { raw?: string; decoded?: string }): void {
+    const tok: Token = {
+      kind,
+      start: startB,
+      end: this.b,
+      text: this.source.slice(startI, this.i),
+      ...extra,
+    };
+    if (this.tokens.length >= SYNTAX_BOUNDS.tokenCount - 1) {
+      fail('TOKEN_BOUND', 'token bound exceeded', tok.start, tok.end);
+    }
+    this.tokens.push(tok);
+  }
+
+  private skipIgnored(): void {
+    const src = this.source;
+    while (this.i < this.n) {
+      const c = src.charCodeAt(this.i);
+      if (c === 32 || c === 9 || c === 13 || c === 10) {
+        this.bumpAscii();
+        continue;
+      }
+      if (c === 47 && this.i + 1 < this.n) {
+        const d = src.charCodeAt(this.i + 1);
+        if (d === 47) {
+          this.bumpAscii();
+          this.bumpAscii();
+          while (this.i < this.n && src.charCodeAt(this.i) !== 10) this.bumpCp();
+          continue;
+        }
+        if (d === 42) {
+          const startB = this.b;
+          this.bumpAscii();
+          this.bumpAscii();
+          let closed = false;
+          while (this.i < this.n) {
+            if (src.charCodeAt(this.i) === 42 && this.i + 1 < this.n && src.charCodeAt(this.i + 1) === 47) {
+              this.bumpAscii();
+              this.bumpAscii();
+              closed = true;
+              break;
+            }
+            this.bumpCp();
+          }
+          if (!closed) fail('UNTERMINATED_COMMENT', 'unterminated block comment', startB, this.b);
+          continue;
+        }
+      }
+      break;
+    }
+  }
+
+  private scanToken(): void {
+    const src = this.source;
+    const c = src.charCodeAt(this.i);
+    const startB = this.b;
+    const startI = this.i;
+    const c2 = this.i + 1 < this.n ? src.charCodeAt(this.i + 1) : -1;
+
+    if (c === 61 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('==', startB, startI);
+      return;
+    }
+    if (c === 33 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('!=', startB, startI);
+      return;
+    }
+    if (c === 60 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('<=', startB, startI);
+      return;
+    }
+    if (c === 62 && c2 === 61) {
+      this.bumpAscii();
+      this.bumpAscii();
+      this.emit('>=', startB, startI);
+      return;
+    }
+
+    const ch = src[this.i]!;
+    if (ONE_CHAR.has(ch)) {
+      this.bumpAscii();
+      this.emit(ch, startB, startI);
+      return;
+    }
+
+    if (c === 34) {
+      this.scanString(startB, startI);
+      return;
+    }
+
+    if (isDigit(c)) {
+      while (this.i < this.n && isDigit(src.charCodeAt(this.i))) this.bumpAscii();
+      const digits = src.slice(startI, this.i);
+      if (digits.length > 1 && digits[0] === '0') {
+        fail('INTEGER_TOKEN', 'invalid integer token', startB, this.b);
+      }
+      if (digits.length > SYNTAX_BOUNDS.integerTokenDigits) {
+        fail('INTEGER_BOUND', 'integer digit bound exceeded', startB, this.b);
+      }
+      this.emit('integer', startB, startI);
+      return;
+    }
+
+    if (isAsciiLetter(c)) {
+      this.bumpAscii();
+      while (this.i < this.n && isAsciiIdentCont(src.charCodeAt(this.i))) this.bumpAscii();
+      if (this.i < this.n && isNonAsciiIdentLike(codePointAt(src, this.i))) {
+        fail('NON_ASCII_IDENTIFIER', 'non-ASCII identifier', this.b, this.b);
+      }
+      const name = src.slice(startI, this.i);
+      if (name.length > SYNTAX_BOUNDS.identifierAsciiCharacters) {
+        fail('IDENTIFIER_BOUND', 'identifier length bound exceeded', startB, this.b);
+      }
+      this.emit(KEYWORDS.has(name) ? name : 'ident', startB, startI);
+      return;
+    }
+
+    if (c > 127 && isNonAsciiIdentLike(codePointAt(src, this.i))) {
+      fail('NON_ASCII_IDENTIFIER', 'non-ASCII identifier', startB, startB);
+    }
+    fail('UNEXPECTED_CHAR', 'unexpected character', startB, startB);
+  }
+
+  private scanString(startB: number, startI: number): void {
+    const src = this.source;
+    this.bumpAscii();
+    let decoded = '';
+    let decodedBytes = 0;
+
+    const appendCp = (cp: number): void => {
+      decoded += String.fromCodePoint(cp);
+      decodedBytes += utf8SizeCp(cp);
+      if (decodedBytes > SYNTAX_BOUNDS.decodedStringUtf8Bytes) {
+        fail('STRING_BOUND', 'decoded string UTF-8 bound exceeded', startB, this.b);
+      }
+    };
+
+    while (this.i < this.n) {
+      const c = src.charCodeAt(this.i);
+      if (c === 34) {
+        this.bumpAscii();
+        const raw = src.slice(startI, this.i);
+        this.emit('string', startB, startI, { raw, decoded });
+        return;
+      }
+      if (c <= 0x1f) {
+        fail('INVALID_STRING', 'unescaped control in string', this.b, this.b);
+      }
+      if (c === 92) {
+        this.bumpAscii();
+        if (this.i >= this.n) fail('UNTERMINATED_STRING', 'unterminated string', startB, this.b);
+        const e = src.charCodeAt(this.i);
+        if (e === 34) {
+          appendCp(34);
+          this.bumpAscii();
+        } else if (e === 92) {
+          appendCp(92);
+          this.bumpAscii();
+        } else if (e === 47) {
+          appendCp(47);
+          this.bumpAscii();
+        } else if (e === 98) {
+          appendCp(8);
+          this.bumpAscii();
+        } else if (e === 102) {
+          appendCp(12);
+          this.bumpAscii();
+        } else if (e === 110) {
+          appendCp(10);
+          this.bumpAscii();
+        } else if (e === 114) {
+          appendCp(13);
+          this.bumpAscii();
+        } else if (e === 116) {
+          appendCp(9);
+          this.bumpAscii();
+        } else if (e === 117) {
+          this.bumpAscii();
+          const hex = this.readHex4(startB);
+          if (hex >= 0xd800 && hex <= 0xdbff) {
+            if (
+              this.i + 1 < this.n &&
+              src.charCodeAt(this.i) === 92 &&
+              src.charCodeAt(this.i + 1) === 117
+            ) {
+              this.bumpAscii();
+              this.bumpAscii();
+              const low = this.readHex4(startB);
+              if (low < 0xdc00 || low > 0xdfff) {
+                fail('INVALID_SURROGATE', 'invalid surrogate pair', startB, this.b);
+              }
+              appendCp(0x10000 + ((hex - 0xd800) << 10) + (low - 0xdc00));
+            } else {
+              fail('INVALID_SURROGATE', 'lone surrogate escape', startB, this.b);
+            }
+          } else if (hex >= 0xdc00 && hex <= 0xdfff) {
+            fail('INVALID_SURROGATE', 'lone surrogate escape', startB, this.b);
+          } else {
+            appendCp(hex);
+          }
+        } else {
+          fail('INVALID_STRING', 'unknown string escape', this.b, this.b);
+        }
+        continue;
+      }
+      if (c >= 0xd800 && c <= 0xdbff) {
+        appendCp(codePointAt(src, this.i));
+        this.bumpCp();
+      } else {
+        appendCp(c);
+        this.bumpCp();
+      }
+    }
+    fail('UNTERMINATED_STRING', 'unterminated string', startB, this.b);
+  }
+
+  private readHex4(stringStart: number): number {
+    let hex = 0;
+    for (let k = 0; k < 4; k++) {
+      if (this.i >= this.n) fail('UNTERMINATED_STRING', 'unterminated string', stringStart, this.b);
+      const h = hexDigit(this.source.charCodeAt(this.i));
+      if (h < 0) fail('INVALID_STRING', 'invalid unicode escape', this.b, this.b);
+      hex = (hex << 4) | h;
+      this.bumpAscii();
+    }
+    return hex;
+  }
+}
+
+class Parser {
+  pos = 0;
+  nodeCount = 0;
+  synDepth = 0;
+  readonly depths = new WeakMap<object, number>();
+  extraTokenCount = 0;
+  readonly tokens: Token[];
+
+  constructor(tokens: Token[]) {
+    this.tokens = tokens;
+  }
+
+  parseProgram(): Program {
+    const profile = this.parseProfile();
+    const agreement = this.parseAgreement();
+    if (!this.at('eof')) {
+      const t = this.peek();
+      this.fail('TRAILING_INPUT', 'trailing input after program', t.start, t.end);
+    }
+    return this.counted({
+      tag: 'Program',
+      profile,
+      agreement,
+      span: { start: profile.span.start, end: agreement.span.end },
+    });
+  }
+
+  private peek(): Token {
+    return this.tokens[this.pos]!;
+  }
+
+  private at(kind: string): boolean {
+    return this.peek().kind === kind;
+  }
+
+  private advance(): Token {
+    const t = this.peek();
+    if (t.kind !== 'eof') this.pos++;
+    return t;
+  }
+
+  private fail(code: string, message: string, start = this.peek().start, end = this.peek().end): never {
+    fail(code, message, start, end);
+  }
+
+  private unexpected(tok = this.peek()): never {
+    this.fail(
+      'UNEXPECTED_TOKEN',
+      tok.kind === 'eof' ? 'unexpected end of input' : `unexpected token ${tok.kind}`,
+      tok.start,
+      tok.end,
+    );
+  }
+
+  private expect(kind: string): Token {
+    if (this.at(kind)) return this.advance();
+    this.unexpected();
+  }
+
+  private expectIdent(): Token {
+    if (this.at('ident')) return this.advance();
+    this.unexpected();
+  }
+
+  private counted<T extends { span: Span }>(node: T): T {
+    this.nodeCount++;
+    if (this.nodeCount > SYNTAX_BOUNDS.astNodes) {
+      this.fail('AST_NODE_BOUND', 'AST node bound exceeded', node.span.start, node.span.end);
+    }
+    return node;
+  }
+
+  private expr<T extends object>(node: T, depth: number): T {
+    if (depth > SYNTAX_BOUNDS.nestingDepth) {
+      const span = (node as { span: Span }).span;
+      this.fail('NESTING_BOUND', 'nesting depth bound exceeded', span.start, span.end);
+    }
+    this.counted(node as { span: Span });
+    this.depths.set(node, depth);
+    return node;
+  }
+
+  private depthOf(node: object): number {
+    return this.depths.get(node) ?? 1;
+  }
+
+  private enterNest(at: Token): void {
+    if (this.synDepth >= SYNTAX_BOUNDS.nestingDepth) {
+      this.fail('NESTING_BOUND', 'nesting depth bound exceeded', at.start, at.end);
+    }
+    this.synDepth++;
+  }
+
+  private leaveNest(): void {
+    this.synDepth--;
+  }
+
+  private parseProfile(): ProfileDecl {
+    const kw = this.expect('profile');
+    const str = this.expect('string');
+    if (str.decoded !== SYNTAX_PROFILE) {
+      this.fail('PROFILE_MISMATCH', `profile must be ${SYNTAX_PROFILE}`, str.start, str.end);
+    }
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'ProfileDecl',
+      value: str.decoded!,
+      raw: str.raw!,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAgreement(): AgreementDecl {
+    const kw = this.expect('agreement');
+    const name = this.expectIdent();
+    this.expect('{');
+    const declarations: Declaration[] = [];
+    while (!this.at('}') && !this.at('eof')) {
+      if (declarations.length >= SYNTAX_BOUNDS.totalDeclarations) {
+        this.fail('DECLARATION_BOUND', 'declaration bound exceeded');
+      }
+      declarations.push(this.parseDeclaration());
+    }
+    const close = this.expect('}');
+    return this.counted({
+      tag: 'AgreementDecl',
+      name: name.text,
+      declarations,
+      span: { start: kw.start, end: close.end },
+    });
+  }
+
+  private parseDeclaration(): Declaration {
+    if (this.at('unit')) return this.parseNamedSimple('UnitDecl');
+    if (this.at('party')) return this.parseNamedSimple('PartyDecl');
+    if (this.at('asset')) return this.parseAsset();
+    if (this.at('const')) return this.parseConstOrState('ConstDecl');
+    if (this.at('state')) return this.parseConstOrState('StateDecl');
+    if (this.at('action')) return this.parseAction();
+    const t = this.peek();
+    if (t.kind === 'ident' || KEYWORDS.has(t.kind)) {
+      this.fail('UNKNOWN_DECLARATION', `unknown declaration ${t.text || t.kind}`, t.start, t.end);
+    }
+    this.unexpected();
+  }
+
+  private parseNamedSimple(tag: 'UnitDecl' | 'PartyDecl'): UnitDecl | PartyDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    const semi = this.expect(';');
+    return this.counted({
+      tag,
+      name: name.text,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAsset(): AssetDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'AssetDecl',
+      name: name.text,
+      type,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseConstOrState(tag: 'ConstDecl' | 'StateDecl'): ConstDecl | StateDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    this.expect('=');
+    const value = this.parseExpression();
+    const semi = this.expect(';');
+    return this.counted({
+      tag,
+      name: name.text,
+      type,
+      value,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseAction(): ActionDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect('(');
+    const parameters: Parameter[] = [];
+    if (!this.at(')')) {
+      parameters.push(this.parseParameter());
+      while (this.at(',')) {
+        if (parameters.length >= SYNTAX_BOUNDS.parameters) {
+          this.fail('ARITY_BOUND', 'parameter bound exceeded');
+        }
+        this.advance();
+        parameters.push(this.parseParameter());
+      }
+    }
+    this.expect(')');
+    this.expect('{');
+    const statements: Statement[] = [];
+    const postconditions: Ensures[] = [];
+    let seenEnsures = false;
+    while (!this.at('}') && !this.at('eof')) {
+      if (statements.length + postconditions.length >= SYNTAX_BOUNDS.statementsPerAction) {
+        this.fail('STATEMENT_BOUND', 'statement bound exceeded');
+      }
+      if (this.at('ensures')) {
+        seenEnsures = true;
+        postconditions.push(this.parseEnsures());
+        continue;
+      }
+      if (seenEnsures) {
+        this.fail('STATEMENT_AFTER_ENSURES', 'statement after ensures');
+      }
+      statements.push(this.parseStatement());
+    }
+    const close = this.expect('}');
+    return this.counted({
+      tag: 'ActionDecl',
+      name: name.text,
+      parameters,
+      statements,
+      postconditions,
+      span: { start: kw.start, end: close.end },
+    });
+  }
+
+  private parseParameter(): Parameter {
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    return this.counted({
+      tag: 'Parameter',
+      name: name.text,
+      type,
+      span: { start: name.start, end: type.span.end },
+    });
+  }
+
+  private parseStatement(): Statement {
+    if (this.at('requires')) {
+      const kw = this.advance();
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Requires',
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('let')) {
+      const kw = this.advance();
+      const name = this.expectIdent();
+      this.expect('=');
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Let',
+        name: name.text,
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('next')) {
+      const kw = this.advance();
+      this.expect('.');
+      const name = this.expectIdent();
+      this.expect('=');
+      const expression = this.parseExpression();
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Next',
+        name: name.text,
+        expression,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    if (this.at('emit')) {
+      const kw = this.advance();
+      const type = this.parseType();
+      this.expect('{');
+      const fields: EffectField[] = [];
+      if (!this.at('}')) {
+        fields.push(this.parseEffectField());
+        while (this.at(',')) {
+          if (fields.length >= SYNTAX_BOUNDS.recordFields) {
+            this.fail('ARITY_BOUND', 'record field bound exceeded');
+          }
+          this.advance();
+          fields.push(this.parseEffectField());
+        }
+      }
+      this.expect('}');
+      const semi = this.expect(';');
+      return this.counted({
+        tag: 'Emit',
+        type,
+        fields,
+        span: { start: kw.start, end: semi.end },
+      });
+    }
+    this.unexpected();
+  }
+
+  private parseEffectField(): EffectField {
+    const name = this.expectIdent();
+    this.expect(':');
+    const expression = this.parseExpression();
+    return this.counted({
+      tag: 'EffectField',
+      name: name.text,
+      expression,
+      span: { start: name.start, end: expression.span.end },
+    });
+  }
+
+  private parseEnsures(): Ensures {
+    const kw = this.advance();
+    const expression = this.parseExpression();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'Ensures',
+      expression,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseType(): TypeNode {
+    const name = this.expectIdent();
+    let args: TypeNode[] = [];
+    let depth = 1;
+    let end = name.end;
+    if (this.at('<')) {
+      this.enterNest(this.peek());
+      this.advance();
+      if (this.at('>') || this.at('>=')) {
+        this.fail('EMPTY_TYPE_ARGS', 'empty type argument list', this.peek().start, this.peek().start + 1);
+      }
+      args.push(this.parseType());
+      while (this.at(',')) {
+        this.advance();
+        args.push(this.parseType());
+      }
+      end = this.expectGt();
+      this.leaveNest();
+      let maxD = 0;
+      for (const a of args) maxD = Math.max(maxD, this.depthOf(a));
+      depth = 1 + maxD;
+    }
+    return this.expr(
+      {
+        tag: 'Type' as const,
+        name: name.text,
+        arguments: args,
+        span: { start: name.start, end },
+      },
+      depth,
+    );
+  }
+
+  private expectGt(): number {
+    const t = this.peek();
+    if (t.kind === '>') {
+      this.advance();
+      return t.end;
+    }
+    if (t.kind === '>=') {
+      if (this.tokens.length + this.extraTokenCount + 1 > 8192) {
+        this.fail('TOKEN_BOUND', 'token bound exceeded', t.start, t.end);
+      }
+      this.extraTokenCount++;
+      const gtEnd = t.start + 1;
+      this.tokens[this.pos] = { kind: '=', start: gtEnd, end: t.end, text: '=' };
+      return gtEnd;
+    }
+    this.unexpected();
+  }
+
+  private parseExpression(): Expression {
+    return this.parseDisjunction();
+  }
+
+  private parseDisjunction(): Expression {
+    return this.parseLeftBin(() => this.parseConjunction(), ['or']);
+  }
+
+  private parseConjunction(): Expression {
+    return this.parseLeftBin(() => this.parseNegation(), ['and']);
+  }
+
+  private parseLeftBin(next: () => Expression, kinds: string[]): Expression {
+    let left = next();
+    while (kinds.includes(this.peek().kind)) {
+      const op = this.advance();
+      const right = next();
+      left = this.makeBinary(op, left, right);
+    }
+    return left;
+  }
+
+  private parseNegation(): Expression {
+    const nots: Token[] = [];
+    while (this.at('not')) nots.push(this.advance());
+    let expr = this.parseComparison();
+    for (let i = nots.length - 1; i >= 0; i--) {
+      const tok = nots[i]!;
+      expr = this.expr(
+        {
+          tag: 'Unary' as const,
+          operator: 'not' as const,
+          operand: expr,
+          span: { start: tok.start, end: expr.span.end },
+        },
+        1 + this.depthOf(expr),
+      );
+    }
+    return expr;
+  }
+
+  private parseComparison(): Expression {
+    const left = this.parseSum();
+    const kind = this.peek().kind;
+    if (!CMP_OPS.has(kind)) return left;
+    const op = this.advance();
+    const right = this.parseSum();
+    const node = this.expr(
+      {
+        tag: 'Comparison' as const,
+        operator: op.kind as Comparison['operator'],
+        left,
+        right,
+        span: { start: left.span.start, end: right.span.end },
+      },
+      1 + Math.max(this.depthOf(left), this.depthOf(right)),
+    );
+    if (CMP_OPS.has(this.peek().kind)) {
+      const extra = this.peek();
+      this.fail('CHAINED_COMPARISON', 'chained comparison', extra.start, extra.end);
+    }
+    return node;
+  }
+
+  private parseSum(): Expression {
+    return this.parseLeftBin(() => this.parseProduct(), ['+', '-']);
+  }
+
+  private parseProduct(): Expression {
+    return this.parseLeftBin(() => this.parsePostfix(), ['*']);
+  }
+
+  private parsePostfix(): Expression {
+    let expr = this.parsePrimary();
+    while (this.at('.')) {
+      this.advance();
+      const field = this.expectIdent();
+      expr = this.expr(
+        {
+          tag: 'Projection' as const,
+          object: expr,
+          field: field.text,
+          span: { start: expr.span.start, end: field.end },
+        },
+        1 + this.depthOf(expr),
+      );
+    }
+    return expr;
+  }
+
+  private parsePrimary(): Expression {
+    if (this.at('integer')) {
+      const t = this.advance();
+      return this.expr(
+        { tag: 'IntegerLiteral' as const, value: t.text, span: { start: t.start, end: t.end } },
+        1,
+      );
+    }
+    if (this.at('string')) {
+      const t = this.advance();
+      return this.expr(
+        {
+          tag: 'StringLiteral' as const,
+          raw: t.raw!,
+          decoded: t.decoded!,
+          span: { start: t.start, end: t.end },
+        },
+        1,
+      );
+    }
+    if (this.at('true') || this.at('false')) {
+      const t = this.advance();
+      return this.expr(
+        {
+          tag: 'BooleanLiteral' as const,
+          value: t.kind === 'true',
+          span: { start: t.start, end: t.end },
+        },
+        1,
+      );
+    }
+    if (this.at('ident')) {
+      const name = this.advance();
+      if (this.at('(')) {
+        this.enterNest(this.peek());
+        this.advance();
+        const args: Expression[] = [];
+        if (!this.at(')')) {
+          args.push(this.parseExpression());
+          while (this.at(',')) {
+            if (args.length >= SYNTAX_BOUNDS.callArguments) {
+              this.fail('ARITY_BOUND', 'call argument bound exceeded');
+            }
+            this.advance();
+            args.push(this.parseExpression());
+          }
+        }
+        const close = this.expect(')');
+        this.leaveNest();
+        let depth = 1;
+        for (const a of args) depth = Math.max(depth, 1 + this.depthOf(a));
+        return this.expr(
+          {
+            tag: 'Call' as const,
+            name: name.text,
+            arguments: args,
+            span: { start: name.start, end: close.end },
+          },
+          depth,
+        );
+      }
+      return this.expr(
+        { tag: 'Identifier' as const, name: name.text, span: { start: name.start, end: name.end } },
+        1,
+      );
+    }
+    if (this.at('(')) {
+      this.enterNest(this.peek());
+      this.advance();
+      const expr = this.parseExpression();
+      this.expect(')');
+      this.leaveNest();
+      return expr;
+    }
+    this.unexpected();
+  }
+
+  private makeBinary(op: Token, left: Expression, right: Expression): Binary {
+    return this.expr(
+      {
+        tag: 'Binary' as const,
+        operator: op.kind as Binary['operator'],
+        left,
+        right,
+        span: { start: left.span.start, end: right.span.end },
+      },
+      1 + Math.max(this.depthOf(left), this.depthOf(right)),
+    );
+  }
+}
+
+export function parseSuccessorSource(source: string): Program {
+  if (typeof source !== 'string') {
+    fail('SOURCE_TYPE', 'source must be a string', 0, 0);
+  }
+  validateSource(source);
+  const tokens = new Lexer(source).tokenize();
+  return new Parser(tokens).parseProgram();
+}
+

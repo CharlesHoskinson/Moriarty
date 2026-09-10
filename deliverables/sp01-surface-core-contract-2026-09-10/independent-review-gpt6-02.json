@@ -1,0 +1,204 @@
+{
+  "model": "gpt-6-astra",
+  "scope": "Fresh independent source review only. No delegation, candidate modifications, operational campaigns, network submissions, proof execution or private-data access.",
+  "startup": {
+    "developmentSkillLoaded": "/home/charl/Moriarty/plugins/moriarty-dev/skills/develop/SKILL.md",
+    "applicableAgentsInstructionsRead": true,
+    "checkoutStatus": [
+      {
+        "checkout": "/home/charl/Moriarty/.worktrees/sp01-boolean-revision",
+        "command": "PYTHONDONTWRITEBYTECODE=1 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+        "exitCode": 1,
+        "result": "sqlite3.OperationalError: unable to open database file"
+      },
+      {
+        "checkout": "/home/charl/Moriarty/.worktrees/sp01-expression-contract",
+        "command": "PYTHONDONTWRITEBYTECODE=1 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+        "exitCode": 1,
+        "result": "sqlite3.OperationalError: unable to open database file"
+      }
+    ]
+  },
+  "reviews": [
+    {
+      "candidate": "A",
+      "candidateSha256": "248ac1d3a664106b15ad3433db7348d3a837bcec19062a4fa59e6c4e3999c7f4",
+      "sourceVerdict": "REQUEST_CHANGES",
+      "checkout": "/home/charl/Moriarty/.worktrees/sp01-boolean-revision",
+      "hashVerification": {
+        "candidateMatchesRequestedHash": true,
+        "filePinsVerified": 124,
+        "mismatches": [],
+        "verifiedAgainAfterReview": true
+      },
+      "independentlyInspectedPaths": [
+        "AGENTS.md",
+        "docs/FOOTGUNS.md",
+        "experiments/moriarty-language/spec/successor/semantic-contract.md",
+        "experiments/moriarty-language/spec/successor/static-semantics.md",
+        "experiments/moriarty-language/spec/successor/representation.md",
+        "experiments/moriarty-language/spec/successor/expression-signatures.json",
+        "experiments/moriarty-language/spec/successor/expression-cases.json",
+        "experiments/moriarty-language/spec/successor/boolean-cases.json",
+        "experiments/moriarty-language/spec/successor/check-expression-contract.py",
+        "experiments/moriarty-language/spec/successor/test-expression-contract.py",
+        "deliverables/sp01-surface-core-contract-2026-09-10/source-candidate-02.json",
+        "deliverables/sp01-surface-core-contract-2026-09-10/source-patch-02.patch",
+        "deliverables/sp01-surface-core-contract-2026-09-10/preservation-map-02.json",
+        "deliverables/sp01-surface-core-contract-2026-09-10/check-preservation-02.py",
+        "deliverables/sp01-surface-core-contract-2026-09-10/strict-contract-0/experiments/moriarty-language/spec/successor/semantic-contract.md"
+      ],
+      "actualChecks": [
+        {
+          "check": "check-expression-contract.py",
+          "result": "Exit 0; 40 constructors, 40 case pairs, 48 Boolean cases, no structural errors."
+        },
+        {
+          "check": "test-expression-contract.py",
+          "result": "Exit 0; 20 tests passed."
+        },
+        {
+          "check": "check-preservation-02.py",
+          "result": "Exit 0; all 101 historical pins preserved: 6 archived and 95 unchanged. All 9 proposal pins resolved; 38 non-Boolean signatures and admission/domain/financial-statement sections unchanged."
+        },
+        {
+          "check": "Independent in-memory patch reconstruction",
+          "result": "All seven patched source files reconstructed exactly from the preserved originals and patch."
+        },
+        {
+          "check": "Independent mathematical cross-check of all 48 Boolean fixtures",
+          "result": "47 results matched completely. All 48 matched values or rejection codes, node paths and entered-node accounting; one diagnostic span conflicts with the result representation."
+        },
+        {
+          "check": "Source-span inspection",
+          "result": "Valid source spans matched UTF-8 slices, including the Unicode example and parent Require provenance."
+        },
+        {
+          "check": "Malformed-span negative control",
+          "result": "The checker accepts the invalid [10,15) diagnostic for a 14-byte source. Replacing only its expected diagnostic with synthetic [0,0) produces rejection-span-provenance."
+        }
+      ],
+      "findings": [
+        {
+          "id": "A-1",
+          "severity": "medium",
+          "classification": "Repository observation and independently reproduced specification inconsistency",
+          "locations": [
+            "experiments/moriarty-language/spec/successor/boolean-cases.json:4380",
+            "experiments/moriarty-language/spec/successor/check-expression-contract.py:191",
+            "experiments/moriarty-language/spec/successor/representation.md:165",
+            "experiments/moriarty-language/spec/successor/representation.md:205",
+            "experiments/moriarty-language/spec/successor/semantic-contract.md:250"
+          ],
+          "finding": "BC1-dead-invalid-source-span copies the malformed input range [10,15) into its Rejected.span although the supplied source has only 14 UTF-8 bytes. Rejected.span is defined as P, whose source ranges must fit the supplied artifact. The structural checker requires this invalid diagnostic to equal the offending node's span and rejects a synthetic fallback.",
+          "requestedChange": "Keep the malformed input and INPUT_SPAN rejection, but specify a valid diagnostic fallback, preserving nodePath [1] and workUsed 0. Update the checker to permit that policy and distinguish malformed input metadata from valid output provenance."
+        }
+      ],
+      "positiveAssessment": "Entered-node contexts, zero-cost Boolean contractions, conditional costs, original selected-child paths, unchanged whole-action admission, and Require/Ensure ordering are consistent within the reviewed Boolean scope.",
+      "limitations": [
+        "The independent Python cross-check covers the constructors and inputs used by these fixtures; it is not a complete language implementation or proof.",
+        "The supplied structural checker deliberately does not establish semantic case correctness.",
+        "No parser/elaborator correspondence, runtime/K behavior, financial composition, registered profile, full RP01, proof or ledger acceptance is established."
+      ]
+    },
+    {
+      "candidate": "B",
+      "candidateSha256": "322ad8d3405e28cd18ee82fe3a6afc1beda17ee215832cf2c07b480ec20ba93e",
+      "sourceVerdict": "REQUEST_CHANGES",
+      "checkout": "/home/charl/Moriarty/.worktrees/sp01-expression-contract",
+      "hashVerification": {
+        "candidateMatchesRequestedHash": true,
+        "filePinsVerified": 33,
+        "mismatches": [],
+        "original20FilesAndArchiveCopiesVerified": true,
+        "verifiedAgainAfterReview": true
+      },
+      "independentlyInspectedPaths": [
+        "AGENTS.md",
+        "deliverables/sp01-signing-context-contract-2026-09-10/draft-candidate-03.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/draft-candidate-02.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/contract-draft-01.md",
+        "deliverables/sp01-signing-context-contract-2026-09-10/IMPLEMENTATION-02.md",
+        "deliverables/sp01-signing-context-contract-2026-09-10/CORRECTION-03.md",
+        "deliverables/sp01-signing-context-contract-2026-09-10/profile-03.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/schema-02.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/schema-03.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.py",
+        "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.test.py",
+        "deliverables/sp01-signing-context-contract-2026-09-10/context-examples-03.json",
+        "deliverables/sp01-signing-context-contract-2026-09-10/preservation-03.json"
+      ],
+      "actualChecks": [
+        {
+          "check": "context-checker-03.test.py",
+          "result": "Exit 0; 28 tests passed."
+        },
+        {
+          "check": "Retained examples and generated schema",
+          "result": "Positive and cancellation examples returned SOURCE_CONTEXT_VALID; schema_for(PROFILE) exactly matched schema-03.json."
+        },
+        {
+          "check": "Original four defects",
+          "result": "Rehashed display99/executed20 rejected ARGUMENT_BINDING; malformed Unicode rejected INPUT_ENCODING; pooled genesis MAX+1 rejected NUMERIC_DOMAIN while MAX passed; generalized target/profile accepted and mismatched target rejected TARGET."
+        },
+        {
+          "check": "Independent generalized profile",
+          "result": "Four renamed parties, three renamed assets, different target and prices, and an eight-byte sidecar passed with independently calculated charge 12."
+        },
+        {
+          "check": "Rehashed semantic negative controls",
+          "result": "Gross-cap, fee-cap, underreported-work, altered-frame and erased-duty mutations rejected GROSS_CAP, FEE_CAP, WORK_DERIVATION or TRANSITION_FRAME as applicable. Removing mutations recovered success."
+        },
+        {
+          "check": "Numeric and diagnostic ordering controls",
+          "result": "Generated destination overflow rejected NUMERIC_DOMAIN. Revocation and consumed predecessor rejected REVOKED and CURRENTNESS before a concurrently corrupted frame."
+        },
+        {
+          "check": "Migration",
+          "result": "Migration preserving cancellation duties and counters passed; attempting to restore Active status rejected TRANSITION_FRAME."
+        },
+        {
+          "check": "ExactPlan replay",
+          "result": "One authorized fill and two consecutive executions of that same fill both returned SOURCE_CONTEXT_VALID. The authority hash and plan hash stayed unchanged; the second predecessor differed."
+        }
+      ],
+      "findings": [
+        {
+          "id": "B-1",
+          "severity": "high",
+          "classification": "Independently reproduced authorization-binding defect",
+          "locations": [
+            "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.py:105",
+            "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.py:107",
+            "deliverables/sp01-signing-context-contract-2026-09-10/contract-draft-01.md:62",
+            "deliverables/sp01-signing-context-contract-2026-09-10/contract-draft-01.md:79"
+          ],
+          "finding": "ExactPlan checks reusable membership in authority.exactPlans. The committed plan contains no predecessor binding, and accepted plan occurrences are not consumed. A single authorized fill transferring 20 and charging fee 2 can therefore execute twice under the unchanged authority, transferring 40 and charging fees 4 at different predecessors. Both histories pass. This does not implement the contract's exact-predecessor authorization or separately authorized continuation requirement.",
+          "requestedChange": "Bind each exact authorization occurrence to its intended predecessor and transition commitments, and enforce occurrence consumption or an explicitly authorized execution sequence. Add a regression where the authorized occurrence passes but its reuse at another predecessor rejects without changing the original authority."
+        }
+      ],
+      "additionalObservations": [
+        {
+          "locations": [
+            "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.py:63",
+            "deliverables/sp01-signing-context-contract-2026-09-10/context-checker-03.py:110"
+          ],
+          "result": "An Accrue-only history with created=0 and accrued=outstanding=10 passes. A terminal successful step followed by further accrual also passes.",
+          "disposition": "These demonstrate absent debt-existence and absorbing-terminal checks. Their intended treatment needs explicit subset semantics; they are recorded as lifecycle limitations rather than assumed full-financial-ABI requirements."
+        }
+      ],
+      "limitations": [
+        "Context and selected profile remain trusted source-test inputs; no cryptographic authentication was inferred.",
+        "Partition tests cover the stated generic conservation predicate, not complete financial branch/join histories.",
+        "No full 38-operation ABI, full expression costing, runtime signature verification, mandatory proof claims, full RP01 or Midnight acceptance is established.",
+        "The unavailable prior Grok verdict supplied no approval evidence."
+      ]
+    }
+  ],
+  "executionDiscipline": {
+    "pythonDontWriteBytecode": true,
+    "candidateFilesModified": false,
+    "subagentsUsed": false,
+    "networkSubmissions": false
+  }
+}
