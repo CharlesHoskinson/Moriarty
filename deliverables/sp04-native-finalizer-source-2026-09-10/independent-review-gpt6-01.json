@@ -1,0 +1,122 @@
+{
+  "schema": "moriarty.independent-native-finalizer-source-math-review/1",
+  "reviewer": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/spec_audit_early",
+    "independentNonAuthor": true,
+    "otherCurrentReviewerVerdictRead": false
+  },
+  "recordedAtUtc": "2026-09-10T19:00:54.168623+00:00",
+  "proposalSha256": "6e979f88697d354660599d572ffcf5fb60cc278a45c761e58a77c341f7a18589",
+  "supplementManifestSha256": "e03b044388140a3c222ec8b90a27b066bf6f8a173506ddede2b917ded263a354",
+  "verdict": "PASS_SCOPED",
+  "scope": "Pinned-source and public-integer investigation; explicit fixed-G2 two-term schedule and conditional arithmetic-region subtotal only. No native backend choice, F0 go, F0a/F1 dispatch, complete verifier fit, deployment or resource admission.",
+  "findings": [
+    {
+      "id": "F0-REVIEW-01",
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "source-evidence.json; check-public-constants.py",
+      "detail": "Verified both root manifest hashes and bound files, 23 exact retained git objects, eight checksum-bound archives, 18 referenced archive members and two BLST source copies (65 binding checks). All eight archive checksums independently match the exact ledger9 Cargo.lock object; native Cargo.lock independently pins BLST0.3.17 and its archive checksum. Same Fp381/Fq255 constants and seven56bit shifted limbs were checked. Nine boundary roundtrips and the distinct base values0,r sharing scalar residue0 establish only public encoding arithmetic, not point validity or constraint soundness."
+    },
+    {
+      "id": "F0-REVIEW-02",
+      "severity": "INFO",
+      "result": "VERIFIED",
+      "source": "schedule-supplement-01/pairing.c:272; native curves/src/bls12_381/mod.rs:49",
+      "detail": "Prepared-line group offsets1/4/8/18/51 and lengths2/3/9/32/16 consume68 lines,62 squares and67 sparse products per nonidentity term. Native wrapper evaluates two terms separately and multiplies their outputs. Four fixed Fp products per evaluated line and initial point doubling/negation are included. No hidden additional Miller iteration was found in this exact path."
+    },
+    {
+      "id": "F0-REVIEW-03",
+      "severity": "INFO",
+      "result": "VERIFIED_WITH_PREMISES",
+      "source": "schedule-supplement-01/pairing.c:355; count-schedule.py exponent transcription",
+      "detail": "Manually checked helper loops, raise_to_z macro and final_exp transcription. Counts315 cyclotomic squares,35 dense products,10 conjugations, Frobenius2/3/2/1 and one inverse agree. Symbolic exponent is3E modulo p^12-1, not E. For a nonzero element in the stated Fp12 field, h=f^E satisfies h^r=1, and gcd(3,r)=1 implies h^3=1 iff h=1. This supports only equality-to-identity, not equality of general GT outputs. The easy exponent maps into the cyclotomic subgroup; replacing optimized squares by dense squares avoids assuming an implemented cyclotomic optimization."
+    },
+    {
+      "id": "F0-REVIEW-04",
+      "severity": "INFO",
+      "result": "VERIFIED_WITH_PREMISES",
+      "source": "schedule-supplement-01/README.md:27; fp12_tower.c:667",
+      "detail": "Schoolbook tower expansion is consistent: Fp2 uses4 base products; Fp6 uses9 Fp2 products,6 coefficient additions and2 nonresidue multiplications; Fp12 uses4 Fp6 products,2 coefficient additions and1 multiplication byv. Dense product144Fp multiplications/105adds/45subtracts; using it for sparse products and all squares gives610 instances including the inverse-product equation. Additional lines/Frobenius/conjugations yield88480 multiplications and91630 normalized linear operations. Fixed Montgomery constants still require exact canonical conversion and SRS binding."
+    },
+    {
+      "id": "F0-REVIEW-05",
+      "severity": "INFO",
+      "result": "VERIFIED_CONDITIONAL_SUBTOTAL",
+      "source": "schedule-supplement-01/count-gadget-cost.py; pinned circuits7.2.4 field/foreign/{field_chip.rs,gates/mul.rs,gates/norm.rs,util.rs}; field/decomposition/{chip.rs,instructions.rs,cpu_utils.rs}",
+      "detail": "Integer port matches auxiliary-bound formulas, ceiling/floor division, power rounding, LCM sufficiency and native no-wrap checks. Widths116/117/117 and69/92/92 yield31 and35 core-plus-range rows. Fixed request overestimates give45 per normalized-input multiply and56 per normalized add/subtract/negation. Immediate normalization keeps each corrected linear result below2^57, safely below automatic normalization threshold2^112/10, so no hidden second normalization is required. Inputs to the dense routine must already have well-formed constrained limbs, and a fixed zero operand is used for subtraction-based negation."
+    },
+    {
+      "id": "F0-REVIEW-06",
+      "severity": "INFO",
+      "result": "VERIFIED_WITH_EXCLUSIONS",
+      "source": "schedule-supplement-01/README.md:75; pinned proofs0.8.2 circuit/floor_planner/single_pass.rs:98",
+      "detail": "88480*45 +91630*56 =9112880 is a defensible conditional sum of the specified arithmetic-region heights under the described layout. A region starts at a maximum prior column endpoint, so serial summation does not credit parallel packing. It is NOT a full-domain row bound, measured synthesis, lower bound, k selection, or impossibility result for smaller optimized constructions. Constant/table assignment and complete layout/permutation/blinding overhead remain outside the subtotal."
+    },
+    {
+      "id": "F0-REVIEW-07",
+      "severity": "INFO",
+      "result": "REQUIRED_PREMISES_RETAINED",
+      "source": "schedule-supplement-01/README.md:43",
+      "detail": "Variable G1 identity must be constrained and masked to the constant-one Miller contribution before the combined inverse equation. Two masks require24Fp selections plus correctly derived bits. The inverse witness must be constrained by all12 field equalities f*w=1; zero therefore fails. Final identity adds12 equalities. Invalid points/subgroups/identity bits and substituted line tables cannot be accepted by host checks. Fixed G2 identity is excluded under the nondegenerate exact inner-SRS premise; if later allowed, its empty line table requires explicit alternate constant-one handling. The nontrivial P3 fixture requirement remains."
+    },
+    {
+      "id": "F0-REVIEW-08",
+      "severity": "INFO",
+      "result": "SCOPE_HONEST",
+      "source": "README.md outer stack section; schedule-supplement-01/README.md final sections",
+      "detail": "Public-input VERIFIER_MAX_DEGREE14 is correctly distinguished from circuit row k; source parameter catalog throughk25 gives no resource credit, SRS selection or Preview binary alignment. The original no-go proposal is preserved. The supplement supplies a specified schedule before implementation and leaves a precise boundary/layout cost problem; it does not impose implemented pairing as a circular prerequisite to F0 analysis."
+    }
+  ],
+  "requiredChanges": [],
+  "conditions": [
+    "Retain nonzero extension-field input enforcement and valid canonical/subgroup point and exact nondegenerate inner-SRS premises; do not substitute the outer SRS.",
+    "Do not cite9112880 as a complete finalizer/verifier bound or as evidence of a chosen k fit.",
+    "Cost the excluded canonical G1/subgroup/identity boundary, constant decoding and assignment,24 selections,12 inverse-witness assignments,24 equalities, tables/domain/blinding, transcript, carried-accumulator MSM and statement binding before a complete fit claim.",
+    "Any eventual F0 go, backend/SRS/resource choice, F0a/F1 execution or Preview route remains a separate reviewed decision. Prior R3 k17 failure, zero proofs,220 rounded charged seconds and all subsequent costs remain consumed."
+  ],
+  "meaningfulChecks": [
+    {
+      "command": "python3 check-public-constants.py /home/charl/Moriarty /home/charl/.cargo/registry/cache/index.crates.io-1949cf8c6b5b557f",
+      "exitCode": 0,
+      "result": "gpt6-constants-01.json",
+      "matchesFrozenResult": true
+    },
+    {
+      "command": "python3 schedule-supplement-01/count-schedule.py",
+      "exitCode": 0,
+      "result": "gpt6-schedule-01.json",
+      "matchesFrozenResult": true
+    },
+    {
+      "command": "python3 schedule-supplement-01/count-gadget-cost.py",
+      "exitCode": 0,
+      "result": "gpt6-gadget-cost-01.json",
+      "matchesFrozenResult": true
+    },
+    {
+      "command": "Independent public Python lock, exponent-domain, normalization-threshold and range-row checks",
+      "exitCode": 0,
+      "result": "gpt6-independent-math-01.json"
+    }
+  ],
+  "reviewerHarnessCorrections": [
+    "Initial generic pin-check script assumed all git records repeat repository and all tar members include package prefixes. Two KeyErrors were corrected by inspecting those record formats. No candidate hash mismatched; original source/proposal/result bytes remained untouched."
+  ],
+  "operations": {
+    "compiler": 0,
+    "prover": 0,
+    "network": 0,
+    "privateReads": 0,
+    "services": 0
+  },
+  "nextTechnicalPredicate": "Specify and count the canonical point/identity and full layout boundary against exact source, combine it with this arithmetic schedule, then compare a defensible total to an explicitly reviewed outer envelope. Static source accounting remains eligible before F0a.",
+  "evidence": {
+    "gpt6-pin-checks-01.json": "65e29c9b689abe8fbdbdc1653367fc31faf5b62fda4881a0862aa3cf0c4cdc3a",
+    "gpt6-constants-01.json": "408f90fbbd63e3a55dac36d18b451d6a328a775647783d101117bd5e648fef0e",
+    "gpt6-schedule-01.json": "2c3f8703ec47d1536054a44537ab993b22ad37feb3e9251d18f935f124d0aec0",
+    "gpt6-gadget-cost-01.json": "7ee0f203ca6aad61fd32330dbb3c0b98af1df1d559668b299236079ea2d7c0e5",
+    "gpt6-independent-math-01.json": "8eac06684c6e72a32088972678d98ae7b009a95c33407e3a6debe1975e10ada5"
+  }
+}
