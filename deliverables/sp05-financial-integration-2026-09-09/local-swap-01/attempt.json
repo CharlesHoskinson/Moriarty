@@ -1,0 +1,28 @@
+{
+  "schema": "moriarty.local-swap-attempt/1",
+  "allocationId": "sp05-local-swap-01",
+  "createdAt": "2026-09-10T10:21:55.304507+00:00",
+  "admissionSha256": "65899327525fbfb4bc412ab9962e559a37644c10bbd7d58211c46342bc042dca",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-swap-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-swap-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorAttempt": "../local-continuation-02/attempt-result.json",
+  "earlierRecovery": "../local-recovery-01/attempt-result.json",
+  "originalDeploymentAttempt": "../local-execution-04/attempt-result.json",
+  "consumedReadOnlyDiagnostic": "../local-recovery-diagnostic-01/attempt.json",
+  "priorReservedSubmissions": 6,
+  "priorReservedDustSpeck": "1800000000000006",
+  "otherHistoricalCharges": "continuation01/02 and recovery01/02/03, all diagnostics and all other service/review/compiler/proof charges retained separately, not zeroed"
+}
