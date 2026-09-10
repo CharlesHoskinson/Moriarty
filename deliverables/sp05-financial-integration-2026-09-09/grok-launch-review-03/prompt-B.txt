@@ -1,0 +1,66 @@
+Grok 4.6 high independent bounded SOURCE review section B. Validate exclusive durable public native transaction retention before wallet submit, result/event closed projections and secret leakage boundaries. Native ledger and integration producer separately pinned; source-test helpers cannot enter production path. Upper-level private directory supplied by launcher.
+Two broader reviews timed out. This is the smaller executable/API mechanism; no tools, no code changes, no wallet/network/proofs. Return concise JSON verdict APPROVED/CHANGES_REQUESTED for THIS SECTION ONLY, blocking findings and limits. Do not claim entire-launcher or execution acceptance. No need to repeat source. Source SHA256 0dbd814f75389225b2a3ef9e7000e8460efab40889d3aaa08f971e5a698d1748
+1: /** Existing-wallet local entry point. Actual execution requires separate admission
+2:  * and outer process containment. Importing this module never reads private files,
+3:  * constructs a wallet, imports SDK code, or contacts a service.
+4:  */
+5: import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+6: import {createHash} from 'node:crypto';
+7: import {join,dirname,isAbsolute,resolve} from 'node:path';
+8: import {pathToFileURL} from 'node:url';
+9: import {PINNED_NM} from './providers.mjs';
+10: import {inspectFinancialBuild} from './proven-assets.mjs';
+11: import {integrateLocalFinancialCase} from './integrate-local.mjs';
+12: 
+13: const check=(ok,code)=>{if(!ok)throw Error(code);};
+14: const hash=b=>createHash('sha256').update(b).digest('hex');
+15: const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+16: const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+17: const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+18: const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+19: const childKinds=['shielded','unshielded','dust'];
+20: const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+21: function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+46: function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+47: function syncDirectory(p){const d=openSync(p,constants.O_RDONLY);try{fsyncSync(d);}finally{closeSync(d);}}
+48: function durableBytes(p,bytes){const fd=openSync(p,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,bytes);fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(p));}
+49: function durableFile(p,value){durableBytes(p,JSON.stringify(value)+'\n');}
+50: /** Called only at the wallet submission boundary, after provider reservations.
+51:  * Retains native finalized public payloads, never recipes or SDK private objects.
+52:  */
+53: export function retainPublicSubmissions({wallet,ledger,directory}){
+54:  privateDirectory(directory);check(typeof wallet?.submitTransaction==='function','LAUNCH_SUBMIT_API');
+55:  const submit=wallet.submitTransaction.bind(wallet);
+56:  return new Proxy(wallet,{get(target,key){
+57:   if(key==='submitTransaction')return async tx=>{
+58:    check(tx instanceof ledger.Transaction&&Object.getPrototypeOf(tx)===ledger.Transaction.prototype,'LAUNCH_NATIVE_TRANSACTION');
+59:    const raw=Buffer.from(tx.serialize());check(raw.length>0&&raw.length<=16*1024*1024,'LAUNCH_PUBLIC_TRANSACTION_SIZE');
+60:    const canonical=ledger.Transaction.deserialize('signature','proof','binding',raw);
+61:    check(Buffer.from(canonical.serialize()).equals(raw),'LAUNCH_NONCANONICAL_TRANSACTION');
+62:    const transactionHash=canonical.transactionHash(),identifiers=[...canonical.identifiers()];check(hex(transactionHash)&&identifiers.length>0&&identifiers.length<=128&&identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_TRANSACTION_IDENTITY');
+63:    const file=transactionHash+'.bin';
+64:    durableBytes(join(directory,file),raw);
+65:    durableFile(join(directory,transactionHash+'.json'),{schema:'moriarty.public-submission-bytes/1',transactionHash,identifiers,rawSha256:hash(raw),bytes:raw.length,file,scope:'Finalized public native bytes retained before wallet submission; submission and ledger acceptance unknown'});
+66:    return submit(canonical);
+67:   };
+68:   const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+69:  }});
+70: }
+71: /** Only the actual reviewed integration producer reaches this writer in the CLI.
+72:  * That producer already closes nested observations/comparisons. This is retention,
+73:  * not a sanitizer for caller-supplied SDK errors or private results.
+74:  */
+75: export function retainPublicIntegrationResult(directory,result){
+76:  exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope');
+77:  check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
+78:  if(result.driver!==undefined){const d=result.driver;exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':''));check(d.schema==='moriarty.local-financial-run/1','LAUNCH_PUBLIC_DRIVER');}
+79:  if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
+80:  durableFile(join(directory,'integration-result.json'),structuredClone(result));
+81: }
+82: export function publicLaunchEvent(e){
+83:  check(e&&['submitted','stopped'].includes(e.kind),'LAUNCH_EVENT_KIND');
+84:  check(Array.isArray(e.identifiers)&&e.identifiers.length<=128&&e.identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_EVENT_IDS');
+85:  if(e.kind==='submitted'){check(typeof e.txId==='string'&&e.identifiers.includes(e.txId)&&hex(e.transactionHash),'LAUNCH_EVENT_TX');return {kind:e.kind,txId:e.txId,identifiers:[...e.identifiers],transactionHash:e.transactionHash};}
+86:  check(Number.isSafeInteger(e.pendingOperations)&&e.pendingOperations>=0&&e.reservationRetained===true,'LAUNCH_EVENT_STOP');
+87:  return {kind:e.kind,identifiers:[...e.identifiers],reservationRetained:true,pendingOperations:e.pendingOperations};
+88: }

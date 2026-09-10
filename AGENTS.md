@@ -77,7 +77,7 @@ resource and acceptance gates. Merge status is not product acceptance.
 - Preserve contract properties, intent refinement, transition validity and history
   compliance as mandatory acceptance obligations. Refunds cannot erase gross debit
   limits; fees count against net goals. Residual duties survive partial progress.
-- Use Claude Opus at medium effort (record its resolved canonical model) and a fresh `gpt-6-astra` for independent
+- Use Grok 4.6 at high effort (record its returned model identity) and a fresh `gpt-6-astra` for independent
   reviews. Preserve actual reviewer identity and scope; unavailable auditors cannot
   approve work or trigger a silent substitution. Apply Humanizer to maintained prose.
 - Old A4/A5, Candidate A, S01/S02 and K execution plans are superseded. Their recovery
@@ -92,11 +92,11 @@ resource and acceptance gates. Merge status is not product acceptance.
 
 ## Current implementation and review routing
 
-The [September 9 reviewer update](raw/assignments/moriarty-opus-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Claude Opus reviews. Use the installed CLI's `opus` selection at medium effort and preserve the resolved canonical model identity. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This supersedes Fable for pending and future reviews; historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
+The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews; historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
 
 ## Autonomous sprint decisions
 
-The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use Claude Opus medium, GPT-6 and Grok 4.6 for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
+The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use the current GPT-6 and Grok 4.6 reviewer routing for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
 
 ## Research vault
 
@@ -158,4 +158,4 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
 ```
-Use the guarded CLI when host coverage is unverified. Current code routing is GPT-6 implementation with separate GPT-6 Astra and Claude Opus audits, per [the latest instruction](raw/assignments/moriarty-opus-review-routing-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.
+Use the guarded CLI when host coverage is unverified. Current code routing is GPT-6 implementation with separate GPT-6 Astra and Grok 4.6 audits, per [the latest instruction](raw/assignments/moriarty-grok-review-routing-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.
