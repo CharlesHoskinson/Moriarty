@@ -1,0 +1,25 @@
+{
+  "schema": "moriarty.local-swap-continuation-attempt/1",
+  "allocationId": "sp05-local-swap-continuation-01",
+  "createdAt": "2026-09-10T11:45:47.268056+00:00",
+  "admissionSha256": "abeb509929832b1310a7ff2750ad0d2ae1815730518960d976c2e2de340f06cf",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-swap-continuation-stop-01",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-swap-continuation-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorAttempt": "../local-swap-01/attempt-result.json",
+  "priorReservedSubmissions": 8,
+  "priorReservedDustSpeck": "2400000000000008",
+  "otherHistoricalCharges": "Every prior loan/swap allocation, service/build/proof/review/diagnostic charge remains consumed; no refund or reuse"
+}
