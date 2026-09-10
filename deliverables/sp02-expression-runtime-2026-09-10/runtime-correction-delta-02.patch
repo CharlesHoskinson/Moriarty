@@ -1,0 +1,237 @@
+--- a/experiments/moriarty-language/src/successor/expression-types-v1.ts
++++ b/experiments/moriarty-language/src/successor/expression-types-v1.ts
+@@ -12,7 +12,16 @@
+   for (const item of v) { array(item); if (item.length !== 2) fail('INPUT_SCHEMA'); identifier(item[0]); decimal(item[1]); }
+ }
+ export function typeShape(t: any): asserts t is ValueType {
+-  array(t); if (typeof t[0] !== 'string') fail('INPUT_SCHEMA');
++  const capacities: any[] = [];
++  // Option/Collection metadata forms a unary chain, independent of value depth.
++  while (true) {
++    array(t); if (typeof t[0] !== 'string') fail('INPUT_SCHEMA');
++    if (t[0] === 'Option') {
++      if (t.length !== 2) fail('INPUT_SCHEMA'); t = t[1];
++    } else if (t[0] === 'Collection') {
++      if (t.length !== 3) fail('INPUT_SCHEMA'); capacities.push(t[2]); t = t[1];
++    } else break;
++  }
+   const tag = t[0];
+   if (SCALARS.includes(tag)) { if (t.length !== 1) fail('INPUT_SCHEMA'); }
+   else if (['Amount', 'Record', 'Enum', 'Operation'].includes(tag)) {
+@@ -25,11 +34,8 @@
+     if (t.length !== 4) fail('INPUT_SCHEMA'); identifier(t[1]); identifier(t[2]); decimal(t[3]);
+   } else if (tag === 'Quantity') {
+     if (t.length !== 3) fail('INPUT_SCHEMA'); unitShape(t[1]); decimal(t[2]);
+-  } else if (tag === 'Option') {
+-    if (t.length !== 2) fail('INPUT_SCHEMA'); typeShape(t[1]);
+-  } else if (tag === 'Collection') {
+-    if (t.length !== 3) fail('INPUT_SCHEMA'); typeShape(t[1]); decimal(t[2]);
+   } else fail('INPUT_SCHEMA');
++  for (let i = capacities.length - 1; i >= 0; i--) decimal(capacities[i]);
+ }
+ function mapShape(v: any): void { object(v); for (const k of Object.keys(v)) identifier(k); }
+ export function schemaShape(s: any): asserts s is Schema {
+@@ -61,10 +67,15 @@
+   }
+ }
+ export function resolve(t: ValueType, s: Schema, domainCode = 'TYPE_LITERAL'): void {
++  const capacities: string[] = [];
++  while (t[0] === 'Option' || t[0] === 'Collection') {
++    if (t[0] === 'Collection') capacities.push(t[2]);
++    t = t[1];
++  }
+   const tag = t[0];
+   if (tag === 'Unit') fail('TYPE_NAME');
+-  if (['UInt64', 'UInt128', 'SInt128', 'Bool', 'Text'].includes(tag)) return;
+-  if (tag === 'Amount') { if (!s.assets.includes(t[1])) fail('TYPE_NAME'); }
++  if (['UInt64', 'UInt128', 'SInt128', 'Bool', 'Text'].includes(tag)) { /* resolved scalar */ }
++  else if (tag === 'Amount') { if (!s.assets.includes(t[1])) fail('TYPE_NAME'); }
+   else if (tag === 'Shares') { if (!s.vaults.includes(t[1]) || !s.parties.includes(t[2])) fail('TYPE_NAME'); }
+   else if (tag === 'Rate' || tag === 'Quantity' || tag === 'Price') {
+     if (tag === 'Quantity') unitDomain(t[1], s, domainCode);
+@@ -77,10 +88,12 @@
+   } else if (tag === 'Record') declared(s.recordTypes, t[1]);
+   else if (tag === 'Enum') declared(s.enumTypes, t[1]);
+   else if (tag === 'Operation') declared(s.operations, t[1]);
+-  else if (tag === 'Option' || tag === 'Collection') {
+-    resolve(t[1], s, domainCode);
+-    if (tag === 'Collection' && (BigInt(t[2]) < 0n || BigInt(t[2]) > 128n)) fail('TYPE_COLLECTION_BOUND');
+-  } else fail('TYPE_NAME');
++  else fail('TYPE_NAME');
++  // Match recursive postorder: resolve the inner type before outer capacities.
++  for (let i = capacities.length - 1; i >= 0; i--) {
++    const capacity = BigInt(capacities[i]);
++    if (capacity < 0n || capacity > 128n) fail('TYPE_COLLECTION_BOUND');
++  }
+ }
+ export function validateSchema(s: Schema): void {
+   let declarations = 0;
+@@ -102,8 +115,8 @@
+   for (const [, t] of definitions.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)) resolve(t, s);
+   const visiting = new Set<string>(), done = new Set<string>();
+   function walkType(t: ValueType): void {
+-    if (t[0] === 'Option' || t[0] === 'Collection') walkType(t[1]);
+-    else if (t[0] === 'Record') walk('R:' + t[1]);
++    while (t[0] === 'Option' || t[0] === 'Collection') t = t[1];
++    if (t[0] === 'Record') walk('R:' + t[1]);
+     else if (t[0] === 'Operation') walk('O:' + t[1]);
+   }
+   function walk(name: string): void {
+--- a/experiments/moriarty-language/src/successor/expression-wire-v1.ts
++++ b/experiments/moriarty-language/src/successor/expression-wire-v1.ts
+@@ -31,27 +31,42 @@
+ }
+ /** Exact J spelling. Input here consists only of JSON.parse-owned data trees. */
+ export function canonical(value: any): string {
+-  if (typeof value === 'string') {
+-    if (!scalarString(value)) fail('INPUT_SCHEMA');
+-    return JSON.stringify(value);
++  // Type metadata has no semantic depth ceiling. Use an explicit traversal
++  // stack; input byte bounds, rather than the host call stack, bound this work.
++  const output: string[] = [];
++  const pending: ({ value: any } | { text: string })[] = [{ value }];
++  while (pending.length) {
++    const item = pending.pop()!;
++    if ('text' in item) { output.push(item.text); continue; }
++    const v = item.value;
++    if (typeof v === 'string') {
++      if (!scalarString(v)) fail('INPUT_SCHEMA');
++      output.push(JSON.stringify(v));
++    } else if (typeof v === 'boolean') output.push(String(v));
++    else if (Array.isArray(v)) {
++      output.push('['); pending.push({ text: ']' });
++      for (let i = v.length - 1; i >= 0; i--) {
++        pending.push({ value: v[i] });
++        if (i > 0) pending.push({ text: ',' });
++      }
++    } else {
++      if (v === null || typeof v !== 'object') fail('INPUT_SCHEMA');
++      const keys = Object.keys(v).sort(scalarOrder);
++      output.push('{'); pending.push({ text: '}' });
++      for (let i = keys.length - 1; i >= 0; i--) {
++        pending.push({ value: v[keys[i]] }, { text: ':' }, { value: keys[i] });
++        if (i > 0) pending.push({ text: ',' });
++      }
++    }
+   }
+-  if (typeof value === 'boolean') return String(value);
+-  if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+-  if (value === null || typeof value !== 'object') fail('INPUT_SCHEMA');
+-  return '{' + Object.keys(value).sort(scalarOrder).map(k => canonical(k) + ':' + canonical(value[k])).join(',') + '}';
++  return output.join('');
+ }
+ export function parseCanonical(text: string, maxBytes: number): any {
+   if (typeof text !== 'string') fail('INPUT_SCHEMA');
+   if (text.length > maxBytes || bytes(text) > maxBytes) fail('INPUT_BOUND');
+-  // A valid Core of constructor depth64 has JSON nesting below256. This
+-  // transport guard is a derived safety ceiling, not a smaller semantic bound.
+-  let depth = 0, quoted = false, escaped = false;
+-  for (const ch of text) {
+-    if (quoted) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === '"') quoted = false; }
+-    else if (ch === '"') quoted = true;
+-    else if (ch === '{' || ch === '[') { if (++depth > 512) fail('INPUT_BOUND'); }
+-    else if (ch === '}' || ch === ']') depth--;
+-  }
++  // JSON.parse without a reviver and the iterative J writer support metadata
++  // nesting throughout the admitted byte range. Core/schema/value depth limits
++  // apply separately to their normative trees after transport decoding.
+   let value: any;
+   try { value = JSON.parse(text); } catch { fail('INPUT_SCHEMA'); }
+   // Duplicate keys, whitespace, nonminimal escapes and noncanonical ordering
+@@ -76,8 +91,14 @@
+ }
+ export function array(v: any): asserts v is any[] { if (!Array.isArray(v)) fail('INPUT_SCHEMA'); }
+ export function treeSize(v: any): { nodes: number; depth: number } {
+-  const children = Array.isArray(v) ? v : v !== null && typeof v === 'object' ? Object.values(v) : [];
+-  let nodes = 1, depth = 1;
+-  for (const child of children) { const n = treeSize(child); nodes += n.nodes; depth = Math.max(depth, n.depth + 1); }
++  let nodes = 0, depth = 0;
++  const pending = [{ value: v, depth: 1 }];
++  while (pending.length) {
++    const item = pending.pop()!;
++    nodes++; depth = Math.max(depth, item.depth);
++    const children = Array.isArray(item.value) ? item.value
++      : item.value !== null && typeof item.value === 'object' ? Object.values(item.value) : [];
++    for (const child of children) pending.push({ value: child, depth: item.depth + 1 });
++  }
+   return { nodes, depth };
+ }
+--- a/experiments/moriarty-language/tests/expression-v1-adversarial.test.mjs
++++ b/experiments/moriarty-language/tests/expression-v1-adversarial.test.mjs
+@@ -27,7 +27,7 @@
+ test('descriptor count is an actual runtime bound with rollback',()=>{const p=inputs();p.schema.recordTypes.R={};p.schema.operations.O='R';p.schema.args.f=['Record','R'];p.Args.f={};const emit=()=>N('Emit',{operation:'O',fields:Arg('f')});const ok=run(Act(...Array.from({length:128},emit)),p,1000);assert.equal(ok.descriptors.length,128);const bad=run(Act(...Array.from({length:129},emit)),p,1000);assert.equal(bad.code,'DESCRIPTOR_BOUND');assert.equal(bad.workUsed,'258');assert.equal('descriptors' in bad,false);});
+ test('result mutation cannot affect subsequent evaluations',()=>{const p=stateX();const evaluator=createExpressionContractV1(J(p.schema));const r=J(request(Act(),p));const a=evaluator.evaluate(r);a.post.x='0';assert.equal(evaluator.evaluate(r).post.x,'10');});
+ test('source, Core and snapshots retain separate simultaneous byte bounds',()=>{const p=inputs();const r=request(Act(),p);r.source='x'.repeat(65536);assert.equal(raw(J(r),p).status,'ExpressionPrepared');r.source+='x';rejected(raw(J(r),p),'INPUT_BOUND');});
+-test('deep hostile JSON is a defined rejection without host stack overflow',()=>rejected(raw('['.repeat(10000)+'true'+']'.repeat(10000)),'INPUT_BOUND'));
++test('deep non-object request is INPUT_SCHEMA without host stack overflow',()=>rejected(raw('['.repeat(10000)+'true'+']'.repeat(10000)),'INPUT_SCHEMA'));
+ 
+ test('statement256 is legal and257 rejects before any reduction',()=>{
+  assert.equal(run(Act(...Array.from({length:256},()=>Req(B(true)))),inputs(),1000).status,'ExpressionPrepared');
+--- /dev/null
++++ b/experiments/moriarty-language/tests/expression-v1-depth.test.mjs
+@@ -0,0 +1,65 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {createExpressionContractV1} from '../src/successor/expression-v1.ts';
++import {J,inputs,N,P} from './expression-v1-support.mjs';
++const schema=J(inputs().schema);
++// Assemble exact wire strings independently of the runtime serializer or host
++// recursive stringify. Type metadata does not contribute to value/Core depth.
++const option=(n,bottom='["Bool"]')=>'["Option",'.repeat(n)+bottom+']'.repeat(n);
++const coreFor=t=>J(N('ConstructNone',{elementType:'TYPE_MARKER'})).replace('"TYPE_MARKER"',t);
++const request=(core,work='1')=>J({contract:'moriarty-expression-contract/1',source:'',core:'CORE_MARKER',Pre:{},Args:{},Obs:{},workInitial:work}).replace('"CORE_MARKER"',core);
++const evaluate=(type,work='1')=>createExpressionContractV1(schema).evaluate(request(coreFor(type),work));
++function rejected(result,code,work='0') {assert.deepEqual(result,{status:'Rejected',code,span:P,nodePath:[],workUsed:work});}
++function checkNone(result,n) {
++ assert.equal(result.judgmentResult,'ExpressionValue');assert.deepEqual(result.value,[]);assert.equal(result.workRemaining,'0');
++ let t=result.type;for(let i=0;i<n+1;i++){assert.equal(t.length,2);assert.equal(t[0],'Option');t=t[1];}assert.deepEqual(t,['Bool']);
++}
++for(const n of [508,509,600,3000])test(`None with Option metadata depth ${n}`,()=>checkNone(evaluate(option(n)),n));
++const maxDepth=Math.floor((65536-Buffer.byteLength(coreFor(option(0))))/11);
++test('largest Option chain fitting Core byte bound succeeds',()=>{
++ assert.ok(maxDepth>5900);assert.ok(Buffer.byteLength(coreFor(option(maxDepth)))<=65536);
++ checkNone(evaluate(option(maxDepth)),maxDepth);
++});
++test('next Option chain exceeds Core bytes and rejects before work',()=>{
++ assert.ok(Buffer.byteLength(coreFor(option(maxDepth+1)))>65536);rejected(evaluate(option(maxDepth+1)),'INPUT_BOUND');
++});
++test('deep metadata still needs an evaluation work unit',()=>rejected(evaluate(option(maxDepth),'0'),'WORK_EXHAUSTED'));
++test('deep type shape error is INPUT_SCHEMA',()=>rejected(evaluate(option(3000,'["Unknown"]')),'INPUT_SCHEMA'));
++test('deep unresolved nominal type is TYPE_NAME',()=>rejected(evaluate(option(3000,'["Record","Missing"]')),'TYPE_NAME'));
++test('deep Unit data type remains disallowed',()=>rejected(evaluate(option(3000,'["Unit"]')),'TYPE_NAME'));
++test('deep Collection capacity checks preserve inner type error order',()=>{
++ rejected(evaluate('["Collection",'+option(3000,'["Record","Missing"]')+',"129"]'),'TYPE_NAME');
++ rejected(evaluate('["Collection",'+option(3000)+',"129"]'),'TYPE_COLLECTION_BOUND');
++});
++test('deep Collection metadata accepts valid finite capacities',()=>{
++ const n=2000,t='["Collection",'.repeat(n)+'["Bool"]'+',"0"]'.repeat(n);
++ const result=evaluate(t);assert.equal(result.judgmentResult,'ExpressionValue');assert.deepEqual(result.value,[]);assert.equal(result.workRemaining,'0');
++ let inner=result.type[1];for(let i=0;i<n;i++){assert.equal(inner[0],'Collection');assert.equal(inner[2],'0');inner=inner[1];}assert.deepEqual(inner,['Bool']);
++});
++test('malformed canonical encoding remains rejected at deep metadata',()=>{
++ rejected(createExpressionContractV1(schema).evaluate(request(coreFor(option(3000)).replace('["Bool"]','[ "Bool"]'))),'INPUT_SCHEMA');
++});
++test('deep schema JSON is rejected by normative schema depth bound',()=>{
++ const s=schema.replace('"args":{}','"args":{"x":'+option(3000)+'}');
++ rejected(createExpressionContractV1(s).evaluate(request(coreFor('["Bool"]'))),'INPUT_BOUND');
++});
++test('deep types compare structurally during ConstructSome typing',()=>{
++ const n=2500;
++ const core=J(N('ConstructSome',{elementType:'TYPE_MARKER',value:'VALUE_MARKER'}))
++  .replace('"TYPE_MARKER"',option(n)).replace('"VALUE_MARKER"',coreFor(option(n-1)));
++ const result=createExpressionContractV1(schema).evaluate(request(core,'2'));
++ assert.equal(result.judgmentResult,'ExpressionValue');assert.deepEqual(result.value,[[]]);assert.equal(result.workRemaining,'0');
++ let t=result.type;for(let i=0;i<n+1;i++){assert.equal(t[0],'Option');t=t[1];}assert.deepEqual(t,['Bool']);
++});
++test('deep mismatched types reject statically before work',()=>{
++ const core=J(N('ConstructSome',{elementType:'TYPE_MARKER',value:'VALUE_MARKER'}))
++  .replace('"TYPE_MARKER"',option(2500)).replace('"VALUE_MARKER"',coreFor(option(2499,'["Text"]')));
++ rejected(createExpressionContractV1(schema).evaluate(request(core,'0')),'TYPE_MISMATCH');
++});
++test('deep metadata types in unselected branches remain statically checked',()=>{
++ const condition=N('LitBool',{value:false});
++ const core=J(N('And',{left:condition,right:N('Eq',{left:'LEFT_MARKER',right:'RIGHT_MARKER'})}))
++  .replace('"LEFT_MARKER"',coreFor(option(2500))).replace('"RIGHT_MARKER"',coreFor(option(2500,'["Record","Missing"]')));
++ assert.deepEqual(createExpressionContractV1(schema).evaluate(request(core,'2')),
++  {status:'Rejected',code:'TYPE_NAME',span:P,nodePath:['1','1'],workUsed:'0'});
++});

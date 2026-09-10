@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "SP02-expression-runtime-independent-gpt6-02",
+  "verdict": "APPROVE",
+  "createdAt": "2026-09-10T22:07:32.628387+00:00",
+  "candidate": {
+    "path": "deliverables/sp02-expression-runtime-2026-09-10/runtime-candidate-02.json",
+    "sha256": "3d8b006a189f73bb5d4b132de43123a72b60a9ac9d7690463e18e7a81e0087cf",
+    "sourcePatchSha256": "6e4062c91462706c1fefb96993df9a5cdd8e51f8f8eed11a64bb9957821003f0",
+    "correctionDeltaSha256": "6ccdfad4bbf3264dc148c6469ec78ec9844e3acb1080599c646fb3612061cb33"
+  },
+  "reviewer": {
+    "agent": "/root/runtime_depth_independent",
+    "requestedModel": "gpt-6-astra",
+    "actualModelIdentityAvailable": "Host developer instructions identify GPT-6; the parent assignment routes this fresh reviewer as GPT-6 Astra. A provider-returned exact model identifier is not exposed in this reviewer context.",
+    "independentOfAuthor": true,
+    "authoredPinnedRuntime": false,
+    "grokApprovalClaimed": false
+  },
+  "scope": [
+    "Exact corrected Core expression public API createExpressionContractV1(schemaCanonicalJSON).evaluate(requestCanonicalJSON), including all 40 constructors in expression-v1.ts and helper files.",
+    "Read representation.md, static-semantics.md, semantic-contract.md and full runtime plus correction delta. Verify removal of nonnormative JSON depth restriction without changing ordinary static/reduction rules.",
+    "Check iterative canonical serialization, JSON.parse without reviver, schema tree sizing, unary Option/Collection shape and resolution traversal, preserved inner-type-before-capacity order and schema cycle traversal.",
+    "Reproduce retained independent tests and add independent public-API conformance probes with separately assembled deep wire trees; no runtime serializer used by new probe inputs."
+  ],
+  "pinVerification": {
+    "before": {
+      "checked": 204,
+      "mismatches": []
+    },
+    "after": {
+      "checked": 204,
+      "mismatches": []
+    },
+    "candidateBytesUnchanged": true,
+    "pinnedSourceAndLogsEdited": false,
+    "sourceContractPins": {
+      "checked": 136,
+      "mismatches": []
+    },
+    "originalCandidatePreservation": {
+      "checked": 176,
+      "unchanged": 173,
+      "archived": 3,
+      "mismatches": []
+    }
+  },
+  "findings": [],
+  "priorFindingDisposition": [
+    {
+      "id": "EXRT-G6-01",
+      "status": "RESOLVED",
+      "evidence": "Reran the exact retained independent-reproducer-EXRT-G6-01.mjs unchanged: exit 0, Option^509 Bool ConstructNone succeeds, empty value, workRemaining 0. Independently derived largest Option chain admitted by Core bytes: depth 5947 accepted; depth 5948 returns INPUT_BOUND before reduction. No substitute type-metadata depth cap appears in the correction."
+    }
+  ],
+  "tests": {
+    "nodeVersion": "v24.18.1",
+    "retainedOriginalReproducer": {
+      "command": "node deliverables/sp02-expression-runtime-2026-09-10/independent-reproducer-EXRT-G6-01.mjs",
+      "exitCode": 0
+    },
+    "retainedIndependentProbes": {
+      "command": "node deliverables/sp02-expression-runtime-2026-09-10/independent-probes-gpt6-01.mjs",
+      "exitCode": 0,
+      "assertions": 23435,
+      "booleanReferenceDifferentialCases": 8750
+    },
+    "fullRegression": {
+      "command": "npm test",
+      "cwd": "experiments/moriarty-language",
+      "exitCode": 0,
+      "passed": 441,
+      "failed": 0
+    },
+    "typecheck": {
+      "command": "npm run typecheck",
+      "cwd": "experiments/moriarty-language",
+      "exitCode": 0
+    },
+    "newIndependentConformance": {
+      "command": "node deliverables/sp02-expression-runtime-2026-09-10/independent-probes-gpt6-02.mjs",
+      "exitCode": 0,
+      "status": "PASS",
+      "checks": 220,
+      "groups": {
+        "Option accepted": 10,
+        "Option empty": 10,
+        "Option work": 10,
+        "Option no work": 20,
+        "mixed resolved leaf": 39,
+        "mixed value": 39,
+        "deep leaf rejection": 20,
+        "capacity range": 4,
+        "capacity spelling": 8,
+        "inner nominal before capacity": 2,
+        "shape before nominal": 2,
+        "max Option depth": 1,
+        "max Option accepted": 1,
+        "next Option Core byte bound": 2,
+        "noncanonical deep": 10,
+        "duplicate envelope": 2,
+        "schema depth64": 1,
+        "schema depth bound": 4,
+        "acyclic nominal chain": 1,
+        "mixed schema cycle": 2,
+        "Core depth accepted": 2,
+        "Core depth65": 2,
+        "work upper": 1,
+        "work bounds": 8,
+        "source UTF8 exact": 2,
+        "source UTF8 over": 4,
+        "W exact65536": 1,
+        "W work": 1,
+        "W65537": 1,
+        "W consumed work": 1,
+        "snapshot4096": 1,
+        "snapshot4097": 2,
+        "deep exact type agreement": 1,
+        "deep Some work": 1,
+        "deep exact type mismatch": 2,
+        "expanded acyclic snapshot depth": 2
+      },
+      "maxOptionDepth": 5947,
+      "exactWLastTextBytes": 785,
+      "durationMs": 221.654605
+    }
+  },
+  "assessment": [
+    "Iterative canonical traversal preserves scalar-order keys and exact string spelling for the JSON-owned finite input domain. Exact reserialization comparison continues to reject duplicate keys and noncanonical encodings.",
+    "Type shape and resolution preserve recursive postorder: validate inner type before outer Collection capacities. Metadata depth is governed by the existing byte bound, while schema JSON and mathematical value/Core bounds remain distinct.",
+    "Public API conformance probes passed for all 13 resolved leaf families under mixed wrappers; signed Quantity/Rate scale and unit domains, missing nominal references, Unit exclusion, malformed annotation tags and decimal capacities retained expected rejection phases.",
+    "Exact W byte limit, snapshot node count, schema/Core depth, source UTF-8 and work boundaries retained their specified results. Deep Some exact equality and mismatch were checked; a compact acyclic schema describing an overdeep value returned INPUT_BOUND before reduction.",
+    "Full runtime source inspection and retained independent tests cover Boolean short-circuit work/path behavior, arithmetic/comparison ranges, all five statements, static/snapshot/reduction ordering and rejection rollback. This is finite empirical conformance evidence, not exhaustive proof."
+  ],
+  "operationalStatus": {
+    "inspected": true,
+    "reportedBlock": "operational history unresolved or unverified",
+    "pendingTransactions": [],
+    "dispatchPerformed": false
+  },
+  "limits": [
+    "Approval is scoped to this exact Core expression runtime candidate and the reviewed expression contract; it is not profile or product acceptance.",
+    "No complete source-to-Core elaboration, source-span correspondence, K semantics/correspondence or metatheorem proof established.",
+    "All 38 financial-operation relations, ledger settlement, signatures/history/privacy/authentication, general native proofs and mandatory Preview acceptance remain OPEN.",
+    "No network, service, wallet, operational dispatch or resource campaign action performed.",
+    "Separate required Grok review, actual provider identity and terminal outcome remain independent gates; this receipt supplies no Grok vote or substitution.",
+    "No exhaustive proof of the full finite domain or host/native resource-cost bound is claimed."
+  ],
+  "artifacts": [
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-reproducer-green-gpt6-02.log",
+      "sha256": "b3a883b6dbcc4c25e90c20d74febe1784ae0d5700cd41ca27ae45ff4dee2b834"
+    },
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-retained-probes-gpt6-02.log",
+      "sha256": "1bc49480c0059e4ffd227ab437b1cc28498c98cd3d5f835d8078f012f6055457"
+    },
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-regression-gpt6-02.log",
+      "sha256": "e90ffd33e5840a8b2d89c82f3225ffb2377e13fb8e2c72b3825a50f503d63750"
+    },
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-typecheck-gpt6-02.log",
+      "sha256": "396901319daac4a4413b23478852db3c572014f86c71d148273565f0f3332696"
+    },
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-probes-gpt6-02.log",
+      "sha256": "55c35245fb9ac268ef64e64016c212119e04f8a8aae2ec7a5b59ec5111c14a48"
+    },
+    {
+      "path": "deliverables/sp02-expression-runtime-2026-09-10/independent-probes-gpt6-02.mjs",
+      "sha256": "794c270256f50934c30a73cb735f05fe84212f1e7be703e00057c5d7cbc23fcf"
+    }
+  ]
+}
