@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,writeFileSync,symlinkSync,rmSync,readFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {validateLocalLaunchPlan,readPrivateLaunchFile,publicLaunchEvent,retainPublicSubmissions} from '../../../experiments/moriarty-midnight-financial/ledger/launch-local.mjs';
+const h='ab'.repeat(32);
+const make=()=>({schema:'moriarty.local-financial-launch/1',kind:'swap',build:{receiptPath:'/private/build',receiptSha256:h,sourceManifestHash:h},networkConfig:{networkId:'undeployed',node:'http://127.0.0.1:9944',indexer:'http://127.0.0.1:8088/graphql',indexerWS:'ws://[::1]:8088/graphql/ws',proofServer:'http://[::1]:6300'},wallet:{seedFile:'/private/seed',stateDirectory:'/private/wallet',expectedAddress:'mn_addr_undeployed1example'},roles:{firstAddress:h,secondAddress:'cd'.repeat(32),secretsFile:'/private/roles'},privateState:{directory:'/private/state',passwordFile:'/private/password'},networkTag:h,expectedProtocolVersion:1000000,limits:{allocationId:'review-source-only',deadlineMs:Date.now()+60000,submissions:4,dustFee:'0',grossByLogicalAsset:{ASSET_A:'0',ASSET_B:'0'}},outputDirectory:'/private/run'});
+for(const value of [(1n<<128n).toString(),'01','1e9','+1']) {const p=make();p.limits.grossByLogicalAsset.ASSET_B=value;assert.throws(()=>validateLocalLaunchPlan(p));}
+const max=make();max.limits.dustFee=((1n<<128n)-1n).toString();assert.equal(validateLocalLaunchPlan(max).limits.dustFee,max.limits.dustFee);console.log('PASS unsigned 128-bit exact bounds and noncanonical decimal rejection');
+for(const url of ['http://127.0.0.1.evil.invalid:9944','http://name:password@127.0.0.1:9944','http://[::ffff:127.0.0.1]:9944','http://127.0.0.1:9944/#private']) {const p=make();p.networkConfig.node=url;assert.throws(()=>validateLocalLaunchPlan(p));}
+const p=make(),closed=validateLocalLaunchPlan(p);p.roles.firstAddress='00'.repeat(32);assert.equal(closed.roles.firstAddress,h);console.log('PASS loopback spoofing, credentials, fragments, and caller mutation');
+const root=mkdtempSync(join(tmpdir(),'sp05-gpt6-adversarial-'));
+try{mkdirSync(join(root,'real'));writeFileSync(join(root,'real','input'),'INERT_PRIVATE_CANARY',{mode:0o600});symlinkSync(join(root,'real'),join(root,'alias'));assert.throws(()=>readPrivateLaunchFile(join(root,'alias','input')));assert.equal(readFileSync(join(root,'real','input'),'utf8'),'INERT_PRIVATE_CANARY');console.log('PASS private ancestor symlink rejection without input mutation');
+let calls=0;const wallet={async submitTransaction(){calls++;}};class Transaction{};const wrapped=retainPublicSubmissions({wallet,ledger:{Transaction},directory:root});await assert.rejects(wrapped.submitTransaction({serialize:()=>Buffer.from('INERT_PRIVATE_CANARY')}));assert.equal(calls,0);console.log('PASS non-native private recipe rejected before serialization or submission');
+}finally{rmSync(root,{recursive:true,force:true});}
+assert.deepEqual(publicLaunchEvent({kind:'stopped',identifiers:[h],reservationRetained:true,pendingOperations:1,error:new Error('INERT_PRIVATE_CANARY')}),{kind:'stopped',identifiers:[h],reservationRetained:true,pendingOperations:1});console.log('PASS stopped event excludes SDK errors');

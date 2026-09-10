@@ -1,0 +1,130 @@
+{
+  "schema": "moriarty.sp05-independent-build-result-review/1",
+  "reviewedAt": "2026-09-09T22:24:38.844082+00:00",
+  "reviewer": {
+    "agent": "/root/sp05_launch_final_audit",
+    "model": "GPT-6 Astra",
+    "role": "Independent actual result auditor; did not implement or dispatch build",
+    "priorScope": "Same agent independently reviewed launcher source; this is a new actual-result audit"
+  },
+  "verdict": "APPROVED",
+  "acceptedScope": "Actual compiler-generated key artifacts for existing fixed custody loan and swap only",
+  "sourceCandidateSha": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6",
+  "executionManifestSha256": "17688ad330b33bb6f2a6ddee2a717949ebb5404607648e833ae59308b30ace35",
+  "launcherSha256": "dc2f8e386222722fa86a2318fafc0b38add66a09ab55eecdaadfff2d2302fa8d",
+  "checks": {
+    "path": "/home/charl/Moriarty/.worktrees/sp05-financial-integration/deliverables/sp05-financial-integration-2026-09-09/full-build-01/gpt6-build-result-checks.json",
+    "sha256": "0ef55c746d3a63045b87f012c4f75d5022dd384d4e9960ecdf498033bf4f90dc"
+  },
+  "sourceAndToolchain": {
+    "verifiedSourcePins": 17,
+    "verifiedToolchainPins": 7,
+    "toolchainResolvedPathsAndSizesVerified": true,
+    "requestSourceCommitmentsVerified": true,
+    "compiler": "0.31.1",
+    "language": "0.23.0",
+    "runtime": "0.16.0",
+    "compactWrapper": "0.5.2"
+  },
+  "cases": {
+    "loan": {
+      "artifactCount": 16,
+      "retainedFileCount": 20,
+      "retainedLogicalBytes": 16056263,
+      "circuits": [
+        "accrue",
+        "initialize",
+        "settle"
+      ],
+      "wallMs": 16796,
+      "attempts": 1,
+      "synthetic": false,
+      "artifactHashesVerified": true,
+      "stagedSourcesMatchPinnedSources": true,
+      "receiptDeadlineSatisfied": true,
+      "activeCgroupSamples": 3,
+      "terminalCgroupEmpty": true
+    },
+    "swap": {
+      "artifactCount": 16,
+      "retainedFileCount": 20,
+      "retainedLogicalBytes": 20978930,
+      "circuits": [
+        "close",
+        "initialize",
+        "swap"
+      ],
+      "wallMs": 20368,
+      "attempts": 1,
+      "synthetic": false,
+      "artifactHashesVerified": true,
+      "stagedSourcesMatchPinnedSources": true,
+      "receiptDeadlineSatisfied": true,
+      "activeCgroupSamples": 3,
+      "terminalCgroupEmpty": true
+    }
+  },
+  "resourceResult": {
+    "verdict": "WITHIN_REVIEWED_BOUNDS",
+    "aggregateWallMs": 37699,
+    "aggregateLimitMs": 720000,
+    "totalRetainedLogicalBytes": 37035193,
+    "totalRetainedLogicalLimit": 2147483648,
+    "perCaseRetainedLogicalLimit": 1073741824,
+    "perCaseTmpfsAllocationLimit": 1073741824,
+    "memoryMaxBytes": 4294967296,
+    "memorySwapMaxBytes": 0,
+    "compileLimitMs": 300000,
+    "serviceLimitMs": 330000,
+    "actualUnitPropertiesVerified": [
+      "RuntimeMaxUSec=5min 30s",
+      "TimeoutStopUSec=0",
+      "KillMode=control-group",
+      "SendSIGKILL=yes",
+      "FinalKillSignal=9",
+      "MemoryMax=4294967296",
+      "MemorySwapMax=0"
+    ],
+    "memoryPeakFromSystemdStderr": {
+      "loan": "391.6M, swap 0B",
+      "swap": "546.3M, swap 0B"
+    },
+    "serialityEvidence": "Loan receipt and outer completion precede swap launch and attempt reservation; supervisor requires empty terminal unit before advancing.",
+    "outsideEvidenceBytesAtAudit": 172400,
+    "diagnosticHeadroomBytes": 16777216,
+    "physicalHostAllocationCapped": false
+  },
+  "observations": [
+    "Inspected root admission and its hash-bound supervisor, exact request/resource/launch/dispatch/attempt records, receipt command arguments and output digests, actual systemd stderr, raw active cgroup readbacks, terminal observations and run summary. All referenced byte bindings checked; other auditor review files were hashed only, without reading their verdict content.",
+    "Both builders ran four version probes then exactly one full compile command without --skip-zk or commandAdapter. Both command sequences returned zero; receipts are built, synthetic=false and proofsGenerated=false. Existing attempt records remain consumed at one each.",
+    "All 16 listed compiler artifacts per case exist, are nonempty regular singly-linked files, and match declared sizes/SHA-256. Every retained file was independently enumerated and hashed: 16 compiler artifacts, three staged sources and one build receipt per case; no unexpected artifact files or symlinks.",
+    "Compiler metadata marks initialize/accrue/settle (loan) and initialize/swap/close (swap) as proof-enabled impure circuits, with matching prover, verifier, textual ZKIR and binary ZKIR assets. Generated JavaScript imports runtime 0.16.0 and exposes these exact provableCircuits. No cryptographic transaction proof was generated or verified by this audit.",
+    "Actual active samples have finite correct service limits and raw memory.max/memory.swap.max. Terminal records show unloaded inactive units. A fresh read-only systemctl query and cgroup-path check independently confirmed the service and cgroup are absent at review time.",
+    "The reviewed launcher mounts a size-limited tmpfs, checks the original host bind target and caps logical retention. Successful actual runs plus exact retained hash/path checks support this mechanism for these two executions; no raw mountinfo peak-allocation capture was retained, so quota enforcement evidence also depends on the pinned launcher and its earlier real-namespace tests.",
+    "All ten pre-existing campaign entries compare equal to the before snapshot. The completion-program comparison showed only four I2 admission fields changed from specified-only to pending-review with candidate/profile/campaign binding; historical stops and charges were not reset.",
+    "Outer stdout files are empty because systemd-run did not use --pipe. This is expected; compiler command stdout/stderr and their hashes are in the retained build receipts, and actual service termination, runtime and peak memory are in outer stderr."
+  ],
+  "limitations": [
+    "This verdict accepts compiler key artifacts only. It does not accept I2, general financial correctness, ledger settlement, wallet custody, transaction proof generation, Docker/Preview execution or native recursive PCD.",
+    "Key usability in an actual transaction remains untested. Compiler output consistency and complete required artifacts do not substitute for the next real proof/ledger result.",
+    "Trust remains scoped to the pinned compiler writing its designated output tree. Physical filesystem rounding/metadata and arbitrary malicious host writes are outside the stated quota model.",
+    "The 16MiB outside headroom was reserved and the supervisor polled evidence-directory size. Current evidence is well below it. This is not an independently imposed journal or arbitrary host-diagnostic hard quota.",
+    "Runtime timeout, OOM and cleanup-failure branches were not triggered in these successful builds. Actual runs stayed far below the limits; prior launcher tests and the inert SIGKILL probe cover separate control mechanisms.",
+    "Moriarty startup status still reports unresolved historical operational-history fields. This result audit does not clear those unrelated plugin stops or create new dispatch authority."
+  ],
+  "reviewerActions": {
+    "compilerInvocations": 0,
+    "walletOperations": 0,
+    "transactionProofs": 0,
+    "networkOperations": 0,
+    "productionEdits": 0,
+    "otherReviewerVerdictsRead": false
+  },
+  "resultClaims": {
+    "compilerArtifactsAccepted": true,
+    "transactionProofGenerated": false,
+    "financialExecutionAccepted": false,
+    "I2Accepted": false,
+    "PreviewAccepted": false
+  }
+}

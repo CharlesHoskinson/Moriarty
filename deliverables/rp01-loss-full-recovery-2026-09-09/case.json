@@ -1,0 +1,913 @@
+{
+  "schema": "moriarty.fixed-full-loss-recovery-challenge/1",
+  "id": "RP01-LOSS-FULL-RECOVERY",
+  "status": "proposed-fixed-design-awaiting-independent-reviews",
+  "protocolConformance": false,
+  "languageImplementation": false,
+  "networkAcceptance": false,
+  "prefix": {
+    "casePath": "deliverables/rp01-loss-allocation-2026-09-09/case.json",
+    "caseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93",
+    "checkerSha256": "38c985ce97cb53f4d86fbeb7148f7b6dde3e932b50ad05d98f79b0af169af16b"
+  },
+  "policy": {
+    "version": "GenericLossV1",
+    "extension": "GenericFullRecoveryV1",
+    "contribution": "NonrefundableThirdPartyPaymentWithoutSubrogation",
+    "additionalCash": "450",
+    "additionalFee": "0",
+    "additionalOrdinaryWork": "1",
+    "debtCreationLimit": "0",
+    "forgivenessLimit": "0"
+  },
+  "assumptions": [
+    "Sponsor owns an external finite 450 Cash account composed once with the validated partial predecessor; it is a supplied custody fact, not minted Cash or on-chain evidence.",
+    "Sponsor pays Pool directly on behalf of Borrower as a nonrefundable contribution, acquires no successor claim or subrogation right, and charges no additional fee. This is a proposed generic case policy, not a legal/protocol claim.",
+    "Fresh grants are distinct externally authorized records bound to the exact predecessor and dates121 through130; legitimacy, signatures and revocation are assumed, not verified.",
+    "The prior ordinary allocation12 and reserve2 remain; a distinct finite resource source contributes exactly1 ordinary unit, yielding a declared lifetime ceiling13 ordinary plus2 reserve. This is an explicit proposed resource extension, not an automatic continuation refresh.",
+    "Existing pro-rata shares and historical expense policy remain unchanged; full repayment reverses remaining allowance450 and leaves pool fee loss10."
+  ],
+  "unresolvedChoices": [
+    "SP01 consequential review of sponsor no-subrogation policy, fresh authority and one-unit resource extension.",
+    "SP02 richer canonical representation and source signing; SP03 executable language transition; SP07 primary source/version policy binding; SP09 required claim/proof and custody/ledger evidence.",
+    "Fresh independent GPT-6 and Grok4.6 review required; no acceptance asserted."
+  ],
+  "bounds": {
+    "uint128Max": "340282366920938463463374607431768211455",
+    "extensionSteps": "1",
+    "eventsPerStep": "3",
+    "actors": "6",
+    "assetRows": "12",
+    "duties": "1",
+    "claims": "2",
+    "grants": "11",
+    "usedTransfers": "6",
+    "usedAllocations": "3",
+    "lossSnapshots": "4",
+    "ordinaryLifetime": "13",
+    "closureReserve": "2",
+    "sidecarUtf8Bytes": "65536"
+  },
+  "fundingSource": {
+    "owner": "Sponsor",
+    "asset": "Cash",
+    "balance": "450",
+    "collateralBalance": "0",
+    "kind": "ExternalPreexistingCashAccount"
+  },
+  "workSource": {
+    "owner": "RecoveryWorkSponsor",
+    "initial": "1",
+    "contribution": "1"
+  },
+  "freshGrants": {
+    "Sponsor450": {
+      "issuer": "Sponsor",
+      "holder": "Sponsor",
+      "scope": "Transfer",
+      "initial": "450",
+      "remaining": "450",
+      "spent": "0",
+      "asset": "Cash",
+      "recipient": "Pool",
+      "dutyId": "Loan1",
+      "version": "GenericLossV1",
+      "issuedAt": "121",
+      "expiresAt": "130",
+      "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+    },
+    "Recovery450": {
+      "issuer": "Pool",
+      "holder": "Servicer",
+      "scope": "Repay",
+      "initial": "450",
+      "remaining": "450",
+      "spent": "0",
+      "asset": "Cash",
+      "recipient": "Pool",
+      "dutyId": "Loan1",
+      "version": "GenericLossV1",
+      "issuedAt": "121",
+      "expiresAt": "130",
+      "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+    },
+    "Reverse450": {
+      "issuer": "Governor",
+      "holder": "Servicer",
+      "scope": "ReverseImpairment",
+      "initial": "450",
+      "remaining": "450",
+      "spent": "0",
+      "asset": null,
+      "recipient": null,
+      "dutyId": "Loan1",
+      "version": "GenericLossV1",
+      "issuedAt": "121",
+      "expiresAt": "130",
+      "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+    }
+  },
+  "initial": {
+    "assets": {
+      "Cash": {
+        "Pool": "640",
+        "Borrower": "45",
+        "Buyer": "0",
+        "FeeCollector": "15",
+        "Custodian": "0",
+        "Sponsor": "450"
+      },
+      "Collateral": {
+        "Pool": "0",
+        "Borrower": "0",
+        "Buyer": "4",
+        "FeeCollector": "0",
+        "Custodian": "0",
+        "Sponsor": "0"
+      }
+    },
+    "duties": [
+      {
+        "id": "Loan1",
+        "debtor": "Borrower",
+        "creditor": "Pool",
+        "denomination": "Cash",
+        "principal": "450",
+        "accrued": "0",
+        "outstanding": "450",
+        "status": "Defaulted",
+        "collateralUnits": "0",
+        "legalRecourse": "Retained"
+      }
+    ],
+    "accounts": {
+      "grossReceivable": "450",
+      "impairmentAllowance": "450",
+      "carryingReceivable": "0",
+      "nav": "640",
+      "sharesOutstanding": "1000",
+      "impairmentExpense": "600",
+      "feeExpense": "10",
+      "recoveryGain": "150",
+      "netLoss": "460"
+    },
+    "claims": [
+      {
+        "holder": "HolderA",
+        "shares": "600",
+        "bookValue": "384",
+        "allocatedNetLoss": "276"
+      },
+      {
+        "holder": "HolderB",
+        "shares": "400",
+        "bookValue": "256",
+        "allocatedNetLoss": "184"
+      }
+    ],
+    "authority": {
+      "DefaultGrant": {
+        "issuer": "Governor",
+        "holder": "Servicer",
+        "scope": "MarkDefault",
+        "initial": "1",
+        "remaining": "0",
+        "spent": "1",
+        "asset": null,
+        "recipient": null,
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "ImpairGrant": {
+        "issuer": "Governor",
+        "holder": "Servicer",
+        "scope": "Impair",
+        "initial": "600",
+        "remaining": "0",
+        "spent": "600",
+        "asset": null,
+        "recipient": null,
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "CollateralGrant": {
+        "issuer": "Borrower",
+        "holder": "Custodian",
+        "scope": "Transfer",
+        "initial": "4",
+        "remaining": "0",
+        "spent": "4",
+        "asset": "Collateral",
+        "recipient": "Buyer",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "BuyerGrant": {
+        "issuer": "Buyer",
+        "holder": "Buyer",
+        "scope": "Transfer",
+        "initial": "400",
+        "remaining": "0",
+        "spent": "400",
+        "asset": "Cash",
+        "recipient": "Pool",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "PoolFeeGrant": {
+        "issuer": "Pool",
+        "holder": "Pool",
+        "scope": "Transfer",
+        "initial": "10",
+        "remaining": "0",
+        "spent": "10",
+        "asset": "Cash",
+        "recipient": "FeeCollector",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "BorrowerGrant": {
+        "issuer": "Borrower",
+        "holder": "Borrower",
+        "scope": "Transfer",
+        "initial": "155",
+        "remaining": "0",
+        "spent": "155",
+        "asset": "Cash",
+        "recipient": null,
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "RecoveryGrant": {
+        "issuer": "Pool",
+        "holder": "Servicer",
+        "scope": "Repay",
+        "initial": "550",
+        "remaining": "0",
+        "spent": "550",
+        "asset": "Cash",
+        "recipient": "Pool",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "ReverseGrant": {
+        "issuer": "Governor",
+        "holder": "Servicer",
+        "scope": "ReverseImpairment",
+        "initial": "150",
+        "remaining": "0",
+        "spent": "150",
+        "asset": null,
+        "recipient": null,
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "expiresAt": "200"
+      },
+      "Sponsor450": {
+        "issuer": "Sponsor",
+        "holder": "Sponsor",
+        "scope": "Transfer",
+        "initial": "450",
+        "remaining": "450",
+        "spent": "0",
+        "asset": "Cash",
+        "recipient": "Pool",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "issuedAt": "121",
+        "expiresAt": "130",
+        "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+      },
+      "Recovery450": {
+        "issuer": "Pool",
+        "holder": "Servicer",
+        "scope": "Repay",
+        "initial": "450",
+        "remaining": "450",
+        "spent": "0",
+        "asset": "Cash",
+        "recipient": "Pool",
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "issuedAt": "121",
+        "expiresAt": "130",
+        "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+      },
+      "Reverse450": {
+        "issuer": "Governor",
+        "holder": "Servicer",
+        "scope": "ReverseImpairment",
+        "initial": "450",
+        "remaining": "450",
+        "spent": "0",
+        "asset": null,
+        "recipient": null,
+        "dutyId": "Loan1",
+        "version": "GenericLossV1",
+        "issuedAt": "121",
+        "expiresAt": "130",
+        "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+      }
+    },
+    "work": {
+      "remaining": "3",
+      "spent": "10",
+      "closureReserve": "2",
+      "owner": "Servicer",
+      "additionalAllocated": "1",
+      "resourceSource": {
+        "owner": "RecoveryWorkSponsor",
+        "initial": "1",
+        "remaining": "0",
+        "spent": "1"
+      }
+    },
+    "history": {
+      "usedTransferIds": [
+        "CollateralDelivery",
+        "SaleCash",
+        "SaleFee",
+        "LateCash",
+        "LateFee"
+      ],
+      "usedAllocationIds": [
+        "SaleAllocation",
+        "LateAllocation"
+      ],
+      "usedObservationIds": [
+        "DefaultObs",
+        "BidObs"
+      ],
+      "fundedNominalRecovery": "550",
+      "forgivenNominal": "0",
+      "nominalCreated": "0",
+      "lossAllocations": [
+        {
+          "stepId": "default-and-impair",
+          "impairmentExpense": "600",
+          "feeExpense": "0",
+          "recoveryGain": "0",
+          "netLoss": "600",
+          "claims": [
+            {
+              "holder": "HolderA",
+              "shares": "600",
+              "bookValue": "300",
+              "allocatedNetLoss": "360"
+            },
+            {
+              "holder": "HolderB",
+              "shares": "400",
+              "bookValue": "200",
+              "allocatedNetLoss": "240"
+            }
+          ]
+        },
+        {
+          "stepId": "collateral-sale-and-funded-discharge",
+          "impairmentExpense": "600",
+          "feeExpense": "10",
+          "recoveryGain": "0",
+          "netLoss": "610",
+          "claims": [
+            {
+              "holder": "HolderA",
+              "shares": "600",
+              "bookValue": "294",
+              "allocatedNetLoss": "366"
+            },
+            {
+              "holder": "HolderB",
+              "shares": "400",
+              "bookValue": "196",
+              "allocatedNetLoss": "244"
+            }
+          ]
+        },
+        {
+          "stepId": "later-funded-recovery",
+          "impairmentExpense": "600",
+          "feeExpense": "10",
+          "recoveryGain": "150",
+          "netLoss": "460",
+          "claims": [
+            {
+              "holder": "HolderA",
+              "shares": "600",
+              "bookValue": "384",
+              "allocatedNetLoss": "276"
+            },
+            {
+              "holder": "HolderB",
+              "shares": "400",
+              "bookValue": "256",
+              "allocatedNetLoss": "184"
+            }
+          ]
+        }
+      ]
+    },
+    "continuation": {
+      "owner": "Servicer",
+      "status": "Open",
+      "debtId": "Loan1",
+      "nominalCreationRemaining": "0",
+      "forgivenessRemaining": "0",
+      "policyVersion": "GenericLossV1"
+    }
+  },
+  "step": {
+    "id": "full-funded-recovery",
+    "now": "125",
+    "events": [
+      {
+        "kind": "Transfer",
+        "grant": "Sponsor450",
+        "actor": "Sponsor",
+        "version": "GenericLossV1",
+        "id": "FullCash",
+        "asset": "Cash",
+        "from": "Sponsor",
+        "to": "Pool",
+        "amount": "450",
+        "purpose": "ThirdPartyRecovery"
+      },
+      {
+        "kind": "Repay",
+        "grant": "Recovery450",
+        "actor": "Servicer",
+        "version": "GenericLossV1",
+        "allocationId": "FullAllocation",
+        "transferId": "FullCash",
+        "dutyId": "Loan1",
+        "amount": "450"
+      },
+      {
+        "kind": "ReverseImpairment",
+        "grant": "Reverse450",
+        "actor": "Servicer",
+        "version": "GenericLossV1",
+        "dutyId": "Loan1",
+        "allocationId": "FullAllocation",
+        "amount": "450"
+      }
+    ],
+    "workCost": "3",
+    "after": {
+      "assets": {
+        "Cash": {
+          "Pool": "1090",
+          "Borrower": "45",
+          "Buyer": "0",
+          "FeeCollector": "15",
+          "Custodian": "0",
+          "Sponsor": "0"
+        },
+        "Collateral": {
+          "Pool": "0",
+          "Borrower": "0",
+          "Buyer": "4",
+          "FeeCollector": "0",
+          "Custodian": "0",
+          "Sponsor": "0"
+        }
+      },
+      "duties": [
+        {
+          "id": "Loan1",
+          "debtor": "Borrower",
+          "creditor": "Pool",
+          "denomination": "Cash",
+          "principal": "0",
+          "accrued": "0",
+          "outstanding": "0",
+          "status": "Discharged",
+          "collateralUnits": "0",
+          "legalRecourse": "Retained"
+        }
+      ],
+      "accounts": {
+        "grossReceivable": "0",
+        "impairmentAllowance": "0",
+        "carryingReceivable": "0",
+        "nav": "1090",
+        "sharesOutstanding": "1000",
+        "impairmentExpense": "600",
+        "feeExpense": "10",
+        "recoveryGain": "600",
+        "netLoss": "10"
+      },
+      "claims": [
+        {
+          "holder": "HolderA",
+          "shares": "600",
+          "bookValue": "654",
+          "allocatedNetLoss": "6"
+        },
+        {
+          "holder": "HolderB",
+          "shares": "400",
+          "bookValue": "436",
+          "allocatedNetLoss": "4"
+        }
+      ],
+      "authority": {
+        "DefaultGrant": {
+          "issuer": "Governor",
+          "holder": "Servicer",
+          "scope": "MarkDefault",
+          "initial": "1",
+          "remaining": "0",
+          "spent": "1",
+          "asset": null,
+          "recipient": null,
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "ImpairGrant": {
+          "issuer": "Governor",
+          "holder": "Servicer",
+          "scope": "Impair",
+          "initial": "600",
+          "remaining": "0",
+          "spent": "600",
+          "asset": null,
+          "recipient": null,
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "CollateralGrant": {
+          "issuer": "Borrower",
+          "holder": "Custodian",
+          "scope": "Transfer",
+          "initial": "4",
+          "remaining": "0",
+          "spent": "4",
+          "asset": "Collateral",
+          "recipient": "Buyer",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "BuyerGrant": {
+          "issuer": "Buyer",
+          "holder": "Buyer",
+          "scope": "Transfer",
+          "initial": "400",
+          "remaining": "0",
+          "spent": "400",
+          "asset": "Cash",
+          "recipient": "Pool",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "PoolFeeGrant": {
+          "issuer": "Pool",
+          "holder": "Pool",
+          "scope": "Transfer",
+          "initial": "10",
+          "remaining": "0",
+          "spent": "10",
+          "asset": "Cash",
+          "recipient": "FeeCollector",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "BorrowerGrant": {
+          "issuer": "Borrower",
+          "holder": "Borrower",
+          "scope": "Transfer",
+          "initial": "155",
+          "remaining": "0",
+          "spent": "155",
+          "asset": "Cash",
+          "recipient": null,
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "RecoveryGrant": {
+          "issuer": "Pool",
+          "holder": "Servicer",
+          "scope": "Repay",
+          "initial": "550",
+          "remaining": "0",
+          "spent": "550",
+          "asset": "Cash",
+          "recipient": "Pool",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "ReverseGrant": {
+          "issuer": "Governor",
+          "holder": "Servicer",
+          "scope": "ReverseImpairment",
+          "initial": "150",
+          "remaining": "0",
+          "spent": "150",
+          "asset": null,
+          "recipient": null,
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "expiresAt": "200"
+        },
+        "Sponsor450": {
+          "issuer": "Sponsor",
+          "holder": "Sponsor",
+          "scope": "Transfer",
+          "initial": "450",
+          "remaining": "0",
+          "spent": "450",
+          "asset": "Cash",
+          "recipient": "Pool",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "issuedAt": "121",
+          "expiresAt": "130",
+          "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+        },
+        "Recovery450": {
+          "issuer": "Pool",
+          "holder": "Servicer",
+          "scope": "Repay",
+          "initial": "450",
+          "remaining": "0",
+          "spent": "450",
+          "asset": "Cash",
+          "recipient": "Pool",
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "issuedAt": "121",
+          "expiresAt": "130",
+          "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+        },
+        "Reverse450": {
+          "issuer": "Governor",
+          "holder": "Servicer",
+          "scope": "ReverseImpairment",
+          "initial": "450",
+          "remaining": "0",
+          "spent": "450",
+          "asset": null,
+          "recipient": null,
+          "dutyId": "Loan1",
+          "version": "GenericLossV1",
+          "issuedAt": "121",
+          "expiresAt": "130",
+          "predecessorCaseSha256": "74e3a5506a775c260ed5471a273343bb0a8b840c3f628a7a83b4ca818a2edd93"
+        }
+      },
+      "work": {
+        "remaining": "0",
+        "spent": "13",
+        "closureReserve": "2",
+        "owner": "Servicer",
+        "additionalAllocated": "1",
+        "resourceSource": {
+          "owner": "RecoveryWorkSponsor",
+          "initial": "1",
+          "remaining": "0",
+          "spent": "1"
+        }
+      },
+      "history": {
+        "usedTransferIds": [
+          "CollateralDelivery",
+          "SaleCash",
+          "SaleFee",
+          "LateCash",
+          "LateFee",
+          "FullCash"
+        ],
+        "usedAllocationIds": [
+          "SaleAllocation",
+          "LateAllocation",
+          "FullAllocation"
+        ],
+        "usedObservationIds": [
+          "DefaultObs",
+          "BidObs"
+        ],
+        "fundedNominalRecovery": "1000",
+        "forgivenNominal": "0",
+        "nominalCreated": "0",
+        "lossAllocations": [
+          {
+            "stepId": "default-and-impair",
+            "impairmentExpense": "600",
+            "feeExpense": "0",
+            "recoveryGain": "0",
+            "netLoss": "600",
+            "claims": [
+              {
+                "holder": "HolderA",
+                "shares": "600",
+                "bookValue": "300",
+                "allocatedNetLoss": "360"
+              },
+              {
+                "holder": "HolderB",
+                "shares": "400",
+                "bookValue": "200",
+                "allocatedNetLoss": "240"
+              }
+            ]
+          },
+          {
+            "stepId": "collateral-sale-and-funded-discharge",
+            "impairmentExpense": "600",
+            "feeExpense": "10",
+            "recoveryGain": "0",
+            "netLoss": "610",
+            "claims": [
+              {
+                "holder": "HolderA",
+                "shares": "600",
+                "bookValue": "294",
+                "allocatedNetLoss": "366"
+              },
+              {
+                "holder": "HolderB",
+                "shares": "400",
+                "bookValue": "196",
+                "allocatedNetLoss": "244"
+              }
+            ]
+          },
+          {
+            "stepId": "later-funded-recovery",
+            "impairmentExpense": "600",
+            "feeExpense": "10",
+            "recoveryGain": "150",
+            "netLoss": "460",
+            "claims": [
+              {
+                "holder": "HolderA",
+                "shares": "600",
+                "bookValue": "384",
+                "allocatedNetLoss": "276"
+              },
+              {
+                "holder": "HolderB",
+                "shares": "400",
+                "bookValue": "256",
+                "allocatedNetLoss": "184"
+              }
+            ]
+          },
+          {
+            "stepId": "full-funded-recovery",
+            "impairmentExpense": "600",
+            "feeExpense": "10",
+            "recoveryGain": "600",
+            "netLoss": "10",
+            "claims": [
+              {
+                "holder": "HolderA",
+                "shares": "600",
+                "bookValue": "654",
+                "allocatedNetLoss": "6"
+              },
+              {
+                "holder": "HolderB",
+                "shares": "400",
+                "bookValue": "436",
+                "allocatedNetLoss": "4"
+              }
+            ]
+          }
+        ]
+      },
+      "continuation": {
+        "owner": "Servicer",
+        "status": "Discharged",
+        "debtId": "Loan1",
+        "nominalCreationRemaining": "0",
+        "forgivenessRemaining": "0",
+        "policyVersion": "GenericLossV1"
+      }
+    },
+    "actorEffects": [
+      {
+        "actor": "Pool",
+        "asset": "Cash",
+        "grossDebit": "0",
+        "grossCredit": "450",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "450"
+      },
+      {
+        "actor": "Borrower",
+        "asset": "Cash",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Buyer",
+        "asset": "Cash",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "FeeCollector",
+        "asset": "Cash",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Custodian",
+        "asset": "Cash",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Sponsor",
+        "asset": "Cash",
+        "grossDebit": "450",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "-450"
+      },
+      {
+        "actor": "Pool",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Borrower",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Buyer",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "FeeCollector",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Custodian",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      },
+      {
+        "actor": "Sponsor",
+        "asset": "Collateral",
+        "grossDebit": "0",
+        "grossCredit": "0",
+        "feesPaid": "0",
+        "refund": "0",
+        "netChange": "0"
+      }
+    ]
+  }
+}

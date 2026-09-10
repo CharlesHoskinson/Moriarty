@@ -1,0 +1,88 @@
+Grok 4.6 high independent bounded SOURCE review section C. Validate actual SDK loading, strict saved-state restore, identity binding, deadline and cleanup through production integration call. Helper bodies separately reviewed: validate closedplan/owner-onlyfiles; retention stores native finalized publictx bytes before submit. Underlying integration source independently reviewed. Outer containment must terminate any surviving SDK/indexer work.
+Two broader reviews timed out. This is the smaller executable/API mechanism; no tools, no code changes, no wallet/network/proofs. Return concise JSON verdict APPROVED/CHANGES_REQUESTED for THIS SECTION ONLY, blocking findings and limits. Do not claim entire-launcher or execution acceptance. No need to repeat source. Source SHA256 0dbd814f75389225b2a3ef9e7000e8460efab40889d3aaa08f971e5a698d1748
+1: /** Existing-wallet local entry point. Actual execution requires separate admission
+2:  * and outer process containment. Importing this module never reads private files,
+3:  * constructs a wallet, imports SDK code, or contacts a service.
+4:  */
+5: import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+6: import {createHash} from 'node:crypto';
+7: import {join,dirname,isAbsolute,resolve} from 'node:path';
+8: import {pathToFileURL} from 'node:url';
+9: import {PINNED_NM} from './providers.mjs';
+10: import {inspectFinancialBuild} from './proven-assets.mjs';
+11: import {integrateLocalFinancialCase} from './integrate-local.mjs';
+12: 
+13: const check=(ok,code)=>{if(!ok)throw Error(code);};
+14: const hash=b=>createHash('sha256').update(b).digest('hex');
+15: const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+16: const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+17: const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+18: const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+19: const childKinds=['shielded','unshielded','dust'];
+20: const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+21: function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+89: export async function inspectLocalLaunchRuntime(){
+90:  const pins=runtimePins();let files=0;
+91:  for(const [name,pin] of Object.entries(pins))for(const [entry,digest] of Object.entries(pin.files)){check(hash(readFileSync(join(PINNED_NM,name,entry)))===digest,'LAUNCH_SDK_PIN');files++;}
+92:  return {status:'SOURCE_INSPECTED',files,walletStarted:false};
+93: }
+94: async function runtime(){
+95:  await inspectLocalLaunchRuntime();const pins=runtimePins();
+96:  const load=name=>import(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href);
+97:  const [sdk,ledger,network,rx,ws]=await Promise.all(['@midnight-ntwrk/wallet-sdk','@midnight-ntwrk/midnight-js-protocol','@midnight-ntwrk/midnight-js-network-id','rxjs','ws'].map(load));
+98:  globalThis.WebSocket=ws.WebSocket;return {sdk,ledger,network,rx};
+99: }
+100: /** Imports exact SDK code but creates no wallet, key, proof or network request. */
+101: export async function inspectLocalLaunchApi(){
+102:  const {sdk,ledger,network,rx}=await runtime();
+103:  check(['ShieldedWallet','UnshieldedWallet','DustWallet','createKeystore','NoOpTransactionHistoryStorage'].every(k=>typeof sdk[k]==='function')&&typeof sdk.WalletFacade.init==='function'&&typeof sdk.HDWallet.fromSeed==='function'&&typeof ledger.signingKeyFromBip340==='function'&&typeof network.setNetworkId==='function'&&typeof rx.firstValueFrom==='function','LAUNCH_SDK_API');
+104:  return {status:'API_INSPECTED',walletStarted:false,keysCreated:false,networkRequests:0};
+105: }
+106: // No caller-supplied SDK/runtime adapters: only the fixed inspected SDK reaches execution.
+107: export async function launchLocalFinancialCase(plan){
+108:  const p=validateLocalLaunchPlan(plan);process.umask(0o077);
+109:  privateDirectory(p.wallet.stateDirectory);privateDirectory(dirname(p.outputDirectory));privateDirectory(p.privateState.directory);
+110:  // Inspect real proving assets before opening private wallet material.
+111:  await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
+112:  const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
+113:  const password=readPrivateLaunchFile(p.privateState.passwordFile).toString('utf8').trim();check(password.length>=16,'LAUNCH_PRIVATE_PASSWORD');
+114:  const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
+115:  const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
+116:  mkdirSync(p.outputDirectory,{mode:0o700}); // Exclusive run directory, never resume or retry automatically.
+117:  syncDirectory(dirname(p.outputDirectory));
+118:  durableFile(join(p.outputDirectory,'plan.json'),p);
+119:  let sequence=0,wallet,ownershipTransferred=false,phase='restore';const children=[];
+120:  const append=value=>durableFile(join(p.outputDirectory,`${String(++sequence).padStart(3,'0')}.json`),value);
+121:  const deadline=p.limits.deadlineMs;
+122:  const within=async fn=>{check(Date.now()<deadline,'LAUNCH_DEADLINE');let t;try{return await Promise.race([Promise.resolve().then(fn),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('LAUNCH_DEADLINE')),Math.max(1,deadline-Date.now()));})]);}finally{clearTimeout(t);}};
+123:  try{
+124:   const {sdk,ledger,network,rx}=await within(runtime);network.setNetworkId('undeployed');
+125:   const hd=sdk.HDWallet.fromSeed(Buffer.from(seedHex,'hex'));seed.fill(0);seedHex=undefined;check(hd.type==='seedOk','LAUNCH_SEED_DERIVATION');
+126:   let keys;try{const result=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal,sdk.Roles.Dust]).deriveKeysAt(0);check(result.type==='keysDerived','LAUNCH_SEED_DERIVATION');keys=result.keys;}finally{hd.hdWallet.clear();}
+127:   const shieldedSecretKeys=ledger.ZswapSecretKeys.fromSeed(keys[sdk.Roles.Zswap]),dustSecretKey=ledger.DustSecretKey.fromSeed(keys[sdk.Roles.Dust]),unshieldedKeystore=sdk.createKeystore(keys[sdk.Roles.NightExternal],'undeployed');
+128:   check(unshieldedKeystore.getBech32Address().asString()===p.wallet.expectedAddress&&unshieldedKeystore.getAddress()===p.roles.firstAddress,'LAUNCH_EXISTING_IDENTITY');
+129:   const signingBytes=unshieldedKeystore.getSecretKey();let deploymentSigningKey;try{deploymentSigningKey=ledger.signingKeyFromBip340(signingBytes);}finally{signingBytes.fill(0);}
+130:   check(ledger.signatureVerifyingKey(deploymentSigningKey)===unshieldedKeystore.getPublicKey(),'LAUNCH_SIGNING_IDENTITY');
+131:   const restore=(factory,kind)=>async c=>{const child=await factory(c).restore(saved[kind]);children.push(child);if(Date.now()>=deadline){await child.stop();throw Error('LAUNCH_DEADLINE');}return child;};
+132:   wallet=await within(()=>sdk.WalletFacade.init({configuration:{networkId:'undeployed',indexerClientConnection:{indexerHttpUrl:p.networkConfig.indexer,indexerWsUrl:p.networkConfig.indexerWS},provingServerUrl:new URL(p.networkConfig.proofServer),relayURL:new URL(p.networkConfig.node.replace(/^http/,'ws')),txHistoryStorage:new sdk.NoOpTransactionHistoryStorage(),costParameters:{additionalFeeOverhead:300000000000000n,feeBlocksMargin:5}},shielded:restore(sdk.ShieldedWallet,'shielded'),unshielded:restore(sdk.UnshieldedWallet,'unshielded'),dust:restore(sdk.DustWallet,'dust')}).then(async value=>{if(Date.now()>=deadline){await value.stop();throw Error('LAUNCH_DEADLINE');}return value;}));
+133:   const restored=await within(()=>rx.firstValueFrom(wallet.unshielded.state));
+134:   check(restored.state.networkId==='undeployed'&&restored.state.publicKey.publicKey===unshieldedKeystore.getPublicKey()&&restored.state.publicKey.addressHex===p.roles.firstAddress&&restored.state.publicKey.address===p.wallet.expectedAddress,'LAUNCH_RESTORED_IDENTITY');
+135:   phase='sync';await within(()=>wallet.start(shieldedSecretKeys,dustSecretKey));const synced=await within(()=>wallet.waitForSyncedState());check(synced.isSynced===true&&synced.dust.availableCoins.length>0,'LAUNCH_REGISTERED_DUST_REQUIRED');
+136:  const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
+137:   const retainedWallet=retainPublicSubmissions({wallet,ledger,directory:submissionDirectory});
+138:   phase='integration';ownershipTransferred=true;
+139:   const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicLaunchEvent(e)),onStage:summary=>{check(summary?.status==='PASS'&&['deploy','initialize','accrue','settle','swap','close'].includes(summary.stage),'LAUNCH_STAGE');durableFile(join(p.outputDirectory,'stage-'+summary.stage+'.json'),summary);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}};
+140:   let result;
+141:   try{result=await integrateLocalFinancialCase(options);}
+142:   catch(error){if(error.publicIntegrationResult!==undefined)retainPublicIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('LOCAL_FINANCIAL_RUN_INCOMPLETE');}
+143:   retainPublicIntegrationResult(p.outputDirectory,result);return result;
+144:  }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('LOCAL_FINANCIAL_LAUNCH_FAILED');}
+145:  finally{seed.fill(0);if(!ownershipTransferred){let t;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Outer process containment remains required. */}finally{clearTimeout(t);}}}
+146: }
+147: if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+148:  let hardTimer;
+149:  try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=result.status==='PASS'?0:2;}
+150:  catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+151:  finally{clearTimeout(hardTimer);}
+152:  process.exit(process.exitCode??0);
+153: }

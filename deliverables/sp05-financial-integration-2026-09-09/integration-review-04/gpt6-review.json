@@ -1,0 +1,81 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/sp05_final_integration_audit",
+  "independent": true,
+  "candidateAuthor": "/root",
+  "reviewedAt": "2026-09-09T22:08:28.725655+00:00",
+  "candidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/candidate-04.json",
+    "sha256": "3cc0849a1703c9fc552e6701b41f8560d7904ad0af8a543a507601deffc941f3",
+    "fileCount": 34,
+    "matchingFiles": 34,
+    "mismatches": []
+  },
+  "verdict": "PASS",
+  "scope": "Independent source checkpoint review of the assembled local financial integration; not execution admission or financial acceptance. Builder/launcher implementation review remains separate.",
+  "productionFilesReviewed": [
+    "ledger/integrate-local.mjs",
+    "ledger/run-local.mjs",
+    "ledger/providers.mjs",
+    "ledger/prepare-deployment.mjs",
+    "ledger/receipt.mjs",
+    "ledger/financial-comparison.mjs",
+    "ledger/proven-assets.mjs"
+  ],
+  "findings": [],
+  "substantiveObservations": [
+    "Native receipt decoder enforces signatures.length === inputs.length and verifies each signature against its corresponding input owner and segment signature data. Actual native-byte regressions reject missing, extra, and reordered signatures while accepting two correctly signed owners.",
+    "Standalone comparator checks exact compact-runtime package.json and dist/index.js SHA-256 values before importing the runtime. Its source-test inspection adapter shares the byte predicates and returns only an inert inspection result; it cannot supply an executable comparator or runtime.",
+    "Integration finally falls back to provider cleanup when the driver throws before returning a cleanup receipt; if provider cleanup is unavailable or rejects, wallet stop is attempted. Regressions cover both the real driver ownership-guard failure and an adapter driver throw, retaining incomplete containment and closing loaded assets.",
+    "Prepared deployment snapshots canonical native unproven transaction bytes before deriving asset-specific caps; the one-use driver submits that prepared transaction and follows the pinned SDK private-state lifecycle only after SucceedEntirely. Inspected midnight-js-contracts 4.1.1 dist/index.mjs submitDeployTx for correspondence.",
+    "Provider inspection enforces original transaction semantics across balancing, signing and finalization, counts gross inputs and native DUST fees before submission, retains durable reservations on ambiguity, and limits submissions to issued exact native bytes.",
+    "Observer joins native bytes, identifiers, action identity, finalized canonical block and block-pinned state/balances. Comparator checks exact fixed trace states, native transcript effects, participant net deltas, gross amounts, reserves, asset conservation and replay exclusion against pinned independent expectations.",
+    "Retained generated JavaScript tests execute both loan and swap states/transcript effects and reject mutated actual generated loan state/payout. Their UTXO, finality, fees and ledger transport remain synthetic.",
+    "Production provider cleanup explicitly returns containmentComplete:false; driver therefore throws INCOMPLETE even after all four comparisons. Integration retains the comparisons and does not claim network, proof or financial acceptance."
+  ],
+  "checks": [
+    {
+      "command": "npm --prefix experiments/moriarty-midnight-financial run test:ledger",
+      "exitCode": 0,
+      "passed": 154,
+      "failed": 0,
+      "skipped": 0,
+      "path": "deliverables/sp05-financial-integration-2026-09-09/integration-review-04/gpt6-ledger-tests.txt",
+      "sha256": "dbc088eee32c14687ed2b6002a0c1fd3e1a5ea55635e5aefe72873687a8e2e28"
+    },
+    {
+      "command": "npm --prefix experiments/moriarty-midnight-financial test",
+      "exitCode": 0,
+      "passed": 52,
+      "failed": 0,
+      "skipped": 0,
+      "path": "deliverables/sp05-financial-integration-2026-09-09/integration-review-04/gpt6-baseline-tests.txt",
+      "sha256": "255e0f7c1745a81deac78bc9a4d7e8e659bd96d823b208784378e70abb1498e6"
+    },
+    {
+      "command": "MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/main-integration npm --prefix experiments/moriarty-midnight-financial run test:compiled",
+      "exitCode": 0,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "path": "deliverables/sp05-financial-integration-2026-09-09/integration-review-04/gpt6-compiled-tests.txt",
+      "sha256": "2fb44f8976434cf77c3cfed1dec26a99510207f08ccf07eb7036fab28c7f3da1"
+    }
+  ],
+  "limitations": [
+    "No compiler invocation or full build, proof generation, wallet operation, public or local ledger network dispatch was performed by this review.",
+    "No mandatory PCD, financial settlement, execution admission, broad ACTUS/DeFi conformance or transitive dependency attestation is established.",
+    "Pinned runtime package and entry checks are direct byte checks, not complete transitive supply-chain attestation.",
+    "RPC/indexer observations retain their explicit external trust boundary.",
+    "Guarded CLI startup status reports unresolved operational history; this read-only review does not resolve or bypass that stop.",
+    "Other reviewer outputs were not read."
+  ],
+  "fullBuilds": 0,
+  "proofsGenerated": 0,
+  "walletOperations": 0,
+  "networkDispatches": 0,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

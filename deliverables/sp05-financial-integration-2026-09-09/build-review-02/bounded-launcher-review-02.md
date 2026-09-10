@@ -1,0 +1,13 @@
+# Revised launcher independent review
+
+**APPROVED within the explicitly clarified scope.** The original rejection is preserved in `bounded-launcher-review.json/.md`. This followup binds launcher SHA-256 `dad18f12cbfe47440bc228745265f96473d399b6d929f3dc2b54933fc59526cd` and tests SHA-256 `1f16b62144f147b718fee1d15707a918f6293c6c7edc3776e8b23b619165abd1`.
+
+The scope is **1GiB actual tmpfs generation quota per case plus at most1GiB logical retained file contents per case,2GiB total logical contents**. It does not promise a1GiB physical hostdisk allocation cap or bound filesystemblock/metadata overhead. This explicit root clarification is material to the verdict, not a hidden waiver.
+
+All **7 offline tests passed**, including actual64KiB ENOSPC, original large-sparse/hardlink rejection before host copying, mirror absence while the command runs and mutation-time streaming-budget enforcement. The updated copier preflights the entire logical tree, rejects hardlinks/nonregular files, opens no-follow descriptors, checks inode identity and file sizes, and charges one shared budget during copying. The host mirror is created only after the direct child returns; its original directory descriptor is not inherited by the child. These changes close the original reproductions for the stated logical-content/designated-output scope.
+
+An additional actual namespace probe remains important:32sparse files, each truncated to1byte, produced32logical retained bytes but131,072allocated host bytes under a65,536-byte tmpfs quota and returned zero. This fits the clarified logical ceiling and disproves a corresponding physical hostdisk ceiling. The result is retained in the companion JSON. The launcher also remains outside the scope of a generic malicious-code filesystem sandbox.
+
+**Resource vote: APPROVED WITH CONDITIONS** for one loan and one swap attempt,serial only,distinct1GiB generation tmpfs and1GiB logical retention per case,4GiB memory,zero swap,300seconds compile plus30seconds cleanup per case,720seconds aggregate and1MiB command output per command. The exact clarified scope must be recorded in admission. External authority must authenticate reviewer/source/resource/request bindings, enforce serial/per-case/aggregate accounting without charge resets, and inspect actual terminal cgroup status plus retained artifacts before accepting build output. Direct child return does not prove every descendant is already terminal.
+
+The harmless supplied live-cgroup probe verifies settings for that invocation. It does not prove full-build exhaustion/kill behavior. No compiler,wallet,proof or network operation was run. This review does not clear guarded operational-history blockers or authorize dispatch.

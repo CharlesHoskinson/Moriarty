@@ -1,0 +1,58 @@
+Grok 4.6 high independent bounded SOURCE review section A. Validate plan/CLI/private-file safety and fail-before-wallet behavior. Public CLI invalid-arg check observed exit1/fixed redacted diagnostic. Assumptions: downstream execution reviewed separately and outer process containment mandatory.
+Two broader reviews timed out. This is the smaller executable/API mechanism; no tools, no code changes, no wallet/network/proofs. Return concise JSON verdict APPROVED/CHANGES_REQUESTED for THIS SECTION ONLY, blocking findings and limits. Do not claim entire-launcher or execution acceptance. No need to repeat source. Source SHA256 0dbd814f75389225b2a3ef9e7000e8460efab40889d3aaa08f971e5a698d1748
+1: /** Existing-wallet local entry point. Actual execution requires separate admission
+2:  * and outer process containment. Importing this module never reads private files,
+3:  * constructs a wallet, imports SDK code, or contacts a service.
+4:  */
+5: import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+6: import {createHash} from 'node:crypto';
+7: import {join,dirname,isAbsolute,resolve} from 'node:path';
+8: import {pathToFileURL} from 'node:url';
+9: import {PINNED_NM} from './providers.mjs';
+10: import {inspectFinancialBuild} from './proven-assets.mjs';
+11: import {integrateLocalFinancialCase} from './integrate-local.mjs';
+12: 
+13: const check=(ok,code)=>{if(!ok)throw Error(code);};
+14: const hash=b=>createHash('sha256').update(b).digest('hex');
+15: const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+16: const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+17: const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+18: const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+19: const childKinds=['shielded','unshielded','dust'];
+20: const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+21: function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+22: export function validateLocalLaunchPlan(p){
+23:  exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory');
+24:  check(p.schema==='moriarty.local-financial-launch/1'&&['loan','swap'].includes(p.kind),'LAUNCH_SCHEMA');
+25:  exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hex(p.build.receiptSha256)&&hex(p.build.sourceManifestHash),'LAUNCH_BUILD_HASH');
+26:  exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');check(p.networkConfig.networkId==='undeployed','LAUNCH_NETWORK');
+27:  for(const key of ['node','indexer','indexerWS','proofServer']){const u=new URL(p.networkConfig[key]);check(u.protocol===(key==='indexerWS'?'ws:':'http:')&&['127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&!u.hash,'LAUNCH_LOOPBACK');}
+28:  exact(p.wallet,'seedFile,stateDirectory,expectedAddress');absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);check(typeof p.wallet.expectedAddress==='string'&&/^mn_addr_undeployed1[a-z0-9]+$/.test(p.wallet.expectedAddress),'LAUNCH_WALLET_ADDRESS');
+29:  exact(p.roles,'firstAddress,secondAddress,secretsFile');absolute(p.roles.secretsFile);check(hex(p.roles.firstAddress)&&hex(p.roles.secondAddress)&&p.roles.firstAddress!==p.roles.secondAddress,'LAUNCH_ROLES');
+30:  exact(p.privateState,'directory,passwordFile');absolute(p.privateState.directory);absolute(p.privateState.passwordFile);absolute(p.outputDirectory);
+31:  const paths=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory];check(new Set(paths).size===3&&paths.every((a,i)=>paths.every((b,j)=>i===j||!a.startsWith(b+'/'))),'LAUNCH_DISTINCT_DIRECTORIES');
+32:  check(hex(p.networkTag)&&Number.isSafeInteger(p.expectedProtocolVersion)&&p.expectedProtocolVersion>=0,'LAUNCH_BINDINGS');
+33:  exact(p.limits,'allocationId,deadlineMs,submissions,dustFee,grossByLogicalAsset');check(typeof p.limits.allocationId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.limits.allocationId),'LAUNCH_ALLOCATION');
+34:  check(Number.isSafeInteger(p.limits.deadlineMs)&&p.limits.deadlineMs>Date.now()&&p.limits.deadlineMs<=Date.now()+3600000&&p.limits.submissions===4&&decimal(p.limits.dustFee),'LAUNCH_LIMITS');
+35:  exact(p.limits.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(p.limits.grossByLogicalAsset).every(decimal),'LAUNCH_ASSET_LIMITS');
+36:  return structuredClone(p);
+37: }
+38: function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
+39: export function readPrivateLaunchFile(p){
+40:  absolute(p);safeAncestors(p);let fd;
+41:  try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+42:  finally{if(fd!==undefined)closeSync(fd);}
+43: }
+44: export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
+45: function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
+46: function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+47: function syncDirectory(p){const d=openSync(p,constants.O_RDONLY);try{fsyncSync(d);}finally{closeSync(d);}}
+48: function durableBytes(p,bytes){const fd=openSync(p,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,bytes);fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(p));}
+49: function durableFile(p,value){durableBytes(p,JSON.stringify(value)+'\n');}
+147: if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+148:  let hardTimer;
+149:  try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=result.status==='PASS'?0:2;}
+150:  catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+151:  finally{clearTimeout(hardTimer);}
+152:  process.exit(process.exitCode??0);
+153: }

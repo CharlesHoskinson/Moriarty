@@ -1,0 +1,39 @@
+{
+  "scope": "Two harmless serial services using fixed330sper-case unit under external720s clock; no compiler",
+  "argv": [
+    "systemd-run",
+    "--user",
+    "--wait",
+    "--pipe",
+    "--unit=moriarty-sp05-financial-build.service",
+    "--property=MemoryMax=4294967296",
+    "--property=MemorySwapMax=0",
+    "--property=RuntimeMaxSec=330",
+    "--property=KillMode=control-group",
+    "--property=TimeoutStopSec=0",
+    "--property=SendSIGKILL=yes",
+    "unshare",
+    "--user",
+    "--map-root-user",
+    "--mount",
+    "--fork",
+    "/usr/bin/python3",
+    "-c",
+    "import json; from pathlib import Path; import subprocess; r=next(l[3:] for l in Path('/proc/self/cgroup').read_text().splitlines() if l.startswith('0::')); p=Path('/sys/fs/cgroup')/r.lstrip('/'); raw={k:(p/k).read_text().strip() for k in ['memory.max','memory.swap.max','pids.max','cgroup.events']}; settings=subprocess.check_output(['systemctl','--user','show','moriarty-sp05-financial-build.service','--property=RuntimeMaxUSec,KillMode,TimeoutStopUSec,SendSIGKILL'],text=True); assert raw['memory.max']=='4294967296' and raw['memory.swap.max']=='0'; assert 'RuntimeMaxUSec=5min 30s' in settings and 'KillMode=control-group' in settings; print(json.dumps({'cgroup':r,'raw':raw,'settings':settings,'compilerInvocations':0}))"
+  ],
+  "elapsedSeconds": 0.10403447600037907,
+  "rawResults": [
+    {
+      "exit": 0,
+      "stdout": "{\"cgroup\": \"/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-financial-build.service\", \"raw\": {\"memory.max\": \"4294967296\", \"memory.swap.max\": \"0\", \"pids.max\": \"38504\", \"cgroup.events\": \"populated 1\\nfrozen 0\"}, \"settings\": \"TimeoutStopUSec=0\\nRuntimeMaxUSec=5min 30s\\nKillMode=control-group\\nSendSIGKILL=yes\\n\", \"compilerInvocations\": 0}\n",
+      "stderr": "Running as unit: moriarty-sp05-financial-build.service; invocation ID: 48b549264f624676837e1b0bef5d95d3\n          Finished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\n               Service runtime: 45ms\n             CPU time consumed: 28ms\n                   Memory peak: 7.7M (swap: 0B)\n"
+    },
+    {
+      "exit": 0,
+      "stdout": "{\"cgroup\": \"/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-financial-build.service\", \"raw\": {\"memory.max\": \"4294967296\", \"memory.swap.max\": \"0\", \"pids.max\": \"38504\", \"cgroup.events\": \"populated 1\\nfrozen 0\"}, \"settings\": \"TimeoutStopUSec=0\\nRuntimeMaxUSec=5min 30s\\nKillMode=control-group\\nSendSIGKILL=yes\\n\", \"compilerInvocations\": 0}\n",
+      "stderr": "Running as unit: moriarty-sp05-financial-build.service; invocation ID: 1294a96f27aa4caa85e4533b7a86c6d6\n          Finished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\n               Service runtime: 45ms\n             CPU time consumed: 28ms\n                   Memory peak: 7.9M (swap: 0B)\n"
+    }
+  ],
+  "launcherSha256": "dad18f12cbfe47440bc228745265f96473d399b6d929f3dc2b54933fc59526cd",
+  "compilerInvocations": 0
+}

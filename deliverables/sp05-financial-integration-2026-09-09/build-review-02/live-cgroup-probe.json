@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "systemd-run",
+    "--user",
+    "--wait",
+    "--pipe",
+    "--unit=moriarty-sp05-financial-build.service",
+    "--property=MemoryMax=4294967296",
+    "--property=MemorySwapMax=0",
+    "--property=RuntimeMaxSec=330",
+    "--property=KillMode=control-group",
+    "--property=TimeoutStopSec=0",
+    "--property=SendSIGKILL=yes",
+    "unshare",
+    "--user",
+    "--map-root-user",
+    "--mount",
+    "--fork",
+    "/usr/bin/python3",
+    "-c",
+    "import importlib.util,json; from pathlib import Path; p=Path('/home/charl/Moriarty/.worktrees/sp05-financial-integration/experiments/moriarty-midnight-financial/ledger/run-build-bounded.py'); s=importlib.util.spec_from_file_location('b',p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); m.verify_cgroup(); print(json.dumps({'scope':'harmless live cgroup probe only','cgroup':Path('/proc/self/cgroup').read_text(),'memoryMaxBytes':m.MEMORY,'memorySwapMaxBytes':0,'compilerInvocations':0,'verified':True}))"
+  ],
+  "exit": 0,
+  "elapsedSeconds": 0.07882070541381836,
+  "stdout": "{\"scope\": \"harmless live cgroup probe only\", \"cgroup\": \"0::/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-sp05-financial-build.service\\n\", \"memoryMaxBytes\": 4294967296, \"memorySwapMaxBytes\": 0, \"compilerInvocations\": 0, \"verified\": true}\n",
+  "stderr": "Running as unit: moriarty-sp05-financial-build.service; invocation ID: cdb6ec32160749eb9809eedd5bf39884\n          Finished with result: success\nMain processes terminated with: code=exited, status=0/SUCCESS\n               Service runtime: 71ms\n             CPU time consumed: 35ms\n                   Memory peak: 9.2M (swap: 0B)\n",
+  "compilerInvocations": 0
+}

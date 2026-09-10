@@ -1,0 +1,109 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/sp05_integration_audit",
+  "independent": true,
+  "authorSelfReview": false,
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/candidate-02.json",
+  "candidateSha256": "2033b9641b07a603e49e382a385ecfc4d2007e350415697efebd8431dc1a8725",
+  "commit": "cb21b30d7f1161447f2ab95d6b5ac62dfae7a600",
+  "verifiedFiles": 32,
+  "fileHashMismatches": [],
+  "verdict": "PASS_WITH_LIMITS",
+  "scope": "Fixed local financial integration source and offline behavior only. No blocking source defect established in bounded independent inspection. This is one required review, not candidate acceptance or dispatch authorization.",
+  "blockingFindings": [],
+  "checks": [
+    {
+      "name": "baseline",
+      "command": "npm test",
+      "cwd": "experiments/moriarty-midnight-financial",
+      "exitCode": 0,
+      "passed": 52,
+      "failed": 0,
+      "logSha256": "35521c82b423138706b6410ef8c475f90e4c1de3c4958d7ca017db150aeb8f25"
+    },
+    {
+      "name": "ledger",
+      "command": "npm run test:ledger",
+      "cwd": "experiments/moriarty-midnight-financial",
+      "exitCode": 0,
+      "passed": 146,
+      "failed": 0,
+      "logSha256": "035659b1c23bdf5e17b0261e6580295a1f64130b73b491031a92590838e8a715"
+    },
+    {
+      "name": "retained-generated-runtime",
+      "command": "MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/main-integration npm run test:compiled",
+      "cwd": "experiments/moriarty-midnight-financial",
+      "exitCode": 0,
+      "passed": 3,
+      "failed": 0,
+      "logSha256": "7169825d0c9089bba282023bc915f9f63d4af55b8a2bb9ace1bc2ac4c0cd3c90"
+    }
+  ],
+  "reviewedPath": [
+    "integrate-local.mjs",
+    "prepare-deployment.mjs",
+    "proven-assets.mjs",
+    "providers.mjs",
+    "receipt.mjs",
+    "financial-comparison.mjs",
+    "run-local.mjs"
+  ],
+  "sdkInspection": {
+    "location": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk",
+    "contracts": "midnight-js-contracts/dist/index.mjs:26-71,943-997,1056",
+    "facade": "wallet-sdk-facade/dist/index.js:357-386,414-471",
+    "indexer": "midnight-js-indexer-public-data-provider/dist/index.mjs:828-903,965-994",
+    "observations": "Actual proveTx -> balanceTx -> submitTx -> watchForTxData sequence, real tokenKindsToBalance option, UNBOUND_TRANSACTION shape, signature/proof/pre-binding and balancing pre-proof stages, blockHash state/balance query configurations inspected."
+  },
+  "observations": [
+    "Deployment constructor output is captured once before exact native asset colors and durable budget allocation. Single-use adapter submits the serialized prepared deployment and follows successful private-state lifecycle.",
+    "Balance admission preserves original actions/transcripts/metadata and effects, allows checked payer funding/change plus DUST-only balancing, then verifies signed input owners and complete semantic bytes before reserving cumulative gross inputs, native vFee and submissions before finalization. No refund subtraction or automatic reservation recovery.",
+    "Ambiguous operations retain reservations, identifiers and persistent stop/active state; restart and concurrent handles do not reset same-allocation counters.",
+    "Asset loading requires externally bound genuine receipt and current source manifest, exact listed bytes, proof artifacts and compiler command/version data; imported source bytes are hash checked and runtime mapped explicitly. Source adapters cannot grant executable/proof/network acceptance.",
+    "Observer decodes native finalized bytes and compares indexer identifiers, input/output rows and canonical finalized block; block-pinned state feeds a closed full-state/effect/reserve/participant comparison. Published summaries project observations rather than copy expectations.",
+    "Original expectations remain preserved. Native self-mint refinement changes two swap-initialize native input quantities, retaining economic deltas and reserves; actual retained generated-runtime tests reproduce the mapping."
+  ],
+  "requiredFollowups": [
+    {
+      "id": "L1",
+      "severity": "execution-gate",
+      "file": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "line": 422,
+      "related": "run-local.mjs:89-93; integrate-local.mjs:174-177",
+      "observation": "Raw pinned SDK cleanup always returns containmentComplete:false. The real driver therefore throws DRIVER_CLEANUP_INCOMPLETE with INCOMPLETE when otherwise successful. The outer composition retains this result. This is correct refusal, not a waived requirement.",
+      "reproduction": "Inspect cleanup return and the driver contained predicate; inert cleanup/deadline tests in ledger suite reproduce incomplete outcomes. No live handle was used.",
+      "requiredAction": "Before any actual launch, separately review and demonstrate an outer process termination boundary, bounded pending operations, retained public outcomes and ambiguous-submission recovery. Do not change this false field into an unsupported success claim."
+    },
+    {
+      "id": "L2",
+      "severity": "empirical-gate",
+      "file": "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs",
+      "line": 195,
+      "observation": "No admitted genuine full financial build was available or executed in this review. Executable proven-loader path and whole composition were not reproduced against actual newly built proof assets and real wallet/proof/network services.",
+      "reproduction": "The loader rejects synthetic/failed/unproven receipts at line 127; the offline test:compiled suite uses retained generated code with simulated context/transport.",
+      "requiredAction": "Only after required source/resource reviews and admission, produce a genuine bounded build receipt, test its exact loader/SDK preparation path and execute separately admitted local financial experiments."
+    },
+    {
+      "id": "L3",
+      "severity": "acceptance-gate",
+      "file": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "line": 174,
+      "observation": "Network, proof and financial acceptance remain false; source tests and generated simulations establish no ledger settlement, rollback or mandatory PCD. Opus is unavailable per parent handoff; no identity or vote was inferred.",
+      "reproduction": "Read explicit acceptance fields and source-test status; no compiler, proof, wallet creation, network, publication or dispatch operation was run.",
+      "requiredAction": "Obtain the mandatory independent Opus audit with actual resolved identity, preserve all admissions/resource gates and require actual local/Preview/proof evidence before their corresponding claims."
+    }
+  ],
+  "limitations": [
+    "Bounded source audit, not a transitive supply-chain attestation or exhaustive security proof.",
+    "Existing wallet handles, callbacks, genuine build receipt admission and external indexer/RPC observations remain trust dependencies; sourceTestOnly adapters are inert-test interfaces.",
+    "Standalone private-state durability, actual DUST proving, full-build resource behavior, real rollback and outer termination were not empirically tested.",
+    "Status CLI reports existing unresolved operational history; review work does not clear it."
+  ],
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false,
+  "publishAuthorizedByReview": false,
+  "dispatchAuthorizedByReview": false
+}

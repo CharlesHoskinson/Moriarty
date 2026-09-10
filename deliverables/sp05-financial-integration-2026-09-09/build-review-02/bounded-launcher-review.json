@@ -1,0 +1,85 @@
+{
+  "schema": "moriarty.independent-bounded-launcher-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/sp05_integration_audit",
+  "independent": true,
+  "authorSelfReview": false,
+  "verdict": "CHANGES_REQUESTED",
+  "scope": "Only original fixed launcher and its five-test file; no builder review or compiler/network/proof execution.",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-build-bounded.py",
+      "sha256": "539b99a45554dfe6a42038c555ebf73c756d4eff9eedd04656f627968104cc73"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-build-bounded.test.py",
+      "sha256": "8bbef402b33b0e79e62349e81d5a594e539cc0d26ca1986e017d959f83b1bcc9"
+    }
+  ],
+  "findings": [
+    {
+      "id": "B1",
+      "severity": "high",
+      "file": "experiments/moriarty-midnight-financial/ledger/run-build-bounded.py",
+      "line": 100,
+      "endLine": 113,
+      "title": "Retention expands bounded tmpfs contents into unbounded host disk usage",
+      "observation": "retain copies every regular-file path to the host mirror using copyfileobj without a shared retained-byte budget, sparse-file check or inode multiplicity policy. tmpfs limits allocated pages, not summed logical lengths. Sparse holes are materialized and hard links are duplicated.",
+      "reproduction": "Call quota_run(parent, mirror, inertPythonCommand,65536) in unshare --user --map-root-user --mount --fork. Child: create sparse with truncate(262144); create linked with 16384 bytes; os.link(linked,link0) through link7. Actual exit0;10 retained files;409600 logical bytes and409600 allocated host bytes. Temporary files removed afterwards.",
+      "requiredChange": "Enforce a cumulative retention byte ceiling before and during copying, reject unsupported sparse/hardlink representations or account their full copied cost, detect source mutation, and never let partial copies exceed the fixed host-retention allowance. Add actual namespace sparse/hardlink/growth regression controls."
+    },
+    {
+      "id": "B2",
+      "severity": "high",
+      "file": "experiments/moriarty-midnight-financial/ledger/run-build-bounded.py",
+      "line": 126,
+      "endLine": 132,
+      "title": "Child can write directly into the unbounded host mirror",
+      "observation": "The launcher bind-mounts the original host output directory at mirror before starting the command in that same mount namespace. The child retains writable access to mirror and other host paths allowed to the user. A private mount namespace and tmpfs at parent do not restrict these writes.",
+      "reproduction": "Call quota_run(parent, mirror, [python,-c,\"import pathlib,sys; (pathlib.Path(sys.argv[1])/\"direct-host-output\").write_bytes(b\"x\"*131072)\",str(mirror)],65536) inside the same unshare configuration. Actual exit0 and131072 host bytes retained, with no tmpfs writes. Temporary files removed afterwards.",
+      "requiredChange": "For a hard child disk-confinement claim, prevent compiler descendants from writing the host retention mirror and other unbounded paths, using an enforced writable-path boundary or separate inaccessible retention context. A post-copy byte check alone does not close this direct-write path. If the intended claim is only a cooperative output-directory cap, explicitly narrow the claim and obtain the applicable resource decision before relying on it."
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 experiments/moriarty-midnight-financial/ledger/run-build-bounded.test.py",
+      "passed": 5,
+      "failed": 0,
+      "exitCode": 0,
+      "actual": "Includes64KiB tmpfs ENOSPC and same-path retention in user/mount namespace."
+    },
+    {
+      "name": "sparse-and-hardlink-amplification",
+      "quotaBytes": 65536,
+      "retainedAllocatedBytes": 409600,
+      "retainedLogicalBytes": 409600,
+      "retainedFiles": 10,
+      "exitCode": 0
+    },
+    {
+      "name": "direct-host-mirror-write",
+      "quotaBytes": 65536,
+      "retainedHostBytes": 131072,
+      "exitCode": 0
+    }
+  ],
+  "positiveObservations": [
+    "Private mount propagation and explicit tmpfs size enforce ordinary writes to the intended output mount; the supplied ENOSPC test reproduces this.",
+    "Per-process cgroup checks inspect memory.max4GiB, swap.max0 and service RuntimeMaxUSec330s/KillMode control-group; systemd-run config includes TimeoutStopSec0 and SendSIGKILL yes.",
+    "Exclusive launch/result records and an existing attempt refusal avoid silent record overwrite. Bound JSON explicitly does not authenticate reviewer authority.",
+    "Zero exit still records accepted:false, terminalCgroupVerified:false and requires terminal/artifact review. Failed retention cannot produce wrapper acceptance."
+  ],
+  "openClaims": [
+    "No actual systemd memory exhaustion, runtime kill, zero-swap pressure or terminal empty-cgroup experiment was run in this review. Those are still required external launch checks.",
+    "Two serial case allocations, distinct1GiB per-case tmpfs, one attempt each and720s aggregate deadline are external authority/orchestration constraints; this single invocation does not enforce the aggregate.",
+    "The marker is conservative attemptMayBeCharged evidence, not authenticated proof that actual full-build attempt admission and its terminal disposition are correct.",
+    "Abrupt cgroup kill can discard volatile partial output; the source documents this limitation.",
+    "The two findings bind only the specified original hashes; concurrent repairs require a new fixed-source review."
+  ],
+  "fullBuilds": 0,
+  "proofs": 0,
+  "newTransactions": 0,
+  "networkAcceptance": false,
+  "resourceAcceptance": false,
+  "dispatchAuthorized": false
+}
