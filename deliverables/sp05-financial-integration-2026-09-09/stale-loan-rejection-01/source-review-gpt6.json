@@ -1,0 +1,63 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "actualIdentity": "Independent GPT-6 Astra delegated reviewer /root/spec_audit_early; not source author",
+  "reviewedAt": "2026-09-10T14:59:42.929983+00:00",
+  "candidateSha256": "c030a4af55deb646a4189ad004fbdbae0b1bb3cefb331be16c458f31ea7d31bd",
+  "verdict": "BLOCKED",
+  "scope": "Frozen stale-loan rejection source/helper and controlled native fee test only. No execution/resource admission, private identity check, fresh proof, actual wallet ticket, node rejection, financial nonmutation or Preview acceptance.",
+  "sourceHashes": {
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs": "b6d3c16527c14d10c25de1fcb174d4333ae8b39f6351899efb83b4c20a83cb60",
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.test.mjs": "fbf09f1bc74689312cb79f73bdfe69b83ca2def9cc5d5f97e0fbbcbf1ce327fc",
+    "experiments/moriarty-midnight-financial/ledger/provider-positive-fee.test.mjs": "d069232122fce838eb7e6bf70b73d5aad59265764d83f16f2097f8b10f3e0944"
+  },
+  "findings": [
+    {
+      "id": "G6-SLR-01",
+      "severity": "blocking",
+      "summary": "Default wallet submission error wrapper is not recognized; actual typed node invalid status becomes OUTCOME_UNKNOWN.",
+      "source": "experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs:27",
+      "productionEvidence": [
+        "Installed wallet-sdk-capabilities/dist/submission/submissionService.js:31 wraps each node error with its own SubmissionError via Effect.mapError.",
+        "The same module:42 runs that Effect using Effect.runPromise.",
+        "Installed wallet-sdk-facade/dist/index.js:318 invokes this submission service and rethrows its error after revert.",
+        "Classifier unwraps only FiberFailure/Fail and then tests direct node-client TransactionInvalidError or node-client SubmissionError; neither matches the separate capabilities SubmissionError."
+      ],
+      "reproduction": "gpt6-submission-wrapper-reproduction.json",
+      "actual": "Direct real node-client error is recognized. The same error under the real capabilities SubmissionError and actual Effect.runPromise returns OUTCOME_UNKNOWN.",
+      "impact": "The intended ordinary guarded provider route cannot establish the new node-invalid predicate even when its installed node client reports the exact matching invalid status. Existing connected tests bypass the outer production wrapper.",
+      "requiredRepair": "Recognize only the exact installed capabilities SubmissionError at its expected position, then validate the exact inner node-client class and submitted bytes. Preserve unknown classification for unrelated/spoofed/mismatched/extra-nested errors. Add the real wrapper to connected submission tests and refreeze."
+    }
+  ],
+  "nonblockingObservations": [
+    "Previously identified mutation controls now advance both anchor fields and assert exact intended errors.",
+    "Polling enforces the narrower60s stop before/after RPC and terminal cleanup enforces the outer deadline; connected latePoll/cleanupLate controls pass.",
+    "Post-rejection outcome retention precedes the retained terminal barrier and later after-state observation.",
+    "SDK/generated preparation uses a synthetic capability commitment only; private checker is mocked and proof/balance/submit boundaries are inert. Documentation accurately leaves original private identity, operational glue and actual node execution open.",
+    "Candidate embeds historical accepted-reader scope saying method support remained unobserved at that source increment; later published local-finalized-state-02 supplies actual local support separately."
+  ],
+  "checks": [
+    {
+      "command": "MORIARTY_LOAN_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/loan-output/build/build-receipt.json node --experimental-test-module-mocks --test experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.test.mjs experiments/moriarty-midnight-financial/ledger/provider-positive-fee.test.mjs",
+      "status": "PASS",
+      "tests": 9,
+      "fail": 0,
+      "skip": 0,
+      "evidence": "gpt6-verification.tap"
+    },
+    {
+      "command": "node deliverables/sp05-financial-integration-2026-09-09/stale-loan-rejection-01/gpt6-submission-wrapper-reproducer.mjs",
+      "status": "BLOCKER_REPRODUCED",
+      "evidence": "gpt6-submission-wrapper-reproduction.json"
+    },
+    {
+      "check": "Frozen candidate and136file digests verified before/after checks",
+      "status": "PASS"
+    }
+  ],
+  "evidenceManifest": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/stale-loan-rejection-01/source-evidence-gpt6.json",
+    "sha256": "fca085bd5954e415271708d8200d693de49e70ab1bede023e8b99107b50bd748"
+  },
+  "otherCurrentReviewerVerdictRead": false
+}

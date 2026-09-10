@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 258.466,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "```json\n{\n  \"reviewer\": \"grok-4.6\",\n  \"candidateSha256\": \"0561261a5616cdd6190c62d5df39dd8e6a550355e38e26c13510ec4f0e482c5b\",\n  \"verdict\": \"PASS_SCOPED\",\n  \"originalGap\": {\n    \"gpt6Candidate01\": \"BLOCKED because classifyStaleLoanFailure accepted Effect Fail(node-client.TransactionInvalidError) only; the installed default wallet path is Effect Fail(capabilities.SubmissionError(cause=node-client.TransactionInvalidError))\",\n    \"originalGrokCandidate01\": \"PASS missed that gap: connected tests injected a bare node-client TransactionInvalidError through Effect.runPromise and never constructed makeDefaultSubmissionService\",\n    \"thisReview\": \"Independent source check of the hashed correction and the hashed default-service controlled-transport tests; no GPT6 verdict on candidate 02 was used\"\n  },\n  \"correction\": {\n    \"claimed\": \"One exact default capabilities SubmissionError wrapper plus actual default service boundary tests\",\n    \"observedInHelper\": \"After FiberFailure Fail extraction, one instanceof WalletSubmissionError unwrap of .cause; then the prior strict node-client TransactionInvalidError plus exact submitted-byte equality. No name/text match, no recursive nested-cause walk.\",\n    \"sdkAlignment\": \"wallet-sdk-capabilities submissionService.js makeDefaultSubmissionServiceEffect mapError wraps every node-client failure as new SubmissionError({ message: 'Transaction submission error', cause: err }) and the promise adapter runs Effect.runPromise. PolkadotNodeClient.#handleSubmissionResult maps status.isInvalid to node-client TransactionInvalidError({ txData: serializedTransaction }). One unwrap is exactly that production shape.\",\n    \"preservedOriginalPath\": \"Bare Effect Fail(TransactionInvalidError) still classifies without the capabilities wrapper, so candidate-01 helper behavior remains.\",\n    \"rpcAndTransport\": \"After the one unwrap, generic node-client SubmissionError stays OUTCOME_UNKNOWN; RpcError code 1010 is retained only as rpcCode on that same UNKNOWN outcome.\"\n  },\n  \"controlledDefaultServiceTests\": {\n    \"file\": \"experiments/moriarty-midnight-financial/ledger/stale-loan-submission-service.test.mjs\",\n    \"sha256\": \"270360d70cdfbbc654f55eaa63fa74510a412222c7a7f6f108cd9bbf130a9e79\",\n    \"actualsUsed\": [\n      \"makeDefaultSubmissionService\",\n      \"PolkadotNodeClient constructor and sendMidnightTransaction/status callback\",\n      \"ledger.Transaction.deserialize of retained public native bytes 473b363b\u2026\",\n      \"classifyStaleLoanFailure on the thrown promise rejection\",\n      \"service.close()\"\n    ],\n    \"intercept\": \"Only PolkadotNodeClient.make is replaced with Effect.succeed(new PolkadotNodeClient(DEFAULT_CONFIG, controlledApi)). No WsProvider/ApiPromise.create, no live HTTP/WebSocket.\",\n    \"controls\": {\n      \"invalid\": \"callback({status:{isInvalid:true}}) \u2192 NODE_REJECTED / NODE_TRANSACTION_INVALID / nodeRejectionEstablished true / stalePredicateEstablished false\",\n      \"transport\": \"send Promise.reject(Error) \u2192 OUTCOME_UNKNOWN / UNCLASSIFIED_SUBMIT_FAILURE / nodeRejectionEstablished false\",\n      \"rpc1010\": \"send Promise.reject(RpcError code 1010) \u2192 OUTCOME_UNKNOWN with rpcCode 1010 / nodeRejectionEstablished false\",\n      \"negative\": \"wrong submitted bytes and phase prove do not establish node rejection\"\n    },\n    \"textMatchingDisproved\": \"All three modes log the same wrapper message 'Transaction submission error'; only the invalid-status plus matching bytes path sets nodeRejectionEstablished. Classification is not by error text.\",\n    \"recordedTap\": \"deliverables/sp05-financial-integration-2026-09-09/stale-loan-rejection-01/green-corrected-final-02.tap sha256 864b774456ba8dff8f1d5e6878afef27173824d5526566ed29064eee96a1a4d0 reports 12 pass / 0 fail / 0 skip and prints the three closed classifications above. This session did not re-run tests.\"\n  },\n  \"findings\": [\n    {\n      \"severity\": \"note\",\n      \"id\": \"service-test-absolute-helper-import\",\n      \"detail\": \"stale-loan-submission-service.test.mjs imports the helper from /home/charl/Moriarty/.worktrees/sp05-deadline-review/... rather than ./stale-loan-rejection.mjs. The TAP therefore binds to whatever helper occupies that worktree at run time. The hashed helper 2729cf7aeaa05de8c27e3da79bcbc2e278b4bc7016748d561e2b834352c3a196 is independently the correct unwrap; this is a reproducibility/binding weakness, not a classifier defect.\"\n    },\n    {\n      \"severity\": \"note\",\n      \"id\": \"readme-classifier-text-lags-correction\",\n      \"detail\": \"README.md still describes only node-client TransactionInvalidError inside one Effect Fail cause and does not mention the capabilities SubmissionError unwrap. CORRECTION-02.md states the new bound. Non-blocking for this source increment.\"\n    }\n  ],\n  \"scope\": \"Reviewed source and supplied controlled tests only: stale accrue prepare/submit classification, one-level default capabilities SubmissionError unwrap, actual makeDefaultSubmissionService plus actual PolkadotNodeClient against a controlled API, and the existing inert positive native DUST fee admission control. No adverse execution, admission, live node rejection, Preview, paid-fee acceptance, wallet/private store, proof, or compiler activity is in scope.\",\n  \"limitations\": [\n    \"This session did not edit, hash, execute, or open network; TAP and SDK excerpts were taken as supplied evidence.\",\n    \"Candidate-01 historical paths were not re-opened; they remain under original-source-preservation.json sha256 5b74d347b58aba1a4a12acd5ac8b7267edc8d2c6a62bf10dc1e77ef77a46e215 and raw reviews stay immutable.\",\n    \"Wallet facade submitTransaction and createFinancialProviders midnightProvider.submitTx are not in the new service tests. Facade source rethrows the same submissionService error after revert; that is a source inference, not a live wallet observation.\",\n    \"Controlled isInvalid is a plain status object on the intercepted send callback, not a node codec object or a real mempool/runtime invalid predicate. Invalid status still does not establish which stale predicate the node applied.\",\n    \"providerSubmissionAttempted moved inside the submit thunk is adjacent helper behavior; it is not live delivery or confirmation.\",\n    \"Paid fee, reservation release, preview, operational launcher/store identity, and execution admission remain open as documented.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 55926,
+      "output_tokens": 13121,
+      "cache_read_input_tokens": 256,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 55926,
+        "outputTokens": 13121,
+        "cacheReadInputTokens": 256,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.03242002
+      }
+    },
+    "total_cost_usd": 0.03242002,
+    "session_id": "01a08bdb-dedb-7f50-bc13-4b7743f1f12f"
+  }
+}

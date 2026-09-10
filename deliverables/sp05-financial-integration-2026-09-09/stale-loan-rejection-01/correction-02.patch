@@ -1,0 +1,48 @@
+--- experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs
++++ experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs
+@@ -14,6 +14,7 @@
+ const handles=new WeakMap();
+ const effect=await import(pathToFileURL(PINNED_NM+'/effect/dist/esm/index.js').href);
+ const {TransactionInvalidError,SubmissionError}=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/wallet-sdk-node-client/dist/effect/NodeClientError.js').href);
++const {SubmissionError:WalletSubmissionError}=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/wallet-sdk-capabilities/dist/submission/submissionService.js').href);
+ const {default:RpcError}=await import(pathToFileURL(PINNED_NM+'/@polkadot/rpc-provider/coder/error.js').href);
+ async function dependencies(){
+  const path=PINNED_NM+'/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs';requireThat(hash(readFileSync(path))==='9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072','SDK_PIN');
+@@ -29,6 +30,8 @@
+  // SDK Effect.runPromise may wrap node failures. Do not recognize names, text or
+  // generic SubmissionError as a ledger rejection, or serialize its txData.
+  let failure=error;if(effect.Runtime.isFiberFailure(error)){const cause=error[effect.Runtime.FiberFailureCauseId];failure=effect.Cause.isFailType(cause)?effect.Option.getOrUndefined(effect.Cause.failureOption(cause)):undefined;}
++ // The default submission service wraps exactly one node-client failure.
++ if(failure instanceof WalletSubmissionError)failure=failure.cause;
+  if(phase==='submit'&&failure instanceof TransactionInvalidError&&submittedBytes instanceof Uint8Array&&submittedBytes.length>0&&failure.txData instanceof Uint8Array&&Buffer.from(failure.txData).equals(Buffer.from(submittedBytes)))return Object.freeze({status:'NODE_REJECTED',phase,code:'NODE_TRANSACTION_INVALID',nodeRejectionEstablished:true,stalePredicateEstablished:false});
+  const rpcCode=phase==='submit'&&failure instanceof SubmissionError&&failure.txData instanceof Uint8Array&&submittedBytes instanceof Uint8Array&&Buffer.from(failure.txData).equals(Buffer.from(submittedBytes))&&failure.cause instanceof RpcError&&failure.cause.code===1010?1010:undefined;
+  const codes=['OBSERVATION_TIMEOUT_UNKNOWN','RPC_DEADLINE','STALE_LOAN_DEADLINE'];
+@@ -62,7 +65,7 @@
+  */
+ export async function submitPreparedStaleLoan(handle,{retainCandidate,retainSubmissionOutcome}){
+  const h=handles.get(handle);requireThat(h&&!h.used&&typeof retainCandidate==='function'&&typeof retainSubmissionOutcome==='function','HANDLE');h.used=true;handles.delete(handle);
+- let phase='prove',raw,candidate,rejection,submitted=false;
++ let phase='prove',raw,candidate,rejection,providerSubmissionAttempted=false;
+  try{
+   h.loaded.assertFresh();
+   const proven=await h.within(()=>h.providers.proofProvider.proveTx(h.prepared.private.unprovenTx));
+@@ -72,8 +75,8 @@
+   requireThat(Object.keys(a.transcripts[0].effects).sort().join(',')==='claimedUnshieldedSpends,unshieldedInputs,unshieldedMints,unshieldedOutputs'&&Object.values(a.transcripts[0].effects).every(v=>Array.isArray(v)?v.length===0:Object.keys(v).length===0),'FINANCIAL_EFFECTS');
+   const retained=await h.within(()=>retainCandidate({raw:Uint8Array.from(raw),transaction:structuredClone(candidate)}));requireThat(retained?.status==='RECORDED'&&retained.rawSha256===candidate.rawSha256,'CANDIDATE_RETENTION');
+   requireThat(Buffer.from(finalized.serialize()).equals(raw),'CANDIDATE_MUTATION');
+-  phase='submit';submitted=true;
+-  try{await h.within(()=>h.providers.midnightProvider.submitTx(finalized));return {status:'UNEXPECTED_SUBMISSION_SUCCESS',candidate,financialNonmutationEstablished:false};}
++  phase='submit';
++  try{await h.within(()=>{providerSubmissionAttempted=true;return h.providers.midnightProvider.submitTx(finalized);});return {status:'UNEXPECTED_SUBMISSION_SUCCESS',candidate,financialNonmutationEstablished:false};}
+   catch(error){rejection=classifyStaleLoanFailure(error,phase,raw);}
+   const outcome={candidateRawSha256:candidate.rawSha256,...rejection};
+   const recorded=await h.within(()=>retainSubmissionOutcome(outcome));requireThat(recorded?.status==='RECORDED'&&recorded.candidateRawSha256===candidate.rawSha256&&recorded.code===rejection.code,'OUTCOME_RETENTION');
+@@ -92,7 +95,7 @@
+   requireThat(after.blockHeight>barrier,'AFTER_SUBMISSION_ANCHOR');
+   const equality=compareStaleLoanSnapshots(handle.before,after);
+   return {status:rejection.nodeRejectionEstablished?'NODE_REJECTION_FINANCIAL_NONMUTATION':'OUTCOME_UNKNOWN',rejection,candidate,before:handle.before,terminalBarrier:{blockHash:barrierHash,blockHeight:barrier},after,equality,financialNonmutationEstablished:rejection.nodeRejectionEstablished,feeAccounting:{candidateDustFeeSpeck:candidate.dustFee,paidFeeSpeck:null,paidStatus:'UNKNOWN',reservationReleasePerformed:false},scope:'Retained node invalid status and full contract financial nonmutation only; invalid predicate detail and wallet fees remain separate'};
+- }catch(error){return {status:'INCOMPLETE',failure:classifyStaleLoanFailure(error,phase),submitted,...(candidate?{candidate}:{}),...(rejection?{rejection}:{}),financialNonmutationEstablished:false};}
++ }catch(error){return {status:'INCOMPLETE',failure:classifyStaleLoanFailure(error,phase),providerSubmissionAttempted,...(candidate?{candidate}:{}),...(rejection?{rejection}:{}),financialNonmutationEstablished:false};}
+  finally{requireThat(h.loaded.cleanup()?.loaderHooksRemoved===true,'CLEANUP');requireThat(Date.now()<h.deadlineMs,'DEADLINE');}
+ }
+ export function closeStaleLoanPreparation(handle){const h=handles.get(handle);requireThat(h&&!h.used,'HANDLE');h.used=true;handles.delete(handle);requireThat(h.loaded.cleanup()?.loaderHooksRemoved===true,'CLEANUP');return {loaderClosed:true};}
