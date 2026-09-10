@@ -48,6 +48,8 @@ The [reviewed expression specification](deliverables/sp01-expression-contract-20
 
 The separate [executable expression runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) now implements all 40 Core constructors and has independent GPT-6 and Grok approval. It checks types before execution, uses exact integer arithmetic, evaluates Boolean branches selectively and publishes no tentative state after rejection. Run `node deliverables/sp02-expression-runtime-2026-09-10/demo-01.mjs` to observe an accepted update and a rejected Ensure. Callers currently supply Core directly; full `.mori` elaboration and K correspondence remain open.
 
+The [financial expression runtime](deliverables/sp02-financial-pure-expression-2026-09-10/RESULT.md) adds eight pure constructors in a separate versioned API, with independent GPT-6 and Grok approval. It supports shares, tagged variants, explicit numeric conversion, conditional values, UInt256 and dimensional arithmetic. The original expression profile remains unchanged. Its vault conversion cases exercise deposit, mint, withdrawal and redemption arithmetic; they do not execute those financial actions or establish their ledger acceptance.
+
 The successor semantic freeze and full SP02/SP03 acceptance remain open. A K definition also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance. Archived ZKIR K work does not establish Moriarty semantics.
 
 ### Successor source grammar (EBNF)
