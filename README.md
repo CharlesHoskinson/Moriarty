@@ -4,6 +4,8 @@ Moriarty is an experimental language and toolchain for **bounded financial contr
 
 You can currently author and simulate contracts, inspect their effects, and generate restricted Compact execution kernels. The bounded [loan](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md) and [swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/RESULT.md) examples have executed on Midnight Preview with independently checked native transfers and historical state. Mandatory proof-carrying financial settlement is still under development. This repository is not a production SDK or an audited deployment.
 
+**Midnight Preview is a hard acceptance gate.** Each supported financial capability needs execution on Preview, retained transaction IDs, finalized native effects and state readback checked against the language semantics. Local tests and compiled artifacts support that evidence. They do not close the network gate; mandatory proof and history checks must also pass before release.
+
 ## Financial semantics above Compact
 
 Compact supports Midnight contracts and zero-knowledge circuits. Moriarty adds rules for financial operations: which asset an amount denotes, how interest rounds, when a payment becomes due, what a participant has authorized, and which obligations survive a transaction.
