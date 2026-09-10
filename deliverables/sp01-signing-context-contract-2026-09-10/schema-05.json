@@ -1,0 +1,1203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:moriarty:signing-context-example:5",
+  "type": "object",
+  "properties": {
+    "format": {
+      "enum": [
+        "signing-context-example-5"
+      ]
+    },
+    "genesis": {
+      "type": "object",
+      "properties": {
+        "instance": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+        },
+        "declared": {
+          "const": [
+            "balances",
+            "debt",
+            "duties",
+            "status",
+            "version",
+            "work"
+          ]
+        },
+        "funding": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+              },
+              "owner": {
+                "enum": [
+                  "alice",
+                  "bob",
+                  "fees"
+                ]
+              },
+              "asset": {
+                "enum": [
+                  "A",
+                  "B"
+                ]
+              },
+              "amount": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "id",
+              "owner",
+              "asset",
+              "amount"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 16
+        },
+        "ordinary": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "recovery": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "instance",
+        "declared",
+        "funding",
+        "ordinary",
+        "recovery"
+      ],
+      "additionalProperties": false
+    },
+    "genesisHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "ExactPlan",
+            "OutcomeIntent"
+          ]
+        },
+        "network": {
+          "enum": [
+            "local"
+          ]
+        },
+        "deployment": {
+          "enum": [
+            "d1"
+          ]
+        },
+        "principal": {
+          "enum": [
+            "alice"
+          ]
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+        },
+        "genesisHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "profileHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "notBefore": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "notAfter": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ContractInvariant",
+              "IntentRefinement",
+              "TransitionValidity",
+              "HistoryCompliance"
+            ]
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true
+        },
+        "allowedOps": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "Transfer",
+              "Fee",
+              "CreateDebt",
+              "Accrue",
+              "Repay",
+              "Cancel",
+              "Migrate"
+            ]
+          },
+          "maxItems": 7
+        },
+        "grossCaps": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "feeCaps": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "debtAdditionCap": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "debtOutstandingCap": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "netMode": {
+          "enum": [
+            "Exact",
+            "AtLeast"
+          ]
+        },
+        "cancelAllowed": {
+          "type": "boolean"
+        },
+        "netGoal": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "exactOccurrences": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+              },
+              "predecessorStateHash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+              },
+              "planHash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+              },
+              "postStateHash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+              },
+              "terminal": {
+                "type": "boolean"
+              },
+              "predecessorLocation": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "predecessorResourceHash": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "id",
+              "predecessorStateHash",
+              "planHash",
+              "postStateHash",
+              "terminal",
+              "predecessorLocation",
+              "predecessorResourceHash"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "network",
+        "deployment",
+        "principal",
+        "nonce",
+        "genesisHash",
+        "profileHash",
+        "notBefore",
+        "notAfter",
+        "claims",
+        "allowedOps",
+        "exactOccurrences",
+        "grossCaps",
+        "feeCaps",
+        "debtAdditionCap",
+        "debtOutstandingCap",
+        "netGoal",
+        "netMode",
+        "cancelAllowed"
+      ],
+      "additionalProperties": false
+    },
+    "authorityHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "initial": {
+      "type": "object",
+      "properties": {
+        "balances": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "gross": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "fees": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "receipts": {
+          "type": "object",
+          "properties": {
+            "alice.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "alice.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "bob.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.A": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "fees.B": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "alice.A",
+            "alice.B",
+            "bob.A",
+            "bob.B",
+            "fees.A",
+            "fees.B"
+          ],
+          "additionalProperties": false
+        },
+        "debt": {
+          "type": "object",
+          "properties": {
+            "created": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "accrued": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "repaid": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "writtenOff": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "credited": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            },
+            "outstanding": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+            }
+          },
+          "required": [
+            "created",
+            "accrued",
+            "repaid",
+            "writtenOff",
+            "credited",
+            "outstanding"
+          ],
+          "additionalProperties": false
+        },
+        "ordinary": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "recovery": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+        },
+        "duties": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+              },
+              "debtor": {
+                "enum": [
+                  "alice"
+                ]
+              },
+              "creditor": {
+                "enum": [
+                  "bob"
+                ]
+              },
+              "asset": {
+                "enum": [
+                  "B"
+                ]
+              },
+              "amount": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "id",
+              "debtor",
+              "creditor",
+              "asset",
+              "amount"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 8
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+        },
+        "status": {
+          "enum": [
+            "Active",
+            "Cancelled"
+          ]
+        }
+      },
+      "required": [
+        "balances",
+        "gross",
+        "fees",
+        "receipts",
+        "debt",
+        "ordinary",
+        "recovery",
+        "duties",
+        "version",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "initialHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+          },
+          "predecessor": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+          },
+          "authorityHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+          },
+          "plan": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                        },
+                        "type": {
+                          "enum": [
+                            "ObligationId"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "type",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                        },
+                        "type": {
+                          "enum": [
+                            "UInt128"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "type",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 8
+              },
+              "operations": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "Transfer"
+                          ]
+                        },
+                        "from": {
+                          "enum": [
+                            "alice",
+                            "bob",
+                            "fees"
+                          ]
+                        },
+                        "to": {
+                          "enum": [
+                            "alice",
+                            "bob",
+                            "fees"
+                          ]
+                        },
+                        "asset": {
+                          "enum": [
+                            "A",
+                            "B"
+                          ]
+                        },
+                        "amount": {
+                          "type": "object",
+                          "properties": {
+                            "literal": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                            }
+                          },
+                          "required": [
+                            "literal"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "from",
+                        "to",
+                        "asset",
+                        "amount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "Fee"
+                          ]
+                        },
+                        "from": {
+                          "enum": [
+                            "alice",
+                            "bob",
+                            "fees"
+                          ]
+                        },
+                        "to": {
+                          "enum": [
+                            "alice",
+                            "bob",
+                            "fees"
+                          ]
+                        },
+                        "asset": {
+                          "enum": [
+                            "A",
+                            "B"
+                          ]
+                        },
+                        "amount": {
+                          "type": "object",
+                          "properties": {
+                            "literal": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                            }
+                          },
+                          "required": [
+                            "literal"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "from",
+                        "to",
+                        "asset",
+                        "amount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "CreateDebt",
+                            "Accrue",
+                            "Repay"
+                          ]
+                        },
+                        "obligation": {
+                          "enum": [
+                            "Loan01"
+                          ]
+                        },
+                        "amount": {
+                          "type": "object",
+                          "properties": {
+                            "literal": {
+                              "type": "string",
+                              "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                            }
+                          },
+                          "required": [
+                            "literal"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "obligation",
+                        "amount"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "Cancel"
+                          ]
+                        },
+                        "reservation": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "reservation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "enum": [
+                            "Migrate"
+                          ]
+                        },
+                        "newVersion": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "newVersion"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 16
+              },
+              "sidecarHex": {
+                "type": "string",
+                "pattern": "^([0-9a-f]{2})*(?![\\s\\S])",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "action",
+              "arguments",
+              "operations",
+              "sidecarHex"
+            ],
+            "additionalProperties": false
+          },
+          "planHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+          },
+          "now": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+          },
+          "ordinaryCharge": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+          },
+          "recoveryCharge": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+          },
+          "post": {
+            "type": "object",
+            "properties": {
+              "balances": {
+                "type": "object",
+                "properties": {
+                  "alice.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "alice.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "alice.A",
+                  "alice.B",
+                  "bob.A",
+                  "bob.B",
+                  "fees.A",
+                  "fees.B"
+                ],
+                "additionalProperties": false
+              },
+              "gross": {
+                "type": "object",
+                "properties": {
+                  "alice.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "alice.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "alice.A",
+                  "alice.B",
+                  "bob.A",
+                  "bob.B",
+                  "fees.A",
+                  "fees.B"
+                ],
+                "additionalProperties": false
+              },
+              "fees": {
+                "type": "object",
+                "properties": {
+                  "alice.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "alice.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "alice.A",
+                  "alice.B",
+                  "bob.A",
+                  "bob.B",
+                  "fees.A",
+                  "fees.B"
+                ],
+                "additionalProperties": false
+              },
+              "receipts": {
+                "type": "object",
+                "properties": {
+                  "alice.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "alice.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "bob.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.A": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "fees.B": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "alice.A",
+                  "alice.B",
+                  "bob.A",
+                  "bob.B",
+                  "fees.A",
+                  "fees.B"
+                ],
+                "additionalProperties": false
+              },
+              "debt": {
+                "type": "object",
+                "properties": {
+                  "created": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "accrued": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "repaid": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "writtenOff": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "credited": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  },
+                  "outstanding": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "created",
+                  "accrued",
+                  "repaid",
+                  "writtenOff",
+                  "credited",
+                  "outstanding"
+                ],
+                "additionalProperties": false
+              },
+              "ordinary": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+              },
+              "recovery": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+              },
+              "duties": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+                    },
+                    "debtor": {
+                      "enum": [
+                        "alice"
+                      ]
+                    },
+                    "creditor": {
+                      "enum": [
+                        "bob"
+                      ]
+                    },
+                    "asset": {
+                      "enum": [
+                        "B"
+                      ]
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,38})(?![\\s\\S])"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "debtor",
+                    "creditor",
+                    "asset",
+                    "amount"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 8
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}(?![\\s\\S])"
+              },
+              "status": {
+                "enum": [
+                  "Active",
+                  "Cancelled"
+                ]
+              }
+            },
+            "required": [
+              "balances",
+              "gross",
+              "fees",
+              "receipts",
+              "debt",
+              "ordinary",
+              "recovery",
+              "duties",
+              "version",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "stateHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+          },
+          "terminal": {
+            "type": "boolean"
+          },
+          "occurrenceId": {
+            "type": "string",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id",
+          "predecessor",
+          "authorityHash",
+          "plan",
+          "planHash",
+          "now",
+          "ordinaryCharge",
+          "recoveryCharge",
+          "post",
+          "stateHash",
+          "terminal",
+          "occurrenceId"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 32
+    }
+  },
+  "required": [
+    "format",
+    "genesis",
+    "genesisHash",
+    "authority",
+    "authorityHash",
+    "initial",
+    "initialHash",
+    "steps"
+  ],
+  "additionalProperties": false
+}
