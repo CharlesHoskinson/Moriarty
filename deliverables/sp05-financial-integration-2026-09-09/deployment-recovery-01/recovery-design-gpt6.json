@@ -1,0 +1,124 @@
+{
+  "schema": "moriarty.deployment-recovery-design-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/password_preflight_review",
+    "independentDesignVote": true,
+    "implementationAudited": false
+  },
+  "reviewedAt": "2026-09-10T05:30:57.565383+00:00",
+  "proposalPath": "deliverables/sp05-financial-integration-2026-09-09/launch-source-05/deployment-recovery-next.md",
+  "proposalSha256": "b0398efb4f11e08762729d9e9b49f618bf8989d429b70230ca32b01fbdc23f1b",
+  "verdict": "APPROVE_DESIGN_ONLY",
+  "vote": "approve",
+  "scope": "Narrow explicit recovery of the one identified uninitialized local loan deployment, subject to all proposal predicates and separate exact implementation/resource/execution reviews.",
+  "findings": [],
+  "rationale": [
+    {
+      "kind": "repository observation",
+      "text": "prepareFinancialDeployment waits for SucceedEntirely then writes private state and signing key before returning the deployed address to runLocalFinancialCase. A storage failure can therefore strand a successful public deploy before the driver records its deploy stage. The proposed explicit historical-deployment branch repairs this boundary without pretending that a deployment call succeeded anew."
+    },
+    {
+      "kind": "repository observation",
+      "text": "The existing integration prepares a fresh deploy to derive its address before rawTokenType asset binding, and the driver always deploys first. Both require explicit branch changes. Using the retained address and real deployment identifier preserves the fixed four-stage comparator while allowing exactly three fresh calls."
+    },
+    {
+      "kind": "source fact",
+      "text": "Pinned ContractDeploy documentation states construction randomizes its address. Pinned findDeployedContract can write caller private state and generate a fresh signing key. The proposal correctly excludes both as unguarded recovery shortcuts."
+    },
+    {
+      "kind": "repository observation",
+      "text": "observeFinalizedStage checks native/indexer identity, success, node finalized height, canonical block hash, protocol version and block-pinned state/balances. Its closed receipt does not preserve the full native initialState or maintenance authority; recovery must inspect those from actual native objects as proposed."
+    },
+    {
+      "kind": "repository observation",
+      "text": "The stateful financial comparator verifies role addresses/capability commitments, program/network binding, domain and zero constructor fields, native effects, balances and fees. Its position advances after each passing stage, so historical deployment must pass and be retained exactly once before the three calls."
+    },
+    {
+      "kind": "source fact",
+      "text": "Pinned private provider scopes sublevels by a hash of accountId and scopes private values by contractAddress:privateStateId. set obtains salt metadata before password validation; setSigningKey is a later operation. The proposal requires inspection of a copy rather than inferring the real database contents from the synthetic failure or file size."
+    },
+    {
+      "kind": "inference",
+      "text": "Given exact historical and current public-state binding, original capabilities and maintenance key, source-bound constructor reconstruction of an unchanged empty private result, and a verified metadata-only original store, initializing an isolated provider destination is a coherent recovery design. The original store and prior charges remain evidence, not a resumed journal."
+    }
+  ],
+  "implementationPredicatesToAudit": [
+    "Retained raw bytes, native transaction hash, both identifiers, actual observed identifier, address, original build, network genesis/tag and protocol must be exact-bound to the specific prior allocation. Historical observation must be compared against those bytes, not accepted solely because its address matches.",
+    "Full native initial/current state comparison must include data, balances, exact operation set and verifier bytes, maintenance key set, threshold and counter. SDK verifyContractState is only a subset check and cannot establish this predicate alone. Any normalization must be narrow, source-grounded and covered by positive and adversarial offline tests.",
+    "Current state must be read at the checked fresh finalized hash, not an unpinned latest state. A changed/unavailable state stops the branch. Freshness and deadline checks must still cover the path to the first actual call.",
+    "Constructor-only reconstruction must use the unchanged admitted generated contract and original constructor arguments; check exact empty private result and absence of witness/private effects without creating ContractDeploy. Do not accept a caller-provided empty object as verified recovery.",
+    "Copied-store inspection must enumerate the entire database namespace, validate exactly the expected account-scoped metadata key and closed salt/version value, reject all unexpected keys including other account or signing sublevels, and keep raw keys/values/private manifests out of public output. Preserve the stopped original bytes; account for Level mutating its inspection copy.",
+    "New destination and password must be isolated from original store/password/wallet paths, satisfy existing private-file and symlink rules, and be exclusive. Restore state and the verified existing signing key only after all predicates and durable deploy comparison pass; validate round-trip equality before financial operations.",
+    "The internally assembled recovery branch must expose no unrestricted restore callback or fake deploy adapter. Negative tests must trap every deploy construction/prove/balance/submission path during recovery setup, and record exactly three ordinary call submissions afterward.",
+    "Bind the new three-submission reservation to the verified recovery branch. Keep original charges, submissions, receipts and stopped reservation journal intact and include cumulative gross/debit accounting across allocations. A design vote neither creates nor authorizes that allocation."
+  ],
+  "checks": [
+    {
+      "kind": "performed",
+      "description": "Read guarded CLI status and exact proposal; inspected the listed source/interface files without any real private-state access."
+    },
+    {
+      "kind": "not performed",
+      "description": "No constructor replay, retained native transaction replay, live finality query or copied real-store inspection was performed in this design review. Root is investigating offline feasibility independently."
+    }
+  ],
+  "limitations": [
+    "This is a substantive design vote, not an exact implementation audit or empirical recovery result. Proposed required tests remain mandatory before execution review.",
+    "Public indexed SUCCESS and metadata-only attribution are not independently promoted to canonical finality or facts about the real private store by this review.",
+    "Current-state reads cannot guarantee that the chain remains unchanged afterward. Existing native semantic checks, freshness, ledger validation and explicit stop behavior remain necessary.",
+    "Guarded status reports unresolved operational history. This vote does not clear it. A separate Grok vote, implementation reviews, concrete bounded recovery/resource decision and all existing acceptance gates remain required."
+  ],
+  "sourceBindings": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs",
+      "sha256": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "sha256": "3976c02556e567be05625a783f902f6d10cb53150e85cea7d184cb02a142c2dc"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "sha256": "638fe118f1e211cc3c24aed17e81b69800be2c44782b25ac319532979eda556f"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+      "sha256": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+      "sha256": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "c902820dee080f78a6ae341ca30bac8c959a86f94a9781a8ddae7fbb60408f95"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+      "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs",
+      "sha256": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-level-private-state-provider/dist/index.mjs",
+      "sha256": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "sha256": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/launch-source-05/password-provider-repro-result.json",
+      "sha256": "82969207f42a3cc1c11b5fbf1a4675a79db4bd8785a5379d4a203be501942115"
+    }
+  ],
+  "newAllocationAuthorized": false,
+  "recoveryWritesAuthorized": false,
+  "executionAdmitted": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

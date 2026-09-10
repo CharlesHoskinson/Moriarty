@@ -55,3 +55,49 @@ test('observation failure keeps SDK ID and never invokes comparator or next call
  const h=harness();let compared=0;h.options.observe=async()=>{throw Error('NONCANONICAL_BLOCK');};h.options.verifyStage=()=>{compared++;return {status:'PASS'};};
  await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'NONCANONICAL_BLOCK');assert.deepEqual(e.publicResult.transactionIds,['deploy']);return true;});assert.equal(compared,0);assert.equal(h.calls.length,1);assert.equal(h.counts().cleaned,1);
 });
+
+const recoveredIdentity=()=>({contractAddress:'ab'.repeat(32),txId:'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9'});
+function recoveryHarness() {
+ const h=harness();h.options.existingDeployment=recoveredIdentity();
+ for(const name of ['deployContract','createUnprovenDeployTx','findDeployedContract','prepareFinancialDeployment'])Object.defineProperty(h.options.sdk,name,{get(){throw Error('RECOVERY_DEPLOY_API_FORBIDDEN:'+name);}});
+ return h;
+}
+test('recovered loan observes historical deployment once then submits exactly three calls',async()=>{
+ const h=recoveryHarness(),events=[];
+ h.options.providers.execute=async(stage,f)=>{events.push(stage);return f();};
+ h.options.observe=async x=>{assert.equal(x.contractAddress,h.options.existingDeployment.contractAddress);return {receipt:{txId:x.txId},state:{observed:x.circuitId}};};
+ const out=await runLocalFinancialCase(h.options);
+ assert.deepEqual(events,['observe:deploy','compare:deploy','initialize','observe:initialize','compare:initialize','accrue','observe:accrue','compare:accrue','settle','observe:settle','compare:settle']);
+ assert.deepEqual(h.calls.map(x=>x.stage),['initialize','accrue','settle']);
+ assert.ok(h.calls.every(x=>x.options.contractAddress===recoveredIdentity().contractAddress&&x.options.privateStateId==='sp05-loan'));
+ assert.equal(out.status,'PASS');assert.equal(out.stages.length,4);assert.deepEqual(out.transactionIds,[recoveredIdentity().txId,'initialize','accrue','settle']);assert.equal(out.operationalState.reservedSubmissions,3);assert.deepEqual(h.counts(),{cleaned:1,stopped:0});
+});
+for(const value of [null,[],{},'identity',{...recoveredIdentity(),extra:true},{...recoveredIdentity(),contractAddress:'ab'},{...recoveredIdentity(),contractAddress:'AB'.repeat(32)},{...recoveredIdentity(),txId:''},{...recoveredIdentity(),txId:'deploy'},{...recoveredIdentity(),txId:'cd'.repeat(32)},{...recoveredIdentity(),txId:'CD'.repeat(33)},Object.assign(Object.create({extra:true}),recoveredIdentity()),Object.defineProperty(recoveredIdentity(),'hidden',{value:true}),Object.assign(recoveredIdentity(),{[Symbol('extra')]:true})])test('malformed recovery identity fails before observations or SDK calls',async()=>{
+ const h=harness();h.options.existingDeployment=value;let observed=0;h.options.observe=()=>{observed++;throw Error('OBSERVATION_FORBIDDEN');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'INVALID_EXISTING_DEPLOYMENT');assert.deepEqual(e.publicResult.transactionIds,[]);return true;});assert.equal(h.calls.length,0);assert.equal(observed,0);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+});
+test('recovery rejects accessors without invoking them',async()=>{
+ const h=harness();h.options.existingDeployment=Object.defineProperty(recoveredIdentity(),'txId',{get(){throw Error('GETTER_FORBIDDEN');}});
+ await assert.rejects(runLocalFinancialCase(h.options),/INVALID_EXISTING_DEPLOYMENT/);assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+test('swap recovery is rejected before deployment or observation',async()=>{
+ const h=harness('swap');h.options.existingDeployment=recoveredIdentity();await assert.rejects(runLocalFinancialCase(h.options),/EXISTING_DEPLOYMENT_REQUIRES_LOAN/);assert.equal(h.calls.length,0);assert.equal(h.counts().cleaned,1);
+});
+for(const outcome of ['FAIL','throw','observe'])test(`historical recovery ${outcome} stops all calls and retains public identity`,async()=>{
+ const h=recoveryHarness();let compared=0;
+ h.options.verifyStage=()=>{compared++;if(outcome==='throw')throw Error('HISTORICAL_FAILURE');return {status:'FAIL'};};
+ if(outcome==='observe')h.options.observe=()=>{throw Error('HISTORICAL_FAILURE');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.publicResult.status,'FAILED');assert.equal(e.publicResult.contractAddress,recoveredIdentity().contractAddress);assert.deepEqual(e.publicResult.transactionIds,[recoveredIdentity().txId]);assert.deepEqual(e.publicResult.stages,[]);return true;});
+ assert.equal(compared,outcome==='observe'?0:1);assert.equal(h.calls.length,0);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+});
+test('recovery identity is captured before asynchronous binding checks',async()=>{
+ const h=recoveryHarness(),seen=[];
+ h.options.providers.getExecutionBinding=async()=>{h.options.existingDeployment.contractAddress='ef'.repeat(32);h.options.existingDeployment.txId='12'.repeat(32);return h.binding;};
+ h.options.observe=async x=>{seen.push(x);return {receipt:{txId:x.txId}};};
+ const out=await runLocalFinancialCase(h.options);assert.equal(out.contractAddress,recoveredIdentity().contractAddress);assert.equal(seen[0].txId,recoveredIdentity().txId);assert.ok(h.calls.every(x=>x.options.contractAddress===recoveredIdentity().contractAddress));
+});
+
+test('recovered loan cannot pass with incomplete containment',async()=>{
+ const h=recoveryHarness();h.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);assert.equal(e.publicResult.operationalState.reservedSubmissions,3);return true;});
+});

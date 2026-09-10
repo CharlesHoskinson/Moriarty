@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 121.082,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "```json\n{\n  \"verdict\": \"CHANGES_REQUESTED\",\n  \"proposalSha256\": \"b0398efb4f11e08762729d9e9b49f618bf8989d429b70230ca32b01fbdc23f1b\",\n  \"findings\": [\n    {\n      \"severity\": \"high\",\n      \"description\": \"Chain/native verification is not ordered before seed or Level writes. Current launch-local reads snapshots/seed, restores the wallet, then integrates. Recovery must deserialize/canonicalize 0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c, observe identifier 00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9 at node-finalized height/hash independent of indexer SUCCESS, and prove current state at a fresh finalized hash is still the exact uninitialized constructor state for ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713 \u2014 all before seed, HDWallet, or any new store write. Failure stops with no recovery files.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"description\": \"Queried vs retained action.initialState must be exact, or a separately reviewed normalizer must already exist. \u201cAny representation normalization made explicit and tested\u201d is an open decode door. Inequality without that reviewed normalizer is a stop, not a recovery-time adapter.\"\n    },\n    {\n      \"severity\": \"high\",\n      \"description\": \"Private-state/signing-key restore cannot be a post-deploy callback. run-local.mjs always calls deployContract; integrate-local always prepareFinancialDeployment and binds colors/observe to prepared.public.contractAddress. Recovery needs a closed branch that cannot reach prepareFinancialDeployment, createUnprovenDeployTx, deployContract, submitDeploy, or findDeployedContract. setContractAddress + set('sp05-loan', verified {}) + setSigningKey(original VK-checked key) plus in-memory round-trip must succeed before submitCallTx is reachable. A skippable callback after recording deploy is not a gate.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"description\": \"Pre-deploy wallet snapshots are not post-inclusion state. After restore+waitForSyncedState, require indexer-backed coins/DUST consistent with the already-included deployment (spent deploy inputs gone, registered DUST still sufficient for three calls). Stop if sync would resurrect spent outputs or leave DUST short. Do not assume snapshot restore plus sync is enough without that check.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"description\": \"Launch plan remains exact() with submissions===4. Recovery needs a closed existingDeployment object (original bytes/hash/both identifiers, address, build hashes, genesis/tag, protocol, original allocation evidence, new isolated store path) accepted only with submissions===3. Ordinary launches must still reject submissions!==4 and reject recovery fields. Constructor-only reconstruction must use the pinned contracts init API, assert {} and no ContractDeploy; hardcoded {} without that check is not allowed.\"\n    }\n  ],\n  \"conditions\": [\n    \"Loan-only recovery of ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713. No redeploy, no findDeployedContract, no fake deployContract adapter, no generic resume framework, no edit of original store/password/journal/charges.\",\n    \"Copy+inspect the original Level directory only; require account-scoped salt/version metadata and no private-state or signing-key values. Unexpected keys stop. New isolated store and new validator-passing password only.\",\n    \"Historical deploy is observed/compared once and must not consume the new reservation. New allocation at most three submissions; original deployment charge stays on its journal.\",\n    \"This vote is design-only. No source landing, resource envelope, service start, or recovery write is authorized. Implementation still needs independent source review and a later bounded resource vote.\"\n  ],\n  \"scope\": \"Design for recovering the existing uninitialized local loan after private-store password failure; not implementation, not resource allocation, not financial acceptance.\",\n  \"limitations\": [\n    \"Indexer SUCCESS at height 20313 is not treated as node finality. That check is still unperformed.\",\n    \"Synthetic 185-byte WAL reproduction does not prove the real failed store is metadata-only; copy-then-inspect is required.\",\n    \"Source05 password preflight is a separate published fix and does not recover this deployment.\",\n    \"ContractDeploy address randomization and findDeployedContract\u2019s missing-key fallback remain reasons this cannot be a re-prepare or SDK find path.\"\n  ]\n}\n```",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 11347,
+      "output_tokens": 5149,
+      "cache_read_input_tokens": 160512,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 11347,
+        "outputTokens": 5149,
+        "cacheReadInputTokens": 160512,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.02275348
+      }
+    },
+    "total_cost_usd": 0.02275348,
+    "session_id": "01a0898c-cbc2-7f80-aabb-3dcde3f7e042"
+  }
+}

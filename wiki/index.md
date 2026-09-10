@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T04:45:00Z
+updated_at: 2026-09-10T06:23:18Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -240,4 +240,4 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 
 [Report, interactive graph and design analysis](../deliverables/security-token-transformations-2026-09-09/README.md), SRC-0110, adds asset/claim/encumbrance distinctions and eight proposed transformation cases. CLM-0943–CLM-0945 are maintained in [[wiki/moriarty-architecture|architecture]] and [[wiki/security|security]]. Full report read; 100 graph nodes, 239 directed edges and seven communities. External citations remain unverified. Proposed SP01–SP12 refinements preserve current MC/RP acceptance gates.
 
-[[wiki/midnight-readiness-lessons|Local Midnight readiness lessons]]: stale indexed time, native DUST checks, mutation deadlines and adequate reviewer budgets. Actual failed local execution remains distinct from Preview acceptance.
+[[wiki/midnight-readiness-lessons|Local Midnight readiness lessons]]: stale indexed time, native DUST checks, mutation deadlines, installed password policy, recovery identity and actual-provider locking. Local observations and source reviews remain distinct from Preview acceptance.

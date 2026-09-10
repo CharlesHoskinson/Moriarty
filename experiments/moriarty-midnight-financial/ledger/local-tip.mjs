@@ -20,9 +20,9 @@ async function indexedBlock(indexer,deadlineMs,fetchImpl){
 /** At most 60 read-only samples, one-second spacing, 60 seconds total and no
  * extension of the caller's existing wall deadline. A hung request is aborted.
  */
-export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalThis.fetch}){
+export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalThis.fetch,exactFinality=false}){
  node=endpoint(node);indexer=endpoint(indexer);
- check(Number.isSafeInteger(deadlineMs)&&deadlineMs>Date.now()&&typeof fetchImpl==='function','TIP_DEADLINE');
+ check(Number.isSafeInteger(deadlineMs)&&deadlineMs>Date.now()&&typeof fetchImpl==='function'&&typeof exactFinality==='boolean','TIP_DEADLINE');
  const stop=Math.min(deadlineMs,Date.now()+60000);
  for(let attempt=0;attempt<60&&Date.now()<stop;attempt++){
   try{
@@ -41,6 +41,7 @@ export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalT
    const finalizedHeight=Number(BigInt(header.number));
    check(Number.isSafeInteger(finalizedHeight)&&Math.abs(block.height-finalizedHeight)<=2,'TIP_LAG');
    check(await rpc('chain_getBlockHash',[block.height])==='0x'+block.hash,'TIP_CHAIN_MISMATCH');
+   if(exactFinality)check(block.height===finalizedHeight&&'0x'+block.hash===finalizedHash,'TIP_EXACT_FINALITY');
    const checkedAt=Date.now();check(checkedAt<stop&&timestampMs<=checkedAt&&checkedAt-timestampMs<=60000,'TIP_STALE');
    return {schema:'moriarty.local-tip-readiness/1',height:block.height,hash:block.hash,timestampMs,finalizedHeight,finalizedHash,checkedAt,status:'READY',scope:'Recent indexed canonical block near finalized head; not transaction finality or consensus validity'};
   }catch{/* Only read-only readiness probes repeat; wallet operations never retry. */}

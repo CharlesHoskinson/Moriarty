@@ -1,0 +1,332 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/recovery_source_audit",
+    "host": "Codex",
+    "role": "Fresh delegated independent source reviewer; no candidate implementation edits"
+  },
+  "reviewedAt": "2026-09-10T06:33:04.765017+00:00",
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-candidate-03.json",
+  "candidateSha256": "3523e1f64323b8092de571f7018dba1f8683ebe66f353d30e44b98931f00fc66",
+  "worktreeHead": "5e75fca57c7b71dedb6ba0cf4963196cb59372ae",
+  "verdict": "PASS_SCOPED",
+  "findings": [],
+  "scope": "Independent source correction review of exact candidate03, including all eight original Grok findings and the preserved GPT6 Level-lock fix. Unchanged source inspection carries forward only on matching bytes. No runtime/resource admission or financial/network/proof acceptance.",
+  "priorReview": {
+    "path": "source-review-gpt6-02.json",
+    "sha256": "b1d3f05a73a6e5fda1364e9e29353c0d6c343252a60bddede9c801ed83f14f00",
+    "candidateSha256": "775602ba647dad30cbc54b24af1c35b18a36016d35b668abfdd7d22dfcc507ce"
+  },
+  "reviewedDispositions": [
+    {
+      "finding": "Grok-1 current finalized state",
+      "status": "RESOLVED",
+      "file": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "line": 89,
+      "detail": "Selects node finalized head after observeFinalizedStage completes, reads its header, rejects regression versus the historical observation and excessive lag/ahead, queries complete native state at the selected head, and requires an unchanged finalized head after the reads. The supplied earlier tip remains only a recent canonical timing/lag sample. This corrects the earlier current-state hole."
+    },
+    {
+      "finding": "Grok-2 destination before allocation",
+      "status": "RESOLVED",
+      "file": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "line": 201,
+      "detail": "checkDestination now precedes initializeReservations and provider creation. Its failure stops before the new journal allocation call."
+    },
+    {
+      "finding": "Grok-3 readiness composition",
+      "status": "RESOLVED",
+      "file": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+      "line": 44,
+      "detail": "Recovery preflight passes exactFinality:true; the existing read-only loop waits for matching indexed/finalized height and hash within the unchanged 60-second and caller deadline bounds. Default ordinary readiness remains nearby-block behavior. The public gate separately refreshes finality after historical observation."
+    },
+    {
+      "finding": "Grok-4 Bech32 method equivalence",
+      "status": "DISPOSITION_VERIFIED_NO_CHANGE_NEEDED",
+      "detail": "Independently hashed installed wallet-sdk-address-format source and compared exact lines 67-86: toString returns this.asString(). Preserving toString maintains the original account namespace without creating an API mismatch."
+    },
+    {
+      "finding": "Grok-5 constructor Zswap shape",
+      "status": "RESOLVED",
+      "file": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "line": 72,
+      "detail": "Requires exactly four own fields and exactly the known enumerable keys, plus empty inputs/outputs, currentIndex 0n and unchanged coin key. Symbol, hidden extra and other own fields are rejected."
+    },
+    {
+      "finding": "Grok-6 signing-key codec",
+      "status": "DISPOSITION_VERIFIED_WITH_INPUT_NARROWING",
+      "file": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "line": 63,
+      "detail": "Installed ledger declares SigningKey as string; helper now rejects non-string/empty input. Strict equality is valid for the serialized string value. Prior independent pinned-provider synthetic reproduction demonstrated sequential state/key roundtrip and remains retained. This does not establish actual recovery storage."
+    },
+    {
+      "finding": "Grok-7 direct low-level driver identity",
+      "status": "DISPOSITION_VERIFIED_NO_SCOPE_CHANGE",
+      "detail": "Design02 explicitly provides an internal closed identity from integration after verified restore. Launcher binds the exact historical loan; integration rejects a direct existingDeployment option and production test adapters. Arbitrary caller-supplied provider/SDK access to the low-level driver is not the public launch authority and establishes no recovery acceptance."
+    },
+    {
+      "finding": "Grok-8 preflight before directory creation",
+      "status": "DISPOSITION_VERIFIED_SEPARATE_OPERATIONAL_REQUIREMENT",
+      "detail": "Launcher pre-seed privateDirectory calls only stat the existing prepared directories. The exported public preflight performs no new private-store writes and is callable before operational preparation; launcher repeats it before seed access. The separately authorized operational procedure must invoke it before creating the base/password/plan. No operational procedure execution or admission was reviewed or established here."
+    },
+    {
+      "finding": "GPT6-R1 Level lock collision",
+      "status": "REMAINS_RESOLVED",
+      "file": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "line": 115,
+      "detail": "Sequential get then getSigningKey and single-use/equality guards remain unchanged from the reviewed correction02."
+    }
+  ],
+  "checks": [
+    {
+      "name": "candidate-integrity",
+      "result": "PASS",
+      "detail": "All 28 listed file digests match exact candidate03 at review entry and issuance. 18 candidate02 files remain unchanged. All five source-snapshots-02 files match their original candidate02 hashes and their production deltas were inspected."
+    },
+    {
+      "name": "required-startup",
+      "result": "PASS",
+      "detail": "Retained loaded development skill and refreshed status --json; no pending transaction notifications were reported. Source review stayed within the assigned scope."
+    },
+    {
+      "name": "focused-source-tests",
+      "result": "PASS",
+      "command": "node --test --test-name-pattern='finalized|indexed tip|exact-finality|nonempty recovery destination' experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs",
+      "detail": "Independently ran 10 focused tests; 10 passed, zero failed. Uses retained public native bytes and inert providers/fetch, not live chain evidence."
+    },
+    {
+      "name": "independent-finality-regression-input",
+      "result": "PASS",
+      "detail": "Independently constructed inert RPC case where historical observation saw finalized height deploy+2 and the fresh head regressed to deploy+1. Actual helper rejected RECOVERY_CURRENT_HEIGHT before any current-head state query. No network, wallet, original private reads or private writes."
+    },
+    {
+      "name": "SDK-source-verification",
+      "result": "PASS",
+      "detail": "All previously inspected SDK hashes remain unchanged. All five sdk-correction-evidence.json file hashes and exact line excerpts independently match installed source."
+    },
+    {
+      "name": "retained-regression05",
+      "result": "OBSERVED_NOT_RERUN",
+      "detail": "Inspected ledger-regression-05.tap completed summary: 288 tests, 288 pass, 0 fail. The full suite was not rerun by this reviewer."
+    },
+    {
+      "name": "constructor-evidence03",
+      "result": "SOURCE_INSPECTED_OBSERVATION_NOT_RERUN",
+      "detail": "Compared constructor-restore-check-03.mjs with check02: only exclusive observation output path differs. Inspected observation03 reporting exact constructor state, four Zswap fields, empty private effects, original authority/signing identity, exclusive in-memory restore and reuse rejection. No private-input constructor execution was performed by this reviewer."
+    },
+    {
+      "name": "production-path-retained",
+      "result": "PASS_SCOPED",
+      "detail": "Rechecked recovery integration order through destination check, allocation, production provider creation, awaited sequential restoration, driver historical deploy observation and three calls. No new deploy, find shortcut, unchecked external private result, old journal reuse, source-test acceptance or unbounded deadline was introduced."
+    }
+  ],
+  "candidateFileChecks": {
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": {
+      "expected": "fac078018fc22c4ef88ebb45cba14bc14b5d535f6a16319638755e38f9c2b319",
+      "actual": "fac078018fc22c4ef88ebb45cba14bc14b5d535f6a16319638755e38f9c2b319",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs": {
+      "expected": "9f29d15230cd169ea42869dd9901ccc238ffe676675c7190c5ce4c78eabe57a0",
+      "actual": "9f29d15230cd169ea42869dd9901ccc238ffe676675c7190c5ce4c78eabe57a0",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": {
+      "expected": "af5fc81f9a18313ce0e27dfd0c99ab5fbb1d09fd1809f672f22f3c30c441c524",
+      "actual": "af5fc81f9a18313ce0e27dfd0c99ab5fbb1d09fd1809f672f22f3c30c441c524",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs": {
+      "expected": "e4ee4342ecfae20e602ecfec50b83396d9f442771ef58880aa2e727354427ddf",
+      "actual": "e4ee4342ecfae20e602ecfec50b83396d9f442771ef58880aa2e727354427ddf",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": {
+      "expected": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba",
+      "actual": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs": {
+      "expected": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0",
+      "actual": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": {
+      "expected": "2c05d140d534753089c0ee5373b3a2f861ae318ff1182d75d80aded3b6b612c4",
+      "actual": "2c05d140d534753089c0ee5373b3a2f861ae318ff1182d75d80aded3b6b612c4",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs": {
+      "expected": "fa1c3c91f491cd33103894e3d68d4944a3d7d2c7a7f7622dd0ea48955f087f17",
+      "actual": "fa1c3c91f491cd33103894e3d68d4944a3d7d2c7a7f7622dd0ea48955f087f17",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": {
+      "expected": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+      "actual": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs": {
+      "expected": "8637a685b900b4754faa28874e47a3637d575a29767d032c6d0a638601babfcc",
+      "actual": "8637a685b900b4754faa28874e47a3637d575a29767d032c6d0a638601babfcc",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs": {
+      "expected": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+      "actual": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md": {
+      "expected": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+      "actual": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": {
+      "expected": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+      "actual": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": {
+      "expected": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "actual": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": {
+      "expected": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+      "actual": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": {
+      "expected": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+      "actual": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": {
+      "expected": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "actual": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": {
+      "expected": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+      "actual": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md": {
+      "expected": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+      "actual": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation.json": {
+      "expected": "b16136d4ddf6d8a5d6e15efe83ec3a48fe28e3a9965f9273f7252a289d04356f",
+      "actual": "b16136d4ddf6d8a5d6e15efe83ec3a48fe28e3a9965f9273f7252a289d04356f",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-02.mjs": {
+      "expected": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+      "actual": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-02.json": {
+      "expected": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+      "actual": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-review-gpt6-level-lock-reproduction-01.json": {
+      "expected": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+      "actual": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs": {
+      "expected": "057b1db6663bb92e251026628727bbf0784aad4c7de9b97c1434bf49a856264d",
+      "actual": "057b1db6663bb92e251026628727bbf0784aad4c7de9b97c1434bf49a856264d",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-03.json": {
+      "expected": "bdcf47df75da71e44156545c277365a8f2974086b462f28733769f52a23ed7c1",
+      "actual": "bdcf47df75da71e44156545c277365a8f2974086b462f28733769f52a23ed7c1",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-03.mjs": {
+      "expected": "2b63e0c1142b2a358fbd5b5decbbbb25baf68870cd8ead7dc8794dc6da905a07",
+      "actual": "2b63e0c1142b2a358fbd5b5decbbbb25baf68870cd8ead7dc8794dc6da905a07",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/sdk-correction-evidence.json": {
+      "expected": "8a013a7a55d38553151221eb367c94bfe597b9377706dd9e4cf253b5bbdfa328",
+      "actual": "8a013a7a55d38553151221eb367c94bfe597b9377706dd9e4cf253b5bbdfa328",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-corrections-03.md": {
+      "expected": "2f06f475e2103bacc46db25eed25af6f2e927a9e94d2499e6bfe661d274f1bb5",
+      "actual": "2f06f475e2103bacc46db25eed25af6f2e927a9e94d2499e6bfe661d274f1bb5",
+      "matches": true
+    }
+  },
+  "unchangedCandidate02Files": [
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation.json",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-02.mjs",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-02.json",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-review-gpt6-level-lock-reproduction-01.json"
+  ],
+  "sdkCorrectionChecks": [
+    {
+      "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js",
+      "sha256": "20c1669c47d99200ccd981508dee9dd9b99fb0ded3217232dded468482de81cd",
+      "excerptMatches": true
+    },
+    {
+      "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "sha256": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36",
+      "excerptMatches": true
+    },
+    {
+      "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js",
+      "sha256": "703c24afc04f7e6907a3fe581a429985512fa514ca58b377580200c687d828f0",
+      "excerptMatches": true
+    },
+    {
+      "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js",
+      "sha256": "6122952c8d140f4421edd2ad41eb648706c5c4341eb91e79bfb78a0461938a02",
+      "excerptMatches": true
+    },
+    {
+      "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/ShieldedWallet.js",
+      "sha256": "efbd1de674b939c56b3f74b753c3b01689afbc0cd47c8b2328e043e0e8fd4066",
+      "excerptMatches": true
+    }
+  ],
+  "evidenceSha256": {
+    "source-grok-result-01.json": "aae6ddb569ff95ce5297e7b574ca94425478de191a086584d0f276a17bf17392",
+    "source-corrections-03.md": "2f06f475e2103bacc46db25eed25af6f2e927a9e94d2499e6bfe661d274f1bb5",
+    "ledger-regression-05.tap": "430f4ac5f0c50ecf50c929c50882ba58507fc9f8490fd9508a6a31b42f1af403",
+    "constructor-restore-observation-03.json": "bdcf47df75da71e44156545c277365a8f2974086b462f28733769f52a23ed7c1",
+    "source-review-gpt6-level-lock-reproduction-01.json": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9"
+  },
+  "limitations": [
+    "The earlier review01/review02 current-state conclusion was incomplete; Grok identified a real stale-tip hole. Candidate03 correction and this updated predicate replace that conclusion while preserving the original reviews.",
+    "Finalized-head equality establishes a stable observation window only. It cannot prevent a future concurrent transaction after the last read; no broader atomicity guarantee is claimed.",
+    "No service, wallet construction/restore, original seed/role/snapshot/store read, actual recovery database write, proof or submission was performed by this reviewer.",
+    "Current-chain state/finality, original metadata-only store contents, synchronized spent-input exclusion and adequate full-allocation DUST remain runtime gates rather than established observations.",
+    "Actual constructor observations are retained author evidence; source review does not upgrade in-memory provider checks to actual storage or financial acceptance.",
+    "Original outer process containment and separately authorized operational preflight-before-preparation requirements remain. Draft operational execution was outside this source candidate review.",
+    "Grok reviewed candidate01; its findings were independently dispositioned here. This GPT6 verdict does not fabricate a Grok candidate03 approval.",
+    "The verdict applies only to candidate03 digest and inspected source scope, not a complete transitive dependency or infrastructure audit."
+  ],
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

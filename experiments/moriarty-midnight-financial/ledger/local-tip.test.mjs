@@ -86,3 +86,11 @@ test('readiness retention crossing the deadline cannot start wallet balancing',a
   await assert.rejects(guarded.balanceUnboundTransaction(),/TIP_DEADLINE/);assert.equal(balanced,0);
  }finally{Date.now=original;}
 });
+
+test('recovery exact-finality readiness waits for matching head while ordinary readiness permits nearby blocks',async()=>{
+ const f=fixture({height:11});
+ assert.equal((await api.waitForLocalTip(f.options)).height,11);
+ await assert.rejects(api.waitForLocalTip({...f.options,exactFinality:true,deadlineMs:Date.now()+35}),/TIP_NOT_READY/);
+ f.block.height=12;assert.equal((await api.waitForLocalTip({...f.options,exactFinality:true})).height,12);
+ await assert.rejects(api.waitForLocalTip({...f.options,exactFinality:'true'}),/TIP_DEADLINE/);
+});

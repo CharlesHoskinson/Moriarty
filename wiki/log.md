@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T04:45:00Z
+updated_at: 2026-09-10T06:23:18Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Preserve deployed identity and test recovery storage
+
+Updated [[wiki/midnight-readiness-lessons|Midnight lessons]] with actual indexed deployment/storage failure, installed password-policy evidence and independently reproduced LevelDB read collision. Corrected source serializes readback; 281 source tests pass. Live recovery, Grok source approval and runtime admission remain pending. No source/claim assessment or sprint acceptance promoted.
 
 ## [2026-09-10] save | Local Midnight readiness and reviewer timing
 

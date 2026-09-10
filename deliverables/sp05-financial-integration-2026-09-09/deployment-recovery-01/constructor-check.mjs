@@ -1,0 +1,22 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
+const exec='/home/charl/Moriarty/.worktrees/sp05-financial-integration';
+const out='/home/charl/Moriarty/.worktrees/sp05-deadline-review/deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-observation.json';
+const nm='/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
+const {loadProvenFinancialContract}=await import(exec+'/experiments/moriarty-midnight-financial/ledger/proven-assets.mjs');
+const ledger=await import(nm+'/@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs');
+const {ContractExecutable}=await import(nm+'/@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs');
+const {makeContractExecutableRuntime,exitResultOrError}=await import(nm+'/@midnight-ntwrk/midnight-js-types/dist/index.mjs');
+const {NodeZkConfigProvider}=await import(nm+'/@midnight-ntwrk/midnight-js-node-zk-config-provider/dist/index.mjs');
+const sdk=await import(nm+'/@midnight-ntwrk/wallet-sdk/dist/index.js');
+const {setNetworkId}=await import(nm+'/@midnight-ntwrk/midnight-js-network-id/dist/index.mjs');setNetworkId('undeployed');
+const base='/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03';const p=JSON.parse(readFileSync(base+'/plan.json'));const roles=JSON.parse(readFileSync(base+'/roles.json'));const b=x=>Uint8Array.from(Buffer.from(x,'hex'));
+const seed=Buffer.from(readFileSync(p.wallet.seedFile,'utf8').trim(),'hex');const hd=sdk.HDWallet.fromSeed(seed);seed.fill(0);if(hd.type!=='seedOk')throw Error('KEY_DERIVATION');const k=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal]).deriveKeysAt(0);hd.hdWallet.clear();if(k.type!=='keysDerived')throw Error('KEY_DERIVATION');const zs=ledger.ZswapSecretKeys.fromSeed(k.keys[sdk.Roles.Zswap]);const keystore=sdk.createKeystore(k.keys[sdk.Roles.NightExternal],'undeployed');const signingBytes=keystore.getSecretKey();const signingKey=ledger.signingKeyFromBip340(signingBytes);signingBytes.fill(0);
+const loaded=await loadProvenFinancialContract({case:'loan',...p.build});const bindings=JSON.parse(readFileSync(exec+'/experiments/moriarty-midnight-financial/custody/bindings.json')).loan;
+try{
+ const runtime=makeContractExecutableRuntime(new NodeZkConfigProvider(loaded.zkConfigPath),{coinPublicKey:zs.coinPublicKey,signingKey});const ce=ContractExecutable.make(loaded.compiledContract);const result=exitResultOrError(await runtime.runPromiseExit(ce.initialize({},b(roles.firstSecret),b(roles.secondSecret),{bytes:b(p.roles.firstAddress)},{bytes:b(p.roles.secondAddress)},b(bindings.programDigest),b(p.networkTag))));
+ const raw=readFileSync(exec+'/deliverables/sp05-financial-integration-2026-09-09/local-execution-04/run-public/public-transactions/0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c.bin');const tx=ledger.Transaction.deserialize('signature','proof','binding',raw);const action=[...tx.intents.values()].flatMap(x=>x.actions)[0];const reconstructed=ledger.ContractState.deserialize(result.public.contractState.serialize());
+ const observation={observedAt:new Date().toISOString(),status:'CONSTRUCTOR_REPLAY_ONLY',stateBytesEqual:Buffer.from(reconstructed.serialize()).equals(Buffer.from(action.initialState.serialize())),emptyPrivateState:isDeepStrictEqual(result.private.privateState,{}),signingKeyUnchanged:result.private.signingKey===signingKey,authorityMatchesOriginal:action.initialState.maintenanceAuthority.committee.length===1&&action.initialState.maintenanceAuthority.committee[0]===keystore.getPublicKey()&&action.initialState.maintenanceAuthority.threshold===1&&action.initialState.maintenanceAuthority.counter===0n,operations:action.initialState.operations(),initialStateSha256:createHash('sha256').update(action.initialState.serialize()).digest('hex'),reconstructedStateSha256:createHash('sha256').update(reconstructed.serialize()).digest('hex'),zswapLocalStateFieldNames:Object.keys(result.private.zswapLocalState),networkRequests:0,walletConstructed:false,transactionConstructed:false,proofsGenerated:false,scope:'Actual retained compiled constructor with original private inputs in memory; no private state/result emitted, no store write, no chain/current-state/finality acceptance'};
+ writeFileSync(out,JSON.stringify(observation,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify(observation));
+}finally{loaded.cleanup();}

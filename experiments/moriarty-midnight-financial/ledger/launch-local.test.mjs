@@ -88,3 +88,17 @@ test('storage password preflight applies actual SDK policy before wallet work an
   assert.equal(await api.readLocalStoragePassword(file),accepted);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+function recoveryLaunchPlan(){
+ const p=plan(),old='/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03';
+ p.build.receiptSha256='51ee2d4d60216464a9ace67966ba0ab253699844187aeb5652b46dc6e9ca5bf7';p.networkTag='e72f7a21a0397844563b4206f887b779ffa0d937c2d1b2339441faa1f08b9846';p.limits.submissions=3;
+ p.wallet={seedFile:'/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed',stateDirectory:'/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2',expectedAddress:'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9'};
+ p.roles={firstAddress:'9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb',secondAddress:'c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e',secretsFile:old+'/roles.json'};
+ p.existingDeployment={schema:'moriarty.existing-local-loan/1',transactionFile:'/public/native.bin',transactionHash:'0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c',identifiers:['00b6140ece5793d57c801512e8e7c9e2ec2687e19b1c48a1f56167f2cd1dfc9e66','00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9'],txId:'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9',contractAddress:'ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713',buildReceiptSha256:p.build.receiptSha256,networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,sourceAllocationId:'sp05-local-loan-03',sourceResultFile:'/public/result.json',sourceResultSha256:'bf1d456714ea134ad7e320849b3841088b2a2a352435d75ced65854c48031f54',sourcePrivateStateDirectory:old+'/contract-state',inspectionDirectory:'/private/inspection',destinationDirectory:p.privateState.directory};
+ return p;
+}
+test('closed recovery launch keeps original wallet and roles and permits exactly three submissions',()=>{
+ const p=recoveryLaunchPlan(),copy=api.validateLocalLaunchPlan(p);assert.deepEqual(copy,p);assert.notEqual(copy,p);
+ for(const mutate of [p=>p.kind='swap',p=>p.limits.submissions=4,p=>p.wallet.seedFile='/other/seed',p=>p.wallet.stateDirectory='/other/snapshots',p=>p.wallet.expectedAddress='mn_addr_undeployed1other',p=>p.roles.firstAddress=h,p=>p.roles.secondAddress=h,p=>p.existingDeployment.inspectionDirectory=p.wallet.stateDirectory+'/copy',p=>p.existingDeployment.inspectionDirectory=p.outputDirectory,p=>p.privateState.passwordFile=p.wallet.stateDirectory+'/password',p=>p.existingDeployment.privateState={},p=>p.existingDeployment.txId=h]){const x=recoveryLaunchPlan();mutate(x);assert.throws(()=>api.validateLocalLaunchPlan(x));}
+ const ordinary=plan();ordinary.limits.submissions=3;assert.throws(()=>api.validateLocalLaunchPlan(ordinary));
+});

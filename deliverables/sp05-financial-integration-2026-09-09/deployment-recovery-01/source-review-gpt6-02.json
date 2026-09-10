@@ -1,0 +1,241 @@
+{
+  "schema": "moriarty.independent-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/recovery_source_audit",
+    "host": "Codex",
+    "role": "Fresh delegated independent source reviewer; no candidate implementation edits"
+  },
+  "reviewedAt": "2026-09-10T06:16:11.345606+00:00",
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-candidate-02.json",
+  "candidateSha256": "775602ba647dad30cbc54b24af1c35b18a36016d35b668abfdd7d22dfcc507ce",
+  "worktreeHead": "5e75fca57c7b71dedb6ba0cf4963196cb59372ae",
+  "verdict": "PASS_SCOPED",
+  "findings": [],
+  "scope": "Correction review of exact candidate02 plus carried-forward inspection of the byte-identical files from independent candidate01 review. Source-only approval of the single retained local loan recovery implementation; no runtime admission, recovery execution or financial/network/proof acceptance.",
+  "priorReview": {
+    "path": "source-review-gpt6-01.json",
+    "sha256": "72ae1581583b417fc370a2d7ec603d73ed4d826622e95d4ec182a31452704e5e",
+    "verdict": "CHANGES_REQUESTED",
+    "candidateSha256": "5b756c5a12c2a0cd2948494728479b4bd557028d057013731bc11315e67587c0"
+  },
+  "resolvedFindings": [
+    {
+      "id": "R1",
+      "status": "RESOLVED_IN_SOURCE",
+      "file": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs",
+      "line": 105,
+      "detail": "Parallel Promise.all readbacks replaced by await provider.get followed by await provider.getSigningKey. The installed SDK withSubLevel finally awaits sublevel and Level closure before returning, so the first operation releases the database lock before the next begins. Original roundtrip equality assertion, constructor-minted WeakSet membership and single-use consumption checks are unchanged. The independently run pinned-provider synthetic reproduction already demonstrated sequential success and concurrent LEVEL_LOCKED failure.",
+      "evidence": "source-review-gpt6-level-lock-reproduction-01.json"
+    }
+  ],
+  "checks": [
+    {
+      "name": "candidate-integrity",
+      "result": "PASS",
+      "detail": "Exact candidate digest and all 23 listed file hashes matched on entry and at review issuance. 19 of the original 20 file hashes are unchanged."
+    },
+    {
+      "name": "bounded-production-delta",
+      "result": "PASS",
+      "detail": "Compared current recover-deployment.mjs with source-snapshots-01/recover-deployment.mjs. Only production change is replacing the parallel readbacks with two sequential awaits and an explanatory comment. Snapshot digest equals the candidate01 original."
+    },
+    {
+      "name": "unchanged-sdk",
+      "result": "PASS",
+      "detail": "Rehashed all nine SDK files inspected during the independent original review; each remains byte-identical."
+    },
+    {
+      "name": "syntax",
+      "result": "PASS",
+      "detail": "Ran node --check experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs successfully."
+    },
+    {
+      "name": "exclusive-read-regression-source",
+      "result": "PASS_SCOPED",
+      "detail": "Inspected constructor-restore-check-02.mjs: fake provider holds an exclusive read flag across an awaited delay and throws on overlap. It calls the actual constructor/restore helpers, checks call order, successful restoration and reuse rejection. This script requires original private inputs and was not executed by this reviewer."
+    },
+    {
+      "name": "retained-constructor-observation",
+      "result": "OBSERVED_NOT_RERUN",
+      "detail": "Inspected hash-bound constructor-restore-observation-02.json reporting exclusive readback success, exact constructor state, unchanged signing identity, empty private/Zswap result, reuse rejection and zero actual store writes. This remains scoped author observation."
+    },
+    {
+      "name": "retained-full-regression",
+      "result": "OBSERVED_NOT_RERUN",
+      "detail": "Read ledger-regression-03.tap terminal summary: 281 tests, 281 pass, 0 failures. Source tests are not financial acceptance."
+    },
+    {
+      "name": "prior-production-path-review",
+      "result": "PASS_SCOPED",
+      "detail": "All other source conclusions in review01 carry forward on exact unchanged bytes: public gate before seed and repeated in integration; complete serialized native/history/current-state equality; constructor-only reconstruction; copied-root metadata-only inspection; strict wallet/spent-input/DUST gate; isolated destination; restore before recovery driver; no redeploy/find shortcut; exactly three new submissions; preserved original charges; explicit source-test scope and bounded cleanup."
+    }
+  ],
+  "candidateFileChecks": {
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": {
+      "expected": "41ee556e766680973fcf596973f1ba8ddf85aa5dab060305f925bec01f0de124",
+      "actual": "41ee556e766680973fcf596973f1ba8ddf85aa5dab060305f925bec01f0de124",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs": {
+      "expected": "0fcf2aab9a59af2d75607134efb1b486b8416cd806a92a042469a79c0ae9642e",
+      "actual": "0fcf2aab9a59af2d75607134efb1b486b8416cd806a92a042469a79c0ae9642e",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": {
+      "expected": "af5fc81f9a18313ce0e27dfd0c99ab5fbb1d09fd1809f672f22f3c30c441c524",
+      "actual": "af5fc81f9a18313ce0e27dfd0c99ab5fbb1d09fd1809f672f22f3c30c441c524",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs": {
+      "expected": "e4ee4342ecfae20e602ecfec50b83396d9f442771ef58880aa2e727354427ddf",
+      "actual": "e4ee4342ecfae20e602ecfec50b83396d9f442771ef58880aa2e727354427ddf",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": {
+      "expected": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba",
+      "actual": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs": {
+      "expected": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0",
+      "actual": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": {
+      "expected": "17ad0eaabd966059bfa26ec5a2c4f83d8aa44cd90f3b1382f3c2920c5fd3ce41",
+      "actual": "17ad0eaabd966059bfa26ec5a2c4f83d8aa44cd90f3b1382f3c2920c5fd3ce41",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs": {
+      "expected": "ffdd62f53ddf18264b7da06349973672f7e41e1bef90618326c39166ddb76e3a",
+      "actual": "ffdd62f53ddf18264b7da06349973672f7e41e1bef90618326c39166ddb76e3a",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": {
+      "expected": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+      "actual": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs": {
+      "expected": "8637a685b900b4754faa28874e47a3637d575a29767d032c6d0a638601babfcc",
+      "actual": "8637a685b900b4754faa28874e47a3637d575a29767d032c6d0a638601babfcc",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs": {
+      "expected": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+      "actual": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md": {
+      "expected": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+      "actual": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": {
+      "expected": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+      "actual": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": {
+      "expected": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "actual": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": {
+      "expected": "3b8e02c306309f5f09a59c2eb2e919383621a6bdd85f856717817bb881815a04",
+      "actual": "3b8e02c306309f5f09a59c2eb2e919383621a6bdd85f856717817bb881815a04",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": {
+      "expected": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+      "actual": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": {
+      "expected": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "actual": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "matches": true
+    },
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": {
+      "expected": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+      "actual": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md": {
+      "expected": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+      "actual": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation.json": {
+      "expected": "b16136d4ddf6d8a5d6e15efe83ec3a48fe28e3a9965f9273f7252a289d04356f",
+      "actual": "b16136d4ddf6d8a5d6e15efe83ec3a48fe28e3a9965f9273f7252a289d04356f",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-02.mjs": {
+      "expected": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+      "actual": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-02.json": {
+      "expected": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+      "actual": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+      "matches": true
+    },
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-review-gpt6-level-lock-reproduction-01.json": {
+      "expected": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+      "actual": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+      "matches": true
+    }
+  },
+  "unchangedOriginalFiles": [
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation.json"
+  ],
+  "inspectedSdkSha256": {
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-level-private-state-provider/dist/index.mjs": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/level/index.js": "14d1713253123c99a384aa66e79f871144216fe84d3b0362c3cf9f2ee3da7aa4",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/classic-level/index.js": "6958a1d105be7eca861e18d244a42b3a6e7fc28c3cf9dbe6dd24720c529a171c",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-js/dist/esm/effect/ContractExecutable.js": "173260f05faa4e61a60f54db774e8576ae7bfdd6e535a5105ca2b2c3b7bcc2a6",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-facade/dist/index.js": "bb63f609499432f54b7db424d124d7dc80ad7a466af3c39cf7033f52b33f7562",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/ShieldedWallet.js": "efbd1de674b939c56b3f74b753c3b01689afbc0cd47c8b2328e043e0e8fd4066",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js": "703c24afc04f7e6907a3fe581a429985512fa514ca58b377580200c687d828f0",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js": "6122952c8d140f4421edd2ad41eb648706c5c4341eb91e79bfb78a0461938a02",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs": "23a1883b796fbea037817ae0a7e0f5ed3c072a7d30974154a8de917893cd7f2f"
+  },
+  "evidenceSha256": {
+    "constructor-restore-check-02.mjs": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+    "constructor-restore-observation-02.json": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+    "source-review-gpt6-level-lock-reproduction-01.json": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+    "ledger-regression-03.tap": "c31143d7e6c5d95578d4a49e19b7eb61e00d9e6c743575cf7942cfa22ddaa9b1"
+  },
+  "limitations": [
+    "This verdict is limited to exact candidate02 source; it does not admit actual recovery, services, new private-store writes, proofs, transactions or a resource allocation.",
+    "No original seed, role-secret, wallet snapshot or private-store contents were read by this reviewer. No wallet, network or actual recovery operation ran.",
+    "The prior independent real-provider reproduction used only a temporary synthetic fixture; no production constructor-issued result was persisted by this reviewer.",
+    "Actual current-chain canonical state, original metadata-only store inspection, synchronized spent-input exclusion and full available DUST cap remain unperformed runtime gates.",
+    "No new empirical constructor check using private inputs was run during this correction review; retained observations are explicitly scoped.",
+    "Deadline races and reported incomplete containment retain the original outer-process requirement. No complete transitive dependency or infrastructure audit is claimed.",
+    "Fresh Grok review and any runtime/resource decision remain separate requirements."
+  ],
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

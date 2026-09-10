@@ -96,3 +96,41 @@ After the SDK independently queries the indexer during balancing, the launcher c
 This change responds to the actual local deployment rejection recorded in `deliverables/sp05-financial-integration-2026-09-09/local-execution-02/RESULT.md`. The original allocation remains consumed. Source tests do not authorize a new run or establish ledger acceptance.
 
 Storage passwords must pass the installed `midnight-js-utils` validator before wallet restore or any transaction. Length alone is insufficient: random lowercase hexadecimal passwords fail its character-class rule. The launcher pins and calls the SDK policy directly, returning only a closed error on rejection. Provision a random password that passes that exact validator; do not change an existing deployment's stored password or reset its private files. Successful ledger deployment followed by a storage failure requires separate recovery of that deployment, with its transaction and charges retained.
+
+## Recover the retained local loan
+
+The optional `existingDeployment` field selects recovery of the one deployment
+identified by `EXISTING_LOAN` in `recover-deployment.mjs`. This mode requires
+`kind: "loan"` and exactly three submissions. The ordinary launch remains four.
+Recovery never prepares or submits another deployment.
+
+The closed object contains `schema: "moriarty.existing-local-loan/1"`,
+`transactionFile`, `transactionHash`, `identifiers`, `txId`, `contractAddress`,
+`buildReceiptSha256`, `networkTag`, `expectedProtocolVersion`,
+`sourceAllocationId`, `sourceResultFile`, `sourceResultSha256`,
+`sourcePrivateStateDirectory`, `inspectionDirectory`, and `destinationDirectory`.
+Identity fields must match the retained deployment and source allocation.
+Paths are absolute. The source database and role file remain the originals;
+the inspection directory must not exist, and the destination must be empty.
+The launcher requires the original wallet paths and participant addresses.
+
+Before creating recovery files, the admitted operational procedure must call
+`preflightLocalRecovery(plan)`. The launcher repeats this public gate before
+reading seed or role material. It verifies native bytes, genesis, the original
+transaction's canonical finality, and exact serialized state at the historical
+block and recent finalized indexed head. No state normalization is permitted.
+
+Integration repeats the public gate, synchronizes the existing wallet, rejects
+spent original inputs and any pending DUST, and checks available DUST against
+the entire new allocation cap. It executes only the unchanged constructor,
+requiring exact public state, empty private state, unchanged signing key and no
+Zswap effects. It copies and inspects the original stopped database, requiring
+only account-scoped encryption metadata. It then writes and reads back the
+verified result in the new store before invoking the driver. Failed copies and
+partial new stores remain evidence; they are never silently reused or reset.
+
+The driver observes and compares the historical deployment once, then submits
+`initialize`, `accrue`, and `settle`. The deployment's original charge stays in
+its original allocation. The new allocation charges only new submissions and
+never resumes the stopped journal. Source tests and constructor reconstruction
+do not establish recovery, local financial acceptance or Preview acceptance.

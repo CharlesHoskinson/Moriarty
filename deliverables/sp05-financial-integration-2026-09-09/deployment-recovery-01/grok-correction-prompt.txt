@@ -1,0 +1,430 @@
+Corrected design responds to your five findings. Explicit publicbeforeseed+exactno-normalizer statecomparison, no restorecallback and no driverbeforefullyrestoredroundtrips, fixedclosedrecovery3vsordinary4plan, actualstrictwalletsync and oldDustNullifierabsence/remainingbalance checks now required. Installed SDK DustWalletState.balance(Date) returnsbigint; DustLocalState.findUtxoByNullifier plus pendingDust enable spentoldnote checks. Actual offlineconstructor confirms fullstatebyteequality, emptyprivate and noZswap effects without transactionconstruct. Please vote on revised exact design, not old implementation which is explicitly to be changed. No allocation/runtime authorization.
+Independent Grok4.6 high consequential design vote under user AFK majority authority. Existing native deployment indexedSUCCESS but invalidhex password prevented private persistence. Source05 preflight fixed and published. We must recover actual existing contract, not redeploy or reset original files/journals/charges. Review attached concrete proposed recovery design plus current source. Native ContractDeploy constructor randomizes address; cannot reprepare to match. Proposal verifies finalized originalnative/state, current uninitialized exactstate/authority/verifier/capability bindings, copiedoldstore metadataonly, samekeys/originalroles, newisolated validpasswordstore, roundtrip then3remainingcalls. It proposes explicit internally assembled existingDeployment branch, never fake deploy SDK or findDeployedContract newkey fallback. No generic recovery framework. Decide whether design justified/sufficient, identify exact missing gate. No resource allocation/live execution authorized. Return conciseJSON {verdict:APPROVED|CHANGES_REQUESTED,proposalSha256,findings:[],conditions:[],scope,limitations:[]}. No tools/web/delegation,900sallowance.
+
+ProposalSHA256 1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7
+
+FILE deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md SHA256 1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7
+# Proposed recovery of the existing local loan deployment
+
+**Corrected proposal only; supersedes the original unexecuted design, whose votes remain preserved.** No recovery, private-store inspection, wallet operation, service start, transaction, source change, or acceptance is established by this plan. Existing contract: `ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713`; native deployment transaction: `0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c`, observed indexer SUCCESS at height 20313. Canonical finality and full deploy comparison still require verification.
+
+## Smallest implementation
+
+Add one explicit, loan-only `existingDeployment` branch to the existing launch/integration/driver inputs. It binds the original transaction bytes/hash/identifiers, expected address, original build receipt, network genesis/tag, protocol version, original allocation evidence, and new isolated private-store path. Keep the ordinary deployment branch. Recovery must never enter `prepareFinancialDeployment`, `createUnprovenDeployTx`, `deployContract`, or a deployment submission. Do not disguise recovery behind a fake `deployContract` adapter.
+
+1. **Verify before recovering private state.** Retain the existing build and its hashes; use `loadProvenFinancialContract` without compiling. Deserialize the retained native transaction, require canonical reserialization, exact transaction hash and both identifiers, one ContractDeploy at segment 1, and exact address. Run `observeFinalizedStage` against its actual submitted identifier `00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9`. Its node checks must confirm finalized height and canonical block hash independently of indexer SUCCESS. Require exact complete serialized native ContractState equality between retained action.initialState, queried historical state and current finalized state, including data, balances, complete operation set/verifier bytes and authority. No normalizer is authorized; any difference stops. Perform this public/native/finality/current-state phase before reading the seed, deriving HD keys, constructing or restoring any wallet, or writing a recovery Level database. The operational service preflight must also pass this public phase before creating a new private recovery base/password/plan. Repeat the public checks inside the launcher before seed access so a stale preflight receipt cannot bypass them. Verify all three operation verifier keys against the unchanged build. Also query current state at a fresh finalized hash and require it still has the exact uninitialized constructor state, balances and authority; stop if any later transition occurred.
+
+2. **Bind original constructor inputs and identities.** Feed the original roles, networkTag and program binding into the existing financial comparator's deploy stage. It checks payout addresses, both capability commitments, domains, zero initialization fields and other expected public state. Keep original role secrets and wallet identity; derive the original signing key through the existing launcher route and require its verification key to match the retained/current maintenance authority, threshold and counter. A source-bound constructor-only execution may reconstruct the private result using the unchanged generated contract and original inputs; require exactly `{}` and no private-state-producing witness effects. It must not construct a new ContractDeploy. The known original preparation already required its constructor private output to equal `{}`; this is a checked reconstruction, not an arbitrary seed value. Retain only public checks, never secret inputs or reconstructed private content.
+
+3. **Preserve the failed store before any new store write.** Under separately approved recovery, copy the stopped original store to a private evidence snapshot, preserving permissions and a manifest. Inspect only that copy with the pinned Level implementation, because opening Level can change its files. Require exactly the account-scoped salt/version metadata entry and no private-state or signing-key values. The 185-byte WAL and synthetic reproduction do not prove that predicate for the real store. Unexpected keys or unreadable data stop recovery. Preserve the original password, directory, journal and allocation records unchanged. Use a newly created isolated store with a new password that passes the pinned validator; this is a separate destination, not password rotation of the old store.
+
+4. **Restore through the existing provider.** Only after steps 1–3 pass, configure the new `levelPrivateStateProvider` for the same account and contract, call `setContractAddress(address)`, `set('sp05-loan', verifiedConstructorPrivateResult)`, and `setSigningKey(address, verifiedOriginalSigningKey)`. Verify successful round-trip equality in memory without emitting values. Do this before proof/balance/submission, under the fresh recovery allocation and deadline. The production branch must consume a verified internal recovery result, not accept unchecked caller-provided private state.
+
+5. **Continue the existing driver only after restore completes.** In recovery mode, seed `address` and the real deployment identifier from the verified native binding, execute the ordinary deploy observation/comparison as the first recorded stage, then execute existing `initialize`, `accrue`, `settle` calls. Ensure deploy comparison runs exactly once in the stateful comparator. There is no post-deploy restore callback. Integration must finish steps1–4 and both private-state/signing-key round trips before invoking the recovery driver. It then passes a closed internal existingDeployment identity; that branch cannot call any deployment API. The ordinary deploy observation/comparator runs once after the completed restore gate and before initialize. Missing or failed restore prevents driver invocation entirely. Reuse existing `submitCallTx`, proof/balance guards, per-balance freshness checks, stage retention and cleanup. Bind USD_TEST_ASSET to the retained address using existing `rawTokenType` logic, never a newly prepared address.
+
+The fresh allocation permits **three remaining submissions**, with reviewed DUST/gross-debit limits and existing outer containment. The complete financial trace contains four real stages spanning two allocations: historical deployment plus three new calls. Original deployment and earlier unsuccessful-attempt charges remain in their original records and in cumulative resource accounting. Historical observation must not charge a second deployment or refund its first charge. No old stopped reservation journal is resumed or edited. The launch validator must accept a closed existingDeployment object only for this loan recovery and exactly three submissions. That object pins original raw path/hash/both identifiers/address, original build receipt, genesis/tag, protocol, allocation evidence and isolated store location. Ordinary launches remain exactly four submissions and reject recovery fields; unchecked adapters and supplied private-state values remain forbidden.
+
+## Post-inclusion wallet gate
+
+After the public-before-seed gate and original-key reconstruction, restore the original snapshots without changing them and synchronize from the indexer. Before restoring private values or making any call, require all three wallet progress objects to be connected and strictly complete (zero allowed gap), not merely facade isSynced. Decode each original deployment input and require it absent from available/pending unshielded coins. For every retained native dust spend.oldNullifier, require the synchronized DustLocalState.findUtxoByNullifier(oldNullifier) to return undefined and pendingDust to contain no matching old nullifier. Require registered available DUST and dust.balance(at the recent canonical indexed time) >= the entire new allocation DUST cap for the three remaining calls. Missing codec/method/data, present spent input, incomplete sync or insufficient balance stops; no registration/funding/reset/retry. Existing fresh-tip and native-time guards remain active for every new balance/submit. These installed APIs are inspected evidence, not a claim that this wallet already passed them.
+
+The actual constructor-only check now reproduces the full retained native initialState byte-for-byte, verifies original maintenance authority, returns exactly {}, preserves the signing key, and has empty Zswap inputs/outputs and currentIndex0. The implementation must assert these predicates itself using the pinned initialize API and must never construct a ContractDeploy. The observation does not replace current-chain verification or original-store inspection.
+
+## Required tests before runtime authorization
+
+- Offline replay of actual retained deployment bytes establishes address/identifiers and verifier/constructor/authority checks; altered raw bytes, address, role capability, network binding, key, verifier or current initialized state fails before writes.
+- Existing driver with inert providers records the actual old deploy stage and exactly three calls; any deploy/prove/balance/submit during recovery setup fails the test. Old evidence is not rewritten and the comparator counts the historical deployment once.
+- Synthetic copied stores: metadata-only succeeds; any private/signing value, malformed metadata, unexpected account or symlink fails. Original fixture files remain byte-identical. New-store validation and round-trip failure stop before financial operations.
+- Invalid password fails before wallet restore; a valid password permits exact provider set/read in an isolated fixture. No original secret/password appears in output.
+- Finality/indexer mismatch, unavailable original transaction, wrong current state, stale tip, session catch-up, deadline and remaining-budget exhaustion stop without a new transaction. Existing source tests do not replace actual three-stage settlement evidence.
+
+## Source grounds and limitations
+
+Moriarty paths: `ledger/prepare-deployment.mjs:36–46,57–63` binds original constructor output and performs post-success private writes; `run-local.mjs:50–67` currently always deploys before recording; `integrate-local.mjs` currently derives asset colors from prepared address; `receipt.mjs:116–162` performs full native/indexer/node observation; `financial-comparison.mjs:46–103` checks original role capabilities and constructor public state; `launch-local.mjs` derives deployment signing identity from the existing unshielded key. Paths are under `experiments/moriarty-midnight-financial/`.
+
+Pinned installed SDK (4.1.1 contracts/provider, ledger-v8 8.1.0): `ledger-v8/ledger-v8.d.ts:2238–2252` explicitly says constructing ContractDeploy randomizes its address; recover from the retained action instead. `midnight-js-contracts/dist/index.mjs:943–963` exposes constructor initialization and private result; `1782–1794,1873–1900` shows `findDeployedContract` writes private state/key and generates a fresh signing key when missing. It therefore cannot be an unguarded recovery shortcut. Existing `submitCallTx` can use the explicitly restored provider. `verifyContractState:1847–1853` checks local operation verifier keys; it does not by itself verify constructor bindings, authority, absence of later state transitions or finality.
+
+This plan proposes a narrow recovery path for this uninitialized loan only. It does not establish generic resume, lost-secret recovery, a new deployment, Preview acceptance or completed financial settlement. Fresh GPT-6/Grok implementation review and a concrete bounded recovery/resource decision remain necessary before actual recovery writes and service execution.
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-observation-02.json SHA256 548e57f0cd88646729710517a0826281ee14c6836d4d1024a71123cb8cbe607c
+{
+  "observedAt": "2026-09-10T05:31:29.719Z",
+  "status": "CONSTRUCTOR_REPLAY_ONLY",
+  "stateBytesEqual": true,
+  "emptyPrivateState": true,
+  "signingKeyUnchanged": true,
+  "authorityMatchesOriginal": true,
+  "operations": [
+    "accrue",
+    "initialize",
+    "settle"
+  ],
+  "initialStateSha256": "42aac4043fd65583cc2aa8ef87216f313c3da84c85d50f9db333b59725337cf7",
+  "reconstructedStateSha256": "42aac4043fd65583cc2aa8ef87216f313c3da84c85d50f9db333b59725337cf7",
+  "zswapLocalStateFieldNames": [
+    "coinPublicKey",
+    "currentIndex",
+    "inputs",
+    "outputs"
+  ],
+  "noConstructorZswapEffects": true,
+  "constructorZswapCurrentIndex": "0",
+  "networkRequests": 0,
+  "walletConstructed": false,
+  "transactionConstructed": false,
+  "proofsGenerated": false,
+  "scope": "Actual retained compiled constructor with original private inputs in memory; no private state/result emitted, no store write, no chain/current-state/finality acceptance"
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs SHA256 f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6
+import {createHash} from 'node:crypto';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
+import {PINNED_NM} from './providers.mjs';
+
+const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+const requireThat=(ok,message)=>{if(!ok)throw Error(message);};
+export async function loadFinancialContractsSdk() {
+  const root=join(PINNED_NM,'@midnight-ntwrk/midnight-js-contracts');
+  requireThat(JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version==='4.1.1','CONTRACTS_SDK_VERSION');
+  const entry=join(root,'dist/index.mjs');
+  requireThat(sha(readFileSync(entry))==='9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072','CONTRACTS_SDK_BYTES');
+  return import(pathToFileURL(entry).href);
+}
+
+/**
+ * Run the real constructor once and fix its native deployment address BEFORE
+ * allocating asset-specific spending limits. This operation does not prove,
+ * balance, submit or create a wallet. The caller supplies an existing wallet's
+ * public-key accessor and an admitted compiled contract's verifier-key provider.
+ * Private constructor data stays in the single-use closure, never in public.
+ * The adapter submits the exact prepared bytes through pinned SDK submitTx and
+ * follows its submitDeployTx private-state lifecycle after observed success.
+ * An injected SDK is for offline source tests, not a network acceptance claim.
+ */
+export async function prepareFinancialDeployment({deploymentOptions,publicWalletProvider,zkConfigProvider,signingKey,ledger,sdk}) {
+  const options=deploymentOptions;
+  requireThat(options && Object.keys(options).sort().join(',')==='args,compiledContract,initialPrivateState,privateStateId','DEPLOYMENT_OPTIONS_SHAPE');
+  requireThat(['sp05-loan','sp05-swap'].includes(options.privateStateId) && isDeepStrictEqual(options.initialPrivateState,{}),'DEPLOYMENT_PRIVATE_STATE');
+  requireThat(Array.isArray(options.args)&&options.args.length===6&&options.compiledContract,'DEPLOYMENT_CONSTRUCTOR_REQUIRED');
+  requireThat(signingKey!==undefined&&ledger?.Transaction&&ledger?.ContractDeploy,'DEPLOYMENT_NATIVE_BINDINGS_REQUIRED');
+  const compiledContract=options.compiledContract;
+  const fixed={args:structuredClone(options.args),initialPrivateState:{},privateStateId:options.privateStateId};
+  sdk??=await loadFinancialContractsSdk();
+  const create=sdk.createUnprovenDeployTx,submit=sdk.submitTx,call=sdk.submitCallTx;
+  requireThat([create,submit,call].every(fn=>typeof fn==='function'),'DEPLOYMENT_SDK_INTERFACE');
+  const prepared=await create({walletProvider:publicWalletProvider,zkConfigProvider},{compiledContract,...structuredClone(fixed),signingKey});
+  requireThat(prepared?.private?.unprovenTx instanceof ledger.Transaction,'PREPARED_NATIVE_TRANSACTION_REQUIRED');
+  const raw=Buffer.from(prepared.private.unprovenTx.serialize());
+  const native=ledger.Transaction.deserialize('signature','pre-proof','pre-binding',raw);
+  requireThat(Buffer.from(native.serialize()).equals(raw),'PREPARED_NONCANONICAL_TRANSACTION');
+  const actions=[...native.intents.values()].flatMap(intent=>intent.actions);
+  const contractAddress=prepared.public?.contractAddress;
+  requireThat(typeof contractAddress==='string'&&/^[a-f0-9]{64}$/.test(contractAddress)&&actions.length===1&&actions[0] instanceof ledger.ContractDeploy&&actions[0].address===contractAddress,'PREPARED_DEPLOYMENT_IDENTITY');
+  const initialPrivateState=structuredClone(prepared.private.initialPrivateState),privateSigningKey=prepared.private.signingKey;
+  requireThat(isDeepStrictEqual(initialPrivateState,{})&&privateSigningKey===signingKey,'PREPARED_PRIVATE_STATE_CHANGED');
+  let consumed=false;
+  const driverSdk=Object.freeze({
+    async deployContract(providers,requested) {
+      requireThat(!consumed,'PREPARED_DEPLOYMENT_ALREADY_CONSUMED');
+      requireThat(requested && Object.keys(requested).sort().join(',')==='args,compiledContract,initialPrivateState,privateStateId'&&requested.compiledContract===compiledContract&&isDeepStrictEqual({args:requested.args,initialPrivateState:requested.initialPrivateState,privateStateId:requested.privateStateId},fixed),'PREPARED_DEPLOYMENT_OPTIONS_CHANGED');
+      for(const name of ['setContractAddress','set','setSigningKey'])requireThat(typeof providers?.privateStateProvider?.[name]==='function','DEPLOYMENT_PRIVATE_PROVIDER');
+      consumed=true; // Submission ambiguity is terminal for this exact handle.
+      const unprovenTx=ledger.Transaction.deserialize('signature','pre-proof','pre-binding',raw);
+      const finalized=await submit(providers,{unprovenTx});
+      requireThat(finalized?.status==='SucceedEntirely','DEPLOYMENT_NOT_SUCCEEDED');
+      requireThat(typeof finalized.txId==='string'&&finalized.txId.length>0,'DEPLOYMENT_MISSING_TRANSACTION_ID');
+      providers.privateStateProvider.setContractAddress(contractAddress);
+      await providers.privateStateProvider.set(fixed.privateStateId,initialPrivateState);
+      await providers.privateStateProvider.setSigningKey(contractAddress,privateSigningKey);
+      return {deployTxData:{public:{contractAddress,txId:finalized.txId}}};
+    },
+    submitCallTx:call,
+  });
+  return Object.freeze({public:Object.freeze({contractAddress,unprovenTransactionSha256:sha(raw),scope:'prepared-only'}),driverSdk});
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/run-local.mjs SHA256 3976c02556e567be05625a783f902f6d10cb53150e85cea7d184cb02a142c2dc
+import {readFileSync} from 'node:fs';
+import {loadFinancialContractsSdk} from './prepare-deployment.mjs';
+
+const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
+const BASE=1n<<64n;
+function mul(a,b) {return {aLo:a%BASE,aHi:a/BASE,bLo:b%BASE,bHi:b/BASE,lo:(a%BASE)*(b%BASE)%BASE,carry:(a%BASE)*(b%BASE)/BASE};}
+function div(n,d) {const q=n/d;return {q,r:n%d,product:mul(d,q)};}
+function bytes(hex) {if(typeof hex!=='string'||!/^[0-9a-f]{64}$/.test(hex))throw Error('INVALID_PUBLIC_BINDING');return Uint8Array.from(Buffer.from(hex,'hex'));}
+function secret(x) {if(!(x instanceof Uint8Array)||x.length!==32)throw Error('INVALID_ROLE_SECRET');return Uint8Array.from(x);}
+function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)throw Error('INVALID_CURRENT_TIME');return t;}
+
+
+/**
+ * Executes the fixed local I2 sequence. Caller must supply the reviewed native
+ * observer and full financial comparator; neither can be omitted. No CLI or
+ * public dispatch is exposed until the complete integration is reviewed.
+ * verifyStage must return an object with status PASS; every other outcome stops.
+ * This function owns provider cleanup even when preflight fails. Failures expose
+ * error.publicResult with known public IDs, reservations and cleanup disposition.
+ * Incomplete containment cannot return PASS. SDK private results are not copied.
+ */
+export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk}) {
+  if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
+  const stages=[],transactionIds=new Set();let address,failure,cleanup;
+  try {
+    if(network!=='undeployed')throw Error('LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK');
+    if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
+    if(typeof observe!=='function'||typeof verifyStage!=='function'||typeof now!=='function')throw Error('OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED');
+    if(!providers||typeof providers.execute!=='function'||typeof providers.cleanup!=='function'||typeof providers.stop!=='function'||typeof providers.getState!=='function'||typeof providers.getExecutionBinding!=='function')throw Error('GUARDED_PROVIDERS_REQUIRED');
+    const first=secret(roles.firstSecret),second=secret(roles.secondSecret);
+    const firstAddress=bytes(roles.firstAddress),secondAddress=bytes(roles.secondAddress);
+    if(roles.firstAddress===roles.secondAddress)throw Error('DISTINCT_FINANCIAL_PARTICIPANTS_REQUIRED');
+    const program=bytes(bindings[kind].programDigest),net=bytes(networkTag);
+    const payerAddress=roles.firstAddress;
+    let initialBinding;
+    async function checkBinding() {
+      const observed=await providers.getExecutionBinding();
+      if(observed?.network?.networkId!=='undeployed'||observed.sdkNetworkId!=='undeployed'||observed.payerAddress!==payerAddress)throw Error('LOCAL_EXECUTION_BINDING_MISMATCH');
+      for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']]) {
+        const url=new URL(observed.network[key]);
+        if(url.protocol!==protocol||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password||url.hash)throw Error('LOCAL_EXECUTION_BINDING_ENDPOINT');
+      }
+      const snapshot=JSON.stringify(observed);
+      if(initialBinding!==undefined&&snapshot!==initialBinding)throw Error('LOCAL_EXECUTION_BINDING_CHANGED');
+      initialBinding=snapshot;
+    }
+    await checkBinding();
+    sdk??=await loadFinancialContractsSdk();
+    const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
+    address=deployed.deployTxData.public.contractAddress;bytes(address);
+    async function record(circuitId,txId) {
+      if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
+      transactionIds.add(txId);
+      const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address}));
+      const comparison=await providers.execute('compare:'+circuitId,()=>verifyStage(circuitId,observation));
+      if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
+      stages.push(observation.receipt);
+    }
+    await record('deploy',deployed.deployTxData.public.txId);
+    async function call(circuitId,args) {
+      const result=await providers.execute(circuitId,async()=>{await checkBinding();return sdk.submitCallTx(providers,{compiledContract,contractAddress:address,privateStateId:`sp05-${kind}`,circuitId,args});});
+      await record(circuitId,result.public.txId);
+    }
+    if(kind==='loan') {
+      await call('initialize',[first,program,net,2n,time(now)]);
+      await call('accrue',[first,program,net,0n,2n,time(now),{h0:mul(5000000000n,8n),h1:mul(40000000000n,31n),h2:mul(100n,365n),h3:div(1240000000000n,36500n)}]);
+      await call('settle',[first,program,net,1n,2n,0n,533972602n,time(now),{unused:0n}]);
+    } else {
+      await call('initialize',[second,program,net,3n,time(now)]);
+      await call('swap',[first,program,net,0n,4n,4n,0n,1n,10000n,19700n,time(now),{h0:mul(10000n,997n),h1:mul(9970000n,2000000n),h2:mul(1000000n,1000n),h3:div(19940000000000n,1009970000n)}]);
+      await call('close',[second,program,net,1n,3n,time(now),{unused:0n}]);
+    }
+  } catch(error) {
+    failure=error instanceof Error?error:Error('DRIVER_OPERATION_FAILED');
+    try {providers.stop?.('driver failed');}catch{/* Preserve the first failure. */}
+  } finally {
+    try {
+      const result=await providers.cleanup();
+      cleanup={walletStopped:result?.walletStopped===true,pendingOperations:Number.isSafeInteger(result?.pendingOperations)&&result.pendingOperations>=0?result.pendingOperations:null,containmentComplete:result?.containmentComplete===true};
+    } catch {cleanup={walletStopped:false,pendingOperations:null,containmentComplete:false};}
+  }
+  // Public operational evidence excludes provider reasons, private SDK results and keys.
+  let operationalState;
+  try {
+    const state=providers.getState?.();
+    for(const id of state?.identifiers??[])if(typeof id==='string'&&id)transactionIds.add(id);
+    operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
+  } catch {operationalState={unavailable:true};}
+  const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
+  const publicResult={schema:'moriarty.local-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  if(failure||!contained) {
+    const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
+    error.publicResult=publicResult;throw error;
+  }
+  return publicResult;
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/integrate-local.mjs SHA256 638fe118f1e211cc3c24aed17e81b69800be2c44782b25ac319532979eda556f
+/** Production composition for the fixed local I2 case. No wallet creation or CLI dispatch.
+ * Supplying existing handles transfers cleanup responsibility, including preflight failures.
+ * Execution still requires a separately reviewed launch with outer process containment.
+ */
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {loadProvenFinancialContract} from './proven-assets.mjs';
+import {loadFinancialContractsSdk,prepareFinancialDeployment} from './prepare-deployment.mjs';
+import {PINNED_NM,loadFinancialSdk,initializeFinancialReservations,createFinancialProviders} from './providers.mjs';
+import {observeFinalizedStage} from './receipt.mjs';
+import {createFinancialComparator} from './financial-comparison.mjs';
+import {runLocalFinancialCase} from './run-local.mjs';
+
+const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const bytes=hex=>{requireThat(typeof hex==='string'&&/^[a-f0-9]{64}$/.test(hex),'INTEGRATION_PUBLIC_BYTES');return Uint8Array.from(Buffer.from(hex,'hex'));};
+const PINS={
+  "@midnight-ntwrk/midnight-js-protocol": {
+    "version": "4.1.1",
+    "packageSha256": "bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd",
+    "entries": {
+      "dist/ledger.mjs": "4db121cdee21bb88cecca5dc1433c6d30cc12c1ac1f4c5e40a606440e08ac840"
+    }
+  },
+  "@midnight-ntwrk/ledger-v8": {
+    "version": "8.1.0",
+    "packageSha256": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+    "entries": {
+      "midnight_ledger_wasm_fs.js": "125acbc6327afcf5540e70fe2a42de58af909695fc284a0e663e20a3666d296c",
+      "midnight_ledger_wasm_bg.js": "0fcb6f30ec4c0f894917d516db627d78de5630377bf7918bac08466b894cb716",
+      "midnight_ledger_wasm_bg.wasm": "88ff7c7c47c30138ee8f3a0c8bcbf12dbdcdeba591edebfb955c30d732ea7638"
+    }
+  },
+  "@midnight-ntwrk/compact-runtime": {
+    "version": "0.16.0",
+    "packageSha256": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+    "entries": {
+      "dist/index.js": "c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde"
+    }
+  }
+};
+async function loadNativeRuntime(){
+  for(const [name,pin] of Object.entries(PINS)){
+    const root=join(PINNED_NM,name);
+    requireThat(hash(readFileSync(join(root,'package.json')))===pin.packageSha256,'INTEGRATION_RUNTIME_PACKAGE_PIN');
+    requireThat(JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version===pin.version,'INTEGRATION_RUNTIME_VERSION');
+    for(const [entry,digest] of Object.entries(pin.entries))requireThat(hash(readFileSync(join(root,entry)))===digest,'INTEGRATION_RUNTIME_ENTRY_PIN');
+  }
+  const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+  const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
+  return {ledger,runtime};
+}
+function localEndpoint(value,protocol){
+  const url=new URL(value);
+  requireThat(url.protocol===protocol&&['127.0.0.1','localhost','[::1]'].includes(url.hostname)&&!url.username&&!url.password&&!url.hash,'INTEGRATION_LOCAL_ENDPOINT');
+  return url.href;
+}
+function validDeadline(value){requireThat(Number.isSafeInteger(value)&&value>Date.now(),'INTEGRATION_DEADLINE');}
+/** Read-only local JSON-RPC: one request, no redirects/retries, 64KiB body ceiling. */
+export function createLocalRpc({node,deadlineMs,fetchImpl=globalThis.fetch}){
+  const endpoint=localEndpoint(node,'http:');validDeadline(deadlineMs);requireThat(typeof fetchImpl==='function','RPC_FETCH_REQUIRED');
+  let nextId=0;
+  return async(method,params)=>{
+    requireThat(['chain_getFinalizedHead','chain_getHeader','chain_getBlockHash'].includes(method)&&Array.isArray(params),'RPC_METHOD');
+    requireThat(method==='chain_getFinalizedHead'?params.length===0:method==='chain_getHeader'?params.length===1&&typeof params[0]==='string'&&/^0x[a-f0-9]{64}$/i.test(params[0]):params.length===1&&Number.isSafeInteger(params[0])&&params[0]>=0,'RPC_PARAMS');
+    validDeadline(deadlineMs);const id=++nextId,controller=new AbortController();let timer;
+    const operation=(async()=>{
+      const response=await fetchImpl(endpoint,{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id,method,params}),signal:controller.signal});
+      requireThat(response.ok===true&&response.body,'RPC_HTTP_STATUS');
+      const reader=response.body.getReader(),chunks=[];let size=0;
+      try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>65536){controller.abort();throw Error('RPC_BODY_LIMIT');}chunks.push(Buffer.from(value));}}
+      finally{reader.releaseLock();}
+      const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      requireThat(body?.jsonrpc==='2.0'&&body.id===id&&Object.hasOwn(body,'result')&&!Object.hasOwn(body,'error'),'RPC_RESPONSE');
+      return body.result;
+    })();
+    try{return await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('RPC_DEADLINE'));},Math.min(deadlineMs-Date.now(),2147483647));})]);}
+    finally{clearTimeout(timer);controller.abort();}
+  };
+}
+const realDependencies={loadAssets:loadProvenFinancialContract,loadContractsSdk:loadFinancialContractsSdk,loadProviderSdk:loadFinancialSdk,loadNativeRuntime,prepareDeployment:prepareFinancialDeployment,initializeReservations:initializeFinancialReservations,createProviders:createFinancialProviders,createComparator:createFinancialComparator,observe:observeFinalizedStage,driver:runLocalFinancialCase,fetch:globalThis.fetch};
+async function stopWallet(wallet){
+  if(typeof wallet?.stop!=='function')return {walletStopped:false,pendingOperations:null,containmentComplete:false};
+  let timer;try{await Promise.race([Promise.resolve().then(()=>wallet.stop()),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('WALLET_CLEANUP_TIMEOUT')),5000);})]);return {walletStopped:true,pendingOperations:0,containmentComplete:false};}
+  catch{return {walletStopped:false,pendingOperations:null,containmentComplete:false};}finally{clearTimeout(timer);}
+}
+/**
+ * limits.grossByLogicalAsset uses USD_TEST_ASSET (loan), ASSET_A/ASSET_B (swap).
+ * onStage must durably retain the closed comparison and return {status:'RECORDED',stage,txId}.
+ * Explicit complete inert adapters are permitted only with sourceTestOnly:true;
+ * those invocations can never return execution/network/proof acceptance.
+ */
+export async function integrateLocalFinancialCase(options){
+  let loaded,providers,driverStarted=false,driverResult,financialComparison,failure,cleanup,phase='preflight';
+  const summaries=[],pending=new Set();
+  const wallet=options?.walletContext?.wallet;
+  let sourceTestOnly=false,limits,assetBindings,buildBinding;
+  try{
+    requireThat(options&&typeof wallet?.stop==='function','EXISTING_WALLET_CLEANUP_REQUIRED');
+    sourceTestOnly=options.sourceTestOnly===true;
+    requireThat(options.adapters===undefined||sourceTestOnly,'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST');
+    requireThat(!sourceTestOnly||options.adapters,'COMPLETE_INERT_ADAPTERS_REQUIRED');
+    const deps=sourceTestOnly?options.adapters:realDependencies;
+    for(const key of Object.keys(realDependencies))requireThat(typeof deps[key]==='function','COMPLETE_INERT_ADAPTERS_REQUIRED');
+    const {kind}=options;requireThat(kind==='loan'||kind==='swap','INTEGRATION_KIND');
+    requireThat(options.build&&Object.keys(options.build).sort().join(',')==='receiptPath,receiptSha256,sourceManifestHash','BUILD_RECEIPT_BINDING_REQUIRED');
+    bytes(options.build.receiptSha256);bytes(options.build.sourceManifestHash);
+    buildBinding=Object.freeze({...options.build});
+    requireThat(Number.isSafeInteger(options.expectedProtocolVersion)&&options.expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
+    requireThat(typeof options.onStage==='function'&&typeof options.onEvent==='function'&&typeof options.now==='function','REVIEWED_STAGE_EVENT_TIME_CALLBACKS_REQUIRED');
+    const expectedProtocolVersion=options.expectedProtocolVersion,onStage=options.onStage,onEvent=options.onEvent,now=options.now;
+    const network=Object.freeze({...options.networkConfig});requireThat(network.networkId==='undeployed','INTEGRATION_LOCAL_NETWORK');
+    for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']])localEndpoint(network[key],protocol);
+    requireThat(options.roles&&Object.keys(options.roles).sort().join(',')==='firstAddress,firstSecret,secondAddress,secondSecret','ROLE_BINDING_FIELDS');
+    const roles={...options.roles,firstSecret:Uint8Array.from(options.roles?.firstSecret??[]),secondSecret:Uint8Array.from(options.roles?.secondSecret??[])};
+    requireThat(roles.firstSecret.length===32&&roles.secondSecret.length===32,'ROLE_SECRETS_REQUIRED');
+    bytes(roles.firstAddress);bytes(roles.secondAddress);requireThat(roles.firstAddress!==roles.secondAddress,'DISTINCT_PARTICIPANTS_REQUIRED');bytes(options.networkTag);
+    requireThat(options.deploymentSigningKey!==undefined,'EXISTING_DEPLOYMENT_SIGNING_KEY_REQUIRED');
+    const logicalNames=kind==='loan'?['USD_TEST_ASSET']:['ASSET_A','ASSET_B'];
+    limits={...options.limits};const logical={...limits.grossByLogicalAsset};
+    requireThat(Object.keys(logical).sort().join('|')===logicalNames.sort().join('|'),'LOGICAL_ASSET_LIMITS');
+    for(const cap of Object.values(logical))requireThat(typeof cap==='bigint'&&cap>=0n,'LOGICAL_ASSET_CAP');
+    requireThat(!Object.hasOwn(limits,'grossByAsset'),'ALREADY_BOUND_ASSET_LIMITS_FORBIDDEN');
+    validDeadline(limits.deadlineMs);
+    requireThat(Number.isSafeInteger(limits.submissions)&&limits.submissions>0&&typeof limits.dustFee==='bigint'&&limits.dustFee>=0n,'FINANCIAL_LIMITS');
+    const checkDeadline=()=>validDeadline(limits.deadlineMs);
+    async function within(label,fn){
+      checkDeadline();let timer;const operation=Promise.resolve().then(()=>{checkDeadline();return fn();});pending.add(operation);operation.then(()=>pending.delete(operation),()=>pending.delete(operation));
+      try{const value=await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('INTEGRATION_DEADLINE_'+label)),Math.min(limits.deadlineMs-Date.now(),2147483647));})]);checkDeadline();return value;}finally{clearTimeout(timer);}
+    }
+    const sdk=await within('runtime',()=>deps.loadProviderSdk()),{ledger,runtime}=await within('native',()=>deps.loadNativeRuntime());
+    const payer=ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey());
+    const checkBinding=()=>{checkDeadline();requireThat(sdk.getNetworkId()==='undeployed'&&ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey())===roles.firstAddress,'INTEGRATION_WALLET_NETWORK_BINDING');};
+    checkBinding();requireThat(payer===roles.firstAddress,'INTEGRATION_PAYER');
+    phase='load-assets';loaded=await within('assets',()=>deps.loadAssets({case:kind,...buildBinding}));
+    const assertFresh=()=>{checkBinding();loaded.assertFresh();};assertFresh();
+    const sourceBindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'))[kind];
+    const program=bytes(sourceBindings.programDigest),networkTag=options.networkTag;
+    const FreshZkProvider=class extends sdk.NodeZkConfigProvider{constructor(path){super(path);return new Proxy(this,{get(target,key){const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;return(...args)=>{assertFresh();const result=value.apply(target,args);return result?.then?result.then(value=>{assertFresh();return value;}):result;};}});}};
+    const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
+    const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
+    phase='prepare-deployment';
+    const prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)]},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
+    const contractAddress=prepared.public.contractAddress;bytes(contractAddress);assertFresh();
+    const domains=kind==='loan'?{USD_TEST_ASSET:sourceBindings.usdDomain}:{ASSET_A:sourceBindings.assetADomain,ASSET_B:sourceBindings.assetBDomain};
+    const grossByAsset={};assetBindings={};
+    for(const name of Object.keys(domains)){const color=runtime.rawTokenType(bytes(domains[name]),contractAddress);bytes(color);requireThat(!Object.hasOwn(grossByAsset,color),'ASSET_COLOR_COLLISION');grossByAsset[color]=logical[name];assetBindings[name]=color;}
+    delete limits.grossByLogicalAsset;limits=Object.freeze({...limits,grossByAsset:Object.freeze(grossByAsset)});
+    const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
+    phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
+    phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
+    const rpc=createLocalRpc({node:network.node,deadlineMs:limits.deadlineMs,fetchImpl:deps.fetch});
+    const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+    const freshDriverSdk={deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
+    phase='driver';driverStarted=true;
+    let driverFailure;
+    try{
+      driverResult=await deps.driver({kind,network:'undeployed',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshDriverSdk,
+        observe:({circuitId,txId,contractAddress})=>{assertFresh();requireThat(contractAddress===prepared.public.contractAddress,'PREPARED_OBSERVED_ADDRESS_MISMATCH');return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress,decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
+        verifyStage:async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const publicSummary=structuredClone(summary);const stored=await onStage(structuredClone(publicSummary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(publicSummary);return summary;}});
+    }catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
+    finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}
+    driverResult={...driverResult,assetBindings};
+  }catch(error){failure=error instanceof Error?error:Error('INTEGRATION_FAILED');}
+  finally{
+    if(!driverStarted || !driverResult?.cleanup){
+      if(providers){try{cleanup=await providers.cleanup();}catch{cleanup=await stopWallet(wallet);}}
+      else cleanup=await stopWallet(wallet);
+    }else cleanup=driverResult?.cleanup;
+    if(loaded){try{await loaded.cleanup();}catch{failure??=Error('ASSET_LOADER_CLEANUP_FAILED');}}
+  }
+  const publicResult={schema:'moriarty.local-financial-integration/1',status:failure?(driverResult?.status??'FAILED'):sourceTestOnly?'SOURCE_TEST_ONLY':driverResult.status,kind:['loan','swap'].includes(options?.kind)?options.kind:null,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,
+    build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,
+    scope:'Fixed I2 composition; source adapters and incomplete containment never establish financial network acceptance'};
+  if(failure){failure.publicIntegrationResult=publicResult;throw failure;}
+  return publicResult;
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "moriarty.deployment-recovery-driver-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/password_preflight_review",
+    "independentOfImplementation": true
+  },
+  "reviewedAt": "2026-09-10T05:44:51.400548+00:00",
+  "verdict": "PASS_SCOPED",
+  "scope": "Source-only review of the explicit historical-deployment branch in run-local.mjs and its inert test definitions; launcher/integration/helpers and operational recovery are excluded.",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "sha256": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs",
+      "sha256": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0"
+    }
+  ],
+  "diffSha256": "49642b997ee30c4a05f76dbaf27d12d2a5fb2c3128dbbb4112d6c3d89f0c4c42",
+  "proposal": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md",
+    "sha256": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7"
+  },
+  "findings": [],
+  "observations": [
+    "Recovery is loan-only and requires exactly two own data properties on a plain object: lowercase 64-hex contractAddress and lowercase 66-hex txId. Extra string/symbol/non-enumerable keys, accessors, incompatible prototypes and malformed values are rejected. Valid strings are captured before the first await, preventing later caller mutation from replacing the selected identity.",
+    "The recovery branch assigns address and the historical transaction identifier directly; it never enters providers.execute(deploy) or reads/calls sdk.deployContract. It does not introduce any preparation, find, restore callback, native deployment construction or private-store operation.",
+    "The shared record(deploy) observes and verifies the historical deployment exactly once before initialize. Only PASS proceeds. The unchanged loan sequence then calls initialize, accrue and settle with the retained address and sp05-loan state ID.",
+    "The original loan/swap deployment branch and financial call arguments remain unchanged. Existing network/payer binding checks, per-stage comparisons, stop behavior, provider cleanup and incomplete-containment rejection remain active.",
+    "Historical txId is added before observation; observation/comparison failure retains known address and identifier, emits no completed stage, invokes no new financial call and stops/cleans up the owned providers.",
+    "The test definitions cover forbidden deployment API getters, exact event ordering and three calls, public historical identity retention, malformed identities/accessors, swap rejection, mutation across awaits, historical observation/comparator failure and incomplete containment, alongside existing ordinary driver cases."
+  ],
+  "checks": [
+    {
+      "check": "Read complete two-file candidate and git diff; independently hash exact bytes",
+      "performedByReviewer": true,
+      "status": "PASS"
+    },
+    {
+      "command": "git diff --check -- experiments/moriarty-midnight-financial/ledger/run-local.mjs experiments/moriarty-midnight-financial/ledger/run-local.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0
+    },
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/run-local.test.mjs",
+      "performedByReviewer": false,
+      "reportedByAuthor": {
+        "passed": 40
+      },
+      "note": "Not rerun under this no-runtime source-review assignment; suite definitions were inspected."
+    }
+  ],
+  "integrationObligations": [
+    "The driver identity shape is not a finality, current-state, original-store, constructor or restore attestation. Production integration must construct it internally only after all corrected-design gates and both restore round trips succeed, and must prevent driver invocation on any failure.",
+    "The driver emits exactly three call operations in this branch but does not itself enforce a three-submission reservation. Launcher/integration must enforce the closed recovery plan, native binding, exactly-three cap and cumulative allocation accounting with the guarded provider.",
+    "Production observe and verifyStage must bind the historical identity to original native bytes, perform required real observation/comparison and durable stage retention exactly once. This driver test uses inert observers and cannot establish those predicates."
+  ],
+  "limitations": [
+    "Only these two source files and their diff are approved within this verdict. Root launcher/integration/helper implementation is pending and was not audited here; the overall recovery source is not complete or callable by virtue of this receipt.",
+    "No source edits, test/runtime execution, wallet, service, compiler, real private-state read, recovery write or transaction was performed.",
+    "Guarded status retains unresolved operational history; this review does not clear it. Full integration tests, independent final source review, Grok review and separate resource/execution admission remain required."
+  ],
+  "sourceComplete": false,
+  "recoveryCallable": false,
+  "executionAdmitted": false,
+  "recoveryWritesAuthorized": false,
+  "newAllocationAuthorized": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

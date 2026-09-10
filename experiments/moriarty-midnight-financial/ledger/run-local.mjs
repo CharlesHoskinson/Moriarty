@@ -19,7 +19,7 @@ function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)t
  * error.publicResult with known public IDs, reservations and cleanup disposition.
  * Incomplete containment cannot return PASS. SDK private results are not copied.
  */
-export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk}) {
+export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment}) {
   if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
   const stages=[],transactionIds=new Set();let address,failure,cleanup;
   try {
@@ -27,6 +27,18 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
     if(typeof observe!=='function'||typeof verifyStage!=='function'||typeof now!=='function')throw Error('OBSERVATION_AND_FINANCIAL_COMPARATOR_REQUIRED');
     if(!providers||typeof providers.execute!=='function'||typeof providers.cleanup!=='function'||typeof providers.stop!=='function'||typeof providers.getState!=='function'||typeof providers.getExecutionBinding!=='function')throw Error('GUARDED_PROVIDERS_REQUIRED');
+    // Integration supplies this identity only after public verification and private
+    // restore round trips. These shape checks do not establish those predicates.
+    let recovery;
+    if(existingDeployment!==undefined) {
+      if(kind!=='loan')throw Error('EXISTING_DEPLOYMENT_REQUIRES_LOAN');
+      if(existingDeployment===null||typeof existingDeployment!=='object'||Object.getPrototypeOf(existingDeployment)!==Object.prototype)throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const fields=Object.getOwnPropertyDescriptors(existingDeployment),keys=Reflect.ownKeys(fields);
+      if(keys.length!==2||!keys.includes('contractAddress')||!keys.includes('txId')||keys.some(key=>!Object.hasOwn(fields[key],'value')))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      const contractAddress=fields.contractAddress.value,txId=fields.txId.value;
+      if(typeof contractAddress!=='string'||!/^[0-9a-f]{64}$/.test(contractAddress)||typeof txId!=='string'||!/^[0-9a-f]{66}$/.test(txId))throw Error('INVALID_EXISTING_DEPLOYMENT');
+      recovery={contractAddress,txId};
+    }
     const first=secret(roles.firstSecret),second=secret(roles.secondSecret);
     const firstAddress=bytes(roles.firstAddress),secondAddress=bytes(roles.secondAddress);
     if(roles.firstAddress===roles.secondAddress)throw Error('DISTINCT_FINANCIAL_PARTICIPANTS_REQUIRED');
@@ -46,8 +58,15 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     }
     await checkBinding();
     sdk??=await loadFinancialContractsSdk();
-    const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
-    address=deployed.deployTxData.public.contractAddress;bytes(address);
+    let deployTxId;
+    if(recovery) {
+      address=recovery.contractAddress;
+      deployTxId=recovery.txId;
+    } else {
+      const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
+      address=deployed.deployTxData.public.contractAddress;bytes(address);
+      deployTxId=deployed.deployTxData.public.txId;
+    }
     async function record(circuitId,txId) {
       if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
       transactionIds.add(txId);
@@ -56,7 +75,7 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
       if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
       stages.push(observation.receipt);
     }
-    await record('deploy',deployed.deployTxData.public.txId);
+    await record('deploy',deployTxId);
     async function call(circuitId,args) {
       const result=await providers.execute(circuitId,async()=>{await checkBinding();return sdk.submitCallTx(providers,{compiledContract,contractAddress:address,privateStateId:`sp05-${kind}`,circuitId,args});});
       await record(circuitId,result.public.txId);

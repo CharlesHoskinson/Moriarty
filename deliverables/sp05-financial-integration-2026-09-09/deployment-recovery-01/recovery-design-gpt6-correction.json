@@ -1,0 +1,129 @@
+{
+  "schema": "moriarty.deployment-recovery-design-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/password_preflight_review",
+    "independentDesignVote": true,
+    "implementationAudited": false
+  },
+  "reviewedAt": "2026-09-10T05:35:57.313097+00:00",
+  "proposalPath": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md",
+  "proposalSha256": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+  "priorReview": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-gpt6.json",
+    "sha256": "20adcb0e688c80b8f29cc3bcbd2bafc1aebf0ba41d9d61b6fe7f6879068ba136",
+    "preserved": true
+  },
+  "verdict": "APPROVE_DESIGN_ONLY",
+  "vote": "approve",
+  "scope": "Corrected exact single-loan recovery proposal, including the explicit pendingDust-empty approval condition below. No implementation, allocation, private write, runtime or acceptance approval.",
+  "findings": [],
+  "resolvedDesignFindings": [
+    {
+      "originalSeverity": "high",
+      "issue": "Public/native/finality/current-state checks did not explicitly precede seed and recovery writes.",
+      "resolution": "Corrected step 1 places the complete public gate before seed/HD wallet and Level writes, adds an operational gate before new recovery base/password/plan creation, and repeats it inside the launcher to reject stale preflight receipts."
+    },
+    {
+      "originalSeverity": "high",
+      "issue": "Representation normalization left an open equality exception.",
+      "resolution": "The corrected proposal requires complete serialized native ContractState byte equality across retained initial, historical and current finalized state, including all operations and authority. Any difference stops; no normalizer is authorized."
+    },
+    {
+      "originalSeverity": "high",
+      "issue": "Private restore could be a post-deploy callback reachable after driver start.",
+      "resolution": "Integration must finish private-state and signing-key writes and both round trips before invoking the recovery driver. There is no restore callback or fake deployment adapter; the driver receives only a closed verified identity and cannot reach a deploy API."
+    },
+    {
+      "originalSeverity": "medium",
+      "issue": "Old snapshots did not establish post-inclusion wallet state.",
+      "resolution": "Added connected, strictly complete progress for all three child wallets; original spent unshielded-input absence; original DUST nullifier absence from native state and pending list; registered DUST and full-cap balance at checked indexed time. Approval additionally requires an empty entire pendingDust list as described below."
+    },
+    {
+      "originalSeverity": "medium",
+      "issue": "Four-submission ordinary launch and constructor reconstruction remained insufficiently explicit.",
+      "resolution": "A closed, identity-bound loan-only recovery object requires exactly three submissions; ordinary mode remains exactly four and rejects recovery fields. Pinned initialize must reconstruct the empty private result with original key, exact public state and no constructor Zswap effects without creating ContractDeploy."
+    }
+  ],
+  "approvalConditions": [
+    {
+      "id": "RECOVERY-PENDING-DUST-EMPTY",
+      "required": true,
+      "text": "Before using dust.balance(recentCanonicalIndexedTime) to establish coverage of the entire new DUST cap, require pendingDust to be an array with length exactly zero, in addition to testing every historical oldNullifier absent. Missing data or any pending entry stops. Parent explicitly accepted this stricter implementation condition during review. DustWalletState.balance delegates to native walletBalance, while available-coin selection separately excludes pendingDust nonces; this review does not assume that the native balance excludes pending spends."
+    },
+    {
+      "id": "RECOVERY-ORDER-AND-EXACTNESS",
+      "required": true,
+      "text": "Implement the corrected gates in their stated order; exact equality, full namespace copied-store inspection, original identity binding, exclusive isolated destination, successful round trips, no-deploy reachability and exact submission count must receive adversarial offline coverage. No private writes or driver invocation may be justified by a source-test adapter or unchecked recovery identity."
+    },
+    {
+      "id": "RECOVERY-SEPARATE-EXECUTION",
+      "required": true,
+      "text": "Keep the original store/password/snapshots/journal and all prior charges intact. Fresh independent exact implementation reviews and a separate concrete bounded allocation/recovery decision are required before operational execution; this vote grants none of those permissions."
+    }
+  ],
+  "observations": [
+    {
+      "kind": "source fact",
+      "text": "Inspected SyncProgress.isStrictlyComplete calls isCompleteWithin with zero gap and requires isConnected. The implementation must check all three child progress objects, not facade isSynced alone."
+    },
+    {
+      "kind": "source fact",
+      "text": "Installed ledger declares DustLocalState.findUtxoByNullifier(nullifier) returning QualifiedDustOutput or undefined. DustWalletState.balance(time) delegates to getWalletBalance, which invokes native walletBalance(time). CoreWallet stores pendingDust nullifiers and available-coin selection filters pending nonces separately."
+    },
+    {
+      "kind": "experiment observation reported by parent",
+      "text": "constructor-observation-02 records byte-identical initial/reconstructed state hashes, empty private state, unchanged signing key, original authority match, empty Zswap inputs/outputs and index zero. The reviewed constructor-check-02 script uses ContractExecutable.initialize and does not construct a new deployment. The reviewer did not rerun the script or read its private inputs."
+    },
+    {
+      "kind": "inference",
+      "text": "These corrections make the recovery gate explicit across launcher, integration and driver boundaries and preserve the four-real-stage financial trace across two allocations. They establish a reviewable implementation design, not evidence that the live chain or real private store currently satisfies it."
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/grok-result.json",
+      "sha256": "b4516ca23b25fa8b6056d940d55f6cb557509baaf7f14e9f2e2d8b989f28edbf"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-check-02.mjs",
+      "sha256": "7f4696d04ccc90da2f746ecdd13e614dd8068f8ca8359476f7c8ddfe59830230"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-observation-02.json",
+      "sha256": "548e57f0cd88646729710517a0826281ee14c6836d4d1024a71123cb8cbe607c"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "sha256": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-abstractions/dist/SyncProgress.js",
+      "sha256": "d63fb740f6b5ecb8cf7c7ab2dfcd59ced8635710edf3a106565299dfcdc913d9"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js",
+      "sha256": "6122952c8d140f4421edd2ad41eb648706c5c4341eb91e79bfb78a0461938a02"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/v1/CoinsAndBalances.js",
+      "sha256": "b2e6e462c0709cc3f3945e1e0c16f6fcbf45ce8e58c70b22e2e11b300373fc37"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/v1/CoreWallet.js",
+      "sha256": "ff6b955ac1cda4bd5590d897df67e31facdf0b70b1622e76212ebe4c497b42b0"
+    }
+  ],
+  "limitations": [
+    "Source inspection only in this correction review. No service, network, wallet, source change, private real-state access, constructor replay or copied-store inspection was performed.",
+    "Historical/current canonical equality, full deploy comparison and metadata-only real-store predicate remain runtime gates, not facts established by constructor replay.",
+    "The constructor observation supports constructor feasibility only. Its script and result are separately hash-bound; it is not a source-bound full implementation receipt or an independent replay by this reviewer.",
+    "Guarded status still reports unresolved operational history. This review does not clear that state, establish Grok agreement or grant execution."
+  ],
+  "newAllocationAuthorized": false,
+  "recoveryWritesAuthorized": false,
+  "executionAdmitted": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

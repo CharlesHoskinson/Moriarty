@@ -22,7 +22,7 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-10T04:45:00Z
+updated_at: 2026-09-10T06:23:18Z
 ---
 
 # Current research context
@@ -51,4 +51,4 @@ The [TypeScript-style language report and PL checklist](../deliverables/language
 
 [Security-token report and asset transformations](../deliverables/security-token-transformations-2026-09-09/README.md): SRC-0110 recommends explicit assets, claims, encumbrances and operation-specific authority. Define the model in SP01, types and reductions/K in SP02–03, servicing/DeFi behavior in SP07–08, and history/composition/conformance in SP06/SP09–12. Preserve the current admitted SP05 loan/swap work; test each later supported profile on Docker then Preview. The eight new cases are proposals; report citations and standards status remain unverified.
 
-[[wiki/midnight-readiness-lessons|Local readiness lessons]]: actual loan deployment rejected stale DUST time. Source repair checks fresh indexed data and native timestamps. Prior charges and wallet identity remain; Preview financial acceptance is open.
+[[wiki/midnight-readiness-lessons|Local readiness lessons]]: stale-DUST rejection was followed by an indexed deployment and local storage failure. Source recovery preserves its identity and serializes actual-provider readbacks; live recovery and Preview financial acceptance remain open.

@@ -6,12 +6,15 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
 import {loadProvenFinancialContract} from './proven-assets.mjs';
 import {loadFinancialContractsSdk,prepareFinancialDeployment} from './prepare-deployment.mjs';
 import {PINNED_NM,loadFinancialSdk,initializeFinancialReservations,createFinancialProviders} from './providers.mjs';
 import {observeFinalizedStage} from './receipt.mjs';
 import {createFinancialComparator} from './financial-comparison.mjs';
 import {runLocalFinancialCase} from './run-local.mjs';
+import {EXISTING_LOAN,validateExistingLoanPlan,readExistingLoanInputs,verifyExistingLoanPublic,reconstructExistingLoan,assertRecoveryWallet,restoreExistingLoanPrivate} from './recover-deployment.mjs';
+import {inspectFailedLoanStore,assertEmptyRecoveryStore} from './recover-store.mjs';
 
 const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -81,6 +84,28 @@ export function createLocalRpc({node,deadlineMs,fetchImpl=globalThis.fetch}){
   };
 }
 const realDependencies={loadAssets:loadProvenFinancialContract,loadContractsSdk:loadFinancialContractsSdk,loadProviderSdk:loadFinancialSdk,loadNativeRuntime,prepareDeployment:prepareFinancialDeployment,initializeReservations:initializeFinancialReservations,createProviders:createFinancialProviders,createComparator:createFinancialComparator,observe:observeFinalizedStage,driver:runLocalFinancialCase,fetch:globalThis.fetch};
+/** Fixed read-only public gate. No seed, wallet, new private files or store writes.
+ * The launcher invokes this before reading wallet material; integration repeats it.
+ */
+export async function preflightLocalRecovery(plan){
+  const recovery=validateExistingLoanPlan(plan.existingDeployment,plan),deadlineMs=plan.limits.deadlineMs;
+  validDeadline(deadlineMs);let loaded;
+  try{
+    const {ledger}=await loadNativeRuntime(),sdk=await loadFinancialSdk();
+    requireThat(plan.networkConfig.networkId==='undeployed','RECOVERY_PUBLIC_NETWORK');sdk.setNetworkId('undeployed');
+    for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:']])localEndpoint(plan.networkConfig[key],protocol);
+    const {raw}=readExistingLoanInputs(recovery,ledger);
+    loaded=await loadProvenFinancialContract({case:'loan',...plan.build});
+    const rpc=createLocalRpc({node:plan.networkConfig.node,deadlineMs});
+    requireThat(await rpc('chain_getBlockHash',[0])==='0x'+recovery.networkTag,'RECOVERY_PUBLIC_GENESIS');
+    const {waitForLocalTip}=await import('./local-tip.mjs');
+    const tip=await waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs,exactFinality:true});
+    const provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
+    const result=await verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip});
+    loaded.assertFresh();validDeadline(deadlineMs);return result;
+  }finally{if(loaded)await loaded.cleanup();}
+}
+const realRecoveryDependencies={publicCheck:preflightLocalRecovery,reconstruct:reconstructExistingLoan,inspectStore:inspectFailedLoanStore,checkDestination:assertEmptyRecoveryStore,restore:restoreExistingLoanPrivate,checkWallet:assertRecoveryWallet};
 async function stopWallet(wallet){
   if(typeof wallet?.stop!=='function')return {walletStopped:false,pendingOperations:null,containmentComplete:false};
   let timer;try{await Promise.race([Promise.resolve().then(()=>wallet.stop()),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('WALLET_CLEANUP_TIMEOUT')),5000);})]);return {walletStopped:true,pendingOperations:0,containmentComplete:false};}
@@ -104,6 +129,14 @@ export async function integrateLocalFinancialCase(options){
     requireThat(!sourceTestOnly||options.adapters,'COMPLETE_INERT_ADAPTERS_REQUIRED');
     const deps=sourceTestOnly?options.adapters:realDependencies;
     for(const key of Object.keys(realDependencies))requireThat(typeof deps[key]==='function','COMPLETE_INERT_ADAPTERS_REQUIRED');
+    requireThat(options.recoveryAdapters===undefined||sourceTestOnly,'INTEGRATION_RECOVERY_ADAPTERS_REQUIRE_SOURCE_TEST');
+    requireThat(options.existingDeployment===undefined,'INTEGRATION_USE_CLOSED_RECOVERY_PLAN');
+    if(options.recoveryPlan!==undefined)validateExistingLoanPlan(options.recoveryPlan.existingDeployment,options.recoveryPlan);
+    const recoveryPlan=options.recoveryPlan===undefined?undefined:structuredClone(options.recoveryPlan);
+    const recovery=recoveryPlan===undefined?undefined:validateExistingLoanPlan(recoveryPlan.existingDeployment,recoveryPlan);
+    const recoveryDeps=sourceTestOnly?options.recoveryAdapters:realRecoveryDependencies;
+    if(recovery)for(const key of Object.keys(realRecoveryDependencies))requireThat(typeof recoveryDeps?.[key]==='function','COMPLETE_INERT_RECOVERY_ADAPTERS_REQUIRED');
+    else requireThat(options.recoveryAdapters===undefined,'INTEGRATION_RECOVERY_PLAN_REQUIRED');
     const {kind}=options;requireThat(kind==='loan'||kind==='swap','INTEGRATION_KIND');
     requireThat(options.build&&Object.keys(options.build).sort().join(',')==='receiptPath,receiptSha256,sourceManifestHash','BUILD_RECEIPT_BINDING_REQUIRED');
     bytes(options.build.receiptSha256);bytes(options.build.sourceManifestHash);
@@ -126,6 +159,12 @@ export async function integrateLocalFinancialCase(options){
     validDeadline(limits.deadlineMs);
     requireThat(Number.isSafeInteger(limits.submissions)&&limits.submissions>0&&typeof limits.dustFee==='bigint'&&limits.dustFee>=0n,'FINANCIAL_LIMITS');
     const checkDeadline=()=>validDeadline(limits.deadlineMs);
+    if(recovery){
+      requireThat(kind===recoveryPlan.kind&&isDeepStrictEqual(buildBinding,recoveryPlan.build)&&isDeepStrictEqual(network,recoveryPlan.networkConfig)&&options.networkTag===recoveryPlan.networkTag&&expectedProtocolVersion===recoveryPlan.expectedProtocolVersion,'RECOVERY_INTEGRATION_BINDING');
+      requireThat(roles.firstAddress===recoveryPlan.roles.firstAddress&&roles.secondAddress===recoveryPlan.roles.secondAddress&&options.walletContext.unshieldedKeystore.getBech32Address().toString()===recoveryPlan.wallet.expectedAddress,'RECOVERY_INTEGRATION_ROLES');
+      requireThat(options.privateStateConfig&&Object.keys(options.privateStateConfig).sort().join(',')==='midnightDbName,privateStateStoreName,privateStoragePasswordProvider'&&options.privateStateConfig.midnightDbName===recovery.destinationDirectory&&options.privateStateConfig.privateStateStoreName==='sp05-loan','RECOVERY_INTEGRATION_STORE');
+      requireThat(limits.allocationId===recoveryPlan.limits.allocationId&&limits.deadlineMs===recoveryPlan.limits.deadlineMs&&limits.submissions===3&&limits.dustFee===BigInt(recoveryPlan.limits.dustFee)&&logical.USD_TEST_ASSET===BigInt(recoveryPlan.limits.grossByLogicalAsset.USD_TEST_ASSET)&&limits.reservationStatePath===join(recoveryPlan.outputDirectory,'reservations.json'),'RECOVERY_INTEGRATION_LIMITS');
+    }
     async function within(label,fn){
       checkDeadline();let timer;const operation=Promise.resolve().then(()=>{checkDeadline();return fn();});pending.add(operation);operation.then(()=>pending.delete(operation),()=>pending.delete(operation));
       try{const value=await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('INTEGRATION_DEADLINE_'+label)),Math.min(limits.deadlineMs-Date.now(),2147483647));})]);checkDeadline();return value;}finally{clearTimeout(timer);}
@@ -141,24 +180,37 @@ export async function integrateLocalFinancialCase(options){
     const FreshZkProvider=class extends sdk.NodeZkConfigProvider{constructor(path){super(path);return new Proxy(this,{get(target,key){const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;return(...args)=>{assertFresh();const result=value.apply(target,args);return result?.then?result.then(value=>{assertFresh();return value;}):result;};}});}};
     const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
     const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
-    phase='prepare-deployment';
-    const prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)]},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
-    const contractAddress=prepared.public.contractAddress;bytes(contractAddress);assertFresh();
+    const constructorArgs=[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)];
+    let prepared,verifiedPrivate;
+    if(recovery){
+      phase='recovery-public';const checked=await within('recovery-public',()=>recoveryDeps.publicCheck(recoveryPlan));
+      phase='recovery-wallet';const synced=await within('recovery-sync',()=>wallet.waitForSyncedState());
+      recoveryDeps.checkWallet({synced,binding:checked.binding,timestampMs:checked.tip.timestampMs,dustCap:limits.dustFee});checkDeadline();
+      phase='recovery-constructor';verifiedPrivate=await within('recovery-constructor',()=>recoveryDeps.reconstruct({compiledContract:loaded.compiledContract,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),coinPublicKey:publicWalletProvider.getCoinPublicKey(),signingKey:options.deploymentSigningKey,args:constructorArgs,ledger}));
+      phase='recovery-store';await within('recovery-store',()=>recoveryDeps.inspectStore({sourceDirectory:recovery.sourcePrivateStateDirectory,inspectionDirectory:recovery.inspectionDirectory,accountId:options.walletContext.unshieldedKeystore.getBech32Address().toString()}));
+    }else{
+      phase='prepare-deployment';
+      prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:constructorArgs},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
+    }
+    const contractAddress=recovery?EXISTING_LOAN.contractAddress:prepared.public.contractAddress;bytes(contractAddress);assertFresh();
     const domains=kind==='loan'?{USD_TEST_ASSET:sourceBindings.usdDomain}:{ASSET_A:sourceBindings.assetADomain,ASSET_B:sourceBindings.assetBDomain};
     const grossByAsset={};assetBindings={};
     for(const name of Object.keys(domains)){const color=runtime.rawTokenType(bytes(domains[name]),contractAddress);bytes(color);requireThat(!Object.hasOwn(grossByAsset,color),'ASSET_COLOR_COLLISION');grossByAsset[color]=logical[name];assetBindings[name]=color;}
     delete limits.grossByLogicalAsset;limits=Object.freeze({...limits,grossByAsset:Object.freeze(grossByAsset)});
     const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
+    if(recovery){phase='recovery-destination';recoveryDeps.checkDestination(recovery.destinationDirectory);checkDeadline();}
     phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
     phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
+    if(recovery){phase='recovery-restore';await within('recovery-restore',()=>recoveryDeps.restore(providers.privateStateProvider,verifiedPrivate));}
     const rpc=createLocalRpc({node:network.node,deadlineMs:limits.deadlineMs,fetchImpl:deps.fetch});
     const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
-    const freshDriverSdk={deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
+    const freshDriverSdk=recovery?{submitCallTx(...args){assertFresh();return contractsSdk.submitCallTx(...args);}}:{deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
     phase='driver';driverStarted=true;
     let driverFailure;
     try{
       driverResult=await deps.driver({kind,network:'undeployed',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshDriverSdk,
-        observe:({circuitId,txId,contractAddress})=>{assertFresh();requireThat(contractAddress===prepared.public.contractAddress,'PREPARED_OBSERVED_ADDRESS_MISMATCH');return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress,decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
+        ...(recovery?{existingDeployment:{contractAddress,txId:EXISTING_LOAN.txId}}:{}),
+        observe:({circuitId,txId,contractAddress:observedAddress})=>{assertFresh();requireThat(observedAddress===contractAddress,'PREPARED_OBSERVED_ADDRESS_MISMATCH');return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress:observedAddress,decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
         verifyStage:async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const publicSummary=structuredClone(summary);const stored=await onStage(structuredClone(publicSummary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(publicSummary);return summary;}});
     }catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
     finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}

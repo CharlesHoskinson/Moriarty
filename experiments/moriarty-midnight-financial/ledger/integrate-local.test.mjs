@@ -138,3 +138,87 @@ test('protocol and reviewed callbacks remain captured after asynchronous prepara
   await assert.rejects(integrateLocalFinancialCase(f.options),/DRIVER_CLEANUP_INCOMPLETE/);
   assert.equal(observed,4);assert.equal(f.summaries.length,4);
 });
+
+const oldLoan={contractAddress:'ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713',transactionHash:'0af6f3ed8960b1a7d1d5e8c204d9e133255e784dd2c5fad1f160c5212d02bd3c',txId:'00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9',identifiers:['00b6140ece5793d57c801512e8e7c9e2ec2687e19b1c48a1f56167f2cd1dfc9e66','00959c51e7d62ee9160bf1396ce0ab52f26757a7c5adec669cb083d5a8787d1de9'],buildReceiptSha256:'51ee2d4d60216464a9ace67966ba0ab253699844187aeb5652b46dc6e9ca5bf7'};
+function recoveryFixture(){
+ const f=fixture(),o=f.options,original='/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03',networkTag='e72f7a21a0397844563b4206f887b779ffa0d937c2d1b2339441faa1f08b9846';
+ o.networkTag=networkTag;o.build.receiptSha256=oldLoan.buildReceiptSha256;o.limits.submissions=3;o.limits.reservationStatePath='/inert/recovery-output/reservations.json';
+ o.privateStateConfig={midnightDbName:'/inert/recovery-destination',privateStateStoreName:'sp05-loan',privateStoragePasswordProvider:()=> 'synthetic-password'};
+ o.walletContext.unshieldedKeystore.getBech32Address=()=>({toString:()=> 'synthetic-wallet'});
+ o.walletContext.wallet.waitForSyncedState=async()=>{f.calls.push('recovery-sync');return {syntheticSync:true};};
+ const recovery={schema:'moriarty.existing-local-loan/1',transactionFile:'/inert/original.bin',...oldLoan,networkTag,expectedProtocolVersion:1000000,sourceAllocationId:'sp05-local-loan-03',sourceResultFile:'/inert/original-result.json',sourceResultSha256:'bf1d456714ea134ad7e320849b3841088b2a2a352435d75ced65854c48031f54',sourcePrivateStateDirectory:original+'/contract-state',inspectionDirectory:'/inert/recovery-inspection',destinationDirectory:o.privateStateConfig.midnightDbName};
+ o.recoveryPlan={kind:'loan',networkTag,networkConfig:{...o.networkConfig},expectedProtocolVersion:1000000,build:{...o.build},roles:{firstAddress:first,secondAddress:second,secretsFile:original+'/roles.json'},wallet:{expectedAddress:'synthetic-wallet'},limits:{...o.limits,dustFee:'100',grossByLogicalAsset:{USD_TEST_ASSET:'20'}},privateState:{directory:o.privateStateConfig.midnightDbName,passwordFile:'/inert/new-password'},outputDirectory:'/inert/recovery-output',existingDeployment:recovery};
+ const privateResult={syntheticConstructorResult:true},privateProvider={syntheticPrivateProvider:true};
+ o.recoveryAdapters={
+  checkDestination:path=>{f.calls.push('recovery-destination');assert.equal(path,o.privateStateConfig.midnightDbName);},
+  publicCheck:async plan=>{f.calls.push('recovery-public');assert.deepEqual(plan,o.recoveryPlan);return {binding:{syntheticBinding:true},tip:{timestampMs:1700000000000}};},
+  checkWallet:input=>{f.calls.push('recovery-wallet');assert.deepEqual(input,{synced:{syntheticSync:true},binding:{syntheticBinding:true},timestampMs:1700000000000,dustCap:100n});},
+  reconstruct:async input=>{f.calls.push('recovery-constructor');assert.equal(input.args.length,6);assert.equal(input.signingKey,o.deploymentSigningKey);return privateResult;},
+  inspectStore:async input=>{f.calls.push('recovery-store');assert.deepEqual(input,{sourceDirectory:original+'/contract-state',inspectionDirectory:recovery.inspectionDirectory,accountId:'synthetic-wallet'});},
+  restore:async(provider,result)=>{f.calls.push('recovery-restore');assert.equal(provider,privateProvider);assert.equal(result,privateResult);return {status:'RESTORED'};},
+ };
+ f.adapters.prepareDeployment=()=>{throw Error('PREPARE_FORBIDDEN');};
+ f.adapters.loadContractsSdk=async()=>new Proxy({submitCallTx:async(_p,input)=>{f.calls.push(input.circuitId);assert.equal(input.contractAddress,oldLoan.contractAddress);return {public:{txId:'inert-'+input.circuitId}};}},{get(target,key){if(['deployContract','createUnprovenDeployTx','findDeployedContract'].includes(key))throw Error('DEPLOY_API_FORBIDDEN');return target[key];}});
+ f.adapters.loadNativeRuntime=async()=>({ledger:{addressFromKey:()=>first},runtime:{rawTokenType:(_domain,a)=>{assert.equal(a,oldLoan.contractAddress);f.calls.push('derive-color');return color;}}});
+ const create=f.adapters.createProviders;
+ f.adapters.createProviders=async input=>({...await create(input),privateStateProvider:privateProvider,getState:()=>({reservedSubmissions:3,reservedDustFee:10n,reservedGrossByAsset:{[color]:10n},identifiers:[]}),cleanup:async()=>{f.calls.push('provider-cleanup');return {walletStopped:true,pendingOperations:0,containmentComplete:true};}});
+ f.adapters.driver=async input=>{f.calls.push('driver');assert.deepEqual(input.existingDeployment,{contractAddress:oldLoan.contractAddress,txId:oldLoan.txId});assert.ok(f.calls.includes('recovery-restore'));return runLocalFinancialCase(input);};
+ return f;
+}
+test('recovery composition restores before real driver, observes historical deploy once and submits only three calls',async()=>{
+ const f=recoveryFixture(),out=await integrateLocalFinancialCase(f.options);
+ assert.equal(out.status,'SOURCE_TEST_ONLY');assert.equal(out.financialAcceptance,false);assert.equal(out.networkAcceptance,false);assert.equal(out.proofAcceptance,false);
+ const order=['recovery-public','recovery-sync','recovery-wallet','recovery-constructor','recovery-store','derive-color','recovery-destination','initialize-allocation','providers','recovery-restore','driver','observe:deploy','compare:deploy','record:deploy','initialize','observe:initialize','compare:initialize','record:initialize','accrue','observe:accrue','compare:accrue','record:accrue','settle','observe:settle','compare:settle','record:settle','provider-cleanup','asset-cleanup'];
+ assert.deepEqual(f.calls.filter(x=>x!=='fresh'&&x!=='load-assets'),order);
+ assert.deepEqual(out.driver.transactionIds,[oldLoan.txId,'inert-initialize','inert-accrue','inert-settle']);assert.equal(out.driver.operationalState.reservedSubmissions,3);assert.equal(out.comparisons.length,4);assert.equal(out.driver.contractAddress,oldLoan.contractAddress);assert.deepEqual(out.assetBindings,{USD_TEST_ASSET:color});
+ assert.ok(!JSON.stringify(out).includes('PRIVATE-DEPLOYMENT-CANARY'));
+});
+for(const [gate,phase] of [['publicCheck','recovery-public'],['checkWallet','recovery-wallet'],['reconstruct','recovery-constructor'],['inspectStore','recovery-store'],['restore','recovery-restore']])test(`recovery ${gate} failure stops before driver and cleans owned resources`,async()=>{
+ const f=recoveryFixture();f.options.recoveryAdapters[gate]=()=>{throw Error('SYNTHETIC_GATE_FAILURE');};
+ await assert.rejects(integrateLocalFinancialCase(f.options),e=>{assert.equal(e.message,'SYNTHETIC_GATE_FAILURE');assert.equal(e.publicIntegrationResult.phase,phase);assert.equal(e.publicIntegrationResult.status,'FAILED');assert.equal(e.publicIntegrationResult.comparisons.length,0);return true;});
+ assert.ok(!f.calls.includes('driver'));assert.ok(!f.calls.includes('initialize'));assert.ok(!f.calls.includes('observe:deploy'));assert.equal(f.calls.filter(x=>x===(gate==='restore'?'provider-cleanup':'wallet-stop')).length,1);assert.equal(f.calls.filter(x=>x==='asset-cleanup').length,1);
+ if(gate!=='restore')assert.ok(!f.calls.includes('initialize-allocation'));
+});
+test('recovery wallet synchronization rejection prevents constructor, store and driver',async()=>{
+ const f=recoveryFixture();f.options.walletContext.wallet.waitForSyncedState=async()=>{throw Error('SYNC_FAILURE');};await assert.rejects(integrateLocalFinancialCase(f.options),/SYNC_FAILURE/);
+ for(const stage of ['recovery-constructor','recovery-store','driver','initialize-allocation'])assert.ok(!f.calls.includes(stage));assert.ok(f.calls.includes('wallet-stop'));assert.ok(f.calls.includes('asset-cleanup'));
+});
+for(const [name,mutate,code] of [
+ ['allocation',f=>f.options.limits.allocationId='changed','LIMITS'],
+ ['submissions',f=>f.options.limits.submissions=4,'LIMITS'],
+ ['dust',f=>f.options.limits.dustFee=101n,'LIMITS'],
+ ['gross cap',f=>f.options.limits.grossByLogicalAsset.USD_TEST_ASSET=21n,'LIMITS'],
+ ['deadline',f=>f.options.limits.deadlineMs++,'LIMITS'],
+ ['journal',f=>f.options.limits.reservationStatePath='/inert/other.json','LIMITS'],
+ ['store directory',f=>f.options.privateStateConfig.midnightDbName='/inert/other','STORE'],
+ ['store namespace',f=>f.options.privateStateConfig.privateStateStoreName='other','STORE'],
+ ['role',f=>f.options.roles.secondAddress='99'.repeat(32),'ROLES'],
+ ['wallet',f=>f.options.walletContext.unshieldedKeystore.getBech32Address=()=>({toString:()=> 'changed'}),'ROLES'],
+ ['network tag',f=>f.options.networkTag='99'.repeat(32),'BINDING'],
+ ['build',f=>f.options.build.sourceManifestHash='99'.repeat(32),'BINDING'],
+])test(`recovery rejects actual ${name} differing from closed plan before recovery work`,async()=>{
+ const f=recoveryFixture();mutate(f);await assert.rejects(integrateLocalFinancialCase(f.options),new RegExp('RECOVERY_INTEGRATION_'+code));assert.deepEqual(f.calls,['wallet-stop']);
+});
+test('recovery plan rejects changed deployment identity and unchecked identity shortcut',async()=>{
+ const f=recoveryFixture();f.options.recoveryPlan.existingDeployment.contractAddress=address;await assert.rejects(integrateLocalFinancialCase(f.options),/RECOVERY_PLAN_BINDING/);assert.deepEqual(f.calls,['wallet-stop']);
+ const shortcut=fixture();shortcut.options.existingDeployment={contractAddress:oldLoan.contractAddress,txId:oldLoan.txId};await assert.rejects(integrateLocalFinancialCase(shortcut.options),/INTEGRATION_USE_CLOSED_RECOVERY_PLAN/);assert.deepEqual(shortcut.calls,['wallet-stop']);
+});
+test('production integration rejects recovery adapters before loading runtime or touching private state',async()=>{
+ const f=recoveryFixture();delete f.options.sourceTestOnly;delete f.options.adapters;
+ await assert.rejects(integrateLocalFinancialCase(f.options),/INTEGRATION_RECOVERY_ADAPTERS_REQUIRE_SOURCE_TEST/);assert.deepEqual(f.calls,['wallet-stop']);
+});
+test('source recovery requires all recovery adapters',async()=>{
+ for(const missing of ['publicCheck','reconstruct','inspectStore','restore','checkWallet','checkDestination']){const f=recoveryFixture();delete f.options.recoveryAdapters[missing];await assert.rejects(integrateLocalFinancialCase(f.options),/COMPLETE_INERT_RECOVERY_ADAPTERS_REQUIRED/);assert.deepEqual(f.calls,['wallet-stop']);}
+});
+
+test('nonempty recovery destination stops before provider creation and driver',async()=>{
+ const f=recoveryFixture();f.options.recoveryAdapters.checkDestination=()=>{throw Error('DESTINATION_NOT_EMPTY');};
+ await assert.rejects(integrateLocalFinancialCase(f.options),/DESTINATION_NOT_EMPTY/);
+ assert.ok(!f.calls.includes('initialize-allocation'));assert.ok(!f.calls.includes('providers'));assert.ok(!f.calls.includes('driver'));assert.ok(f.calls.includes('wallet-stop'));assert.ok(f.calls.includes('asset-cleanup'));
+});
+
+test('recovery rejects deployment identity getter before cloning or executing it',async()=>{
+ const f=recoveryFixture();let accessed=0;
+ Object.defineProperty(f.options.recoveryPlan.existingDeployment,'txId',{enumerable:true,get(){accessed++;return oldLoan.txId;}});
+ await assert.rejects(integrateLocalFinancialCase(f.options),/RECOVERY_PLAN_FIELDS/);assert.equal(accessed,0);assert.deepEqual(f.calls,['wallet-stop']);
+});
