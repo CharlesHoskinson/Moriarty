@@ -1,0 +1,11 @@
+# Fresh local chain data and native DUST time
+
+The launcher now waits for a recent canonical indexed block before wallet restore and every balance. It checks actual returned native DUST creation time before signing and again before submission. The SDK still chooses its own timestamp; existing wallet state is preserved. Conservative local age/height limits do not establish consensus validity.
+
+The actual preceding deployment was rejected with a 39-hour-old DUST timestamp; [the failed attempt](../local-execution-02/RESULT.md) and its charges remain. A regression decodes those real rejected native bytes and proves they cannot reach another submit call through the guard. Offline tests also cover stale/future/mismatched/lagging tips, numeric millisecond units, hung/oversized responses, second-query regression and slow proving. These tests do not demonstrate successful financial settlement.
+
+The independent GPT-6 reviewer found a deadline race across durable readiness retention. [The red test](deadline-red.txt) reproduced one balance starting after deadline; the corrected candidate rechecks immediately before the SDK call. [The complete regression](ledger-regression-deadline-fix.txt) records 180 passes and no failures, using retained compiled artifacts without rebuilding.
+
+[Candidate02](candidate-02.json) is the final reviewed source: [GPT-6 review](gpt6-review.json) and [Grok review](grok-review.json). Original candidate/review/failure records remain immutable. Grok completed the original full review in430.332s and the correction plus separately scoped resource vote in132.358s, both terminal end_turn. These source verdicts do not themselves admit execution. The [successor resource proposal](../local-execution-03/resource-proposal.json) retains prior charges and separate source/build/live preflight gates.
+
+The readiness result only establishes a recent indexed block whose hash matches the canonical node chain near the finalized head; it is not a transaction finality receipt. A stale/future native time or slow proof stops the attempt. Individual read-probe errors currently collapse to TIP_NOT_READY, and the no-regression test also violates the age bound; those limits are retained in the Grok review. Actual financial execution and Preview acceptance remain separate obligations.

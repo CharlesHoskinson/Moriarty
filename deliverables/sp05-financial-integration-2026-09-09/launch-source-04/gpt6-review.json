@@ -1,0 +1,121 @@
+{
+  "schema": "moriarty.local-tip-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/tip_freshness_audit",
+    "independentOfImplementation": true
+  },
+  "reviewedAt": "2026-09-10T04:24:10.171614+00:00",
+  "baseCommit": "0c596ea5c4feefc094b2a41804ff336f3701d36a",
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/launch-source-04/candidate-02.json",
+  "candidateSha256": "42ebb0b23376324318d98aaa31aa7e512b195aa256428ac3acc6902d226742c6",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+      "sha256": "3b8e02c306309f5f09a59c2eb2e919383621a6bdd85f856717817bb881815a04"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs",
+      "sha256": "0df06f01e63890fc71111c8eaa424b8b135d3431fda35a9d941c17014bc88dc8"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "e2a9995d3317810a64635cd64794f060418032fbc04b04c12f6cfe0048c7756f"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "sha256": "4bf68880c9e4a372aaf46464e8df0b92f2fbd4f1186586ca3e12b4b6f3b41ce5"
+    }
+  ],
+  "supportingFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "sha256": "638fe118f1e211cc3c24aed17e81b69800be2c44782b25ac319532979eda556f"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-execution-02/RESULT.md",
+      "sha256": "1bc9b05b2810a7342928ccabc24162aa1f381b07cc3e2ef478ca8e18cd03da53"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-execution-02/native-time-inspection.json",
+      "sha256": "b1cf60a3b20aa833f2aed1295230353776f671002a195608058cf3670c4aa480"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/launch-source-04/ledger-regression-final.txt",
+      "sha256": "ef18d1f5b3b68e56a6d5afcc9f5972172cf3e8c0f45084686722c3984fb918c9"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/launch-source-04/ledger-regression-deadline-fix.txt",
+      "sha256": "40c3641f9ed56b786f555014afaad0e27d25b32d68c9c7830e11a0b52fa8badb"
+    }
+  ],
+  "verdict": "PASS_SCOPED",
+  "scope": "Local readiness and native DUST freshness repair plus post-retention deadline correction in the four candidate files; source and bounded offline regression results only.",
+  "findings": [],
+  "resolvedFindings": [
+    {
+      "id": "TIP-DEADLINE-01",
+      "severity": "medium",
+      "originalReceipt": "gpt6-initial-review.json",
+      "resolution": "A deadline check now immediately follows synchronous onTip retention and precedes wallet balance. Independent final regression observes zero balance calls when retention advances beyond the deadline.",
+      "historicalNote": "The initial receipt captured the test file after the author had also added the deadline regression but before the production fix. Its prior executed test result was 8 tests; the final exact file has 11 tests."
+    }
+  ],
+  "observations": [
+    "Production launch checks readiness before SDK wallet restoration and wraps the real wallet used by the integration provider. Every provider balance reaches waitForLocalTip, SDK balance, actual recipe DUST ctime inspection, then provider native/type/allowance checks and signing. The facade forwards methods with its original receiver.",
+    "Installed wallet SDK Sync.js queries BlockHash with offset:null and converts its timestamp using new Date(blockData.timestamp). Installed generated indexer types expose number height and timestamp. The guard matches that conversion and the regression accepts epoch milliseconds while rejecting second-scale values. No heuristic timestamp rescaling occurs.",
+    "Readiness admits literal HTTP loopback endpoints, rejects credentials/fragments and redirects, limits response bodies to 64 KiB, bounds each sample by a shared five-second deadline, and retries only read-only queries for at most 60 samples and 60 seconds within the plan deadline. Node RPC is restricted to finalized-head/header/block-hash methods.",
+    "An indexed timestamp must be nonfuture and at most 60 seconds old. Its height must be within two blocks of the sampled finalized head; its hash must match the node at its own height. Age is rechecked after the RPC sequence. This establishes bounded local observation freshness, not indexed-block finality or future transaction validity.",
+    "The actual SDK recipe base and optional balancing transaction are both checked for nonfuture DUST ctime no older than 60 seconds and no earlier than the observed tip rounded to seconds. The final submission guard checks native age again. This catches an independently stale second SDK indexer query and elapsed proving time without rewriting timestamps.",
+    "The historical rejected public native transaction deserializes using the pinned ledger and is rejected by the submit guard before the inert submitter is called. Retained release source dust.rs checks ctime against block time and configured grace period; the new 60-second policy does not claim to equal that consensus parameter.",
+    "Finalized canonical public bytes and public identity metadata are durably retained before the final guard and actual submit call. Freshness records contain only validated public block data, numeric times and fixed scope text. Private recipes, wallet objects and exception messages are not added to evidence.",
+    "Existing provider exclusive operation state, one-use issued transaction tickets, reservations, native semantic checks and no automatic wallet retry remain in the production path. A freshness failure does not reset the failed allocation or refund charges.",
+    "All candidate and supporting file hashes were independently verified against candidate-02.json before writing this verdict."
+  ],
+  "checks": [
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0,
+      "passed": 11,
+      "failed": 0,
+      "durationMs": 2482.199123
+    },
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0,
+      "passed": 12,
+      "failed": 0,
+      "durationMs": 1352.927108,
+      "note": "Executed before final local-tip-only deadline correction; launcher candidate source unchanged."
+    },
+    {
+      "command": "git diff --check -- experiments/moriarty-midnight-financial/ledger/launch-local.mjs experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "performedByReviewer": true,
+      "exitCode": 0
+    },
+    {
+      "check": "Independent inert exported-guard fake-clock reproducer before correction",
+      "performedByReviewer": true,
+      "observed": "balance called once after deadline; sent to author and preserved in initial review."
+    }
+  ],
+  "limitations": [
+    "No wallet restoration/start, private wallet read, Docker start, proof build, live network request, transaction submission or dependency change was performed by the reviewer. Historical public bytes were deserialized offline.",
+    "RPC observations are not atomic and the chain may move after readiness. Recipe timestamp and pre-submit age checks limit the observed stale-time defect; they cannot guarantee consensus admission or finality. Local system clock correctness and runtime behavior remain assumptions.",
+    "JavaScript timers and AbortController bound normal asynchronous transport, not synchronous filesystem stalls or every external SDK operation. Existing outer process containment remains required.",
+    "The exact source identity of the running node image remains unresolved; retained release-tag source is explanatory evidence only.",
+    "The reviewer independently ran the 11 freshness and 12 launcher tests; the broader 180-test result is author-provided and not independently rerun here.",
+    "Grok review, successor resources, complete-source/build/execution admission, Preview settlement, financial correctness and mandatory proof acceptance remain separate gates."
+  ],
+  "executionAdmitted": false,
+  "successorAllocationAuthorized": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

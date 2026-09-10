@@ -1,0 +1,9 @@
+Scoped source review: PASS. Candidate `candidate-02.json` has SHA-256 `42ebb0b23376324318d98aaa31aa7e512b195aa256428ac3acc6902d226742c6`; all listed source and supporting hashes match. Reviewer: fresh GPT-6 Astra, `/root/tip_freshness_audit`, independent of implementation.
+
+The original deadline finding is resolved: the guard rechecks the deadline after durable readiness retention and before starting wallet balancing. The reviewer reproduced the prior late balance call and independently verified the corrected zero-call regression. The initial CHANGES_REQUESTED receipt remains in `gpt6-initial-review.json`.
+
+Independent checks passed: 11 freshness tests and 12 launcher tests. Tests cover stale and future times, node mismatch/lag, bounded transport, millisecond scalar semantics, the SDK second-query regression, the historical rejected native transaction, slow-proof expiry, and retention crossing the deadline. The launcher tests ran before the final local-tip-only correction; launcher source did not change.
+
+Production wiring reaches readiness before restoration and each balance, checks actual native recipe DUST time before signing, and checks native age before submission. The installed SDK uses `block(offset: null)` and `new Date(timestamp)`, matching the guard. Public transaction bytes are retained before final rejection, and provider reservations and one-use submission controls remain intact. No unresolved blocking source findings remain.
+
+These are conservative local freshness checks, not consensus or finality guarantees. Chain observations are non-atomic, source identity of the running node image remains unresolved, and outer containment remains required. No wallet, live network, proof build or submission was performed. This review does not admit execution, authorize a successor allocation, or establish financial, proof or network acceptance. Full detail and candidate bindings are in `gpt6-review.json`.

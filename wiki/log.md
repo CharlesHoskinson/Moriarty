@@ -4,11 +4,11 @@ title: Moriarty research log
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-09
+updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-09T22:50:07Z
+updated_at: 2026-09-10T04:45:00Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Local Midnight readiness and reviewer timing
+
+Saved [[wiki/midnight-readiness-lessons|observed failure and repair lessons]] from the actual rejected loan deployment, installed SDK timestamp path and independent deadline reproduction. Preserve native bytes, reserved charges and original wallet state. No new source/claim assessment, network admission or financial acceptance.
 
 ## [2026-09-09] save | Numeric K conversion and ProRata
 

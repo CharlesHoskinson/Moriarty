@@ -1,0 +1,58 @@
+{
+  "schema": "moriarty.local-tip-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/tip_freshness_audit",
+    "independentOfImplementation": true
+  },
+  "reviewedAt": "2026-09-10T04:22:30.775348+00:00",
+  "baseCommit": "f81f051e1c5f2c4046e142de9aa84918877ebaa5",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+      "sha256": "6359634ca5c71dd24ea058c542f4a6a57c24d8660457aa381aaa3bee6c7d8703"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs",
+      "sha256": "0df06f01e63890fc71111c8eaa424b8b135d3431fda35a9d941c17014bc88dc8"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "e2a9995d3317810a64635cd64794f060418032fbc04b04c12f6cfe0048c7756f"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "sha256": "4bf68880c9e4a372aaf46464e8df0b92f2fbd4f1186586ca3e12b4b6f3b41ce5"
+    }
+  ],
+  "verdict": "CHANGES_REQUESTED",
+  "scope": "Fresh local tip and native DUST age repair source; no execution admission",
+  "findings": [
+    {
+      "id": "TIP-DEADLINE-01",
+      "severity": "medium",
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+      "line": 69,
+      "description": "Successful readiness retention calls onTip synchronously; durable filesystem work can cross the deadline before balanceUnboundTransaction starts. No deadline check occurs between retention and that mutating wallet operation.",
+      "reproduction": "Reviewer used the exported guard, inert fetch and fake Date.now. onTip advanced clock to deadline+1. Guard rejected TIP_DEADLINE only after invoking balance once; expected zero calls.",
+      "requestedChange": "Recheck the plan deadline immediately after onTip and before SDK balance; add regression."
+    }
+  ],
+  "checks": [
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs",
+      "passed": 8,
+      "failed": 0,
+      "note": "Executed before two additional author tests were added; those additions are included in these captured hashes but not this initial execution result."
+    },
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "passed": 12,
+      "failed": 0
+    }
+  ],
+  "executionAdmitted": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

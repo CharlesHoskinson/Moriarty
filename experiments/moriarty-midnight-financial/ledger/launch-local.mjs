@@ -9,6 +9,7 @@ import {pathToFileURL} from 'node:url';
 import {PINNED_NM} from './providers.mjs';
 import {inspectFinancialBuild} from './proven-assets.mjs';
 import {integrateLocalFinancialCase} from './integrate-local.mjs';
+import {waitForLocalTip,guardLocalWallet} from './local-tip.mjs';
 
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -123,6 +124,8 @@ export async function launchLocalFinancialCase(plan){
  const within=async fn=>{check(Date.now()<deadline,'LAUNCH_DEADLINE');let t;try{return await Promise.race([Promise.resolve().then(fn),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('LAUNCH_DEADLINE')),Math.max(1,deadline-Date.now()));})]);}finally{clearTimeout(t);}};
  try{
   const {sdk,ledger,network,rx}=await within(runtime);network.setNetworkId('undeployed');
+  const tipOptions={node:p.networkConfig.node,indexer:p.networkConfig.indexer,deadlineMs:deadline};
+  phase='tip-readiness';append(await within(()=>waitForLocalTip(tipOptions)));phase='restore';
   const hd=sdk.HDWallet.fromSeed(Buffer.from(seedHex,'hex'));seed.fill(0);seedHex=undefined;check(hd.type==='seedOk','LAUNCH_SEED_DERIVATION');
   let keys;try{const result=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal,sdk.Roles.Dust]).deriveKeysAt(0);check(result.type==='keysDerived','LAUNCH_SEED_DERIVATION');keys=result.keys;}finally{hd.hdWallet.clear();}
   const shieldedSecretKeys=ledger.ZswapSecretKeys.fromSeed(keys[sdk.Roles.Zswap]),dustSecretKey=ledger.DustSecretKey.fromSeed(keys[sdk.Roles.Dust]),unshieldedKeystore=sdk.createKeystore(keys[sdk.Roles.NightExternal],'undeployed');
@@ -135,7 +138,8 @@ export async function launchLocalFinancialCase(plan){
   check(restored.state.networkId==='undeployed'&&restored.state.publicKey.publicKey===unshieldedKeystore.getPublicKey()&&restored.state.publicKey.addressHex===p.roles.firstAddress&&restored.state.publicKey.address===p.wallet.expectedAddress,'LAUNCH_RESTORED_IDENTITY');
   phase='sync';await within(()=>wallet.start(shieldedSecretKeys,dustSecretKey));const synced=await within(()=>wallet.waitForSyncedState());check(synced.isSynced===true&&synced.dust.availableCoins.length>0,'LAUNCH_REGISTERED_DUST_REQUIRED');
  const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
-  const retainedWallet=retainPublicSubmissions({wallet,ledger,directory:submissionDirectory});
+  const guardedWallet=guardLocalWallet({wallet,...tipOptions,onTip:append});
+  const retainedWallet=retainPublicSubmissions({wallet:guardedWallet,ledger,directory:submissionDirectory});
   phase='integration';ownershipTransferred=true;
   const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicLaunchEvent(e)),onStage:summary=>{check(summary?.status==='PASS'&&['deploy','initialize','accrue','settle','swap','close'].includes(summary.stage),'LAUNCH_STAGE');durableFile(join(p.outputDirectory,'stage-'+summary.stage+'.json'),summary);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}};
   let result;

@@ -86,3 +86,11 @@ Existing role-secret and password files can be prepared under the later bounded
 execution admission. The reviewed public participant selection, a finite admitted plan, current
 local service readiness, successful strict restoration and available DUST remain
 required inputs/checks. No private artifact was read or changed during this task.
+
+## Fresh local chain data before balancing
+
+The launcher waits for a recent indexed block before restoring the wallet, and checks again before each balance. Each check has at most 60 read-only samples, one-second spacing, five-second request bounds and a total ceiling of 60 seconds within the existing plan deadline. It uses the same `block(offset: null)` timestamp as the pinned SDK, requires age at most 60 seconds with no future time, matches the block hash against the node, and requires its height within two blocks of the finalized head. The indexed block itself can precede or follow that head; this check is not a finality receipt. These are conservative local readiness limits, not consensus parameters.
+
+After the SDK independently queries the indexer during balancing, the launcher checks the native recipe's DUST creation time before it returns to signing: no future time, age at most 60 seconds, and no regression below the observed tip timestamp rounded to seconds. It checks native age again before submission. A slow proof can therefore stop before submission; no timestamp is rewritten and no wallet operation retries. Public bytes are retained before that final check, preserving failed output. Successful readiness observations are retained as closed public records. Wallet synchronization alone does not establish freshness.
+
+This change responds to the actual local deployment rejection recorded in `deliverables/sp05-financial-integration-2026-09-09/local-execution-02/RESULT.md`. The original allocation remains consumed. Source tests do not authorize a new run or establish ledger acceptance.

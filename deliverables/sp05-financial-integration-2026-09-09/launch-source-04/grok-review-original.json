@@ -1,0 +1,18 @@
+{
+  "candidateSha256": "0d58bccf353dae33c9a94e07b94d2cbbf59a83ba41e2d6b9c4872e231bcf8050",
+  "observedModel": "grok-4.6",
+  "usageModel": "grok-4.6-build",
+  "verdict": "APPROVED",
+  "scope": "Local indexer/DUST freshness repair only; no successor execution admission or network acceptance",
+  "findings": [],
+  "limitations": [
+    "Source-only review of the supplied files; this does not establish ledger, network, proof, or financial acceptance, and it does not authorize a new allocation.",
+    "60s age, no-future, and \u00b12 height are local readiness policy as documented; they are not a proof of the node Dust validity window.",
+    "waitForLocalTip swallows per-probe errors and terminates as TIP_NOT_READY; individual TIP_STALE/TIP_LAG/TIP_CHAIN_MISMATCH codes are not surfaced.",
+    "No-regression below the pre-balance tip (second-rounded) is enforced at recipe return; the dedicated test uses a 39-hour ctime that also violates the 60s bound, so that predicate is not isolated.",
+    "Submit-time dustTime uses the 60s/no-future bound only (minTimestamp 0). That matches the slow-proof stop; it does not re-query the indexer or re-apply tip non-regression.",
+    "retainPublicSubmissions is the outer submit proxy, so public native bytes are written before the submit-time ctime check. That matches the stated evidence policy.",
+    "waitForSyncedState still does not inspect timestamp age; freshness is only the new tip/guard path.",
+    "Supporting ledger-regression-final.txt reports 179 passing tests; this review did not re-execute them."
+  ]
+}
