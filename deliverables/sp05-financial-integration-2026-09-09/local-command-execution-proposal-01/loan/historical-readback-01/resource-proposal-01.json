@@ -1,0 +1,83 @@
+{
+  "schema": "moriarty.local-loan-historical-readback-resource/1",
+  "status": "PROPOSED",
+  "attempts": 1,
+  "submissions": 0,
+  "proofs": 0,
+  "dustFeeSpeck": "0",
+  "grossDebit": "0",
+  "sourceCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/historical-readback-01/source-candidate-01.json",
+    "sha256": "12b9d62ef54f8bc7c6f28abf313f20e989734d81ead76345c4dcf9d53f2c83e2"
+  },
+  "servicesSeconds": 240,
+  "diagnosticSeconds": 180,
+  "querySeconds": 60,
+  "activationSeconds": 120,
+  "cleanupSeconds": 31,
+  "totalSeconds": 300,
+  "diagnosticUnit": "moriarty-sp05-local-loan-historical-readback-01.service",
+  "stopUnit": "moriarty-sp05-local-loan-historical-readback-stop-01",
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "stoppedContainers": [
+    {
+      "name": "moriarty-midnight-proof-server",
+      "mustRemainStopped": true,
+      "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531"
+    }
+  ],
+  "storage": {
+    "minimumFreeBytes": 4294967296,
+    "minimumHostAvailableMemoryBytes": 21474836480,
+    "diagnosticOutputMaxBytes": 524288,
+    "rpcResponseMaxBytes": 65536
+  },
+  "priorAccounting": {
+    "reservedSubmissions": 31,
+    "reservedDustSpeck": "9300000000000031",
+    "scope": "Prior27/8100000000000027 plus latest local loan4/1200000000000004; all prior ceilings, failed attempts and unquantified service/proof/compiler/reviewer charges remain consumed. No allowance reset."
+  },
+  "nodeProcess": {
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "RuntimeMaxSec": 180,
+    "Type": "exec",
+    "RemainAfterExit": true,
+    "TimeoutStartSec": "remaining activation allowance minus1, checked after durable argv",
+    "TimeoutStopSec": 1
+  },
+  "readLimits": {
+    "readinessMaxQueries": 60,
+    "captureQueries": 17,
+    "totalQueriesMax": 77,
+    "perRequestMs": 5000,
+    "responseBytesMax": 65536,
+    "allResponseBytesCeiling": 5046272,
+    "retries": "Only demonstrated connection readiness failures before readiness; no operation retry or historical fallback"
+  },
+  "scope": "One read-only historical reobservation of four completed LOCAL loan stages; existing node+indexer only, prover remains stopped. Indexer is retained startup context, not queried as a substitute for exact node historical state. No wallet/private plan/roles/seed/snapshot reads, no financial repeat, no proof/build/submission.",
+  "containment": "Independent timer at240s kills diagnostic cgroup<=5s, Dockerstop both existing containers<=20s, ExecStopPost Dockerkill<=5s, accuracy<=1s; planned physical containment by271s within300s envelope. Never cancel until actual cgroup absence/both exited/prover still exited independently retained.",
+  "acceptance": "Four exact block-pinned native state byte strings, canonical finality anchor, complete compiled fields/keys/balances equality and deploy initial native-state equality. Trusted RPC observation, not authenticated state proof; both fresh source/resource reviews then actual result audits required. Prior actual result remains blocked pending this evidence.",
+  "readiness": "Shared activation/readiness ends at arming+120s; capture gets60s after readiness, cgroup180s max but outertimer remains240s. Zero financial or query retry after method failure.",
+  "methodEvidence": "Existing node RPC supports explicit at argument by pinned primary source; prior local readback observed historical state. Pruned/unavailable state or genericRPC_RESPONSE fails unknown, no assumed unsupported reason or alternate query."
+}
