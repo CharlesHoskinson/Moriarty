@@ -1,0 +1,357 @@
+{
+  "schema": "moriarty.preview-swap-exit-resource-draft/1",
+  "status": "PROPOSED_NOT_ADMITTED",
+  "sourceStatus": "RUNTIME_SOURCE_REVIEWED; EXACT_EXECUTOR_SOURCE_REVIEWS_PENDING",
+  "admissionStatus": "PENDING_RESOURCE_VOTES_AND_EXCLUSIVE_ADMISSION",
+  "sourceCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/source-candidate-01.json",
+    "sha256": "13b774816395ea9de19770f1a9bbe378af433559661813eac04e7d8d75bdaac7"
+  },
+  "sourceReviews": [],
+  "resourceVotes": [],
+  "scope": "Second public Preview swap case attempt: one fresh deploy, initialize, swap, close. Original wallet identities and retained full swap build; no consumed allocation replay.",
+  "attempts": 1,
+  "submissions": 4,
+  "dustFeeSpeck": "2000000000000000",
+  "grossByLogicalAsset": {
+    "ASSET_A": "100000",
+    "ASSET_B": "0"
+  },
+  "publicPlanDraft": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/public-plan-draft.json",
+    "sha256": "737327a7cab097ceb07c994327700184a149563f37d790d6a30a4d865d071d41"
+  },
+  "draftDeadline": "deadlineMs=0 deliberately fails production validation; only admitted execution may materialize deadline from the observed independent timer epoch.",
+  "privatePreparation": {
+    "base": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01",
+    "planFile": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/plan.json",
+    "outputDirectory": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/run",
+    "contractStateDirectory": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/contract-state",
+    "exclusive": true,
+    "newKeysOrCapabilities": false,
+    "directoryMode": "0700",
+    "fileMode": "0600",
+    "reuse": {
+      "seedFile": "/home/charl/.local/share/moriarty/test-wallets/public-preview-20260907.seed",
+      "stateDirectory": "/home/charl/.local/share/moriarty/test-wallets/preview-runtime-20260907",
+      "expectedAddress": "mn_addr_preview18adpl4a5kmjm5ffq7wy6wtq5sjy5pl67g4js8ldpvzdqrnpdgthqvlhhye",
+      "rolesFile": "/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03/roles.json",
+      "passwordFile": "/home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03/password"
+    },
+    "walletPersistence": "Use current original Preview child snapshots after original loan, original swap and loan-exit01. Preserve all backups; fail on pending markers. No fresh wallet, reset, chmod, fallback, retry or private content read during packet preparation."
+  },
+  "timeSeconds": {
+    "activationAndSetupMax": 120,
+    "operationDeadlineAfterArming": 2490,
+    "operationRemainingAtLatestActivation": 2370,
+    "bootstrapHardExitAfterOperationDeadline": 6,
+    "independentShutdownAfterArming": 2500,
+    "cleanupMax": 31,
+    "latestPlannedContainmentAfterArming": 2531,
+    "envelopeMax": 2550,
+    "scope": "All bootstrap build/runtime/genesis checks, private setup, wallet restore/sync, proofs, submissions and finalized readbacks share operation deadline; no independent per-stage allowances. No restart when a substage exhausts remaining time."
+  },
+  "launcherService": {
+    "unit": "moriarty-sp05-preview-swap-exit-01.service",
+    "stopUnit": "moriarty-sp05-preview-swap-exit-stop-01",
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "RuntimeMaxSecCeiling": 2496,
+    "RuntimeMaxSecRule": "floor(remaining operation seconds)+6, resolved immediately before launch; also bounded by independent shutdown",
+    "TimeoutStartSecRule": "floor(activation deadline minus current monotonic time)-1; require >=1, fsync resolved argv, then require remaining time >= this allowance before systemd-run",
+    "TimeoutStopSec": 1,
+    "KillMode": "control-group",
+    "FinalKillSignal": "SIGKILL",
+    "SendSIGKILL": true,
+    "UMask": "0077",
+    "StandardOutput": "append:/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/sdk.stdout",
+    "StandardError": "append:/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/sdk.stderr",
+    "RemainAfterExit": true
+  },
+  "containersAllowedToStart": [
+    {
+      "name": "moriarty-midnight-proof-server",
+      "image": "sha256:801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531",
+      "status": "exited",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "portBindings": {
+        "6300/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "16300"
+          }
+        ]
+      }
+    }
+  ],
+  "containersMustRemainStopped": [
+    {
+      "name": "moriarty-midnight-node",
+      "image": "sha256:ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb"
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "image": "sha256:03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b"
+    }
+  ],
+  "containment": {
+    "launcherKillMaxSeconds": 5,
+    "dockerStopMaxSeconds": 20,
+    "dockerKillFallbackMaxSeconds": 5,
+    "timerAccuracyMaxSeconds": 1,
+    "timerLaunchAttemptedAndObservedActiveSeparate": true,
+    "neverCancelBeforeObservedContainment": true,
+    "retain": [
+      "unit terminal status",
+      "actual launcher cgroup absence",
+      "proof-server exited state",
+      "node/indexer remained stopped",
+      "all partial public evidence and reservations",
+      "private wallet/store state and backups"
+    ],
+    "stopOnAmbiguity": "UNKNOWN; retain all charges; no replay, resubmission, new wallet, state rollback or automatic recovery",
+    "terminalBeforeStop": "Require loaded active/exited, MainPID0, Typeexec, RemainAfterExityes, Transientyes, Resultsuccess, ExecMainCode1/ExecMainStatus0, and InvocationID exactly equal acknowledged startup. Retain before explicit stop. Missing status is UNKNOWN. Explicit stop triggers ExecStopPost; verify physical cgroup absence and all container states before cancelling original timer."
+  },
+  "proofAccounting": {
+    "expectedLogicalFinancialStages": 4,
+    "expectedWalletFinalizeRequests": 4,
+    "hardProofCallbackCountEnforced": false,
+    "applicationRetries": 0,
+    "sourceObservation": "The integration runs four logical stages; providers.mjs constructs the SDK httpClientProofProvider without a proof-callback counter. Wallet finalization is inside the bounded provider reservation path. Four is the intended stage/finalize sequence, not an independently enforced aggregate SDK proof request limit.",
+    "sdkInternalRetries": "SDK callback multiplicity and internal retries are not established as an absolute count. All consume the same wall time, CPU, memory, DUST and submission ceilings; no new allowance or retry campaign.",
+    "enforcedAccounting": "The provider checks reservedSubmissions < 4 plus cumulative DUST and gross native asset allowance before reservation; these enforced financial caps are unchanged."
+  },
+  "networkBounds": {
+    "bootstrapGenesisRequestSecondsMax": 15,
+    "readOnlyRpcResponseBytesMax": 65536,
+    "readOnlyRpcRetries": 0,
+    "walletAndIndexerRateLimit": "No new QPS limiter is claimed. Existing SDK transport/polling under one process and shared wall deadline; no extra diagnostic polling loop.",
+    "proofReadiness": "Existing TCP-listener readiness pattern only: at most 30 loopback connect samples to 127.0.0.1:16300, at least 1s between samples, <=2s/connect inside the 120s setup window. Listening does not prove proof correctness or asset readiness."
+  },
+  "storage": {
+    "minimumFreeBytes": 4294967296,
+    "minimumHostAvailableMemoryBytes": 9663676416,
+    "publicPayloadBytesEachMax": 16777216,
+    "publicPayloadCountMax": 4,
+    "publicJsonBytesEachMax": 8388608,
+    "privateSnapshotNextBytesEachMax": 33554432,
+    "aggregateHardQuota": false,
+    "scope": "Four logical native submissions retained by existing byte writer; preserve all copies, original/new wallet snapshots, new contract store and partial results. No private bytes or raw SDK output published.",
+    "privateDiagnostics": {
+      "stdout": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/sdk.stdout",
+      "stderr": "/home/charl/.local/state/moriarty/sp05-preview-swap-exit-20260910-01/sdk.stderr",
+      "creation": "Exclusive O_CREAT|O_EXCL|O_NOFOLLOW, mode0600, fsync files and owner0700 directory before acknowledged manager activation.",
+      "retention": "Do not publish raw SDK logs. Hashes and narrowly sanitized excerpts require separate inspection/review. Preserve full original private files on failure.",
+      "hardLogFileByteLimit": null,
+      "scope": "Finite process runtime and CPU bound log production but do not establish a numeric byte ceiling. The 4GiB free-disk precheck is headroom, not a quota. No RLIMIT_FSIZE is applied because it would also cap wallet snapshots, native payloads and private LevelDB files. Disk exhaustion stops the attempt; retain original logs and reservations, no automatic truncation or replay."
+    }
+  },
+  "priorCharges": {
+    "priorLocalReservedSubmissions": 11,
+    "priorLocalReservedDustSpeck": "3300000000000011",
+    "priorLocalAdmittedDustCeilingSpeck": "4000000000000010",
+    "priorPreviewLoanReservedSubmissions": 4,
+    "priorPreviewLoanReservedDustSpeck": "1200000000000004",
+    "priorPreviewLoanAdmittedDustCeilingSpeck": "2000000000000000",
+    "priorPreviewSwapReservedSubmissions": 4,
+    "priorPreviewSwapReservedDustSpeck": "1200000000000004",
+    "priorPreviewSwapAdmittedDustCeilingSpeck": "2000000000000000",
+    "priorCombinedReservedSubmissions": 23,
+    "priorCombinedReservedDustSpeck": "6900000000000023",
+    "priorCombinedAdmittedDustCeilingSpeck": "10000000000000010",
+    "thisAttemptAdditionalSubmissionsMax": 4,
+    "thisAttemptAdditionalDustCapSpeck": "2000000000000000",
+    "combinedReservedSubmissionCeiling": 27,
+    "combinedReservedPlusThisCapSpeck": "8900000000000023",
+    "combinedAdmittedCeilingPlusThisCapSpeck": "12000000000000010",
+    "reservedDustIsPaidFee": false,
+    "preservation": "All older local/Preview hello-world, compiler/build/proof, preflight/amendment/probe/runtime/reviewer charges and admitted caps remain consumed, including older unquantified totals. No global total, refund, reset, state rollback, repeat permission correction or retry is inferred.",
+    "priorPreviewLoanExitReservedSubmissions": 4,
+    "priorPreviewLoanExitReservedDustSpeck": "1200000000000004",
+    "priorPreviewLoanExitAdmittedDustCeilingSpeck": "2000000000000000"
+  },
+  "expectedEvidence": [
+    "Four actual canonical-finalized native Preview swap receipts and complete comparisons, all native IDs retained/notified",
+    "Actual ExecMainCode/ExecMainStatus/Result plus exact bounded closed final CLI stdout with status FINANCIAL_COMPLETE, containmentComplete false and all acceptance flags false",
+    "Actual native DUST total within2e15SPECK, gross ASSET_A<=100000, ASSET_B=0, coherent existing-wallet snapshot persistence",
+    "Exact durable results/public native bytes plus all partial evidence on failure",
+    "Independent terminal launcher cgroup absence and proof server exited, local node/indexer stayed stopped, before any timer cancellation",
+    "Independent GPT6 and Grok result reviews; command completion alone does not close outer containment",
+    "Loaded active/exited terminal properties with ExecMainCode1/ExecMainStatus0 and same nonzero InvocationID as acknowledged startup, durably captured before explicit launcher stop."
+  ],
+  "acceptance": "Only independently reviewed actual successor four-stage swap results, native cumulative fee comparison, successful coherent wallet persistence, actual CLI exit0/closed stdout and independently observed outer containment can establish this command result. Prior loan/swap financial evidence stays preserved. Full SP05/mandatory PCD/MC05/MC06/conformance/release obligations remain separate.",
+  "stopOn": [
+    "missing/mismatched source or resource votes",
+    "occupied unit/timer/output/store/allocation/backup",
+    "changed original identity or pending persistence marker",
+    "container image/limits/port/state mismatch",
+    "insufficient memory or storage",
+    "genesis/protocol/owner/build mismatch",
+    "missing or invalid private inputs, failed restore/sync, nonspendable DUST or pending wallet state",
+    "first failure, cap or deadline exceeded",
+    "unknown submission/finality or failed full financial comparison",
+    "incomplete containment"
+  ],
+  "executionSource": "execute-once.py: finite consumed loan-exit adaptation with original swap plan, new names/accounting, RemainAfterExit=yes and startup InvocationID retention.",
+  "packetBinding": "The proposal transitively pins every listed operational packet file; the proposal itself is bound by its independent digest in the exclusive admission. No self-hash.",
+  "assetCapRationale": {
+    "ASSET_A": "100000 gross admitted ceiling from original reviewed swap; actual trade uses fixed 10000 input. ASSET_B gross allowance zero; output receipts are independently compared."
+  },
+  "envelopeRationale": "Same reviewed2550s/2e15SPECK envelope as original loan and swap. Earlier actual loan runtime is evidence of feasibility, not a guarantee. All setup/restore/proof/submission/observation/persistence phases share the original hard deadlines; no proof callback count or SDK retry count beyond the original source guarantees is claimed.",
+  "predecessorScope": "Original swap is one consumed attempt; this is its second under owning two-attempt cap. Original loan plus loan-exit01 exhaust loan cap. Old CLI failures/missing exit remain immutable; no implicit third-loan authority.",
+  "case": "swap",
+  "kind": "swap",
+  "changedHypothesis": "Corrected CLI source already produced FINANCIAL_COMPLETE but successful transient loan unit unloaded before terminal observation. RemainAfterExit=yes retains active/exited status; installed harmless true smoke observed code1/status0, then explicit stop and absent cgroup. This second swap attempt tests actual retained CLI exit evidence; no third loan or cap reset.",
+  "permissionPolicy": "The original same-inode0700 correction was separately approved/applied. This attempt requires current strict metadata already correct and grants no chmod or retry.",
+  "publicProvenance": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/execute-once.py",
+      "sha256": "e15bd843a4410a01f793ad9d10c1d663a4020f4fc1621a080ac3dd4a4a14a8d0"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/resource-proposal-draft.json",
+      "sha256": "0c7332ba05ecbc502f43d8736074c997e25e9631fb6f95f8ce5c8c855ec82643"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/resource-proposal-draft.json",
+      "sha256": "dcdaa4b077edd6361b14310d2a5edee224578baaa680f3e87f5137b884b9ccc1"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/attempt-result-01.json",
+      "sha256": "43fddebe3ed86bdcceec063064c8ed38b70a7ff6124436f5ad2bcb8f07ed569e"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/attempt-result-01.json",
+      "sha256": "4fa2d682894fd3d5dab7b27bb344f7c5504336031d3325b9a5a3059968b4685a"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-result-review-gpt6-01.json",
+      "sha256": "e1592e8cd9a12c8129e38ffc5b12ae34c53b3600ed38a34fa15c22b43b32efb2"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-result-review-grok-01.json",
+      "sha256": "b6069902a6ae426e9965c27375923b984cb6e2041520cd611d6c949d292c4e33"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-result-review-gpt6-01.json",
+      "sha256": "ba8142e041dac2bf7c544fc3abc1dff896f263f91081e065dcf621e5a34ea5d5"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-result-review-grok-01.json",
+      "sha256": "68fddc336e1a0ef65557fa37f6eb15b13b2da23cb2437cfe4f3274e24f1138f9"
+    },
+    {
+      "path": "evidence/midnight-preview-2026-09-07/wallet-public.json",
+      "sha256": "01a31bab9f9920f1385f3fef92fee7638b477f77875390613ebb19e1a786fc98"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/root-runtime-metadata.json",
+      "sha256": "4edfa89da5383e3012501f1f27dbea250a7ec99875da62d8b9215a1e973a3970"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-completion-01/scoped-source-approval-01.json",
+      "sha256": "7325c6f5fdcb2d8a46228b06cb4924a2d4f2accd5c1ab3cff3683ac5563142e2"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/execute-once.py",
+      "sha256": "c8040549e015f0402a72b1b37f2ec3772bf79eaeec4b69a4f07b4af9fd7c16fb"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/resource-proposal-draft.json",
+      "sha256": "a88497860b4356c7ef08a752d7792612f95a90516601e957e8325ade7ba00632"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/terminal-observation-01.json",
+      "sha256": "157aabcc8af4a14a0a2faba37423cf80906b19c012c447fb6b7a44c5dfa513b9"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/stdout-observation-01.json",
+      "sha256": "34c530d17ca5995556ea1385e03a39c4ff15061f79fdb0125590e5b329f04fd6"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/outer-containment-observation-01.json",
+      "sha256": "ce65d996a9c78ffa5540a5ed9bea440c69a61cd98862cda1bdbb168fb36e9828"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-status-retention-01/source-candidate-02.json",
+      "sha256": "3a2e057ae293e1d37c6d59ecaf40f43828881fe92445574ff38a52e87c42724b"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-status-retention-01/smoke-attempt-02.jsonl",
+      "sha256": "97d693a3652f99c4a015ae557be3bafd0dca36238bfa2b1bae6b5247e2962668"
+    }
+  ],
+  "packetFiles": {
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/COMMANDS-DRAFT.md": "b5167fd61bf4847a7f15b40804df54a4294efd8be33c93ec3e7e229d61791556",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/check-static.py": "22b0dbe9da26ba16bfa9fac719c62a7bab21afd17ceed96bf369c500ea468d4e",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/execute-once.py": "0cd4369a41bf4242ac3e68275e1d91040625caaa07c207d198d3f6085c50df31",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/metadata-observation.json": "c1304e38bc18ffa279e322b251e5682edabe2926d557fac18795834b5faaddf2",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/public-plan-draft.json": "737327a7cab097ceb07c994327700184a149563f37d790d6a30a4d865d071d41",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/static-checks.json": "7d8691f60e8dc81bd025647a7e08692fdd473667c8b568184c46677036683e2b",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/terminal-tests.txt": "fb184ea57734512b1f088f9181209901b9cd46df3eb7eaa2500ea9e48dde20b5",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/terminal_predicate.py": "29df049bf8da51d23b4b09f101fbdd7d8f4f893ddf5e7e2a7b2049c537624f67",
+    "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/test_terminal.py": "5a1ac2f62367a1b92a4d437d011f55bbc16743fc4686d0f0819b248baca4ca4c"
+  },
+  "runtimeClosure": {
+    "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "experiments/moriarty-language/compact/generated/loan/bound-program.json": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+    "experiments/moriarty-language/compact/generated/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+    "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+    "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
+    "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+    "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+    "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "experiments/moriarty-midnight-financial/custody/bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "experiments/moriarty-midnight-financial/custody/generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "experiments/moriarty-midnight-financial/custody/loan.compact": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+    "experiments/moriarty-midnight-financial/custody/swap.compact": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.mjs": "5907e8af27217910e2e2546409a70909eb9bd077be6fcc33872ac44a1e6da766",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.mjs": "ed9698646230a50df55b346ca65fb47e2090924dd0e160ca46f2b7149dd25578",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.mjs": "568fd5602f9b3a6da38b64ed571e97a73374d59a022e757d0a8c7a3adf35ac80",
+    "experiments/moriarty-midnight-financial/ledger/continue-swap-plan.mjs": "369891fc909c3ed5cb55a3d84beb87a6cfb313352dfe286c44f5f22a584ccda8",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1",
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+    "experiments/moriarty-midnight-financial/ledger/financial-rpc.mjs": "c9316e175c45c46dcda9f114f8097a0c2e562a8f0bf1424c4b760ddf37f6154c",
+    "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "7164ccf41de2bd611203a58f73efea440f7e71526b837d2c328d1b46a3345d2d",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "396dd61caee096e4c82df86ddd8814f89d2814a8d1201408405b4ad0b0f9942d",
+    "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "c24fd638e0e837c1a4df76e2b911b842d6d8b535c92eba7fe051d4cb8994db3e",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+    "experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs": "4b5cfb48f10870febe44e526384eea9e0427f0acc293219a720cc7c9c7c634c2",
+    "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": "61e3dc84b495285d8d4ca2460744f802b3123326c601d0e4f86ad5ea585e7dff",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "f7d0266f5a798bce4433a4c4e474e68f2fe67d824f40a1afe2bd0856a9673e46",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "40f1c4dc8a670b216fab22b945cbe77ef2a3a711de304bf2cd4bb5e1980fbaeb",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "ff36a27e5c63aea63339a08d09b20fe659f33c6b3ac796f9e1181ad78b1cc790",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "87b510734645ccf579c67258f2fb28c1e72782866ddcce919d66ddd1601de3a2",
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-plan.mjs": "9cfc0d19a24869311c936050bbaf0838fd719bf388a2a955a214afe1f7418e08",
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs": "381e9eac1be54a0ac0e1d92d0178508ccbae673682f39699bf9725a8ab7fe9f1",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs": "02eed3b99def59695b76482c4017bc328ce8c8ac6b1c436ba8dbee8e06b5ca5d"
+  },
+  "runtimeClosureEvidence": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/runtime-closure.json",
+    "sha256": "f0e49e1ee760c330861d3bd501892775442277f49e86bdb7ebd86f2405ab0a10"
+  },
+  "build": {
+    "receiptPath": "/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json",
+    "receiptSha256": "3789da217a36cecd5f7603cbbaead32671418da36ecc5c2d20b1709b9577f362",
+    "sourceManifestHash": "a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6"
+  },
+  "caseAttempt": 2,
+  "caseAttemptCap": 2,
+  "priorSwapAttempts": 1,
+  "priorLoanAttempts": 2,
+  "staticChecks": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/static-checks.json",
+    "sha256": "7d8691f60e8dc81bd025647a7e08692fdd473667c8b568184c46677036683e2b"
+  }
+}
