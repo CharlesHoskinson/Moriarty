@@ -5,7 +5,7 @@ type: runtime
 status: active
 created: 2026-09-10
 updated: 2026-09-10
-updated_at: 2026-09-10T08:30:09Z
+updated_at: 2026-09-10T09:41:25.143491+00:00
 tags:
   - moriarty
   - midnight
@@ -53,3 +53,5 @@ These are provisional implementation lessons linked to observed failures and ins
 **Trace both transport shapes and storage side effects.** The initialized-loan [source findings](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/continuation-wallet-source-findings.json) identify wallet coins as `coin.utxo`, not flat UTXOs. The installed SDK decoder reproduced the old spent-input guard omission; both actual historical transactions had zero such inputs, so no missed historical spend is established. The continuation requires the exact available minted output and retains DUST/synchronization checks.
 
 The pinned private provider can create encryption metadata or migrate older ciphertext during `get` and `getSigningKey`. A method called read is not necessarily free of writes. Source08 preserves the original bytes in a raw snapshot, checks exact current encryption framing and namespaces in a separate copy, then verifies the existing password, empty private state and original signing identity. No empty-state substitution or reseeding is permitted. [Source08 design and tests](../deliverables/sp05-financial-integration-2026-09-09/initialized-continuation-01/DESIGN.md) remain under independent review; 372 source/synthetic ledger tests pass. The actual store has not been inspected by this new path and independent initialize finality/full financial comparison remain open.
+
+**Test the transport representation at both consumers.** The [contained continuation01 failure](../deliverables/sp05-financial-integration-2026-09-09/local-continuation-01/RESULT.md) stopped before private access because the observer expected a raw hexadecimal owner. [Pinned indexer and SDK source](../deliverables/sp05-financial-integration-2026-09-09/indexed-owner-01/source-findings.json) instead yields Bech32m; the [actual wallet decoder and state application](../deliverables/sp05-financial-integration-2026-09-09/indexed-owner-01/wallet-owner-source-findings.json) preserve it too. Earlier tests substituted database bytes and missed both boundaries. The shared correction decodes the canonical local address, checks network, type and exact re-encoding, then compares native identity. Regressions use retained native output and reconstructed API encoding through the installed wallet decoder, plus malformed and unequal-owner cases. The failed HTTP payload was not captured, so source reconstruction remains distinct from a live response. Source09 full regression passes376 cases; independent review and successor execution remain separate obligations.

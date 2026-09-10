@@ -234,7 +234,7 @@ test('actual SDK decoded coin wrappers reject a retained spent input in availabl
  const require=createRequire(join(PINNED_NM,'../package.json'));const {Schema}=require('effect');
  const {WalletSyncUpdateSchema}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js')).href);
  // Synthetic subscription metadata and spent history, actual initialized output identity.
- const wire={type:'UnshieldedTransaction',transaction:{id:35,hash:'1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6',type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789027704001},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{value:'20000000000',owner:'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9',tokenType:'e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef',intentHash:'4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603',outputIndex:0,ctime:1,registeredForDustGeneration:false}],spentUtxos:[]};
+ const wire={type:'UnshieldedTransaction',transaction:{id:35,hash:'1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6',type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789027704001},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{value:'20000000000',owner:'9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb',tokenType:'e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef',intentHash:'4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603',outputIndex:0,ctime:1,registeredForDustGeneration:false}],spentUtxos:[]};
  const coin=Schema.decodeUnknownSync(WalletSyncUpdateSchema)(wire).createdUtxos[0];
  assert.equal(coin.intentHash,undefined);assert.equal(coin.utxo.outputNo,0);assert.equal(coin.utxo.value,20000000000n);
  const original=api.inspectExistingLoanBytes(raw,ledger);assert.equal(original.spentUnshieldedInputs.length,0,'original deployment has no unshielded spend to miss');
@@ -257,7 +257,7 @@ const initializeId='006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af3
 function initializedPublicFixture(){
  const f=publicFixture(),watches=[],stateReads=[],rpcReads=[],headHash='ab'.repeat(32),headHeight=20364;
  const tx=ledger.Transaction.deserialize('signature','proof','binding',initializedRaw);
- const initializedData={...f.data,tx,txId:initializeId,txHash:initializeHash,identifiers:[...tx.identifiers()],blockHeight:20363,blockHash:initializeBlock,unshielded:{created:[{owner:'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9',tokenType:'e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef',value:20000000000n,intentHash:'4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603'}],spent:[]}};
+ const initializedData={...f.data,tx,txId:initializeId,txHash:initializeHash,identifiers:[...tx.identifiers()],blockHeight:20363,blockHash:initializeBlock,unshielded:{created:[{owner:'9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb',tokenType:'e92df6339320f55209d4586ce039b6ef05a7be960999fca913006146cb72cdef',value:20000000000n,intentHash:'4d343d21f150af922dc483b319b87b069a2b2cb8e3f3f64f4bad4485dbf61603'}],spent:[]}};
  f.options.rawInitialize=initializedRaw;
  f.options.tip={status:'READY',hash:headHash,height:headHeight,finalizedHash:'0x'+headHash,finalizedHeight:headHeight,timestampMs:Date.now()};
  f.options.readCurrentTip=async()=>({...f.options.tip});

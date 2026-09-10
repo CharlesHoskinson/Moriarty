@@ -5,7 +5,6 @@
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {decodeNativeFinancialTransaction} from './receipt.mjs';
-import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const sha=raw=>createHash('sha256').update(raw).digest('hex');
 export const INITIALIZED_LOAN=Object.freeze({
@@ -73,6 +72,6 @@ export function assertInitializedLoanMintedOutput({synced,binding}){
  const u=synced?.unshielded;check(Array.isArray(u?.availableCoins)&&Array.isArray(u?.pendingCoins),'INITIALIZED_WALLET_COINS');
  const matches=coin=>coin?.utxo?.intentHash===MINTED_OUTPUT.intentHash&&coin.utxo.outputNo===MINTED_OUTPUT.outputNo;
  const available=u.availableCoins.filter(matches);check(available.length===1&&!u.pendingCoins.some(matches),'INITIALIZED_WALLET_AVAILABLE');
- const coin=available[0].utxo;let owner;try{owner=decodeLocalIndexedOwner(coin.owner);}catch{throw Error('INITIALIZED_WALLET_OUTPUT');}check(owner===MINTED_OUTPUT.owner&&coin.type===MINTED_OUTPUT.type&&typeof coin.value==='bigint'&&coin.value===BigInt(MINTED_OUTPUT.value),'INITIALIZED_WALLET_OUTPUT');
+ const coin=available[0].utxo;check(coin.owner===MINTED_OUTPUT.owner&&coin.type===MINTED_OUTPUT.type&&typeof coin.value==='bigint'&&coin.value===BigInt(MINTED_OUTPUT.value),'INITIALIZED_WALLET_OUTPUT');
  return true;
 }

@@ -7,8 +7,6 @@ import {pathToFileURL} from 'node:url';
 const require = createRequire('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/package.json');
 const ledger = await import(pathToFileURL(require.resolve('@midnight-ntwrk/ledger-v8')).href);
 const module = await import('./receipt.mjs').catch(() => ({}));
-const addressCodec=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js');
-const indexedOwner=(hex,network='undeployed')=>addressCodec.MidnightBech32m.encode(network,new addressCodec.UnshieldedAddress(Buffer.from(hex,'hex'))).toString();
 
 // These are native serialized test transactions, not valid network proofs or receipts.
 async function nativeFixture({signed=true,deploy=false,twoOwners=false,twoInputs=false,mutateSignatures=x=>x,offerSection='guaranteed',segmentOverride}={}) {
@@ -72,7 +70,7 @@ test('observer traverses native deployment bytes with inert RPC and rejects fina
   const {tx,address,contractAddress}=await nativeFixture({deploy:true});
   const blockHash='03'.repeat(32), queries=[];
   const [segment,intent]=[...tx.intents][0];
-  const data={tx,txId:tx.identifiers()[0],identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:10,protocolVersion:8,fees:{paidFees:'0',estimatedFees:'0'},unshielded:{spent:[{owner:indexedOwner(address),tokenType:'01'.repeat(32),value:100n,intentHash:'02'.repeat(32)}],created:[{owner:indexedOwner(address),tokenType:'01'.repeat(32),value:70n,intentHash:intent.intentHash(0)}]}};
+  const data={tx,txId:tx.identifiers()[0],identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:10,protocolVersion:8,fees:{paidFees:'0',estimatedFees:'0'},unshielded:{spent:[{owner:address,tokenType:'01'.repeat(32),value:100n,intentHash:'02'.repeat(32)}],created:[{owner:address,tokenType:'01'.repeat(32),value:70n,intentHash:intent.intentHash(0)}]}};
   const provider={watchForTxData:async()=>data,queryContractState:async(a,c)=>{queries.push([a,c]);return {data:'observed-state'};},queryUnshieldedBalances:async(a,c)=>{queries.push([a,c]);return [];} };
   let canonical='0x'+blockHash;
   const rpc=async name=>({chain_getFinalizedHead:'0x'+blockHash,chain_getHeader:{number:'0xa'},chain_getBlockHash:canonical}[name]);
@@ -152,7 +150,7 @@ function actualInitializeFixture(heights=[20362,20363]){
  const raw=readFileSync(new URL('run-public/public-transactions/1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6.bin',realInitializeRoot));
  const tx=ledger.Transaction.deserialize('signature','proof','binding',raw),row=JSON.parse(readFileSync(new URL('stopped-indexer-effects.json',realInitializeRoot))).rows[0];
  const blockHash='7f61e4c7225c456400e852f3648cf7fcad958bb05ed84002441782764093c94f',priorHash='09'.repeat(32),olderHash='08'.repeat(32);let watches=0,heads=0,states=0;
- const data={tx,txId:'006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af36d9b46',identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:20363,protocolVersion:1000000,fees:{paidFees:'1',estimatedFees:'1'},unshielded:{spent:[],created:[{owner:indexedOwner(row.ownerRaw),tokenType:row.tokenTypeRaw,value:20000000000n,intentHash:row.intentHash}]}};
+ const data={tx,txId:'006466368995501afc82b36cb38dac6f1cee531565eb75b70db6f3af5af36d9b46',identifiers:tx.identifiers(),txHash:tx.transactionHash(),status:'SucceedEntirely',blockHash,blockHeight:20363,protocolVersion:1000000,fees:{paidFees:'1',estimatedFees:'1'},unshielded:{spent:[],created:[{owner:row.ownerRaw,tokenType:row.tokenTypeRaw,value:20000000000n,intentHash:row.intentHash}]}};
  const provider={watchForTxData:async()=>{watches++;return data;},queryContractState:async()=>{states++;return {data:'inert-decoded-state'};},queryUnshieldedBalances:async()=>[]};
  const rpc=async(method,params)=>{
   if(method==='chain_getFinalizedHead'){const h=heights[Math.min(heads++,heights.length-1)];return '0x'+(h===20363?blockHash:h===20362?priorHash:olderHash);}
@@ -183,28 +181,4 @@ test('fallible output origin retains its nonzero physical segment namespace',asy
  const decoded=module.decodeNativeFinancialTransaction(tx.serialize(),ledger);
  assert.equal(decoded.outputs[0].section,'fallible');assert.equal(decoded.outputs[0].segment,9);
  assert.equal(decoded.outputs[0].intentHash,intent.intentHash(9));assert.notEqual(decoded.outputs[0].intentHash,intent.intentHash(0));
-});
-
-// Reconstructed API owner from retained actual SQLite bytes and the pinned
-// indexer/SDK conversion, not a captured HTTP response or new chain observation.
-test('actual initialize owner crosses the Bech32m indexer boundary without changing native identity',async()=>{
- const f=actualInitializeFixture([20363]);
- assert.equal(f.data.unshielded.created[0].owner,'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9');
- const observed=await module.observeFinalizedStage(f.options);
- assert.equal(observed.receipt.transaction.outputs[0].owner,f.row.ownerRaw);
- assert.equal(observed.receipt.transaction.outputs[0].intentHash,f.row.intentHash);
-});
-test('indexed owner rejects noncanonical, malformed and cross-network address encodings',async()=>{
- const f=actualInitializeFixture([20363]),owner=f.data.unshielded.created[0].owner,raw=Buffer.from(f.row.ownerRaw,'hex');
- const invalid=[f.row.ownerRaw,owner.toUpperCase(),owner.slice(0,-1)+(owner.endsWith('q')?'p':'q'),indexedOwner(f.row.ownerRaw,'preview'),indexedOwner(f.row.ownerRaw,'mainnet'),new addressCodec.MidnightBech32m('dust','undeployed',raw).toString(),new addressCodec.MidnightBech32m('addr','undeployed',raw.subarray(1)).toString(),new addressCodec.MidnightBech32m('addr','undeployed',Buffer.concat([raw,Buffer.from([0])])).toString(),null,{},'x'.repeat(1000)];
- // The installed parser ignores HRP segments after the third. Canonical
- // re-encoding must still reject that otherwise-decodable checksum-valid form.
- const {bech32m}=await import(pathToFileURL(require.resolve('@scure/base')).href);
- invalid.push(bech32m.encode('mn_addr_undeployed_extra',bech32m.toWords(raw),false));
- for(const value of invalid){f.data.unshielded.created[0].owner=value;await assert.rejects(module.observeFinalizedStage(f.options),/INVALID_INDEXED_OWNER/);}
- assert.equal(f.counts().states,0);
-});
-test('a canonical but unequal indexed owner fails full native output comparison',async()=>{
- const f=actualInitializeFixture([20363]);f.data.unshielded.created[0].owner=indexedOwner('aa'.repeat(32));
- await assert.rejects(module.observeFinalizedStage(f.options),/INDEXED_OUTPUTS_MISMATCH/);assert.equal(f.counts().states,0);
 });

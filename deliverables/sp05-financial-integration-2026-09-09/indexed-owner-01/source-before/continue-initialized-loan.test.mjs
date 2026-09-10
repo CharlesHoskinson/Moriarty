@@ -63,24 +63,9 @@ test('wrong real signing identity or wrong state prevents any provider access',a
 
 test('minted continuation gate requires exactly one full available output and none pending',()=>{
  assert.equal(typeof api.assertInitializedLoanMintedOutput,'function');const binding=api.inspectInitializedLoanBytes(raw,ledger),m=binding.mintedOutput;
- const coin=()=>({utxo:{intentHash:m.intentHash,outputNo:m.outputNo,owner:'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9',type:m.type,value:BigInt(m.value)},meta:{}});
+ const coin=()=>({utxo:{intentHash:m.intentHash,outputNo:m.outputNo,owner:m.owner,type:m.type,value:BigInt(m.value)},meta:{}});
  const synced=()=>({unshielded:{availableCoins:[coin()],pendingCoins:[]}});
  assert.equal(api.assertInitializedLoanMintedOutput({synced:synced(),binding}),true);
  for(const mutate of [s=>s.unshielded.availableCoins=[],s=>s.unshielded.pendingCoins=[coin()],s=>s.unshielded.availableCoins.push(coin()),s=>s.unshielded.availableCoins[0].utxo.owner='aa'.repeat(32),s=>s.unshielded.availableCoins[0].utxo.type='aa'.repeat(32),s=>s.unshielded.availableCoins[0].utxo.value=20000000000,s=>s.unshielded.availableCoins[0].utxo.value=1n,s=>s.unshielded.availableCoins[0].utxo.outputNo=1,s=>s.unshielded.availableCoins[0]=coin().utxo]){const s=synced();mutate(s);assert.throws(()=>api.assertInitializedLoanMintedOutput({synced:s,binding}),/INITIALIZED_WALLET/);}
  assert.throws(()=>api.assertInitializedLoanMintedOutput({synced:synced(),binding:{...binding,mintedOutput:{...m,value:'1'}}}),/INITIALIZED_WALLET_BINDING/);
-});
-
-test('actual wallet sync decoder keeps indexed Bech32m owner and the continuation gate matches its native identity',async()=>{
- const {createRequire}=await import('node:module');const require=createRequire('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/package.json');const {Schema}=require('effect');
- const {WalletSyncUpdateSchema}=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/SyncSchema.js');
- const binding=api.inspectInitializedLoanBytes(raw,ledger),m=binding.mintedOutput,owner='mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9';
- // Actual initialized output; reconstructed API encoding and inert update metadata.
- const wire={type:'UnshieldedTransaction',transaction:{id:35,hash:binding.transactionHash,type:'RegularTransaction',protocolVersion:1000000,block:{timestamp:1789027704001},transactionResult:{status:'SUCCESS',segments:null}},createdUtxos:[{value:m.value,owner,tokenType:m.type,intentHash:m.intentHash,outputIndex:m.outputNo,ctime:1789027704,registeredForDustGeneration:false}],spentUtxos:[]};
- const coin=Schema.decodeUnknownSync(WalletSyncUpdateSchema)(wire).createdUtxos[0];assert.equal(coin.utxo.owner,owner);assert.equal(coin.utxo.value,20000000000n);
- const synced={unshielded:{availableCoins:[coin],pendingCoins:[]}};assert.equal(api.assertInitializedLoanMintedOutput({synced,binding}),true);
- const {MidnightBech32m,UnshieldedAddress}=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-address-format/dist/index.js');
- for(const bad of [m.owner,owner.toUpperCase(),MidnightBech32m.encode('preview',new UnshieldedAddress(Buffer.from(m.owner,'hex'))).toString(),MidnightBech32m.encode('undeployed',new UnshieldedAddress(Buffer.from('aa'.repeat(32),'hex'))).toString()]){
-  const changed={unshielded:{availableCoins:[{...coin,utxo:{...coin.utxo,owner:bad}}],pendingCoins:[]}};
-  assert.throws(()=>api.assertInitializedLoanMintedOutput({synced:changed,binding}),/INITIALIZED_WALLET_OUTPUT/);
- }
 });

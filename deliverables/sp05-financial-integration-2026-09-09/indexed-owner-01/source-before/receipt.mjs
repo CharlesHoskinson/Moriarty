@@ -1,6 +1,5 @@
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function requireThat(ok, code) { if (!ok) throw new Error(code); }
@@ -104,9 +103,8 @@ export async function beforeDeadline(operation, deadlineMs) {
 
 function indexedRows(rows) {
   requireThat(Array.isArray(rows),'MISSING_INDEXED_UTXOS');
-  return rows.map(x=>({owner:decodeLocalIndexedOwner(x.owner),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
+  return rows.map(x=>({owner:hex(x.owner,'INDEXED_OWNER'),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
 }
-
 function nativeRows(rows) {
   return rows.map(({owner,type,value,intentHash})=>({owner,type,value,intentHash}));
 }

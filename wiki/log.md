@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T08:30:09Z
+updated_at: 2026-09-10T09:41:25.143491+00:00
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Match indexer and wallet owner encodings
+
+Recorded the contained continuation01 failure and source09 transport-boundary lesson in [[wiki/midnight-readiness-lessons]]. Actual SDK decoding preserves Bech32m; tests had substituted database hex. The correction keeps strict native identity comparison. Reviews and live continuation remain open.
 
 ## [2026-09-10] save | Indexed initialization and exact output identity
 
