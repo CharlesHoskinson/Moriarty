@@ -64,17 +64,6 @@ export function validateLocalLaunchPlan(p){
  }
  return structuredClone(p);
 }
-/** Called only after the actual integration result is retained. The validated
- * launch mode chooses fresh completion versus the existing returned-status contract.
- */
-export function localFinancialCommandExitCode(result,plan){
- const p=validateLocalLaunchPlan(plan);
- const existing=['existingDeployment','existingInitializedLoan','existingInitializedSwap','existingStaleLoan'].some(k=>Object.hasOwn(p,k));
- if(!existing)return localFinancialExitCode(result,p.limits.deadlineMs);
- check(result&&Object.values(Object.getOwnPropertyDescriptors(result)).every(d=>Object.hasOwn(d,'value'))&&result.schema==='moriarty.local-financial-integration/1'&&result.kind===p.kind&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false&&['PASS','FAILED','INCOMPLETE'].includes(result.status),'LAUNCH_EXISTING_RESULT');
- if(result.status==='PASS')check(result.cleanup?.containmentComplete===true&&result.cleanup?.walletStopped===true&&result.cleanup?.pendingOperations===0&&result.setupPendingOperations===0,'LAUNCH_EXISTING_RESULT');
- check(Date.now()<p.limits.deadlineMs,'LAUNCH_DEADLINE');return result.status==='PASS'?0:2;
-}
 function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
 export function readPrivateLaunchFile(p){
  absolute(p);safeAncestors(p);let fd;
@@ -251,7 +240,7 @@ export async function launchLocalFinancialCase(plan){
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
  let hardTimer;
- try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,containmentComplete:result.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=localFinancialCommandExitCode(result,plan);}
+ try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,containmentComplete:result.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=localFinancialExitCode(result,plan.limits.deadlineMs);}
  catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
  finally{clearTimeout(hardTimer);}
  process.exit(process.exitCode??0);

@@ -1,0 +1,336 @@
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+index 14e763e..1ab2fb9 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-local.mjs
+@@ -397,8 +397,9 @@ export async function integrateLocalFinancialCase(options){
+     }else cleanup=driverResult?.cleanup;
+     if(loaded){try{await loaded.cleanup();}catch{failure??=Error('ASSET_LOADER_CLEANUP_FAILED');}}
+   }
++  if(driverResult?.status==='FINANCIAL_COMPLETE'&&!failure){try{requireThat(financialComparison?.status==='PASS'&&summaries.length===4&&pending.size===0&&cleanup?.walletStopped===true&&cleanup?.pendingOperations===0,'INTEGRATION_COMPLETION_REQUIRED');requireThat(Number.isSafeInteger(limits.deadlineMs)&&Date.now()<limits.deadlineMs,'INTEGRATION_DEADLINE');}catch(error){failure=error;}}
+   const adverseVerified=adverse?.status==='NODE_REJECTION_FINANCIAL_NONMUTATION'&&adverse.financialNonmutationEstablished===true&&adverse.rejection?.nodeRejectionEstablished===true&&adverse.equality?.status==='FINANCIAL_STATE_UNCHANGED'&&adverse.before?.stateSha256===adverse.after?.stateSha256&&adverse.before?.serializedStateHex===adverse.after?.serializedStateHex&&adverse.after?.blockHeight>adverse.terminalBarrier?.blockHeight&&adverse.terminalBarrier?.blockHeight>=adverse.before?.blockHeight&&adverse.reservations?.pendingOperations===0&&pending.size===0&&cleanup?.pendingOperations===0;
+-  const publicResult={schema:'moriarty.local-financial-integration/1',status:failure?(driverResult?.status??'FAILED'):sourceTestOnly?'SOURCE_TEST_ONLY':adverse?(adverseVerified&&cleanup?.containmentComplete===true?'PASS':'INCOMPLETE'):driverResult.status,kind:['loan','swap'].includes(options?.kind)?options.kind:null,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,
++  const publicResult={schema:'moriarty.local-financial-integration/1',status:failure?(['FAILED','INCOMPLETE'].includes(driverResult?.status)?driverResult.status:'FAILED'):sourceTestOnly?'SOURCE_TEST_ONLY':adverse?(adverseVerified&&cleanup?.containmentComplete===true?'PASS':'INCOMPLETE'):driverResult.status,kind:['loan','swap'].includes(options?.kind)?options.kind:null,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,
+     build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,...(adverse?{adverse}:{}),cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),
+     scope:'Fixed I2 composition; source adapters and incomplete containment never establish financial network acceptance'};
+   if(failure){failure.publicIntegrationResult=publicResult;throw failure;}
+diff --git a/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs b/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
+index 6a3d846..8f1a0f1 100644
+--- a/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs
+@@ -27,18 +27,17 @@ function fixture() {
+   options.adapters=adapters;return {options,adapters,calls,summaries,getLimits:()=>limits,sdk,driverSdk};
+ }
+ test('full composition prepares address then binds colors once and records every stage before next call',async()=>{
+-  const f=fixture();let error;
+-  try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
+-  assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');
+-  assert.equal(error.publicIntegrationResult.status,'INCOMPLETE');
+-  assert.equal(error.publicIntegrationResult.sourceTestOnly,true);
+-  assert.equal(error.publicIntegrationResult.networkAcceptance,false);
++  const f=fixture(),result=await integrateLocalFinancialCase(f.options);
++  assert.equal(result.status,'SOURCE_TEST_ONLY');
++  assert.equal(result.driver.status,'FINANCIAL_COMPLETE');
++  assert.equal(result.sourceTestOnly,true);
++  assert.equal(result.networkAcceptance,false);
+   assert(f.calls.indexOf('prepare')<f.calls.indexOf('derive-color'));
+   assert(f.calls.indexOf('derive-color')<f.calls.indexOf('initialize-allocation'));
+   assert.equal(f.calls.filter(c=>c==='derive-color').length,1);
+   for(const [stage,next] of [['deploy','initialize'],['initialize','accrue'],['accrue','settle']])assert(f.calls.indexOf('record:'+stage)<f.calls.indexOf(next));
+   assert.equal(f.summaries.length,4);
+-  assert(!JSON.stringify(error.publicIntegrationResult).includes('PRIVATE-DEPLOYMENT-CANARY'));
++  assert(!JSON.stringify(result).includes('PRIVATE-DEPLOYMENT-CANARY'));
+   assert.equal(f.calls.at(-1),'asset-cleanup');
+ });
+ for(const [label,mutate] of [
+@@ -110,11 +109,11 @@ function swapFixture(){
+  return f;
+ }
+ test('swap waits for exact wallet mint after durable initialize comparison and before actual driver swap',async()=>{
+- const f=swapFixture();let error;try{await integrateLocalFinancialCase(f.options);}catch(e){error=e;}
+- assert.equal(error.message,'DRIVER_CLEANUP_INCOMPLETE');assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
++ const f=swapFixture(),result=await integrateLocalFinancialCase(f.options);
++ assert.equal(result.status,'SOURCE_TEST_ONLY');assert.deepEqual(f.summaries.map(s=>s.stage),['deploy','initialize','swap','close']);
+  assert.equal(f.calls.filter(c=>c==='swap-wallet-sync').length,1);
+  assert(f.calls.indexOf('record:initialize')<f.calls.indexOf('swap-wallet-sync'));assert(f.calls.indexOf('swap-wallet-sync')<f.calls.indexOf('swap'));
+- assert.deepEqual(error.publicIntegrationResult.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
++ assert.deepEqual(result.assetBindings,{ASSET_A:color,ASSET_B:'99'.repeat(32)});
+ });
+ test('missing initialized wallet mint stops actual driver before swap and close',async()=>{
+  const f=swapFixture(),sync=f.options.walletContext.wallet.waitForSyncedState;
+@@ -163,7 +162,7 @@ test('protocol and reviewed callbacks remain captured after asynchronous prepara
+   f.adapters.createComparator=async o=>{assert.equal(o.expectedProtocolVersion,1000000);return compare(o);};
+   const observe=f.adapters.observe;
+   f.adapters.observe=async o=>{assert.equal(o.expectedProtocolVersion,1000000);observed++;return observe(o);};
+-  await assert.rejects(integrateLocalFinancialCase(f.options),/DRIVER_CLEANUP_INCOMPLETE/);
++  assert.equal((await integrateLocalFinancialCase(f.options)).status,'SOURCE_TEST_ONLY');
+   assert.equal(observed,4);assert.equal(f.summaries.length,4);
+ });
+ 
+@@ -326,7 +325,7 @@ test('current and historical comparator allowances remain separate in each loan
+  for(const make of [fixture,recoveryFixture,continuationFixture]){
+   const f=make(),o=f.options,original=f.adapters.createComparator;let observed;
+   f.adapters.createComparator=async args=>{observed=args;return original(args);};
+-  if(make===fixture)await assert.rejects(integrateLocalFinancialCase(o),{message:'DRIVER_CLEANUP_INCOMPLETE'});else await integrateLocalFinancialCase(o);
++  assert.equal((await integrateLocalFinancialCase(o)).status,'SOURCE_TEST_ONLY');
+   assert.equal(observed.dustFeeCap,o.limits.dustFee);
+   const expected=make===fixture?[]:make===recoveryFixture?[['deploy']]:[['deploy'],['initialize']];
+   assert.deepEqual(observed.historicalFeeAllocations,expected.map(stages=>({stages,dustFeeCap:2000000000000000n})));
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+index 75b3f85..59eba6e 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+@@ -1,3 +1,5 @@
++import {validateLocalFinancialCompletion,localFinancialExitCode} from './local-completion.mjs';
++export {localFinancialExitCode} from './local-completion.mjs';
+ import {isDeepStrictEqual} from 'node:util';
+ import {decodeNativeFinancialTransaction} from './receipt.mjs';
+ import {validateStaleLoanPlan,STALE_LOAN} from './stale-loan-plan.mjs';
+@@ -116,7 +118,7 @@ export function retainPublicIntegrationResult(directory,result){
+  check(result&&Object.values(Object.getOwnPropertyDescriptors(result)).every(d=>Object.hasOwn(d,'value'))&&Reflect.ownKeys(result).length===Object.keys(result).length,'LAUNCH_PUBLIC_RESULT_FIELDS');
+  exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope'+(failure?',failureCode':'')+(Object.hasOwn(result,'adverse')?',adverse':''));
+  if(failure){check(Object.hasOwn(failure,'value')&&['FAILED','INCOMPLETE'].includes(result.status),'LAUNCH_PUBLIC_FAILURE_CODE');validatePublicIntegrationFailureCode(failure.value);}
+- check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
++ check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FINANCIAL_COMPLETE','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
+  if(result.driver!==undefined){
+   const d=result.driver,diagnostic=Object.getOwnPropertyDescriptor(d,'failure');
+   exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':'')+(diagnostic?',failure':''));
+@@ -125,6 +127,7 @@ export function retainPublicIntegrationResult(directory,result){
+  }
+  if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
+  if(result.adverse!==undefined){validatePublicAdverseValue(result.adverse);if(result.adverse.candidate!==undefined)check(isDeepStrictEqual(publicJsonValue(result.adverse.candidate),JSON.parse(readFileSync(join(directory,'adverse-candidate.json'),'utf8'))),'LAUNCH_ADVERSE_CANDIDATE_BINDING');}
++ if(result.status==='FINANCIAL_COMPLETE')validateLocalFinancialCompletion(result);
+  durableFile(join(directory,'integration-result.json'),publicJsonValue(structuredClone(result)));
+ }
+ function publicJsonValue(value){
+@@ -231,13 +234,13 @@ export async function launchLocalFinancialCase(plan){
+   if(p.existingInitializedLoan||p.existingInitializedSwap)options.continuationPlan=p;
+   try{result=await integrateLocalFinancialCase(options);}
+   catch(error){if(error.publicIntegrationResult!==undefined)retainPublicIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('LOCAL_FINANCIAL_RUN_INCOMPLETE');}
+-  retainPublicIntegrationResult(p.outputDirectory,result);return result;
++  retainPublicIntegrationResult(p.outputDirectory,result);check(Date.now()<deadline,'LAUNCH_DEADLINE');return result;
+  }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('LOCAL_FINANCIAL_LAUNCH_FAILED');}
+  finally{seed.fill(0);if(!ownershipTransferred){let t;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Outer process containment remains required. */}finally{clearTimeout(t);}}}
+ }
+ if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+  let hardTimer;
+- try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=result.status==='PASS'?0:2;}
++ try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,containmentComplete:result.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=localFinancialExitCode(result,plan.limits.deadlineMs);}
+  catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+  finally{clearTimeout(hardTimer);}
+  process.exit(process.exitCode??0);
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-local.mjs b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+index 1c959c3..8db9d04 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-local.mjs
+@@ -161,8 +161,9 @@ async function runFinancialCase({kind,network,providers,compiledContract,roles,n
+     operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
+   } catch {operationalState={unavailable:true};}
+   const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
+-  // Preview command completion does not attest to external process containment.
+-  const previewComplete=target==='preview'&&stages.length===4&&cleanup.walletStopped&&cleanup.pendingOperations===0;
++  // Fresh command completion does not attest to external process containment.
++  // Existing-deployment and continuation local modes retain their prior cleanup gate.
++  const previewComplete=(target==='preview'||(!existingDeployment&&!initializedLoan&&!initializedSwap))&&stages.length===4&&cleanup.walletStopped&&cleanup.pendingOperations===0;
+   const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':previewComplete?'FINANCIAL_COMPLETE':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+   if(failure||(!contained&&!previewComplete)) {
+     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
+diff --git a/experiments/moriarty-midnight-financial/ledger/run-local.test.mjs b/experiments/moriarty-midnight-financial/ledger/run-local.test.mjs
+index 0282dc5..56b45d7 100644
+--- a/experiments/moriarty-midnight-financial/ledger/run-local.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/run-local.test.mjs
+@@ -152,3 +152,8 @@ test('initialized driver rejects combined modes and altered fixed history before
+   const h=initializedDriverFixture();change(h);await assert.rejects(runLocalFinancialCase(h.options),/INITIALIZED_LOAN/);assert.equal(h.calls.length,0);
+  }
+ });
++
++test('fresh local four-stage completion does not require external containment',async()=>{
++ const h=harness();h.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:0,containmentComplete:false});
++ const result=await runLocalFinancialCase(h.options);assert.equal(result.status,'FINANCIAL_COMPLETE');assert.equal(result.cleanup.containmentComplete,false);
++});
+diff --git a/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.mjs b/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.mjs
+new file mode 100644
+index 0000000..82622a5
+--- /dev/null
++++ b/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.mjs
+@@ -0,0 +1,43 @@
++/** Fresh local four-stage completion only. No persistence or outer containment claim. */
++import {isDeepStrictEqual} from 'node:util';
++const check=(ok,code)=>{if(!ok)throw Error(code);};
++const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x);
++const exact=(o,keys)=>check(o&&Object.keys(o).sort().join(',')===keys.split(',').sort().join(','),'LOCAL_COMPLETION_FIELDS');
++function data(value){
++ let count=0;const visit=v=>{check(++count<=20000,'LOCAL_COMPLETION_BOUND');if(v===null||v===undefined||['string','boolean','number'].includes(typeof v))return;check(v&&typeof v==='object'&&(Array.isArray(v)||Object.getPrototypeOf(v)===Object.prototype),'LOCAL_COMPLETION_DATA');for(const [k,d] of Object.entries(Object.getOwnPropertyDescriptors(v))){check(Object.hasOwn(d,'value'),'LOCAL_COMPLETION_ACCESSOR');visit(d.value);}check(Object.getOwnPropertySymbols(v).length===0,'LOCAL_COMPLETION_DATA');};visit(value);return value;
++}
++function completed(r){
++ check(['PASS','FINANCIAL_COMPLETE'].includes(r.status)&&r.sourceTestOnly===false&&!Object.hasOwn(r,'failureCode')&&r.phase==='driver'&&r.setupPendingOperations===0,'LOCAL_COMPLETION_REQUIRED');
++ check(r.cleanup.containmentComplete===(r.status==='PASS'),'LOCAL_COMPLETION_CONTAINMENT');
++ const d=r.driver,f=r.financialComparison,order=r.kind==='loan'?['deploy','initialize','accrue','settle']:['deploy','initialize','swap','close'];
++ check(d&&f&&d.status===r.status&&!Object.hasOwn(d,'failure')&&f.status==='PASS'&&f.kind===r.kind&&f.contractAddress===d.contractAddress,'LOCAL_COMPLETION_REQUIRED');
++ for(const c of [r.cleanup,d.cleanup])check(c.walletStopped===true&&c.pendingOperations===0,'LOCAL_COMPLETION_REQUIRED');
++ check(isDeepStrictEqual(r.cleanup,d.cleanup)&&Array.isArray(d.stages)&&d.stages.length===4&&Array.isArray(r.comparisons)&&r.comparisons.length===4&&isDeepStrictEqual(f.stages,r.comparisons),'LOCAL_COMPLETION_REQUIRED');
++ const ids=new Set();
++ for(const [i,stage] of order.entries()){
++  const receipt=d.stages[i],comparison=r.comparisons[i];
++  exact(receipt,'schema,txId,contractAddress,circuitId,transaction,blockHash,blockHeight,finalizedHead,finalizedHeight,protocolVersion,indexerIdentifiers,fees,contractBalances,acceptance');
++  exact(receipt.transaction,'schema,rawSha256,transactionHash,identifiers,inputs,outputs,actions,grossByAsset,dustFee,proofVerified,ledgerAccepted');
++  check(receipt.schema==='moriarty.finalized-financial-stage/1'&&receipt.acceptance==='uncertified-I2-observation'&&Number.isSafeInteger(receipt.blockHeight)&&Number.isSafeInteger(receipt.finalizedHeight)&&receipt.finalizedHeight>=receipt.blockHeight&&/^0x[0-9a-f]{64}$/.test(receipt.finalizedHead)&&Number.isSafeInteger(receipt.protocolVersion)&&receipt.transaction.schema==='moriarty.native-financial-transaction/1','LOCAL_COMPLETION_REQUIRED');
++  check(receipt.circuitId===stage&&receipt.contractAddress===d.contractAddress&&comparison.status==='PASS'&&comparison.kind===r.kind&&comparison.stage===stage&&comparison.txId===receipt.txId&&comparison.contractAddress===d.contractAddress&&comparison.blockHash===receipt.blockHash&&comparison.blockHeight===receipt.blockHeight,'LOCAL_COMPLETION_REQUIRED');
++  check(receipt.transaction?.identifiers?.includes(receipt.txId)&&receipt.transaction.proofVerified===false&&receipt.transaction.ledgerAccepted===false,'LOCAL_COMPLETION_REQUIRED');
++  for(const id of receipt.transaction.identifiers){check(!ids.has(id),'LOCAL_COMPLETION_REQUIRED');ids.add(id);}
++ }
++ check(Array.isArray(d.transactionIds)&&d.transactionIds.length===ids.size&&new Set(d.transactionIds).size===ids.size&&d.transactionIds.every(id=>ids.has(id)),'LOCAL_COMPLETION_REQUIRED');
++ check(d.operationalState?.reservedSubmissions===4&&decimal(d.operationalState.reservedDustFee)&&d.operationalState.unavailable===undefined,'LOCAL_COMPLETION_REQUIRED');
++ return r;
++}
++export function validateLocalFinancialCompletion(result){
++ const r=data(result);check(r?.schema==='moriarty.local-financial-integration/1'&&r.driver?.schema==='moriarty.local-financial-run/1'&&['loan','swap'].includes(r.kind)&&r.adverse===undefined,'LOCAL_COMPLETION_REQUIRED');
++ for(const flag of ['networkAcceptance','proofAcceptance','financialAcceptance'])check(r[flag]===false,'LOCAL_COMPLETION_ACCEPTANCE');
++ for(const entry of [r.financialComparison,...(r.comparisons??[])])check(entry?.networkAcceptance===false&&entry?.proofAcceptance===false,'LOCAL_COMPLETION_ACCEPTANCE');
++ const out=completed(r);const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x),id=x=>typeof x==='string'&&/^(?:[a-f0-9]{64}|[a-f0-9]{66})$/.test(x);
++ check(hex(r.driver.contractAddress)&&r.driver.kind===r.kind&&hex(r.build?.receiptSha256)&&hex(r.build?.sourceManifestHash),'LOCAL_COMPLETION_BINDING');
++ let fees=0n;
++ for(const [i,receipt] of r.driver.stages.entries()){
++  check(hex(receipt.blockHash)&&hex(receipt.transaction.rawSha256)&&receipt.transaction.rawSha256===receipt.transaction.transactionHash&&receipt.transaction.identifiers.every(id)&&receipt.indexerIdentifiers.every(id)&&id(receipt.txId),'LOCAL_COMPLETION_BINDING');
++  check(decimal(receipt.transaction.dustFee)&&r.comparisons[i].nativeFee?.asset==='DUST'&&r.comparisons[i].nativeFee?.unit==='SPECK'&&r.comparisons[i].nativeFee.amount===receipt.transaction.dustFee,'LOCAL_COMPLETION_FEE');fees+=BigInt(receipt.transaction.dustFee);
++ }
++ check(fees.toString()===r.driver.operationalState.reservedDustFee,'LOCAL_COMPLETION_FEE');return out;
++}
++export function localFinancialExitCode(result,deadlineMs){check(Number.isSafeInteger(deadlineMs)&&Date.now()<deadlineMs,'LOCAL_COMPLETION_DEADLINE');validateLocalFinancialCompletion(result);check(Date.now()<deadlineMs,'LOCAL_COMPLETION_DEADLINE');return 0;}
+diff --git a/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.test.mjs b/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.test.mjs
+new file mode 100644
+index 0000000..61d4b8b
+--- /dev/null
++++ b/home/charl/Moriarty/.worktrees/sp05-local-completion/experiments/moriarty-midnight-financial/ledger/local-completion.test.mjs
+@@ -0,0 +1,132 @@
++/** Composed SOURCE-ONLY regressions. Transport/SDK submission and reservation
++ * counters are controlled fixtures, never live calls or real allocations.
++ * Native transaction bytes and financial public states come from retained loan
++ * evidence. Role capability commitments alone are replaced with commitments to
++ * synthetic test secrets; no original private roles or state are accessed.
++ * ContractState containers have controlled empty balances; decoded financial
++ * fields are reconstructed from retained summaries, not decoded from those containers.
++ */
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {readFileSync,mkdtempSync,rmSync,writeFileSync,openSync,fsyncSync,closeSync} from 'node:fs';
++import {tmpdir} from 'node:os';
++import {join} from 'node:path';
++import {pathToFileURL} from 'node:url';
++import {PINNED_NM} from './providers.mjs';
++import {integrateLocalFinancialCase} from './integrate-local.mjs';
++import {runLocalFinancialCase} from './run-local.mjs';
++import {observeFinalizedStage} from './receipt.mjs';
++import {createFinancialComparator} from './financial-comparison.mjs';
++import {retainPublicIntegrationResult} from './launch-local.mjs';
++const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
++const stateRuntime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs')).href);
++const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
++const {MidnightBech32m,UnshieldedAddress}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/wallet-sdk-address-format/dist/index.js')).href);
++const D=new URL('../../../deliverables/sp05-financial-integration-2026-09-09/',import.meta.url);
++const read=path=>readFileSync(new URL(path,D));
++const retained=JSON.parse(read('local-continuation-02/run-public/integration-result.json'));
++const stages=['deploy','initialize','accrue','settle'];
++const summaries=Object.fromEntries(stages.map(s=>[s,JSON.parse(read(`local-continuation-02/run-public/stage-${s}.json`))]));
++const receiptByStage=Object.fromEntries(retained.driver.stages.map(r=>[r.circuitId,r]));
++const raws={deploy:read('local-execution-04/run-public/public-transactions/'+receiptByStage.deploy.transaction.transactionHash+'.bin'),initialize:read('local-recovery-03/run-public/public-transactions/'+receiptByStage.initialize.transaction.transactionHash+'.bin'),...Object.fromEntries(['accrue','settle'].map(s=>[s,read('local-continuation-02/run-public/public-transactions/'+receiptByStage[s].transaction.transactionHash+'.bin')]))};
++const bytes=s=>Uint8Array.from(Buffer.from(s,'hex'));
++const address=receiptByStage.deploy.contractAddress,first=summaries.deploy.publicState.borrowerAddress.bytes,second=summaries.deploy.publicState.lenderAddress.bytes,networkTag=summaries.deploy.publicState.networkTag;
++const color=summaries.initialize.publicState.usdColor;
++const publicKey=[...ledger.Transaction.deserialize('signature','proof','binding',raws.settle).intents.values()].flatMap(i=>[i.guaranteedUnshieldedOffer,i.fallibleUnshieldedOffer]).filter(Boolean).flatMap(o=>o.inputs)[0].owner;
++const roles={firstAddress:first,secondAddress:second,firstSecret:new Uint8Array(32).fill(17),secondSecret:new Uint8Array(32).fill(18)};
++function decodedState(stage){
++ const p=summaries[stage].publicState;
++ const scalars=x=>typeof x==='string'?BigInt(x):Object.fromEntries(Object.entries(x).map(([k,v])=>[k,scalars(v)]));
++ const s={...p,programDigest:bytes(p.programDigest),networkTag:bytes(p.networkTag),initialized:p.initialized,remaining:BigInt(p.remaining),revision:BigInt(p.revision),kernelState:scalars(p.kernelState),usdDomain:bytes(p.usdDomain),usdColor:bytes(p.usdColor),lastAccrue:scalars(p.lastAccrue),lastSettle:scalars(p.lastSettle)};
++ for(const [role,secret] of [['borrower',roles.firstSecret],['lender',roles.secondSecret]]){s[role+'Address']={bytes:bytes(p[role+'Address'].bytes)};s[role+'Capability']=runtime.persistentHash(new runtime.CompactTypeVector(4,new runtime.CompactTypeBytes(32)),[Uint8Array.from(Buffer.from(`moriarty:sp05:loan:${role}`.padEnd(32,'\0'))),bytes(networkTag),bytes(p.programDigest),secret]);}
++ return s;
++}
++function fixture({wireMutation,observationMutation,bindingMutation}={}){
++ const calls=[],compared=[],watched=[];let stopped=false,closed=false;const priorCount=0,priorDust=0n;let charges=priorDust,gross=0n;
++ const network={networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
++ const binding={network,payerAddress:first,sdkNetworkId:'undeployed'};
++ const submit=stage=>{calls.push(stage);charges+=BigInt(receiptByStage[stage].transaction.dustFee);gross+=BigInt(receiptByStage[stage].transaction.grossByAsset[color]??0);return receiptByStage[stage].txId;};
++ const sdkCalls={deployContract:async()=>({deployTxData:{public:{contractAddress:address,txId:submit('deploy')}}}),submitCallTx:async(_p,o)=>({public:{txId:submit(o.circuitId)}})};
++ const options={kind:'loan',sourceTestOnly:true,walletContext:{wallet:{async stop(){closed=true;}},unshieldedKeystore:{getPublicKey:()=>publicKey},shieldedSecretKeys:{coinPublicKey:'synthetic-coin',encryptionPublicKey:'synthetic-encryption'}},networkConfig:network,roles,networkTag,deploymentSigningKey:'synthetic-signing-key-not-used',build:{receiptPath:'/synthetic/public-build.json',receiptSha256:'11'.repeat(32),sourceManifestHash:'22'.repeat(32)},privateStateConfig:{},limits:{allocationId:'composed-negative-only',reservationStatePath:'/synthetic/no-file-created',deadlineMs:Date.now()+10000,submissions:4,dustFee:2000000000000000n,grossByLogicalAsset:{USD_TEST_ASSET:20000000000n}},expectedProtocolVersion:1000000,onEvent:()=>{},now:()=>1700000000n,onStage:async s=>{compared.push(s.stage);if(bindingMutation)bindingMutation(s.stage,binding);return {status:'RECORDED',stage:s.stage,txId:s.txId};}};
++ options.adapters={loadAssets:async()=>({compiledContract:{sourceOnly:true},decodeState:decodedState,zkConfigPath:'/synthetic/no-proving-assets',assertFresh(){},cleanup(){}}),loadContractsSdk:async()=>sdkCalls,loadProviderSdk:async()=>({getNetworkId:()=> 'undeployed',NodeZkConfigProvider:class{}}),loadNativeRuntime:async()=>({ledger,runtime}),prepareDeployment:async()=>({public:{contractAddress:address},driverSdk:sdkCalls}),initializeReservations:()=>{},createProviders:async()=>({publicDataProvider:{},execute:async(_label,fn)=>fn(),stop(){stopped=true;},getExecutionBinding:()=>binding,getState:()=>({reservedSubmissions:priorCount+calls.length,reservedDustFee:charges,reservedGrossByAsset:gross?{[color]:gross}:{},identifiers:calls.flatMap(s=>receiptByStage[s].transaction.identifiers)}),cleanup:async()=>{closed=true;return {walletStopped:true,pendingOperations:0,containmentComplete:true};}}),createComparator:createFinancialComparator,driver:runLocalFinancialCase,fetch:()=>{throw Error('NO_NETWORK');},observe:async o=>{
++  const stage=o.circuitId,r=receiptByStage[stage];
++  const row=x=>({owner:MidnightBech32m.encode('undeployed',new UnshieldedAddress(Buffer.from(x.owner,'hex'))).toString(),tokenType:x.type,value:BigInt(x.value),intentHash:x.intentHash});
++  const data={tx:ledger.Transaction.deserialize('signature','proof','binding',raws[stage]),txId:r.txId,txHash:r.transaction.transactionHash,identifiers:r.transaction.identifiers,status:'SucceedEntirely',protocolVersion:r.protocolVersion,blockHash:r.blockHash,blockHeight:r.blockHeight,fees:{paidFees:r.fees.indexerReported.paid,estimatedFees:r.fees.indexerReported.estimated},unshielded:{created:r.transaction.outputs.map(row),spent:r.transaction.inputs.map(row)}};
++  if(wireMutation)wireMutation(stage,data);
++  const provider={watchForTxData:async id=>{watched.push(stage);assert.equal(id,r.txId);return data;},queryContractState:async()=>new stateRuntime.ContractState(),queryUnshieldedBalances:async()=>Object.entries(r.contractBalances).map(([tokenType,value])=>({tokenType,balance:BigInt(value)}))};
++  const rpc=async(method,args)=>method==='chain_getHeader'?{number:'0x'+r.blockHeight.toString(16)}:method==='chain_getBlockHash'?'0x'+r.blockHash:'0x'+r.blockHash;
++  const observed=await observeFinalizedStage({...o,provider,rpc,decodeState:()=>o.decodeState(stage)});if(observationMutation)observationMutation(stage,observed);return observed;
++ }};
++ return {options,calls,compared,watched,state:()=>({stopped,closed,charges,gross,priorCount,priorDust})};
++}
++async function runAndRetain(f){
++ const dir=mkdtempSync(join(tmpdir(),'moriarty-composed-public-'));let result,error;
++ try{
++  // Real durable stage writes are confined to synthetic public scratch.
++  const record=f.options.onStage;f.options.onStage=async s=>{const file=join(dir,'stage-'+s.stage+'.json');writeFileSync(file,JSON.stringify(s));const fd=openSync(file,'r');try{fsyncSync(fd);}finally{closeSync(fd);}return record(s);};
++  try{result=await integrateLocalFinancialCase(f.options);}catch(e){error=e;result=e.publicIntegrationResult;}
++  assert.throws(()=>retainPublicIntegrationResult(dir,result),/LAUNCH_PUBLIC_RESULT/,'production retention must reject source-only evidence');
++  assert.ok(result, error?.message);writeFileSync(join(dir,'integration-result.json'),JSON.stringify(result));const fd=openSync(join(dir,'integration-result.json'),'r');try{fsyncSync(fd);}finally{closeSync(fd);}const parentFd=openSync(dir,'r');try{fsyncSync(parentFd);}finally{closeSync(parentFd);}const retainedResult=JSON.parse(readFileSync(join(dir,'integration-result.json')));
++  for(const stage of f.compared)assert.equal(JSON.parse(readFileSync(join(dir,'stage-'+stage+'.json'))).status,'PASS');
++  return {result:retainedResult,error};
++ }finally{rmSync(dir,{recursive:true,force:true});}
++}
++
++import {localFinancialExitCode,validateLocalFinancialCompletion} from './local-completion.mjs';
++const originals={providers:await import('./providers.mjs'),assets:await import('./proven-assets.mjs'),prepare:await import('./prepare-deployment.mjs'),receipt:await import('./receipt.mjs')};
++// Test-runner module interception only: no production adapters or source status
++// are passed to the real integration entry. SDK/transport operations are inert.
++async function completedFixture(t,{pending=0,stopFailure=false,observationMutation,retentionFailure=false,dustFeeCap,containmentComplete=false,loaderFailure=false,lateCleanup=false}={}){
++ const f=fixture({observationMutation}),deps=f.options.adapters,directory=mkdtempSync(join(tmpdir(),'moriarty-local-exit-'));
++ t.after(()=>rmSync(directory,{recursive:true,force:true}));
++ if(dustFeeCap!==undefined)f.options.limits.dustFee=dustFeeCap;
++ const load=deps.loadAssets;deps.loadAssets=async()=>{const loaded=await load();return {...loaded,cleanup:()=>{loaded.cleanup();if(lateCleanup)t.mock.method(Date,'now',()=>f.options.limits.deadlineMs+1);if(loaderFailure)throw Error('CONTROLLED_LOADER_CLEANUP');}};};
++ const create=deps.createProviders;
++ deps.createProviders=async o=>{const p=await create(o);return {...p,cleanup:async()=>{await p.cleanup();if(stopFailure)throw Error('CONTROLLED_WALLET_STOP_FAILED');return {walletStopped:true,pendingOperations:pending,containmentComplete};}};};
++ t.mock.module(new URL('./providers.mjs',import.meta.url).href,{namedExports:{...originals.providers,loadFinancialSdk:deps.loadProviderSdk,initializeFinancialReservations:deps.initializeReservations,createFinancialProviders:deps.createProviders}});
++ t.mock.module(new URL('./proven-assets.mjs',import.meta.url).href,{namedExports:{...originals.assets,loadProvenFinancialContract:deps.loadAssets}});
++ t.mock.module(new URL('./prepare-deployment.mjs',import.meta.url).href,{namedExports:{...originals.prepare,loadFinancialContractsSdk:deps.loadContractsSdk,prepareFinancialDeployment:deps.prepareDeployment}});
++ t.mock.module(new URL('./receipt.mjs',import.meta.url).href,{namedExports:{...originals.receipt,observeFinalizedStage:deps.observe}});
++ t.mock.method(globalThis,'fetch',deps.fetch);
++ delete f.options.adapters;delete f.options.sourceTestOnly;
++ f.options.onStage=s=>{if(retentionFailure)throw Error('CONTROLLED_RETENTION_FAILURE');writeFileSync(join(directory,'stage-'+s.stage+'.json'),JSON.stringify(s));return {status:'RECORDED',stage:s.stage,txId:s.txId};};
++ const entry=await import('./integrate-local.mjs?exit-test='+Math.random());
++ let result,error;try{result=await entry.integrateLocalFinancialCase(f.options);}catch(e){error=e;result=e.publicIntegrationResult;}
++ return {...f,result,error,directory};
++}
++test('controlled production driver/integration/writer reaches CLI zero selector with external containment still false',async t=>{
++ const f=await completedFixture(t);assert.equal(f.error,undefined);assert.equal(f.result.status,'FINANCIAL_COMPLETE');assert.equal(f.result.driver.status,'FINANCIAL_COMPLETE');
++ retainPublicIntegrationResult(f.directory,f.result);const stored=JSON.parse(readFileSync(join(f.directory,'integration-result.json')));
++ assert.equal(localFinancialExitCode(stored,f.options.limits.deadlineMs),0);assert.equal(stored.cleanup.containmentComplete,false);assert.equal(stored.driver.cleanup.containmentComplete,false);
++ for(const k of ['networkAcceptance','proofAcceptance','financialAcceptance'])assert.equal(stored[k],false);
++ assert.equal(stored.sourceTestOnly,false);assert.deepEqual(f.calls,stages);assert.equal(stored.comparisons.length,4);
++});
++for(const control of [{pending:1},{stopFailure:true},{retentionFailure:true},{loaderFailure:true},{lateCleanup:true},{observationMutation:(s,o)=>{if(s==='initialize')o.receipt.transaction.outputs[0].owner=second;}}])test('failed/pending production path never receives CLI zero',async t=>{
++ const f=await completedFixture(t,control);assert.ok(f.error);assert.throws(()=>localFinancialExitCode(f.result,f.options.limits.deadlineMs));assert.notEqual(f.result.status,'FINANCIAL_COMPLETE');
++});
++test('completed result validator rejects stale status, missing stages/IDs, unknown work and false containment claims',async t=>{
++ const f=await completedFixture(t);assert.equal(f.error,undefined);
++ for(const mutate of [r=>r.financialComparison.networkAcceptance=true,r=>{r.comparisons[0].proofAcceptance='false';r.financialComparison.stages=r.comparisons;},r=>Object.defineProperty(r.cleanup,'pendingOperations',{get(){throw Error('ACCESSOR_EXECUTED');}}),r=>r.status='FAILED',r=>r.status='INCOMPLETE',r=>r.sourceTestOnly=true,r=>r.setupPendingOperations=1,r=>r.driver.stages.pop(),r=>delete r.driver.stages[0].finalizedHeight,r=>r.financialComparison.stages.pop(),r=>r.driver.transactionIds[0]='bad',r=>r.cleanup.containmentComplete=true,r=>r.driver.status='INCOMPLETE',r=>r.driver.operationalState={unavailable:true},r=>r.driver.failure={phase:'observe',stage:'settle',code:'UNCLASSIFIED_DRIVER_FAILURE'}]){
++  const r=structuredClone(f.result);mutate(r);assert.throws(()=>localFinancialExitCode(r,f.options.limits.deadlineMs));
++ }
++ assert.throws(()=>localFinancialExitCode(f.result,Date.now()),/DEADLINE/);
++});
++
++test('admitted cumulative excess fee prevents financial completion and CLI zero',async t=>{
++ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
++ const f=await completedFixture(t,{dustFeeCap:total-1n});assert.equal(f.error.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(f.result.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');assert.throws(()=>localFinancialExitCode(f.result,f.options.limits.deadlineMs));
++});
++test('successful contained result retains PASS; source-only results never become command success',async t=>{
++ const f=await completedFixture(t,{containmentComplete:true});assert.equal(f.result.status,'PASS');assert.equal(localFinancialExitCode(f.result,f.options.limits.deadlineMs),0);
++ const r=structuredClone(f.result);r.status='SOURCE_TEST_ONLY';r.sourceTestOnly=true;assert.throws(()=>localFinancialExitCode(r,f.options.limits.deadlineMs));
++});
++test('failed durable result retention prevents the CLI exit selector from running',async t=>{
++ const f=await completedFixture(t);writeFileSync(join(f.directory,'integration-result.json'),'original');let selected=false;
++ assert.throws(()=>{retainPublicIntegrationResult(f.directory,f.result);selected=true;localFinancialExitCode(f.result,f.options.limits.deadlineMs);});assert.equal(selected,false);assert.equal(readFileSync(join(f.directory,'integration-result.json'),'utf8'),'original');
++});
++import fs from 'node:fs';import {syncBuiltinESMExports} from 'node:module';
++test('final durable result directory fsync crossing the absolute deadline cannot yield CLI zero',async t=>{
++ const f=await completedFixture(t);let clock=Date.now();f.options.limits.deadlineMs=clock+1000;const fsync=fs.fsyncSync;
++ t.mock.method(Date,'now',()=>clock);t.mock.method(fs,'fsyncSync',fd=>{const r=fsync(fd);if(fs.fstatSync(fd).isDirectory())clock=f.options.limits.deadlineMs+1;return r;});syncBuiltinESMExports();t.after(()=>{t.mock.restoreAll();syncBuiltinESMExports();});
++ retainPublicIntegrationResult(f.directory,f.result);assert.throws(()=>localFinancialExitCode(f.result,f.options.limits.deadlineMs),{message:'LOCAL_COMPLETION_DEADLINE'});assert.ok(readFileSync(join(f.directory,'integration-result.json')).length>0);
++});

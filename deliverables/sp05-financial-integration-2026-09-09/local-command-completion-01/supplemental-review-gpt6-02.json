@@ -1,0 +1,70 @@
+{
+  "schema": "moriarty.local-command-completion-supplemental-source-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerRole": "Independent non-author source reviewer",
+  "reviewerAgent": "/root/local_completion_audit",
+  "reviewedAt": "2026-09-10T19:50:28.457973+00:00",
+  "candidateSha256": "3c1e29c3aa9ab90647f26aad7063c9cb9f99abb1dd0f2e9081a3ee5df10a3fc9",
+  "sourceVerdict": "FAIL_SCOPED",
+  "verdict": "FAIL_SCOPED",
+  "scope": "Supplemental audit of shared local CLI exit mapping for excluded recovery, initialized-continuation and stale-adverse plan modes. Source-only reproduction; no operations.",
+  "supersedesVerdictOf": "independent-review-gpt6-01.json",
+  "originalReceiptPreserved": true,
+  "correction": "Original PASS_SCOPED missed that driver-level exclusion does not preserve final CLI exit mapping. All 217 tests passed but did not cover this shared selector regression.",
+  "findings": [
+    {
+      "id": "LOCAL_COMPLETION_SHARED_SELECTOR_MODE_REGRESSION",
+      "severity": "blocking",
+      "status": "OPEN",
+      "locations": [
+        "experiments/moriarty-midnight-financial/ledger/launch-local.mjs:243",
+        "experiments/moriarty-midnight-financial/ledger/local-completion.mjs:29",
+        "experiments/moriarty-midnight-financial/ledger/local-completion.mjs:33"
+      ],
+      "detail": "CLI now unconditionally calls a fresh-only localFinancialExitCode for every validated local plan. The validator rejects adverse results and requires a local driver plus four current reserved submissions. Previously any successfully returned PASS mapped to 0 and other returned statuses mapped to 2. Stale integration can successfully return INCOMPLETE with adverse evidence and no driver; writer accepts it, but the new selector throws and CLI catch maps it to 1. A controlled contained continuation PASS has four receipts including historical stages but only two current reservations; writer accepts it and old selector yields 0, whereas new selector throws and yields 1. Recovery has three current reservations.",
+      "reachability": "Stale INCOMPLETE is a currently reachable successful-return production shape because production cleanup containmentComplete is false and stale outcome can return rather than throw. Contained PASS for recovery/continuation/adverse is an existing source contract; current production cleanup always false means these PASS cases are controlled-contract regressions, not observed operational results. Continuation has four recorded stages, not two; two denotes new submissions.",
+      "requiredRepair": "Route the fresh completion validator only for fresh execution using the already validated mutually exclusive plan modes. Preserve prior status PASS -> 0, otherwise -> 2 for existingDeployment, existingInitializedLoan, existingInitializedSwap and existingStaleLoan successful returns, while retaining current thrown-failure behavior and deadline checks. Add meaningful selector regressions for excluded modes; no new dispatch or framework is needed."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "source-only existing stale fixture public projection",
+      "command": "node /tmp/sp05-local-selector-regression.mjs",
+      "result": {
+        "retained": true,
+        "status": "INCOMPLETE",
+        "hasAdverse": true,
+        "hasDriver": false,
+        "oldExit": 2,
+        "newExitThroughCliCatch": 1,
+        "error": "LOCAL_COMPLETION_REQUIRED"
+      },
+      "method": "Extracted existing inert stale fixture into temporary module with absolute source imports; ran existing source adapter integration. Applied same sourceTestOnly/status/public-adverse projection convention as its existing durable-writer test. No real stale submission occurred. Initial unmodified fixture projection failed writer reservation shape checks; corrected projection uses permitted OUTCOME_UNKNOWN adverse evidence, matching the existing test technique."
+    },
+    {
+      "kind": "controlled retained-public continuation projection",
+      "result": {
+        "retained": true,
+        "status": "PASS",
+        "stages": 4,
+        "reservedSubmissions": 2,
+        "oldExit": 0,
+        "newExitThroughCliCatch": 1,
+        "error": "LOCAL_COMPLETION_REQUIRED"
+      },
+      "method": "Read retained public local-continuation-02 integration-result; changed status and cleanup containment in memory only to model the existing contained PASS contract, wrote to and removed a temporary public scratch directory. Did not change historical evidence or claim actual containment."
+    }
+  ],
+  "pinsVerified": 54,
+  "conditions": [
+    "Do not merge original candidate under the earlier PASS; repair and refreeze, then obtain both independent reviews of exact repaired bytes.",
+    "Actual Midnight hard gate remains open; local source tests establish neither financial acceptance nor actual command exit.",
+    "Loan and swap public caps remain exhausted; no resource or operational approval is granted."
+  ],
+  "privateContentsRead": false,
+  "sourceEdited": false,
+  "serviceStarts": 0,
+  "newTransactions": 0,
+  "newProofs": 0,
+  "actualResultAccepted": false
+}
