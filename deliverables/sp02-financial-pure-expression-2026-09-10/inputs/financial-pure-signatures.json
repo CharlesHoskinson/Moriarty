@@ -1,0 +1,148 @@
+{
+  "status": "PROPOSED_NOT_RUNTIME",
+  "preservedConstructors": 40,
+  "addedConstructors": 8,
+  "totalConstructors": 48,
+  "rows": [
+    {
+      "constructor": "ConstructAmount",
+      "metadata": {
+        "asset": "declared Asset identifier"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "value:UInt128 -> Amount<asset>",
+      "source": "amount<A>(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ConstructShares",
+      "metadata": {
+        "vault": "declared Vault identifier",
+        "holder": "declared Party identifier"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "value:UInt128 -> Shares<vault,holder>",
+      "source": "shares<V,H>(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ConstructVariant",
+      "metadata": {
+        "family": "declared Variant family",
+        "tag": "declared tag in family"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "value:payload(family,tag) -> Variant<family>",
+      "source": "variant<F.Tag>(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "VALUE_BOUND"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ProjectVariant",
+      "metadata": {
+        "tag": "declared tag in child Variant family"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "value:Variant<F> -> payload(F,tag)",
+      "source": "project_variant<Tag>(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_NAME",
+        "TYPE_MISMATCH",
+        "VARIANT_CASE"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ProjectSome",
+      "metadata": {},
+      "children": [
+        "value"
+      ],
+      "typing": "value:Option<T> -> T",
+      "source": "some_value(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_MISMATCH",
+        "OPTION_NONE"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ConvertUInt",
+      "metadata": {
+        "width": "canonical decimal string64|128|256"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "value:UInt64|UInt128|UInt256 -> UInt<width>",
+      "source": "to_uint<W>(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_LITERAL",
+        "TYPE_MISMATCH",
+        "ARITH_RANGE"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "ScalarValue",
+      "metadata": {
+        "component": "quanta|mantissa|negative|magnitude"
+      },
+      "children": [
+        "value"
+      ],
+      "typing": "closed overload table in financial-pure-extensions.md",
+      "source": "quanta|mantissa|is_negative|magnitude(value)",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_LITERAL",
+        "TYPE_MISMATCH"
+      ],
+      "stateEffects": []
+    },
+    {
+      "constructor": "Select",
+      "metadata": {},
+      "children": [
+        "condition",
+        "consequent",
+        "alternative"
+      ],
+      "typing": "condition:Bool, consequent:T, alternative:T -> T; exact same finite pure T",
+      "source": "condition ? consequent : alternative",
+      "ownNodeCharge": 1,
+      "staticAndDynamicErrors": [
+        "TYPE_MISMATCH"
+      ],
+      "stateEffects": [],
+      "evaluation": "condition once, then selected arm only; whole syntax static checking and bound"
+    }
+  ],
+  "sharedContract": "exact N/P encoding, static whole-tree checking, inherited error-span ordering and bounded values; Boolean /1 actual selected-node semantics"
+}
