@@ -22,7 +22,7 @@ sources:
   - SRC-0097
   - SRC-0077
   - SRC-0078
-updated_at: 2026-09-10T07:43:11Z
+updated_at: 2026-09-10T08:30:09Z
 ---
 
 # Current research context
@@ -49,4 +49,4 @@ The [TypeScript-style language report and PL checklist](../deliverables/language
 
 [Security-token report and asset transformations](../deliverables/security-token-transformations-2026-09-09/README.md): SRC-0110 recommends explicit assets, claims, encumbrances and operation-specific authority. Define the model in SP01, types and reductions/K in SP02–03, servicing/DeFi behavior in SP07–08, and history/composition/conformance in SP06/SP09–12. Preserve the current admitted SP05 loan/swap work; test each later supported profile on Docker then Preview. The eight new cases are proposals; report citations and standards status remain unverified.
 
-[[wiki/midnight-readiness-lessons|Local readiness lessons]]: a contained public recovery diagnostic exposed exact-block action lookup semantics. The unchanged actual-SDK fixture passes with latest-state lookup and matching indexed/finalized bracketing; full native-state equality remains required. All 291 ledger tests pass. Source/resource audits and actual recovery remain pending; no Preview financial acceptance.
+[[wiki/midnight-readiness-lessons|Midnight lessons]]: recovery03 restored the retained identity and submitted initialize, indexed Success in local block 20363. Finality and full financial comparison remain unestablished. Native output-origin and bounded finality-wait and retention repairs pass 306 tests; GPT-6 and Grok approved source07. Preserve initialized state and private storage; reconcile before accrue/settle. No Preview financial acceptance.

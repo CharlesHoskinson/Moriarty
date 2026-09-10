@@ -1,0 +1,11 @@
+# Initialize result from the stopped public indexer
+
+Actual database observation: transaction `1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6` is stored as regular transaction 35 with transaction-result JSON `"Success"`, protocol 1000000, both expected identifiers and block 20363 (`7f61e4c7225c456400e852f3648cf7fcad958bb05ed84002441782764093c94f`). Its retained raw transaction hashes to the same value. The latest indexed block is also 20363.
+
+Contract action 7 is a call with entry point `initialize`. Its public state is 7811 bytes, SHA256 `1f0724d2afe55e1c2aa22580f1bf9f0eed1a30e74b7a04ff78fe622a1e6fb30f`, retained as `indexed-initialize-state.bin`. The same address has only its earlier deployment and this initialize action in this stopped snapshot. One indexed unshielded UTXO was created by transaction 35 and remains unspent in this snapshot; its raw owner/token/value/intent fields are in `stopped-indexer-effects.json`. No complete financial comparator or node canonical-finality check was performed by this task.
+
+Acquisition: container inspection reported exited, PID 0 and no mounts. Docker diff listed only `/data/indexer.sqlite` and `/data/ledger-db.sqlite` beneath changed `/data`. Docker archive HEAD metadata measured the public indexer SQLite at 23,842,816 bytes with no WAL or SHM. The separate ledger database was 360,251,392 bytes, over the 256 MiB bound, and was not copied. Only the smaller indexer database was copied to a mode-0700 temporary directory; the database is mode 0600. The full database remains outside the repository.
+
+Read-only queries used SQLite `mode=ro&immutable=1`. SHA256 before and after querying remained `0ca51c9dc2bd314567fc25ce2dcc7d7d2195c460b969ab3c8eebe0cc535d264b`. `stopped-indexer-copy.json` retains its scratch path. The captured actual table schemas and literal SQL queries accompany the small result records. Queries touched public transaction, identifier, block, contract-action/balance and UTXO tables only.
+
+This is primary evidence of the stopped indexer's recorded initialize success and effects. It does not independently establish node canonical finality, full financial comparison, private-state consistency or permission to resume. No service was started, and no wallet, role, password or private contract database was accessed.

@@ -1,0 +1,55 @@
+{
+  "schema": "moriarty.independent-source-review-supplement/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": "GPT-6 Astra, /root/recovery_source_audit",
+  "candidateSha256": "efef3f015b8b084f29537541e6e84b502284d5111e90411adada86614517b273",
+  "supersedesSourceVerdict": "PASS_SCOPED",
+  "sourceVerdict": "CHANGES_REQUESTED",
+  "previousReview": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/joint-review-gpt6-06.json",
+    "sha256": "949f086c94bd6f9ba4035b2aed984eb5fab818f340f3e136f140f80a413cd7e7",
+    "preservedUnchanged": true
+  },
+  "recoveryResultVerdict": "PASS_SCOPED",
+  "finding": {
+    "id": "GPT6-SUPPLEMENT-06-001",
+    "severity": "high",
+    "producer": {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "line": 120
+    },
+    "consumer": {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "line": 101
+    },
+    "propagation": {
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "line": 216
+    },
+    "statement": "Candidate06 driver adds enumerable failure to every failed publicResult, but launcher exact driver keys omit failure. Integration propagates that object unchanged. Every such failed result is rejected with LAUNCH_FIELDS before integration-result.json persistence, masking the intended failure and losing the terminal integration artifact.",
+    "correction": "Accept only a closed optional driver.failure with exact allowed scalar phase/stage/code validation at launcher retention; retain the complete public integration failure record. Add a producer-to-retention regression and negative unexpected/private/accessor-field checks."
+  },
+  "independentReproduction": {
+    "productionDriverWithInertAdapters": true,
+    "productionLauncherRetention": true,
+    "syntheticRolesOnly": true,
+    "driverFailure": {
+      "phase": "observe",
+      "stage": "deploy",
+      "code": "NOT_FINALIZED"
+    },
+    "cleanupCalls": 1,
+    "withFailure": {
+      "error": "LAUNCH_FIELDS",
+      "artifactWritten": false
+    },
+    "sameResultWithoutFailure": {
+      "artifactWritten": true
+    },
+    "temporaryPublicFixtureRemoved": true,
+    "launcherSha256": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+    "driverSha256": "df138015e0ac83aed74d3a5652461202f4384cc2af44cb34dd63ae4b54c6e108"
+  },
+  "reviewCorrection": "My completed06 review inspected producer projection but missed its exact-key consumer. Its source PASS_SCOPED is withdrawn by this supplement; the retained recovery03 result-scope assessment remains valid. Grok supplied the cross-boundary finding, then I independently reproduced it.",
+  "scope": "No production/resource edits, live chain/services, actual private wallet/store/role/seed access, or operational execution. Only synthetic inert driver adapters and temporary public evidence file were used. No source07 approval yet."
+}

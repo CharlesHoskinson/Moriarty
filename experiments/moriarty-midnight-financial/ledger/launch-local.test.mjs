@@ -102,3 +102,19 @@ test('closed recovery launch keeps original wallet and roles and permits exactly
  for(const mutate of [p=>p.kind='swap',p=>p.limits.submissions=4,p=>p.wallet.seedFile='/other/seed',p=>p.wallet.stateDirectory='/other/snapshots',p=>p.wallet.expectedAddress='mn_addr_undeployed1other',p=>p.roles.firstAddress=h,p=>p.roles.secondAddress=h,p=>p.existingDeployment.inspectionDirectory=p.wallet.stateDirectory+'/copy',p=>p.existingDeployment.inspectionDirectory=p.outputDirectory,p=>p.privateState.passwordFile=p.wallet.stateDirectory+'/password',p=>p.existingDeployment.privateState={},p=>p.existingDeployment.txId=h]){const x=recoveryLaunchPlan();mutate(x);assert.throws(()=>api.validateLocalLaunchPlan(x));}
  const ordinary=plan();ordinary.limits.submissions=3;assert.throws(()=>api.validateLocalLaunchPlan(ordinary));
 });
+
+test('launcher rejects malformed diagnostic fields and accessors before durable retention',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'moriarty-diagnostic-validation-'));let getterCalls=0;
+ const valid=()=>({phase:'observe',stage:'initialize',code:'NOT_FINALIZED'});
+ const base=()=>({schema:'moriarty.local-financial-integration/1',status:'FAILED',kind:'loan',sourceTestOnly:false,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:undefined,assetBindings:undefined,phase:'driver',driver:{schema:'moriarty.local-financial-run/1',status:'FAILED',kind:'loan',contractAddress:h,stages:[],transactionIds:[h],cleanup:{walletStopped:true},operationalState:{},scope:'fixture',failure:valid()},cleanup:{walletStopped:true},setupPendingOperations:0,comparisons:[],financialComparison:undefined,scope:'fixture'});
+ const changes=[
+  d=>d.failure.code='PRIVATE_VALUE',d=>d.failure.phase='PRIVATE_VALUE',d=>d.failure.stage='PRIVATE_VALUE',
+  d=>d.failure.private='PRIVATE_VALUE',d=>d.failure.code={secret:'PRIVATE_VALUE'},d=>d.failure=null,
+  d=>d.status='PASS',d=>Object.defineProperty(d,'failure',{enumerable:true,get(){getterCalls++;return valid();}}),
+  d=>Object.defineProperty(d.failure,'code',{enumerable:true,get(){getterCalls++;return 'NOT_FINALIZED';}}),
+  d=>Object.defineProperty(d.failure,'secret',{value:'PRIVATE_VALUE'}),d=>d.failure[Symbol('secret')]='PRIVATE_VALUE',
+  d=>Object.setPrototypeOf(d.failure,{secret:'PRIVATE_VALUE'})
+ ];
+ try{for(const change of changes){const result=base();change(result.driver);assert.throws(()=>api.retainPublicIntegrationResult(directory,result),e=>!e.message.includes('PRIVATE_VALUE'));assert.deepEqual(readdirSync(directory),[]);}assert.equal(getterCalls,0);}
+ finally{rmSync(directory,{recursive:true,force:true});}
+});

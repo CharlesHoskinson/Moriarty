@@ -1,0 +1,84 @@
+{
+  "schema": "moriarty.gpt6-public-native-finality-lag-review/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": "GPT-6 Astra, Codex independent agent /root/recovery_source_audit",
+  "nativeFile": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/run-public/public-transactions/1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6.bin",
+  "nativeSha256": "1f64634de2761fc0f140dbe7784a0cbf7005f226799e94d9878932378bc731e6",
+  "observerSha256": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+  "sdkSha256": "23a1883b796fbea037817ae0a7e0f5ed3c072a7d30974154a8de917893cd7f2f",
+  "sourceFinding": {
+    "file": "experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+    "line": 137,
+    "code": "NOT_FINALIZED",
+    "severity": "availability-after-submission",
+    "statement": "The observer checks finalized height exactly once after the indexed transaction watch. A valid indexed inclusion ahead of finality immediately rejects; the hypothetical next finalized-head response is never read. This is conservative rejection, not unsound acceptance."
+  },
+  "lagThenWouldAdvance": {
+    "status": "REJECTED",
+    "error": "NOT_FINALIZED",
+    "watchCalls": 1,
+    "headCalls": 1,
+    "stateCalls": 0,
+    "rpcCalls": [
+      {
+        "method": "chain_getFinalizedHead",
+        "params": []
+      },
+      {
+        "method": "chain_getHeader",
+        "params": [
+          "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+        ]
+      }
+    ]
+  },
+  "alreadyFinalized": {
+    "status": "RETURNED_INERT_OBSERVATION",
+    "blockHeight": 20363,
+    "finalizedHeight": 20363,
+    "watchCalls": 1,
+    "headCalls": 1,
+    "stateCalls": 1,
+    "rpcCalls": [
+      {
+        "method": "chain_getFinalizedHead",
+        "params": []
+      },
+      {
+        "method": "chain_getHeader",
+        "params": [
+          "0xabababababababababababababababababababababababababababababababab"
+        ]
+      },
+      {
+        "method": "chain_getBlockHash",
+        "params": [
+          20363
+        ]
+      }
+    ]
+  },
+  "fixtureConstruction": {
+    "transaction": "Actual retained 9653-byte initialize native transaction, decoded with pinned installed ledger.",
+    "indexedData": "Synthetic SucceedEntirely, txId/hash/identifiers from actual native, blockHeight20363, synthetic blockHash ab repeated32, synthetic fee strings1, native-derived complete UTXO rows.",
+    "rpc": "Lag variant first finalized head cd repeated32/header20362; any later head would be ab repeated32/header20363. Ready variant ab/header20363 from first call. Canonical blockHash ab. No actual endpoint.",
+    "state": "Inert synthetic state and empty balances; no financial comparison or network/proof acceptance.",
+    "earlierFixtureCorrection": "First control fixture omitted intentHash in synthetic UTXO rows and failed INVALID_INDEXED_INTENT; corrected native-derived mapping, without production changes, makes the finalized control return."
+  },
+  "sdkFinding": {
+    "file": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-indexer-public-data-provider/dist/index.mjs",
+    "line": 965,
+    "statement": "watchForTxData returns first nonempty regular indexed transaction, maps transaction result/status/block, and has no node-finality wait."
+  },
+  "historicalScope": "Actual run retained submitted transaction and driver failure before an initialize receipt; the actual raw failure code and contemporaneous per-query head pair were not retained. This reproduction supports one matching mechanism, not proof that the actual failure was NOT_FINALIZED.",
+  "recommendation": "After reconciling this already-submitted initialize transaction, separately review a bounded finality-height polling helper inside observeFinalizedStage. Watch and validate indexed transaction once. Poll only valid heads behind the known inclusion height within one existing/shorter deadline and bounded samples/spacing. Require monotone finality and preserve target canonical-hash check before reading its block-pinned state. Malformed RPC data, provider errors, transaction/identity/status/state mismatches and deadline expiration remain fatal; no transaction call or submission is repeated.",
+  "testsDesign": [
+    "Actual retained native initialize with lag20362 then finalized20363: watch once, no state query before finality, eventual pinned observation after advancement.",
+    "Permanent valid lag: bounded timeout/sample exhaustion, no state queries, no accepted receipt.",
+    "Already finalized: one sample and same complete receipt predicates.",
+    "Malformed hash/header, finality regression, wrong target canonical hash, invalid status/identifiers/protocol/UTXO rows: fail closed without retrying transaction or swallowing mismatch.",
+    "Caller deadline already expired or crossed during a read/spacing: no later state query or accepted stage.",
+    "Reconciliation and closed continuation must prove this initialize status/state before permitting only remaining stages; never deploy or resubmit initialize."
+  ],
+  "scope": "Public source/offline reproduction only. No live chain/services, private seed/roles/store/wallet access, proof, submission, operational runner, or production/resource source edits."
+}

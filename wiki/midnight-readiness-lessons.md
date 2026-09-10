@@ -5,7 +5,7 @@ type: runtime
 status: active
 created: 2026-09-10
 updated: 2026-09-10
-updated_at: 2026-09-10T07:43:11Z
+updated_at: 2026-09-10T08:30:09Z
 tags:
   - moriarty
   - midnight
@@ -38,4 +38,14 @@ The actual local loan deployment reached node submission and was rejected with `
 
 **Bind the actual review input.** An intended diagnostic Grok request accidentally used the previous recovery prompt after an incomplete path replacement. The [dispatch error record](../deliverables/sp05-financial-integration-2026-09-09/local-recovery-diagnostic-01/review-dispatch-error-01.json) preserves the unusable response and charged call; overwritten historical files were restored from the published commit. Verify explicit prompt, candidate and output paths before starting a reviewer. Keep the existing workflow; another wrapper is not a product capability.
 
+**Distinguish indexed inclusion from node finality.** [Recovery03](../deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/RESULT.md) restored the retained identity and submitted initialize. The stopped public indexer records Success at block 20363, initialized state and one created output. Independent canonical finality and the full initialize comparison were not retained. An [independent reproduction](../deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/finality-lag-review-gpt6.json) shows the observer rejecting after one finality read, before a configured later head. The exact historical failure code was discarded, so that cause remains an inference. Bounded read-only finality polling must not become transaction resubmission.
+
+**Derive identities in the correct execution namespace.** The [actual output-origin comparison](../deliverables/sp05-financial-integration-2026-09-09/native-output-origin-01/RESULT.md) found that a guaranteed output in physical segment 21861 has origin `intentHash(0)`. The prior decoder used the physical segment. Pinned native computation and the captured image-revision indexer implementation agree; fallible outputs retain their physical segment. Preserve exact origin comparison rather than weakening it to amount matching. Fixtures must include nonzero segments and independently observed output identities.
+
+**Import the producer's runtime representation.** The first offline initialized-state decoder used native ledger ContractState and hit `expected instance of ChargedState`. The actual indexer imports ContractState from the protocol compact-runtime entry; the corrected [helper](../deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/decode-indexed-initialize.mjs) follows that import. Equal serialized data does not make distinct WASM classes interchangeable. The helper failure remains recorded.
+
+**Retain useful public failures and preserve partial success.** [Receipt repairs](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/repair-design-06.md) add a closed phase/stage and allowlisted public code without copying unknown SDK messages or private objects. All 303 ledger tests pass; independent reviews remain pending at this save. An initialized contract must not use the old constructor-only recovery path. Keep its original and recovered private stores, transaction IDs and four charged reservations; reconcile before a closed continuation of accrue/settle. No Preview or full financial acceptance follows from local indexer Success.
+
 These are provisional implementation lessons linked to observed failures and inspected code. No source or claim ledger assessment is promoted. See [[wiki/index|the research index]], [the roadmap](../ROADMAP.md) and [orchestration stop rules](../docs/FOOTGUNS.md).
+
+**Check the consumer before claiming a diagnostic works.** Source06 added a safe driver failure field but the launcher still rejected that field under its closed result schema. Grok caught the incompatibility; GPT-6 independently reproduced it and withdrew its initial source pass. The [supplemental finding](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/source-review-gpt6-06-supplement.json) preserves the disagreement. Source07 tests the actual driver failure through the actual durable writer; it shares a closed diagnostic validator and rejects accessors and extra fields. [Source07](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/RESULT.md) subsequently passed both scoped reviews; 306 ledger tests pass. Grok completed in 179.117 seconds within its 900-second allowance. A producer unit test alone did not cover durable result retention.

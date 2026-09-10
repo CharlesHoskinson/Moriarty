@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {retainPublicIntegrationResult} from './launch-local.mjs';
 import {runLocalFinancialCase} from './run-local.mjs';
 const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'));
 const network={networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'};
@@ -100,4 +103,31 @@ test('recovery identity is captured before asynchronous binding checks',async()=
 test('recovered loan cannot pass with incomplete containment',async()=>{
  const h=recoveryHarness();h.options.providers.cleanup=async()=>({walletStopped:true,pendingOperations:1,containmentComplete:false});
  await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.equal(e.message,'DRIVER_CLEANUP_INCOMPLETE');assert.equal(e.publicResult.status,'INCOMPLETE');assert.equal(e.publicResult.stages.length,4);assert.equal(e.publicResult.operationalState.reservedSubmissions,3);return true;});
+});
+
+
+test('public failure retains a known observer code and closed phase without SDK details',async()=>{
+ const h=harness();h.options.observe=async()=>{throw Error('NOT_FINALIZED');};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.deepEqual(e.publicResult.failure,{phase:'observe',stage:'deploy',code:'NOT_FINALIZED'});return true;});
+});
+test('public failure never copies an unknown SDK message or object',async()=>{
+ const h=harness();h.options.observe=async()=>{const e=Error('PRIVATE_VALUE_ABC123');e.privateState={secret:'PRIVATE_OTHER'};throw e;};
+ await assert.rejects(runLocalFinancialCase(h.options),e=>{assert.deepEqual(e.publicResult.failure,{phase:'observe',stage:'deploy',code:'UNCLASSIFIED_DRIVER_FAILURE'});assert.ok(!JSON.stringify(e.publicResult).includes('PRIVATE_'));return true;});
+});
+
+for(const message of ['NOT_FINALIZED','PRIVATE_SDK_FAILURE'])test(`launcher durably retains actual driver failure: ${message}`,async()=>{
+ const h=harness(),directory=mkdtempSync(join(tmpdir(),'moriarty-driver-retention-'));
+ h.options.observe=async()=>{throw Object.assign(Error(message),{private:{secret:'PRIVATE_CANARY'}});};
+ try{
+  await assert.rejects(runLocalFinancialCase(h.options),error=>{
+   const driver=error.publicResult;
+   const result={schema:'moriarty.local-financial-integration/1',status:'FAILED',kind:'loan',sourceTestOnly:false,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:undefined,assetBindings:undefined,phase:'driver',driver,cleanup:driver.cleanup,setupPendingOperations:0,comparisons:[],financialComparison:undefined,scope:'Source-only fixture; no network acceptance'};
+   retainPublicIntegrationResult(directory,result);
+   const raw=readFileSync(join(directory,'integration-result.json'),'utf8'),saved=JSON.parse(raw);
+   assert.deepEqual(saved.driver.failure,{phase:'observe',stage:'deploy',code:message==='NOT_FINALIZED'?message:'UNCLASSIFIED_DRIVER_FAILURE'});
+   assert.deepEqual(saved.driver.transactionIds,['deploy']);assert.deepEqual(saved.cleanup,complete);
+   assert.ok(!raw.includes('PRIVATE_')&&!raw.includes('NEVER_PUBLISH'));return true;
+  });
+  assert.equal(h.calls.length,1);assert.deepEqual(h.counts(),{cleaned:1,stopped:1});
+ }finally{rmSync(directory,{recursive:true,force:true});}
 });

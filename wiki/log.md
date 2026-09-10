@@ -8,7 +8,7 @@ updated: 2026-09-10
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T07:43:11Z
+updated_at: 2026-09-10T08:30:09Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,10 @@ sources:
 ---
 
 # Wiki log
+
+## [2026-09-10] save | Indexed initialization and exact output identity
+
+Updated [[wiki/midnight-readiness-lessons|Midnight lessons]] with actual recovered identity and indexed initialize Success, outstanding independent finality, actual guaranteed-output origin evidence and safe public diagnostics. Receipt repairs pass 303 tests; independent review remains pending. Preserve initialized state, private stores and all four charged submissions. No source/claim promotion or Preview acceptance.
 
 ## [2026-09-10] save | Reproduce exact-block state semantics
 
@@ -1060,3 +1064,7 @@ SRC-0109 collects thirteen full academic documents and fourteen substantive offi
 ## [2026-09-09] ingest | Security-token report and asset transformations
 
 Captured the supplied 97,006-byte report unchanged as SRC-0110; all 565 lines read. Capture `capture-security-token-report9-20260909`; ingest `ingest-security-token-report9-20260909`. [Dossier and graph](../deliverables/security-token-transformations-2026-09-09/README.md) contain 100 nodes, 239 directed edges, seven communities, three extracted hyperedges and eight unexecuted proposed cases. CLM-0943–CLM-0945 extend architecture/security synthesis with explicit claim continuity and policy-path completeness. SRC-0109 is reserved by the existing syntax research branch; its identity is not reused. External citation tokens and two missing catalogs remain unresolved. No network requests, language implementation, proofs or Midnight transactions were performed by this intake.
+
+Source06 review addendum: Grok found a launcher schema incompatibility; GPT-6 reproduced it and withdrew its source pass. Source07 repairs the producer-to-writer boundary; correction reviews remain pending. Actual result audits retain their scoped passes.
+
+Source07 outcome: GPT-6 and Grok approved the repaired driver-to-launcher retention boundary. Full ledger suite306 pass, zero skips; [source disposition](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/source-disposition-07.json). No new execution or finality/financial acceptance. Next is fixed initialized-loan continuation and actual SDK coin-wrapper validation.

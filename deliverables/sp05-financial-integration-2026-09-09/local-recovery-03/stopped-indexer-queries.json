@@ -1,0 +1,7 @@
+{
+  "transaction": "SELECT t.id, lower(hex(t.hash)) AS hash, t.protocol_version, length(t.raw) AS rawBytes, r.transaction_result, lower(hex(r.paid_fees)) AS paidFeesRaw, lower(hex(r.estimated_fees)) AS estimatedFeesRaw, b.height, lower(hex(b.hash)) AS blockHash, b.timestamp FROM transactions t JOIN regular_transactions r ON r.id=t.id JOIN blocks b ON b.id=t.block_id WHERE t.hash=?",
+  "identifiers": "SELECT lower(hex(identifier)) AS identifier FROM transaction_identifiers WHERE transaction_id=? ORDER BY id",
+  "action": "SELECT c.id,c.variant,c.attributes,length(c.state) AS stateBytes,lower(hex(c.address)) AS address,b.height,lower(hex(b.hash)) AS blockHash,t.id AS transaction_id,lower(hex(t.hash)) AS txHash FROM contract_actions c JOIN transactions t ON t.id=c.transaction_id JOIN blocks b ON b.id=t.block_id WHERE c.address=? ORDER BY c.id",
+  "latestBlock": "SELECT height,lower(hex(hash)) AS hash,timestamp FROM blocks ORDER BY height DESC LIMIT 1",
+  "balances": "SELECT lower(hex(token_type)) AS tokenTypeRaw,lower(hex(amount)) AS amountRaw FROM contract_balances WHERE contract_action_id=? ORDER BY id"
+}

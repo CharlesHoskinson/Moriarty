@@ -10,6 +10,24 @@ function secret(x) {if(!(x instanceof Uint8Array)||x.length!==32)throw Error('IN
 function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)throw Error('INVALID_CURRENT_TIME');return t;}
 
 
+const publicFailureCodes=new Set(['NOT_FINALIZED','FINALIZED_HASH','FINALIZED_HEADER','FINALIZED_HEIGHT','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','TRANSACTION_STATUS','NATIVE_TRANSACTION_REQUIRED','TRANSACTION_ID_MISMATCH','IDENTIFIERS_MISMATCH','TRANSACTION_HASH_MISMATCH','CONTRACT_ACTION_COUNT','CONTRACT_ACTION_MISMATCH','SEGMENT_FAILURE','UNSUPPORTED_PROTOCOL','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','MISSING_CONTRACT_STATE','MISSING_CONTRACT_BALANCES','DUPLICATE_BALANCE_ASSET','OBSERVATION_TIMEOUT_UNKNOWN','DEADLINE_EXPIRED','RPC_DEADLINE','FINANCIAL_COMPARISON_REQUIRED_PASS','DRIVER_CLEANUP_INCOMPLETE']);
+/** Closed public diagnostic shared by the producer and durable launcher boundary. */
+export function validatePublicDriverFailure(failure){
+  const invalid=()=>{throw Error('INVALID_PUBLIC_DRIVER_FAILURE');};
+  if(!failure||Object.getPrototypeOf(failure)!==Object.prototype)invalid();
+  const fields=Object.getOwnPropertyDescriptors(failure),keys=Reflect.ownKeys(fields);
+  if(keys.length!==3||!['phase','stage','code'].every(k=>Object.hasOwn(fields,k))||keys.some(k=>!Object.hasOwn(fields[k],'value')||!fields[k].enumerable))invalid();
+  const phase=fields.phase.value,stage=fields.stage.value,code=fields.code.value;
+  if(!['preflight','call','observe','compare'].includes(phase)||![null,'deploy','initialize','accrue','settle','swap','close'].includes(stage)||(code!=='UNCLASSIFIED_DRIVER_FAILURE'&&!publicFailureCodes.has(code)))invalid();
+  return {phase,stage,code};
+}
+function publicFailure(error,phase,stage){
+  const message=Object.getOwnPropertyDescriptor(error,'message');
+  const code=message&&Object.hasOwn(message,'value')&&publicFailureCodes.has(message.value)?message.value:'UNCLASSIFIED_DRIVER_FAILURE';
+  return validatePublicDriverFailure({phase,stage,code});
+}
+
+
 /**
  * Executes the fixed local I2 sequence. Caller must supply the reviewed native
  * observer and full financial comparator; neither can be omitted. No CLI or
@@ -21,7 +39,7 @@ function time(now) {const t=now();if(typeof t!=='bigint'||t<0n||t>=2000000000n)t
  */
 export async function runLocalFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment}) {
   if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
-  const stages=[],transactionIds=new Set();let address,failure,cleanup;
+  const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
   try {
     if(network!=='undeployed')throw Error('LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK');
     if(!['loan','swap'].includes(kind))throw Error('UNKNOWN_FINANCIAL_CASE');
@@ -63,20 +81,23 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
       address=recovery.contractAddress;
       deployTxId=recovery.txId;
     } else {
+      diagnosticPhase='call';diagnosticStage='deploy';
       const deployed=await providers.execute('deploy',async()=>{await checkBinding();return sdk.deployContract(providers,{compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[first,second,{bytes:firstAddress},{bytes:secondAddress},program,net]});});
       address=deployed.deployTxData.public.contractAddress;bytes(address);
       deployTxId=deployed.deployTxData.public.txId;
     }
     async function record(circuitId,txId) {
       if(typeof txId!=='string'||!txId)throw Error('MISSING_TRANSACTION_ID');
-      transactionIds.add(txId);
+      transactionIds.add(txId);diagnosticPhase='observe';diagnosticStage=circuitId;
       const observation=await providers.execute('observe:'+circuitId,()=>observe({circuitId,txId,contractAddress:address}));
+      diagnosticPhase='compare';
       const comparison=await providers.execute('compare:'+circuitId,()=>verifyStage(circuitId,observation));
       if(comparison?.status!=='PASS')throw Error('FINANCIAL_COMPARISON_REQUIRED_PASS');
       stages.push(observation.receipt);
     }
     await record('deploy',deployTxId);
     async function call(circuitId,args) {
+      diagnosticPhase='call';diagnosticStage=circuitId;
       const result=await providers.execute(circuitId,async()=>{await checkBinding();return sdk.submitCallTx(providers,{compiledContract,contractAddress:address,privateStateId:`sp05-${kind}`,circuitId,args});});
       await record(circuitId,result.public.txId);
     }
@@ -106,7 +127,7 @@ export async function runLocalFinancialCase({kind,network,providers,compiledCont
     operationalState={reservedSubmissions:state?.reservedSubmissions??null,reservedDustFee:state?.reservedDustFee?.toString()??null,reservedGrossByAsset:Object.fromEntries(Object.entries(state?.reservedGrossByAsset??{}).map(([asset,value])=>[asset,value.toString()]))};
   } catch {operationalState={unavailable:true};}
   const contained=cleanup.walletStopped&&cleanup.pendingOperations===0&&cleanup.containmentComplete;
-  const publicResult={schema:'moriarty.local-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  const publicResult={schema:'moriarty.local-financial-run/1',status:failure?'FAILED':contained?'PASS':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
   if(failure||!contained) {
     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
     error.publicResult=publicResult;throw error;

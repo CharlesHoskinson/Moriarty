@@ -1,0 +1,108 @@
+{
+  "tables": [
+    {
+      "name": "_sqlx_migrations",
+      "sql": "CREATE TABLE _sqlx_migrations (\n    version BIGINT PRIMARY KEY,\n    description TEXT NOT NULL,\n    installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    success BOOLEAN NOT NULL,\n    checksum BLOB NOT NULL,\n    execution_time BIGINT NOT NULL\n)"
+    },
+    {
+      "name": "blocks",
+      "sql": "CREATE TABLE blocks (\n  id INTEGER PRIMARY KEY,\n  hash BLOB NOT NULL UNIQUE,\n  height INTEGER NOT NULL,\n  protocol_version INTEGER NOT NULL,\n  parent_hash BLOB NOT NULL,\n  author BLOB,\n  timestamp INTEGER NOT NULL,\n  zswap_merkle_tree_root BLOB NOT NULL,\n  ledger_parameters BLOB NOT NULL,\n  ledger_state_key BLOB NOT NULL\n, zswap_end_index INTEGER NOT NULL DEFAULT 0, dust_commitment_end_index INTEGER NOT NULL DEFAULT 0, dust_generation_end_index INTEGER NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "transactions",
+      "sql": "CREATE TABLE transactions (\n  id INTEGER PRIMARY KEY,\n  block_id INTEGER NOT NULL REFERENCES blocks (id),\n  variant TEXT CHECK (variant IN ('Regular', 'System')) NOT NULL,\n  hash BLOB NOT NULL,\n  protocol_version INTEGER NOT NULL,\n  raw BLOB NOT NULL\n)"
+    },
+    {
+      "name": "regular_transactions",
+      "sql": "CREATE TABLE regular_transactions (\n  id INTEGER PRIMARY KEY REFERENCES transactions (id),\n  transaction_result TEXT NOT NULL,\n  zswap_merkle_tree_root BLOB NOT NULL,\n  zswap_start_index INTEGER NOT NULL,\n  zswap_end_index INTEGER NOT NULL,\n  dust_commitment_start_index INTEGER NOT NULL,\n  dust_commitment_end_index INTEGER NOT NULL,\n  dust_generation_start_index INTEGER NOT NULL,\n  dust_generation_end_index INTEGER NOT NULL,\n  paid_fees BLOB,\n  estimated_fees BLOB\n)"
+    },
+    {
+      "name": "transaction_identifiers",
+      "sql": "CREATE TABLE transaction_identifiers (\n  id INTEGER PRIMARY KEY,\n  transaction_id INTEGER NOT NULL REFERENCES regular_transactions (id),\n  identifier BLOB NOT NULL\n)"
+    },
+    {
+      "name": "contract_actions",
+      "sql": "CREATE TABLE contract_actions (\n  id INTEGER PRIMARY KEY,\n  transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  variant TEXT CHECK (variant IN ('Deploy', 'Call', 'Update')) NOT NULL,\n  address BLOB NOT NULL,\n  state BLOB NOT NULL,\n  zswap_state BLOB NOT NULL,\n  attributes TEXT NOT NULL\n)"
+    },
+    {
+      "name": "unshielded_utxos",
+      "sql": "CREATE TABLE unshielded_utxos (\n  id INTEGER PRIMARY KEY,\n  creating_transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  spending_transaction_id INTEGER REFERENCES transactions (id),\n  owner BLOB NOT NULL,\n  token_type BLOB NOT NULL,\n  value BLOB NOT NULL,\n  intent_hash BLOB NOT NULL,\n  output_index INTEGER NOT NULL,\n  ctime INTEGER,\n  initial_nonce BLOB NOT NULL,\n  registered_for_dust_generation INTEGER NOT NULL,\n  UNIQUE (intent_hash, output_index)\n)"
+    },
+    {
+      "name": "ledger_events",
+      "sql": "CREATE TABLE ledger_events (\n  id INTEGER PRIMARY KEY,\n  transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  variant TEXT CHECK (\n    variant IN (\n      'ZswapInput',\n      'ZswapOutput',\n      'ParamChange',\n      'DustInitialUtxo',\n      'DustGenerationDtimeUpdate',\n      'DustSpendProcessed'\n    )\n  ) NOT NULL,\n  grouping TEXT CHECK (grouping IN ('Zswap', 'Dust')) NOT NULL,\n  raw BYTEA NOT NULL,\n  attributes TEXT NOT NULL\n)"
+    },
+    {
+      "name": "contract_balances",
+      "sql": "CREATE TABLE contract_balances (\n  id INTEGER PRIMARY KEY,\n  contract_action_id INTEGER NOT NULL REFERENCES contract_actions (id),\n  token_type BLOB NOT NULL, -- Serialized TokenType (hex-encoded)\n  amount BLOB NOT NULL, -- u128 amount as bytes (for large number support)\n  UNIQUE (contract_action_id, token_type)\n)"
+    },
+    {
+      "name": "wallets",
+      "sql": "CREATE TABLE wallets (\n  id BLOB PRIMARY KEY, -- UUID\n  viewing_key_hash BLOB NOT NULL UNIQUE,\n  viewing_key BLOB NOT NULL, -- Ciphertext with nonce, no longer unique!\n  wanted_start_index INTEGER NOT NULL DEFAULT 0,\n  first_indexed_transaction_id INTEGER NOT NULL DEFAULT 0,\n  last_indexed_transaction_id INTEGER NOT NULL DEFAULT 0,\n  last_active INTEGER NOT NULL,\n  session_id BLOB UNIQUE -- Random per-session ID for API authentication, NULL when disconnected.\n)"
+    },
+    {
+      "name": "relevant_transactions",
+      "sql": "CREATE TABLE relevant_transactions (\n  id INTEGER PRIMARY KEY,\n  wallet_id BLOB NOT NULL REFERENCES wallets (id),\n  transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  UNIQUE (wallet_id, transaction_id)\n)"
+    },
+    {
+      "name": "dust_generation_info",
+      "sql": "CREATE TABLE dust_generation_info (\n  id INTEGER PRIMARY KEY,\n  night_utxo_hash BLOB NOT NULL,\n  value BLOB NOT NULL,\n  owner BLOB NOT NULL,\n  nonce BLOB NOT NULL,\n  ctime INTEGER NOT NULL,\n  merkle_index INTEGER NOT NULL,\n  dtime INTEGER,\n  transaction_id INTEGER REFERENCES transactions (id)\n, generation_index INTEGER, backing_night BLOB, initial_value BLOB)"
+    },
+    {
+      "name": "dust_nullifiers",
+      "sql": "CREATE TABLE dust_nullifiers (\n  id INTEGER PRIMARY KEY,\n  nullifier BLOB NOT NULL,\n  commitment BLOB NOT NULL,\n  transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  block_id INTEGER NOT NULL REFERENCES blocks (id)\n)"
+    },
+    {
+      "name": "zswap_nullifiers",
+      "sql": "CREATE TABLE zswap_nullifiers (\n  id INTEGER PRIMARY KEY,\n  transaction_id INTEGER NOT NULL REFERENCES transactions (id),\n  block_id INTEGER NOT NULL REFERENCES blocks (id),\n  nullifier BLOB NOT NULL\n)"
+    },
+    {
+      "name": "cnight_registrations",
+      "sql": "CREATE TABLE cnight_registrations (\n  id INTEGER PRIMARY KEY,\n  cardano_stake_key BLOB NOT NULL,\n  dust_address BLOB NOT NULL,\n  valid BOOLEAN NOT NULL,\n  registered_at INTEGER NOT NULL,\n  removed_at INTEGER,\n  block_id INTEGER REFERENCES blocks (id),\n  utxo_tx_hash BLOB,\n  utxo_output_index INTEGER,\n  UNIQUE (cardano_stake_key, dust_address)\n)"
+    },
+    {
+      "name": "system_parameters_terms_and_conditions",
+      "sql": "CREATE TABLE system_parameters_terms_and_conditions (\n  id INTEGER PRIMARY KEY,\n  block_height INTEGER NOT NULL,\n  block_hash BLOB NOT NULL,\n  timestamp INTEGER NOT NULL,\n  hash BLOB NOT NULL,\n  url TEXT NOT NULL\n)"
+    },
+    {
+      "name": "system_parameters_d",
+      "sql": "CREATE TABLE system_parameters_d (\n  id INTEGER PRIMARY KEY,\n  block_height INTEGER NOT NULL,\n  block_hash BLOB NOT NULL,\n  timestamp INTEGER NOT NULL,\n  num_permissioned_candidates INTEGER NOT NULL,\n  num_registered_candidates INTEGER NOT NULL\n)"
+    },
+    {
+      "name": "epochs",
+      "sql": "CREATE TABLE epochs (\n  epoch_no INTEGER PRIMARY KEY,\n  starts_at TEXT NOT NULL,\n  ends_at TEXT NOT NULL\n)"
+    },
+    {
+      "name": "pool_metadata_cache",
+      "sql": "CREATE TABLE pool_metadata_cache (\n  pool_id TEXT PRIMARY KEY,\n  hex_id TEXT UNIQUE,\n  name TEXT,\n  ticker TEXT,\n  homepage_url TEXT,\n  updated_at TEXT,\n  url TEXT\n)"
+    },
+    {
+      "name": "spo_identity",
+      "sql": "CREATE TABLE spo_identity (\n  spo_sk TEXT PRIMARY KEY,\n  sidechain_pubkey TEXT UNIQUE,\n  pool_id TEXT REFERENCES pool_metadata_cache (pool_id),\n  mainchain_pubkey TEXT UNIQUE,\n  aura_pubkey TEXT UNIQUE\n)"
+    },
+    {
+      "name": "committee_membership",
+      "sql": "CREATE TABLE committee_membership (\n  spo_sk TEXT,\n  sidechain_pubkey TEXT,\n  epoch_no INTEGER NOT NULL,\n  position INTEGER NOT NULL,\n  expected_slots INTEGER NOT NULL,\n  PRIMARY KEY (epoch_no, position)\n)"
+    },
+    {
+      "name": "spo_epoch_performance",
+      "sql": "CREATE TABLE spo_epoch_performance (\n  spo_sk TEXT REFERENCES spo_identity (spo_sk),\n  identity_label TEXT,\n  epoch_no INTEGER NOT NULL,\n  expected_blocks INTEGER NOT NULL,\n  produced_blocks INTEGER NOT NULL,\n  PRIMARY KEY (epoch_no, spo_sk)\n)"
+    },
+    {
+      "name": "spo_history",
+      "sql": "CREATE TABLE spo_history (\n  spo_hist_sk INTEGER PRIMARY KEY,\n  spo_sk TEXT REFERENCES spo_identity (spo_sk),\n  epoch_no INTEGER NOT NULL,\n  status TEXT NOT NULL,\n  valid_from INTEGER NOT NULL,\n  valid_to INTEGER NOT NULL,\n  UNIQUE (spo_sk, epoch_no)\n)"
+    },
+    {
+      "name": "spo_stake_refresh_state",
+      "sql": "CREATE TABLE spo_stake_refresh_state (\n  id INTEGER PRIMARY KEY DEFAULT 1,\n  last_pool_id TEXT,\n  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+    },
+    {
+      "name": "spo_stake_snapshot",
+      "sql": "CREATE TABLE \"spo_stake_snapshot\" (\n  pool_id TEXT PRIMARY KEY REFERENCES pool_metadata_cache (pool_id) ON DELETE CASCADE,\n  live_stake INTEGER,\n  active_stake INTEGER,\n  live_delegators INTEGER,\n  live_saturation REAL,\n  declared_pledge INTEGER,\n  live_pledge INTEGER,\n  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n)"
+    },
+    {
+      "name": "spo_stake_history",
+      "sql": "CREATE TABLE \"spo_stake_history\" (\n  id INTEGER PRIMARY KEY,\n  pool_id TEXT NOT NULL REFERENCES pool_metadata_cache (pool_id) ON DELETE CASCADE,\n  recorded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  mainchain_epoch INTEGER,\n  live_stake INTEGER,\n  active_stake INTEGER,\n  live_delegators INTEGER,\n  live_saturation REAL,\n  declared_pledge INTEGER,\n  live_pledge INTEGER\n)"
+    }
+  ]
+}

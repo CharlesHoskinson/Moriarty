@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import {join,dirname,isAbsolute,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {PINNED_NM} from './providers.mjs';
+import {validatePublicDriverFailure} from './run-local.mjs';
 import {inspectFinancialBuild} from './proven-assets.mjs';
 import {integrateLocalFinancialCase,preflightLocalRecovery} from './integrate-local.mjs';
 import {waitForLocalTip,guardLocalWallet} from './local-tip.mjs';
@@ -98,7 +99,12 @@ export function retainPublicSubmissions({wallet,ledger,directory}){
 export function retainPublicIntegrationResult(directory,result){
  exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope');
  check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
- if(result.driver!==undefined){const d=result.driver;exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':''));check(d.schema==='moriarty.local-financial-run/1','LAUNCH_PUBLIC_DRIVER');}
+ if(result.driver!==undefined){
+  const d=result.driver,diagnostic=Object.getOwnPropertyDescriptor(d,'failure');
+  exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':'')+(diagnostic?',failure':''));
+  check(d.schema==='moriarty.local-financial-run/1','LAUNCH_PUBLIC_DRIVER');
+  if(diagnostic){check(Object.hasOwn(diagnostic,'value')&&d.status==='FAILED','LAUNCH_PUBLIC_DRIVER_FAILURE');validatePublicDriverFailure(diagnostic.value);}
+ }
  if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
  durableFile(join(directory,'integration-result.json'),structuredClone(result));
 }
