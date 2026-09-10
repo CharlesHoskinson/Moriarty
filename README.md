@@ -40,13 +40,13 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 
 [K](https://kframework.org/docs/user_manual/) describes execution through configurations and rewrite rules. It is the selected framework for Moriarty's formal operational semantics. Typing judgments define admissible programs; contract properties and Hoare-style assertions state claims to prove. Denotational models can support particular financial analyses, but do not replace the execution definition.
 
-The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Its grammar is reproduced below. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile.
+The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. The newer `moriarty-expression-source/1` grammar is reproduced below. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile.
 
 The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) supports Transfer-only execution as well as Transfer followed by Repay. The Transfer-only extension is tracked in [its scoped evidence](deliverables/transfer-only-k-2026-09-09/README.md). All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
 
 The [reviewed expression specification](deliverables/sp01-expression-contract-2026-09-10/RESULT.md) now defines all 40 proposed constructors, their typing and reduction rules, and exact representations for finite byte/node bounds. GPT-6 Astra and Grok 4.6 approved that source scope. The [reviewed Boolean revision](deliverables/sp01-surface-core-contract-2026-09-10/RESULT.md) adds short-circuit And/Or rules and valid rejection spans while preserving the original source evidence. The full financial-operation, signing and history contract still needs completion.
 
-The separate [executable expression runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) now implements all 40 Core constructors and has independent GPT-6 and Grok approval. It checks types before execution, uses exact integer arithmetic, evaluates Boolean branches selectively and publishes no tentative state after rejection. Run `node deliverables/sp02-expression-runtime-2026-09-10/demo-01.mjs` to observe an accepted update and a rejected Ensure. Callers currently supply Core directly; full `.mori` elaboration and K correspondence remain open.
+The separate [executable expression runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) now implements all 40 Core constructors and has independent GPT-6 and Grok approval. It checks types before execution, uses exact integer arithmetic, evaluates Boolean branches selectively and publishes no tentative state after rejection. Run `node deliverables/sp02-expression-runtime-2026-09-10/demo-01.mjs` to observe an accepted update and a rejected Ensure. The [reviewed source frontend](deliverables/sp02-expression-source-2026-09-10/RESULT.md) now elaborates actual `.mori` text into this runtime. Run `npm --prefix experiments/moriarty-language run expression-demo` to check and evaluate an ordinary state update from source. The factory accepts a trusted schema and one action; emitted financial operations are descriptors. Full source-defined schemas, multiple actions, financial execution and K correspondence remain open.
 
 The [financial expression runtime](deliverables/sp02-financial-pure-expression-2026-09-10/RESULT.md) adds eight pure constructors in a separate versioned API, with independent GPT-6 and Grok approval. It supports shares, tagged variants, explicit numeric conversion, conditional values, UInt256 and dimensional arithmetic. The original expression profile remains unchanged. Its vault conversion cases exercise deposit, mint, withdrawal and redemption arithmetic; they do not execute those financial actions or establish their ledger acceptance.
 
@@ -54,7 +54,7 @@ The successor semantic freeze and full SP02/SP03 acceptance remain open. A K def
 
 ### Successor source grammar (EBNF)
 
-This is the complete syntax grammar for **`moriarty-successor-syntax/0`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/grammar.ebnf). The parser is implemented. This provisional profile still omits constructs required by the full roadmap; its successor semantic contract remains unfrozen.
+This is the complete syntax grammar for **`moriarty-expression-source/1`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf). The parser, formatter, checker and local evaluator support all 40 Core expression constructors within this profile. Parsing a declaration does not establish executable support: constants, state declarations and multiple actions are rejected by this source factory. The [source contract](experiments/moriarty-language/spec/successor/expression-source.md) defines the supported schema binding and diagnostics. The eight financial-expression additions and complete successor language remain separate unfinished work.
 
 The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.
 
@@ -73,14 +73,17 @@ The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notat
 Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use `//` or `/* ... */`.
 
 ```ebnf
-(*
-  ISO/IEC 14977 EBNF for moriarty-successor-syntax/0.
-  Provisional syntax profile; parser implemented. Not a semantic freeze.
-  Concatenation is comma. Alternation is vertical bar.
-  Square brackets are optional. Braces are zero or more repetition.
-  Quoted text is a terminal. A special sequence names a lexical token
-  defined in lexical.md. Every nonterminal used below is defined here
-  or is such a lexical token.
+(* ISO/IEC 14977 EBNF for moriarty-expression-source/1.
+   Source header must match exactly; syntax/0 remains separate.
+   Lexical rules are lexical.md plus profile-gated [ and ] punctuation.
+   Parentheses create no AST nodes; precedence and associativity match syntax/0.
+   Generic names are excluded from ordinaryPrimaryName.
+   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
+   declarations256, statements256, record fields64, ordinary call arguments64,
+   collection intrinsic arguments128, action parameters256.
+   Integer lexical tokens remain unsigned canonical decimals; - is separate.
+   The source contract supplies all type/domain/metadata and diagnostic rules.
+   Parsing const/state or multiple actions does not make them executable.
 *)
 
 program = profileDecl, agreementDecl, ? end of file ? ;
@@ -121,7 +124,7 @@ binding = "let", identifier, "=", expression, ";" ;
 
 update = "next", ".", identifier, "=", expression, ";" ;
 
-emission = "emit", type, "{", [ effectFields ], "}", ";" ;
+emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
 
 effectFields = effectField, { ",", effectField } ;
 
@@ -131,7 +134,10 @@ postcondition = "ensures", expression, ";" ;
 
 type = identifier, [ typeArgs ] ;
 
-typeArgs = "<", type, { ",", type }, ">" ;
+typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
+
+typeArgument = type | signedInteger ;
+signedInteger = [ "-" ], integerToken ;
 
 expression = disjunction ;
 
@@ -149,14 +155,25 @@ sum = product, { ( "+" | "-" ), product } ;
 
 product = postfix, { "*", postfix } ;
 
-postfix = primary, { ".", identifier } ;
+postfix = primary, { ".", identifier | "[", expression, "]" } ;
 
-primary = integerToken
+ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record ? ;
+
+primary = "-", integerToken
+        | integerToken
         | stringToken
         | "true"
         | "false"
-        | identifier, [ "(", [ arguments ], ")" ]
+        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
+        | genericCall
+        | recordLiteral
         | "(", expression, ")" ;
+
+genericCall = ( "some" | "none" | "collection" | "quantity" ),
+              "<", typeArgument, { ",", typeArgument }, ">",
+              "(", [ arguments ], ")" ;
+
+recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
 
 arguments = expression, { ",", expression } ;
 
@@ -166,28 +183,13 @@ integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
 
 stringToken = ? JSON string token defined in lexical.md ? ;
 
-(* Grammar interpretation and additional admission constraints:
-   1. The source contains exactly one profileDecl and one agreementDecl.
-   2. The profile string must be the characters moriarty-successor-syntax/0.
-   3. Unparenthesized a < b < c is rejected. (a < b) < c and a < (b < c)
-      are syntactically admitted; their typing is a separate check.
-   4. typeArgs is nonempty. Foo<> is not a type.
-   5. Parentheses do not create AST nodes. They only group.
-   6. not binds looser than comparison: not a == b parses as not (a == b).
-   7. or, and, +, -, and * associate to the left.
-   8. Call arguments, parameters, and effect fields have no trailing comma.
-   9. function, import, loop, obligation, request, composition, observation,
-      settlement, policy, status, reserve, and effect-schema forms are not
-      productions of this profile.
-  10. Bounds in syntax-profile.json are simultaneous and not part of EBNF.
-*)
 ```
 
 The [lexical specification](experiments/moriarty-language/spec/successor/lexical.md) defines the referenced tokens and their source spans. Identifiers match `[A-Za-z][A-Za-z0-9_]*`, are case-sensitive, and cannot be keywords. Integers are canonical unsigned decimals (`0` or a nonzero digit followed by digits); strings use JSON escapes and must decode to Unicode scalar values. Only ASCII space, tab, CR and LF separate tokens as whitespace. Source comments use `//` or non-nesting `/* ... */`; a bare `/` is not an operator. Input must be valid UTF-8, with no BOM stripping or Unicode normalization.
 
-The fixed [syntax bounds](experiments/moriarty-language/spec/successor/syntax-profile.json) apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including `ensures`, and 64 entries per parameter, call-argument or effect-field list. These parser limits are separate from the atomic execution bounds and from financial runtime limits.
+The [expression-source bounds](experiments/moriarty-language/spec/successor/expression-source.md) extend the base [syntax bounds](experiments/moriarty-language/spec/successor/syntax-profile.json) and apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including `ensures`, 256 action parameters, 128 collection-intrinsic arguments, and 64 ordinary call arguments or effect fields. These parser limits are separate from the atomic execution bounds and from financial runtime limits.
 
-Syntax acceptance does not imply execution. The [bounded funded source profile](experiments/moriarty-language/spec/successor/funded-source.md), `moriarty-funded-source/0`, uses this same source header through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit `Transfer` and `Repay` emissions, producing local `Prepared` candidates. It rejects state and const declarations, `requires`, `let`, `next`, `ensures`, projections and operators, although those forms appear in this grammar. Its numeric values are limited to UInt128. The [funded example](experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori) exercises that subset; the separate [syntax-only example](experiments/moriarty-language/spec/successor/examples/partial-payment.mori) does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.
+Syntax acceptance does not imply execution. The [bounded funded source profile](experiments/moriarty-language/spec/successor/funded-source.md), `moriarty-funded-source/0`, uses the older `moriarty-successor-syntax/0` source header and [grammar](experiments/moriarty-language/spec/successor/grammar.ebnf) through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit `Transfer` and `Repay` emissions, producing local `Prepared` candidates. It rejects state and const declarations, `requires`, `let`, `next`, `ensures`, projections and operators, although those forms appear in this grammar. Its numeric values are limited to UInt128. The [funded example](experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori) exercises that subset; the separate [syntax-only example](experiments/moriarty-language/spec/successor/examples/partial-payment.mori) does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.
 
 ### Small-step semantics (implemented repayment subset)
 
