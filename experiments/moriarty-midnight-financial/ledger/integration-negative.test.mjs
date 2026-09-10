@@ -82,3 +82,10 @@ for(const c of [
 ])test(`composed negative: ${c.name} stops and preserves charged public failure evidence`,async()=>{
  const f=fixture(c.options),{result,error}=await runAndRetain(f);assert.ok(error);assert.equal(error.message,c.code);assert.equal(result.status,'FAILED');assert.deepEqual(f.calls,c.calls);assert.deepEqual(f.compared,c.compared);assert.equal(result.driver.transactionIds.length,c.calls.length);assert.equal(result.driver.failure.phase,c.code==='LOCAL_EXECUTION_BINDING_MISMATCH'?'call':['INDEXED_OUTPUTS_MISMATCH','INVALID_PAID_FEES'].includes(c.code)?'observe':'compare');assert.equal(result.driver.operationalState.reservedSubmissions,6+c.calls.length);const expectedCharge=1800000000000006n+c.calls.reduce((sum,stage)=>sum+BigInt(receiptByStage[stage].transaction.dustFee),0n);assert.equal(result.driver.operationalState.reservedDustFee,String(expectedCharge));assert.ok(f.state().charges>f.state().priorDust);assert.deepEqual(result.driver.operationalState.reservedGrossByAsset,c.calls.includes('settle')?{[color]:'20000000000'}:{});assert.equal(f.state().stopped,true);assert.equal(f.state().closed,true);assert.equal(result.financialAcceptance,false);assert.ok(result.driver.failure&&typeof result.failureCode==='string');assert.equal(result.sourceTestOnly,true);
 });
+
+test('local actual observer/comparator composition enforces its admitted cumulative cap',async()=>{
+ const total=stages.reduce((sum,s)=>sum+BigInt(receiptByStage[s].transaction.dustFee),0n);
+ const f=fixture();f.options.limits.dustFee=total-1n;const failed=await runAndRetain(f);
+ assert.equal(failed.error.message,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(failed.result.failureCode,'NATIVE_FEE_CAP_EXCEEDED');assert.equal(failed.result.driver.failure.code,'NATIVE_FEE_CAP_EXCEEDED');assert.deepEqual(f.compared,stages.slice(0,3));assert.equal(f.state().closed,true);
+ const exact=fixture();exact.options.limits.dustFee=total;const accepted=await runAndRetain(exact);assert.equal(accepted.error,undefined);assert.equal(accepted.result.financialComparison.status,'PASS');
+});

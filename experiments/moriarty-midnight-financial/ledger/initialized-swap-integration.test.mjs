@@ -97,3 +97,10 @@ for(const change of [p=>p.limits.allocationId='sp05-local-swap-01',p=>p.existing
 test('composed swap plan getters rejected without invocation before setup',async()=>{for(const key of ['kind','existingInitializedSwap']){const f=continuationFixture();let calls=0;Object.defineProperty(f.options.continuationPlan,key,{get(){calls++;throw Error('GETTER_TRAP');}});await assert.rejects(integrateLocalFinancialCase(f.options),/CONTINUATION_INTEGRATION_PLAN/);assert.equal(calls,0);assert.deepEqual(f.calls,['wallet-stop']);}});
 test('missing initialized mint stops before preservation and new dispatch',async()=>{const f=continuationFixture();f.options.walletContext.wallet.waitForSyncedState=async()=>{const s=syncedFixture();s.unshielded.availableCoins=[];return s;};await assert.rejects(integrateLocalFinancialCase(f.options),/SWAP_WALLET/);assert.ok(!f.calls.includes('continuation-preserve')&&!f.calls.includes('swap')&&!f.calls.includes('close'));});
 for(const [gate,code] of [['publicCheck','SWAP_CONTINUATION_DEPLOY_STATE'],['checkPrivate','SWAP_CONTINUATION_PRIVATE_READ'],['checkWallet','SWAP_CONTINUATION_WALLET_HISTORY']])test('retains closed swap diagnostic '+code,async()=>{const f=continuationFixture();f.options.continuationAdapters[gate]=()=>{throw Error(code);};await assert.rejects(integrateLocalFinancialCase(f.options),e=>{assert.equal(e.publicIntegrationResult.failureCode,code);return true;});});
+
+test('historical fee allocations are bound separately from the new allowance',async()=>{
+ const f=continuationFixture(),original=f.adapters.createComparator;let args;
+ f.adapters.createComparator=async input=>{args=input;return original(input);};
+ await integrateLocalFinancialCase(f.options);assert.equal(args.dustFeeCap,f.options.limits.dustFee);
+ assert.deepEqual(args.historicalFeeAllocations,[['deploy','initialize']].map(stages=>({stages,dustFeeCap:2000000000000000n})));
+});

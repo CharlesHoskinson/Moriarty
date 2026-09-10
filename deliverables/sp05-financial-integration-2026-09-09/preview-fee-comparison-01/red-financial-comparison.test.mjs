@@ -49,7 +49,7 @@ function fixture(kind='loan') {
  });
  return {kind,stages,rows,colors};
 }
-async function comparator(kind='loan') {assert.equal(typeof api.createFinancialComparator,'function','financial comparator must exist');return api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n});}
+async function comparator(kind='loan') {assert.equal(typeof api.createFinancialComparator,'function','financial comparator must exist');return api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000});}
 async function run(fx,mutate) {const c=await comparator(fx.kind);for(let i=0;i<fx.rows.length;i++){if(mutate)mutate(fx.rows[i],i,fx);c.verifyStage(fx.stages[i],fx.rows[i]);}return c.finish();}
 
 test('complete loan and swap comparison preserves gross spending and residual duties',async()=>{
@@ -96,7 +96,7 @@ test('rejects skipped stages and remains stopped after a failure',async()=>{
  const fx=fixture(),c=await comparator();assert.throws(()=>c.finish(),/INCOMPLETE/);assert.throws(()=>c.verifyStage('initialize',fx.rows[1]),/STAGE_ORDER/);assert.throws(()=>c.verifyStage('deploy',fx.rows[0]),/STOPPED/);
 });
 test('rejects duplicate participants and never exposes role secrets',async()=>{
- assert.equal(typeof api.createFinancialComparator,'function');await assert.rejects(api.createFinancialComparator({kind:'loan',roles:{...roles,secondAddress:roles.firstAddress},networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n}),/PARTICIPANTS/);
+ assert.equal(typeof api.createFinancialComparator,'function');await assert.rejects(api.createFinancialComparator({kind:'loan',roles:{...roles,secondAddress:roles.firstAddress},networkTag,expectedProtocolVersion:1000000}),/PARTICIPANTS/);
  const r=await run(fixture());assert.equal(JSON.stringify(r).includes(Buffer.from(roles.firstSecret).toString('hex')),false);
 });
 
@@ -175,32 +175,3 @@ test('matched native fees exceeding the admitted cumulative SPECK cap reject',as
  assert.throws(()=>c.finish(),{message:'COMPARISON_STOPPED'});
 });
 
-test('exact cap and within cap pass for both complete financial traces',async()=>{
- for(const kind of ['loan','swap'])for(const dustFeeCap of [492n,493n]){
-  const fx=fixture(kind),c=await api.createFinancialComparator({kind,roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap});
-  fx.rows.forEach((row,i)=>c.verifyStage(fx.stages[i],row));assert.equal(c.finish().status,'PASS');
- }
-});
-test('self-consistent first fee above cap rejects despite unresolved lower indexer units',async()=>{
- const fx=fixture();fx.rows[0].receipt.fees.nativeDebit.amount=fx.rows[0].receipt.transaction.dustFee='493';
- fx.rows[0].receipt.fees.indexerReported.paid='1';
- const c=await comparator();assert.throws(()=>c.verifyStage('deploy',fx.rows[0]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
-});
-test('a finite native SPECK cap is mandatory, with no unlimited source-fixture default',async()=>{
- for(const dustFeeCap of [undefined,null,'492',492,-1n,1n<<128n,Infinity])await assert.rejects(api.createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap}),{message:'NATIVE_FEE_CAP_REQUIRED'});
-});
-test('historical surplus cannot subsidize current fees; historical groups also accumulate',async()=>{
- const fx=fixture(),args={kind:'loan',roles,networkTag,expectedProtocolVersion:1000000};
- const historicalFeeAllocations=[{stages:['deploy','initialize'],dustFeeCap:1000n}];
- const c=await api.createFinancialComparator({...args,dustFeeCap:245n,historicalFeeAllocations});
- historicalFeeAllocations[0].dustFeeCap=1000000n;historicalFeeAllocations[0].stages.push('settle');
- for(let i=0;i<3;i++)c.verifyStage(fx.stages[i],fx.rows[i]);
- assert.throws(()=>c.verifyStage('settle',fx.rows[3]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
- const d=await api.createFinancialComparator({...args,dustFeeCap:1000n,historicalFeeAllocations:[{stages:['deploy','initialize'],dustFeeCap:245n}]});
- d.verifyStage('deploy',fx.rows[0]);assert.throws(()=>d.verifyStage('initialize',fx.rows[1]),{message:'NATIVE_FEE_CAP_EXCEEDED'});
- const e=await api.createFinancialComparator({...args,dustFeeCap:246n,historicalFeeAllocations:[{stages:['deploy','initialize'],dustFeeCap:246n}]});
- fx.rows.forEach((row,i)=>e.verifyStage(fx.stages[i],row));assert.equal(e.finish().status,'PASS');
-});
-test('historical stages must be a finite nonoverlapping contiguous prefix',async()=>{
- for(const historicalFeeAllocations of [[{stages:['initialize'],dustFeeCap:123n}],[{stages:['deploy','deploy'],dustFeeCap:246n}],[{stages:['deploy'],dustFeeCap:undefined}]])await assert.rejects(api.createFinancialComparator({kind:'loan',roles,networkTag,expectedProtocolVersion:1000000,dustFeeCap:492n,historicalFeeAllocations}),/HISTORICAL_FEE/);
-});

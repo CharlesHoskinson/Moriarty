@@ -321,3 +321,14 @@ test('actual production preflight failure survives durable launcher retention wi
   const raw=readFileSync(join(directory,'integration-result.json'),'utf8'),saved=JSON.parse(raw);assert.equal(saved.failureCode,result.failureCode);assert.equal(saved.phase,'preflight');assert.ok(!raw.includes('PRIVATE_'));return true;
  });assert.deepEqual(f.calls,['wallet-stop']);}finally{rmSync(directory,{recursive:true,force:true});}
 });
+
+test('current and historical comparator allowances remain separate in each loan mode',async()=>{
+ for(const make of [fixture,recoveryFixture,continuationFixture]){
+  const f=make(),o=f.options,original=f.adapters.createComparator;let observed;
+  f.adapters.createComparator=async args=>{observed=args;return original(args);};
+  if(make===fixture)await assert.rejects(integrateLocalFinancialCase(o),{message:'DRIVER_CLEANUP_INCOMPLETE'});else await integrateLocalFinancialCase(o);
+  assert.equal(observed.dustFeeCap,o.limits.dustFee);
+  const expected=make===fixture?[]:make===recoveryFixture?[['deploy']]:[['deploy'],['initialize']];
+  assert.deepEqual(observed.historicalFeeAllocations,expected.map(stages=>({stages,dustFeeCap:2000000000000000n})));
+ }
+});
