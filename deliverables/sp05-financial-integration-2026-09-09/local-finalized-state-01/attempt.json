@@ -1,0 +1,40 @@
+{
+  "status": "CONSUMED",
+  "admissionSha256": "4eff4fa2e5133cfe2eaf71d30ee074a43dcfb0a91ec5f2049b77242b2f3b5d33",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-finalized-state-stop-01",
+    "--on-active=180s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-finalized-state-01.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-node"
+  ],
+  "diagnosticArgvTemplate": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-finalized-state-01",
+    "--property=Type=exec",
+    "--property=MemoryMax=4294967296",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=90",
+    "--property=TimeoutStopSec=1",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "--property=UMask=0077",
+    "--property=StandardOutput=null",
+    "--property=StandardError=null",
+    "--working-directory=/home/charl/Moriarty/.worktrees/sp05-deadline-review",
+    "/usr/local/bin/node",
+    "/home/charl/Moriarty/.worktrees/sp05-deadline-review/deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/probe.mjs"
+  ],
+  "submissionsAllowed": 0,
+  "retryAllowed": false
+}

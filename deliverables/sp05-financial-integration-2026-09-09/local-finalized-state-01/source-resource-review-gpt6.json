@@ -1,0 +1,80 @@
+{
+  "schema": "moriarty.local-finalized-state-source-resource-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/spec_audit_early",
+  "reviewedAt": "2026-09-10T14:24:11.421597+00:00",
+  "candidateSha256": "bf3814fc5a9090bf3062617b3e17d8f5c7104b4fb12ecbce1553161aebce6ffe",
+  "proposalSha256": "aa85b8331f0d208df44fcb3f5e6b1c60277c276c274b3558abb2c09200261976",
+  "sourceVerdict": "PASS_SCOPED",
+  "resourceVerdict": "APPROVE_BOUNDED_RUN",
+  "scope": "One proposed node-only public-state observation of the existing loan and swap through explicit finalized anchors. Source review and one bounded service allocation only; no operational script was imported or executed by this reviewer.",
+  "independence": {
+    "authoredCandidate": false,
+    "readOtherCurrentReviewerVerdict": false,
+    "historicalDependencyReviews": "The accepted finalized-state reader source16 record and its prior candidate/result bindings were inspected as existing dependencies, not as votes for this new probe."
+  },
+  "findings": [],
+  "sourceChecks": [
+    "All104 candidate file hashes verified before and after controlled tests, including operational script, probe/test, reader/RPC implementation and historical dependencies. Exact candidate/proposal SHA and accepted-reader references verified.",
+    "Probe startup verifies fixed local genesis before contract-state queries and binds original contract addresses, full loan/swap build receipt digests and source manifest digest. Full native/gen-generated decode is delegated to the accepted reader and loader.",
+    "Controlled fetch is passed through the real createLocalRpc, corrected reader, real native ContractState decoder and actual full compiled loaders. Successful control captured both complete retained native states and full decoded public records; no live fetch in the positive test.",
+    "Readiness retries only TypeError fetch failed with ECONNREFUSED, at most60samples/60seconds. Each request is capped at5seconds or remaining time. Post-readiness genesis/build/state failures are terminal with no state-operation retry or indexer/latest fallback.",
+    "Each capture has explicit canonical finalized anchor; anchors can differ as node advances. Scope promises neither atomic cross-contract observation nor authenticated state proof nor no intervening actions after an anchor.",
+    "Method errors mapped by transport to RPC_RESPONSE leave support UNKNOWN when no successful capture exists. A completed first snapshot may establish observed availability and remain retained if the second fails. No unsupported-method claim is inferred from a generic transport error.",
+    "Public output is exclusively created, bounded to64KiB and fsynced along with directory. Bigints/byte arrays are serialized explicitly; complete original native hex remains. Error messages are bounded and the probe opens no original private state/wallet/secret input.",
+    "Probe cleanup closes each loaded contract, checks result and never reports OBSERVED if shared deadline expires afterward.89second internal timer and90second diagnostic manager runtime are distinct safeguards, not live containment evidence."
+  ],
+  "resourceChecks": [
+    "execute-once.py was read and AST parsed only. It rejects optimized Python; binds admission status, proposal, source candidate, every admitted file, two identity-bound source approvals and two resource votes, plus raw actual-review references. This reviewer approval alone is insufficient to execute.",
+    "Exclusive fsynced attempt.json is written as CONSUMED before timer/container activation; existing attempts/results/units reject. No retry/counter reset exists. Prior10submissions and3000000000000010SPECK remain preserved; this operation proposes0transaction submissions,0proofs,0DUST and0asset debit.",
+    "Preflight requires12GiB available host memory and4GiB free disk, all3containers exited and exact image identities. Node config must remain5GiBmemory/10GiBtotal memory-plus-swap/4CPU/restart-no. Only the existing node appears in start/stop/kill commands; no indexer/prover start or writable-layer reset.",
+    "Independent timer is armed/checked before node start. Its observed D-Bus monotonic expiry and accuracy define arming, with180seconds until shutdown and accuracy<=1second. Timer service bounds cgroupkill+dockerstop to25seconds, then ExecStopPost nodekill to5seconds: planned terminal bound211seconds after timer arming.",
+    "Docker start and diagnostic activation are checked against arming+90seconds. Manager TimeoutStartSec is floor(remaining activation time)-1, exact argv durably saved, and dispatch refuses if recording consumes the reserved time. Post-dispatch acknowledged active timestamp must lie before activation deadline.",
+    "Diagnostic service has4GiBmemory/no-swap/200%CPU/90second RuntimeMaxSec,control-groupKillMode,1secondstopgrace,SIGKILL final handling. The outer timer separately stops/kills the Docker node.",
+    "Setup failures retain no-retry failure evidence and attempt node/cgroup cleanup while independent timer remains. No code cancels timer before actual terminal-containment inspection. Actual node exit/cgroupabsence/othercontainersstopped must be observed after the run before timer cancellation or success reporting."
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "node --test --test-reporter=tap deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/probe.test.mjs",
+      "exitCode": 0,
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 2095.685762,
+      "output": "deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/gpt6-probe-verification.tap",
+      "sha256": "eefd66de147f0ff0157ef4630e1fae0804f3e70e39e15aa5d2cfb9911e82f2ef"
+    },
+    {
+      "command": "python3 deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/activation-static-checks-02.py",
+      "exitCode": 0,
+      "casesPassed": 4,
+      "scope": "Extracted activation source statements executed only with controlled clock/save/run; no operational import, subprocess, daemon or network.",
+      "output": "deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/gpt6-activation-static-checks-02.txt",
+      "sha256": "65deb463c30ae96773db10a30c3b6f7430814715cc59bde999d285e352739695",
+      "resultPath": "deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-01/activation-static-checks-02.json",
+      "resultSha256": "1815138ea8f97e594b159988cee03b96b1809991a698b494f3801c830e9727cc"
+    },
+    {
+      "command": "ast.parse(execute-once.py source text)",
+      "status": "PASS",
+      "operationalScriptImported": false,
+      "operationalScriptExecuted": false
+    }
+  ],
+  "limitations": [
+    "This source/resource vote does not assert actual unit or container state, resource configuration enforcement, local RPC support, current loan/swap state or completed containment. Those are dispatch/result observations.",
+    "Approval is for exactly one bounded node-only observation after both actual source/resource reviews and exclusive admission; it grants no failed transaction campaign or broader service run.",
+    "211seconds is the planned outer containment bound after timer arming. No promise-based timer is represented as process containment; actual post-run termination inspection remains mandatory.",
+    "Node RPC and supplied contract identities remain trusted and unauthenticated. Full captured state still does not prove ledger nonmutation, Preview acceptance, mandatory PCD or SP05.2 completion.",
+    "A failed/partial observation remains failure evidence; do not start another run, classification request, wallet flow, public campaign or fallback under this consumed proposal."
+  ],
+  "operationsPerformed": {
+    "liveNetworkRequests": 0,
+    "servicesStarted": 0,
+    "transactionsSubmitted": 0,
+    "proofsGenerated": 0,
+    "compilerRuns": 0,
+    "privateInputsRead": 0
+  }
+}
