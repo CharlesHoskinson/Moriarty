@@ -1,0 +1,783 @@
+This document walks through the basic workflow for writing Unison code. We'll introduce bits and pieces of the core Unison language and its syntax as we go.
+The Unison language documentation
+is a more in-depth resource if you have questions or want to learn more.
+📑
+This tour is separated into several parts! Follow along and revisit them as needed:
+Part 1: Hello to the Unison codebase manager
+Part 2: Creating a project
+Part 3: Navigating a Unison codebase
+Part 4: Writing Unison code
+Part 5: Adding and updating code
+Part 6: Sharing code and installing Unison libraries
+This guide assumes you've already gone through the steps in
+the quickstart guide
+and skimmed through
+the big idea
+.
+Part 1: 👋 to the Unison codebase manager
+The Unison Codebase Manager, or UCM for short, is the command line tool that runs the Unison programming language and allows you to interact with the Unison code you've written. It functions as the interface to your Unison codebase.
+Its many responsibilities include:
+Typechecking and compiling new code
+Organizing, navigating, and finding Unison definitions
+Storing the state of your codebase
+Running Unison programs and Unison binaries
+Publishing and installing Unison libraries
+💡 Remember: Unison code is not saved as text-based file content. That's why we need a tool to change and run Unison programs.
+Running the UCM
+Enter
+ucm
+in your terminal to get started. By default,
+ucm
+creates or opens opens a codebase in your home directory.
+This is the Unison Codebase Manager starting up and initializing a fresh codebase:
+Now starting the Unison Codebase Manager (UCM)...
+
+[…]
+
+Get started:
+
+  📖 Type help to list all commands, or help <cmd> to view help for one command
+  🎨 Type ui to open the Codebase UI in your default browser
+  📚 Read the official docs at https://www.unison-lang.org/docs/
+  🌏 Visit Unison Share at https://share.unison-lang.org to discover libraries
+  👀 I'm watching for changes to .u files under ~/unisonCode
+
+ scratch/main>
+We're used to thinking about our codebase as a bag of text files that is mutated as we make changes to our code, but in Unison the codebase is saved and updated programatically, with the aid of this CLI.
+The Unison codebase format has a few key properties:
+Terms and types are identified by their implementation, not just their name. The codebase stores a hash of the syntax tree of a term or type.
+It is
+append-only
+:
+all changes to the codebase, including deletions, are appended to a log representing the codebase state.
+As a result, a Unison codebase has its own notion of versioning and synchronization independent of git, and
+a robust set of tools
+has been developed for managing and viewing changes in Unison code over time.
+If you are creating a new codebase, your prompt,
+>
+,
+will read
+scratch/main
+.
+This is the current working project and branch name, two concepts which we'll cover next.
+Part 2: 🗂 Creating a project
+Rather than creating multiple codebases for each application, Unison subdivides one codebase into "projects". Unison
+projects
+are analogous to source code repositories. They separate your code into apps, libraries, and other work that you may want to collaborate on. Projects are further divided into
+branches
+representing independent work streams.
+Inside a project, your code is grouped by
+namespaces
+.
+Namespaces organize your Unison terms and types into a tree, similar to directories on your computer. For example, a name like
+math.sqrt
+refers to the
+sqrt
+definition inside the
+math
+namespace. Definitions can have multiple namespace segments, like
+base.Optional.Some
+,
+separated by dots.
+In the UCM console, create a fresh
+tour
+project with the
+project.create
+command.
+scratch/main> project.create tour
+
+   🎉 I've created the project tour.
+
+
+   I'll now fetch the latest version of the base Unison library...
+
+
+   🎨 Type `ui` to explore this project's code in your browser.
+   🌏 Discover libraries at https://share.unison-lang.org
+   📖 Use `help-topic projects` to learn more about projects.
+
+   Write your first Unison code with UCM:
+
+     1. Open scratch.u.
+     2. Write some Unison code and save the file.
+     3. In UCM, type `update` to save it to your new project.
+
+   🎉 🥳 Happy coding!
+
+tour/main>
+Notice the prompt changes to
+tour/main>
+.
+Your current project is now
+tour
+and the current branch is
+/main
+.
+Your UCM commands and code will be scoped to this particular project and branch.
+When you create a new project, the UCM automatically installs the
+base
+standard library for you. It's located in a special namespace called
+lib
+.
+🧠
+The
+lib
+namespace is where the UCM installs all the dependencies of the project. It is always located directly inside the root of the project.
+Let's explore the
+base
+library that was just downloaded and get used to navigating a Unison codebase next.
+Part 3: ⛵️ Navigating a Unison codebase
+You can view the term and type names in a namespace with the
+ls
+command.
+tour/main> ls lib.base.data.List
+The output is a numbered list of definitions and their associated signatures.
+tour/main> ls lib.base.data.List
+
+1.   ++                    ([a] -> [a] -> [a])
+2.   ++.                   (1 term)
+3.   +:                    (a -> [a] -> [a])
+[…]
+Because Unison code is stored via the UCM, we can cache and retrieve information like:
+Where are all the places my function is called?
+What are the definitions that match a given name or type signature?
+What is the exact implementation of the function I depend on?
+In fact, let's try searching and viewing code with the
+find
+and
+view
+commands:
+tour/main> find reverse
+
+I couldn't find matches in this namespace, searching in 'lib'...
+
+1.  lib.base.data.Graph.reverse : Graph v ->{Exception} Graph v
+2.  lib.base.data.Graph.tests.reverse : [Result]
+3.  lib.base.data.List.Nonempty.reverse : List.Nonempty a -> List.Nonempty a
+4.  lib.base.data.List.reverse : [a] -> [a]
+The
+find
+command is searching for definitions whose names include
+reverse
+.
+It searches first within our own code in the project, and then in
+lib
+.
+tour/main> view List.reverse
+
+  lib.base.data.List.reverse : [a] -> [a]
+  lib.base.data.List.reverse as =
+     List.foldLeft (acc a -> a +: acc) [] as
+Here, we used the
+view
+command to look at the source code of a function.
+Let's introduce some Unison syntax:
+List
+.
+reverse
+:
+[
+a
+]
+->
+[
+a
+]
+is the syntax for a type signature. Type signatures are defined above the definition in Unison. We read the
+:
+symbol as "has type", as in, "reverse has the type
+[a] -> [a]
+"
+Square brackets,
+[ ]
+,
+represent lists in Unison
+A lowercase variable in a type signature is a generic placeholder representing some other type. The type
+[a] -> [a]
+means this is a function which takes a list of elements of some type and returns a list of the same type.
+List.reverse as
+names the one argument to the function,
+as
+.
+Everything after the
+=
+is the body of the function. Here it's a
+block
+,
+demarcated by whitespace.
+(acc a -> ..)
+is the syntax for an anonymous function
+Function arguments are separated by spaces, so
+(acc a -> ...) [] as
+are three arguments to
+List
+.
+foldLeft
+✨
+Enter the
+view
+command without any arguments to open up a
+fzf search
+interface for finding definitions in your codebase. It's a quick way to explore the codebase and find definitions by name.
+Part 4: 📝 Writing Unison code
+Unison's interactive scratch files
+The codebase manager listens for changes to any file ending in
+.u
+in the current directory. When any such file is saved (which we call a "scratch file"), Unison parses and typechecks that file.
+Keep your
+ucm
+terminal running and open up a file,
+scratch.u
+(or
+foo.u
+,
+or whatever you like) in your preferred text editor.
+if you want syntax highlighting for Unison files,
+follow this link
+for instructions on setting up your editor.
+Put the following in your scratch file:
+square
+:
+Nat
+->
+Nat
+square
+x
+=
+use
+Nat
+*
+x
+*
+x
+This defines a function called
+square
+.
+It takes an argument called
+x
+and it returns
+x
+multiplied by itself.
+The
+use Nat *
+is a
+use clause
+which specifies which "*" operator we want to use. This one is from the
+Nat
+namespace in our
+lib.base
+standard library. Use clauses mean we can refer to
+base.Nat
+as simply
+Nat
+and can refer to
+*
+without prefixing it
+Nat.*
+.
+When you save the file, Unison indicates whether or not the change can be applied:
+I found and typechecked these definitions in ~/unisoncode/scratch.u. If you do an `update`, here's how your codebase would change:
+
+  ⍟ New definitions:
+
+    square : Nat -> Nat
+Before we save
+square
+in the codebase, let's try calling it right in the
+scratch.u
+file, in a line starting with
+>
+:
+square
+:
+Nat
+->
+Nat
+square
+x
+=
+use
+Nat
+*
+x
+*
+x
+>
+square
+4
+Save the file, and Unison prints:
+6 | > square 4
+      ⧩
+      16
+The
+> square 4
+on line 6 is called a "watch expression". Unison uses watch expressions to run code inline, instead of having a separate read-eval-print-loop (REPL). Everything in your scratch file and your project is in scope, so you can test code as you go with all the features of your text editor.
+Question:
+Should we reevaluate all watch expressions on every save, even if they're expensive? Unison avoids this by caching results, keyed by the hash of each expression. If the hash hasn't changed, Unison reuses the cached result. You can clear the cache anytime without issues. Think of your
+.u
+files like spreadsheets — only the cells whose dependencies change get recomputed.
+🤓
+There's one more ingredient that makes this work effectively, and that's functional programming. When an expression has no side effects, its result is
+deterministic
+,
+and you can cache it as long as you have a good key for the cache, like the Unison content-based hash. Unison's type system won't let you do I/O inside one of these watch expressions or anything else that would make the result change from one evaluation to the next.
+Try out a few more
+watch expressions
+and see how the UCM responds:
+-- A comment, ignored by Unison
+>
+List.reverse
+[
+1
+,
+2
+,
+3
+,
+4
+]
+>
+4
++
+6
+>
+5.0
+/
+2.0
+>
+not
+true
+Testing your code
+Next let's add a test for our
+square
+function:
+test>
+square.tests.ex1
+=
+verify
+do
+ensureEqual
+(
+square
+4
+)
+16
+test>
+introduces a test
+watch expression
+named
+square.tests.ex1
+By convention, tests for a definition
+foo
+go in
+foo.tests
+.
+Otherwise, there's nothing special about the name
+square.tests.ex1
+.
+test
+.
+verify
+expects a
+delayed computation
+which calls the function under test with its expected result.
+do
+starts the delayed computation. Think of it as a function with no arguments,
+() -> a
+,
+which is used to return a result lazily.
+test
+.
+ensureEqual
+raises an
+Exception
+if its two values are not equal, failing the test.
+Save the file, and the UCM responds with:
+8 | test> square.tests.ex1 =
+       verify do ensureEqual (square 4) 16
+
+✅ Passed
+A property-based test
+Let's test this a bit more thoroughly.
+square
+should have the property that
+square a * square b == square (a * b)
+for all choices of
+a
+and
+b
+.
+The testing library supports writing property-based tests like this. There's some new syntax here, explained afterwards:
+test>
+square.tests.prop1
+=
+verify
+do
+Each.repeat
+100
+a
+=
+Random.natIn
+0
+100
+b
+=
+Random.natIn
+0
+100
+ensure
+(
+square
+a
+*
+square
+b
+==
+square
+(
+a
+*
+b
+))
+This will test our function with a bunch of different inputs using the
+Each
+and
+Random
+abilities.
+Each
+is being used to generate 100
+Random
+numbers, which the test then verifies.
+Syntax notes
+The Unison code block, which begins after an
+=
+,
+can have any number of
+bindings
+(`a = …`) all at the same indentation level. The last expression (`ensure (square …)`) is the result of the block.
+The
+do
+keyword introduces a
+delayed computation
+code block, delimited by whitespace.
+Save your scratch file to check that the property test succeeds.
+Part 5: ➕➖ Adding and updating code
+The
+square
+function and its tests are not yet part of the codebase. So far they only exist in our scratch file. Let's add them now. Switch to the UCM and type
+update
+:
+tour/main> update
+
+  ⍟ I've added these definitions:
+
+    square             : Nat -> Nat
+    square.tests.ex1   : [Result]
+    square.tests.prop1 : [Result]
+Try typing
+view square.tests.prop1
+in the UCM.
+tour/main> view square.tests.prop1
+
+square.tests.prop1 : [Result]
+square.tests.prop1 = test.verify do
+  use Nat * ==
+  use Random natIn
+  Each.repeat 100
+  a = natIn 0 100
+  b = natIn 0 100
+  ensure (square a * square b == square (a * b))
+Unison inserts precise
+use
+statements when rendering your code, and formats it according to its own pretty-printing conventions.
+Type
+test
+at the UCM prompt to "run" your test suite:
+tour/main> test
+
+  Cached test results (`help testcache` to learn more)
+
+  ◉ square.tests.ex1      : Passed
+  ◉ square.tests.prop1    : Passed
+
+  ✅ 2 test(s) passing
+
+  Tip: Use view square.tests.ex1 to view the source of a test.
+The console will print your results, but it did not actually execute any code! The tests had been run previously and cached according to their Unison hash. In a purely functional language like Unison, tests like these are deterministic and won't actually rerun until the code they depend on changes.
+Moving and renaming terms
+Let's move
+square
+and its tests to a different location in our project with the
+move
+command.
+move
+is recursive, so it will move the term and all the things inside the
+square
+namespace to the new name.
+tour/main> move square mySquare
+
+  Done.
+Once that's done, use
+find
+with no arguments to view all the definitions under the current namespace:
+tour/main> find
+
+  1. mySquare : Nat -> Nat
+  2. mySquare.tests.ex1 : [Result]
+  3. mySquare.tests.prop1 : [Result]
+If you run
+test
+again, you'll see the results of our tests are still cached! Our definitions are identified by their
+implementation
+,
+not their name.
+tour/main> test
+
+  Cached test results (`help testcache` to learn more)
+
+  ◉ mySquare.tests.ex1       : Passed
+  ◉ mySquare.tests.prop1     : Passed
+
+  ✅ 2 test(s) passing
+Updating existing definitions
+Let's change the implementation of our
+mySquare
+function.
+Add three dashes,
+---
+,
+on a new line at the top of your your scratch.u file. This is called a
+fold
+.
+Everything under the
+---
+will be ignored by the UCM.
+Then enter
+edit mySquare
+in the UCM:
+tour/main> edit mySquare
+
+  ☝️
+
+  I added 1 definition to the top of ~/unisoncode/scratch.u
+
+  You can edit them there, then run `update` to replace the definitions currently in this branch.
+This prepends the pretty-printed definition of
+mySquare
+to your scratch file.
+Let's define
+mySquare x
+as the sum of the first
+x
+odd numbers, just for fun. (Here's a
+nice geometric illustration of why this gives the same results
+):
+use
+base
+mySquare
+:
+Nat
+->
+Nat
+mySquare
+x
+=
+sum
+(
+map
+(
+x
+->
+x
+*
+2
++
+1
+) (
+range
+0
+x
+))
+sum
+:
+[
+Nat
+]
+->
+Nat
+sum
+=
+foldLeft
+(
++
+)
+0
+Save the file and the UCM should display a message saying that
+mySquare
+is ok to update:
+I found and typechecked these definitions in ~/unisoncode/scratch.u. If you
+run `update`, here's how your codebase would change:
+
+    ⍟ These new definitions are ok to `update`:
+
+      sum : [Nat] -> Nat
+
+    ⍟ These names already exist. You can `update` them to your new definition:
+
+      mySquare : Nat -> Nat
+Let's try that:
+tour/main> update
+
+  ⍟ I've added these definitions:
+
+    sum : [Nat] -> Nat
+
+  ⍟ I've updated these names to your new definition:
+
+    mySquare : Nat -> Nat
+Only affected tests are rerun on
+update
+The dependency tracking for determining whether a test needs rerunning is 100% accurate and is tracked at the level of individual definitions.
+If we rerun the
+test
+command now, the tests will not be be cached, since one of their dependencies has actually changed:
+tour/main> test
+
+  ✅
+
+    New test results:
+
+  ◉ mySquare.tests.ex1      : Passed
+  ◉ mySquare.tests.prop1    : Passed
+
+  ✅ 2 test(s) passing
+
+  Tip: Use view 1 to view the source of a test.
+Part 6: 🤝 Sharing code and installing Unison libraries
+🎉
+The last thing you'll need to do is sign up for Unison Share. Unison Share is the code hosting platform for Unison. It's where you'll manage collaboration on your own code and discover new Unison libraries. Head to
+Unison Share
+and follow the instructions there to link your local codebase for code hosting!
+Code is published to Unison's own code hosting solution,
+Unison Share
+,
+using the
+push
+command and libraries are installed via the
+lib.install
+command. There's no separate tooling needed for managing dependencies or publishing code. Interacting with code hosting on Unison Share is all built into the UCM.
+Congratulations on completing the tour of Unison! You're ready to get writing Unison code. We're excited to see what you build! 🥳
+What next?
+🌟
+Configure UCM to set author and license information
+🌟
+Learn more about Unison projects
+🌟
+Take a look at the language documentation and get started writing Unison code
+🌟
+Learn how to update Unison code and resolve conflicts
+📚
+Explore the Unison Share catalogue
+📚
+A mental model for Abilities in Unison covers a unique aspect of Unison's type system
+📚
+Walk-through videos for the Unison coding workflow
+Unison project
+A Unison project is a Unison codebase concept that represents a library, application, or other code package that can be shared, collaborated on, and versioned. You can create and manipulate projects with UCM commands and view your projects on Unison Share.
+Unison branch
+A branch, in Unison's project model, represents an independent development workstream. Much like git branches, they enable workflows like creating PR's and maintaining different features of a project. Branches inherit the codebase state of the branch they were created from.
+Namespace
+In Unison, a namespace is a mapping of names to their underlying definitions.
+We often think of these names as forming a tree, much like a directory of files, and names are like file paths in this tree.
+ls
+ls
+displays the terms, types, and sub-namespaces in the given namespace.
+name
+accepts both absolute and relative namespace paths.
+scratch/main> ls base.List
+scratch/main> ls .base.Bag
+view
+myproject/main> view base.data.List.map
+view
+displays the source code of the given Unison term or type.
+Deterministic
+A function which is deterministic will always return the same result for the given set of input values.
+Watch expression
+In a file with the
+.u
+extension, any line beginning with
+>
+is a watch expression. A watch expression tells the UCM to execute the Unison expression to the right of the symbol and render the result to the console.
+Watch expressions cannot execute code whose abilities are not enclosed by a handler.
+Watch expression
+In a file with the
+.u
+extension, any line beginning with
+>
+is a watch expression. A watch expression tells the UCM to execute the Unison expression to the right of the symbol and render the result to the console.
+Watch expressions cannot execute code whose abilities are not enclosed by a handler.
+update
+myProject/main> update
+myProject/main> update aTerm
+Adds everything in the most recently typechecked file to the namespace, replacing existing definitions having the same name, and attempts to update all the existing dependents accordingly. If the process can't be completed automatically, the dependents will be added back to the scratch file for your review.
+use
+clause
+The use clause allows code in the current
+lexical scope
+to use terms and types in the given namespace without referencing them by their fully qualified names.
+use
+Nat
+drop
++
+(
+drop
+5
+4
+)
++
+8
+use
+can be called without referencing specific terms--''use List'' brings everything under the
+List
+namespace into scope, or it can reference specific definitions, as in,
+use List map flatMap
+Fold (`---` in a scratch file)
+In a
+.u
+suffixed file, a line starting with
+---
+introduces a
+fold
+.
+Everything below the
+---
+will be ignored by the UCM.
+aTerm
+=
+"this will be typechecked by the UCM"
+---
+
+bTerm = "this will be ignored"
+push
+Pushing from within a project:
+myProject/branch> push
+@othersProject/feature> push /@myUser/feature
+Pushing a namespace to a remote namespace:
+scratch/main> push git(git@github.com:myUser/myCodebase).releases.v1 .update.v1
+scratch/main> push myUser.public.myProject .myProject
+The
+push
+command is used to push definitions from a local codebase to a remote codebase.
+The first argument to
+push
+is any hosted project or remote namespace path that identifies the location to push to and the second argument (if given) identifies a namespace or project in the local codebase that should be applied to the remote repo. If a second argument is not supplied, then the current namespace or project will be pushed to the given remote namespace.
+lib.install
+Downloads the latest release of the specified library:
+myProject/main> lib.install @unison/base
+To install a specific version of a library, use the name of the libray followed by "release/versionNumber":
+myProject/main> lib.install @unison/base/releases/1.0.0
+The
+lib.install
+command is used to install a library from Unison Share, as of Unison version 0.5.21. If you are using an older Unison version, use the
+pull
+command to install libraries.

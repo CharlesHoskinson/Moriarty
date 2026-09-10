@@ -10,6 +10,7 @@ tags:
   - navigation
 updated_at: 2026-09-09T20:18:05Z
 sources:
+  - SRC-0109
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -1038,3 +1039,7 @@ Ingested report8 as SRC-0106, captured all40named ERC/EIP pages as SRC-0107, and
 ## [2026-09-09] ingest | Bounded repayment K references
 
 SRC-0108 captures nine official K pages with Scrapling 0.4.15, robots policy, SHA-256 and selected-section review. [Reference review](../docs/research/2026-09-09-bounded-k-references.md) provides S2 implementation recommendations and records the narrow CLM-0806 wording limitation. Older immutable captures and claims are preserved. No K execution, proof, source/Core freeze or Preview acceptance was performed by this intake.
+
+## 2026-09-09 — Language design research and PL convergence
+
+SRC-0109 collects thirteen full academic documents and fourteen substantive official documentation pages, with hashes/locators and retained access gaps. CLM-0940–0942 and the [convergence report](../deliverables/language-design-2026-09-09/CONVERGENCE.md) distinguish twenty agreed feature labels from substantive amendments and dissent. Experiments remain specified-only. Added bounded grammar lessons and qualified the historical K status; no financial/proof gate changed.

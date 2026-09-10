@@ -1,0 +1,34 @@
+If you intend to publish your code in a project for others to use, you'll want to specify a license at the root of your project laying out the conditions under which others may use it.
+First create an author with the
+create.author
+command. It's perfectly fine to create a new
+metadata
+.
+Author
+term per project, but if your author term is already defined in a library dependency included in the project, you can refer to that instance in your license instead of creating a new one.
+project1/main> create.author aliceCoder "Alice Coder"
+This adds the following values to your codebase:
+1. metadata.authors.aliceCoder          : metadata.Author
+2. metadata.authors.aliceCoder.guid     : GUID
+3. metadata.copyrightHolders.aliceCoder : CopyrightHolder
+Next, create a License with a
+CopyrightHolder
+and
+LicenseType
+under which to publish your code. The license is an ordinary Unison value of type
+License
+.
+In your scratch file, you'll create a license value like this:
+LICENSE
+=
+License
+[
+copyrightHolders.aliceCoder
+] [
+Year
+2025
+]
+licenseTypes.bsd3
+Your Unison authorship information is linked to the project via inclusion in this term.
+Add that to your project at the top-level of the project:
+project1/main> add

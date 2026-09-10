@@ -1,0 +1,157 @@
+Here's the big idea behind Unison, which we'll explain along with some of its benefits:
+🧠
+Each Unison definition is identified by a
+hash
+of
+its
+syntax tree.
+Put another way, Unison code is
+content-addressed.
+Here's an example, the
+increment
+function on
+Nat
+:
+increment
+:
+Nat
+->
+Nat
+increment
+n
+=
+n
++
+1
+While we've given this function a human-readable name (and the function
+Nat
+.
++
+also has a human-readable name), names are just separately stored metadata that don't affect the function's hash. The syntax tree of
+increment
+that Unison hashes looks something like:
+Unison uses 512-bit SHA3 hashes, which have unimaginably small chances of collision.
+If we generated one million unique Unison definitions every second, we should expect our first hash collision after roughly 100 quadrillion years! ⏳
+increment
+= (
+#
+arg1
+->
+#
+a8s6df921a8
+#
+arg1
+1
+)
+So all named arguments are replaced by positionally-numbered variable references, and all dependencies (in this case the
+Nat
+.
++
+function) are replaced by their hashes. Thus, the hash of
+increment
+uniquely identifies its exact implementation and pins down all its dependencies.
+An analogy:
+Each Unison definition has a unique and deterministic address (its hash) in this vast immutable address space. Names are like pointers to addresses in this space. We can change what address a name points to, but the contents of each address are forever unchanging.
+Benefits
+This starting assumption provides some surprising benefits: it simplifies distributed programming, eliminates builds and dependency conflicts, supports typed durable storage, structured refactorings, enables better tools for working with code, and lots more.
+🌟
+This isn't just theory and speculation—we created the
+Unison Cloud Platform
+to operationalize these benefits for anyone who wants to write and deploy Unison code.
+Let's go over how each of these benefits emerges.
+This
+Strange Loop talk
+covers many of these ideas as well, though some of the details are out of date.
+Simplifying distributed programming
+Programming languages today are generally based around the idea that a program is a thing that describes what a single OS process does, on a single computer. Any interaction with things outside the program boundary is done very indirectly, by sending bytes over a socket, say. You can't "just" run a computation elsewhere, you have to send bytes over the network, and then (somehow?) make sure the other end is running a separate program that is listening for those bytes and will deserialize them and hopefully run the computation you want.
+With this existing paradigm, distributed computations are described not with one program, but many separate programs stitched together with a morass of glue, duct tape, YAML files, and blobs of JSON being sent over the network.
+Moreover, it's complicated to set up all your compute resources to ensure that overall, they act to execute the overall computation you're interested in, and you get none of the niceties of programming languages to help you along the way. When programming for a single machine, you generally have a typechecker that helps ensure all the pieces fit together, and you can abstract over things however you like, introduce reusable components, and so on. This support is notably missing when assembling the correct layer of
+stuff
+needed to get lots of computers to do something useful in concert.
+In Unison, since definitions are identified by a content hash, arbitrary computations can just be moved from one location to another, with missing dependencies deployed on the fly. The basic protocol is something like: the sender ships the bytecode tree to the recipient, who inspects the bytecode for any hashes it's missing. If it already has all the hashes, it can run the computation; otherwise, it requests the ones it's missing and the sender syncs them on the fly. They'll be cached for next time.
+Of course, there's a lot of engineering that goes into making this work nicely, but the basic idea is simple and robust.
+This ability to relocate arbitrary computations subsumes the more limited notions of code deployment, remote procedure calls, and more, and lets us build powerful distributed computing components as ordinary Unison libraries.
+📕
+Spark-like datasets in under 100 lines of Unison
+shows how distributed programming libraries can be built up with minimal code in Unison
+It is a freeing thing to not have to do any setup in advance of just
+running
+your program which can describe whole distributed systems. Rather than having to do a bunch of work "out of band" to ensure your compute resources are ready to run the code they need (like building containers, uploading a container image or jarfile somewhere, or whatever else), in the Unison model of distributed computing, you just run the code and whatever dependencies are missing can be sync'd on the fly.
+Of course, distributed programming can still be challenging, and distributed programs are different than sequential, single-machine programs. But distributed programming should not be
+needlessly tedious.
+Let's spend our time on the things that actually
+matter
+about distributed programs, not on deployment, setup, and tedious encoding and decoding to move values and computations around!
+No builds
+In Unison, you're almost never waiting around for your code to build. Why is that?
+Because Unison definitions are identified by their hash, they never change. We may change which
+names
+are associated with which hashes (and this is used for Unison's approach to refactoring and code evolution), but the definition associated with a hash never changes.
+Thus, we can parse and typecheck definitions once, and then store the results in a cache which is
+never invalidated.
+Moreover, this cache is not just some temporary state in your IDE or build tool (which gets mysteriously inconsistent on occasion), it's part of the Unison codebase format. Once anyone has parsed and typechecked a definition and added it to the codebase, no one has to do that ever again.
+This idea also applies to caching test results for pure computations (deterministic tests that don't use I/O). There's no need to rerun a deterministic test if none of its dependencies have changed!
+The result of this pervasive caching is you spend your time writing code, not waiting around for the compiler.
+No dependency conflicts
+Dependency conflicts are, fundamentally, due to different definitions "competing" for the same names. But why do we care if two different definitions use the same name? We shouldn't. The limitation only arises because definitions are referenced by name. In Unison, definitions are referenced by hash (and the names are just separately stored metadata), so dependency conflicts and the diamond dependency problem are just not a thing.
+Instead, what we now think of as a dependency conflict is instead just a situation where there are multiple terms or types that serve a similar purpose. Consider an
+Email
+type, one from v1 of Alice's library, and another from v2 of Alice's library (perhaps included transitively from a different library). We're accustomed to having to stop the world to fix a "broken" build from such a dependency "conflict", but in Unison, it's perfectly fine to have two different
+Email
+types floating around the codebase. They exist as different types, with different hashes, and you can work with both at the same time (and even write ordinary functions to convert between one and the other).
+Of course, over time, you may wish to consolidate those two
+Email
+types that you have in your codebase, but you can do so at your leisure, rather than your codebase being in a broken state and you being unable to run any code or do anything until this conflict is resolved.
+Having multiple versions of "the same" function or type floating around is not really much different than other sorts of duplication that might arise in your codebase, like a handful of similar-looking functions that you notice could all be defined in terms of some common abstraction. When the time is right, you consolidate that duplication away, but there's no need for this natural process to always take precedence over literally all other work.
+Typed, durable storage
+There are two aspects to storing values persistently. One is the interesting part: what sort of schema or data structure should I use for a large collection of data, such that certain queries or computations on it are efficient?
+The uninteresting part is all the serialization and deserialization that one deals with at these boundaries between your program and the underlying storage layer, be it SQL, NoSQL, or something else.
+In Unison, any value at all (including functions or values that contain functions) can be persisted and unpersisted at a later time, without the programmer needing to manually specify a serialization format or write an encoder and decoder.
+One reason people often resort to writing manual encoding/decoding layers is because it's assumed that the codebase doing the serialization at time 0 might be different than the codebase doing the deserialization months or years later. What if the newer codebase has different versions of libraries? Then I won't be able to read my data back! So I'd better write some tedious code on either side of the persistence boundary to convert to and from some stable format such as rows in SQL, a JSON blob, etc.
+Serializing a definition identified by content hash avoids this difficulty. Definitions never change, and deserialization will always yield a value that has the same meaning as when it was first serialized.
+Moreover, this idea makes it possible for a storage layer to be
+typed
+,
+not with a separate type system that your program doesn't know about (as in SQL), but as part of your Unison program. That is, values persisted by your program give you back typed references to the storage layer, and you're assured by Unison's type system that when loading that reference you'll get back a value of the expected type.
+Stay tuned for an article about writing a distributed storage layer in Unison.
+Richer codebase tools
+The Unison codebase is a proper database which knows the type of everything it stores, has a perfect compilation cache, perfect knowledge of dependencies, indices for type-based search, and more. This lets us easily build much richer tools for browsing and interacting with your code. For instance,
+Unison Share
+lets you browse
+fully hyperlinked Unison code
+for libraries in the ecosystem, as well as rendering rich documentation with hyperlinked
+embedded code samples
+.
+By storing the codebase in this more structured way, it's much simpler to support these features. The first version of Unison Share was written in just a few months, by a single person, using the rich information already available in Unison's codebase API.
+Code is, fundamentally, structured information. We currently edit code as text for convenience, but just about anything you want to do with it can be done better by first converting to a more structured form.
+Let's look at a simple example:
+renaming a definition.
+When the code is represented as a bag of mutable text files, renaming a definition accurately involves first converting those text files to some syntax tree which respects the scoping rules of the language and where dependencies are made explicit. This lets us determine which parts of the syntax tree are referencing the thing being renamed, and which parts contain that substring but where it's bound to something else (say, a local variable), or is within a string literal, a comment, etc.
+Once the renaming is complete, the revised syntax tree then needs to be serialized back to text, generating a huge textual diff and possibly lots of conflicts if you're working on the code concurrently with other developers. Furthermore, if the renaming is done on a definition in a published library, all your downstream users will have a broken codebase when they go to upgrade. Isn't this silly?
+Another example: consider the ephemeral compilation caches of build tools and IDEs. These tools go to great lengths to try to avoid recompiling code needlessly, processing the textual code into some richer form that they can cache, but it's quite difficult, especially when the underlying text files are perpetually getting mutated out from underneath the build tool.
+Unison represents your codebase as a proper "database of code", sidestepping many of these difficulties. You still
+edit
+and
+author
+code using your favorite text editor, but once your code is slurped into the codebase, it's stored in a nicely processed form that provides benefits like instant non-breaking renames, type-based search, hyperlinked code, and more. And it's one command to get any definition back into your text buffer (pretty-printed, and using the latest names for definitions) for easy editing.
+On the one hand, text files and text-based tools have a large ecosystem that already exists and that people are used to. But text as a way of storing code loses out on huge advantages that Unison gets "for free" with a more structured representation of what a codebase is. And we are just scratching the surface: Unison's tools for working with code will just keep getting better and better, with entirely new possibilities opening up that are be difficult or impossible using text-based codebases.
+Structured refactoring
+Even if Unison's underlying model is that definitions never change, we do sometimes want to change what definitions our human-readable names are mapped to. You might need to fix bugs, improve performance, or simply repurpose an existing name for a new definition.
+In Unison, changing what names are mapped to which hashes is done with structured refactoring sessions, rather than the typical approach of just mutating text files in place and then fixing a long list of misleading compile errors and failed tests. A Unison codebase is never in a broken state, even midway through a refactoring.
+If your codebase is like a skyscraper, the typical approach to refactoring is like ripping out one of the foundational columns. The skyscraper collapses in a pile of rubble (a long list of misleading compile errors), and you attempt to rebuild a standing skyscraper from that rubble.
+The Unison approach is to keep the existing skyscraper around and just copy bits of it over to a new skyscraper, using a magic cloning tool. The codebase is never in a broken state. All your code is runnable. It's just that, midway through, you may not have fully constructed the second skyscraper and cut over all the names. Unison keeps track of that and gives you a tidy todo list to work through.
+Conclusions
+The longer you spend with this idea of content-addressed code, the more it starts to take hold of you. It's not arbitrary or strange, but a logical and sensible choice with tremendous practical benefits. You start to appreciate the simplicity of the idea and see the need for it everywhere ("this would be a lot easier if the code were content-addressed..."). Is it really feasible, though, to build a programming language around this idea? Yes!
+Part of the fun in building Unison was in working through the implications of what seemed like a great core idea. A big question that arose: even if definitions themselves are unchanging, we do sometimes want to change which definitions we are interested in and assign nice names to. So how does that work? How do you refactor or upgrade code? Is the codebase still just a mutable bag of text files, or do we need something else?
+We
+do
+need something else to make it nice to work with content-addressed code. In Unison we call this something else the
+Unison Codebase Manager
+.
+Where to next?
+🌟
+Take a tour of the codebase manager and the Unison language
+🌟
+What problems does Unison solve?
+📚
+Watch some talks about Unison

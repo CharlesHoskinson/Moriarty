@@ -1,0 +1,841 @@
+       Asynchronous Functional Reactive Programming for GUIs
+
+                                    Evan Czaplicki                                                                      Stephen Chong
+                                 Harvard University                                                                    Harvard University
+                          evan.czaplicki@post.harvard.edu                                                           chong@seas.harvard.edu
+
+
+
+
+Abstract                                                                                            Semantics of most FRP languages assume that signals change
+Graphical user interfaces (GUIs) mediate many of our interac-                                   continuously. Thus, their implementations sample input signals as
+tions with computers. Functional Reactive Programming (FRP) is a                                quickly as possible, and continually recompute the program with
+promising approach to GUI design, providing high-level, declara-                                the latest values for the signals. In practice, however, many sig-
+tive, compositional abstractions to describe user interactions and                              nals change discretely and infrequently, and so constant sampling
+time-dependent computations. We present Elm, a practical FRP                                    leads to unnecessary recomputation. By contrast, Elm assumes that
+language focused on easy creation of responsive GUIs. Elm has                                   all signals are discrete, and uses this assumption to detect when a
+two major features: simple declarative support for Asynchronous                                 signal is unchanged, and in that case, avoid unnecessary recompu-
+FRP; and purely functional graphical layout.                                                    tation.
+    Asynchronous FRP allows the programmer to specify when the                                      In Elm, signals change only when a discrete event occurs. An
+global ordering of event processing can be violated, and thus en-                               event occurs when a program input (such as the mouse position)
+ables efficient concurrent execution of FRP programs; long-running                              changes. Events require recomputation of the program, as the result
+computation can be executed asynchronously and not adversely af-                                of the program may have changed. Previous FRP systems require
+fect the responsiveness of the user interface.                                                  that events are processed synchronously: one at a time in the exact
+    Layout in Elm is achieved using a purely functional declarative                             order of occurrence. In general, synchronization is required to
+framework that makes it simple to create and combine text, images,                              allow the programmer to reason about the behavior of the FRP
+and video into rich multimedia displays.                                                        system, and ensure correct functionality.
+    Together, Elm’s two major features simplify the complicated                                     However, processing an event may take significant time, result-
+task of creating responsive and usable GUIs.                                                    ing in delays to the entire FRP system. Pipelining event processing
+                                                                                                can help to reduce latency, but because the global order of events
+Categories and Subject Descriptors D.3.2 [Language Classifica-                                  must be respected, an event cannot finish processing until all pre-
+tions]: Data-flow languages; Applicative (functional) languages                                 vious events have finished. In GUIs, this is unacceptable behavior:
+                                                                                                the user interface should remain responsive, even if a previous user
+General Terms Languages, Design                                                                 action triggered a long-running computation.
+Keywords Functional Reactive Programming, Graphical User In-                                        Elm provides programmers with a simple abstraction to spec-
+terfaces                                                                                        ify when computation can occur asynchronously. Combined with
+                                                                                                pipelined execution of event processing, this allows long-running
+1.     Introduction                                                                             computation to execute concurrently with other event processing,
+                                                                                                avoids global delays, and allows GUIs to remain responsive.
+Elm is a functional reactive programming language that aims                                         The ability to specify asynchronous computation within an FRP
+to simplify the creation of responsive graphical user interfaces                                paradigm is the key novelty of Elm. We formalize this language
+(GUIs), and specifically targets GUIs for web applications. Func-                               feature by presenting the semantics of a core Asynchronous FRP
+tional reactive programming (FRP) applies pure functional pro-                                  calculus. However, Elm is also a practical and expressive program-
+gramming paradigms to time-varying values, known as signals.                                    ming language, which we demonstrate through the implementation
+FRP is a highly promising approach for implementing GUIs, where                                 of an Elm compiler, and the use of the resulting compiler to develop
+time-varying values can represent input and output (including user                              rich, responsive GUIs that perform non-trivial computation. The
+interaction, server requests and responses), and other information                              Elm compiler produces JavaScript code that can be immediately
+about the execution environment. By enforcing a purely functional                               and easily deployed in web applications. Elm is publicly available.1
+programming style, programmers can explicitly model complex
+time-dependent relationships in a high-level declarative way.                                       Like previous work on efficient FRP (e.g., [25, 30, 31]), Elm
+    However, previous FRP languages and implementations have                                    restricts use of signals to enable efficient implementation. Elm
+suffered from at least two kinds of inefficiencies: unnecessary                                 is strictly more expressive than these previous approaches, since
+recomputation and global delays.                                                                (1) discrete signals generalize continuous signals [31], (2) we em-
+                                                                                                bed a discrete version of Arrowized FRP [25] in Elm, and (3) we
+                                                                                                additionally allow the programmer to specify when signal updates
+                                                                                                should be computed asynchronously.
+Permission to make digital or hard copies of all or part of this work for personal or              The rest of the paper is structured as follows. In Section 2 we
+classroom use is granted without fee provided that copies are not made or distributed           describe key features of Elm through several simple Elm programs.
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. To copy otherwise, to republish, to post on servers or to redistribute
+                                                                                                In Section 3 we present a formalization of the core language of
+to lists, requires prior specific permission and/or a fee.                                      Elm, including semantics and a type system. The full Elm language
+PLDI’13, June 16–19, 2013, Seattle, WA, USA.
+Copyright c 2013 ACM 978-1-4503-2014-6/13/06. . . $10.00                                        1 Available at http://elm-lang.org/.
+
+
+
+
+                                                                                            1
+                                                                               Figure 2. A basic FRP program: tracking mouse movement
+
+
+                                                                            scribe, this is often head-scratchingly difficult to implement in to-
+        Figure 1. Purely functional graphics: basic layout
+                                                                            day’s GUI frameworks, since the content is dynamically updated.
+                                                                            In Elm, however, it is a one liner:
+extends the core language with libraries and syntactic sugar to sim-                    main = lift asText Mouse.position
+plify the creation of expressive GUIs. In Section 4 we describe
+some of these libraries (including the embedding of discrete Arrow-            This code relies on signals, which are the key abstraction of
+ized FRP [25]). Elm has a fully functional compiler that compiles           FRP. A signal is a value that changes over time. In Elm, a signal that
+Elm programs to JavaScript and HTML, suitable for immediate in-             represents a value of type τ changing over time has type Signal τ .
+clusion in web applications. We describe the compiler in Section 5.         For example, a graphical element that changes over time, such as an
+We discuss related work in Section 6 and conclude in Section 7.             animation, is a Signal Element. Indeed, variable main typically
+                                                                            has type Signal Element, since what to display on the screen
+                                                                            changes over time.2
+2.   Elm through Examples                                                      In the code above, the position of the mouse is represented as a
+We present key features of Elm through several simple Elm pro-              signal of a pair of integers, indicating the coordinates of the mouse.
+grams. The first example highlights Elm’s purely functional graph-                      Mouse.position : Signal (Int,Int)
+ical layout. The second example demonstrates how Elm’s graph-
+ics primitives use FRP to easily produce rich interactive GUIs.                 Function lift : (a -> b) -> Signal a -> Signal b
+The third example shows Elm’s async construct, which allows                 takes a function from values of type a to values of type b, and
+programmers to specify that potentially long-running computation            a signal of values of type a, and applies the function to each
+should execute asynchronously, and thus ensures that the user in-           value, resulting in a signal of type b. In the example above, func-
+terface remains responsive.                                                 tion asText : a -> Element (which converts Elm values into
+                                                                            a textual representation) is applied to every value of the signal
+Example 1 The following Elm program lays out three graphical                Mouse.position, thus converting a signal of coordinates into a
+elements vertically, as shown in Figure 1.                                  signal of Elements. As the position of the mouse changes, so does
+content = flow down [ plainText "Welcome to Elm!"                           the Element that is being displayed. This is shown in Figure 2.
+                           , image 150 50 "flower.jpg"                          In Elm, all signals are discrete. That means that instead of
+                           , asText (reverse [1..9]) ]                      the system needing to frequently sample a continuously changing
+                                                                            value (i.e., the system pulls values from the external environment),
+main = container 180 100 middle content                                     the system waits to be notified when the value has changed (i.e.,
+    Variable main is distinguished in Elm: the value of this variable       values are pushed to the system only when they change). Elm is
+will be displayed on the screen when the program is executed. In            a push-based system [12], meaning that computation is performed
+the program above, main is defined to be a 180 by 100 container             only when values change. This reduces needless recomputation. In
+with content defined by variable content. The content is placed             the example above, function asText is only applied to a mouse
+in the middle of the container. (Positioning elements is notoriously        coordinate when the mouse position changes.
+difficult in HTML; Elm provides a simple abstraction, allowing the
+position of content within a container to be specified as topLeft,          Example 3 This example highlights Elm’s ability to perform
+midTop, topRight, midLeft, middle, and so on.)                              asynchronous computation over signals. It uses words entered by
+    Variable content has type Element, indicating that it is a              the user to find and fetch an image from a web service (such as
+graphical element that can be displayed, and/or composed with               Flickr), which may take significant time. The program simultane-
+other graphical elements. The value of content at runtime is a              ously displays the current position of the mouse, with the position
+composite element, comprising three elements stacked vertically.            being updated in a timely manner, regardless of how long image
+The three elements are the text "Welcome to Elm!", a 150 by                 fetching takes.
+50 image, and the text representation of a list containing numbers          (inputField, tags) = Input.text "Enter a tag"
+from 9 down to 1, which are combined together using function
+flow : Direction -> [Element] -> Element (i.e., flow is                     getImage tags =
+a function that takes a value of type Direction, a list of Elements,          lift (fittedImage 300 200)
+and produces an Element).                                                          (syncGet (lift requestTag tags))
+    Values of type Element occupy a rectangular area of the screen
+when displayed, making Elements easy to compose. Elm provides               scene input pos img =
+primitives and library functions to create more complex Element               flow down [ input, asText pos, img ]
+values, and non-rectangular graphical elements. Elm and its li-
+braries provide a simple declarative syntax and semantics, making           main = lift3 scene inputField
+layout easy to reason about.                                                                   Mouse.position
+                                                                                               (async (getImage tags))
+Example 2 This example displays the position of the mouse
+pointer, as seen in Figure 2. Although extremely simple to de-              2 Variable main is also allowed to have type Element, as in Example 1.
+
+
+
+
+                                                                        2
+    Code Input.text "Enter a tag" creates a text input field,
+and returns a pair (inputField, tags), where inputField is                             Numbers      n∈Z
+a signal of graphical elements for the input field, and tags is a                      Variables    x ∈ Var
+signal of strings. Each time the text in the input field changes (due               Input signals   i ∈ Input
+to the user typing), both signals produces a new value: the updated
+element and the current text in the input field.                                    Expressions     e ::= () | n | x | λx : η. e | e1 e2 | e1 ⊕ e2
+    Function getImage takes a signal of strings, and returns a sig-
+nal of images. For each string that the user enters, this function                                       | if e1 e2 e3 | let x = e1 in e2 | i
+requests from the server a URL of an image with tags (i.e., key-                                         | liftn e e1 ... en | foldp e1 e2 e3
+words) that match the string. Function requestTag takes a string,
+                                                                                                         | async e
+and constructs an appropriate HTTP request to the server. (We elide
+the definition of requestTag, which simply performs string con-                     Simple types    τ ::= unit | int | τ → τ 0
+catenation.) Expression lift requestTag tags is thus a signal
+of HTTP requests. Built-in function syncGet issues the requests,                    Signal types    σ ::= signal τ | τ → σ | σ → σ 0
+and evaluates to a signal of image URLs (actually, a signal of JSON                        Types    η ::= τ | σ
+objects returned by the server requests; the JSON objects contain
+image URLs). Function fittedImage (definition elided) takes di-
+                                                                                                    Figure 3. Syntax of FElm
+mensions and an image URL and constructs an image Element.
+    Function scene takes as its arguments input (an Element),
+pos (an arbitrary value) and img (an Element), and composes them
+                                                                              tional constructs are evaluated, and signals are left uninterpreted.
+vertically.
+                                                                              In the second stage, signals are evaluated: as the external environ-
+    Value main puts the pieces together, applying function scene
+                                                                              ment generates new values for input signals, the new values are
+to three signals: the signal of elements representing the text field in
+                                                                              processed as appropriate.
+which the user types, the mouse position (Mouse.position), and
+the signal of images derived from the user’s input (getImage tags).           3.1     Syntax
+Primitive function lift3 is similar to function lift described
+above, but takes a function a -> b -> c -> d, a signal of values              The syntax of FElm is presented in Figure 3. Expressions include
+of type a, a signal of values of type b, and a signal of values of type       the unit value (), integers n, variables x, functions λx : η. e, appli-
+c, and applies the function to the current values of the three signals,       cations e1 e2 , let expressions let x = e1 in e2 , and conditional
+each time any of the three signals produces a new value.                      expressions if e1 e2 e3 which are all standard constructs for func-
+    Keyword async indicates that the getImage computation                     tional languages. (Conditional expression if e1 e2 e3 evaluates to
+should run asynchronously. Without the async keyword, the pro-                e2 if e1 evaluates to a non-zero value, e3 otherwise.) Metavariable
+gram must respect the global ordering of events: when the tags                ⊕ ranges over total binary operations on integers.
+signal produces a new string, processing of new Mouse.position                    We assume a set of identifiers Input that denote input signals
+values must wait until an image is fetched from the server. The               from the external environment, and use i to range over these identi-
+result would be an unresponsive GUI that hangs (i.e., does not dis-           fiers. Signals can be thought of as streams of values. For example,
+play the current mouse position) from when the user types in the              an input signal representing the width of a window can be thought
+input field until an image is fetched. By contrast, with the async            of as a stream of integer values such that every time the window
+keyword, the program does not have to respect the order of values             width changes, a new value for the signal is generated. An input sig-
+generated by getImage tags with respect to values generated by                nal representing whether the left mouse button is currently pressed
+Mouse.position. The GUI remains responsive, regardless of how                 down may be represented as a stream of boolean values. Input sig-
+long it takes to fetch an image from the web service.                         nals may also include special signals, for example, to generate a
+    The async construct can be applied to any signal, and provides            new unit value at fixed time intervals, creating a timer.
+a simple, composable way for the programmer to specify when                       An event occurs when an input signal generates a new value.
+computation over a signal may occur asynchronously, and thus to               Events may trigger computation. In FElm, every signal always has
+ensure that long-running computation does not cause the GUI to                a “current” value: it is the most recent value generated by the signal,
+become unresponsive.                                                          or, for an input signal that has not yet generated a new value, it is
+    The behavior of this example Elm program is difficult to im-              an appropriate default value associated with that input signal. Thus,
+plement in most practical programming frameworks. For example,                every input signal is required to have a default value, which then
+implementation with JavaScript+AJAX requires nested call-backs.               induces default values for other signals.
+Also, such an example is impossible to implement in current FRP                   The remaining expressions (liftn e e1 ... en , foldp e1 e2 e3 ,
+languages as no previous work permits explicit asynchrony and                 and async e) are primitives for manipulating signals, and are
+concurrent execution.                                                         described in more detail below.
+                                                                              Transforming and combining signals For each natural number
+3.   Core Language                                                            n ≥ 0, we have primitive liftn e e1 ... en which allows a
+The full Elm language contains libraries and syntactic sugar that             function e to transform and combine signals e1 . . . en .
+simplify the creation of rich and responsive GUIs. In this section,               Intuitively, if e is a function of type τ1 → τ2 → · · · →
+we present a simple core language—FElm, for “Featherweight                    τn → τ , and expressions ei are of type signal τi respectively, then
+Elm”—that presents the semantics of Elm’s key abstractions.                   liftn e e1 ... en applies function e to the values from signals
+    FElm combines a simply-typed functional language with a                   e1 . . . en , and has type signal τ (i.e., it is a signal that produces
+small set of reactive primitives. Programmers have direct access              values of type τ ). For example,
+to signals, which can be transformed and combined with the full
+                                                                                               lift1 (λx : int. x+x) Window.width
+power of a functional language. A type system restricts the use
+of reactive primitives to ensure that the program can be executed             is a signal of integers obtained by doubling the values from input
+efficiently. FElm uses a two-stage semantics. In the first stage, func-       signal Window.width.
+
+
+
+                                                                          3
+      Signals can also be combined. For example, expression                  T-U NIT             T-N UMBER      T-VAR         T-I NPUT
+                                                                                                                 Γ(x) = η      Γ(i) = signal τ
+      lift2 (λy : int. λz : int. y ÷ z) Mouse.x Window.width
+                                                                              Γ ` () : unit       Γ ` n : int    Γ`x:η         Γ ` i : signal τ
+takes two input signals of integers (Mouse.x and Window.width),
+and produces a signal of integers by combining values from the
+two input signals. It computes the relative position of the mouse’s                T-L AM                          T-A SYNC
+x-coordinate with respect to the window width. Note that the rela-                      Γ, x : η ` e : η 0              Γ ` e : signal τ
+tive position is computed each time an event occurs for either input                Γ ` λx : η. e : η → η 0         Γ ` async e : signal τ
+signal. Moreover, events are globally ordered, and signal compu-
+tation is synchronous in that it respects the global order of events:                   T-O P                        T-A PP
+the sequence of relative positions will reflect the order of events on                     Γ ` e1 : int               Γ ` e1 : η → η 0
+Mouse.x and Window.width.                                                                  Γ ` e2 : int                  Γ ` e2 : η
+Past-dependent transformation The liftn primitives operate                               Γ ` e1 ⊕ e2 : int             Γ ` e1 e2 : η 0
+only on the current values of signals. By contrast, the foldp prim-             T-C OND                         T-L ET
+itive can compute on both the current and previous values of a                        Γ ` e1 : int                      Γ ` e1 : η
+signal. Primitive foldp performs a fold on a signal from the past,               Γ ` e2 : η Γ ` e3 : η               Γ, x : η ` e2 : η 0
+similar to the way in which the standard function foldl performs
+a fold on lists from the left of the list. The type of foldp is                   Γ ` if e1 e2 e3 : η            Γ ` let x = e1 in e2 : η 0
+            (τ → τ 0 → τ 0 ) → τ 0 → signal τ → signal τ 0                                     T-L IFT
+                                                                                                 Γ ` e : τ1 → · · · → τn → τ
+for any τ and τ 0 . Consider foldp e1 e2 e3 . Here, e1 is a function
+                                                                                                  Γ ` ei : signal τi ∀i ∈ 1..n
+of type τ → τ 0 → τ 0 , e2 is a value of type τ 0 and e3 is a
+signal that produces values of type τ . Type τ 0 is the type of the                             Γ ` liftn e e1 ... en : signal τ
+accumulator, and e2 is the initial value of the accumulator. As                               T-F OLD
+values are produced by signal e3 , function e1 is applied to the new                                Γ ` ef : τ → τ 0 → τ 0
+value and the current accumulator, to produce a new accumulator                                Γ ` eb : τ 0    Γ ` es : signal τ
+value. Expression foldp e1 e2 e3 evaluates to the signal of
+accumulator values.                                                                             Γ ` foldp ef eb es : signal τ 0
+    For example, suppose that Keyboard.lastPressed is an input
+signal that indicates the latest key that has been pressed. Then the                 Figure 4. Inference rules for typing judgment Γ ` e : η
+following signal counts the number of key presses. (We assume that
+which key is pressed is encoded as an integer.)
+                                                                             does not overly restrict the expressiveness of the language, which
+      foldp (λk : int. λc : int. c+1) 0 Keyboard.lastPressed                 we discuss further in Section 4.
+                                                                                 The typing judgment for FElm has the form Γ ` e : η, indicat-
+Asynchronous composition The async primitive allows a pro-                   ing that expression e has type η under type context Γ, which maps
+grammer to specify when certain computations on signals can be               variables and input signal identifiers to types. Figure 4 presents in-
+computed asynchronously with respect to the rest of the program.             ference rules for this judgment. The rules for the primitive operators
+This annotation allows the programmer to specify when it is per-             that manipulate signals are as described above, and the remaining
+missible to ignore the global ordering of events. The use and benefit        inference rules are mostly standard. Note that the typing rule for
+of this construct is described in more detail, including a thorough          conditional expressions if e1 e2 e3 requires that the test expres-
+example, in Section 3.3.2.                                                   sion e1 has type int, and in particular, cannot be a signal. A program
+                                                                             e is well typed if Γinput ` e : η holds for a type environment Γinput
+3.2     Type System                                                          that maps every input i ∈ Input to a signal type.
+FElm’s type system ensures that FElm programs cannot produce
+                                                                             3.3     Semantics
+signals of signals. There are two kinds of types: simple types τ and
+signal types σ. Type syntax is presented in Figure 3. Simple types           FElm programs are evaluated in two stages. In the first stage, all
+include base types (unit for the unit value and int for integers) and        and only functional constructs are evaluated, resulting in a term
+functions from simple types to simple types (τ → τ 0 ). Signal types         in an intermediate language that clearly shows how signals are
+σ include type signal τ (for signals that produce values of type τ ),        connected together. The intermediate language is similar to the
+and functions that produce signal types (τ → σ and σ → σ 0 ).                source language of Real-Time FRP [30] and Event-Driven FRP
+    The type system rules out programs that use signals of sig-              [31]. In the second stage, signals are evaluated: new values arriving
+nals, for the following reason. Intuitively, if we have signals of           on input signals trigger computation in a push-based manner.
+signals, then after a program has executed for, say 10 minutes,
+we might create a signal that (through the use of foldp) depends             3.3.1     Functional Evaluation
+on the history of an input signal, say Window.width. To compute              We define an intermediate language according to the grammar in
+the current value of this signal, should we use the entire history           Figure 5. The intermediate language separates values of simple
+of Window.width? But that would require saving all history of                types (unit, numbers, and functions over simple types), and signal
+Window.width from the beginning of execution, even though we                 terms (which will be the basis for the evaluation of signals).
+do not know whether the history will be needed later. Alternatively,            A small step operational semantics for evaluation of FElm pro-
+we could compute the current value of the signal just using the cur-         grams to the intermediate language is given in Figure 6. A FElm
+rent and new values of Window.width (i.e., ignoring the history).            program e will evaluate to a final term, which is either a simple
+But this would allow the possibility of having two identically de-           value v, or a signal term s. The inference rules use evaluation
+fined signals that have different values, based on when they were            contexts E to implement a left-to-right call-by-value semantics.
+created. We avoid these issues by ruling out signals of signals. This        Rule A PPLICATION converts function applications to let expres-
+
+
+
+                                                                         4
+       Values    v ::= () | n | λx : τ. e                                                                  Global Event
+                                                                                                            Dispatcher
+
+ Signal terms    s ::= x | let x = s in u | i | liftn v s1 ... sn
+                                                                                                 Mouse.x                  Window.width
+                       | foldp v1 v2 s | async s
+                                                                                                           λy.λz.y÷z
+  Final terms    u ::= v | s
+
+            Figure 5. Syntax of intermediate language                            lift2 (λy : int. λz : int. y ÷ z) Mouse.x Window.width
+                                                                                     Figure 7. Signal graph for relative x-position of mouse
+
+
+  E ::= [·] | E e | E ⊕ e | v ⊕ E |                                          3.3.2    Signal Evaluation
+          if E e2 e3 | let x = E in e | let x = s in E |                     If a FElm program evaluates to a simple value v, then the program
+                                                                             does not use signals, and is not a reactive program. If, however,
+          liftn E e1 ... en | liftn v s1 ... E ... en |                      it evaluates to a signal term s then we perform the second stage
+          foldp E e2 e3 | foldp v1 E e3 | foldp v1 v2 E |                    of evaluation, performing computation as input signals produce
+                                                                             new values. We first present the intuition behind signal evaluation,
+          async E
+                                                                             then present a working example to solidify the intuition. We then
+  F ::= [·] e | [·] ⊕ e | v ⊕ [·] | if F e2 e3 |                             provide a semantics for signal terms by translation to Concurrent
+          liftn [·] e1 ... en | foldp [·] e2 e3 | foldp v1 [·] e3            ML (CML) [27].
+                                                                             Intuition A signal term can be visualized as a directed acyclic
+  C ONTEXT              OP                   C OND -T RUE
+                                                                             graph, where nodes are input signals (i ∈ Input), liftn terms,
+      e −→ e0             v = v1 ⊕ v2               v 6= 0                   and foldp terms. The definition and use of variables define edges
+   E[e] −→ E[e0 ]        v1 ⊕ v2 −→ v         if v e2 e3 −→ e2               between the nodes. (Asynchronous terms async s are described
+                                                                             below.) We refer to these visualizations as signal graphs.
+C OND -FALSE             A PPLICATION                                            Nodes representing input signals have no incoming edges from
+                                                                             other signal nodes, a node representing term liftn v s1 ... sn has
+                                                                             n incoming edges, and a node representing term foldp v1 v2 s
+  if 0 e2 e3 −→ e3        (λx : η. e1 ) e2 −→ let x = e2 in e1
+                                                                             has a single incoming edge. Signal graphs are acyclic since FElm
+                  R EDUCE                                                    has no way to construct recursive signal terms. Figure 7 shows an
+                                                                             example of a signal graph for a simple FElm program.
+                                                                                 We refer to nodes with no incoming edges as source nodes.
+                   let x = v in e −→ e[v/x]                                  Source nodes include input signals, and, as we will see below,
+         E XPAND                                                             async s nodes. Source nodes are the source of new values. An
+                        x 6∈ f v(F [·])                                      event occurs when the signal represented by a source node produces
+                                                                             a new value. Input signal events are triggered by the external envi-
+          F [let x = s in u] −→ let x = s in F [u]                           ronment, for example, mouse clicks or key presses. A global event
+                                                                             dispatcher is responsible for notifying source nodes when events
+          Figure 6. Semantics for functional evaluation                      occur. The global event dispatcher ensures that events are totally
+                                                                             ordered and no two events occur at exactly the same time. In signal
+                                                                             graphs, we draw dashed lines from the global event dispatcher to
+                                                                             all source nodes.
+sions. Rule R EDUCE performs beta-reduction for let expressions
+                                                                                 Nodes for liftn and foldp terms perform computation on
+let x = v in e, but only when x is bound to a simple value. If x is
+                                                                             values produced by signals. Lift terms perform (pure) computation
+bound to a signal term, then (as shown by context let x = s in E)
+                                                                             on the current values of signals: term liftn v s1 ... sn applies
+subexpression e is evaluated without substitution of x. This ensures
+                                                                             function v to the current values of the n signals to produce a new
+that signal expressions are not duplicated, and reduces unnecessary
+                                                                             value. A node for term foldp v1 v2 s maintains the current value
+computation in the second stage of evaluation, which is described
+                                                                             of the accumulator (initially v2 ), and when a new value is received
+in Section 3.3.2. (This is similar to a call-by-need calculus [5, 22],
+                                                                             from signal s, applies function v1 to the new value and the current
+which avoids duplication of unevaluated expressions.)
+                                                                             value of accumulator, to produce the new value of the accumulator,
+    Rule E XPAND expands the scope of a let expression to allow
+                                                                             which is also the new value for the signal foldp v1 v2 s.
+evaluation to continue. Contexts F describe where Rule E XPAND
+can be applied, and includes all contexts where a simple value v                 Conceptually, signal computation is synchronous: when an
+is required. For a context F , we write f v(F [·]) for the set of free       event occurs (i.e., a source node produces a new value), then it
+variables in F . We assume that expressions are equivalent up to             is as if the new value propagates completely through the signal
+renaming of bound variables, and an appropriate variable x can               graph before the next event is processed. However, if the actual
+always be chosen such that x 6∈ f v(F [·]).                                  semantics used this approach, then global delays would occur, as
+    If a FElm program is well typed, then the first stage of evalua-         processing of a new event would be blocked until processing of all
+tion does not get stuck, and always evaluates to a final term. (We           previous events has finished.
+write −→∗ for the reflexive transitive closure of the relation −→.)              We maintain the simple synchronous semantics, but allow more
+                                                                             efficient implementations, by pipelining the execution of the signal
+Theorem 1 (Type Soundness and Normalization). Let type en-                   graph: conceptually, each node in a signal graph has its own thread
+vironment Γinput map every input i ∈ Input to a signal type. If              of control to perform computation, and each edge in a signal graph
+Γinput ` e : η then e −→∗ u and Γinput ` u : η for some final                holds an unbounded FIFO queue of values. Whenever an event
+term u.                                                                      occurs, all source nodes are notified by the global event dispatcher:
+
+
+
+                                                                         5
+the one source node to which the event is relevant produces the                                                                                  Global
+                                                                                                                                                 Event
+new value, and all other source nodes generate a special value                                                                                 Dispatcher
+noChange v, where v is the current (unchanged) value of the signal.                                      Global
+Thus, every source node produces one value for each event. When                                          Event               words
+                                                                                                       Dispatcher
+a node in the signal graph performs computation, it must take a                                                                                             Mouse
+                                                                                                                                             toFrench
+value from the front of each incoming edge’s queue: computation                     words
+at the node is blocked until values are available on all incoming                                                                   (,)
+edges. If all incoming values indicate no change, then the node                                      toFrench
+does not perform any new computation, but instead propagates                          (,)                                                 wordPairs
+the value noChange v 0 , where v 0 is the latest value of the signal
+represented by the node. If any value on the incoming edge is a                             wordPairs                                                 (,)
+new value (i.e., is not a noChange v value), then the node performs
+computation (which, in the case of a foldp node, updates the
+state) and propagates the newly computed value. This preserves                                   (a)                                            (b)
+the simple synchronous semantics, but allows computation at each                                                         Global
+node to occur in parallel.                                                                                               Event
+    The noChange v 0 values are a form of memoization—allowing                                 words
+                                                                                                                       Dispatcher
+
+nodes to avoid needless recomputation—but in the case of foldp                                                                                 Mouse
+nodes, are also critical to ensure correct execution. For example,                                      toFrench
+                                                                                                                      async wordPairs
+a foldp term that counts the number of key presses (as in Sec-
+tion 3.1) should increment the counter only when a key is actually                             (,)
+pressed, not every time any event occurs.                                                                                           (,)
+                                                                                                          wordPairs
+    The synchrony of execution can be bypassed with the async
+construct. The node for a term async s is a source node: it has no
+incoming edges from other signal nodes, and whenever an event                                                         (c)
+at another source node occurs, a noChange v value is propagated
+from the node. When signal s produces a new value, then a new                                   Figure 8. Example signal graphs
+event for term async s is generated. That is, when s produces a
+value, it is treated like an event from the external environment, and
+will be processed in a pipelined manner by the signal graph. The            (and, in this case, preferable) to allow the mouse events to “jump
+async construct, combined with pipelined execution of the signal            ahead” of the translation computation.
+graph, allows the programmer to easily separate long-running com-              The async primitive allows the programmer to break this syn-
+putations, while maintaining a relatively straightforward semantics         chronization in a controlled way. Informally, the annotation says
+for the FRP program. This allows a programmer to ensure that a              “this subgraph does not need to respect the global order of events”.
+GUI remains responsive even in the presence of significant compu-              The following code uses async to indicate that the wordPairs
+tation trigged by user actions.                                             subgraph should not block mouse updates.
+                                                                                 lift2 (,) (async wordPairs) Mouse.position
+Example Consider the following program which takes in a signal
+of English words, pairing both the original word and the French             The signal graph for this program, shown in Figure 8(c), has two
+translation of the word in a 2-tuple:                                       distinct sections: the “primary subgraph” that combines translation
+                                                                            pairs with the mouse position and the “secondary subgraph” that
+ wordPairs = lift2 (,) words (lift toFrench words)                          produces translation pairs. Effectively, the async primitive breaks a
+For simplicity, we assume that words is an input signal (i.e., words        fully synchronous graph into one primary subgraph and an arbitrary
+are given by the external environment), and function toFrench               number of secondary subgraphs. Event order is maintained within
+takes an English word and produces a French word, and may take              each subgraph, but not between them. The resulting graph is more
+significant time to perform the translation. Function (,) takes two         responsive, but it does not respect global event ordering. In the
+arguments and constructs a pair from them. The signal graph for             example above, this is a desirable improvement.
+wordPairs is shown in Figure 8(a). Although function toFrench               Translation to Concurrent ML We define the semantics of FElm
+may take significant time, it is important that the propagation of          by translation to Concurrent ML (CML) [27]. We target CML
+values from signal words is synchronous, as each English word               because it has simple support for concurrency, it is type safe, and
+must be matched up with its translation. This example motivates             its theory is well understood.
+the need for FRPs to be synchronous: the programmer must be able                The translation to CML is a direct instantiation of the intuition
+to ensure that values from signals are matched up appropriately.            given above: each node in the signal graph has a thread that per-
+    However, there is a tension between synchronization and fast            forms computation for the node, there is a channel for each edge in
+updates. Consider an expression that combines our wordPairs                 the signal graph (representing the FIFO queue for the edge), and the
+signal with the mouse position.                                             global event dispatcher is explicitly represented. Figure 9 defines
+           lift2 (,) wordPairs Mouse.position                               a datatype and several CML helper functions that assist with the
+                                                                            translation. The event data type wraps a value to indicate whether
+The intent of this program is to display the current position of            the value of the signal has changed. Function change takes an event
+the mouse, in addition to translating English words to French.              value, and indicates whether it represents a changed value or not,
+Figure 8(b) shows the signal graph for this program. However,               and function bodyOf unwraps an event value to return the actual
+synchronous update means that while translation is occurring, the           value. Function guid is used to obtain unique identifiers for source
+mouse position will not be updated. In this case, it is not important       nodes.
+to maintain the synchronization between updates of the mouse                    Figure 10 presents the translation of signal terms to CML.
+position and updates of the wordPairs signal: it is perfectly fine          Translation of signal s, denoted JsK, produces a pair (v,c), where
+
+
+
+                                                                        6
+datatype ’a event = NoChange ’a | Change ’a                                   ate computation for the node (if at least one of the incoming values
+change e = case e of | NoChange _ => False                                    is an event of the form Change v), or propagates an event value
+                     | Change _   => True                                     NoChange v where v is the latest computed value for the signal.
+bodyOf e = case e of | NoChange v => v
+                     | Change v   => v
+                                                                              We now describe the translation of each signal term in more detail.
+                                                                                  The translation for input signal i assumes that i is a CML in-
+counter = ref 0                                                               teger value, that there is a suitable default value vi for the signal,
+guid () = counter := !counter + 1; !counter                                   and that there is a multicast channel mci on which new values for
+                                                                              the input signal will be sent. We abstract translation of this triple
+              Figure 9. Translation helper functions
+                                                                              hi, mci , vi i, since it is re-used by the translation for async. Trans-
+                                                                              lation of the triple creates a mailbox cout to publish values for
+                                                                              the input signal. It creates a thread that receives messages from
+JiK = J hi, mci , vi i K                                                      the global event dispatcher on the eventNotify multicast channel
+                                                                              (“recv (port eventNotify)”). For each event, the global event
+J hid, mc, vi K = spawn (fn _ => loop v) ; (v, cout )                         dispatcher sends a message on the eventNotify channel that con-
+  where cout = mailbox ()                                                     tains the unique integer identifier of the source node for which the
+         loop prev =
+           let msg = if (recv (port eventNotify)) == id
+                                                                              event is relevant. If this is the id of the input signal, then the thread
+                          then Change (recv (port mc))                        takes a value v from the input signal channel (“recv (port mc)”)
+                          else NoChange prev                                  and sends Change v on cout . Otherwise, the thread sends value
+           in send cout msg ; loop (bodyOf msg)                               NoChange v 0 , where v 0 is the last value of the input signal.
+                                                                                  Translation of liftn f s1 ... sn creates a mailbox cout on
+Jliftn f s1 ... sn K = spawn (fn _ => loop v) ; (v, cout )                    which to send new values for the signal. It spawns a thread that
+  where (v1 , c1 ), ... , (vn , cn ) = Js1 K, ... , Jsn K                     waits to receive an event value from each of n signals. If any of the
+     v, cout = Jf KV v1 ... vn , mailbox ()                                   values indicate a change has occurred, then function f is applied to
+     loop prev =                                                              the current value of the signals to produce a value v and Change v
+       let (m1 , ... , mn ) = (recv c1 , ... , recv cn )                      is sent on the signal’s channel. Otherwise, NoChange v 0 is sent on
+          msg = if exists change [m1 , ... , mn ] then
+                    Change (Jf KV (bodyOf x1 ) ... (bodyOf xn ))
+                                                                              the channel, where v 0 is the last value of the input signal.
+                  else NoChange prev                                              Translation of foldp f v s is similar to a lift term, except that
+       in send cout msg ; loop (bodyOf msg)                                   the fold has a single input signal, the initial value for the signal is
+                                                                              the explicitly specified value v, and function f is given the previous
+Jfoldp f v sK = spawn (fn _ => loop JvKV ) ; (JvKV , cout )                   value of the fold signal in addition to values received on signal s.
+  where (_, cin ), cout = JsK, mailbox ()                                         Translation of let expressions and variables work together to en-
+         loop acc =                                                           sure that FElm’s runtime system does not have duplicate nodes. A
+          let msg = case recv cin of                                          let expression node serves as a multicast station, forwarding mes-
+                      | NoChange _ -> NoChange acc                            sages to possibly many different nodes. Translation of let x =
+                      |   Change v -> Change (Jf KV v acc)                    sin in sout translates sin , and binds variables xv and xch in the
+                in send cout msg ; loop (bodyOf msg)
+                                                                              translation of sout to be, respectively, the initial value of signal sin
+Jlet x = sin in sout K = spawn loop ;                                         and a multicast channel on which values produced by sin are mul-
+                         (let xv ,xch = v,mcout in Jsout K)                   ticast. Thus, variables are translated to the pair (xv , port xch ),
+  where (v, cin ), mcout = Jsin K, mChannel ()                                where port xch returns a port that allows receipt of messages sent
+        loop () = send mcout (recv cin ) ; loop ()                            on the multicast channel.
+                                                                                  Translation of async s returns the translation of the triple
+JxK = (xv , port xch )                                                        hid, cout , vi, where id is a newly generated unique identifier for
+                                                                              the source node representing the term, cout is a newly created
+JvK = JvKV                                                                    multicast channel, and d is the default value for signal s. The
+                                                                              translation spawns a thread that listens for Change v events to be
+Jasync sK = spawn loop ; J hid, cout , di K
+  where (d, cin ), cout , id = JsK, mChannel (), guid ()
+                                                                              produced by signal s, upon receiving a new value, sends that value
+    loop () = case recv cin of                                                on multicast channel cout , and notifies the global event dispatcher
+               | NoChange _ -> loop ()                                        that source node id has a new event (“send newEvent id”).
+               |   Change v -> send cout v ;
+                                 send newEvent id ; loop ()
+                                                                                 The translation of program s is executed within the context of
+                                                                              the FElm CML runtime system, presented in Figure 11. There are
+        Figure 10. Translation from signal terms to CML                       two important loops: the global event dispatcher eventDispatch
+                                                                              receives events from the newEvent mailbox, and notifies all source
+                                                                              nodes of the new event, using the eventNotify multicast channel;
+v is the default and initial value of the signal, and c is a mailbox, a       the display loop displayLoop updates the user’s view as new dis-
+buffered non-blocking channel to which new values of the signal               play values are produced by the translation of the program s. To-
+are sent. Recall that we assume that every input signal has an                gether, these loops are the input and output for a FElm program,
+appropriate default value, which then induces default values for all          with eventDispatch feeding values in and displayLoop out-
+other signals. We assume a translation function J·KV that translates          putting values to the screen. Note that the newEvent mailbox is
+values (i.e., unit (), integers n, and functions λx : τ. e) to CML.           a FIFO queue, preserving the order of events sent to the mailbox.
+    The translation of each signal term creates a new thread that                The displayLoop depends on the translation of a signal term
+performs computation to produce values for the signal. For source             s. The translation produces both the initialDisplay which is
+nodes, this involves listening on a multicast channel for messages            the first screen to be displayed and the nextDisplay channel upon
+sent from the global dispatcher. For other nodes, the thread waits            which display updates are sent. The display loop just funnels values
+for input on all incoming edges, then either performs the appropri-           from the nextDisplay channel to the screen.
+
+
+
+                                                                          7
+newEvent = mailbox ()
+eventNotify = mChannel ()
+eventDispatch () =
+    let id = recv newEvent in
+           send eventNotify id ; eventDispatch ()
+
+(initialDisplay, nextDisplay) = JsK
+send display initialDisplay
+displayLoop () = let v = recv nextDisplay in                                square   = rect 70 70
+                 send display v ; displayLoop ()                            pentagon = ngon 5 20
+                                                                            circle   = oval 50 50
+spawn eventDispatch ; spawn displayLoop                                     zigzag   = path [ (0,0), (10,10), (0,30), (10,40) ]
+              Figure 11. FElm CML runtime system
+                                                                            main = collage 140 140
+                                                                                  [ filled green pentagon,
+                                                                                    outlined (dashed blue) circle,
+                                                                                    rotate (degrees 70)
+4.    Building GUIs with Elm                                                               (outlined (solid black) square),
+Elm extends the FElm core calculus to a full language for build-                    move 40 40 (trace (solid red) zigzag) ]
+ing rich interactive GUIs, including libraries for constructing and                      Figure 12. Creating and combining shapes
+composing GUI components. Elm can represent quite complex in-
+teractions with a small amount of code. The signal abstraction en-
+courages a separation between reactive code and code focused on               Signal                   Type and Description
+the layout of GUI components. This separation is due in part to               Mouse.position           Signal (Int, Int)
+                                                                                                       Current coordinates of the mouse.
+Elm’s purely functional and declarative approach to graphical lay-
+out, which allows a programmer to say what they want to display,              Mouse.clicks             Signal ()
+without specifying how this should be done.                                                            Triggers on mouse clicks.
+    Elm has additional base values, including strings, floating point         Window.dimensions        Signal (Int, Int)
+numbers, time, tuples, and graphical values such as Elements and                                       Current dimensions of window.
+Forms. Elm libraries provide data structures such as options, lists,          Time.every               Time -> Signal Time
+sets, and dictionaries. Elm provides support for receiving input                                       Update every t milliseconds.
+from mouse, keyboard, and touch devices, for accessing window                 Time.fps                 Float -> Signal Time
+attributes, and for network communication via HTTP. Elm supports                                       Time deltas, updating at the given FPS.
+JSON data structures and Markdown (making text creation easier).
+                                                                              Touch.touches            Signal [Touch]
+Elm’s type system allows let-polymorphism and recursive simple                                         List of ongoing touches. Useful
+types (but not recursive signal types). Elm supports type inference,                                        for defining gestures.
+has extensible records, and has a module system.
+                                                                              Touch.taps               Signal { x:Int, y:Int }
+    In this section we describe some key concepts and libraries for                                    Position of the latest tap.
+building GUIs with Elm, focusing on features unique to Elm.
+                                                                              Keyboard.keysDown        Signal [KeyCode]
+                                                                                                       List of keys that are currently pressed.
+4.1   Elements and Forms                                                      Keyboard.arrows          Signal { x:Int, y:Int }
+Elm has two major categories of graphical primitives: elements                                         Arrow keys pressed.
+and forms. An element (a value of type Element) is a rectangle                                             e.g., up+right is {x=1,y=1}
+with a known width and height. Elements can contain text, im-                 Keyboard.shift           Signal Bool
+ages, or video. They can be easily created and composed, making                                        Is the shift key down?
+it simple to quickly lay out a multimedia display. Elements can be            Input.text               String ->
+resized using functions width and height, both of which have                                             (Signal Element, Signal String)
+type Int -> Element -> Element. Examples in the Introduc-                                              Create a text input field.
+tion demonstrated the composition of elements.
+    A form (a value of type Form) allows non-rectangular shapes                   Figure 13. Some Elm input signals and signal constructors
+and text to be defined and composed. A form is an arbitrary 2D
+shape (including lines, shapes, text, and images) and a form can
+be enhanced by specifying texture and color. Forms can be moved,            width, height, and list of forms.
+rotated, and scaled.                                                                collage : Int -> Int -> [Form] -> Element
+    There are several subtypes of Form, including Line and Shape.
+Primitive functions can be used to construct forms, including line             Figure 12 shows an example of creating several forms, changing
+(which takes a list of points, and returns a line that goes through         their attributes, transforming them, and using collage to combine
+each point), polygon (which takes a list of points and returns an           them into an element.
+irregular polygon that goes through each of the points), and library
+functions such as rect to create rectangles, oval to construct              4.2    Reactive GUIs
+ovals, and ngon to construct regular polygons.                              To allow programmers to write GUIs that interact with the user,
+    Several functions allow lines and shapes to be given different          and react to user input and events in the external environment,
+colors, fills, and rendering. Forms can be moved, scaled, and rotated       Elm provides several primitive signals that can be used in Elm
+using primitive functions move, scale, and rotate.                          programs. These are the identifiers Input used in FElm to denote
+    Function collage provides the ability to combine forms in               input signals from the external environment. Figure 13 describes
+an unstructured way to produce an element. It takes as arguments            some of Elm’s signals and signal constructors. Signal constructor
+
+
+
+                                                                        8
+                                                                             not allow one to work with signal nodes directly. Arrowized FRP
+                                                                             allows this, making it possible to dynamically reconfigure a single
+                                                                             node. This direct embedding of AFRP gives Elm the flexibility of
+                                                                             signal functions without resorting to the use of signals-of-signals.
+                                                                                 An Automaton is defined as a continuation that when given an
+pics = [ "shells.jpg", "car.jpg", "book.jpg" ]                               input a, produces the next continuation and an output b.
+display i =                                                                  data Automaton a b = Step (a -> (Automaton a b, b))
+    image 475 315 (ith (i ‘mod‘ length pics) pics)
+                                                                                 This allows state to be kept around by continually placing it
+count s = foldp (\_ c -> c + 1) 0 s                                          in the next continuation (the next step). Dynamic collections and
+index1 = count Mouse.clicks                                                  dynamic switching are possible because an automaton is a pure data
+index2 = count (Time.every (3 * second))                                     structure with no innate dependencies on inputs (whereas signals
+index3 = count Keyboard.lastPressed                                          depend on an input by definition). Elm provides the following
+                                                                             functions to make it easier to create pure and stateful automata:
+main = lift display index1
+                                                                             pure : (a -> b) -> Automaton a b
+      Figure 14. A simple slide-show: reacting to user input                 init : (a -> b -> b) -> b -> Automaton a b
+                                                                             This lets a programmer create stateful components that can be
+Time.every takes a floating point number t. The resulting signal is          switched in and out of a program. Notice the similarity between
+the current time, updated every t milliseconds. This signal enables          the types of init and foldp.
+time-indexed animations and allows update rates to be tuned by the               To use an Automaton, Elm provides the step function which
+programmer. Signal constructor Time.fps allows a programmer to               steps an automaton forward once, and the run function which feeds
+specify a desired frame rate. The resulting signal is a sequence of          a signal into an automaton, stepping it forward on each change.
+time deltas (i.e., the time elapsed since the last event), making it         step : a -> Automaton a b -> (Automaton a b, b)
+easy to do time-stepped animations. The frame rate is managed by             step input (Step f) = f input
+the Elm runtime system, accommodating performance constraints.
+    Input components such as text boxes, buttons, and sliders are            run : Automaton a b -> b -> Signal a -> Signal b
+represented as a pair of signals: an element (for the graphical              run automaton base inputs =
+component) and a value (for the value input). For example, the                  let step’ input (Step f, _) = f input
+library function                                                                in lift snd (foldp step’ (automaton,base) inputs)
+                                                                                 Functions run and foldp are equivalent in expressive power.
+  Input.text :                                                               We defined run using foldp, but we could have taken Automatons
+        String -> (Signal Element, Signal String)                            as primitives and defined foldp using run, as follows.
+allows a programmer to construct a text input component. The code            foldp : (a -> b -> b) -> b -> Signal a -> Signal b
+                                                                             foldp f base inputs = run (init f base) base inputs
+                     (Input.text "Name")
+                                                                                 We chose foldp as our underlying abstraction partly because it
+returns a pair of a signal of Elements (for the graphical input field)       makes Elm more accessible to users unfamiliar with arrows, arrow
+and a signal of Strings representing the current user input. The             notation, type classes, and category theory. It also allows us to
+graphical element uses the string "Name" as the greyed-out default           improve on our naive embedding of discrete AFRP, or add alternate
+text, indicating the desired user input. The element can be displayed        embeddings, without changing the core language.
+on the screen, and the signals will be updated every time the text in
+the field changes.                                                           5.   Implementation
+    Figure 14 shows how different user inputs can be used to imple-
+ment a slide show. The code displays a single image from a list of           We have implemented an Elm-to-JavaScript compiler, and have a
+images, pics. The user can cycle through the images by clicking              prototype implementation of Elm as an embedded domain-specific
+the mouse. (In the accompanying diagram, the arrows indicate pos-            language (DSL) in Haskell.
+sible transitions between pictures, not actual graphical elements.)             The use of Asynchronous FRP has the potential to ensure that
+The program could easily be modified to change images using a                GUIs remain responsive despite long-running computation. We
+timer as seen in index2 which increments every three seconds.                do not provide direct performance evaluations of Elm, although
+It could also change images when a key is pressed as in index3.              in our experience GUIs implemented with Elm have not required
+The Keyboard.lastPressed signal updates to the latest character              any performance tuning other than identifying signals to mark as
+pressed.                                                                     asynchronous. We note that it is easy to write programs such that
+                                                                             Elm provides arbitrarily better responsiveness over synchronous
+4.3   Signal Functions                                                       FRP. For example, in the following code, function f can be made
+                                                                             arbitrarily long-running. While the asynchronous code (signal
+Elm embeds an implementation of discrete Arrowized FRP (AFRP),               asyncEg) will remain responsive (continuing to display Mouse.x),
+based on the naive continuation-based implementation described in            the synchronous case (signal syncEg) will be unresponsive until
+the first AFRP paper [25]. To better capture the fact that our imple-        evaluation of f completes.
+mentation is discrete (stepping forward only when provided with
+an input) this is called the Automaton library in Elm.                       syncEg = lift2 (,) Mouse.x (lift f Mouse.y)
+    Arrowized FRP is a purely functional way to structure stateful           asyncEg =
+programs. It introduced signal functions [25] which can encapsu-                       lift2 (,) Mouse.x (async (lift f Mouse.y))
+late state and safely be switched in and out of a program. A signal          Similarly, it is possible to write programs such that the pipelined
+function is conceptually equivalent to Elm’s signal nodes: a set of          evaluation of signals has arbitrarily better performance than non-
+external inputs, internal state, and an output. Although signal func-        pipelined execution by ensuring that the signal graph of the pro-
+tions and signal nodes are equivalent, Elm’s core language does              gram is sufficiently deep.
+
+
+
+                                                                         9
+Elm-to-JavaScript compiler The Elm-to-JavaScript compiler is                  for manipulating signals, which supports recursion but not higher-
+implemented in about 2,700 lines of Haskell code. The output of               order functions (making it less expressive than traditional FRP).
+compiling an Elm program is an HTML file. The compiler can                    RT-FRP ensures that reactive updates will terminate as long as the
+also output a JavaScript file for embedding an Elm program into               base language terms terminate, and memory will not grow unless it
+an existing project. The compiler output works on any modern                  grows in the base language. Although not strong guarantees, they
+browser. We provide a Foreign Function Interface to JavaScript to             are a significant improvement over traditional FRP, which might
+allow Elm to integrate with existing JavaScript libraries.                    (needlessly) use space linear in a program’s running time.
+    We have targeted JavaScript as it is extremely expressive for                 Event-Driven FRP (E-FRP) [31] builds on the efficiency gains
+graphics and has unmatched cross-platform support. It is perhaps              of RT-FRP by introducing discrete signals. E-FRP programs are
+the most widely used and supported GUI platform, albeit notori-               event-driven in that no changes need to be propagated unless an
+ously difficult to reason about its graphical layout model and to             event has occurred (i.e., the value of a signal has changed) which
+create readable asynchronous code.                                            improves efficiency of the computation.
+    JavaScript has poor support for concurrency, and as such the                  Xu and Khoo [32] suggest a concurrent runtime for RT-FRP
+Elm-to-JavaScript compiler supports concurrent execution only for             as future work but to the best of our knowledge, this has not
+asynchronous requests, such as HTTP requests and non-blocking                 been pursued. Like RT-FRP, Elm uses a two-tiered language to
+file I/O. JavaScript does provide heavy-weight threads, called Web            restrict the inefficient use of signals. However, whereas RT-FRP
+Workers, but communication and interaction between threads is                 uses different syntactic constructs to separate functional and signal
+limited. We investigated using Web Workers to implement async,                terms, Elm has a unified syntax but a stratified type system. This
+but found their overhead to be too high compared with simpler ap-             allows Elm to avoid non-standard syntactic constructs and accept
+proaches. We anticipate that if and when JavaScript supports light-           more expressions, while restricting inefficient use of signals. Like
+weight threads, we will be able to more fully support asynchrony              E-FRP, Elm uses discrete signals to ensure efficiency and does
+and concurrency in the Elm-to-JavaScript compiler.                            not support recursively defined signals. The original paper on E-
+    Elm programs typically take longer to execute than an equiva-             FRP suggests that discrete signals may be compatible with RT-FRP
+lent hand-written JavaScript program, in a similar way that hand-             style recursion [31], but we have found that such an extension is
+tuned assembly code is often more efficient than compiled high-               not particularly important for creating GUIs. Improving upon these
+level language code. Indeed, a key benefit of Elm is providing bet-           systems, we provide a concurrent runtime, and introduce a simple
+ter abstractions to programmers for building GUIs. However, the               mechanism—the async annotation—to allow programmers to
+current prototype Elm-to-JavaScript compiler is efficient enough              easily take advantage of concurrency.
+to execute all existing Elm programs while providing a responsive                 Arrowized FRP (AFRP) [20, 21, 24, 25, 29] aims to regain much
+user experience on commodity web browsers on standard laptop                  of the expressiveness of traditional FRP and keep the efficiency
+and desktop machines.                                                         gains of RT-FRP. This is achieved by requiring programmers to use
+    The Elm-to-JavaScript compiler has been used to build the                 signal functions instead of having direct access to signals. Signal
+Elm website (http://elm-lang.org/) along with nearly 200 exam-                functions are conceptually equivalent to functions that take a signal
+ples, including a nine-line analog clock, forms with client-side error        of type a as an input, and return a signal of type b.
+checking, a graphing library that handles cartesian and radial coor-              Signal functions solve the semantic problems associated with
+dinates, a slide-show API, and a Flickr image search interface. Elm           dynamically-created stateful signals by keeping state in signal
+has also been used to make Pong and other games, which require                functions instead of in signals. Unlike traditional FRP, a signal
+highly interactive GUIs.                                                      function cannot depend on arbitrary past values. Thus, AFRP al-
+                                                                              lows programs to dynamically change how signals are processed
+Elm-in-Haskell library We also have a prototype Elm-in-Haskell                without space leaks. Although there is no direct access to sig-
+library (144 lines of Haskell code) that supports the key features            nals, AFRP achieves the expressiveness of traditional FRP via
+of Elm. While it does not have as extensive a suite of libraries              continuation-based switching and dynamic collections of signal
+and syntactic sugar, it does fully support the async construct and            functions.
+implement concurrent (pipelined) evaluation of signals. We use                    Signal functions can be embedded in Elm (see Section 4.3),
+the Control.Concurrent.Chan.Strict module and General-                        which brings the benefits of discrete AFRP to Elm programmers,
+ized Abstract Data Types to provide a type-safe implementation of             allowing programs to dynamically create graphical components,
+Elm. By using strict channels we ensure that unevaluated expres-              without requiring signals of signals. Elm’s discrete semantics make
+sions do not escape and cause unintended sequentialization.                   it clear how to allow asynchrony and concurrency, which appears
+                                                                              to be semantically problematic in a continuous AFRP.
+6.    Related Work                                                                Parallel FRP [26], like Elm, enables concurrent signal process-
+Elm is an asynchronous FRP programming language for creating                  ing. Parallel FRP relaxes the order of events within a single signal,
+rich and interactive GUIs. We focus on work related to the efficient          allowing events to be processed out of order. In a server setting,
+FRP implementation, and to FRP frameworks for creating GUIs.                  this means that requests do not need to be processed in the order
+                                                                              received, so responses can be computed in parallel and returned
+6.1   Efficient FRP Implementation                                            immediately. In a GUI setting, such intra-signal asynchrony is typ-
+                                                                              ically inappropriate, as it would allow, for example, key presses to
+“Traditional” Functional Reactive Programming (FRP) was intro-                be processed out of order. Instead, Elm permits inter-signal asyn-
+duced in the Fran system [13] which suffered severe efficiency                chrony: relaxing the order of events between multiple signals. We
+problems as a result of its expressive semantics. It permitted sig-           believe that intra- and inter-signal asynchrony are compatible, but
+nals that depended on any past, present, or future value. As a result,        inter-signal asynchrony is more useful in GUI programming.
+its implementation had to save all past values of a signal just in
+case, growing memory linearly with time.                                          Self-adjusting computation (e.g., [1, 2, 11]) is motivated by the
+    Real-time FRP (RT-FRP) [30, 32] ensures that signals cannot               desire to reduce redundant re-computation. As seen in FElm’s pipe-
+be used in ways that do not have an efficient implementation. Like            lined signal evaluation (Section 3.3.2), avoiding needless recom-
+Elm, RT-FRP uses a two-tiered language: an unrestricted base lan-             putation helps performance and is required for correctness (due
+guage (λ-calculus with recursion) and a limited reactive language             to the stateful nature of the foldp construct). Although FElm
+
+
+
+                                                                         10
+avoids some needless recomputation, it currently propagates many               supported in part by the National Science Foundation under Grant
+noChange v messages through the signal graph. Insights from self-              No. 1054172.
+adjusting computation could be used to reduce these messages and
+improve performance. Indeed, it appears likely that modifiable ref-            References
+erences [1] (used in self-adjusting computation to represent values
+that may change and thus trigger recomputation) can be used to                  [1] U. A. Acar, G. E. Blelloch, and R. Harper. Adaptive functional
+                                                                                    programming. In Proceedings of the 29th ACM SIGPLAN-SIGACT
+encode signals, and can also express asynchronous signals [3].                      Symposium on Principles of Programming Languages, pages 247–
+6.2   FRP GUI Frameworks                                                            259, New York, NY, USA, 2002. ACM.
+                                                                                [2] U. A. Acar, A. Ahmed, and M. Blume. Imperative self-adjusting
+Both traditional FRP and Arrowized FRP have been used as the                        computation. In Proceedings of the 35th Annual ACM SIGPLAN-
+basis of several Haskell-embedded GUI frameworks, including:                        SIGACT Symposium on Principles of Programming Languages, pages
+FranTk [28] (the original GUI framework for Fran [13]); Fruit [9]                   309–322, New York, NY, USA, 2008. ACM.
+and Yampa/Animas [10, 16] (based on Arrowized FRP); and Reac-                   [3] U. A. Acar, G. E. Blelloch, K. Tangwongsan, and D. Türkoğlu. Robust
+tive Banana [4] (based on traditional FRP but avoids time leaks with                kinetic convex hulls in 3D. In Proceedings of the 16th Annual Eu-
+carefully restricted APIs, disallowing signals-of-signals). Each of                 ropean Symposium on Algorithms, pages 29–40, Berlin, Heidelberg,
+these Haskell-embedded libraries suffer from two problems. First,                   2008. Springer-Verlag.
+due to its lazy semantics, embedding the language in Haskell can                [4] H. Apfelmus. Reactive-banana. Haskell library available at http:
+lead to unexpectedly slow updates and unnecessary memory usage,                     //www.haskell.org/haskellwiki/Reactive-banana, 2012.
+which can be an issue for GUIs. Second, these Haskell-embedded                  [5] Z. M. Ariola and M. Felleisen. The call-by-need lambda calculus.
+libraries are a wrapper around a Haskell wrapper around an im-                      Journal of Functional Programming, 7(3):265–301, May 1997.
+perative GUI framework. This complicates both the design and the                [6] E. Chailloux, G. Cousineau, and A. Suàrez.                MLgraph.
+installation of the frameworks. Indeed, FranTk [28] includes event                  http://www.pps.univ-paris-diderot.fr/~cousinea/
+listeners—an imperative abstraction—because they map more nat-                      MLgraph/mlgraph.html, 1992.
+urally onto the Tcl/Tk backend.                                                 [7] G. H. Cooper. Integrating Dataflow Evaluation into a Practical
+    Several frameworks embed FRP in imperative languages. Flap-                     Higher-Order Call-by-Value Language. PhD thesis, Brown Univer-
+jax [23] extends JavaScript with traditional FRP. Flapjax interoper-                sity, May 2008.
+ates easily with existing JavaScript code, as it is simply a JavaScript         [8] A. Courtney. Frappé: Functional reactive programming in Java. In
+library. Frappé [8] adds FRP functionality to Java. Ignatoff et al.                Proceedings of the Third International Symposium on Practical As-
+[18] adapt an object-oriented GUI library for use with the FRP lan-                 pects of Declarative Languages, pages 29–44, London, UK, 2001.
+guage FrTime [7]. By necessity, these projects—including Elm—                       Springer-Verlag.
+all rely on imperative GUI frameworks. This creates incentive to                [9] A. Courtney and C. Elliott. Genuinely functional user interfaces. In
+“work well” with existing code using these frameworks, or to be                     Proceedings of the 2001 ACM SIGPLAN Workshop on Haskell, pages
+“close to the metal” of the framework. However, these incentives                    41–69, 2001.
+can be destructive, with imperative constructs muddying the clarity            [10] A. Courtney, H. Nilsson, and J. Peterson. The Yampa arcade. In
+and simplicity of FRP. To maintain the declarative nature of FRP,                   Proceedings of the 2003 ACM SIGPLAN Workshop on Haskell, pages
+Elm introduces a purely functional graphics library on a platform                   7–18, New York, NY, 2003. ACM.
+that is widely supported and easy to install. Interaction between              [11] A. Demers, T. Reps, and T. Teitelbaum. Incremental evaluation for
+Elm and JavaScript is handled by a simple foreign function inter-                   attribute grammars with application to syntax-directed editors. In Pro-
+face (FFI) that maintains a clean separation between functional and                 ceedings of the 8th ACM SIGPLAN-SIGACT Symposium on Principles
+imperative code.                                                                    of Programming Languages, pages 105–116, New York, NY, USA,
+                                                                                    1981. ACM.
+    Elm provides a functional abstraction for graphical layout.                [12] C. Elliott. Push-pull functional reactive programming. In Proceedings
+Elm’s collage API is similar to previous work on free-form func-                    of the 2nd ACM SIGPLAN Symposium on Haskell, pages 25–36, New
+tional graphics [6, 14, 15, 17, 19]. Unlike this previous work, Elm                 York, NY, 2009. ACM.
+supports user interaction and designs for animation, enabling cre-             [13] C. Elliott and P. Hudak. Functional reactive animation. In Proceedings
+ation of GUIs as opposed to purely static pictures and graphics.                    of the 2nd ACM SIGPLAN International Conference on Functional
+                                                                                    Programming, pages 263–273, New York, NY, 1997. ACM.
+7.    Conclusion                                                               [14] R. B. Findler and M. Flatt. Slideshow: functional presentations. In
+                                                                                    Proceedings of the Ninth ACM SIGPLAN International Conference on
+We have developed the Elm programming language, a practical                         Functional Programming, pages 224–235, New York, NY, USA, 2004.
+asynchronous FRP language focused on easy creation of responsive                    ACM.
+GUIs. We introduced Asynchronous FRP to allow programmers to
+                                                                               [15] S. Finne and S. Peyton Jones. Pictures: A simple structured graphics
+easily specify when a potentially long-running signal computation                   model. In Proceedings of the Glasgow Functional Programming
+should be computed asynchronously, and thus enable efficient con-                   Workshop, 1995.
+current execution of FRP programs. We captured the key concepts
+                                                                               [16] G. Giorgidze and H. Nilsson. Switched-on Yampa: declarative pro-
+of asynchronous FRP in a core calculus.                                             gramming of modular synthesizers. In Proceedings of the 10th Inter-
+    By combining asynchronous FRP with purely functional layout                     national Conference on Practical Aspects of Declarative Languages,
+of graphical elements, Elm simplifies the complicated task of cre-                  pages 282–298, Berlin, Heidelberg, 2008. Springer-Verlag.
+ating responsive and usable graphical user interfaces.                         [17] P. Henderson. Functional geometry. In Proceedings of the 1982 ACM
+                                                                                    Symposium on LISP and Functional Programming, pages 179–187,
+Acknowledgments                                                                     New York, NY, USA, 1982. ACM.
+We thank Greg Morrisett, Stuart Shieber, the anonymous reviewers,              [18] D. Ignatoff, G. H. Cooper, and S. Krishnamurthi. Crossing state lines:
+Umut Acar, Stefan Muller, David Darais, Jan Midtgaard, and the                      Adapting object-oriented frameworks to functional reactive languages.
+                                                                                    In Proceedings of the International Symposium on Functional and
+Aarhus Programming Languages group for their helpful comments
+                                                                                    Logic Programming, 2006.
+and feedback. We thank the Elm user community. This research is
+
+
+
+                                                                          11
+[19] S. N. Kamin and D. Hyatt. A special-purpose language for picture-               Workshop on Haskell, pages 51–64, New York, NY, 2002. ACM.
+     drawing. In Proceedings of the Conference on Domain-Specific Lan-          [26] J. Peterson, V. Trifonov, and A. Serjantov. Parallel functional reactive
+     guages on Conference on Domain-Specific Languages (DSL), 1997,                  programming. In Proceedings of the Second International Workshop
+     pages 23–23, Berkeley, CA, USA, 1997. USENIX Association.                       on Practical Aspects of Declarative Languages, pages 16–31, London,
+[20] H. Liu and P. Hudak. Plugging a space leak with an arrow. Electron.             UK, 2000. Springer-Verlag.
+     Notes Theor. Comput. Sci., 193:29–45, Nov. 2007.                           [27] J. H. Reppy. Concurrent programming in ML. Cambridge University
+[21] H. Liu, E. Cheng, and P. Hudak. Causal commutative arrows and their             Press, 1999. ISBN 9780521480895.
+     optimization. In Proceedings of the 14th ACM SIGPLAN International         [28] M. Sage. FranTk - a declarative GUI language for Haskell. In
+     Conference on Functional Programming, pages 35–46, New York,                    Proceedings of the 5th ACM SIGPLAN International Conference on
+     NY, 2009. ACM.                                                                  Functional Programming, pages 106–117, New York, NY, 2000.
+[22] J. Maraist, M. Odersky, and P. Wadler. The call-by-need lambda             [29] N. Sculthorpe and H. Nilsson. Safe functional reactive programming
+     calculus. Journal of Functional Programming, 8(3):275–317, May                  through dependent types. In Proceedings of the 14th ACM SIGPLAN
+     1998.                                                                           International Conference on Functional Programming, pages 23–34,
+[23] L. A. Meyerovich, A. Guha, J. Baskin, G. H. Cooper, M. Greenberg,               New York, NY, 2009. ACM.
+     A. Bromfield, and S. Krishnamurthi. Flapjax: a programming lan-            [30] Z. Wan, W. Taha, and P. Hudak. Real-time FRP. In Proceedings
+     guage for Ajax applications. In Proceedings of the 24th ACM SIG-                of the 6th ACM SIGPLAN International Conference on Functional
+     PLAN Conference on Object Oriented Programming Systems Lan-                     Programming, pages 146–156, New York, NY, 2001. ACM.
+     guages and Applications, pages 1–20, New York, NY, 2009. ACM.
+                                                                                [31] Z. Wan, W. Taha, and P. Hudak. Event-driven FRP. In Proceedings of
+[24] H. Nilsson. Dynamic optimization for functional reactive program-               the 4th International Symposium on Practical Aspects of Declarative
+     ming using generalized algebraic data types. In Proceedings of the              Languages, pages 155–172, London, UK, UK, 2002. Springer-Verlag.
+     10th ACM SIGPLAN International Conference on Functional Pro-
+     gramming, pages 54–65, New York, NY, 2005. ACM.                            [32] D. N. Xu and S.-C. Khoo. Compiling real time functional reactive
+                                                                                     programming. In Proceedings of the ASIAN Symposium on Partial
+[25] H. Nilsson, A. Courtney, and J. Peterson. Functional reactive pro-              Evaluation and Semantics-Based Program Manipulation, pages 83–
+     gramming, continued. In Proceedings of the 2002 ACM SIGPLAN                     93, New York, NY, 2002. ACM.
+
+
+
+
+                                                                           12
+

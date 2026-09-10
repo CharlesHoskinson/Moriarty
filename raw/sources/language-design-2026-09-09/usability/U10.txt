@@ -1,0 +1,366 @@
+                                         User-Centered Programming Language Design: A
+                                         Course-Based Case Study
+
+
+
+
+arXiv:2011.07565v1 [cs.PL] 15 Nov 2020
+                                         MICHAEL COBLENZ, University of Maryland, USA
+                                         ARIEL DAVIS, Carnegie Mellon University, USA
+                                         MEGAN HOFMANN, Carnegie Mellon University, USA
+                                         VIVIAN HUANG, Carnegie Mellon University, USA
+                                         SIYUE JIN, Carnegie Mellon University, USA
+                                         MAX KRIEGER, Carnegie Mellon University, USA
+                                         KYLE LIANG, Carnegie Mellon University, USA
+                                         BRIAN WEI, Carnegie Mellon University, USA
+                                         MENGCHEN SAM YONG, Carnegie Mellon University, USA
+                                         JONATHAN ALDRICH, Carnegie Mellon University, USA
+                                         Recently, user-centered methods have been proposed to improve the design of programming languages. In
+                                         order to explore what beneﬁts these methods might have for novice programming language designers, we
+                                         taught a collection of user-centered programming language design methods to a group of eight students. We
+                                         observed that natural programming and usability studies helped the students reﬁne their language designs
+                                         and identify opportunities for improvement, even in the short duration of a course project.
+
+                                         1   INTRODUCTION
+                                         PLIERS (Programming Language Iterative Evaluation and Reﬁnement System) is a process for pro-
+                                         gramming language design that integrates user-centered methods with traditional formal meth-
+                                         ods [2]. By including formal methods in the process, PLIERS is intended to facilitate creation of
+                                         sound languages that are also as usable as possible. In designing PLIERS, Coblenz et al. evaluated
+                                         the method by applying it themselves to two diﬀerent programming languages. We were interested
+                                         in assessing the PLIERS process by having people who did not develop it apply some of its tech-
+                                         niques. What usability problems could language designers identify in their language prototypes?
+                                         What challenges would they face in applying the methods?
+                                            Evaluating design processes is challenging. One might like to conduct a randomized controlled
+                                         trial in which a collection of designers are recruited to design languages. Some of the designers
+                                         would be taught the method being evaluated, and the rest of the designers might receive some
+                                         kind of training in traditional methods, such as case study or benchmarking methodology. Then,
+                                         the designers would be given design tasks, and then resulting languages would be evaluated in
+                                         quantitative user studies.
+                                            Unfortunately, such a study is impractical; language design is very expensive, taking months or
+                                         years. Furthermore, there are many relevant variables in such a study (such as individual designer
+                                         experience, preferences, and skills), and controlling for them seems unlikely. Instead, we sought to
+                                         use a lighter-weight approach to obtain some insights regarding what happens when those other
+                                         than the designers of PLIERS use it. We leveraged our context: because the last author was teaching
+                                         a programming language prototyping course, we conducted our study in the context of the course.
+                                         Thus, our evaluation takes the form of a case study, in which we applied PLIERS in our course
+                                         context.
+                                            By studying PLIERS in the context of a course we showed how user-centered methods can be
+                                         useful to novice programming language designers. The students were able to identify shortcom-
+                                         ings in their designs and identify new directions for language design. For example, one language
+                                         was presented in functional style, yet even a programmer who preferred functional programming
+
+                                                                                            1
+Michael Coblenz, Ariel Davis, Megan Hofmann, Vivian Huang, Siyue Jin, Max Krieger, Kyle Liang, Brian Wei, Mengchen
+                                                                                    Sam Yong, and Jonathan Aldrich
+
+ended up using imperative constructs, suggesting that an imperative approach might be worth in-
+vestigating. Another observation was that in natural programming studies (in which participants
+are typically asked to write programs without giving them any training at all), corpora can be used
+as a substitute for live participants: rather than asking participants to write bespoke code, one can
+analyze text that people have written already.
+
+2 RELATED WORK
+The problem of taking programmers into account when designing programming languages was dis-
+cussed by Newell and Card in 1985: “Millions for compilers but hardly a penny for understanding
+human programming language use” [9]. Language designers have to make hundreds of diﬀerent
+decisions when designing programming languages, and although many of these decisions likely
+impact programmers’ abilities to achieve their goals when using the languages, designers lack a
+satisfactory way to leverage user data to inform their designs.
+   To address this problem, Steﬁk and Hanenberg have argued for thorough and careful random-
+ized controlled trials of programming languages [12]. Another approach has been to consider cog-
+nitive science, for example leveraging theories of natural language text understanding [10]. Yet
+another tool is the cognitive dimensions of notation, which provide a vocabulary for discussing
+tradeoﬀs in notations [5]. PLIERS [2] represents another approach to providing design guidance,
+focusing on adapting methods from HCI research to the process of programming language design.
+Since the only users of PLIERS have been the designers, our focus in this work is on seeing whether
+others might be able to use the same techniques in their own programming language designs.
+
+3 PROCEDURE
+The course in which we conducted our study was open to students who had already completed
+courses in either object-oriented programming or systems programming. The course centered
+around a project, in which individuals or small groups (up to two students per group) were asked
+to design a new programming language according to their own design goals. In addition, students
+were expected to complete assignments regarding programming language design and implemen-
+tation.
+   Work on the project was divided into phases. After each phase, students received feedback from
+the course staﬀ that they could leverage in future phases. Phases were as follows:
+  (1) Language proposal, in which students proposed a new programming language for some do-
+      main. Students were told that they could choose a very narrow domain, such as ballet chore-
+      ography, or a broad one, such as systems programming.
+  (2) Concepts for language design, in which students applied Jackson’s Design by Concept tech-
+      niques [6] to produce an initial set of concepts for their language.
+  (3) Language semantics, in which students deﬁned abstract syntax and either static or dynamic
+      semantics for fragments of their languages.
+  (4) User study design, in which students proposed and prototyped a user study of key aspects of
+      their programming languages.
+  (5) User study execution, in which students ran a revised version of their user study.
+  (6) Final design and prototyping, in which students revised their design based on the results of
+      their study, implemented their language, and reported on the changes they had made based
+      on the user studies.
+   In addition to attending lectures on methods for completing the above work, students attended
+lectures and completed assignments regarding implementing interpreters for functional languages
+and transpilers for object-oriented languages.
+
+                                                        2
+User-Centered Programming Language Design: A Course-Based Case Study
+
+
+   We taught students how to integrate user-centered methods into their language design process
+in four 80-minute class meetings. Although the authors presented slides, some of the time was
+spent discussing the material and letting the students try the techniques on small examples. We
+taught key concepts and methods that PLIERS suggests when designing programming languages:
+  (1) Deﬁning usability properties of languages
+  (2) Recruitment techniques
+  (3) Participant selection and pre-screening
+  (4) Natural programming studies [8]
+  (5) Usability studies
+    (a) Choosing appropriate usability questions
+    (b) Techniques for designing tasks in programming language studies, such as Wizard of Oz [3]
+    (c) Collecting data (e.g. think-aloud protocol)
+    (d) Post-study surveys
+  (6) Randomized controlled trials
+  We received IRB approval to use the work products of the students for research purposes. Stu-
+dents obtained informed consent from their user study participants, whom they recruited as a
+convenience sample.
+
+4 PROJECTS
+In order to put the results in context, we summarize in Table 1 the projects that the students
+selected. To improve students’ anonymity, we have replaced the language names with numeric
+identiﬁers (L1, L2, etc.). Although we taught a wide variety of techniques, we encouraged the
+students to consider either a usability study or a natural programming study in order to obtain
+results with an amount of eﬀort that would be appropriate in the context of a course project.
+   One additional student started a project on random number generation, but did not complete
+the project.
+
+
+
+ Name      Purpose                                                         Students Methods
+ L1        A functional language for writing concurrent code               2         Natural
+                                                                                     programming
+ L2        Programming automatic knitting machines (for textile fab- 1               Natural
+           rication)                                                                 programming
+ L3        Making it easier to write CSS code in BEM format [13]     1               Usability
+                                                                                     study
+ L4        Analogical reasoning, e.g. “what is equivalent to apple if      1         Natural
+           lemon is sour?”                                                           programming
+ L5        Programming Internet of Things devices                          1         Usability
+                                                                                     study
+ L6        Describing two-dimensional puzzles, such as Sudoku              2         Natural pro-
+                                                                                     gramming;
+                                                                                     usability
+                                                                                     study
+                       Table 1. Language design projects selected by the students.
+
+
+
+                                                     3
+Michael Coblenz, Ariel Davis, Megan Hofmann, Vivian Huang, Siyue Jin, Max Krieger, Kyle Liang, Brian Wei, Mengchen
+                                                                                    Sam Yong, and Jonathan Aldrich
+
+
+5   RESULTS AND DISCUSSION
+We organize this section by method, and summarize the experiences the students reported from
+the methods. For each method, we derive recommendations for future users of that method on
+programming language design.
+
+5.1 Natural Programming
+Projects L1, L2, L4, and L6 included natural programming studies. In L1, the students were inter-
+ested in how programmers could specify operations on channels, which can be used in concurrent
+contexts to send messages between threads or processes. The students were inspired by Go [4],
+which supports <- syntax for sending messages along channels. For example, in Go, the code be-
+low [7] creates a channel called messages. Then, it sends the “ping” message along the channel
+messages. Finally, it receives a message along the messages channel, putting the result in msg.
+
+    messages := make ( chan string )
+    go func () { messages <- " ping" }()
+    msg := <- messages
+
+   The students did not ﬁnd support for such syntax in their natural programming study. Instead,
+participants invoked send and receive functions. Although this does not imply that the arrow
+syntax is not helpful, it at least suggests that using named functions may be more natural. This
+raises a question of the natural programming technique: for an approach to be natural, is it nec-
+essary for participants to invent it themselves, or does it suﬃce for the technique to be easily
+learnable with good results after learning? Perhaps <- is equally “natural” even though the par-
+ticipants were biased in their selection due to their past experience with other languages. Might
+there be substantive beneﬁts of adopting syntactic choices that participants did not invent? The <-
+operator is indeed shorter, but the beneﬁt may be so small that it cannot be practically measured,
+whereas send and receive might be more learnable. The tradeoﬀ between concise and natural
+syntactic choices motivates further research to evaluate in what cases choices that are natural are
+also better in practical ways, such as learnability. Studies of non-native English speakers suggest
+that keyword choice may not be a very large factor in language usability [11].
+   Project L2 conducted a variation on the natural programming technique. Due to limitations
+imposed by conducting the study during the COVID-19 pandemic, and the need to work with
+knitting domain experts, the student decided to conduct a corpus study rather than recruiting
+participants. Although corpus studies are normally not also natural programming studies, in this
+case, the corpus contained instructions that had been written for humans, not for machines. By
+mining Stitch-Maps [1], a web site hosting knitting patterns, it was possible to obtain a collection
+of ﬁve sets of instructions for knitting cables, which are a hard-to-describe aspect of knitting in-
+structions. Each set of instructions followed the same pattern, which was evidence for using the
+corresponding structure in the knitting programming language: Slip <loop count> to hold on <fron-
+t/back>, stitch instructions on main row, stitch instructions on held stitches. The corpus study was
+limited to patterns by one particular designer. Future work could expand the study to multiple
+designers to assess whether the same patterns are used by the broader knitting community.
+   The corpus also contained patterns that led to the following language constructs, which refer-
+ence the domain-speciﬁc concepts of needles and loops:
+    • Named needles or LIFO queues of loops are created by the phrase: needle <identifier>
+    • A to phrase, which places loops on an identiﬁed needle: operations                 to
+      <needle-identifier> in <front/back>
+
+                                                        4
+User-Centered Programming Language Design: A Course-Based Case Study
+
+
+    • A from phrase, which consumes loops from an identiﬁed needle: operations from
+      <needle-identifier>
+   Project L4 conducted a natural programming study to develop a language for analogical reason-
+ing. The student ﬁrst asked participants to do some analogical reasoning themselves. For example,
+one prompt was:
+      Bakers: the watchmakers of [NOUN]. You’ll ﬁnd them working on watches of their
+      own: [VERB] the [NOUN], [VERB] the [NOUN], and [VERB] the [NOUN].
+   Some participants gave bread for the nouns, which is not surprising, but some gave interesting
+answers for the verbs, such as answers relating to winding, which pertains to watchmaking.
+   Then, participants were asked to propose a syntax for analogical queries. Although some pro-
+posed a form that was analogous to what they had been given, an interesting proposal to write a
+query for The integral, like a [NOUN], [VERB] space into tiny [NOUN:PLURAL] was integral, ? :
+? -> ?. That is, if an integral acts on something, what else acts on something else in an analogous
+fashion?
+   The student reﬂected on the experience:
+      I’m glad I did a natural programming study rather than a usability study of an existing
+      system (which doesn’t exist yet anyway), since it aﬀorded a closer look into what kinds
+      of analogies would be useful to query for. . . and what expectations people have for
+      such a system. Staying “close to the metal” of English and writing questions, rather
+      than presenting a monolithic system outright, gave me more insight into the needs
+      and quirks of potential users. It helped avoid the bias of a more constrained set of
+      “problems” that I’d choose for a concrete usability study.
+   L6 pertained to descriptions of two-dimensional puzzles. In one task, participants were asked
+to write code to describe a series of pictured grids. They used a variety of approaches: a C-like
+2D array; a matrix constructor; and Python range syntax, including negative numbers for reverse
+indexing. The students observed that the participants seemed to be signiﬁcantly inﬂuenced by
+their prior programming experience. In cases like these, other methods must be used to evaluate
+whether one approach is signiﬁcantly better than the others, but these methods are likely not
+feasible in the short duration of the class project.
+
+5.2 Usability Studies
+Projects L3, L5, and L6 included usability studies.
+   In L3, the student conducted an Internet-based usability study of a language to make it easier for
+CSS developers to use block-element-modiﬁer conventions in their languages [13]. In the study,
+one task gave participants a pair of images, which represented two style variants of the same web
+page. Participants were asked to write code in the language to specify the styles. The primary
+usability problem the student identiﬁed was that participants with little general programming ex-
+perience neglected to use the @mod feature (as was required) to express the variations in styles
+between the alternatives. However, it is not clear why the participants made this mistake. This
+diﬃculty highlights a tradeoﬀ in the design of usability studies. By conducting the study on the
+Internet, the student was able to attract a more diverse population of participants, but the format
+did not allow for think-aloud or an opportunity for the experimenter to ask questions of the par-
+ticipants. The latter may be a key ingredient in early-stage user studies in order to elucidate the
+causes of errors.
+   The student developing L5 asked participants to do three programming tasks. Participants were
+given example code and architectural documentation for the language, which facilitated program-
+ming distributed Internet-of-Things systems. The intent was to study how programmers could
+
+                                                     5
+Michael Coblenz, Ariel Davis, Megan Hofmann, Vivian Huang, Siyue Jin, Max Krieger, Kyle Liang, Brian Wei, Mengchen
+                                                                                    Sam Yong, and Jonathan Aldrich
+
+
+specify when code would run, since code needed to run in response to various events. However,
+participants found the tasks more challenging than expected, in part because they found they
+needed to also address the question of where the code would run in the distributed system. The
+study helped in identifying this problem, according to the student who designed the language:
+      Many questions were raised of the delineation of where code runs when writing a
+      timing block. This was surprising as I believed the main issue . . . was how to structure
+      timing constructs. . . .
+   These observations helped motivate structural changes in the language. In the revised version,
+the questions of when code runs is intertwined with the question of where the code runs. Before, the
+language treated the two concepts as being orthogonal. The designers hope that the new approach
+will be easier to reason about.
+   The L6 study included a task in which participants were shown basic constructs of the language
+through an example, and then asked to use that language to describe Sudoku. The example showed
+functional-style code. Interestingly, one participant, who said their favorite language was SML
+(which is a functional language), wrote imperative-style code (including loop and return). It is
+notable that the participant invented syntax seemingly at odds with their own preferences and with
+the example. Also, the programming task study changed smoothly into a natural programming
+study, in which the participant invented their own syntax. This suggests that in the future, it might
+be useful for study designers to think of programming tasks along a continuum from completely
+natural programming (in which participants receive no guidance at all) to a completely constrained
+environment, in which participants must satisfy a formal language speciﬁcation.
+
+6 CONCLUSION AND FUTURE WORK
+We derive several recommendations for language designers who seek to integrate user-centered
+design approaches into their work. For natural programming studies:
+    • Using natural programming for selecting keywords is only a ﬁrst step; naturalness is only
+      one of several relevant criteria, and it is not yet known how to weigh the impact of natural-
+      ness.
+    • Consider using existing corpora as sources of data in natural programming studies. These
+      have potentially lower cost and allow obtaining data from more diverse populations than
+      one might otherwise have access to.
+    • Natural programming oﬀers opportunities for deeper insights into the expectations and ex-
+      isting skills of user than might be obtained in a usability study. Usability studies focus partic-
+      ipants on artifacts that may be unnatural for them; in contrast, natural programming studies
+      consider participants as they are already.
+    • In cases where prior experience strongly impacts behavior, natural programming may be
+      useful for identifying which experience is relevant, allowing development of tools that are
+      more natural for particular groups.
+  For usability studies:
+    • If the experimenter only has the results of participants’ work, it can be impossible to in-
+      fer why participants behaved they way they did. Think-aloud studies or asking follow-up
+      questions of participants are likely better ways of understanding participant behavior.
+    • Usability studies can be useful for checking designers’ assumptions about which parts of
+      the programming tasks will be challenging. Parts that seem hard to the designer may not be
+      signiﬁcant obstacles to success, but other parts may represent serious usability problems.
+    • Even in an interactive user study, we need better techniques for understanding how people
+      make decisions. In L6, it would be useful to know why a functional programmer chose an
+
+                                                        6
+User-Centered Programming Language Design: A Course-Based Case Study
+
+
+       imperative approach, but we lack tools to answer that question deﬁnitively. Of course, if the
+       experimenter had asked the participant, that would have been helpful, but experimenters
+       frequently do not identify some interesting questions until it is too late to ask them. We
+       can gain some insight from grounded theory methods, which leverage iteration in the anal-
+       ysis step; initial data from a study may help identify questions to ask participants in later
+       iterations of the study.
+   This research focused on how beginning language designers might beneﬁt from user-centered
+methods, particularly usability studies and natural programming studies. It identiﬁed several ben-
+eﬁts of using these methods, but future work should investigate to what extent these methods
+are useful for experienced programming language designers. Future work should also investigate
+to what extent these methods lead to generalizable language design guidelines, as opposed to re-
+sults that are speciﬁc to the particular languages being studied. Finally, although experimenter
+skill and experience certainly plays a role, methodological development may improve the ability
+of experimenters to capture deeper insights about programmer behavior.
+
+ACKNOWLEDGMENTS
+We are grateful for the assistance of the participants in our user studies.
+
+REFERENCES
+ [1] JC Briar. 2020. Stitch Maps. https://stitch-maps.com/
+ [2] Michael Coblenz, Gauri Kambhatla, Paulette Koronkevich, Jenna L. Wise, Celeste Barnaby, Joshua Sunshine, Jonathan
+     Aldrich, and Brad A. Myers. 2019. PLIERS: A Process that Integrates User-Centered Methods into Programming
+     Language Design. arXiv:1912.04719
+ [3] Nils Dahlbäck, Arne Jönsson, and Lars Ahrenberg. 1993. Wizard of Oz studies - why and how. Knowledge-based
+     systems 6, 4 (1993), 258–266. https://doi.org/10.1016/0950-7051(93)90017-N
+ [4] Alan A.A. Donovan and Brian W. Kernighan. 2015. The Go Programming Language (1st ed.). Addison-Wesley Profes-
+     sional.
+ [5] Thomas R. G. Green and Marian Petre. 1996. Usability analysis of visual programming environments: a ‘cognitive
+     dimensions’ framework. Journal of Visual Languages & Computing 7, 2 (1996), 131–174.
+ [6] Daniel Jackson. 2019. Design by Concept: A New Way to Think About Software. Pleasant Press, Newton, Massachusetts.
+ [7] Mark McGranaghan. 2020. Go by Example: Channels. https://gobyexample.com/channels
+ [8] Brad A. Myers, John F. Pane, and Amy J. Ko. 2004. Natural Programming Languages and Environments. Commun.
+     ACM 47 (2004), 47–52. Issue 9. https://doi.org/10.1145/1015864.1015888
+ [9] Allen Newell and Stuart K. Card. 1985. The Prospects for Psychological Science in Human-computer Interaction.
+     Hum.-Comput. Interact. 1, 3 (Sept. 1985), 209–242. https://doi.org/10.1207/s15327051hci0103_1
+[10] Nancy Pennington. 1987. Stimulus structures and mental representations in expert comprehension of computer pro-
+     grams. Cognitive Psychology 19, 3 (1987), 295 – 341. https://doi.org/10.1016/0010-0285(87)90007-7
+[11] Kyle Reestman and Brian Dorn. 2019. Native Language’s Eﬀect on Java Compiler Errors. In Proceedings of the 2019
+     ACM Conference on International Computing Education Research (Toronto ON, Canada) (ICER ’19). Association for
+     Computing Machinery, New York, NY, USA, 249–257. https://doi.org/10.1145/3291279.3339423
+[12] Andreas Steﬁk and Stefan Hanenberg. 2017. Methodological irregularities in programming-language research. Com-
+     puter 50, 8 (2017), 60–63. https://doi.org/10.1109/MC.2017.3001257
+[13] Vsevolod Strukchinsky and Vladimir Starkov. 2020. BEM – Block Element Modiﬁer. http://getbem.com
+
+
+
+
+                                                          7
+

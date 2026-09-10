@@ -1,0 +1,395 @@
+We've seen a whirlwind introduction to Unison data types before, but here we'll equip you with the information you need to create your own types. We'll talk about the
+structural
+and
+unique
+keywords, and learn about Unison's syntax for defining types with named fields.
+Let's say we are modeling a local library--we might want to start by representing a couple of book genre options. In a scratch.u file, we'll write something like:
+type
+Genre
+=
+Fiction
+|
+Poetry
+|
+CookBooks
+|
+Science
+|
+Biography
+Let's break down the anatomy of this code. The
+type
+keyword tells the UCM that we're creating a new type as opposed to a
+term definition
+.
+A type definition is
+unique
+or "identified by its name" by default, but it can accept a modifier of
+structural
+or an optional modifier of
+unique
+explicitly. This keyword tells Unison whether the type is unique by its name or by its structure (more on that in a bit). The values after the equals sign are known as
+data constructors
+.
+Each data constructor is separated by a pipe
+|
+which means that the
+Genre
+type can be
+Poetry
+or
+Fiction
+or
+CookBooks
+etc.
+If you're coming from the land of Object Oriented Programming, you might be familiar with the notion of a "constructor" as a special way to create an instance of an object. A good mental model for what a Unison data constructor is doing is that it is a
+function
+whose return type is the data type on the left.
+You might think of the data constructor
+Color
+.
+RGB
+:
+type
+Color
+=
+RGB
+Nat
+Nat
+Nat
+as a function called
+Color.RGB
+that takes three
+Nat
+arguments to produce a value of type
+Color
+.
+RGB
+:
+Nat
+->
+Nat
+->
+Nat
+->
+Color
+The data constructors for
+Genre
+above don't have any arguments, so they don't contain data beyond tagging something as being one thing or another at the moment.
+🎨
+By convention, the UCM will put the data constructors for a type in a namespace which shares the type name; so the data constructors for the type
+Genre
+can be referenced like
+Genre.Poetry
+or
+Genre.CookBooks
+The meaning of "unique"
+We indicated earlier that
+Genre
+is
+unique
+by its name. This tells the type system that the name of this type is
+semantically
+important. An example of a structurally identical type might be a
+Weekday
+(below):
+structural type
+Weekday
+=
+Mon
+|
+Tues
+|
+Wed
+|
+Thurs
+|
+Fri
+Neither
+Weekday
+nor
+Genre
+accept type parameters to construct a value of the type, and both have five data constructors which each have zero arguments, but obviously these model very different domains. Because we've indicated that the type
+Genre
+is unique, it cannot be substituted by a
+Weekday
+or anything else with its same structure.
+What happens if we create identical structural types?
+Say we want to represent an author type with a name, a birth year, and a
+Set
+of
+Genre
+that they might might be filed under. Let's try to make this one a
+structural
+type.
+structural type
+Author
+=
+Author
+Text
+Nat
+(
+Set
+Genre
+)
+In this case, the
+struct
+.
+Author
+type has a single data constructor which happens to be called "Author." Following the data constructor name, we specify the
+types
+that are needed to make an author:
+Text
+,
+Nat
+,
+and a
+Set
+of
+Genre
+.
+Note that calling the data constructor here the same name as the type is just a convention, we could have given the type a differently named data constructor altogether.
+Creating an instance of this
+struct
+.
+Author
+type looks like:
+authorExample
+:
+Author
+authorExample
+=
+genres
+=
+Set.fromList
+[
+CookBooks
+]
+Author
+"Julia Child"
+1912
+genres
+We'd also like to model the idea of a book with a title, a publication year, and a set of genres that might describe it.
+structural type
+Book
+=
+Book
+Text
+Nat
+(
+Set
+Genre
+)
+Great, let's write a function which tries to find a book for a given author. In our scratch file we might write something like:
+bookFinder
+:
+Author
+->
+[
+(
+Author
+,
+Book
+)
+]
+->
+Optional
+Book
+bookFinder
+author
+list
+=
+map
+=
+Map.fromList
+list
+get
+author
+map
+When we save our scratch file we see the following output:
+⍟ These new definitions are ok to `add`:
+
+  type Genre
+  type Author
+  type Book
+  bookFinder : Author -> [(Author, Author)] -> Optional Author
+Our types show up as expected, there's a
+Genre
+,
+an
+Author
+,
+and a
+Book
+that can be added, but taking a closer look at our signature for
+bookFinder
+you'll notice that the types that we wrote in our function definition earlier seem to have been changed! 🤔 This is because the types as we've defined them are equivalent to the Unison type system. Both
+Book
+and
+Author
+have data constructors which take in a
+Text
+,
+a
+Nat
+,
+and a
+Set
+of the same things. These two types are freely interchangeable in Unison programs. This is a situation in which we might want to make both types unique by their
+name
+to avoid any mix-ups. While
+Book
+and
+Author
+are structurally identical, it matters that the types mean different things.
+type
+Author
+=
+Author
+Text
+Nat
+(
+Set
+Genre
+)
+type
+Book
+=
+Author
+Text
+Nat
+(
+Set
+Genre
+)
+Now our UCM output reflects our named types.
+⍟ These new definitions are ok to `add`:
+
+  bookFinder : Author -> [(Author, Book)]-> Optional Book
+Why use structural types?
+It might seem like structural types introduce confusion when modeling a domain, after all, the role of a type system is to help enforce what types are compatible with each other. Consider the following: you're a library developer and you introduce a structural type called
+Maybe
+.
+Maybe is fairly abstract in nature, but you intend to use it to capture when a thing "might be" present or not. (I know, suspend your disbelief here.) The things that a "Maybe" contains are not specific, so you've used the type parameters
+t
+to define it.
+structural type
+Maybe
+t
+=
+Just
+t
+|
+Nothing
+When you save your
+scratch.u
+file to add
+Maybe
+to the codebase, you discover that it's structurally identical to the
+Optional
+data type in
+base
+.
+⍟ These new definitions are ok to `add`:
+
+  structural type Maybe t
+    (also named Optional)
+You've got a suite of helpful functions to work with already! The functions in your program which were written to return a
+Maybe
+can be manipulated by the functions for
+Optional
+.
+Abilities can also be either structural or unique. Many of the abilities that you'll find in base are structural abilities.
+Structural types can be useful when writing code with fewer domain-specific requirements. There are some cases in which using a structural type might reveal that you don't need to reinvent the wheel. One rule of thumb to help decide whether to make a type structural or not is to think if the type you're defining has additional semantics or expected behavior beyond the information that's given in the type signature.
+🌻
+Summary:
+Define a type with the
+type
+keyword
+type Foo = Bar Nat | Baz Text
+A type is "unique" by default
+Use the
+structural
+keyword to make a type which is only known by its structure,
+structural type Foo = Foo Nat
+is the same as
+structural type Bar = Bar Nat
+Structural types are considered equivalent when their
+data constructors
+and parameters are structurally identical.
+What to read next
+🌟
+Record types
+📚
+Language reference for Unison's type system
+Data constructor
+Found on the right hand side of the equals sign in a type declaration, a data constructor describes how to construct a value of some type.
+For example, the
+Optional
+type has two data constructors,
+Optional
+.
+None
+and
+Some
+:
+structural
+type
+Optional
+a
+structural
+type
+Optional
+a
+=
+lib
+.
+base
+.
+Optional
+.
+None
+|
+lib
+.
+base
+.
+Optional
+.
+Some
+a
+Data constructor
+Found on the right hand side of the equals sign in a type declaration, a data constructor describes how to construct a value of some type.
+For example, the
+Optional
+type has two data constructors,
+Optional
+.
+None
+and
+Some
+:
+structural
+type
+Optional
+a
+structural
+type
+Optional
+a
+=
+lib
+.
+base
+.
+Optional
+.
+None
+|
+lib
+.
+base
+.
+Optional
+.
+Some
+a

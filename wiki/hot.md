@@ -9,6 +9,7 @@ tags:
   - moriarty
   - research
 sources:
+  - SRC-0109
   - SRC-0108
   - SRC-0106
   - SRC-0107
@@ -46,3 +47,5 @@ Report8 intake: [comparison, full named-source graph and relevance](../deliverab
 The [bounded repayment K references](../docs/research/2026-09-09-bounded-k-references.md) distinguish explicit numeric bounds, guarded transitions, helper totality and concrete execution from proof acceptance. SRC-0108 is a dated official-doc recapture; current website prose is not local-toolchain equivalence evidence.
 
 [[wiki/k-framework/k-best-practices|Bounded K results and lessons]]: the [numeric extension](../deliverables/numeric-k-2026-09-09/README.md) checks rounding, overflow-before-division, dust and ProRata against 22 new and 42 retained cases. Consult its exact result reviews. Preserve earlier attempts and their scope; full RP01 contract/challenge-map admission, successor semantics, proofs and Preview financial acceptance remain open.
+
+The [TypeScript-style language report and PL checklist](../deliverables/language-design-2026-09-09/REPORT.md) use Elm/Unison ideas within existing bounded financial requirements. SRC-0109, CLM-0940–0942: ordinary `.mori` first; static embedding deferred; domain-duty conservation, explicit authority and separate identity contexts. Panel convergence does not establish usability or financial acceptance.

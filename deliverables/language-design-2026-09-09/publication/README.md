@@ -1,0 +1,11 @@
+# Publication and wiki intake
+
+The language-design dossier recommends twenty feature positions after two independent GPT-6 PL reviews and a Claude Opus architecture review, followed by peer critique and adjudication. Fresh GPT-6 and Claude Opus publication audits pass on their identified candidate scope. These are design recommendations, not human-study findings, implemented features or formal acceptance.
+
+The separate research branch incorporates reviewed main before wiki application. The original author-stage `branch-manifest.json` is retained unchanged: its “pending” status describes that historical checkpoint. All 184 entries still verify. This directory records subsequent final audits and canonical wiki integration; final publication hashes are recorded separately.
+
+The portable operation `ingest-language-design-20260909-convergence` applied eight writes, adding collection SRC-0109 and three provisional claims CLM-0940–0942. The separately checked source-inventory companion adds the same collection while preserving prior rows. These were one logical intake, not one atomic filesystem transaction; the root held the original CSV for rollback if portable apply failed. Apply succeeded and post-apply bytes match both receipts and the companion digest.
+
+Root corrected two nonblocking Opus notes before applying: source/claim ledger generation timestamps now record actual UTC seconds, and the grammar lesson links its existing review. Per-write hashes and timestamp schema were corrected after pre-write inspection rejections. The failure record is retained. Strict lint then reported two README heading targets: the GitHub slugs were not recognized by the Obsidian engine. A separate inspected `lint-fix` changed only those link targets to README.md; labels and claims are unchanged. Final strict lint has zero findings across 37 pages and 364 links.
+
+Original audit text remains unchanged, including limited locators, cosmetic spacing notes and scope boundaries. Existing ledger entries are preserved as JSON values; serialization is not claimed byte-identical. Machine-local paths in retained failed-attempt receipts remain historical provenance, not portable successful-source links. Research prototypes, formative human studies, full source/K correspondence and financial Preview settlement remain open.

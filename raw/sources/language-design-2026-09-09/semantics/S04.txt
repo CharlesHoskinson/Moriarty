@@ -1,0 +1,980 @@
+                 Nix: A Safe and Policy-Free System
+                      for Software Deployment
+                Eelco Dolstra, Merijn de Jonge, and Eelco Visser – Utrecht University
+
+                                                    ABSTRACT
+               Existing systems for software deployment are neither safe nor sufficiently flexible. Primary
+         safety issues are the inability to enforce reliable specification of component dependencies, and the
+         lack of support for multiple versions or variants of a component. This renders deployment
+         operations such as upgrading or deleting components dangerous and unpredictable. A deployment
+         system must also be flexible (i.e., policy-free) enough to support both centralised and local
+         package management, and to allow a variety of mechanisms for transferring components. In this
+         paper we present Nix, a deployment system that addresses these issues through a simple technique
+         of using cryptographic hashes to compute unique paths for component instances.
+
+                     Introduction                             and there seems to be no general deployment system
+                                                              available that satisfies all the above requirements.
+      Software deployment is the act of transferring
+                                                              Most existing tools only consider a small subset of
+software to the environment where it is to be used.
+                                                              these requirements and ignore the others.
+This is a deceivingly hard problem: a number of
+requirements make effective software deployment dif-                In this paper we present Nix, a safe and flexible
+ficult in practice, as most current systems fail to be        deployment system providing mechanisms that can be
+sufficiently safe and flexible.                               used to define a great variety of deployment policies.
+      The main safety issue that a software deployment        The primary features of Nix are:
+system must address is consistency: no deployment                • Concurrent installation of multiple versions and
+action should bring the set of installed software com-             variants
+ponents into an inconsistent state. For instance, an             • Atomic upgrades and downgrades
+installed component should never be able to refer to             • Multiple user environments
+any component not present in the system; and upgrad-             • Safe dependencies
+ing or removing components should not break other                • Complete deployment
+components or running programs [15], e.g., by over-              • Transparent binary deployment as an optimisa-
+writing the files of those components. In particular, it           tion of source deployment
+should be possible to have multiple versions and vari-           • Safe garbage collection
+ants of a component installed at the same time. No               • Multi-level package management (i.e., different
+duplicate components should be installed: if two com-              levels of centralised and local package manage-
+ponents have a shared dependency, that dependency                  ment)
+should be stored exactly once.                                   • Portability
+      Deployment systems must be flexible. They                     These features follow from the fairly simple
+should support both centralised and local package             technique of using cryptographic hashes to compute
+management: it should be possible for both site admin-        unique paths for component instances.
+istrators and local users to install applications, for                              Motivation
+instance, to be able to use different versions and vari-
+ants of components. Finally, it must not be difficult to            In this section we take a close look at the issues
+support deployment both in source and binary form, or         that a system for software deployment must be able to
+to define a variety of mechanisms for transferring            deal with.
+components. In other words, a deployment system                     Dependencies For safe software deployment, it
+should provide flexible mechanisms, not rigid policies.       is essential that the dependencies of a component are
+      Despite much research in this area, proper solu-        correctly identified. For correct deployment of a com-
+tions have not yet been found. For instance, a sum-           ponent, it is necessary not only to install the compo-
+mary of twelve years of research in this field indicates,     nent itself, but also all components which it may need.
+amongst others, that many existing tools ignore the           If the identification of dependencies is incomplete,
+problem of interference between components and that           then the component may or may not work, depending
+end-user customisation has only been slightly exam-           on whether the omitted dependencies are already
+ined [6]. Consequently, there are still many hard out-        present on the target system. In this case, deployment
+standing deployment problems (see the first section),         is said to be incomplete.
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                               79
+Nix: A Safe and Policy-Free System for Software Deployment                                Dolstra, de Jonge, and Visser
+
+
+       As a running example for this paper we will use                  Atomicity Component upgrades in conventional
+the Subversion version management system (http://                systems are not atomic. That is, while a component is
+subversion.tigris.org/). It has several (optional) depen-        being overwritten with a newer version, the compo-
+dencies, such as on the Berkeley DB database library.            nent is in an inconsistent state and may well not work
+When we package the Subversion component for                     correctly. This lack of atomicity extends beyond the
+deployment, we must take this into account and ensure            level of individual components. When upgrading an
+that the Berkeley DB component is also present on                entire system, for instance, it may be necessary to
+each target system. But it is easy to forget this! This is       upgrade shared components such as shared libraries
+because such dependencies are often picked up                    first. If they are not backwards compatible, then there
+‘‘silently.’’ For instance, Subversion’s configure script        will be a timing window in which components that use
+will detect and use Berkeley DB automatically if                 them fail to work properly.
+present on the build system. If it is present on the tar-
+get system, Subversion will happen to work; but if it is                Identification Variants make identification of
+not, it won’t: an incomplete deployment. Some exist-             dependencies surprisingly hard. We may say that a
+ing deployment systems use various tricks to automate            component depends on glibc-2.3.2, but what are the
+dependency identification, e.g., RPM [11] can use the            exact semantics of such a statement? For instance, it
+ldd tool at packaging time to scan for shared library            does not identify the build parameters with which glibc
+dependencies. However, such approaches are either                has been built, nor is there any guarantee that the iden-
+not general enough or not portable.                              tifier glibc-2.3.2 always refers to the same entity in all
+                                                                 circumstances. Indeed, versions of Red Hat Linux and
+       Variability Components may exist in many vari-
+                                                                 SuSE Linux both have RPM packages called glibc-2.3.2,
+ants. Variants occur when different versions exist (i.e.,
+                                                                 but these are not the same, not even at the source level
+almost always), and when a component has optional
+features that can be selected at build time. This is             (they have vendor-specific patches applied).
+known as variability [24]. The Subversion component                     Source/binary deployment We must often cre-
+has several optional features, such as whether we want           ate both ‘‘source’’ and ‘‘binary’’ packages for a com-
+support for OpenSSL encryption and authentication,               ponent. Creating the latter manually is unfortunate,
+whether only a Subversion client should be built, and            since binary deployment can be considered an optimisa-
+whether an Apache server module should be built so               tion of source deployment because it uses fewer
+that Subversion can act as a WebDAV server. Of                   resources on the target system. Ideally, the creation of
+course, there also exist many different versions of              binary packages would happen automatically and trans-
+Subversion, which we sometimes want to use in paral-             parently, but in practice, the creation and dissemination
+lel (for instance, to test a new version before promot-          of binary packages requires explicit effort. This is par-
+ing it to production use on a server). A flexible                ticularly the case if multiple variants are required (which
+deployment system should support the presence of                 variants do we build, and how do users select them?).
+multiple variants of a component on the same system.                    The source/binary dichotomy complicates depen-
+For instance, on a multi-user system different users
+                                                                 dency specification, since a component can have dif-
+may have different requirements and therefore need
+                                                                 ferent dependencies at build time and at run time that
+different variants; on a server system we may want to
+                                                                 must be carefully identified. This is tricky, since a
+test a new component before upgrading critical server
+software to use it; or other components may have con-            build time dependency can become a run time depen-
+flicting requirements on some component.                         dency if the construction process stores a reference to
+                                                                 its dependencies in the build result – a retained depen-
+       Consistency Unfortunately, most package man-              dency. For instance, various libraries such as
+agement disciplines do not support variants very well.           OpenSSL are inputs to the Subversion build process.
+Deployment operations (such as installing, upgrading,            If they are shared libraries, then their full paths (e.g.,
+or renaming a component) are typically destructive:              /usr/lib/libssl.so.0.9.6) will be stored in the resulting
+files are copied to certain locations within the file sys-       Subversion executables, causing these build time
+tem, possibly overwriting what was already there. This           dependencies to become run time dependencies. How-
+can destroy the consistency among components: if we
+                                                                 ever, if they are statically linked (which is a build time
+upgrade or delete some component, then another com-
+                                                                 option of Subversion), then this does not occur. Thus,
+ponent that depends on it may cease to work properly.
+                                                                 there is a subtle interaction between variant selection
+Also, it makes it hard to have multiple variants of a
+component installed concurrently, that is, different ver-        and dependencies.
+sions of the component, or a version built with differ-                 Centralised vs. local package management To
+ent parameters. For instance, the RPM packages for               make software deployment efficient, system adminis-
+Subversion contain files such as /usr/bin/svn, making it         trators should not have to install each and every appli-
+impossible to have two versions installed at the same            cation separately on every computer on a network.
+time. Worse, we might encounter unsatisfiable require-           Rather, software installation should be managed cen-
+ments, e.g., if two applications both require mutually           trally. On the other hand, computers or individual
+incompatible versions of some library.                           users may have individual software requirements. This
+
+
+
+80                                                           2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                          Nix: A Safe and Policy-Free System for Software Deployment
+
+
+requires local package management. Software deploy-             Nix Expressions
+ment should cater for both local and centralised pack-                Installation of components in the store is driven
+age management. It should not be hard to define                 by Nix expressions. These are declarative specifica-
+machine-local policies.                                         tions that describe all aspects of the construction of a
+                                                                component, i.e., obtaining the sources of the compo-
+                       Overview
+                                                                nent, building it from those sources, the components
+       The Nix software deployment system is designed           on which it depends, and the constraints imposed on
+to overcome the problems of deployment described in             those dependencies. Rather than having specific built-
+the previous section. The main ingredients of the Nix1          in language constructs for these notions, the language
+system are the Nix store for storing isolated installa-         of Nix expressions is a simple functional language for
+tions of components; user environments, providing a             computing with sets of attributes. Figure 1 shows a
+user view of a selection of components in the store;            Nix function that returns variants of the Subversion
+Nix expressions, specifying the construction of a com-          system, based on certain parameters; it features most
+ponent from its sources; and a generic means of shar-           typical constructs of the language. Figure 2 shows a
+ing build results between machines. These ingredients           call to this function. We will use these examples to
+provide mechanisms for implementing a wide variety              explain the elements of the language.
+of deployment policies. In this section we give a high-
+                                                                 { clientOnly, apacheModule, sslSupport
+level overview of these ingredients from the perspec-              , stdenv, fetchurl, openssl, httpd
+tive of users of the system. In the next section their             , db4 }:
+implementation is described.
+                                                                 assert !clientOnly -> db4 != null;
+Nix Store                                                        assert apacheModule -> !clientOnly;
+       The fundamental problem of current approaches             assert sslSupport -> (openssl != null
+to software deployment is the confusion of user space              && (apacheModule ->
+and installation space. An end-user interacts with the                  httpd.openssl == openssl));
+applications installed on a computer through a certain           derivation {
+interface. This may be the start menu on Windows and               name = "subversion-0.32.1";
+other desktop environments, or the PATH environment                system = stdenv.system;
+variable in command-line interfaces on Unix-like sys-                builder = ./builder.sh;
+tems. These interfaces form what we call the user                    src = fetchurl {
+space. Deployment is concerned with making applica-                     url =
+tions available through such interfaces by installing all                 http://.../subversion-0.32.1.tgz;
+files necessary for their operation in the file system,                 md5 = "b06717a8ef50db4b...";
+i.e., in the installation space.                                     };
+       Mainly due to historical reasons – deployment                 # Pass these to the builder.
+was often done manually – user space and installation                inherit clientOnly apacheModule
+space are commonly identified. For instance, to keep                         sslSupport;
+the list of directories in the PATH manageable, applica-                     stdenv openssl httpd db4;
+                                                                 }
+tions are installed in a few fixed locations such as
+/usr/bin. Thus, management of the end-user interface              Figure 1: Subversion component (subversion.nix).
+to applications is equal to physical manipulation of
+installation space, entailing all the problems discussed         stdenv = import ...;
+                                                                 openssl = import ...;
+in the previous section.
+                                                                 ... # other component definitions
+       In Nix, user space and installation space are sep-
+                                                                 subversion = (import subversion.nix) {
+arated. User space is a view of installation space.
+                                                                   clientOnly = false;
+Applications and all programs and libraries used to                apacheModule = false;
+implement them are installed in the Nix store. Each                sslSupport = true;
+component is installed in a separate directory in the              inherit stdenv fetchurl openssl
+store. Directory names in the store are chosen so as to                    httpd db4 expat;
+uniquely identify revisions and variants of compo-               };
+nents. This identification scheme goes beyond simple                 Figure 2: Subversion composition (pkgs.nix).
+name+version schemes, since these cannot cope with
+variants of the same version of a component. Thus,                    Derivation The body of the expression is formed
+multiple versions of a component can coexist in the             by calling the primitive function derivation with an
+store without interference.                                     attribute set {key=value;...}. The set contains two
+  1The name Nix is derived from the Dutch word niks, mean-      attributes required by the derivation function: the builder
+ing nothing; build actions do not see anything that has not     attribute indicates a script that builds the component,
+been explicitly declared as an input.                           while the system attribute specifies the target platform
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                                    81
+Nix: A Safe and Policy-Free System for Software Deployment                                    Dolstra, de Jonge, and Visser
+
+
+on which the build is to be performed. The other                    attributes that refer to other derivations (i.e., depen-
+attributes define values for use in the build process               dencies), the corresponding environment variables
+(such as dependencies) and are passed to the build script           contain the paths at which they are stored. Nix ensures
+as environment variables. The name attribute is a sym-              that such dependencies are built prior to the invocation
+bolic identifier for use in the high-level user interface; it       of the builder, so the build script can assume that they
+does not necessarily uniquely identify the component.               are present. The special variable out conveys to the
+       Parameters In order to describe variants of a                builder where it should store the build result. Figure 3
+component, an expression can be parameterised, i.e.,                shows the build script for Subversion. The largest part
+turned into a function from Nix expressions to Nix                  of the script is used to compute the configuration flags
+expressions. The syntax for functions is {k1 , ..., kn }:           based on the features selected for the Subversion
+body, which defines a function that expects to be called            instance. By using a user-definable script for imple-
+with an attribute set containing attributes with names              menting the build of a component, rather than building
+k1 to kn . Thus, the Subversion expression is parame-               in a specific build sequence, no requirements have to
+terised with expressions describing the components on               be made on the build interface of source distributions.
+which it depends (e.g., openssl, httpd, stdenv), options              buildInputs="$openssl $db4 $httpd"
+that select features (e.g., clientOnly, sslSupport), and a            # Bring in GCC etc., set up environment.
+utility (fetchurl). The stdenv component provides all the             . $stdenv/setup
+basic tools that one would expect in a Unix-like envi-                if ! test $clientOnly; then
+ronment, e.g., a C compiler, linker, and standard Unix                  extraFlags="--with-berkeley-db=$db4 \
+utilities. Parameters are instantiated in a function appli-             $extraFlags"
+cation. For example, the expression in Figure 2 instan-               fi
+tiates the Subversion expression by assigning values to               if test $sslSupport; then
+its parameters.                                                         extraFlags="--with-ssl \
+       A subtle but important difference with most                        --with-libs=$openssl $extraFlags"
+component formalisms is that in Nix we explicitly                     fi
+describe not just components but also compositions of                 ...
+components. For instance, an RPM spec file specifies                  tar xvfz $src
+how to build a component, but not its dependencies. It                cd subversion-*
+merely states fairly weak conditions on the expected                  ./configure --prefix=$out $extraFlags
+                                                                      make
+build environment (‘‘a package called glibc-2.3.2
+                                                                      make install
+should be present’’). Thus, a spec file is always
+incomplete, so there is no way to uniquely specify                      Figure 3: Subversion build script (builder.sh).
+concrete components. The Subversion Nix expression
+in Figure 1 is similarly incomplete, but the composi-               User Environments
+tion in Figure 2 provides the whole picture – informa-                    A Nix user environment consists of a selection of
+tion on how to build not just Subversion, but also all              applications from the store currently relevant to a user.
+of its dependencies.                                                ‘‘Users’’ can be human users, but also system users
+                                                                    such as daemons and servers that need a specific
+       The value of the src attribute is another example
+                                                                    selection to be visible. This selection may be imple-
+of functional computation. Its value is the result of a
+                                                                    mented in various ways, depending on the interface
+call to the function fetchurl (passed in as an argument
+                                                                    used by the user. In the case of the PATH interface, a
+of the Subversion function) that downloads the source               user environment is implemented as a single directory
+from a specific URL and verifies that it has the right              – the counterpart of /usr/bin – containing symbolic
+MD5 checksum.                                                       links (or wrapper scripts on systems that do not sup-
+       Assertions In order to restrict the values that can          port them) to the selected applications. Thus, manipu-
+be passed as parameters, a function can state asser-                lation of the user environment consists of manipula-
+tions over the parameters. For example, the db4 data-               tion of this collection of symbolic links, rather than
+base is needed only when a local server is imple-                   directories in the store. Installation of an application in
+mented. Also, consistency between components can be                 user space entails adding a symbolic link to a file in
+enforced. For instance, if both SSL and Apache sup-                 the store and uninstallation entails removing this sym-
+port are enabled, then Apache must link against the                 bolic link instead of physically removing the corre-
+same OpenSSL library as Subversion, since at runtime                sponding file from the file system.
+the Subversion code will be linked against Apache. If                     While other approaches (e.g., [4]) also use a
+this were not enforced, link errors could result.                   directory with symbolic links, these are composed
+       Build When a derivation is built, the build script           manually and/or are only provided in a single location.
+indicated by the builder attribute is invoked. As stated            In Nix an environment is a component in the store.
+above, attributes of the derivation are passed through              Thus, any number of environments can coexist and
+environment variables to the builder. In the case of                variant environments can be composed with tools.
+
+
+
+82                                                              2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                            Nix: A Safe and Policy-Free System for Software Deployment
+
+
+This separation of user space and installation space              thus capturing all special configurations of the particu-
+allows the realization of many different deployment               lar variant being built. Thus, components can be iden-
+scenarios. The following are some typical examples:               tified exactly and deterministically. Consequently a
+   • A user environment may be prescribed by a                    component can be shared by all components that
+     system administrator, or may be adapted by                   depend on it. Indeed we even get maximal sharing: if
+     individual users.                                            two components are the same, then they will occupy
+   • Different users on the same system can com-                  the same location in the store. This means that builds
+     pose different user environments, or can share a             can be shared by users on the same machine.
+     common environment.                                                Since the identification only depends on the
+   • A single user can maintain multiple ‘profiles’               inputs to the build process and the location of the
+     for use in different working situations.                     store, store identifiers are even globally unique. That
+   • A user can experiment with a new version of a                is, a component build can be safely copied to a Nix
+     component while keeping the old (stable) ver-                store on another machine. For this purpose, Nix pro-
+     sion around for regular tasks.                               vides support for transparently maintaining a collec-
+   • Upgrading to a new version or rolling back to                tion of pre-built components on some shared medium
+     an old one is a matter of switching environ-                 such as an FTP site or an installation CD-ROM. After
+     ments.                                                       building a component in the store it can be pushed to
+   • Removal of unused applications can be                        the shared medium.
+     achieved by automatic garbage collection, tak-
+     ing the applications in user environments as                       For instance, the installation and upgrade opera-
+     roots.                                                       tions above perform an installation from source. This
+                                                                  is generally not desirable since it is slow. However, it
+      For instance, to add the Subversion component               is possible to safely and transparently re-use pre-built
+in Figure 2 to the current user environment, we do:               components from a shared resource such as a network
+ $ nix-env -f pkgs.nix -i subversion                              repository. For instance, a component distributor or
+where pkgs.nix is the file containing the definition in Fig-      system administrator can pre-build components, then
+ure 2. This will build Subversion and create a new user           push (upload) them to a server using PUT requests:
+environment, based on the old one, to which Subversion             $ nix-push http://example.org/cache \
+has been added. If an expression for a new Subversion                                 pkgs.nix subversion
+release comes along, we can upgrade as follows:                   This will build Subversion (if necessary) and upload it
+ $ nix-env -f pkgs.nix -u subversion                              and all its dependencies to the indicated site. A user
+which likewise creates a new user environment, based              can then make Nix aware of these:
+on the old one, in which the old Subversion compo-                 $ nix-pull http://example.org/cache
+nent has been replaced by the new one. However, the               Subsequent invocations of nix-env -i / -u will automati-
+old user environment and the components included in               cally use these if they are exactly equal to what the
+it are retained, so it is possible to return to the old situ-     user is requesting to be installed. That is, if the user
+ation if necessary:                                               changes any sources, flags, and so on, the pre-built
+ $ nix-env --rollback                                             components will not be used, and Nix will revert to
+There is no operation to physically remove compo-                 building the components itself. Thus, Nix is both a
+nents from the system. They can only be removed                   source and binary-based deployment system; deploy-
+from a user environment, e.g.,                                    ment of binaries is achieved transparently, as an opti-
+                                                                  misation of a source-based deployment process.
+ $ nix-env -e subversion
+                                                                  Policies
+creates a new user environment from which the links
+to Subversion have been removed. However, storage                       Nix is policy-free. That is, the ingredients intro-
+space can be reclaimed by periodically running a                  duced above are mechanisms for implementing soft-
+garbage collector:                                                ware deployment. A wide variety of policies can be
+                                                                  based on these mechanisms.
+ $ nix-collect-garbage
+                                                                        For instance, depending on the type of organisa-
+which removes any component not reachable from any
+                                                                  tion it may or it may not be desirable or possible that
+user environment. (Therefore it is necessary to period-
+                                                                  users install applications. In an organisation where
+ically prune old user environments, e.g., once we find
+                                                                  homogeneity of workspaces is important, the selection
+that we do not need to roll back to old ones). Garbage
+                                                                  and installation of applications can be restricted to sys-
+collection is safe because we know the full depen-
+                                                                  tem administration. This can be achieved by restricting
+dency graph between components.
+                                                                  all the operations on the store, and the composition of
+Sharing Component Builds                                          user environments to system administration. They may
+      The unique identification of a component in the             compose several prefab user environments for differ-
+store is based on all the inputs to the build process,            ent classes of users. On the other hand, for instance in
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                                     83
+Nix: A Safe and Policy-Free System for Software Deployment                                 Dolstra, de Jonge, and Visser
+
+
+a research environment, where individual users have               depends on the library libc.so.6, because it lists the file
+very specific needs, it is desirable that users are capa-         /nix/store/8d013ea878d0-glibc-2.3.2/lib/libc.so.6 as one of
+ble of installing and upgrading applications them-                the shared libraries against which it links at runtime.
+selves. In this situation environment operations and
+the underlying store operations can be made available
+to ordinary users as well. Similarly, Nix enables
+deployment at different levels of granularity, from a
+single machine, a cluster of machines in a local net-
+work, to a large number of machines on separate sites.
+      Many other policies are possible; some are dis-
+cussed later.
+                    Implementation
+      In this section we discuss the implementation of the
+Nix system. We provide an overview of the main com-
+ponents of the system, which we then discuss in detail.
+The Store
+      The two main design goals of the Nix system are
+to support concurrent variants, and to ensure complete
+dependency information which is necessary to support                                Figure 4: The Store.
+completeness (the deployment process should transmit
+all dependencies necessary for the correct operation of                  The use of these names also provides a solution
+a component). It turns out that the solutions to these            for the dependency problem. First, it prevents unde-
+goals are closely related. Other design goals are porta-          clared dependencies. While it is easy for hard-coded
+bility (we should not fundamentally rely on operating             paths (such as /usr/bin/perl) to end up in component
+system specific features or extensions) and storage               source, thereby causing a dependency that is easily
+efficiency (identical components should not be stored             forgotten while preparing for deployment, no devel-
+more than once).                                                  oper would manually write down these paths in the
+                                                                  source (indeed, being the hash of all build inputs, they
+      The first problem is dealing with variability, i.e.,
+                                                                  are much too ‘‘fragile’’ to be included). Second, we
+concurrent variants. As we hinted in the previous sec-
+                                                                  can now actually scan for dependencies. For instance,
+tion, we support this by storing each variant of a com-
+                                                                  if the string 3c7c39... appears in a component, we
+ponent in a global store, where they have unique
+names and are isolated from each other. For instance,             know that it has a dependency on a specific variant of
+one version or variant of Subversion might be stored              Subversion 0.34. This in particular solves the problem
+in /nix/store/eeeeaf42e56b-subversion-0.32.1,2 while another      of retained dependencies (discussed in the first sec-
+might end up in /nix/store/3c7c39a10ef3-subversion-0.34 .         tion): it is not necessary to declare explicitly those
+To ensure uniqueness, these names are computed by                 build time dependencies that, through retention,
+hashing all inputs involved in building the component.            become run time dependencies, since we can find
+                                                                  them automatically.
+      Thus, each object in the store has a unique name,
+so that variants can co-exist. These names are called                    With precise dependency information, we can
+store paths. In Autoconf [1] terminology, each compo-             achieve the goal of complete deployment. The idea is
+nent has a unique prefix. The file system content refer-          to always deploy component closures: if we deploy a
+enced by a store path is called a store object. Note that         component, then we must also deploy its dependen-
+a given store path uniquely determines the store object.          cies, their dependencies, and so on. That is, we must
+This is because two store objects can only differ if the          always deploy a set of components that is closed under
+inputs to the derivations that built them differ, in which        the ‘‘depends on’’ relation. Since closures are self-
+case the store path would also differ due to the hashing          contained, they are the units of complete software
+scheme used to compute it. Also, a store object can               deployment. After all, if a set of components is not
+never be changed after it has been built.                         closed, it is not safe to deploy, since using them might
+      Figure 4 shows a number of derivates in the                 cause other components to be referenced that are miss-
+store. The tree structure simply denotes the directory            ing on the target system.
+hierarchy. The arrows denote dependencies, i.e., that             Building Components
+the file at the start of the arrow contains the path name                So how do we build components from Nix
+of the file at the end of the arrow, e.g., the program svn        expressions? This could be expressed directly in terms
+ 2The actual names use 32 hexadecimal digits (from a              of Nix expressions, but there are several reasons why
+128-bit cryptographic hash), but they have been shortened         this is a bad idea. First, the language of Nix expressions
+here to preserve space.                                           is fairly high-level, and as the primary interface for
+
+
+
+84                                                             2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                          Nix: A Safe and Policy-Free System for Software Deployment
+
+
+developers, subject to evolution; i.e., the language                Subversion has a retained dependency on
+changes to accommodate new features. However, this                  OpenSSL. Build time dependencies carried
+means that we would have to be able to deal with vari-              over to runtime are detected automatically in
+ability in the Nix expression language itself: several              this way. (This approach is discussed in more
+versions of the language would need to be able to co-               detail in [9]).
+exist in the store. Second, the richness of the language         6. The closure expression is written to the store.
+is nice for users but complicates the sorts of operations
+                                                                     The command nix-instantiate translates a Nix
+that we want to perform (e.g., building and deploy-
+                                                               expression to a store expression:
+ment). Third, Nix expressions cannot easily be identi-
+fied uniquely. Since Nix expressions can import other           $ nix-instantiate pkgs.nix
+expressions scattered all over the file system, it is not       /nix/store/ce87...-subversion.store
+so straightforward to generate an identifier (such as a        The command nix-store --realise realises a derivation
+cryptographic hash) that uniquely identifies the               store expression, returning the resulting closure store
+expression. Finally, a monolithic architecture makes it        expression:
+hard to use different component specification for-              $ nix-store --realise \
+malisms on top of the Nix system (e.g., we could                  /nix/store/ce87...-subversion.store
+retarget Makefiles to use Nix as a backend).                    /nix/store/ab1f...77ef.store
+       For these reasons Nix expressions are translated              Nix users do not generally have to deal with
+into the much simpler language of store expressions,           store expressions. For instance, the nix-env command
+just as compilers generally do the bulk of their work          hides them entirely – the user interacts only with high-
+on simpler intermediate representations of the code
+                                                               level Nix expressions, which is really just a fancy
+being compiled, rather than on a full-blown language
+                                                               wrapper around the two commands above. However,
+with all its complexities. Store expressions describe
+                                                               store expressions are important when implementing
+how to build one or more store paths. Realisation of a
+store expressions means making sure that all those             deployment policies. Their relevance is that they give
+paths are present in the store.                                us a way to uniquely identify a component both in
+                                                               source and binary form, through the derivation and
+       Derivation store expressions describe the build-        closure store expression, respectively. This can be
+ing of a single store component. They describe all             used to implement a variety of deployment policies.
+inputs to the build process: other store expressions that
+must be realised first (build time dependencies), the                A crucial operation for deployment is to query
+build platform, the build script (which is one of the          the set of store paths referenced by a store expression.
+dependencies), and environment variable bindings.              This is the set of paths that must be copied to another
+These are computed from calls to the derivation func-          system to ensure that it can realised there. For
+tion in the Nix expression language by recursively             instance, for the derivation above we get:
+translating all input derivations to derivation store           $ nix-store --qR \
+expressions, copying source files to the store, and               /nix/store/ce87...-subversion.store
+adding all attributes as environment variable bindings.         /nix/store/ce87...-subversion.store
+                                                                /nix/store/d1bc...0aa1-builder.sh
+       To perform the build action described by a               /nix/store/f184...3ed7-gcc.store
+derivation, the following steps are taken:                      /nix/store/f199...0719-bash.store
+   1. Locks are acquired on the output path (the store          ...
+      path of the component being built) to ensure cor-
+      rectness in case of parallel invocations of Nix.         That is, this set includes the derivation store expres-
+   2. Input store expressions are realised. This               sions for building Subversion itself and its direct and
+      ensures that all file system inputs are present.         indirect dependencies, a closure store expression for
+   3. The environment is cleared and initialised to            the builder, and so on.
+      the bindings specified in the derivation.                      On the other hand, for the closure we get:
+   4. The builder is executed.                                  $ nix-store --qR \
+   5. If the builder was executed successfully, we                   /nix/store/ab1f...77ef.store
+      build a closure store expression that describes           /nix/store/ab1f...77ef.store
+      the resulting closure, i.e., the output path and          /nix/store/eeee...e56b-subversion-0.32.1
+      all store paths directly or indirectly referenced         /nix/store/a17f...c48f-openssl-0.9.7c
+      by it. We do this by scanning every file in the           /nix/store/8d01...78d0-glibc-2.3.2
+      output path for occurrences of the crypto-                ...
+      graphic hashes in the input store paths. For             This set only includes the closure store expression
+      instance, when we build Subversion, the path             itself and the component store paths it references.
+      /nix/store/a17fb5a...-openssl-0.9.7c is passed as an
+      input. After the build, we find that the string          Substitutes
+      a17fb5a... occurs in the file libsvn_ra_dav.so (as           With just the mechanisms described above, Nix
+      shown in Figure 4). Thus, we find that                   would be a source-based deployment system (like the
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                                85
+Nix: A Safe and Policy-Free System for Software Deployment                                  Dolstra, de Jonge, and Visser
+
+
+FreeBSD Ports collection [2], or Gentoo Linux [3]),                      Binary level deployment presents more interest-
+since all target systems would have to do a full build             ing challenges, since even small Nix expressions can,
+of all derivations involved in a component installation.           depending on the variability present in the expres-
+This has the advantage of flexibility. Advanced users              sions, yield an exponentially large set of possible store
+or system administrators can adapt Nix expressions to              objects. Also, these store objects are large and may
+build a variant specifically tailored to their needs. For          take a long time to build. Thus, we have to decide
+instance, required functionality disabled by default can           which variants are pre-built, who builds them, and
+be enabled, unnecessary functionality can be disabled,             where they are stored.
+or the components can be built with specific optimisa-                   Let us first look at the most simple deployment
+tion parameters for the target environment. The result-            policy: a fixed selection of variants are pre-built,
+ing derivates may be smaller, faster, easier to support
+                                                                   pushed onto a HTTP server, from where they can then
+(e.g., due to reduced functionality), and so on. On the
+                                                                   be pulled by clients. To push a derivation, all elements
+other hand, the obvious disadvantages are that source-
+                                                                   in the resulting closure are packaged (e.g., by placing
+based deployment requires substantial resources on
+                                                                   them into a .tar.gz archive). All of this is entirely auto-
+the target system, and that it is unsuitable for the
+                                                                   matic: to push the derivations of some expression
+deployment of closed-source products.
+                                                                   foo.nix the distributor merely has to issue the command
+      The Nix solution is to allow source-based deploy-            nix-push foo.nix.
+ment to change transparently into binary-based deploy-
+ment through the mechanism of substitutes. For any                       The client issues the command nix-pull to obtain a
+store path, a substitute expression can be registered,             list of available pre-built components available from a
+which is also just a store derivation expression. Then,            pre-configured URL (i.e., the HTTP server). For each
+whenever Nix is asked to realise a closure that con-               derivation available on the server, substitute expres-
+tains path p, and p does not yet exist, it will first try to       sions are registered that (when built) will fetch,
+build its substitute if available. The idea is that the            decompress, and unpack the packaged output path
+substitute performs the same build as the original                 from the server. Note that nix-pull is lazy: it will not
+expression, but with fewer resources. Typically, this is           fetch the packages themselves, just some information
+done by fetching the pre-built contents of the output              about them.
+path of the derivation from the network, or from                    subversion = {apacheModule, stdenv}:
+installation media such as a CD-ROM. This mecha-                      (import ./subversion.nix)
+nism is generic (policy-free), because it does not force              { clientOnly = false
+any specific deployment policy onto Nix. Specific                     , sslSupport = true
+policies are discussed later.                                         , apacheModule = apacheModule
+                                                                      , stdenv = stdenv, ... };
+                  Deployment Policies
+                                                                    subversion’ = {stdenv}:
+       A useful aspect of Nix is that while it is concep-             [(subversion {apacheModule = true})
+tually a source-based deployment system, it can trans-                 (subversion {apacheModule = false})];
+parently support binary deployment through the sub-                 subversion’’ =
+stitute mechanism. Thus, efficient deployment consists                [(subversion’
+of two aspects:                                                            {stdenv = stdenv-Linux})
+    • Source level: Nix expressions are deployed to the                (subversion’
+      target system, where they are translated to store                    {stdenv = stdenv-FreeBSD})];
+      expressions and built (e.g., through nix-env).                             Figure 5: Variant selection.
+    • Binary level: Pre-built derivates are made avail-
+      able, and substitute expressions are registered                    The issue of which variants to pre-build requires
+      on the target system. This latter step is largely            the distributor to determine the set of variants that are
+      transparent to the users. There is no apparent               most likely to be useful. For instance, for the Subver-
+      difference between a ‘‘source’’ and a ‘‘binary’’             sion component, it may never be useful to not have
+      installation.                                                SSL support, but it may certainly be useful to leave out
+       Source level deployment is unproblematic, since             Apache server support, since that feature introduces a
+Nix expressions tend to be small. Typical deployment               dependency on Apache, which might be undesirable
+policies are to obtain sets of Nix expressions packaged            (e.g., due to space concerns). Also, the platform for
+into a single file for easier distribution, or to fetch them       which to build must be selected. Figure 10 shows how
+from a version management system. The latter is useful             four variants of Subversion can be built. The function
+as it can easily allow automatic upgrades of a system.             subversion supplies all arguments of the expression in
+For instance, we can periodically (e.g., from a cron job)          Figure 1, except apacheModule and stdenv (which deter-
+update the Nix expressions and build the derivations               mines the build tools, and thus the target platform).
+described by them. Note that any subexpressions that               The function subversion’ uses this to produce two vari-
+have not changed do not need to be rebuilt.                        ants, given a stdenv: one with Apache server support,
+
+
+
+86                                                             2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                              Nix: A Safe and Policy-Free System for Software Deployment
+
+
+and one without. This function is in turn used by the              generation 42, which is in turn a symlink to a user
+variable subversion,’’ which calls it twice, with a stdenv         environment in the store. The user environment is sim-
+for Linux and FreeBSD respectively. Hence, this eval-              ply a tree of symlinks to activated components. Hence,
+uates to 2 × 2 = 4 variants.                                       the path /nix/links/current/bin/svn indirectly refers to
+      Pre-building and pushing to a shared network                 /nix/eeee...-subversion-0.31.1/bin/svn .
+site merely optimises deployment of common variant                       Figure 6 also shows what happens when we
+selections; it does not preclude the use of variants that          upgrade Subversion, and add Mozilla in a single
+are not pre-built. If a user selects a variant for which           atomic action. A new environment is constructed in
+no substitute exists, the variant will be built locally            the store based on the current generation (42), the new
+from source. Also, input components such as compil-                generation (43) is made to point to it, and finally the
+ers that are exclusively build time dependencies (that             current link is switched to point at generation 43. The
+is, they appear in the derivation value but not in the             semantics of the POSIX rename() system call ensures
+closure value) will only be fetched or built when the              that this is an atomic operation. That is, users and pro-
+variant must be built locally.                                     grams always see the old set of activated programs, or
+      The tools nix-pull and nix-push are not part of the          the new set, but never neither, both, or a mix. Since
+Nix system as such; they are applications of the under-            old generations are retained, we can atomically down-
+lying technology. Indeed, they are just short Perl                 grade to them in the same manner.
+scripts, and can easily be adapted to support different
+deployment policies. For instance, an entirely different
+policy is lazy construction, where clients push
+derivates onto a server if they are not already present
+there. This is useful if it is not known in advance
+which derivates will be needed. An example is mass
+installation of components in a heterogeneous net-
+work. In a peer-to-peer architecture each client makes
+its derivates available to all other clients (that is, it
+pushes onto itself, and pulls from all other clients). In
+this case there is no server, and thus, no need to pro-
+vide central storage scaling in the number of clients.
+               User Environment Policies
+      The use of cryptographic hashes in store paths
+gives us reliable identification of dependencies and
+non-interference between components, but we can
+hardly expect users to type, e.g., /nix/store/eeeeaf42e56b-
+subversion-0.32.1/bin/svn when they want to start a pro-
+gram! Clearly, we should hide these implementation
+details from users.                                                            Figure 6: User environments.
+      We solve this problem by synthesising user envi-
+ronments. A user environment is the set of applica-                      The generation links are the only external links
+tions or programs available to the user through normal             into the store. This means that the only reachable store
+interaction mechanisms, which in a Unix setting                    paths are those in the closure of the targets of the gen-
+means that they appear in a directory in the user’s                eration links. The closure can be found using the clo-
+PATH environment variable. The user has in her PATH                sure values computed earlier. Since all store paths not
+variable the path /nix/links/current/bin. /nix/links/current is    in this closure are unreachable, they can be deleted at
+a symbolic link (symlink) that points to the current               will. This allows Nix to do automatic garbage collec-
+user environment generation. Generations are sym-                  tion of installed components. Nix has no explicit oper-
+links to the actual user environment. They are needed              ation to delete a store path – that would be unsafe,
+to implement atomic upgrades and rollbacks: when a                 since it breaks the integrity of closures containing that
+derivation is added or removed through nix-env, we                 path. Rather, it provides operations to remove deriva-
+build the new environment, and then create a genera-               tions from the user environment, and to garbage col-
+tion symlink to it with a number one higher than the               lect unreachable store paths. Store paths reachable
+previous generation. User environments are just sets               only from old generations can be garbage collected by
+of symlinks to programs of activated components                    removing the generation links.
+(similar to, e.g., GNU Stow [4]), and are themselves                     This scheme, where a user environment is cre-
+computed using derivations.                                        ated for the entire system, is just the simplest user
+      This is illustrated in Figure 6 (dotted lines denote         environment policy. The creation of a user environ-
+symlinks), where the current symlink points to                     ment is itself a normal derivation, and the command
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                                     87
+Nix: A Safe and Policy-Free System for Software Deployment                                  Dolstra, de Jonge, and Visser
+
+
+nix-env used in the second section is a simple wrapper             used to specify complete server configurations, which
+that automatically creates a derivation, builds it, and            includes not only the software components constitut-
+switches the current generation to the resulting output            ing some server, but also its configuration and other
+path. The build script used by nix-env for environment             auxiliary files. Consider, for instance, an Apache/Sub-
+creation is a fairly trivial Perl script that creates sym-         version server (the Subversion server runs as a module
+links to the files in its input closures. A simple modifica-       on top of Apache). It consists of several components
+tion is to allow profiles – environments for specific users        that are rather picky about specific dependencies, e.g.,
+or situations. This can be done by specifying a different          Apache, Subversion, ViewCVS, Python, and Perl, but
+link directory (e.g., /home/joe/.nixlinks). Also, multiple         also our repository management CGI scripts, static
+versions of the same program in an environment can be              HTML documents and images, the Apache httpd.conf
+accommodated through renaming (e.g., a symlink                     configuration file, SSL private keys, and so on. Since
+svn-0.34), which is a policy decision that can be imple-           these are also components (just not necessarily exe-
+mented by modifying the user environment build script.             cutable components) they can be managed using Nix.
+ derivation {                                                            Figure 8 shows a (simplified) Nix expression for
+   name = "site-env";                                              an Apache/Subversion server. It takes a single argu-
+   builder = ./create-symlinks.pl;                                 ment that specifies whether a test or production server
+   inputs = [                                                      is to be built. The builder produces a component con-
+     ((import ./subversion.nix) { ... })                           sisting of an Apache configuration file, and a control
+     ((import ./mozilla.nix) { ... })                              script to start and stop the server. The builder gener-
+     ... ];
+                                                                   ates these by substituting values such as the desired
+ }
+                                                                   port number and the paths to the Apache and Subver-
+Figure 7: A Nix expression to build a site-wide user               sion components into the given source files.
+    environment (site-wide.nix).
+                                                                     {productionServer}:
+      A more interesting extension is stacked user envi-             derivation {
+ronments, where one environment links to the pro-                      builder = ./builder.sh;
+                                                                       configuration = ./httpd.conf.in;
+grams in another environment. This is easily accom-
+                                                                       controller = ./ctl.sh.in;
+modated: just as the inputs to the construction of an                  portNumber = if productionServer
+environment can be concrete components (such as                                     then 80 else 8080;
+Subversion), they can be other environments. The                       inherit (import ...) httpd subversion;
+result is another indirection in the chain of symlinks. A            }
+typical scenario is a 2-level scheme consisting of a site-
+                                                                   Figure 8: A Nix expression to build a Subversion
+wide environment specified by the site system admin-
+                                                                       server.
+istrators, with user-specific environments that augment
+or override the site-wide environment. Concretely, the                   Now, given a simple script upgrade-server (not
+site administrator makes a Nix expression as in Figure             shown here) that uses nix-env -u to build the new server
+7 (slightly simplified) and makes it available on the              configuration, stop the server running in the old genera-
+local network. Locally, a user can then link this site-            tion, and start the new one, we can easily instantiate
+wide environment into her own environment by doing                 new server configurations by editing source files such
+ nix-env -f site-wide.nix -i site-env                              as httpd.conf.in, and calling upgrade-server. For instance,
+where site-wide.nix refers to the Nix expression. This             the command upgrade-server test instantiates the Nix
+will replace any previously installed derivation with              expression by calling it with a false argument, thus pro-
+the symbolic name site-env. To ensure that changes to              ducing a test server. If this is found to work properly,
+the site-wide environment are automatically propa-                 we can issue upgrade-server production to upgrade the
+gated, these commands can be run periodically (e.g.,               production server. nix-env --rollback can be used to go
+from a cron job), or initiated centrally (by having the            back to the previous generation, if necessary.
+administrator remotely execute them on every                             The server is started using the script controller.sh
+machine and/or for every user).                                    which is part of the server configuration component. It
+      Should components in the local environment                   initialises PATH to point to a specific set of compo-
+override those in the site-wide environment? Again,                nents. This means that the server configuration is self-
+this is a policy decision, and either possibility is just a        contained: it does not depend on anything not explic-
+matter of adapting the builder for the local user envi-            itly specified in the Nix expression. Such a configura-
+ronment, for instance to give precedence to deriva-                tion is therefore pretty much immune to external con-
+tions called site-env.                                             figuration changes, and can be relatively easily trans-
+      Server configurations User environments (con-                ferred to another machine.
+trary to what the term implies) can not only be used to                  The only thing not under Nix control here is state
+specify environments for specific users, but also for              – things that are modified by the server, e.g., the actual
+specific tasks or processes. In particular, they can be            Subversion repositories and user account databases.
+
+
+
+88                                                             2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                          Nix: A Safe and Policy-Free System for Software Deployment
+
+
+      Thus, Nix can be used for the deployment of not           services. For instance, our department’s Subversion
+just software components, but also complete system              server is managed in this way. The main advantages
+configurations – the domain of tools such as Cfengine           are that it is very easy to run multiple instances of a
+[7]. Note that Cfengine declaratively specifies destruc-        service (e.g., for testing – and the test server will in no
+tive changes to be performed to realise a desired con-          way interfere with the production server!), that it is
+figuration. This makes it hard to easily run several            easy to move a service to another machine since we
+configurations in parallel on the same machine, or to           have full dependency information, and again that we
+switch back and forth between configurations. Also,             can rollback to earlier versions.
+Cfengine is typically not used to manage the software                  Build farms It is a good software engineering
+components on a machine (although this is possible,             practice to build software systems continuously during
+e.g., by installing the appropriate packages in an              the development process [13]. In addition, if software
+Cfengine action [20]).                                          is to be portable, it should be built on a variety of
+                       Experience                               machines and configurations. This requires a build
+                                                                farm – a set of machines that sit in a loop building the
+       We have applied Nix to a number of problem               latest version obtained from the version management
+domains.                                                        system. Build farms are also important for release
+       Software deployment We have ‘‘nixified’’ 180             management – the production of software releases –
+or so existing Unix packages, including large ones              which must be an automatic process to ensure repro-
+such as Mozilla Firefox with all its dependencies               ducibility of releases, which is in turn important for
+(which includes the C compiler, basic Unix tools, X11,          software maintenance and support.
+etc.). They are prebuilt for Linux and made available                  The management of a build farm is often highly
+through the push/pull mechanism.                                time-consuming. For instance, if the component being
+       The fundamental limitation to Nix’s dependency           built in the build farm requires (say) Automake 1.7,
+checking is that it will not prevent undeclared depen-          we must install that version of Automake on each
+dencies on components outside of the store. For                 machine in the build farm. If at some point we need a
+instance, if a builder calls /bin/sh, we have no way to         newer version of Automake, we again must go to each
+detect this. To minimise the probability of such unde-          machine to perform the upgrade. So maintaining a
+clared dependencies, we use patched versions of gcc,            build farm scales badly. Worse, there may be conflict-
+ld, and glibc that refuse to use header files and libraries     ing dependencies (e.g., some other component in the
+outside of the Nix store. In our experience this works          build farm may only work with Automake 1.6).
+quite well. For instance, the prebuilt Nix packages                    Such management of dependencies is exactly
+work on a variety of Linux distributions – evidence             what Nix is good at, so we have implemented a build
+that no (major) external components are used. A com-            farm on top of Nix. The main advantages over other
+mon problem with these distributions is that they often         build farms (e.g., [12]) are:
+differ in subtle ways that cause packages built on one
+system to fail on another, e.g., because of C library
+                                                                   • The Nix expression language makes it easy to
+                                                                      describe the build tasks, along with their depen-
+incompatibilities. However, our Nix components are                    dencies.
+completely boot-strapped, that is, they are built using
+only build tools, libraries, etc., that have themselves
+                                                                   • Nix ensures that the dependencies are installed
+                                                                      on each machine in the build farm.
+been built using Nix, and do not rely on components
+outside of the Nix store (other than the running ker-
+                                                                   • The hashing scheme ensures that identical
+                                                                      builds (e.g., of dependencies) are performed
+nel). Using our reliable dependency analysis, any                     only once.
+required libraries and other components are deployed
+also. Thus, they just ‘‘work.’’                                    • In Nix, each derivation has a system attribute
+                                                                      that specifies on what kind of platform the
+       The ability to very rapidly perform rollbacks is               derivation is to be performed (e.g., i686-linux).
+often a life-saver. For instance, it happens quite fre-               If the attribute does not match the type of the
+quently that we attempt to upgrade some bleeding-                     platform on which Nix is run, Nix can automat-
+edge software package, only to discover that it doesn’t               ically distribute the derivation to a different
+work quite as well as the previous version (or not at                 machine of the intended platform type, if one
+all!). A simple nix-env --rollback saves the day. In most             exists. All inputs to the derivation are copied to
+package managers, recovery would be much harder,                      the store of the remote machine, Nix is run on
+since we would have to know exactly what the previ-                   the remote machine, and the result is copied
+ous configuration was, and we would have to have a                    back to the local store. Thus, dealing with
+way to re-obtain the old versions of the packages that                multi-platform builds is fairly transparent: we
+were just upgraded.                                                   can write a Nix expression specifying deriva-
+       Service deployment As described later, Nix can                 tions on a variety of platforms and run it on a
+be used for the deployment of not just software com-                  arbitrary machine. There is no need to schedule
+ponents, but also complete configurations of system                   the build separately on each machine.
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                                    89
+Nix: A Safe and Policy-Free System for Software Deployment                              Dolstra, de Jonge, and Visser
+
+
+     • The resulting builds can be used immediately            exchange and sharing of packages is not truly safe, as
+      by other developers since they are made avail-           is the case for Nix.
+      able through nix-push.                                          Safe upgrading Many systems ignore this issue
+      A downside to a Nix-based build farm is that             [26]. Automatic rollback on failures is discussed in
+installing a package through Nix differs from the              [19]. This turned out to be undesirable in practice
+‘‘native’’ way of installing a package on existing plat-       because it increased installation time and did not
+forms (e.g., by installing an RPM on a Red Hat                 increase consistency. RPM [11] has a notion of trans-
+machine). Thus it is difficult for a Nix build farm to         actions: if the installation of a set of packages failed,
+verify whether a package works when built from                 the entire installation is undone. This is not atomic, so
+source in the native way. However, on Linux systems,           the packages being upgraded are in an inconsistent
+we can in fact build native packages (such as RPMs)            state during the upgrade. The approach discussed in
+without affecting the host system by using User-Mode           [18] uses shortcuts to default package versions, e.g.,
+Linux [5] in Nix derivations. In fact, this fits in quite      emacs pointing to emacs-20.2. This is unsafe because
+well. For instance, the synthesis of the UML disk              programs may now use emacs which initially corre-
+images for the various platforms for which we build            sponds to emacs-20.2, but after an upgrade points to,
+packages is just a normal Nix derivation that creates          e.g., emacs-20.3. Separation of production and devel-
+an Ext2 file system from an arbitrary set of RPMs              opment software via directories is discussed in [17].
+constituting a Linux distribution.                             Once an application has been fully tested under the
+                                                               development tree it is turned into production. This
+                    Related Work
+                                                               requires recompilation because path names will
+       Centralised and local package management                change and may cause errors. Consequently, the
+Package management should be centralised but each              approach is not really safe.
+machine must be adaptable to specific needs [26].                     Garbage collection In [21] an approach for
+Local package management is often ignored in favour            removing old software is discussed. Basically, after
+of centralised package management [19, 17]. In our             software is ‘‘removed’’ by making the directory
+approach, central configurations can easily be shared          unreadable, one verifies whether other software fails
+and local additions can be made. Any user can be               by running it. If so, the deletion is rolled back by mak-
+allowed to deviate from a central configuration. Soft-         ing the directory readable again. This is unsafe
+ware installation by arbitrary users is discussed in           because the test executions may not reveal every
+[21]. In [25] policies are introduced that define which        dependency, and because a time window is introduced
+installation tasks are permitted. This might be a chal-        during which some components do not work.
+lenging extension to Nix. Modules [14] makes soft-
+ware deployment more transparent by abstracting                       Dependency analysis However, the same paper
+from the details of software deployment. Application-          also describes a pointer scanning mechanism similar
+specific deployment details are captured in ‘‘module-          to ours: component directories are scanned for the
+files,’’ which can be shared between large-scale dis-          names of other component directories (e.g., tk-3.3).
+tributed networks, similar to Nix expressions. Mod-            However, such names are not very unique (contrary to
+ules lack the safety properties of Nix. As a result, cor-      cryptographic hashes) and may lead to many false
+rect operation of typical deployment tasks, as dis-            positives. Also, component dependencies are scanned
+cussed initially, cannot be guaranteed.                        for after the component has been made unreadable,
+                                                               not before. In [23] a dependency analysis tool for
+       Non-interference Software packages should not
+                                                               dynamic libraries is discussed. In Nix this information
+interfere with each other. Typical interference is
+                                                               is already available when an application is installed,
+caused by attempting to have multiple versions of a
+component installed. It is important that multiple ver-        and Nix is not restricted to detecting dependencies on
+sions can coexist [21], but this is difficult to achieve       shared libraries only. Vesta [16] is a system for config-
+with current technology [6]. A common approach is to           uration management that supports automatic depen-
+install software packages in separate directories,             dency detection. Like Nix, it detects only dependen-
+sometimes called collections [26]. In [18], a directory        cies that are actually needed, and dependencies are
+naming scheme is used that restricts the number of             complete, i.e., every aspect of the computing environ-
+concurrent versions and variants of a package. Sharing         ment is described and controlled by Vesta.
+is in most deployment systems either unsafe due to                    Safety In [25] common wrong assumptions of
+implicit references, or not supported at all because           package managers are explained, including: i) package
+every application is made completely self-contained            installation steps always operate correctly; ii) all soft-
+[17, 19]. Sharing of data across platforms using a             ware system configuration updates are the result of
+directory structure that separates platform specific           package installation. In Nix, software gets installed
+from platform independent data is discussed in [17],           safely, without affecting the environment. Thus, in con-
+which is concerned with diversity in platform, not             trast to many other systems, Nix will never bring a sys-
+diversity in feature sets. As a consequence however,           tem in an unstable state. Unless a system administrator
+
+
+
+90                                                          2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+Dolstra, de Jonge, and Visser                          Nix: A Safe and Policy-Free System for Software Deployment
+
+
+really wants to mess things up, all upgrades to the Nix                        Author Information
+store are the result of package installation. Safe testing
+                                                                     Eelco Dolstra is a Ph.D. student in the Software
+of applications outside production environments is dis-
+                                                               Technology group at Utrecht University, where he also
+cussed in [21, 17]. In [15] it is confirmed that software
+                                                               obtained his Master’s degree on the integration of
+should be installed in private locations to prevent inter-
+                                                               functional and strategic term-rewriting languages. His
+ference between software packages. Interference turns
+                                                               research focuses on dealing with variability in soft-
+out to be a very common cause of installation problems.
+                                                               ware systems and configuration management, in par-
+In Nix, such packages can safely coexist.
+                                                               ticular software deployment.
+      Packaging In [22] a generic packaging tool for
+building bundles (i.e., collections of products that may             Merijn de Jonge obtained his Ph.D. degree from
+be installed as a unit) is discussed. Source tree compo-       the University of Amsterdam in the area of software
+sition [8] is an alternative technique for automatically       reuse. After a postdoc position at Eindhoven Univer-
+producing bundles from source code components.                 sity, he currently works as a postdoc at Utrecht Uni-
+However, these bundling approaches do not cater for            versity. His research interests include software reuse,
+sharing of components across bundles.                          configuration and build management, software vari-
+                                                               ability, generative programming, component-based
+                      Conclusion                               software development, program transformation, and
+                                                               language-centered software engineering.
+      Seemingly simple tasks such as installing or
+upgrading an application often turn out to be much                   Eelco Visser studied computer science at the
+harder than they should be. Unexpected failures and            University of Amsterdam where he obtained Master’s
+the inability to perform certain actions affect users of       and Ph.D. degrees in the area of syntax definition and
+all levels of computing expertise. In this paper we            language processing. As a postdoc at the Oregon
+have pinpointed a number of causes of the deployment           Graduate Institute in Portland he laid the foundation
+malady, and described the Nix system that addresses            for the Stratego program transformation language. He
+these by using cryptographic hashes to enforce                 is currently an assistant professor in the Software
+uniqueness and isolation between components. It is             Technology group at Utrecht University where he
+successfully used to deploy software components to             leads research projects into program transformation
+several different operating systems, to manage server          and software configuration and deployment.
+configurations, and to support a build farm.
+                                                                                    References
+      There are a number of interesting issues remain-
+ing. Of particular interest is our expectation that Nix         [1] Autoconf, http://www.gnu.org/software/autoconf/ .
+will permit sharing of derivations between users. That          [2] FreeBSD Ports Collection, http://www.freebsd.org/
+is, if user A has built some derivation, and user B                 ports/ .
+attempts to build the same derivation, B can transpar-          [3] Gentoo Linux, http://www.gentoo.org/ .
+ently reuse A’s result. Clearly, using code built by oth-       [4] GNU Stow, http://www.gnu.org/software/stow/ .
+ers is not safe in general, since A may have tampered           [5] User Mode Linux, http://user-mode-linux.source
+with the result. However, our use of cryptographic                  forge.net/ .
+hashes can make this safe, since the hash includes all          [6] Anderson, E. and D. Patterson, ‘‘A Retrospective
+build inputs, and therefore completely characterises                on Twelve Years of LISA Proceedings,’’ Pro-
+the result.                                                         ceedings of the 13th Systems Administration
+      The problems of dependency identification and                 Conference (LISA ’99), pp. 95-107, November
+dealing with variants also plague build managers such               1999.
+as Make [10]. We believe that (with some extensions)            [7] Burgess, Mark, ‘‘Cfengine: A Site Configuration
+Nix can be used to replace these more low-level soft-               Engine,’’ USENIX Computing systems, 8(3),
+ware configuration management tools as well.                        1995.
+                                                                [8] de Jonge, Merijn, ‘‘Source Tree Composition,’’
+                      Availability
+                                                                    Seventh International Conference on Software
+      Nix is free software and is available online at               Reuse, Num. 2319, Lecture Notes in Computer
+http://www.cs.uu.nl/groups/ST/Trace/Nix .                           Science, Springer-Verlag, 2002.
+                                                                [9] Dolstra, E., E. Visser, and M. de Jonge, ‘‘Impos-
+                  Acknowledgements                                  ing a Memory Management Discipline on Soft-
+     We wish to thank Martin Bravenboer and Armijn                  ware Deployment,’’ Proceedings of the 26th
+Hemel for helping in the development of the Nix sys-                International Conference on Software Engineer-
+tem, and Martin Bravenboer and our LISA shepherd                    ing (ICSE 2004), pages 583-592, IEEE Com-
+Rudi van Drunen for commenting on this paper. This                  puter Society, May 2004.
+research was supported by CIBIT|Serc and the NWO               [10] Feldman, Stuart I., ‘‘Make – A Program for
+Jacquard program.                                                   Maintaining Computer Programs,’’ Software –
+
+
+
+2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA                                                               91
+Nix: A Safe and Policy-Free System for Software Deployment                           Dolstra, de Jonge, and Visser
+
+
+     Practice and Experience, Vol. 9, Num. 4, pp.                   Product Lines,’’ Proceedings of WICSA 2001,
+     255-265, 1979.                                                 August 2001.
+[11] Foster-Johnson, Eric, Red Hat RPM Guide, John             [25] Venkatakrishnan, V., N. R. Sekar, T. Kamat, S.
+     Wiley and Sons, 2003.                                          Tsipa, and Z. Liang, ‘‘An Approach for Secure
+[12] Mozilla Foundation, Ti n d e r b o x, http://www.              Software Installation,’’ Proceedings of the 16th
+     mozilla.org/tinderbox.html .                                   Systems Administration Conference (LISA ’02),
+[13] Fowler, Martin, Continuous Integration, http://                USENIX Association, pp. 219-226, November
+     www.martinfowler.com/articles/ continuousInte-                 2002.
+     gration.html .                                            [26] Wong, W. C., ‘‘Local Disk Depot: Customizing
+[14] Furlani, J. L. and P. W. Osel, ‘‘Abstract Yourself             the Software Environment,’’ Proceedings of the
+     with Modules,’’ Proceedings of the Tenth Sys-                  Seventh Systems Administration Conference
+     tems Administration Conference (LISA ’96), pp.                 (LISA ’93), pages 49-53, November 1993.
+     193-204, September 1996.
+[15] Hart, John and Jeffrey D’Amelia, ‘‘An Analysis
+     of RPM Validation Drift,’’ Proceedings of the
+     16th Systems Administration Conference (LISA
+     ’02), pp. 155-166, USENIX Association,
+     November 2002.
+[16] Heydon, Allan, Roy Levin, Timothy Mann, and
+     Yuan Yu, The Vesta Approach to Software Con-
+     figuration Management, Technical Report
+     Research Report 168, Compaq Systems Research
+     Center, March 2001.
+[17] Manheimer, K., B. A. Warsaw, S. N. Clark, and
+     W. Rowe, ‘‘The Depot: A Framework for Shar-
+     ing Software Installation Across Organizational
+     and UNIX Platform Boundaries,’’ Proceedings
+     of the Fourth Systems Administration Conference
+     (LISA ’90), pp. 37-46, October 1990.
+[18] Oetiker, T., ‘‘SEPP: Software Installation and
+     Sharing System,’’ Proceedings of the 12th Sys-
+     tems Administration Conference (LISA ’98),
+     pages 253-259, December 1998.
+[19] Oppenheim, K. and P. McCormick, ‘‘Deployme:
+     Tellme’s Package Management and Deployment
+     System,’’ Proceedings of the 14th Systems
+     Administration Conference (LISA 2000), pages
+     187-196, December 2000.
+[20] Ressman, D. and J. Valdés, ‘‘Use of Cfengine for
+     Automated, Multi-platform Software and Patch
+     Distribution,’’ Proceedings of the 14th Systems
+     Administration Conference (LISA 2000), pp.
+     207-218, December 2000.
+[21] Rouillard, J. P. and R. B. Martin, ‘‘Depot-lite: A
+     Mechanism for Managing Software,’’ Proceed-
+     ings of the Eighth Systems Administration Con-
+     ference (LISA ’94), pages 83-91, 1994.
+[22] Staelin, C., ‘‘mkpkg: A Software Packaging
+     Tool,’’ Proceedings of the 12&th Systems Admin-
+     istration Conference (LISA ’98), pp. 243-252,
+     December 1998.
+[23] Sun, Y. and A. L. Couch, ‘‘Global Impact Analy-
+     sis of Dynamic Library Dependencies,’’ Pro-
+     ceedings of the 15th Systems Administration
+     Conference (LISA 2001), pp. 145-150, November
+     2001.
+[24] van Gurp, Jilles, Jan Bosch, and Mikael Svahn-
+     berg, ‘‘On the Notion of Variability in Software
+
+
+
+92                                                        2004 LISA XVIII – November 14-19, 2004 – Atlanta, GA
+

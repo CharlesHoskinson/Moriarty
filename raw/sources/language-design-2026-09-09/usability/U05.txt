@@ -1,0 +1,644 @@
+Abilene Christian University
+Digital Commons @ ACU
+School of Information Technology and Computing                                                        College of Business Administration
+
+
+
+8-2017
+
+On Novices' Interaction with Compiler Error
+Messages: A Human Factors Approach
+James R. Prather
+Abilene Christian University
+
+Raymond Pettit
+
+Kayla Holcomb McMurry
+
+Alani Peters
+
+John Homer
+See next page for additional authors
+
+
+
+
+Follow this and additional works at: https://digitalcommons.acu.edu/info_tech_computing
+
+Recommended Citation
+Prather, James R.; Pettit, Raymond; McMurry, Kayla Holcomb; Peters, Alani; Homer, John; Simone, Nevan; and Cohen, Maxine, "On
+Novices' Interaction with Compiler Error Messages: A Human Factors Approach" (2017). School of Information Technology and
+Computing. 4.
+https://digitalcommons.acu.edu/info_tech_computing/4
+
+
+This Article is brought to you for free and open access by the College of Business Administration at Digital Commons @ ACU. It has been accepted for
+inclusion in School of Information Technology and Computing by an authorized administrator of Digital Commons @ ACU.
+Authors
+James R. Prather, Raymond Pettit, Kayla Holcomb McMurry, Alani Peters, John Homer, Nevan Simone, and
+Maxine Cohen
+
+
+
+
+                 This article is available at Digital Commons @ ACU: https://digitalcommons.acu.edu/info_tech_computing/4
+              On Novices’ Interaction with Compiler Error Messages:
+                           A Human Factors Approach
+     James Prather, Raymond Pettit, Kayla Holcomb                                                                   Maxine Cohen
+       McMurry, Alani Peters, John Homer, Nevan                                                               Nova Southeastern University
+                        Simone                                                                                   3301 College Avenue
+                    Abilene Christian University                                                               Fort Lauderdale, FL 33314
+                          ACU Box 28036                                                                           cohenm@nova.edu
+                         Abilene, TX 79601
+        jrp09a,rsp05a,kmh12c,alp13d,jdh08a,nfs13a@acu.edu
+
+ABSTRACT                                                                                                 Table 1: Definition of Frequently Used Terms
+The difficulty in understanding compiler error messages can be a
+major impediment to novice student learning. To alleviate this is-                                Term      Meaning
+sue, multiple researchers have run experiments enhancing compiler                                 CEM       Compiler Error Message
+error messages in automated assessment tools for programming                                      ECEM      Enhanced Compiler Error Message
+assignments. The conclusions reached by these published experi-                                   Athene    Automated assessment tool used in this experiment
+ments appear to be conflicting. We examine these experiments and
+propose five potential reasons for the inconsistent conclusions con-
+cerning enhanced compiler error messages: (1) students do not read
+them, (2) researchers are measuring the wrong thing, (3) the effects                          KEYWORDS
+are hard to measure, (4) the messages are not properly designed, (5)                          HCI, human factors, usability, automated assessment tools, educa-
+the messages are properly designed, but students do not understand                            tion, CS1, ethnography
+them in context due to increased cognitive load. We constructed
+                                                                                              ACM Reference format:
+mixed-methods experiments designed to address reasons 1 and 5
+                                                                                              James Prather, Raymond Pettit, Kayla Holcomb McMurry, Alani Peters, John
+with a specific automated assessment tool, Athene, that previously                            Homer, Nevan Simone and Maxine Cohen. 2017. On Novices’ Interaction
+reported inconclusive results. Testing student comprehension of                               with Compiler Error Messages: A Human Factors Approach. In Proceedings
+the enhanced compiler error messages outside the context of an                                of ICER ’17, Tacoma, WA, USA, August 18-20, 2017, 9 pages.
+automated assessment tool demonstrated their effectiveness over                               https://doi.org/10.1145/3105726.3106169
+standard compiler error messages. Quantitative results from a 60
+minute one-on-one think-aloud study with 31 students did not
+show substantial increase in student learning outcomes over the                               1     INTRODUCTION
+control. However, qualitative results from the one-on-one think-
+                                                                                              It is well-documented that novice programmers often struggle in
+aloud study indicated that most students are reading the enhanced
+                                                                                              understanding compiler error messages (CEMs) caused by incorrect
+compiler error messages and generally make effective changes after
+                                                                                              syntax [3, 7, 32, 42]. This is a motivating factor in the development
+encountering them.
+                                                                                              of automated assessment tools [36]. In one very popular tool, BlueJ,
+                                                                                              students placed their difficulty in interpreting CEMs high amongst
+CCS CONCEPTS                                                                                  their other concerns [16]. Bennedsen has suggested that this is
+• Human-centered computing → Empirical studies in HCI;                                        a contributing factor in the high failure rates in CS1 courses [5].
+User studies; Usability testing; • Social and professional topics                             Specifically called out in 1976 [44] as an impediment to learning
+→ CS1; Student assessment; • Applied computing → Computer-                                    syntax, CEMs are still just as cryptic and hard to understand as
+assisted instruction; Interactive learning environments;                                      they were forty years ago [4]. In an attempt to alleviate novice
+                                                                                              frustration, several papers have recently attempted to improve
+                                                                                              upon the design of standard CEMs in automated assessment tools
+                                                                                              from an HCI perspective [2, 31, 33, 42], which we will call enhanced
+Permission to make digital or hard copies of all or part of this work for personal or
+                                                                                              compiler error messages (ECEMs).
+classroom use is granted without fee provided that copies are not made or distributed             Several recent studies have enhanced default CEMs and per-
+for profit or commercial advantage and that copies bear this notice and the full citation     formed empirical experiments to determine if ECEMs have a posi-
+on the first page. Copyrights for components of this work owned by others than ACM
+must be honored. Abstracting with credit is permitted. To copy otherwise, or republish,       tive impact on student learning in CS1 [4, 9, 37]. These studies all
+to post on servers or to redistribute to lists, requires prior specific permission and/or a   provide quantitative data and analysis of student performance, but
+fee. Request permissions from permissions@acm.org.                                            stated conflicting conclusions. Denny et al. [9] and Pettit et al. [37]
+ICER ’17, August 18-20, 2017, Tacoma, WA, USA
+© 2017 Association for Computing Machinery.
+                                                                                              could not find conclusive evidence that enhancing error messages
+ACM ISBN 978-1-4503-4968-0/17/08. . . $15.00                                                  was helpful to students. Becker [4], however, was able to show that
+https://doi.org/10.1145/3105726.3106169                                                       ECEMs were more helpful for those in his study.
+ICER ’17, August 18-20, 2017, Tacoma, WA, USA                          Prather, Pettit, Holcomb McMurry, Peters, Homer, Simone, Cohen
+
+
+   We postulate five possible explanations for these conflicting       tools. Other examples of enhancing compiler error messages for
+results:                                                               novice students include Thetis [15], HiC [18], Expresso [20], Gaunt-
+    (1) students do not read ECEMs,                                    let [14], a tool by Dy [11], LearnCS! [27], an IDE by Barik [3], and
+    (2) researchers are measuring the wrong thing,                     ITS-Debug [6].
+    (3) the effects are hard to measure,
+    (4) the ECEMs are not properly designed, therefore students do     2.2    Students have trouble with CEMs
+        not understand them,                                           Syntax and compiler error messages have long been documented to
+    (5) the ECEMs are properly designed but students do not under-     be a great source of confusion and frustration to students. Traver
+        stand ECEMs in context due to increased cognitive load.        addresses problems with compiler error messages, highlighting
+   For this study, we constructed experiments to test the possibili-   some of the challenges in improving messages and showing many
+ties that (1) students do not read ECEMs or (5) the ECEMs already      actual examples of the misleading messages that compilers produce
+implemented are properly designed but cognitive load in students       [42]. He offers suggestions on improving these messages based
+reduces the positive effects. Our research questions are therefore:    on HCI research and sound pedagogy. Murphy et al. were part of
+                                                                       a large multi-institution group analyzing debugging strategies of
+      • RQ1: Do novice students read ECEMs?                            novice programmers [32]. Observations from class sessions and
+      • RQ2: Are ECEMs helpful for novice students in a setting        one-on-one interviews make apparent the frustrations student have
+        with low cognitive load?                                       related to misunderstanding errors in programming code. Finally,
+      • RQ3: Are the ECEMs helpful for novice students in a setting    Marceau et al. discuss how poor error messages lead to student
+        with high cognitive load?                                      frustrations, one issue researchers sought to address in creating
+We begin by reviewing related work on automated assessment tools,      and improving DrRacket [30]. Furthermore, Marceau observes that
+ECEMs in automated assessment tools, and the design of these           some languages used to teach introductory programming, such as
+ECEMs. We next describe the methodology by which we attempt            Alice [23] and Scratch [29] were created with a goal of protecting
+to answer the research questions above. In section 4, we describe      students from any possibility of creating syntax errors in their early
+both quantitative and qualitative results from our mixed-methods       programs.
+study. In section 5 we summarize our conclusions.
+                                                                       2.3    Empirical evidence of helpfulness of ECEM
+2     RELATED WORK                                                            (Denny, Becker, Pettit)
+Automated assessment tools for programming assignments have            In 2014, Denny et al. reported on the tool CodeWrite and the en-
+been around since at least 1960, when Hollingworth built a way         hanced error messages the compiler generates [9]. Researchers used
+to automatically assess the programs that students submitted in        the CodeWrite tool for Java programmers, intercepting the compiler
+his course via punch cards [19]. Today, many different automated       error messages that the tool returned. The researchers replaced ex-
+assessment tools exist, some focused more on assessment and some       isting compiler error messages with much more descriptive error
+focused more on helping students learn to program. Still others are    messages geared to the novice programmer. The conclusion of the
+focused on test-driven development, such as the popular automated      experiment was that there was no statistically significant difference
+assessment tool Web-CAT [12]. For a general review of automated        in the students’ behavior: students submitted as often as others
+assessment tools see Ala-Mutka [1], Douce [10], and Ihantola [21].     had before to get past the same compile errors. These results were
+                                                                       unexpected and seemed non-intuitive. In contrast, Becker [4] simi-
+2.1     Error messages in automated assessment                         larly enhanced error messages in the automated assessment tool,
+        tools                                                          Decaf, also used for Java programming. His findings showed that
+Many creators of automated assessment tools have attempted to          these enhanced messages actually did change student behavior.
+enhance the standard syntax/compiler error messages that stu-          After viewing an enhanced error message, students were less likely
+dents receive. One of the earliest examples is CAP developed by        to generate the same error in the future. Finally, Pettit et al. en-
+Schorsh in 1995 [39]. The intent of CAP was to provide students in     hanced CEMs in an automated assessment tool, Athene, used for
+an introductory programming course with user-friendly feedback         C++ programming [37]. They could not find conclusive results that
+pertaining to syntax, logic, and style errors. In 2012, Watson dis-    the ECEMs were more helpful than standard CEMs.
+cussed the tool BlueFix, which applied his principle of adapting the
+compiler messages to the level of the students [43]. Upon the first    2.4    Design of ECEMs in automated assessment
+encounter of a compiler error, students saw the standard error. If            tools
+the student generated the same error a second time in a row, they      Hartmann et al. [17] created their own automated assessment tool,
+received an enhanced version of the error message. After a third       HelpMeOut, which provides students with feedback similar to
+consecutive generation of the same compiler error, the student re-     Denny et al. [9]. HelpMeOut queries a database of similar errors
+ceived a suggested fix to their code. This adaptive process involved   and presents users with examples and how to fix them. Previous
+an extensive analysis of the student’s existing code and prediction    approaches, such as those discussed above, have implemented en-
+of the student’s intent. Students were then able to vote on whether    hanced feedback through a selection of top errors provided by
+or not the suggested fix worked. In this way, Watson was able to       instructors. These lists of potential errors are driven by experts and
+introduce crowdsourcing techniques into automated assessment           not user observation. A weakness to this approach is evidenced by
+On Novices’ Interaction with Compiler Error Messages:
+A Human Factors Approach                                                                   ICER ’17, August 18-20, 2017, Tacoma, WA, USA
+
+one such implementation discussed above, Gauntlet [14], that was         code more times, negatively correlating with success. Their find-
+later found by Jackson et al. [22] to not contain the most commonly      ings provide empirical justification for the necessity of enhancing
+encountered errors by novices. HelpMeOut overcomes this weak-            CEMs. Loksa et al. performed a study on a code camp where the
+ness through a dynamic list of real student bugs that can better         control group was taught to program and the experimental group
+reflect actual user experience. Furthermore, the suggestion that         was additionally trained in the cognitive aspects of coding [28].
+appears at the top of the list is accomplished through crowdsourced      They suggest training students in metacognitive awareness, upon
+voting by students. In other words, the dominating metric of which       the assumption that "programming is not merely about language
+examples of similar bugs that students will see is based heavily on      syntax and semantics, but more fundamentally about the iterative
+user experience. While the solution is quite novel, Hartmann, et         process of refining mental representations of computational prob-
+al., do not attempt to measure whether their automated assessment        lems and solutions and expressing those representations as code,"
+tool helped novice programmers create a better mental model of the       and report that students with this training were significantly bet-
+errors they received or whether it increased learnability for novice     ter able to understand error feedback. Loksa’s work suggests an
+programmers. Furthermore, as Traver et al. note, this requires a         entirely different direction for this research, one that is beyond the
+large database of student suggestions and crowd-sourced data [42].       scope of this study.
+    Marceau et al. [31] questioned the computer science education
+research community for investigating whether or not feedback
+                                                                         2.5    Think-aloud studies in CS1
+messages helped users learn without approaching it from the per-
+spective of users. They provide both a quantitative and qualitative      One research tool often employed in evaluating changes made to
+human factors approach via a statistical analysis of user errors after   CS1 classes is the think-aloud protocol where students are observed
+introducing enhanced feedback and follow-up interviews with four         writing code and asked to verbalize their thoughts while doing so.
+of those same students. They discovered that students were grossly       Yuen performed a think-aloud study on his CS1 class to understand
+misinterpreting the feedback messages and were confused at the           the differences in how novices construct knowledge compared to
+highly specialized vocabulary of their automated assessment tool,        experts [46]. He collected data from four sources: an initial survey,
+DrRacket. They postulate that perhaps students do not take the           participants’ work on paper, transcripts of the interviews, and the
+time to read the messages, but rather use it only as an "oracle" that    researcher’s field notes. Their results show three kinds of student
+somehow knows how to fix their code or that students prefer to           behavior in response to various levels of knowledge construction.
+read only the code highlights that indicate the necessary change. In     The least desirable response, "need to code," is when the student
+following work, Marceau et al. [30] provide a rubric for evaluating      does not seek to first understand and determine a solution, but
+the effectiveness of error messages based on student behavior after      instead turns directly to the code. A better response is the second,
+encountering them. They recommend changes to error messages:             "generalizing the problem," where the novice is able to take what
+simplify vocabulary, be more explicit in pointing to the problem,        they have previously learned and try to generalize it to the present
+help students match terms in the error message to parts of their         scenario, sometimes leading to a valid solution. The third and most
+code (e.g. using color coded highlighting), design the programming       desirable behavior, "designing effective solutions," is when the stu-
+course with error messages in mind (rather than an afterthought),        dent is able to properly take their knowledge construction and
+and teach students how to read and understand error messages             apply it to create a working solution. These three categories will
+during class time.                                                       be useful in this study’s data analysis.
+    Several other recent studies utilize aspects of a human factors         Teague et al. perform a think-aloud study watching novices trace
+approach to an automated assessment tool. Traver et al. discuss          code and then attempt to explain in a single sentence what it does
+the theory behind error message design and propose eight spe-            [40]. They follow the classic think-aloud protocols by Ericsson and
+cific principles for the design of ECEMs [42]. Lee and Ko discuss        Simon [13]. Teague’s results suggest that students who cannot trace
+personifying feedback in a game that teaches programming [25].           code cannot build appropriate abstractions to understand complex
+Their tool, Gidget, personifies feedback by accepting blame when a       programming tasks. One important contribution they make is in
+program works incorrectly. Participants in the experimental group        noting that think-aloud studies are difficult for novices. The task of
+where personification was increased completed more levels of the         programming is already cognitively overloading novices and there-
+game in a similar amount of time compared to the control group.          fore asking them to also think-aloud during a study could threaten
+Barik et al. performed an experiment with eye tracking software to       the ability to replicate the same silent attempt. To offset this, they
+determine if students read error messages [2]. These students were       began their study with a short think-aloud practice session so the
+a mix of undergraduate and graduate students who had an average          participant could become familiar with the think-aloud protocol
+of 1.4 years of professional software engineering experience within      and the interviewer. We follow Ericsson and Simon for think-aloud
+a company. While the study by Barik et al. is closely related to the     protocol and follow Teague in adding a short practice session at
+present study, we examine the problem from the perspective of            the beginning to hopefully offset cognitive load on novices.
+novice programmers in their very first programming course. Barik            Whalley and Kasto perform a think-aloud study watching
+et al. found that intermediate students do indeed read CEMs. They        novices solve three programming challenges [45]. Researchers nar-
+also found that, as error messages become more difficult and cryptic,    rated the problem-solving process and showed how some students
+programmers cycled between the error message and the offending           who might otherwise get stuck were able to solve the challenges
+                                                                         with some redirection and scaffolding. They also note that think-
+                                                                         aloud studies are difficult with novice programmers because the
+ICER ’17, August 18-20, 2017, Tacoma, WA, USA                            Prather, Pettit, Holcomb McMurry, Peters, Homer, Simone, Cohen
+
+
+cognitive load is already very high and so they have a difficult time
+concentrating on solving the problem and can’t continually ver-
+balize their thoughts. In order to offset this, they also used a short
+practice session so participants could get used to the think-aloud
+protocol.
+   Qualitative research methods complement our quantitative meth-
+ods in this study. These qualitative methods will give us access to
+information that submission data and quiz results do not, such as
+the students motivations for behaving in a certain way, their beliefs
+about what they are doing, and the feelings that they are having
+when performing certain actions. All of these serve to give us a
+better explanation of why students make certain choices. For a
+thorough review of qualitative research approaches, see Lincoln
+and Guba [26] or Patton [34]. For more information specifically on
+mixed method approaches, see Creswell [8].
+
+3 METHODOLOGY                                                            Figure 1: The error message from error message quiz 1B (en-
+3.1 Pilot Studies                                                        hanced) with the enhanced message expanded
+Two usability pilot studies were conducted in fall 2016, each with
+six participants in ten minute sessions that used a simple Fibonacci
+problem requiring a while-loop to solve. The automated assessment
+tool used in this study was Athene due to its adoption and use at
+the university where the study was conducted [35, 37, 41]. Partici-
+pants were provided with a code file that contained six bugs and
+asked to submit the code, fixing errors as they found them, until
+Athene accepted the program as complete. The program used a
+method that takes n as a parameter and returns the nth Fibonacci
+number, computed using a while loop. After the first pilot study,
+the ECEMs in Athene were redesigned using the guidelines from
+the literature [17, 31, 42]. The second pilot study performed the
+same experiment with the redesigned ECEMs which led to a further
+refining of their design. This included changing wording to better
+match user expectations, streamlining the design, and removing
+pieces that confused users. Perhaps the most interesting change
+was to the text in the title of the enhanced portion of the message
+from "Need More Help?" to "More Information." Most participants
+in the second pilot study indicated that they did not want more
+help - even the ones that struggled. The design of the button used
+the words "Need More Help?" and most participants balked at that
+phrasing as a threat to their ego. Follow-up questions about why
+they felt this way revealed they thought that looking at something
+titled "Need More Help?" was almost like cheating or like giving         Figure 2: The error message from error message quiz 4A (en-
+up and they wanted to do it themselves without looking at the            hanced) with the enhanced message expanded
+answer. The phrasing was picked to be a neutral and clear label
+about the button’s function, but it clearly was not perceived this
+way by participants. Thus, it was changed to "More Information"          load. These quizzes all took place outside of the context of Athene
+as in Figure 1 and Figure 2. The attitude among the participants         as part of a replacement for a daily quiz where cognitive load
+led to the creation of question #3 in the follow-up questions in the     would be much lower. In order to provide a control group and an
+think-aloud study.                                                       experimental group, the class of 31 was divided in to two groups of
+                                                                         similar demographics: A and B. Each quiz contained a code snippet
+3.2    Error Message Quizzes                                             with a bug that would lead to a specific compile error, a feedback
+Participants that were enrolled in CS1 for Spring 2017 at Abilene        message produced by Athene when that code is submitted, and
+Christian University were given six quizzes in class to determine        a short-answer question asking students to determine where the
+if the newly refined ECEMs were more helpful than the standard           error is, what the error is, and how they would fix it. In every case
+compiler messages. This was done in an attempt to answer RQ2: are        students had seven minutes to solve the quiz. In odd-numbered
+ECEMs helpful for novice students in a setting with low cognitive        quizzes, the students in group A saw only the standard compiler
+On Novices’ Interaction with Compiler Error Messages:
+A Human Factors Approach                                                                   ICER ’17, August 18-20, 2017, Tacoma, WA, USA
+
+
+error message as feedback from Athene, while the students in group       previous semesters and a majority of students from those previ-
+B saw the standard compiler error message as well as the enhanced        ous semesters completed the problem within the same 35 minute
+error message from Athene. For the even-numbered quizzes, group          time limit. While solving the problem, a researcher took extensive
+A saw the standard and enhanced messages while group B saw               notes on what the student did and said. This study follows the
+only the standard messages. This was repeated for all six quizzes.       recommendations made by Ericsson and Simon [13] for carrying
+Thus, each student saw a standard message for three quizzes and          out think-aloud studies, specifically minimizing social interaction
+the enhanced message for three quizzes. Each quiz contained a            with participants and trying to gently keep them focused on the
+different code snippet with a different compile error and thus a         task at hand. For instance, if the student stopped talking, then the
+different feedback message from Athene. The compile errors chosen        researcher would say, "Keep speaking," and not "Tell me what you’re
+for the six quizzes were the six errors students encountered most        thinking." This encouraged speaking, but the participant was not
+frequently while attempting the programming assignment used in           asked to formulate responses or socially interactive dialogue.
+the think-aloud study below. The difficulty of the code snippets            After the students successfully completed the problem or the
+that students were asked to analyze scaled along with the content        time limit expired, they were asked up to five interview questions
+of the semester in an effort to make them consistently challenging.      and their responses were recorded. They were asked up to five
+                                                                         because some questions may not have pertained to that particu-
+                                                                         lar student, depending on their experience solving the quiz. For
+3.3    Think-Alouds                                                      instance, students could not be asked about their perception of
+As a classroom enhancement, the researcher canceled class and            the ECEMs if they did not encounter any of them. Below are the
+instead held hour-long one-on-one sessions in CS1 during week            questions that the students were (potentially) asked:
+6 of classes for Spring 2017 at Abilene Christian University. All           (1) When you encountered the enhanced feedback messages
+31 students participated. Each student met one-on-one with a re-                (with the "More information" drop-down), were they helpful?
+searcher where the student was observed completing a "practical                 Why or why not?
+quiz" and received feedback on their process. A practical quiz is sim-      (2) When you see a feedback message from Athene, how does
+ilar to a homework assignment - students receive a programming                  it make you feel?
+problem in Athene, but must solve it in a proctored 35 minute time          (3) Would you rather read the enhanced message under "More
+window. Students were asked to verbalize their thoughts while                   information" first, or would you rather wait until you can’t
+they solved the problem, especially when they encountered the                   figure it out yourself? Why?
+enhanced feedback messages. The primary researcher supervised               (4) (If they saw an enhanced message and did not click it) When
+two researchers conducting these one-on-one studies. Occasionally               you saw the enhanced message, why did you choose not to
+a second supervisor also observed these sessions. This was done to              click on it?
+ensure standardization of practices between observers. In an effort         (5) In this class, how often before the deadline do you usually
+to control for differing development environments and the help stu-             make your first attempt (uploading your program to Athene)
+dents might or might not receive from certain ones, students were               on your homework?
+only allowed to type their code in the default Windows notepad              These questions were designed to get the student talking about
+application.                                                             their experience with the ECEMs that they potentially encountered.
+    The general format of the think-aloud study follows the usability    Getting at perception can be difficult, so the first three questions
+testing guidelines found in Rubin and Chisnell [38] and Krug [24],       were all designed to hit around the same issue. The fourth question
+including pre- and post-testing checklists and scripts. At the begin-    was for those students that we knew would see them and not
+ning of each session, the evaluator read from a script outlining the     use them. The final question was added in an attempt to try and
+reason for the session, the goal of the session, and what was ex-        correlate perceived work ethic with use of the ECEMs.
+pected of the student. Students were then given a very simple task          The think-aloud study with post-assessment interview was de-
+and asked to think-aloud so they can get used to verbalizing their       signed to answer research questions (1) Do Students read ECEMs?
+thoughts, the observer, and the process, as suggested by Teague et       and (3) Are the ECEMs helpful for novice students in a setting with
+al. [40] and Whalley and Kasto [45]. This simple task was to write       high cognitive load?
+a program that would output "Hello, world." This particular task
+was chosen because it was cognitively the easiest code to write for      3.4    Think-Aloud Analysis
+any level of student at that point in the semester, so practicing the
+                                                                         The ethnographic portion of the study consisted of participant ob-
+think-aloud protocol would be easier during this time.
+                                                                         servation and post-assessment interview questions. This allowed us
+    Students were then asked to complete a practical quiz, similar
+                                                                         to record the participants’ actions, thought process, problem solv-
+to a simple homework assignment, with a time limit of 35 minutes.
+                                                                         ing process, reactions to error messages, and their answers to the
+The task was this: given n numbers, compute whether there were
+                                                                         end-of-session interview questions. Because the participants were
+more positive or negative integer numbers provided as input. Stu-
+                                                                         asked to use the think-aloud protocol, we were better able to record
+dents would need to understand the following concepts: console
+                                                                         their thought-process as they solved the assessment. Participant-
+input, console output, conditionals, and loops. This particular prob-
+                                                                         specific data were separately recorded and then phenomena were
+lem, rather than the Fibonacci problem used for the pilot studies,
+                                                                         coded and grouped into categories. In this way, larger trends began
+was chosen because it has been used as an in-class assessment in
+                                                                         to emerge from the natural groupings of the qualitative data.
+ICER ’17, August 18-20, 2017, Tacoma, WA, USA                            Prather, Pettit, Holcomb McMurry, Peters, Homer, Simone, Cohen
+
+
+    We put all of the data into ATLAS.ti and used it for the coding
+process. We began the coding process by combing through each
+document and creating quotations and adding codes for partici-
+pants receiving error messages. For each error message, we coded
+if it was or was not an enhanced error message. The ECEMs were
+then broken down into a numbering system so that we could see
+how many times students received each ECEM. The error messages
+that were not enhanced were coded as "unenhanced," but were not
+given a specific error message number. If the error message was
+enhanced, we then coded if the participant expanded the "more
+information" section (see Figure 1 and Figure 2 and note the collapsi-
+ble "more information" section). If the "more information" section
+was expanded, we then coded whether it proved to be helpful or
+unhelpful based on their next code edit and submission. However, if
+the "more information" section remained collapsed, we did not code
+for that ECEM’s helpfulness. Next, we coded for completion time.
+                                                                         Figure 3: Number of incorrect responses for each condition
+Completion time was divided into five groups: less than 10 minutes,
+                                                                         by quiz
+10-20 minutes, 20-30 minutes, 30-35 minutes, and incomplete. Each
+participant document received one of the completion time codes,
+which allowed us to analyze the progress of each student. At the
+conclusion of each one-on-one session, the evaluator asked several
+questions and then gave feedback on the participant’s performance
+in the quiz. We therefore coded each participant’s response to these
+follow-up questions in order to receive an overall perception for
+the error messages. There were 28 unique codes and these codes
+were used a total of 370 times.
+
+3.5    Program Logs Analysis
+The particular programming assignment that was given in our one-               Figure 4: Incorrect Understanding of CEM vs. ECEM
+on-one think-aloud sessions was given as an in-class assessment in
+three other semesters of the same Programming 1 course. For each
+                                                                         4 (rows 3, 5 and 6), 9 of the 13 students were helped more by the
+submission, Athene logged the student’s information, a snapshot of
+                                                                         ECEMs. One particularly interesting case is the student who incor-
+the code submitted, the test results or error message produced by
+                                                                         rectly answered all three control quizzes, but correctly answered
+Athene, time submitted and current grade on the assessment. The
+                                                                         all three in the experimental condition (row 6). Another outlier in
+logs of these semesters were pulled and analyzed as a control to
+                                                                         the opposite direction was the student who incorrectly answered
+compare against our one-on-one session results. For each semester,
+                                                                         two experimental quizzes, but correctly answered all in the control
+we measured the number of students who completed the program-
+                                                                         condition (row 2).
+ming assignment with a correct solution, average score, and average
+time until completion in both the control and experimental groups.
+                                                                         4.2     Program Logs
+4 RESULTS                                                                Data that can be pulled from Athene’s database on assessment
+                                                                         submissions has been previously reported by Pettit et al. [35, 37].
+4.1 Error Message Quizzes                                                However, in previous studies, students were allowed to compile
+The error message quizzes were given to students outside of the          offline and only submitted their code to Athene when making an
+context of an assessment in Athene to determine if the redesigned        attempt at correctness. While other tools discussed above capture
+ECEMs, on their own, were more helpful than the standard CEMs.           all student compilations, the automated assessment tool used in
+Twenty-seven students from the Spring 2017 CS1 class were present        the present study, Athene, has previously not been able to report
+for all six quizzes. The results of these quizzes (see Figure 3) show    that data. The one-on-one think-aloud study allowed this data to be
+that the experimental case (ECEMs) was more helpful than the             gathered using Athene for the first time. The difference in student
+control (standard CEMs). The mean percent of incorrect answers           behavior when they can only use Athene to compile versus when
+among participants in the control group was 17.28% while the mean        they can compile offline is an interesting subject for a future report,
+percent of incorrect answers in the experimental condition was           but cannot be discussed fully here due to space limitations. We do
+6.17%. Therefore, the experimental condition displayed a statisti-       expect student behavior to change when the compiling constraints
+cally significant improvement over the control (p < 0.035, n = 27,       change, such as an increase in the number of submissions and
+paired two sample for means).                                            therefore the number of errors encountered.
+   Out of the 27 participants present for all six quizzes, 13 students      For those students in the experimental section that completed
+gave an incorrect answer on at least one quiz. As shown in Figure        the assessment during the 35 minute time limit, the average time
+On Novices’ Interaction with Compiler Error Messages:
+A Human Factors Approach                                                                  ICER ’17, August 18-20, 2017, Tacoma, WA, USA
+
+
+                                                                        path to solving the error or the student read the message and didn’t
+                                                                        know how to proceed. Post-assessment ethnographic interviews
+                                                                        and reflection revealed participants’ feelings towards the ECEMs
+                                                                        in greater depth, from gratefulness to frustration.
+                                                                           4.3.1 Observational. Although there were 21 students who com-
+                                                                        pleted the quiz and 10 students who did not complete the quiz, the
+                                                                        total number of errors received was roughly equal at 56 for those
+                                                                        who completed the quiz and 60 errors for those who did not, making
+                                                                        116 total errors tagged by evaluators. The group of participants that
+                                                                        did not complete the quiz had a higher number of errors without
+Figure 5: Average time to complete the problem by semester              enhanced messages (31) and a lower number of enhanced error
+                                                                        messages (29), though this was dominated by a single participant
+                                                                        who encountered the most (15). The incomplete quiz participants
+to completion was 15:46 with a standard deviation of 7:03. In the       had under half of the number of read enhanced messages (9) when
+control, the previous three semesters when this assessment was          compared to the participants that completed the quiz (23). From
+given the average completion times were: 16:44, 17:50, and 13:05        this data it seems that encountering these messages really did prove
+(Figure 5). This data indicates that the experiment did not adversely   helpful for the completion of the quiz.
+affect student outcomes.                                                   The incomplete quiz participants also had over double the
+   The average score for all students in the experimental section       amount of unread enhanced messages (20) when compared to the
+was 67%. The average score for the previous three control semesters     completed quiz participants (8). For the participants that completed
+was 90%, 88.2%, and 84.2%. This seems to indicate that students in      the quiz, there were 19 instances where the "more information"
+the experimental section may have been adversely affected. How-         section of the ECEM proved helpful. This is over six times the
+ever, this may have been an artifact of the way the procedure was       amount of instances for those who did not complete the quiz (3).
+performed. As mentioned above, students have previously been            The incomplete quiz participants also contained more instances of
+able to compile offline and many students will use previous pro-        unhelpful enhanced messages (6) when compared to the completed
+grams they have written as a bootstrap for any new program they         quiz participants (4).
+attempt. In the case of the experimental group, 10 students did not        The data presented in Figure 6 summarizes these observations
+complete the quiz at all, 6 of which suffered from problems with        and appears to indicate that the ECEMs helped students better
+the basic structure of their code. All of these 6 students could not    understand the errors they were encountering, fix those errors, and
+remember include statements and how to write their main func-           ultimately complete the quiz.
+tion. If this assessment had been carried out in a previous semester,
+                                                                           4.3.2 Ethnographic: Perception of overall helpfulness comparing
+these students would have had access to previous programs and
+                                                                        complete and incomplete. Of the ten students that did not solve the
+may have solved the problem. Instead, they could not move past
+                                                                        assessment in the 35 minute time limit, only two read the ECEMs
+the structural compiler errors. Furthermore, none of the structural
+                                                                        and believed they were unhelpful. Another two students that did
+compiler errors had been enhanced because we based our choices
+                                                                        not complete the quiz read the ECEMs and believed them to helpful.
+about which messages to enhance on the frequency with which
+                                                                        The other six students did not receive an enhanced error message
+a CEM was encountered in previous semesters. Since students in
+                                                                        and were therefore unable to confirm whether or not the enhanced
+previous semesters had access to their prior programs before start-
+                                                                        messages were helpful. See Figure 7.
+ing the quiz, none of these errors had been encountered in any
+of the control semesters. Therefore, it is interesting to note that        4.3.3 Ethnographic: Perception of helpfulness of students with
+removing these 6 students from the group brings the average score       repeated error messages. There were four participants that received
+up to 84.8%, which is in range of the control semesters.                a repeated ECEM at least once and did not finish the quiz. One of
+   The error message quiz results above indicate that the ECEMs         them received three repeated ECEMs and thought that they were
+are more helpful than standard CEMs. However, the quantitative          unhelpful. However, another one received the same ECEM ten times
+data from the program logs seems to contract this conclusion, or is     in succession, neglected to read the first nine, finally read it the
+inconclusive at best. This is where the qualitative data illuminates    tenth time, and subsequently corrected the error. Even though this
+a possible explanation.                                                 participant did not finish the quiz, he still believed the ECEMs to
+                                                                        be helpful. The other two participants that received repeated error
+4.3    Think-Alouds                                                     messages and did not finish the quiz only received one repeated
+With regard to the errors that participants received, observational     message and they both found the enhanced messages helpful.
+data - both spoken thought and behavior - allowed for the evaluator
+to be certain when ECEMs were expanded and read. An ECEM was            4.4    Discussion
+marked as "helpful" in the observational data if the student solved     The results of the error message quizzes compared with the quanti-
+that specific error or made steps towards solving it after reading      tative program log results from the assessment seem contradictory.
+the ECEM. Conversely, an ECEM was marked as "unhelpful" if the          The observational and ethnographic data presented above tells a dif-
+student made changes after viewing the ECEM that were not on the        ferent story. The students who struggled, but ultimately succeeded
+ICER ’17, August 18-20, 2017, Tacoma, WA, USA                          Prather, Pettit, Holcomb McMurry, Peters, Homer, Simone, Cohen
+
+
+
+
+                            Figure 6: Student Perception of ECEMs in Complete vs. Incomplete Quizzes
+
+
+                                                                       data could not provide. This helps to answer RQ3 and warrants
+                                                                       further investigation.
+                                                                          There are several threats to validity of these findings. First, the
+                                                                       control groups for the think-aloud study took place over multiple
+                                                                       semesters and had two different professors. We attempted to mini-
+                                                                       mize this threat by keeping the curriculum (assignments, schedule,
+                                                                       the use of Athene, etc.) roughly the same from semester to semester.
+                                                                       Second, control groups for the think-aloud study took the practi-
+Figure 7: Unique student groups based on quantitative and
+                                                                       cal quiz in class, were not asked to think-aloud, and had access to
+qualitative data
+                                                                       previous code files to bootstrap their code. By contrast, students in
+                                                                       the think-aloud study were in a one-on-one setting, were asked to
+in completing the problem, brought down the average score and          think-aloud, and did not have access to previous code. It is possi-
+increased the average time to completion. However, these same stu-     ble that all of these factors increased student cognitive load in the
+dents were helped the most by the ECEMs and expounded on this          think-aloud study and therefore skewed the results. We attempted
+in great detail during the post-assessment interview. Although they    to offset this by adding in the warm-up exercise as suggested by
+struggled with the assessment, observational and ethnographic          Teague et al. [40].
+data shows that it was ultimately the ECEMs that helped them
+across the finish line. This is precisely what we want. Furthermore,   6    FUTURE WORK
+a very small group of students who did not complete the quiz, and      This study should be replicated to further strengthen the findings
+therefore brought down the average score, were not helped by the       presented here. Having more than one experimental group would
+ECEMs and were frustrated by them in the post-assessment inter-        add weight to these findings. It should also be replicated by those
+views. These two students were so unfamiliar with the material         previous studies that found no evidence or inconclusive evidence
+and so fundamentally lost that the additional information provided     for the helpfulness of ECEMs.
+by the ECEMs only added insult to injury. We conjecture that the          As mentioned above, Barik et al. [2] use eye tracking software
+increased cognitive load of the assessment may have tipped the         to examine whether intermediate students read error messages. It
+scales from helpful ECEMs to unhelpful.                                would be helpful to replicate their work with novices in CS1.
+   From all of the data above, the students can be broken up into         Finally, even though this study followed the design guidelines
+six distinct groups as seen in Figure 7.                               by Marceau et al. [31] it would also be useful to use their rubric
+                                                                       [30] to evaluate the helpfulness of the EECMs used in this study.
+5   CONCLUSIONS
+This study has made several important contributions. First, do         7    ACKNOWLEDGMENTS
+novice students read ECEMs? Observational and ethnographic data
+                                                                       The authors would like to thank Abilene Christian University (ACU)
+seem to indicate that novices in CS1 do, in fact, read ECEMs. Stu-
+                                                                       for providing necessary funding for this study. We would also like
+dents also generally find the ECEMs more helpful than the standard
+                                                                       to thank the reviewers for their careful and thorough feedback.
+CEMs. The corroborating evidence by Barik et al. [2] on eye track-
+ing with intermediate students lends more weight to our finding.
+This helps to answer RQ1 and warrants further investigation.
+                                                                       REFERENCES
+                                                                        [1] Kirsti M Ala-Mutka. 2005. A survey of automated assessment approaches for
+   Second, are ECEMs helpful for novice students in a setting with          programming assignments. Computer science education 15, 2 (2005), 83–102.
+low cognitive load? The results of the error message quizzes shows      [2] Titus Barik, Justin Smith, Kevin Lubick, Elisabeth Holmes, Jing Feng, Emerson
+a statistically significant decrease in incorrect understanding of          Murphy-Hill, and Chris Parnin. 2017. Do Developers Read Compiler Error
+                                                                            Messages?. In Proceedings of the International Conference of Software Engineering.
+ECEMs when compared to standard CEMs in an independent envi-                ACM.
+ronment. This data answers RQ2.                                         [3] Titus Barik, Jim Witschey, Brittany Johnson, and Emerson Murphy-Hill. 2014.
+                                                                            Compiler error notifications revisited: an interaction-first approach for helping
+   Finally, are the ECEMs helpful for novice students in a setting          developers more effectively comprehend and resolve error notifications. In Com-
+with high cognitive load? Even though the quantitative program              panion Proceedings of the 36th International Conference on Software Engineering
+log data from the think-aloud study seems inconclusive, the qual-           (ICSE Companion 2014). ACM, 536–539.
+                                                                        [4] Brett A Becker. 2016. An effective approach to enhancing compiler error mes-
+itative data seems to indicate that ECEMs are also effective in an          sages. In Proceedings of the 47th ACM Technical Symposium on Computing Science
+environment with a higher cognitive load. Students that struggled           Education. ACM, 126–131.
+to complete the quiz successfully used the ECEMs to arrive at a         [5] Jens Bennedsen and Michael E. Caspersen. 2007. Failure rates in introductory
+                                                                            programming. ACM SIGCSE Bulletin 39, 2 (2007), 32–36.
+correct solution. Here the qualitative think-aloud data provided a      [6] Elizabeth Carter. 2015. Its debug: practical results. Journal of Computing Sciences
+window into student behavior that the quantitative program log              in Colleges 30, 3 (2015), 9–15.
+On Novices’ Interaction with Compiler Error Messages:
+A Human Factors Approach                                                                                           ICER ’17, August 18-20, 2017, Tacoma, WA, USA
+
+
+ [7] Maria Christakis and Christian Bird. 2016. What developers want and need                    ACM, 168–172.
+     from program analysis: An empirical study. In Proceedings of the 31st IEEE/ACM         [34] Michael Quinn Patton. 2014. Qualitative research & evaluation methods: Integrating
+     International Conference on Automated Software Engineering. ACM, 332–343.                   theory and practice. Sage.
+ [8] John W Creswell. 2013. Research design: Qualitative, quantitative, and mixed           [35] Raymond Pettit, John Homer, Roger Gee, Susan Mengel, and Adam Starbuck. 2015.
+     methods approaches. Sage publications.                                                      An empirical study of iterative improvement in programming assignments. In
+ [9] Paul Denny, Andrew Luxton-Reilly, and Dave Carpenter. 2014. Enhancing syn-                  Proceedings of the 46th ACM Technical Symposium on Computer Science Education.
+     tax error messages appears ineffectual. In Proceedings of the 2014 conference on            ACM, 410–415.
+     Innovation & technology in computer science education. ACM, 273–278.                   [36] Raymond Pettit and James Prather. 2017. Automated Assessment Tools: Too
+[10] Christopher Douce, David Livingstone, and James Orwell. 2005. Automatic test-               Many Cooks, Not Enough Collaboration. J. Comput. Sci. Coll. 32, 4 (April 2017),
+     based assessment of programming: A review. Journal on Educational Resources in              113–121. http://dl.acm.org/citation.cfm?id=3055338.3079060
+     Computing (JERIC) 5, 3 (2005), 4.                                                      [37] Raymond S Pettit, John Homer, and Roger Gee. 2017. Do Enhanced Compiler Error
+[11] Thomas Dy and Ma Mercedes Rodrigo. 2010. A detector for non-literal Java errors.            Messages Help Students?: Results Inconclusive.. In Proceedings of the 2017 ACM
+     In Proceedings of the 10th Koli Calling International Conference on Computing               SIGCSE Technical Symposium on Computer Science Education. ACM, 465–470.
+     Education Research. ACM, 118–122.                                                      [38] Jeffrey Rubin and Dana Chisnell. 2008. Handbook of usability testing: how to plan,
+[12] Stephen H Edwards and Manuel A Perez-Quinones. 2008. Web-CAT: automati-                     design and conduct effective tests (2 ed.). John Wiley & Sons.
+     cally grading programming assignments. In ACM SIGCSE Bulletin, Vol. 40. ACM,           [39] Tom Schorsch. 1995. CAP: an automated self-assessment tool to check Pascal
+     328–328.                                                                                    programs for syntax, logic and style errors. In ACM SIGCSE Bulletin, Vol. 27.
+[13] Karl Anders Ericsson and Herbert Alexander Simon. 1993. Protocol analysis. MIT              ACM, 168–172.
+     press Cambridge, MA.                                                                   [40] Donna Teague, Malcolm Corney, Alireza Ahadi, and Raymond Lister. 2013. A
+[14] Thomas Flowers, Curtis A Carver, and James Jackson. 2004. Empowering students               qualitative think aloud study of the early neo-piagetian stages of reasoning in
+     and building confidence in novice programmers through Gauntlet. In Frontiers in             novice programmers. In Proceedings of the Fifteenth Australasian Computing
+     Education, 2004. FIE 2004. 34th Annual. IEEE, T3H–10.                                       Education Conference-Volume 136. Australian Computer Society, Inc., 87–95.
+[15] Stephen N Freund and Eric S Roberts. 1996. Thetis: an ANSI C programming               [41] Dwayne Towell and Brent Reeves. 2009. From Walls to Steps: Using online
+     environment designed for introductory use. In SIGCSE, Vol. 96. 300–304.                     automatic homework checking tools to improve learning in introductory pro-
+[16] Dianne Hagan and Selby Markham. 2000. Teaching Java with the BlueJ environ-                 gramming courses. (2009).
+     ment. In Proceedings of Australasian Society for Computers in Learning in Tertiary     [42] V Javier Traver. 2010. On compiler error messages: what they say and what they
+     Education Conference ASCILITE 2000. Citeseer.                                               mean. Advances in Human-Computer Interaction 2010 (2010).
+[17] Björn Hartmann, Daniel MacDougall, Joel Brandt, and Scott R Klemmer. 2010.             [43] Christopher Watson, Frederick WB Li, and Jamie L Godwin. 2012. Bluefix: Using
+     What would other programmers do: suggesting solutions to error messages. In                 crowd-sourced feedback to support programming students in error diagnosis and
+     Proceedings of the SIGCHI Conference on Human Factors in Computing Systems.                 repair. In International Conference on Web-Based Learning. Springer, 228–239.
+     ACM, 1019–1028.                                                                        [44] Richard L Wexelblat. 1976. Maxims for malfeasant designers, or how to design
+[18] Robert W Hasker. 2002. HiC: a C++ compiler for CS1. Journal of Computing                    languages to make programming as difficult as possible. In Proceedings of the 2nd
+     Sciences in Colleges 18, 1 (2002), 56–64.                                                   international conference on Software engineering. IEEE Computer Society Press,
+[19] Jack Hollingsworth. 1960. Automatic graders for programming classes. Commun.                331–336.
+     ACM 3, 10 (1960), 528–529.                                                             [45] Jacqueline Whalley and Nadia Kasto. 2014. A qualitative think-aloud study of
+[20] Maria Hristova, Ananya Misra, Megan Rutter, and Rebecca Mercuri. 2003. Identi-              novice programmers’ code writing strategies. In Proceedings of the 2014 conference
+     fying and correcting Java programming errors for introductory computer science              on Innovation & technology in computer science education. ACM, 279–284.
+     students. In ACM SIGCSE Bulletin, Vol. 35. ACM, 153–156.                               [46] Timothy T Yuen. 2007. Novices’ knowledge construction of difficult concepts in
+[21] Petri Ihantola, Tuukka Ahoniemi, Ville Karavirta, and Otto Seppälä. 2010. Review            CS1. ACM SIGCSE Bulletin 39, 4 (2007), 49–53.
+     of recent systems for automatic assessment of programming assignments. In Pro-
+     ceedings of the 10th Koli Calling International Conference on Computing Education
+     Research. ACM, 86–93.
+[22] James Jackson, Michael Cobb, and Curtis Carver. 2005. Identifying top Java errors
+     for novice programmers. In Frontiers in Education, 2005. FIE’05. Proceedings 35th
+     Annual Conference. IEEE, T4C–T4C.
+[23] Caitlin Kelleher, Randy Pausch, and Sara Kiesler. 2007. Storytelling alice motivates
+     middle school girls to learn computer programming. In Proceedings of the SIGCHI
+     conference on Human factors in computing systems. ACM, 1455–1464.
+[24] Steve Krug. 2014. Don’t make me think revisited: A common sense approach to
+     web and mobile usability. (2014).
+[25] Michael J Lee and Andrew J Ko. 2011. Personifying programming tool feedback
+     improves novice programmers’ learning. In Proceedings of the seventh interna-
+     tional workshop on Computing education research. ACM, 109–116.
+[26] Yvonna S Lincoln and Egon G Guba. 1985. Naturalistic inquiry. Vol. 75. Sage.
+[27] Derrell Lipman. 2014. LearnCS!: a new, browser-based C programming environ-
+     ment for CS1. Journal of Computing Sciences in Colleges 29, 6 (2014), 144–150.
+[28] Dastyni Loksa, Andrew J Ko, Will Jernigan, Alannah Oleson, Christopher J
+     Mendez, and Margaret M Burnett. 2016. Programming, Problem Solving, and Self-
+     Awareness: Effects of Explicit Guidance. In Proceedings of the 2016 CHI Conference
+     on Human Factors in Computing Systems. ACM, 1449–1461.
+[29] John Maloney, Mitchel Resnick, Natalie Rusk, Brian Silverman, and Evelyn East-
+     mond. 2010. The scratch programming language and environment. ACM Trans-
+     actions on Computing Education (TOCE) 10, 4 (2010), 16.
+[30] Guillaume Marceau, Kathi Fisler, and Shriram Krishnamurthi. 2011. Measuring
+     the effectiveness of error messages designed for novice programmers. In Proceed-
+     ings of the 42nd ACM technical symposium on Computer science education. ACM,
+     499–504.
+[31] Guillaume Marceau, Kathi Fisler, and Shriram Krishnamurthi. 2011. Mind your
+     language: on novices’ interactions with error messages. In Proceedings of the 10th
+     SIGPLAN symposium on New ideas, new paradigms, and reflections on programming
+     and software. ACM, 3–18.
+[32] Laurie Murphy, Gary Lewandowski, Renée McCauley, Beth Simon, Lynda
+     Thomas, and Carol Zander. 2008. Debugging: the good, the bad, and the quirky–a
+     qualitative analysis of novices’ strategies. In ACM SIGCSE Bulletin, Vol. 40. ACM,
+     163–167.
+[33] Marie-Hélène Nienaltowski, Michela Pedroni, and Bertrand Meyer. 2008. Com-
+     piler error messages: What can help novices?. In ACM SIGCSE Bulletin, Vol. 40.
+
